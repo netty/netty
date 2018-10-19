@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -61,6 +62,47 @@ public class ChannelInitializerTest {
     @After
     public void tearDown() {
         group.shutdownGracefully(0, TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).syncUninterruptibly();
+    }
+
+    @Test
+    public void testInitChannelThrowsRegisterFirst() {
+        testInitChannelThrows(true);
+    }
+
+    @Test
+    public void testInitChannelThrowsRegisterAfter() {
+        testInitChannelThrows(false);
+    }
+
+    private void testInitChannelThrows(boolean registerFirst) {
+        final Exception exception = new Exception();
+        final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
+
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+
+        if (registerFirst) {
+            group.register(pipeline.channel()).syncUninterruptibly();
+        }
+        pipeline.addFirst(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                throw exception;
+            }
+
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                causeRef.set(cause);
+                super.exceptionCaught(ctx, cause);
+            }
+        });
+
+        if (!registerFirst) {
+            group.register(pipeline.channel()).syncUninterruptibly();
+        }
+        pipeline.channel().close().syncUninterruptibly();
+        pipeline.channel().closeFuture().syncUninterruptibly();
+
+        assertSame(exception, causeRef.get());
     }
 
     @Test

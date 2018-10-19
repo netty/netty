@@ -31,12 +31,14 @@ public final class EpollChannelOption<T> extends UnixChannelOption<T> {
             valueOf(EpollChannelOption.class, "TCP_USER_TIMEOUT");
     public static final ChannelOption<Boolean> IP_FREEBIND = valueOf("IP_FREEBIND");
     public static final ChannelOption<Boolean> IP_TRANSPARENT = valueOf("IP_TRANSPARENT");
+    public static final ChannelOption<Boolean> IP_RECVORIGDSTADDR = valueOf("IP_RECVORIGDSTADDR");
     public static final ChannelOption<Integer> TCP_FASTOPEN = valueOf(EpollChannelOption.class, "TCP_FASTOPEN");
     public static final ChannelOption<Boolean> TCP_FASTOPEN_CONNECT =
             valueOf(EpollChannelOption.class, "TCP_FASTOPEN_CONNECT");
     public static final ChannelOption<Integer> TCP_DEFER_ACCEPT =
             ChannelOption.valueOf(EpollChannelOption.class, "TCP_DEFER_ACCEPT");
     public static final ChannelOption<Boolean> TCP_QUICKACK = valueOf(EpollChannelOption.class, "TCP_QUICKACK");
+    public static final ChannelOption<Integer> SO_BUSY_POLL = valueOf(EpollChannelOption.class, "SO_BUSY_POLL");
 
     public static final ChannelOption<EpollMode> EPOLL_MODE =
             ChannelOption.valueOf(EpollChannelOption.class, "EPOLL_MODE");

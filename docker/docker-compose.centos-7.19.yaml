@@ -1,0 +1,22 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: netty:centos-7-1.9
+    build:
+      args:
+        centos_version : "7"
+        java_version : "openjdk@1.9.0-4"
+
+  test:
+    image: netty:centos-7-1.9
+
+  test-leak:
+    image: netty:centos-7-1.9
+
+  test-boringssl-static:
+    image: netty:centos-7-1.9
+
+  shell:
+    image: netty:centos-7-1.9

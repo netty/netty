@@ -15,15 +15,18 @@
  */
 package io.netty.handler.ssl;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.Assume;
+import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+import java.util.Collections;
+
+import static org.junit.Assert.*;
 
 public class SslContextBuilderTest {
 
@@ -69,6 +72,39 @@ public class SslContextBuilderTest {
     public void testServerContextOpenssl() throws Exception {
         Assume.assumeTrue(OpenSsl.isAvailable());
         testServerContext(SslProvider.OPENSSL);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testInvalidCipherJdk() throws Exception {
+        Assume.assumeTrue(OpenSsl.isAvailable());
+        testInvalidCipher(SslProvider.JDK);
+    }
+
+    @Test
+    public void testInvalidCipherOpenSSL() throws Exception {
+        Assume.assumeTrue(OpenSsl.isAvailable());
+        try {
+            // This may fail or not depending on the OpenSSL version used
+            // See https://github.com/openssl/openssl/issues/7196
+            testInvalidCipher(SslProvider.OPENSSL);
+            if (!OpenSsl.versionString().contains("1.1.1")) {
+                fail();
+            }
+        } catch (SSLException expected) {
+            // ok
+        }
+    }
+
+    private static void testInvalidCipher(SslProvider provider) throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SslContextBuilder builder = SslContextBuilder.forClient()
+                .sslProvider(provider)
+                .ciphers(Collections.singleton("SOME_INVALID_CIPHER"))
+                .keyManager(cert.certificate(),
+                        cert.privateKey())
+                .trustManager(cert.certificate());
+        SslContext context = builder.build();
+        context.newEngine(UnpooledByteBufAllocator.DEFAULT);
     }
 
     private static void testClientContextFromFile(SslProvider provider) throws Exception {

@@ -38,6 +38,7 @@
 #include <time.h>
 
 #include "netty_epoll_linuxsocket.h"
+#include "netty_unix_buffer.h"
 #include "netty_unix_errors.h"
 #include "netty_unix_filedescriptor.h"
 #include "netty_unix_jni.h"
@@ -65,11 +66,11 @@ struct mmsghdr {
 #endif
 
 // Those are initialized in the init(...) method and cached for performance reasons
-jfieldID packetAddrFieldId = NULL;
-jfieldID packetScopeIdFieldId = NULL;
-jfieldID packetPortFieldId = NULL;
-jfieldID packetMemoryAddressFieldId = NULL;
-jfieldID packetCountFieldId = NULL;
+static jfieldID packetAddrFieldId = NULL;
+static jfieldID packetScopeIdFieldId = NULL;
+static jfieldID packetPortFieldId = NULL;
+static jfieldID packetMemoryAddressFieldId = NULL;
+static jfieldID packetCountFieldId = NULL;
 
 // util methods
 static int getSysctlValue(const char * property, int* returnValue) {
@@ -181,13 +182,17 @@ static jint netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, j
             }
         } while((err = errno) == EINTR);
     } else {
-        struct itimerspec ts;
-        memset(&ts.it_interval, 0, sizeof(struct timespec));
-        ts.it_value.tv_sec = tvSec;
-        ts.it_value.tv_nsec = tvNsec;
-        if (timerfd_settime(timerFd, 0, &ts, NULL) < 0) {
-            netty_unix_errors_throwChannelExceptionErrorNo(env, "timerfd_settime() failed: ", errno);
-            return -1;
+        // only reschedule the timer if there is a newer event.
+        // -1 is a special value used by EpollEventLoop.
+        if (tvSec != ((jint) -1) && tvNsec != ((jint) -1)) {
+            struct itimerspec ts;
+            memset(&ts.it_interval, 0, sizeof(struct timespec));
+            ts.it_value.tv_sec = tvSec;
+            ts.it_value.tv_nsec = tvNsec;
+            if (timerfd_settime(timerFd, 0, &ts, NULL) < 0) {
+                netty_unix_errors_throwChannelExceptionErrorNo(env, "timerfd_settime() failed: ", errno);
+                return -1;
+            }
         }
         do {
             result = epoll_wait(efd, ev, len, -1);
@@ -205,6 +210,33 @@ static jint netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, j
             }
         } while((err = errno) == EINTR);
     }
+    return -err;
+}
+
+static inline void cpu_relax() {
+#if defined(__x86_64__)
+    asm volatile("pause\n": : :"memory");
+#endif
+}
+
+static jint netty_epoll_native_epollBusyWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len) {
+    struct epoll_event *ev = (struct epoll_event*) (intptr_t) address;
+    int result, err;
+
+    // Zeros = poll (aka return immediately).
+    do {
+        result = epoll_wait(efd, ev, len, 0);
+        if (result == 0) {
+            // Since we're always polling epoll_wait with no timeout,
+            // signal CPU that we're in a busy loop
+            cpu_relax();
+        }
+
+        if (result >= 0) {
+            return result;
+        }
+    } while((err = errno) == EINTR);
+
     return -err;
 }
 
@@ -382,6 +414,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "timerFdRead", "(I)V", (void *) netty_epoll_native_timerFdRead },
   { "epollCreate", "()I", (void *) netty_epoll_native_epollCreate },
   { "epollWait0", "(IJIIII)I", (void *) netty_epoll_native_epollWait0 },
+  { "epollBusyWait0", "(IJI)I", (void *) netty_epoll_native_epollBusyWait0 },
   { "epollCtlAdd0", "(III)I", (void *) netty_epoll_native_epollCtlAdd0 },
   { "epollCtlMod0", "(III)I", (void *) netty_epoll_native_epollCtlMod0 },
   { "epollCtlDel0", "(II)I", (void *) netty_epoll_native_epollCtlDel0 },
@@ -419,13 +452,20 @@ static void freeDynamicMethodsTable(JNINativeMethod* dynamicMethods) {
 // JNI Method Registration Table End
 
 static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
+    int limitsOnLoadCalled = 0;
+    int errorsOnLoadCalled = 0;
+    int filedescriptorOnLoadCalled = 0;
+    int socketOnLoadCalled = 0;
+    int bufferOnLoadCalled = 0;
+    int linuxsocketOnLoadCalled = 0;
+
     // We must register the statically referenced methods first!
     if (netty_unix_util_register_natives(env,
             packagePrefix,
             "io/netty/channel/epoll/NativeStaticallyReferencedJniMethods",
             statically_referenced_fixed_method_table,
             statically_referenced_fixed_method_table_size) != 0) {
-        return JNI_ERR;
+        goto error;
     }
     // Register the methods which are not referenced by static member variables
     JNINativeMethod* dynamicMethods = createDynamicMethodsTable(packagePrefix);
@@ -435,26 +475,40 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
             dynamicMethods,
             dynamicMethodsTableSize()) != 0) {
         freeDynamicMethodsTable(dynamicMethods);
-        return JNI_ERR;
+        goto error;
     }
     freeDynamicMethodsTable(dynamicMethods);
     dynamicMethods = NULL;
     // Load all c modules that we depend upon
     if (netty_unix_limits_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        return JNI_ERR;
+        goto error;
     }
+    limitsOnLoadCalled = 1;
+
     if (netty_unix_errors_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        return JNI_ERR;
+        goto error;
     }
+    errorsOnLoadCalled = 1;
+
     if (netty_unix_filedescriptor_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        return JNI_ERR;
+        goto error;
     }
+    filedescriptorOnLoadCalled = 1;
+
     if (netty_unix_socket_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        return JNI_ERR;
+        goto error;
     }
+    socketOnLoadCalled = 1;
+
+    if (netty_unix_buffer_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
+        goto error;
+    }
+    bufferOnLoadCalled = 1;
+
     if (netty_epoll_linuxsocket_JNI_OnLoad(env, packagePrefix) == JNI_ERR) {
-        return JNI_ERR;
+        goto error;
     }
+    linuxsocketOnLoadCalled = 1;
 
     // Initialize this module
     char* nettyClassName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket");
@@ -463,37 +517,64 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
     nettyClassName = NULL;
     if (nativeDatagramPacketCls == NULL) {
         // pending exception...
-        return JNI_ERR;
+        goto error;
     }
 
     packetAddrFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "addr", "[B");
     if (packetAddrFieldId == NULL) {
         netty_unix_errors_throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.addr");
-        return JNI_ERR;
+        goto error;
     }
     packetScopeIdFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "scopeId", "I");
     if (packetScopeIdFieldId == NULL) {
         netty_unix_errors_throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.scopeId");
-        return JNI_ERR;
+        goto error;
     }
     packetPortFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "port", "I");
     if (packetPortFieldId == NULL) {
         netty_unix_errors_throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.port");
-        return JNI_ERR;
+        goto error;
     }
     packetMemoryAddressFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "memoryAddress", "J");
     if (packetMemoryAddressFieldId == NULL) {
         netty_unix_errors_throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.memoryAddress");
-        return JNI_ERR;
+        goto error;
     }
 
     packetCountFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "count", "I");
     if (packetCountFieldId == NULL) {
         netty_unix_errors_throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.count");
-        return JNI_ERR;
+        goto error;
     }
 
     return NETTY_JNI_VERSION;
+
+error:
+   if (limitsOnLoadCalled == 1) {
+       netty_unix_limits_JNI_OnUnLoad(env);
+   }
+   if (errorsOnLoadCalled == 1) {
+       netty_unix_errors_JNI_OnUnLoad(env);
+   }
+   if (filedescriptorOnLoadCalled == 1) {
+       netty_unix_filedescriptor_JNI_OnUnLoad(env);
+   }
+   if (socketOnLoadCalled == 1) {
+       netty_unix_socket_JNI_OnUnLoad(env);
+   }
+   if (bufferOnLoadCalled == 1) {
+       netty_unix_buffer_JNI_OnUnLoad(env);
+   }
+   if (linuxsocketOnLoadCalled == 1) {
+       netty_epoll_linuxsocket_JNI_OnUnLoad(env);
+   }
+   packetAddrFieldId = NULL;
+   packetScopeIdFieldId = NULL;
+   packetPortFieldId = NULL;
+   packetMemoryAddressFieldId = NULL;
+   packetCountFieldId = NULL;
+
+   return JNI_ERR;
 }
 
 static void netty_epoll_native_JNI_OnUnLoad(JNIEnv* env) {
@@ -501,11 +582,18 @@ static void netty_epoll_native_JNI_OnUnLoad(JNIEnv* env) {
     netty_unix_errors_JNI_OnUnLoad(env);
     netty_unix_filedescriptor_JNI_OnUnLoad(env);
     netty_unix_socket_JNI_OnUnLoad(env);
+    netty_unix_buffer_JNI_OnUnLoad(env);
     netty_epoll_linuxsocket_JNI_OnUnLoad(env);
+
+    packetAddrFieldId = NULL;
+    packetScopeIdFieldId = NULL;
+    packetPortFieldId = NULL;
+    packetMemoryAddressFieldId = NULL;
+    packetCountFieldId = NULL;
 }
 
 // Invoked by the JVM when statically linked
-jint JNI_OnLoad_netty_transport_native_epoll(JavaVM* vm, void* reserved) {
+static jint JNI_OnLoad_netty_transport_native_epoll0(JavaVM* vm, void* reserved) {
     JNIEnv* env;
     if ((*vm)->GetEnv(vm, (void**) &env, NETTY_JNI_VERSION) != JNI_OK) {
         return JNI_ERR;
@@ -536,14 +624,7 @@ jint JNI_OnLoad_netty_transport_native_epoll(JavaVM* vm, void* reserved) {
     return ret;
 }
 
-#ifndef NETTY_BUILD_STATIC
-JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
-    return JNI_OnLoad_netty_transport_native_epoll(vm, reserved);
-}
-#endif /* NETTY_BUILD_STATIC */
-
-// Invoked by the JVM when statically linked
-void JNI_OnUnload_netty_transport_native_epoll(JavaVM* vm, void* reserved) {
+static void JNI_OnUnload_netty_transport_native_epoll0(JavaVM* vm, void* reserved) {
     JNIEnv* env;
     if ((*vm)->GetEnv(vm, (void**) &env, NETTY_JNI_VERSION) != JNI_OK) {
         // Something is wrong but nothing we can do about this :(
@@ -552,8 +633,25 @@ void JNI_OnUnload_netty_transport_native_epoll(JavaVM* vm, void* reserved) {
     netty_epoll_native_JNI_OnUnLoad(env);
 }
 
+// We build with -fvisibility=hidden so ensure we mark everything that needs to be visible with JNIEXPORT
+// http://mail.openjdk.java.net/pipermail/core-libs-dev/2013-February/014549.html
+
+// Invoked by the JVM when statically linked
+JNIEXPORT jint JNI_OnLoad_netty_transport_native_epoll(JavaVM* vm, void* reserved) {
+    return JNI_OnLoad_netty_transport_native_epoll0(vm, reserved);
+}
+
+// Invoked by the JVM when statically linked
+JNIEXPORT void JNI_OnUnload_netty_transport_native_epoll(JavaVM* vm, void* reserved) {
+    JNI_OnUnload_netty_transport_native_epoll0(vm, reserved);
+}
+
 #ifndef NETTY_BUILD_STATIC
+JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
+    return JNI_OnLoad_netty_transport_native_epoll0(vm, reserved);
+}
+
 JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved) {
-  JNI_OnUnload_netty_transport_native_epoll(vm, reserved);
+    JNI_OnUnload_netty_transport_native_epoll0(vm, reserved);
 }
 #endif /* NETTY_BUILD_STATIC */

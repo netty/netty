@@ -35,7 +35,9 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     }
 
     static long deadlineNanos(long delay) {
-        return nanoTime() + delay;
+        long deadlineNanos = nanoTime() + delay;
+        // Guard against overflow
+        return deadlineNanos < 0 ? Long.MAX_VALUE : deadlineNanos;
     }
 
     private final long id = nextTaskId.getAndIncrement();
@@ -151,6 +153,11 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @param mayInterruptIfRunning this value has no effect in this implementation.
+     */
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
         boolean canceled = super.cancel(mayInterruptIfRunning);

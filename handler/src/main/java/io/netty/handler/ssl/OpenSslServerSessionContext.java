@@ -25,8 +25,8 @@ import java.util.concurrent.locks.Lock;
  * {@link OpenSslSessionContext} implementation which offers extra methods which are only useful for the server-side.
  */
 public final class OpenSslServerSessionContext extends OpenSslSessionContext {
-    OpenSslServerSessionContext(ReferenceCountedOpenSslContext context) {
-        super(context);
+    OpenSslServerSessionContext(ReferenceCountedOpenSslContext context, OpenSslKeyMaterialProvider provider) {
+        super(context, provider);
     }
 
     @Override

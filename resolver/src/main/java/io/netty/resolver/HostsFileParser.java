@@ -23,12 +23,14 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -66,22 +68,35 @@ public final class HostsFileParser {
     }
 
     /**
-     * Parse hosts file at standard OS location.
+     * Parse hosts file at standard OS location using the systems default {@link Charset} for decoding.
      *
      * @return a {@link HostsFileEntries}
      */
     public static HostsFileEntries parseSilently() {
+        return parseSilently(Charset.defaultCharset());
+    }
+
+    /**
+     * Parse hosts file at standard OS location using the given {@link Charset}s one after each other until
+     * we were able to parse something or none is left.
+     *
+     * @param charsets the {@link Charset}s to try as file encodings when parsing.
+     * @return a {@link HostsFileEntries}
+     */
+    public static HostsFileEntries parseSilently(Charset... charsets) {
         File hostsFile = locateHostsFile();
         try {
-            return parse(hostsFile);
+            return parse(hostsFile, charsets);
         } catch (IOException e) {
-            logger.warn("Failed to load and parse hosts file at " + hostsFile.getPath(), e);
+            if (logger.isWarnEnabled()) {
+                logger.warn("Failed to load and parse hosts file at " + hostsFile.getPath(), e);
+            }
             return HostsFileEntries.EMPTY;
         }
     }
 
     /**
-     * Parse hosts file at standard OS location.
+     * Parse hosts file at standard OS location using the system default {@link Charset} for decoding.
      *
      * @return a {@link HostsFileEntries}
      * @throws IOException file could not be read
@@ -91,19 +106,37 @@ public final class HostsFileParser {
     }
 
     /**
-     * Parse a hosts file.
+     * Parse a hosts file using the system default {@link Charset} for decoding.
      *
      * @param file the file to be parsed
      * @return a {@link HostsFileEntries}
      * @throws IOException file could not be read
      */
     public static HostsFileEntries parse(File file) throws IOException {
+        return parse(file, Charset.defaultCharset());
+    }
+
+    /**
+     * Parse a hosts file.
+     *
+     * @param file the file to be parsed
+     * @param charsets the {@link Charset}s to try as file encodings when parsing.
+     * @return a {@link HostsFileEntries}
+     * @throws IOException file could not be read
+     */
+    public static HostsFileEntries parse(File file, Charset... charsets) throws IOException {
         checkNotNull(file, "file");
+        checkNotNull(charsets, "charsets");
         if (file.exists() && file.isFile()) {
-            return parse(new BufferedReader(new FileReader(file)));
-        } else {
-            return HostsFileEntries.EMPTY;
+            for (Charset charset: charsets) {
+                HostsFileEntries entries = parse(new BufferedReader(new InputStreamReader(
+                        new FileInputStream(file), charset)));
+                if (entries != HostsFileEntries.EMPTY) {
+                    return entries;
+                }
+            }
         }
+        return HostsFileEntries.EMPTY;
     }
 
     /**

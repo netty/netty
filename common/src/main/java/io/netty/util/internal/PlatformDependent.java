@@ -29,6 +29,7 @@ import org.jctools.util.Pow2;
 import org.jctools.util.UnsafeAccess;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -78,9 +79,8 @@ public final class PlatformDependent {
 
     private static final boolean CAN_ENABLE_TCP_NODELAY_BY_DEFAULT = !isAndroid();
 
-    private static final boolean HAS_UNSAFE = hasUnsafe0();
-    private static final boolean DIRECT_BUFFER_PREFERRED =
-            HAS_UNSAFE && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
+    private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE = unsafeUnavailabilityCause0();
+    private static final boolean DIRECT_BUFFER_PREFERRED;
     private static final long MAX_DIRECT_MEMORY = maxDirectMemory0();
 
     private static final int MPSC_CHUNK_SIZE =  1024;
@@ -128,20 +128,6 @@ public final class PlatformDependent {
                 }
             };
         }
-        if (logger.isDebugEnabled()) {
-            logger.debug("-Dio.netty.noPreferDirect: {}", !DIRECT_BUFFER_PREFERRED);
-        }
-
-        /*
-         * We do not want to log this message if unsafe is explicitly disabled. Do not remove the explicit no unsafe
-         * guard.
-         */
-        if (!hasUnsafe() && !isAndroid() && !PlatformDependent0.isExplicitNoUnsafe()) {
-            logger.info(
-                    "Your platform does not provide complete low-level API for accessing direct buffers reliably. " +
-                    "Unless explicitly requested, heap buffer will always be preferred to avoid potential system " +
-                    "instability.");
-        }
 
         // Here is how the system property is used:
         //
@@ -158,7 +144,7 @@ public final class PlatformDependent {
         } else {
             USE_DIRECT_BUFFER_NO_CLEANER = true;
             if (maxDirectMemory < 0) {
-                maxDirectMemory = maxDirectMemory0();
+                maxDirectMemory = MAX_DIRECT_MEMORY;
                 if (maxDirectMemory <= 0) {
                     DIRECT_MEMORY_COUNTER = null;
                 } else {
@@ -179,7 +165,7 @@ public final class PlatformDependent {
 
         MAYBE_SUPER_USER = maybeSuperUser0();
 
-        if (!isAndroid() && hasUnsafe()) {
+        if (!isAndroid()) {
             // only direct to method if we are not running on android.
             // See https://github.com/netty/netty/issues/2604
             if (javaVersion() >= 9) {
@@ -189,6 +175,24 @@ public final class PlatformDependent {
             }
         } else {
             CLEANER = NOOP;
+        }
+
+        // We should always prefer direct buffers by default if we can use a Cleaner to release direct buffers.
+        DIRECT_BUFFER_PREFERRED = CLEANER != NOOP
+                                  && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
+        if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty.noPreferDirect: {}", !DIRECT_BUFFER_PREFERRED);
+        }
+
+        /*
+         * We do not want to log this message if unsafe is explicitly disabled. Do not remove the explicit no unsafe
+         * guard.
+         */
+        if (CLEANER == NOOP && !PlatformDependent0.isExplicitNoUnsafe()) {
+            logger.info(
+                    "Your platform does not provide complete low-level API for accessing direct buffers reliably. " +
+                    "Unless explicitly requested, heap buffer will always be preferred to avoid potential system " +
+                    "instability.");
         }
     }
 
@@ -249,14 +253,14 @@ public final class PlatformDependent {
      * direct memory access.
      */
     public static boolean hasUnsafe() {
-        return HAS_UNSAFE;
+        return UNSAFE_UNAVAILABILITY_CAUSE == null;
     }
 
     /**
      * Return the reason (if any) why {@code sun.misc.Unsafe} was not available.
      */
     public static Throwable getUnsafeUnavailabilityCause() {
-        return PlatformDependent0.getUnsafeUnavailabilityCause();
+        return UNSAFE_UNAVAILABILITY_CAUSE;
     }
 
     /**
@@ -398,6 +402,10 @@ public final class PlatformDependent {
         }
         throw new UnsupportedOperationException(
                 "sun.misc.Unsafe or java.nio.DirectByteBuffer.<init>(long, int) not available");
+    }
+
+    public static Object getObject(Object object, long fieldOffset) {
+        return PlatformDependent0.getObject(object, fieldOffset);
     }
 
     public static int getInt(Object object, long fieldOffset) {
@@ -562,6 +570,14 @@ public final class PlatformDependent {
 
     public static void putLong(byte[] data, int index, long value) {
         PlatformDependent0.putLong(data, index, value);
+    }
+
+    public static void putObject(Object o, long offset, Object x) {
+        PlatformDependent0.putObject(o, offset, x);
+    }
+
+    public static long objectFieldOffset(Field field) {
+        return PlatformDependent0.objectFieldOffset(field);
     }
 
     public static void copyMemory(long srcAddr, long dstAddr, long length) {
@@ -965,36 +981,47 @@ public final class PlatformDependent {
         return "root".equals(username) || "toor".equals(username);
     }
 
-    private static boolean hasUnsafe0() {
+    private static Throwable unsafeUnavailabilityCause0() {
         if (isAndroid()) {
             logger.debug("sun.misc.Unsafe: unavailable (Android)");
-            return false;
+            return new UnsupportedOperationException("sun.misc.Unsafe: unavailable (Android)");
         }
-
-        if (PlatformDependent0.isExplicitNoUnsafe()) {
-            return false;
+        Throwable cause = PlatformDependent0.getUnsafeUnavailabilityCause();
+        if (cause != null) {
+            return cause;
         }
 
         try {
             boolean hasUnsafe = PlatformDependent0.hasUnsafe();
             logger.debug("sun.misc.Unsafe: {}", hasUnsafe ? "available" : "unavailable");
-            return hasUnsafe;
+            return hasUnsafe ? null : PlatformDependent0.getUnsafeUnavailabilityCause();
         } catch (Throwable t) {
             logger.trace("Could not determine if Unsafe is available", t);
             // Probably failed to initialize PlatformDependent0.
-            return false;
+            return new UnsupportedOperationException("Could not determine if Unsafe is available", t);
         }
     }
 
     private static long maxDirectMemory0() {
         long maxDirectMemory = 0;
+
         ClassLoader systemClassLoader = null;
         try {
-            // Try to get from sun.misc.VM.maxDirectMemory() which should be most accurate.
             systemClassLoader = getSystemClassLoader();
-            Class<?> vmClass = Class.forName("sun.misc.VM", true, systemClassLoader);
-            Method m = vmClass.getDeclaredMethod("maxDirectMemory");
-            maxDirectMemory = ((Number) m.invoke(null)).longValue();
+
+            // When using IBM J9 / Eclipse OpenJ9 we should not use VM.maxDirectMemory() as it not reflects the
+            // correct value.
+            // See:
+            //  - https://github.com/netty/netty/issues/7654
+            String vmName = SystemPropertyUtil.get("java.vm.name", "").toLowerCase();
+            if (!vmName.startsWith("ibm j9") &&
+                    // https://github.com/eclipse/openj9/blob/openj9-0.8.0/runtime/include/vendor_version.h#L53
+                    !vmName.startsWith("eclipse openj9")) {
+                // Try to get from sun.misc.VM.maxDirectMemory() which should be most accurate.
+                Class<?> vmClass = Class.forName("sun.misc.VM", true, systemClassLoader);
+                Method m = vmClass.getDeclaredMethod("maxDirectMemory");
+                maxDirectMemory = ((Number) m.invoke(null)).longValue();
+            }
         } catch (Throwable ignored) {
             // Ignore
         }

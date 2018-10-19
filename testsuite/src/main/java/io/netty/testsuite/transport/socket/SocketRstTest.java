@@ -90,7 +90,8 @@ public class SocketRstTest extends AbstractSocketTest {
         // Verify the client received a RST.
         Throwable cause = throwableRef.get();
         assertTrue("actual [type, message]: [" + cause.getClass() + ", " + cause.getMessage() + "]",
-                   cause instanceof IOException);
+                cause instanceof IOException);
+
         assertRstOnCloseException((IOException) cause, cc);
     }
 

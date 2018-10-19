@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.20.Final-SNAPSHOT</version>
+  <version>4.1.31.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -68,6 +68,60 @@
   </developers>
 
   <profiles>
+    <!-- JDK12 -->
+    <profile>
+      <id>java12</id>
+      <activation>
+        <jdk>12</jdk>
+      </activation>
+      <properties>
+        <!-- Not use alpn agent as Java11 supports alpn out of the box -->
+        <argLine.alpnAgent />
+        <forbiddenapis.skip>true</forbiddenapis.skip>
+        <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
+        <enforcer.plugin.version>3.0.0-M1</enforcer.plugin.version>
+        <!-- 1.4.x does not work in Java10+ -->
+        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
+        <!-- This is the minimum supported by Java12 -->
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.target>1.7</maven.compiler.target>
+      </properties>
+    </profile>
+
+    <!-- JDK11 -->
+    <profile>
+      <id>java11</id>
+      <activation>
+        <jdk>11</jdk>
+      </activation>
+      <properties>
+        <!-- Not use alpn agent as Java11 supports alpn out of the box -->
+        <argLine.alpnAgent />
+        <forbiddenapis.skip>true</forbiddenapis.skip>
+        <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
+        <enforcer.plugin.version>3.0.0-M1</enforcer.plugin.version>
+        <!-- 1.4.x does not work in Java10+ -->
+        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
+      </properties>
+    </profile>
+
+    <!-- JDK10 -->
+    <profile>
+      <id>java10</id>
+      <activation>
+        <jdk>10</jdk>
+      </activation>
+      <properties>
+        <!-- Not use alpn agent as Java10 supports alpn out of the box -->
+        <argLine.alpnAgent />
+        <forbiddenapis.skip>true</forbiddenapis.skip>
+        <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
+        <enforcer.plugin.version>3.0.0-M1</enforcer.plugin.version>
+        <!-- 1.4.x does not work in Java10+ -->
+        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
+      </properties>
+    </profile>
+
     <!-- JDK9 -->
     <profile>
       <id>java9</id>
@@ -78,7 +132,6 @@
         <!-- Not use alpn agent as Java9 supports alpn out of the box -->
         <argLine.alpnAgent />
         <!-- Skip as maven plugin not works with Java9 yet --> 
-        <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
         <enforcer.plugin.version>3.0.0-M1</enforcer.plugin.version>
@@ -103,7 +156,7 @@
     <profile>
       <id>noUnsafe</id>
       <properties>
-        <argLine.noUnsafe>-Dio.netty.noUnsafe</argLine.noUnsafe>
+        <argLine.noUnsafe>-Dio.netty.noUnsafe=true</argLine.noUnsafe>
       </properties>
     </profile>
     <profile>
@@ -169,16 +222,11 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>22</netty.build.version>
     <jboss.marshalling.version>1.4.11.Final</jboss.marshalling.version>
-    <jetty.alpnAgent.version>2.0.6</jetty.alpnAgent.version>
+    <jetty.alpnAgent.version>2.0.8</jetty.alpnAgent.version>
     <jetty.alpnAgent.path>"${settings.localRepository}"/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
     <argLine.common>
       -server
       -dsa -da -ea:io.netty...
-      -XX:+AggressiveOpts
-      -XX:+TieredCompilation
-      -XX:+UseBiasedLocking
-      -XX:+UseFastAccessorMethods
-      -XX:+OptimizeStringConcat
       -XX:+HeapDumpOnOutOfMemoryError
     </argLine.common>
     <!-- Default to ALPN. See forcenpn profile to force NPN -->
@@ -193,11 +241,11 @@
     <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
     <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
-    <tcnative.version>2.0.7.Final</tcnative.version>
+    <tcnative.version>2.0.18.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
-    <conscrypt.version>1.0.0.RC13</conscrypt.version>
+    <conscrypt.version>1.3.0</conscrypt.version>
     <conscrypt.classifier />
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
@@ -245,6 +293,7 @@
     <module>testsuite-autobahn</module>
     <module>testsuite-http2</module>
     <module>testsuite-osgi</module>
+    <module>testsuite-shading</module>
     <module>microbench</module>
     <module>bom</module>
   </modules>
@@ -255,6 +304,13 @@
         <groupId>${project.groupId}</groupId>
         <artifactId>netty-dev-tools</artifactId>
         <version>${project.version}</version>
+      </dependency>
+
+      <!-- Needed for java11 and later as javax.activation is not part of the JDK anymore -->
+      <dependency>
+        <groupId>com.sun.activation</groupId>
+        <artifactId>javax.activation</artifactId>
+        <version>1.2.0</version>
       </dependency>
 
       <!-- Byte code generator - completely optional -->
@@ -467,7 +523,7 @@
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
-        <version>2.7.2</version>
+        <version>2.18.3</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -576,7 +632,7 @@
       <extension>
         <groupId>kr.motd.maven</groupId>
         <artifactId>os-maven-plugin</artifactId>
-        <version>1.5.0.Final</version>
+        <version>1.6.0</version>
       </extension>
     </extensions>
 
@@ -602,10 +658,10 @@
                 </requireMavenVersion>
                 <requireProperty>
                   <regexMessage>
-                    x86_64 JDK must be used.
+                    x86_64/AARCH64 JDK must be used.
                   </regexMessage>
                   <property>os.detected.arch</property>
-                  <regex>^x86_64$</regex>
+                  <regex>^(x86_64|aarch_64)$</regex>
                 </requireProperty>
               </rules>
             </configuration>
@@ -666,6 +722,9 @@
             <ignore>java.nio.channels.SocketChannel</ignore>
             <ignore>java.net.StandardProtocolFamily</ignore>
             <ignore>java.nio.channels.spi.SelectorProvider</ignore>
+            <ignore>java.net.SocketOption</ignore> 
+            <ignore>java.net.StandardSocketOptions</ignore> 
+            <ignore>java.nio.channels.NetworkChannel</ignore>
 
             <!-- Self-signed certificate generation -->
             <ignore>sun.security.x509.AlgorithmId</ignore>
@@ -682,6 +741,7 @@
 
             <!-- SSLSession implementation -->
             <ignore>javax.net.ssl.SSLEngine</ignore>
+            <ignore>javax.net.ssl.ExtendedSSLSession</ignore>
             <ignore>javax.net.ssl.X509ExtendedTrustManager</ignore>
             <ignore>javax.net.ssl.SSLParameters</ignore>
             <ignore>javax.net.ssl.SNIServerName</ignore>
@@ -721,6 +781,9 @@
             <ignore>java.nio.file.Path</ignore>
             <ignore>java.io.File</ignore>
           </ignores>
+          <annotations>
+            <annotation>io.netty.util.internal.SuppressJava6Requirement</annotation>
+          </annotations>
         </configuration>
         <executions>
           <execution>
@@ -826,6 +889,8 @@
             </property>
           </properties>
           <jvm>${testJavaHome}/bin/java</jvm>
+           <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 --> 
+          <trimStackTrace>false</trimStackTrace>
         </configuration>
       </plugin>
       <!-- always produce osgi bundles -->

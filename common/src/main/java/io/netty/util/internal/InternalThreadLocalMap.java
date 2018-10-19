@@ -26,6 +26,7 @@ import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -44,6 +45,8 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     private static final int STRING_BUILDER_MAX_SIZE;
 
     public static final Object UNSET = new Object();
+
+    private BitSet cleanerFlags;
 
     static {
         STRING_BUILDER_INITIAL_SIZE =
@@ -254,10 +257,12 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
         return cache;
     }
 
+    @Deprecated
     public IntegerHolder counterHashCode() {
         return counterHashCode;
     }
 
+    @Deprecated
     public void setCounterHashCode(IntegerHolder counterHashCode) {
         this.counterHashCode = counterHashCode;
     }
@@ -330,5 +335,16 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     public boolean isIndexedVariableSet(int index) {
         Object[] lookup = indexedVariables;
         return index < lookup.length && lookup[index] != UNSET;
+    }
+
+    public boolean isCleanerFlagSet(int index) {
+        return cleanerFlags != null && cleanerFlags.get(index);
+    }
+
+    public void setCleanerFlag(int index) {
+        if (cleanerFlags == null) {
+            cleanerFlags = new BitSet();
+        }
+        cleanerFlags.set(index);
     }
 }

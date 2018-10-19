@@ -33,6 +33,9 @@ final class RedisConstants {
 
     static final int REDIS_MESSAGE_MAX_LENGTH = 512 * 1024 * 1024; // 512MB
 
+    // 64KB is max inline length of current Redis server implementation.
+    static final int REDIS_INLINE_MESSAGE_MAX_LENGTH = 64 * 1024;
+
     static final int POSITIVE_LONG_MAX_LENGTH = 19; // length of Long.MAX_VALUE
 
     static final int LONG_MAX_LENGTH = POSITIVE_LONG_MAX_LENGTH + 1; // +1 is sign

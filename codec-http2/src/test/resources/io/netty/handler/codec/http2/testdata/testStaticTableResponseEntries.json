@@ -1,0 +1,23 @@
+{
+  "header_blocks":
+  [
+    {
+      "headers": [
+        { ":status": "200" },
+        { ":status": "204" },
+        { ":status": "206" },
+        { ":status": "304" },
+        { ":status": "400" },
+        { ":status": "404" },
+        { ":status": "500" }
+      ],
+      "encoded": [
+        "8889 8a8b 8c8d 8e"
+      ],
+      "dynamic_table": [
+      ],
+      "table_size": 0
+    }
+  ]
+}
+

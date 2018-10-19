@@ -369,7 +369,8 @@ public class ResourceLeakDetector<T> {
             // be collected via the WeakReference.
             trackedHash = System.identityHashCode(referent);
             allLeaks.put(this, LeakEntry.INSTANCE);
-            headUpdater.set(this, Record.BOTTOM);
+            // Create a new Record so we always have the creation stacktrace included.
+            headUpdater.set(this, new Record(Record.BOTTOM));
             this.allLeaks = allLeaks;
         }
 

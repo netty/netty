@@ -15,7 +15,8 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.util.Recycler;
+import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.MathUtil;
 
 import java.util.AbstractList;
 import java.util.RandomAccess;
@@ -27,25 +28,80 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  */
 final class CodecOutputList extends AbstractList<Object> implements RandomAccess {
 
-    private static final Recycler<CodecOutputList> RECYCLER = new Recycler<CodecOutputList>() {
+    private static final CodecOutputListRecycler NOOP_RECYCLER = new CodecOutputListRecycler() {
         @Override
-        protected CodecOutputList newObject(Handle<CodecOutputList> handle) {
-            return new CodecOutputList(handle);
+        public void recycle(CodecOutputList object) {
+            // drop on the floor and let the GC handle it.
         }
     };
 
-    static CodecOutputList newInstance() {
-        return RECYCLER.get();
+    private static final FastThreadLocal<CodecOutputLists> CODEC_OUTPUT_LISTS_POOL =
+            new FastThreadLocal<CodecOutputLists>() {
+                @Override
+                protected CodecOutputLists initialValue() throws Exception {
+                    // 16 CodecOutputList per Thread are cached.
+                    return new CodecOutputLists(16);
+                }
+            };
+
+    private interface CodecOutputListRecycler {
+        void recycle(CodecOutputList codecOutputList);
     }
 
-    private final Recycler.Handle<CodecOutputList> handle;
+    private static final class CodecOutputLists implements CodecOutputListRecycler {
+        private final CodecOutputList[] elements;
+        private final int mask;
+
+        private int currentIdx;
+        private int count;
+
+        CodecOutputLists(int numElements) {
+            elements = new CodecOutputList[MathUtil.safeFindNextPositivePowerOfTwo(numElements)];
+            for (int i = 0; i < elements.length; ++i) {
+                // Size of 16 should be good enough for the majority of all users as an initial capacity.
+                elements[i] = new CodecOutputList(this, 16);
+            }
+            count = elements.length;
+            currentIdx = elements.length;
+            mask = elements.length - 1;
+        }
+
+        public CodecOutputList getOrCreate() {
+            if (count == 0) {
+                // Return a new CodecOutputList which will not be cached. We use a size of 4 to keep the overhead
+                // low.
+                return new CodecOutputList(NOOP_RECYCLER, 4);
+            }
+            --count;
+
+            int idx = (currentIdx - 1) & mask;
+            CodecOutputList list = elements[idx];
+            currentIdx = idx;
+            return list;
+        }
+
+        @Override
+        public void recycle(CodecOutputList codecOutputList) {
+            int idx = currentIdx;
+            elements[idx] = codecOutputList;
+            currentIdx = (idx + 1) & mask;
+            ++count;
+            assert count <= elements.length;
+        }
+    }
+
+    static CodecOutputList newInstance() {
+        return CODEC_OUTPUT_LISTS_POOL.get().getOrCreate();
+    }
+
+    private final CodecOutputListRecycler recycler;
     private int size;
-    // Size of 16 should be good enough for 99 % of all users.
-    private Object[] array = new Object[16];
+    private Object[] array;
     private boolean insertSinceRecycled;
 
-    private CodecOutputList(Recycler.Handle<CodecOutputList> handle) {
-        this.handle = handle;
+    private CodecOutputList(CodecOutputListRecycler recycler, int size) {
+        this.recycler = recycler;
+        array = new Object[size];
     }
 
     @Override
@@ -92,7 +148,7 @@ final class CodecOutputList extends AbstractList<Object> implements RandomAccess
             expandArray();
         }
 
-        if (index != size - 1) {
+        if (index != size) {
             System.arraycopy(array, index, array, index + 1, size - index);
         }
 
@@ -135,9 +191,10 @@ final class CodecOutputList extends AbstractList<Object> implements RandomAccess
         for (int i = 0 ; i < size; i ++) {
             array[i] = null;
         }
-        clear();
+        size = 0;
         insertSinceRecycled = false;
-        handle.recycle(this);
+
+        recycler.recycle(this);
     }
 
     /**

@@ -121,7 +121,8 @@ public interface ChannelConfig {
     ChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis);
 
     /**
-     * @deprecated Use {@link MaxMessagesRecvByteBufAllocator}
+     * @deprecated Use {@link MaxMessagesRecvByteBufAllocator} and
+     * {@link MaxMessagesRecvByteBufAllocator#maxMessagesPerRead()}.
      * <p>
      * Returns the maximum number of messages to read per read loop.
      * a {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object) channelRead()} event.
@@ -131,7 +132,8 @@ public interface ChannelConfig {
     int getMaxMessagesPerRead();
 
     /**
-     * @deprecated Use {@link MaxMessagesRecvByteBufAllocator}
+     * @deprecated Use {@link MaxMessagesRecvByteBufAllocator} and
+     * {@link MaxMessagesRecvByteBufAllocator#maxMessagesPerRead(int)}.
      * <p>
      * Sets the maximum number of messages to read per read loop.
      * If this value is greater than 1, an event loop might attempt to read multiple times to procure multiple messages.
@@ -195,21 +197,15 @@ public interface ChannelConfig {
     ChannelConfig setAutoRead(boolean autoRead);
 
     /**
-     * @deprecated  Auto close will be removed in a future release.
-     *
      * Returns {@code true} if and only if the {@link Channel} will be closed automatically and immediately on
-     * write failure.  The default is {@code false}.
+     * write failure. The default is {@code true}.
      */
-    @Deprecated
     boolean isAutoClose();
 
     /**
-     * @deprecated  Auto close will be removed in a future release.
-     *
      * Sets whether the {@link Channel} should be closed automatically and immediately on write failure.
-     * The default is {@code false}.
+     * The default is {@code true}.
      */
-    @Deprecated
     ChannelConfig setAutoClose(boolean autoClose);
 
     /**

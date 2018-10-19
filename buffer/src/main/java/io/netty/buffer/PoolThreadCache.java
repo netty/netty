@@ -27,6 +27,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Acts a Thread cache for allocations. This implementation is moduled after
@@ -54,6 +55,7 @@ final class PoolThreadCache {
     private final int numShiftsNormalDirect;
     private final int numShiftsNormalHeap;
     private final int freeSweepAllocationThreshold;
+    private final AtomicBoolean freed = new AtomicBoolean();
 
     private int allocations;
 
@@ -219,27 +221,42 @@ final class PoolThreadCache {
         }
     }
 
+    /// TODO: In the future when we move to Java9+ we should use java.lang.ref.Cleaner.
+    @Override
+    protected void finalize() throws Throwable {
+        try {
+            super.finalize();
+        } finally {
+            free();
+        }
+    }
+
     /**
      *  Should be called if the Thread that uses this cache is about to exist to release resources out of the cache
      */
     void free() {
-        int numFreed = free(tinySubPageDirectCaches) +
-                free(smallSubPageDirectCaches) +
-                free(normalDirectCaches) +
-                free(tinySubPageHeapCaches) +
-                free(smallSubPageHeapCaches) +
-                free(normalHeapCaches);
+        // As free() may be called either by the finalizer or by FastThreadLocal.onRemoval(...) we need to ensure
+        // we only call this one time.
+        if (freed.compareAndSet(false, true)) {
+            int numFreed = free(tinySubPageDirectCaches) +
+                    free(smallSubPageDirectCaches) +
+                    free(normalDirectCaches) +
+                    free(tinySubPageHeapCaches) +
+                    free(smallSubPageHeapCaches) +
+                    free(normalHeapCaches);
 
-        if (numFreed > 0 && logger.isDebugEnabled()) {
-            logger.debug("Freed {} thread-local buffer(s) from thread: {}", numFreed, Thread.currentThread().getName());
-        }
+            if (numFreed > 0 && logger.isDebugEnabled()) {
+                logger.debug("Freed {} thread-local buffer(s) from thread: {}", numFreed,
+                        Thread.currentThread().getName());
+            }
 
-        if (directArena != null) {
-            directArena.numThreadCaches.getAndDecrement();
-        }
+            if (directArena != null) {
+                directArena.numThreadCaches.getAndDecrement();
+            }
 
-        if (heapArena != null) {
-            heapArena.numThreadCaches.getAndDecrement();
+            if (heapArena != null) {
+                heapArena.numThreadCaches.getAndDecrement();
+            }
         }
     }
 

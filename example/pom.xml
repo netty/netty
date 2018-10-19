@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.20.Final-SNAPSHOT</version>
+    <version>4.1.31.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-example</artifactId>
@@ -138,6 +138,12 @@
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk15on</artifactId>
+    </dependency>
+
+    <!-- Needed on Java11 and later -->
+    <dependency>
+      <groupId>com.sun.activation</groupId>
+      <artifactId>javax.activation</artifactId>
     </dependency>
   </dependencies>
 

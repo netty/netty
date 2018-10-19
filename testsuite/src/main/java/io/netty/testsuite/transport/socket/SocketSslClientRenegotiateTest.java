@@ -40,7 +40,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import javax.net.ssl.SSLHandshakeException;
 import java.io.File;
 import java.nio.channels.ClosedChannelException;
 import java.security.cert.CertificateException;
@@ -49,7 +48,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.*;
+import javax.net.ssl.SSLHandshakeException;
+
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @RunWith(Parameterized.class)
 public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
@@ -79,7 +82,6 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         boolean hasOpenSsl = OpenSsl.isAvailable();
         if (hasOpenSsl) {
             OpenSslServerContext context = new OpenSslServerContext(CERT_FILE, KEY_FILE);
-            context.setRejectRemoteInitiatedRenegotiation(true);
             serverContexts.add(context);
         } else {
             logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
@@ -136,7 +138,8 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
             public void initChannel(Channel sch) throws Exception {
                 serverChannel = sch;
                 serverSslHandler = serverCtx.newHandler(sch.alloc());
-
+                // As we test renegotiation we should use a protocol that support it.
+                serverSslHandler.engine().setEnabledProtocols(new String[] { "TLSv1.2" });
                 sch.pipeline().addLast("ssl", serverSslHandler);
                 sch.pipeline().addLast("handler", serverHandler);
             }
@@ -148,7 +151,8 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
             public void initChannel(Channel sch) throws Exception {
                 clientChannel = sch;
                 clientSslHandler = clientCtx.newHandler(sch.alloc());
-
+                // As we test renegotiation we should use a protocol that support it.
+                clientSslHandler.engine().setEnabledProtocols(new String[] { "TLSv1.2" });
                 sch.pipeline().addLast("ssl", clientSslHandler);
                 sch.pipeline().addLast("handler", clientHandler);
             }
@@ -160,7 +164,8 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         Future<Channel> clientHandshakeFuture = clientSslHandler.handshakeFuture();
         clientHandshakeFuture.sync();
 
-        String renegotiation = "SSL_RSA_WITH_3DES_EDE_CBC_SHA";
+        String renegotiation = clientSslHandler.engine().getEnabledCipherSuites()[0];
+        // Use the first previous enabled ciphersuite and try to renegotiate.
         clientSslHandler.engine().setEnabledCipherSuites(new String[] { renegotiation });
         clientSslHandler.renegotiate().await();
         serverChannel.close().awaitUninterruptibly();

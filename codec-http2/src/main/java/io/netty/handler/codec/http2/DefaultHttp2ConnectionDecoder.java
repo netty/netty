@@ -158,12 +158,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
     void onGoAwayRead0(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData)
             throws Http2Exception {
-        if (connection.goAwayReceived() && connection.local().lastStreamKnownByPeer() < lastStreamId) {
-            throw connectionError(PROTOCOL_ERROR, "lastStreamId MUST NOT increase. Current value: %d new value: %d",
-                    connection.local().lastStreamKnownByPeer(), lastStreamId);
-        }
-        listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
         connection.goAwayReceived(lastStreamId, errorCode, debugData);
+        listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
     }
 
     void onUnknownFrame0(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
@@ -424,16 +420,16 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
 
         @Override
-        public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+        public void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
             // Send an ack back to the remote client.
             // Need to retain the buffer here since it will be released after the write completes.
-            encoder.writePing(ctx, true, data.retainedSlice(), ctx.newPromise());
+            encoder.writePing(ctx, true, data, ctx.newPromise());
 
             listener.onPingRead(ctx, data);
         }
 
         @Override
-        public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+        public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
             listener.onPingAckRead(ctx, data);
         }
 
@@ -535,12 +531,18 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 throw streamError(streamId, STREAM_CLOSED, "Received %s frame for an unknown stream %d",
                                   frameName, streamId);
             } else if (stream.isResetSent() || streamCreatedAfterGoAwaySent(streamId)) {
+                // If we have sent a reset stream it is assumed the stream will be closed after the write completes.
+                // If we have not sent a reset, but the stream was created after a GoAway this is not supported by
+                // DefaultHttp2Connection and if a custom Http2Connection is used it is assumed the lifetime is managed
+                // elsewhere so we don't close the stream or otherwise modify the stream's state.
+
                 if (logger.isInfoEnabled()) {
                     logger.info("{} ignoring {} frame for stream {} {}", ctx.channel(), frameName,
                             stream.isResetSent() ? "RST_STREAM sent." :
                                 ("Stream created after GOAWAY sent. Last known stream by peer " +
                                  connection.remote().lastStreamKnownByPeer()));
                 }
+
                 return true;
             }
             return false;
@@ -636,13 +638,13 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
 
         @Override
-        public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+        public void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
             verifyPrefaceReceived();
             internalFrameListener.onPingRead(ctx, data);
         }
 
         @Override
-        public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+        public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
             verifyPrefaceReceived();
             internalFrameListener.onPingAckRead(ctx, data);
         }

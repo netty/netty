@@ -21,8 +21,12 @@ import org.junit.Test;
 
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static org.junit.Assert.assertArrayEquals;
@@ -235,6 +239,42 @@ public class ByteBufUtilTest {
     }
 
     @Test
+    public void testWriteUsAsciiComposite() {
+        String usAscii = "NettyRocks";
+        ByteBuf buf = Unpooled.buffer(16);
+        buf.writeBytes(usAscii.getBytes(CharsetUtil.US_ASCII));
+        ByteBuf buf2 = Unpooled.compositeBuffer().addComponent(
+                Unpooled.buffer(8)).addComponent(Unpooled.buffer(24));
+        // write some byte so we start writing with an offset.
+        buf2.writeByte(1);
+        ByteBufUtil.writeAscii(buf2, usAscii);
+
+        // Skip the previously written byte.
+        assertEquals(buf, buf2.skipBytes(1));
+
+        buf.release();
+        buf2.release();
+    }
+
+    @Test
+    public void testWriteUsAsciiCompositeWrapped() {
+        String usAscii = "NettyRocks";
+        ByteBuf buf = Unpooled.buffer(16);
+        buf.writeBytes(usAscii.getBytes(CharsetUtil.US_ASCII));
+        ByteBuf buf2 = new WrappedCompositeByteBuf(Unpooled.compositeBuffer().addComponent(
+                Unpooled.buffer(8)).addComponent(Unpooled.buffer(24)));
+        // write some byte so we start writing with an offset.
+        buf2.writeByte(1);
+        ByteBufUtil.writeAscii(buf2, usAscii);
+
+        // Skip the previously written byte.
+        assertEquals(buf, buf2.skipBytes(1));
+
+        buf.release();
+        buf2.release();
+    }
+
+    @Test
     public void testWriteUtf8() {
         String usAscii = "Some UTF-8 like äÄ∏ŒŒ";
         ByteBuf buf = Unpooled.buffer(16);
@@ -243,6 +283,42 @@ public class ByteBufUtilTest {
         ByteBufUtil.writeUtf8(buf2, usAscii);
 
         assertEquals(buf, buf2);
+
+        buf.release();
+        buf2.release();
+    }
+
+    @Test
+    public void testWriteUtf8Composite() {
+        String utf8 = "Some UTF-8 like äÄ∏ŒŒ";
+        ByteBuf buf = Unpooled.buffer(16);
+        buf.writeBytes(utf8.getBytes(CharsetUtil.UTF_8));
+        ByteBuf buf2 = Unpooled.compositeBuffer().addComponent(
+                Unpooled.buffer(8)).addComponent(Unpooled.buffer(24));
+        // write some byte so we start writing with an offset.
+        buf2.writeByte(1);
+        ByteBufUtil.writeUtf8(buf2, utf8);
+
+        // Skip the previously written byte.
+        assertEquals(buf, buf2.skipBytes(1));
+
+        buf.release();
+        buf2.release();
+    }
+
+    @Test
+    public void testWriteUtf8CompositeWrapped() {
+        String utf8 = "Some UTF-8 like äÄ∏ŒŒ";
+        ByteBuf buf = Unpooled.buffer(16);
+        buf.writeBytes(utf8.getBytes(CharsetUtil.UTF_8));
+        ByteBuf buf2 = new WrappedCompositeByteBuf(Unpooled.compositeBuffer().addComponent(
+                Unpooled.buffer(8)).addComponent(Unpooled.buffer(24)));
+        // write some byte so we start writing with an offset.
+        buf2.writeByte(1);
+        ByteBufUtil.writeUtf8(buf2, utf8);
+
+        // Skip the previously written byte.
+        assertEquals(buf, buf2.skipBytes(1));
 
         buf.release();
         buf2.release();
@@ -263,6 +339,7 @@ public class ByteBufUtilTest {
         ByteBufUtil.writeUtf8(buf2, surrogateString);
 
         assertEquals(buf, buf2);
+        assertEquals(buf.readableBytes(), ByteBufUtil.utf8Bytes(surrogateString));
 
         buf.release();
         buf2.release();
@@ -281,6 +358,7 @@ public class ByteBufUtilTest {
         ByteBufUtil.writeUtf8(buf2, surrogateString);
 
         assertEquals(buf, buf2);
+        assertEquals(buf.readableBytes(), ByteBufUtil.utf8Bytes(surrogateString));
 
         buf.release();
         buf2.release();
@@ -299,6 +377,7 @@ public class ByteBufUtilTest {
         ByteBufUtil.writeUtf8(buf2, surrogateString);
 
         assertEquals(buf, buf2);
+        assertEquals(buf.readableBytes(), ByteBufUtil.utf8Bytes(surrogateString));
 
         buf.release();
         buf2.release();
@@ -318,6 +397,7 @@ public class ByteBufUtilTest {
         ByteBufUtil.writeUtf8(buf2, surrogateString);
 
         assertEquals(buf, buf2);
+        assertEquals(buf.readableBytes(), ByteBufUtil.utf8Bytes(surrogateString));
 
         buf.release();
         buf2.release();
@@ -337,7 +417,7 @@ public class ByteBufUtilTest {
         ByteBufUtil.writeUtf8(buf2, surrogateString);
 
         assertEquals(buf, buf2);
-
+        assertEquals(buf.readableBytes(), ByteBufUtil.utf8Bytes(surrogateString));
         buf.release();
         buf2.release();
     }
@@ -356,6 +436,7 @@ public class ByteBufUtilTest {
         ByteBufUtil.writeUtf8(buf2, surrogateString);
 
         assertEquals(buf, buf2);
+        assertEquals(buf.readableBytes(), ByteBufUtil.utf8Bytes(surrogateString));
 
         buf.release();
         buf2.release();
@@ -372,6 +453,7 @@ public class ByteBufUtilTest {
         ByteBufUtil.writeUtf8(buf2, surrogateString);
 
         assertEquals(buf, buf2);
+        assertEquals(buf.readableBytes(), ByteBufUtil.utf8Bytes(surrogateString));
 
         buf.release();
         buf2.release();
@@ -388,6 +470,7 @@ public class ByteBufUtilTest {
         ByteBufUtil.writeUtf8(buf2, surrogateString);
 
         assertEquals(buf, buf2);
+        assertEquals(buf.readableBytes(), ByteBufUtil.utf8Bytes(surrogateString));
 
         buf.release();
         buf2.release();
@@ -458,13 +541,13 @@ public class ByteBufUtilTest {
 
     @Test
     public void testIsTextWithUtf8() {
-        byte[][] validUtf8Bytes = new byte[][]{
+        byte[][] validUtf8Bytes = {
                 "netty".getBytes(CharsetUtil.UTF_8),
-                new byte[]{(byte) 0x24},
-                new byte[]{(byte) 0xC2, (byte) 0xA2},
-                new byte[]{(byte) 0xE2, (byte) 0x82, (byte) 0xAC},
-                new byte[]{(byte) 0xF0, (byte) 0x90, (byte) 0x8D, (byte) 0x88},
-                new byte[]{(byte) 0x24,
+                {(byte) 0x24},
+                {(byte) 0xC2, (byte) 0xA2},
+                {(byte) 0xE2, (byte) 0x82, (byte) 0xAC},
+                {(byte) 0xF0, (byte) 0x90, (byte) 0x8D, (byte) 0x88},
+                {(byte) 0x24,
                         (byte) 0xC2, (byte) 0xA2,
                         (byte) 0xE2, (byte) 0x82, (byte) 0xAC,
                         (byte) 0xF0, (byte) 0x90, (byte) 0x8D, (byte) 0x88} // multiple characters
@@ -472,18 +555,18 @@ public class ByteBufUtilTest {
         for (byte[] bytes : validUtf8Bytes) {
             assertIsText(bytes, true, CharsetUtil.UTF_8);
         }
-        byte[][] invalidUtf8Bytes = new byte[][]{
-                new byte[]{(byte) 0x80},
-                new byte[]{(byte) 0xF0, (byte) 0x82, (byte) 0x82, (byte) 0xAC}, // Overlong encodings
-                new byte[]{(byte) 0xC2},                                        // not enough bytes
-                new byte[]{(byte) 0xE2, (byte) 0x82},                           // not enough bytes
-                new byte[]{(byte) 0xF0, (byte) 0x90, (byte) 0x8D},              // not enough bytes
-                new byte[]{(byte) 0xC2, (byte) 0xC0},                           // not correct bytes
-                new byte[]{(byte) 0xE2, (byte) 0x82, (byte) 0xC0},              // not correct bytes
-                new byte[]{(byte) 0xF0, (byte) 0x90, (byte) 0x8D, (byte) 0xC0}, // not correct bytes
-                new byte[]{(byte) 0xC1, (byte) 0x80},                           // out of lower bound
-                new byte[]{(byte) 0xE0, (byte) 0x80, (byte) 0x80},              // out of lower bound
-                new byte[]{(byte) 0xED, (byte) 0xAF, (byte) 0x80}               // out of upper bound
+        byte[][] invalidUtf8Bytes = {
+                {(byte) 0x80},
+                {(byte) 0xF0, (byte) 0x82, (byte) 0x82, (byte) 0xAC}, // Overlong encodings
+                {(byte) 0xC2},                                        // not enough bytes
+                {(byte) 0xE2, (byte) 0x82},                           // not enough bytes
+                {(byte) 0xF0, (byte) 0x90, (byte) 0x8D},              // not enough bytes
+                {(byte) 0xC2, (byte) 0xC0},                           // not correct bytes
+                {(byte) 0xE2, (byte) 0x82, (byte) 0xC0},              // not correct bytes
+                {(byte) 0xF0, (byte) 0x90, (byte) 0x8D, (byte) 0xC0}, // not correct bytes
+                {(byte) 0xC1, (byte) 0x80},                           // out of lower bound
+                {(byte) 0xE0, (byte) 0x80, (byte) 0x80},              // out of lower bound
+                {(byte) 0xED, (byte) 0xAF, (byte) 0x80}               // out of upper bound
         };
         for (byte[] bytes : invalidUtf8Bytes) {
             assertIsText(bytes, false, CharsetUtil.UTF_8);
@@ -492,8 +575,8 @@ public class ByteBufUtilTest {
 
     @Test
     public void testIsTextWithoutOptimization() {
-        byte[] validBytes = new byte[]{(byte) 0x01, (byte) 0xD8, (byte) 0x37, (byte) 0xDC};
-        byte[] invalidBytes = new byte[]{(byte) 0x01, (byte) 0xD8};
+        byte[] validBytes = {(byte) 0x01, (byte) 0xD8, (byte) 0x37, (byte) 0xDC};
+        byte[] invalidBytes = {(byte) 0x01, (byte) 0xD8};
 
         assertIsText(validBytes, true, CharsetUtil.UTF_16LE);
         assertIsText(invalidBytes, false, CharsetUtil.UTF_16LE);
@@ -501,8 +584,8 @@ public class ByteBufUtilTest {
 
     @Test
     public void testIsTextWithAscii() {
-        byte[] validBytes = new byte[]{(byte) 0x00, (byte) 0x01, (byte) 0x37, (byte) 0x7F};
-        byte[] invalidBytes = new byte[]{(byte) 0x80, (byte) 0xFF};
+        byte[] validBytes = {(byte) 0x00, (byte) 0x01, (byte) 0x37, (byte) 0x7F};
+        byte[] invalidBytes = {(byte) 0x80, (byte) 0xFF};
 
         assertIsText(validBytes, true, CharsetUtil.US_ASCII);
         assertIsText(invalidBytes, false, CharsetUtil.US_ASCII);
@@ -513,21 +596,21 @@ public class ByteBufUtilTest {
         ByteBuf buffer = Unpooled.buffer();
         try {
             buffer.writeBytes(new byte[4]);
-            int[][] validIndexLengthPairs = new int[][] {
-                    new int[]{4, 0},
-                    new int[]{0, 4},
-                    new int[]{1, 3},
+            int[][] validIndexLengthPairs = {
+                    {4, 0},
+                    {0, 4},
+                    {1, 3},
             };
             for (int[] pair : validIndexLengthPairs) {
                 assertTrue(ByteBufUtil.isText(buffer, pair[0], pair[1], CharsetUtil.US_ASCII));
             }
-            int[][] invalidIndexLengthPairs = new int[][]{
-                    new int[]{4, 1},
-                    new int[]{-1, 2},
-                    new int[]{3, -1},
-                    new int[]{3, -2},
-                    new int[]{5, 0},
-                    new int[]{1, 5},
+            int[][] invalidIndexLengthPairs = {
+                    {4, 1},
+                    {-1, 2},
+                    {3, -1},
+                    {3, -2},
+                    {5, 0},
+                    {1, 5},
             };
             for (int[] pair : invalidIndexLengthPairs) {
                 try {
@@ -542,11 +625,87 @@ public class ByteBufUtilTest {
         }
     }
 
+    @Test
+    public void testUtf8Bytes() {
+        final String s = "Some UTF-8 like äÄ∏ŒŒ";
+        checkUtf8Bytes(s);
+    }
+
+    @Test
+    public void testUtf8BytesWithSurrogates() {
+        final String s = "a\uD800\uDC00b";
+        checkUtf8Bytes(s);
+    }
+
+    @Test
+    public void testUtf8BytesWithNonSurrogates3Bytes() {
+        final String s = "a\uE000b";
+        checkUtf8Bytes(s);
+    }
+
+    @Test
+    public void testUtf8BytesWithNonSurrogatesNonAscii() {
+        final char nonAscii = (char) 0x81;
+        final String s = "a" + nonAscii + "b";
+        checkUtf8Bytes(s);
+    }
+
+    private static void checkUtf8Bytes(final CharSequence charSequence) {
+        final ByteBuf buf = Unpooled.buffer(ByteBufUtil.utf8MaxBytes(charSequence));
+        try {
+            final int writtenBytes = ByteBufUtil.writeUtf8(buf, charSequence);
+            final int utf8Bytes = ByteBufUtil.utf8Bytes(charSequence);
+            assertEquals(writtenBytes, utf8Bytes);
+        } finally {
+            buf.release();
+        }
+    }
+
     private static void assertIsText(byte[] bytes, boolean expected, Charset charset) {
         ByteBuf buffer = Unpooled.buffer();
         try {
             buffer.writeBytes(bytes);
             assertEquals(expected, ByteBufUtil.isText(buffer, charset));
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testIsTextMultiThreaded() throws Throwable {
+        final ByteBuf buffer = Unpooled.copiedBuffer("Hello, World!", CharsetUtil.ISO_8859_1);
+
+        try {
+            final AtomicInteger counter = new AtomicInteger(60000);
+            final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
+            List<Thread> threads = new ArrayList<Thread>();
+            for (int i = 0; i < 10; i++) {
+                Thread thread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            while (errorRef.get() == null && counter.decrementAndGet() > 0) {
+                                assertTrue(ByteBufUtil.isText(buffer, CharsetUtil.ISO_8859_1));
+                            }
+                        } catch (Throwable cause) {
+                            errorRef.compareAndSet(null, cause);
+                        }
+                    }
+                });
+                threads.add(thread);
+            }
+            for (Thread thread : threads) {
+                thread.start();
+            }
+
+            for (Thread thread : threads) {
+                thread.join();
+            }
+
+            Throwable error = errorRef.get();
+            if (error != null) {
+                throw error;
+            }
         } finally {
             buffer.release();
         }

@@ -21,7 +21,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
@@ -29,6 +28,7 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.internal.ChannelUtils;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -46,7 +46,15 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
             StringUtil.simpleClassName(FileRegion.class) + ')';
 
-    private Runnable flushTask;
+    private final Runnable flushTask = new Runnable() {
+        @Override
+        public void run() {
+            // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
+            // meantime.
+            ((AbstractNioUnsafe) unsafe()).flush0();
+        }
+    };
+    private boolean inputClosedSeenErrorOnRead;
 
     /**
      * Create a new instance
@@ -77,17 +85,27 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         return METADATA;
     }
 
+    final boolean shouldBreakReadReady(ChannelConfig config) {
+        return isInputShutdown0() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
+    }
+
+    private static boolean isAllowHalfClosure(ChannelConfig config) {
+        return config instanceof SocketChannelConfig &&
+                ((SocketChannelConfig) config).isAllowHalfClosure();
+    }
+
     protected class NioByteUnsafe extends AbstractNioUnsafe {
 
         private void closeOnRead(ChannelPipeline pipeline) {
             if (!isInputShutdown0()) {
-                if (Boolean.TRUE.equals(config().getOption(ChannelOption.ALLOW_HALF_CLOSURE))) {
+                if (isAllowHalfClosure(config())) {
                     shutdownInput();
                     pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                 } else {
                     close(voidPromise());
                 }
             } else {
+                inputClosedSeenErrorOnRead = true;
                 pipeline.fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
             }
         }
@@ -113,6 +131,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         @Override
         public final void read() {
             final ChannelConfig config = config();
+            if (shouldBreakReadReady(config)) {
+                clearReadPending();
+                return;
+            }
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();
             final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
@@ -266,16 +288,13 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         if (setOpWrite) {
             setOpWrite();
         } else {
+            // It is possible that we have set the write OP, woken up by NIO because the socket is writable, and then
+            // use our write quantum. In this case we no longer want to set the write OP because the socket is still
+            // writable (as far as we know). We will find out next time we attempt to write if the socket is writable
+            // and set the write OP if necessary.
+            clearOpWrite();
+
             // Schedule flush again later so other tasks can be picked up in the meantime
-            Runnable flushTask = this.flushTask;
-            if (flushTask == null) {
-                flushTask = this.flushTask = new Runnable() {
-                    @Override
-                    public void run() {
-                        flush();
-                    }
-                };
-            }
             eventLoop().execute(flushTask);
         }
     }

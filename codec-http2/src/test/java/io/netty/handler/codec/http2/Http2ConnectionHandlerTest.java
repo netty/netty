@@ -189,6 +189,7 @@ public class Http2ConnectionHandlerTest {
         when(connection.stream(NON_EXISTANT_STREAM_ID)).thenReturn(null);
         when(connection.numActiveStreams()).thenReturn(1);
         when(connection.stream(STREAM_ID)).thenReturn(stream);
+        when(connection.goAwaySent(anyInt(), anyLong(), any(ByteBuf.class))).thenReturn(true);
         when(stream.open(anyBoolean())).thenReturn(stream);
         when(encoder.writeSettings(eq(ctx), any(Http2Settings.class), eq(promise))).thenReturn(future);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
@@ -638,6 +639,12 @@ public class Http2ConnectionHandlerTest {
 
         when(connection.goAwaySent()).thenReturn(true);
         when(remote.lastStreamKnownByPeer()).thenReturn(STREAM_ID);
+        doAnswer(new Answer<Boolean>() {
+            @Override
+            public Boolean answer(InvocationOnMock invocationOnMock) {
+                throw new IllegalStateException();
+            }
+        }).when(connection).goAwaySent(anyInt(), anyLong(), any(ByteBuf.class));
         handler.goAway(ctx, STREAM_ID + 2, errorCode, data, promise);
         assertTrue(promise.isDone());
         assertFalse(promise.isSuccess());

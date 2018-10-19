@@ -56,6 +56,10 @@ final class LinuxSocket extends Socket {
         setTcpCork(intValue(), tcpCork ? 1 : 0);
     }
 
+    void setSoBusyPoll(int loopMicros) throws IOException {
+        setSoBusyPoll(intValue(), loopMicros);
+    }
+
     void setTcpNotSentLowAt(long tcpNotSentLowAt) throws IOException {
         if (tcpNotSentLowAt < 0 || tcpNotSentLowAt > MAX_UINT32_T) {
             throw new IllegalArgumentException("tcpNotSentLowAt must be a uint32_t");
@@ -99,6 +103,10 @@ final class LinuxSocket extends Socket {
         setIpTransparent(intValue(), enabled ? 1 : 0);
     }
 
+    void setIpRecvOrigDestAddr(boolean enabled) throws IOException {
+        setIpRecvOrigDestAddr(intValue(), enabled ? 1 : 0);
+    }
+
     void getTcpInfo(EpollTcpInfo info) throws IOException {
         getTcpInfo(intValue(), info.info);
     }
@@ -110,6 +118,10 @@ final class LinuxSocket extends Socket {
 
     boolean isTcpCork() throws IOException  {
         return isTcpCork(intValue()) != 0;
+    }
+
+    int getSoBusyPoll() throws IOException  {
+        return getSoBusyPoll(intValue());
     }
 
     int getTcpDeferAccept() throws IOException {
@@ -148,6 +160,10 @@ final class LinuxSocket extends Socket {
         return isIpTransparent(intValue()) != 0;
     }
 
+    boolean isIpRecvOrigDestAddr() throws IOException {
+        return isIpRecvOrigDestAddr(intValue()) != 0;
+    }
+
     PeerCredentials getPeerCredentials() throws IOException {
         return getPeerCredentials(intValue());
     }
@@ -182,6 +198,7 @@ final class LinuxSocket extends Socket {
     private static native int getTcpDeferAccept(int fd) throws IOException;
     private static native int isTcpQuickAck(int fd) throws IOException;
     private static native int isTcpCork(int fd) throws IOException;
+    private static native int getSoBusyPoll(int fd) throws IOException;
     private static native int getTcpNotSentLowAt(int fd) throws IOException;
     private static native int getTcpKeepIdle(int fd) throws IOException;
     private static native int getTcpKeepIntvl(int fd) throws IOException;
@@ -189,6 +206,7 @@ final class LinuxSocket extends Socket {
     private static native int getTcpUserTimeout(int fd) throws IOException;
     private static native int isIpFreeBind(int fd) throws IOException;
     private static native int isIpTransparent(int fd) throws IOException;
+    private static native int isIpRecvOrigDestAddr(int fd) throws IOException;
     private static native void getTcpInfo(int fd, long[] array) throws IOException;
     private static native PeerCredentials getPeerCredentials(int fd) throws IOException;
     private static native int isTcpFastOpenConnect(int fd) throws IOException;
@@ -196,6 +214,7 @@ final class LinuxSocket extends Socket {
     private static native void setTcpDeferAccept(int fd, int deferAccept) throws IOException;
     private static native void setTcpQuickAck(int fd, int quickAck) throws IOException;
     private static native void setTcpCork(int fd, int tcpCork) throws IOException;
+    private static native void setSoBusyPoll(int fd, int loopMicros) throws IOException;
     private static native void setTcpNotSentLowAt(int fd, int tcpNotSentLowAt) throws IOException;
     private static native void setTcpFastOpen(int fd, int tcpFastopenBacklog) throws IOException;
     private static native void setTcpFastOpenConnect(int fd, int tcpFastOpenConnect) throws IOException;
@@ -205,5 +224,6 @@ final class LinuxSocket extends Socket {
     private static native void setTcpUserTimeout(int fd, int milliseconds)throws IOException;
     private static native void setIpFreeBind(int fd, int freeBind) throws IOException;
     private static native void setIpTransparent(int fd, int transparent) throws IOException;
+    private static native void setIpRecvOrigDestAddr(int fd, int transparent) throws IOException;
     private static native void setTcpMd5Sig(int fd, byte[] address, int scopeId, byte[] key) throws IOException;
 }

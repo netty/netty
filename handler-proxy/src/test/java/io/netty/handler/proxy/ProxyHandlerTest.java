@@ -35,6 +35,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.resolver.NoopAddressResolverGroup;
@@ -63,8 +64,8 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.Random;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
@@ -91,8 +92,8 @@ public class ProxyHandlerTest {
         SslContext cctx;
         try {
             SelfSignedCertificate ssc = new SelfSignedCertificate();
-            sctx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
-            cctx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+            sctx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+            cctx = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
         } catch (Exception e) {
             throw new Error(e);
         }
@@ -130,15 +131,27 @@ public class ProxyHandlerTest {
             deadSocks5Proxy, interSocks5Proxy, anonSocks5Proxy, socks5Proxy
     );
 
+    // set to non-zero value in case you need predictable shuffling of test cases
+    // look for "Seed used: *" debug message in test logs
+    private static final long reproducibleSeed = 0L;
+
     @Parameters(name = "{index}: {0}")
     public static List<Object[]> testItems() {
+
         List<TestItem> items = Arrays.asList(
 
                 // HTTP -------------------------------------------------------
 
                 new SuccessTestItem(
-                        "Anonymous HTTP proxy: successful connection",
+                        "Anonymous HTTP proxy: successful connection, AUTO_READ on",
                         DESTINATION,
+                        true,
+                        new HttpProxyHandler(anonHttpProxy.address())),
+
+                new SuccessTestItem(
+                        "Anonymous HTTP proxy: successful connection, AUTO_READ off",
+                        DESTINATION,
+                        false,
                         new HttpProxyHandler(anonHttpProxy.address())),
 
                 new FailureTestItem(
@@ -152,8 +165,15 @@ public class ProxyHandlerTest {
                         new HttpProxyHandler(httpProxy.address())),
 
                 new SuccessTestItem(
-                        "HTTP proxy: successful connection",
+                        "HTTP proxy: successful connection, AUTO_READ on",
                         DESTINATION,
+                        true,
+                        new HttpProxyHandler(httpProxy.address(), USERNAME, PASSWORD)),
+
+                new SuccessTestItem(
+                        "HTTP proxy: successful connection, AUTO_READ off",
+                        DESTINATION,
+                        false,
                         new HttpProxyHandler(httpProxy.address(), USERNAME, PASSWORD)),
 
                 new FailureTestItem(
@@ -173,8 +193,16 @@ public class ProxyHandlerTest {
                 // HTTPS ------------------------------------------------------
 
                 new SuccessTestItem(
-                        "Anonymous HTTPS proxy: successful connection",
+                        "Anonymous HTTPS proxy: successful connection, AUTO_READ on",
                         DESTINATION,
+                        true,
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(anonHttpsProxy.address())),
+
+                new SuccessTestItem(
+                        "Anonymous HTTPS proxy: successful connection, AUTO_READ off",
+                        DESTINATION,
+                        false,
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
                         new HttpProxyHandler(anonHttpsProxy.address())),
 
@@ -191,8 +219,16 @@ public class ProxyHandlerTest {
                         new HttpProxyHandler(httpsProxy.address())),
 
                 new SuccessTestItem(
-                        "HTTPS proxy: successful connection",
+                        "HTTPS proxy: successful connection, AUTO_READ on",
                         DESTINATION,
+                        true,
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(httpsProxy.address(), USERNAME, PASSWORD)),
+
+                new SuccessTestItem(
+                        "HTTPS proxy: successful connection, AUTO_READ off",
+                        DESTINATION,
+                        false,
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
                         new HttpProxyHandler(httpsProxy.address(), USERNAME, PASSWORD)),
 
@@ -216,8 +252,15 @@ public class ProxyHandlerTest {
                 // SOCKS4 -----------------------------------------------------
 
                 new SuccessTestItem(
-                        "Anonymous SOCKS4: successful connection",
+                        "Anonymous SOCKS4: successful connection, AUTO_READ on",
                         DESTINATION,
+                        true,
+                        new Socks4ProxyHandler(anonSocks4Proxy.address())),
+
+                new SuccessTestItem(
+                        "Anonymous SOCKS4: successful connection, AUTO_READ off",
+                        DESTINATION,
+                        false,
                         new Socks4ProxyHandler(anonSocks4Proxy.address())),
 
                 new FailureTestItem(
@@ -231,8 +274,15 @@ public class ProxyHandlerTest {
                         new Socks4ProxyHandler(socks4Proxy.address())),
 
                 new SuccessTestItem(
-                        "SOCKS4: successful connection",
+                        "SOCKS4: successful connection, AUTO_READ on",
                         DESTINATION,
+                        true,
+                        new Socks4ProxyHandler(socks4Proxy.address(), USERNAME)),
+
+                new SuccessTestItem(
+                        "SOCKS4: successful connection, AUTO_READ off",
+                        DESTINATION,
+                        false,
                         new Socks4ProxyHandler(socks4Proxy.address(), USERNAME)),
 
                 new FailureTestItem(
@@ -252,8 +302,15 @@ public class ProxyHandlerTest {
                 // SOCKS5 -----------------------------------------------------
 
                 new SuccessTestItem(
-                        "Anonymous SOCKS5: successful connection",
+                        "Anonymous SOCKS5: successful connection, AUTO_READ on",
                         DESTINATION,
+                        true,
+                        new Socks5ProxyHandler(anonSocks5Proxy.address())),
+
+                new SuccessTestItem(
+                        "Anonymous SOCKS5: successful connection, AUTO_READ off",
+                        DESTINATION,
+                        false,
                         new Socks5ProxyHandler(anonSocks5Proxy.address())),
 
                 new FailureTestItem(
@@ -267,8 +324,15 @@ public class ProxyHandlerTest {
                         new Socks5ProxyHandler(socks5Proxy.address())),
 
                 new SuccessTestItem(
-                        "SOCKS5: successful connection",
+                        "SOCKS5: successful connection, AUTO_READ on",
                         DESTINATION,
+                        true,
+                        new Socks5ProxyHandler(socks5Proxy.address(), USERNAME, PASSWORD)),
+
+                new SuccessTestItem(
+                        "SOCKS5: successful connection, AUTO_READ off",
+                        DESTINATION,
+                        false,
                         new Socks5ProxyHandler(socks5Proxy.address(), USERNAME, PASSWORD)),
 
                 new FailureTestItem(
@@ -288,8 +352,20 @@ public class ProxyHandlerTest {
                 // HTTP + HTTPS + SOCKS4 + SOCKS5
 
                 new SuccessTestItem(
-                        "Single-chain: successful connection",
+                        "Single-chain: successful connection, AUTO_READ on",
                         DESTINATION,
+                        true,
+                        new Socks5ProxyHandler(interSocks5Proxy.address()), // SOCKS5
+                        new Socks4ProxyHandler(interSocks4Proxy.address()), // SOCKS4
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(interHttpsProxy.address()), // HTTPS
+                        new HttpProxyHandler(interHttpProxy.address()), // HTTP
+                        new HttpProxyHandler(anonHttpProxy.address())),
+
+                new SuccessTestItem(
+                        "Single-chain: successful connection, AUTO_READ off",
+                        DESTINATION,
+                        false,
                         new Socks5ProxyHandler(interSocks5Proxy.address()), // SOCKS5
                         new Socks4ProxyHandler(interSocks4Proxy.address()), // SOCKS4
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
@@ -300,8 +376,25 @@ public class ProxyHandlerTest {
                 // (HTTP + HTTPS + SOCKS4 + SOCKS5) * 2
 
                 new SuccessTestItem(
-                        "Double-chain: successful connection",
+                        "Double-chain: successful connection, AUTO_READ on",
                         DESTINATION,
+                        true,
+                        new Socks5ProxyHandler(interSocks5Proxy.address()), // SOCKS5
+                        new Socks4ProxyHandler(interSocks4Proxy.address()), // SOCKS4
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(interHttpsProxy.address()), // HTTPS
+                        new HttpProxyHandler(interHttpProxy.address()), // HTTP
+                        new Socks5ProxyHandler(interSocks5Proxy.address()), // SOCKS5
+                        new Socks4ProxyHandler(interSocks4Proxy.address()), // SOCKS4
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(interHttpsProxy.address()), // HTTPS
+                        new HttpProxyHandler(interHttpProxy.address()), // HTTP
+                        new HttpProxyHandler(anonHttpProxy.address())),
+
+                new SuccessTestItem(
+                        "Double-chain: successful connection, AUTO_READ off",
+                        DESTINATION,
+                        false,
                         new Socks5ProxyHandler(interSocks5Proxy.address()), // SOCKS5
                         new Socks4ProxyHandler(interSocks4Proxy.address()), // SOCKS4
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
@@ -313,7 +406,6 @@ public class ProxyHandlerTest {
                         new HttpProxyHandler(interHttpsProxy.address()), // HTTPS
                         new HttpProxyHandler(interHttpProxy.address()), // HTTP
                         new HttpProxyHandler(anonHttpProxy.address()))
-
         );
 
         // Convert the test items to the list of constructor parameters.
@@ -323,7 +415,9 @@ public class ProxyHandlerTest {
         }
 
         // Randomize the execution order to increase the possibility of exposing failure dependencies.
-        Collections.shuffle(params);
+        long seed = (reproducibleSeed == 0L) ? System.currentTimeMillis() : reproducibleSeed;
+        logger.debug("Seed used: {}\n", seed);
+        Collections.shuffle(params, new Random(seed));
 
         return params;
     }
@@ -337,9 +431,7 @@ public class ProxyHandlerTest {
 
     private final TestItem testItem;
 
-    public ProxyHandlerTest(TestItem testItem) {
-        this.testItem = testItem;
-    }
+    public ProxyHandlerTest(TestItem testItem) { this.testItem = testItem; }
 
     @Before
     public void clearServerExceptions() throws Exception {
@@ -516,8 +608,16 @@ public class ProxyHandlerTest {
     private static final class SuccessTestItem extends TestItem {
 
         private final int expectedEventCount;
+        // Probably we need to be more flexible here and as for the configuration map,
+        // not a single key. But as far as it works for now, I'm leaving the impl.
+        // as is, in case we need to cover more cases (like, AUTO_CLOSE, TCP_NODELAY etc)
+        // feel free to replace this boolean with either config or method to setup bootstrap
+        private final boolean autoRead;
 
-        SuccessTestItem(String name, InetSocketAddress destination, ChannelHandler... clientHandlers) {
+        SuccessTestItem(String name,
+                        InetSocketAddress destination,
+                        boolean autoRead,
+                        ChannelHandler... clientHandlers) {
             super(name, destination, clientHandlers);
             int expectedEventCount = 0;
             for (ChannelHandler h: clientHandlers) {
@@ -527,6 +627,7 @@ public class ProxyHandlerTest {
             }
 
             this.expectedEventCount = expectedEventCount;
+            this.autoRead = autoRead;
         }
 
         @Override
@@ -535,7 +636,7 @@ public class ProxyHandlerTest {
             Bootstrap b = new Bootstrap();
             b.group(group);
             b.channel(NioSocketChannel.class);
-            b.option(ChannelOption.AUTO_READ, ThreadLocalRandom.current().nextBoolean());
+            b.option(ChannelOption.AUTO_READ, this.autoRead);
             b.resolver(NoopAddressResolverGroup.INSTANCE);
             b.handler(new ChannelInitializer<SocketChannel>() {
                 @Override

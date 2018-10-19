@@ -48,11 +48,25 @@ final class Java8SslUtils {
     }
 
     static void setSniHostNames(SSLParameters sslParameters, List<String> names) {
+        sslParameters.setServerNames(getSniHostNames(names));
+    }
+
+    static List getSniHostNames(List<String> names) {
+        if (names == null || names.isEmpty()) {
+            return Collections.emptyList();
+        }
         List<SNIServerName> sniServerNames = new ArrayList<SNIServerName>(names.size());
         for (String name: names) {
             sniServerNames.add(new SNIHostName(name));
         }
-        sslParameters.setServerNames(sniServerNames);
+        return sniServerNames;
+    }
+
+    static List getSniHostName(byte[] hostname) {
+        if (hostname == null || hostname.length == 0) {
+            return Collections.emptyList();
+        }
+        return Collections.singletonList(new SNIHostName(hostname));
     }
 
     static boolean getUseCipherSuitesOrder(SSLParameters sslParameters) {
@@ -69,7 +83,7 @@ final class Java8SslUtils {
     }
 
     @SuppressWarnings("unchecked")
-    static boolean checkSniHostnameMatch(Collection<?> matchers, String hostname) {
+    static boolean checkSniHostnameMatch(Collection<?> matchers, byte[] hostname) {
         if (matchers != null && !matchers.isEmpty()) {
             SNIHostName name = new SNIHostName(hostname);
             Iterator<SNIMatcher> matcherIt = (Iterator<SNIMatcher>) matchers.iterator();

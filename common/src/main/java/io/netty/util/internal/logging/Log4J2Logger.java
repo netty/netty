@@ -21,15 +21,42 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.spi.ExtendedLogger;
 import org.apache.logging.log4j.spi.ExtendedLoggerWrapper;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+
+import static io.netty.util.internal.logging.AbstractInternalLogger.EXCEPTION_MESSAGE;
+
 class Log4J2Logger extends ExtendedLoggerWrapper implements InternalLogger {
 
     private static final long serialVersionUID = 5485418394879791397L;
+    private static final boolean VARARGS_ONLY;
 
-    /** {@linkplain AbstractInternalLogger#EXCEPTION_MESSAGE} */
-    private static final String EXCEPTION_MESSAGE = "Unexpected exception:";
+    static {
+        // Older Log4J2 versions have only log methods that takes the format + varargs. So we should not use
+        // Log4J2 if the version is too old.
+        // See https://github.com/netty/netty/issues/8217
+        VARARGS_ONLY = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+            @Override
+            public Boolean run() {
+                try {
+                    Logger.class.getMethod("debug", String.class, Object.class);
+                    return false;
+                } catch (NoSuchMethodException ignore) {
+                    // Log4J2 version too old.
+                    return true;
+                } catch (SecurityException ignore) {
+                    // We could not detect the version so we will use Log4J2 if its on the classpath.
+                    return false;
+                }
+            }
+        });
+    }
 
     Log4J2Logger(Logger logger) {
         super((ExtendedLogger) logger, logger.getName(), logger.getMessageFactory());
+        if (VARARGS_ONLY) {
+            throw new UnsupportedOperationException("Log4J2 version mismatch");
+        }
     }
 
     @Override
@@ -97,7 +124,7 @@ class Log4J2Logger extends ExtendedLoggerWrapper implements InternalLogger {
         log(toLevel(level), EXCEPTION_MESSAGE, t);
     }
 
-    protected Level toLevel(InternalLogLevel level) {
+    private static Level toLevel(InternalLogLevel level) {
         switch (level) {
             case INFO:
                 return Level.INFO;

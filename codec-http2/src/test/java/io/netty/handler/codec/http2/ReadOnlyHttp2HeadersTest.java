@@ -22,12 +22,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-import static io.netty.handler.codec.http2.DefaultHttp2HeadersTest.verifyPseudoHeadersFirst;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static io.netty.handler.codec.http2.DefaultHttp2HeadersTest.*;
+import static org.junit.Assert.*;
 
 public class ReadOnlyHttp2HeadersTest {
     @Test(expected = IllegalArgumentException.class)
@@ -139,7 +135,10 @@ public class ReadOnlyHttp2HeadersTest {
     @Test
     public void testContainsNameAndValue() {
         Http2Headers headers = newClientHeaders();
-        assertTrue(headers.contains("Name1", "Value1"));
+        assertTrue(headers.contains("Name1", "value1"));
+        assertFalse(headers.contains("Name1", "Value1"));
+        assertTrue(headers.contains("name2", "Value2", true));
+        assertFalse(headers.contains("name2", "Value2", false));
         assertTrue(headers.contains(Http2Headers.PseudoHeaderName.PATH.value(), "/foo"));
         assertFalse(headers.contains(Http2Headers.PseudoHeaderName.STATUS.value(), "200"));
         assertFalse(headers.contains("a missing header", "a missing value"));

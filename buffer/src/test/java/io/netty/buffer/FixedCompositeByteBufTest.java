@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -27,7 +28,6 @@ import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
 import static io.netty.buffer.Unpooled.*;
-import static io.netty.util.ReferenceCountUtil.*;
 import static org.junit.Assert.*;
 
 public class FixedCompositeByteBufTest {
@@ -377,5 +377,79 @@ public class FixedCompositeByteBufTest {
     public void testEmptyArray() {
         ByteBuf buf = newBuffer(new ByteBuf[0]);
         buf.release();
+    }
+
+    @Test
+    public void testHasMemoryAddressWithSingleBuffer() {
+        ByteBuf buf1 = directBuffer(10);
+        if (!buf1.hasMemoryAddress()) {
+            buf1.release();
+            return;
+        }
+        ByteBuf buf = newBuffer(buf1);
+        assertTrue(buf.hasMemoryAddress());
+        assertEquals(buf1.memoryAddress(), buf.memoryAddress());
+        buf.release();
+    }
+
+    @Test
+    public void testHasMemoryAddressWhenEmpty() {
+        Assume.assumeTrue(EMPTY_BUFFER.hasMemoryAddress());
+        ByteBuf buf = newBuffer(new ByteBuf[0]);
+        assertTrue(buf.hasMemoryAddress());
+        assertEquals(EMPTY_BUFFER.memoryAddress(), buf.memoryAddress());
+        buf.release();
+    }
+
+    @Test
+    public void testHasNoMemoryAddressWhenMultipleBuffers() {
+        ByteBuf buf1 = directBuffer(10);
+        if (!buf1.hasMemoryAddress()) {
+            buf1.release();
+            return;
+        }
+
+        ByteBuf buf2 = directBuffer(10);
+        ByteBuf buf = newBuffer(buf1, buf2);
+        assertFalse(buf.hasMemoryAddress());
+        try {
+            buf.memoryAddress();
+            fail();
+        } catch (UnsupportedOperationException expected) {
+            // expected
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    public void testHasArrayWithSingleBuffer() {
+        ByteBuf buf1 = buffer(10);
+        ByteBuf buf = newBuffer(buf1);
+        assertTrue(buf.hasArray());
+        assertArrayEquals(buf1.array(), buf.array());
+        buf.release();
+    }
+
+    @Test
+    public void testHasArrayWhenEmpty() {
+        ByteBuf buf = newBuffer(new ByteBuf[0]);
+        assertTrue(buf.hasArray());
+        assertArrayEquals(EMPTY_BUFFER.array(), buf.array());
+        buf.release();
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testHasNoArrayWhenMultipleBuffers() {
+        ByteBuf buf1 = buffer(10);
+        ByteBuf buf2 = buffer(10);
+        ByteBuf buf = newBuffer(buf1, buf2);
+        assertFalse(buf.hasArray());
+        try {
+            buf.array();
+            fail();
+        } finally {
+            buf.release();
+        }
     }
 }

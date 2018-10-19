@@ -15,7 +15,6 @@
  */
 package io.netty.util;
 
-import io.netty.util.ByteProcessor.IndexOfProcessor;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
@@ -673,44 +672,35 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @throws NullPointerException if {@code subString} is {@code null}.
      */
     public int indexOf(CharSequence subString, int start) {
+        final int subCount = subString.length();
         if (start < 0) {
             start = 0;
         }
-
-        final int thisLen = length();
-
-        int subCount = subString.length();
         if (subCount <= 0) {
-            return start < thisLen ? start : thisLen;
+            return start < length ? start : length;
         }
-        if (subCount > thisLen - start) {
-            return -1;
+        if (subCount > length - start) {
+            return INDEX_NOT_FOUND;
         }
 
         final char firstChar = subString.charAt(0);
         if (firstChar > MAX_CHAR_VALUE) {
-            return -1;
+            return INDEX_NOT_FOUND;
         }
-        ByteProcessor IndexOfVisitor = new IndexOfProcessor((byte) firstChar);
-        try {
-            for (;;) {
-                int i = forEachByte(start, thisLen - start, IndexOfVisitor);
-                if (i == -1 || subCount + i > thisLen) {
-                    return -1; // handles subCount > count || start >= count
-                }
+        final byte firstCharAsByte = c2b0(firstChar);
+        final int len = offset + length - subCount;
+        for (int i = start + offset; i <= len; ++i) {
+            if (value[i] == firstCharAsByte) {
                 int o1 = i, o2 = 0;
-                while (++o2 < subCount && b2c(value[++o1 + arrayOffset()]) == subString.charAt(o2)) {
+                while (++o2 < subCount && b2c(value[++o1]) == subString.charAt(o2)) {
                     // Intentionally empty
                 }
                 if (o2 == subCount) {
-                    return i;
+                    return i - offset;
                 }
-                start = i + 1;
             }
-        } catch (Exception e) {
-            PlatformDependent.throwException(e);
-            return -1;
         }
+        return INDEX_NOT_FOUND;
     }
 
     /**
@@ -723,22 +713,22 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * -1 if found no occurrence.
      */
     public int indexOf(char ch, int start) {
+        if (ch > MAX_CHAR_VALUE) {
+            return INDEX_NOT_FOUND;
+        }
+
         if (start < 0) {
             start = 0;
         }
 
-        final int thisLen = length();
-
-        if (ch > MAX_CHAR_VALUE) {
-            return -1;
+        final byte chAsByte = c2b0(ch);
+        final int len = offset + length;
+        for (int i = start + offset; i < len; ++i) {
+            if (value[i] == chAsByte) {
+                return i - offset;
+            }
         }
-
-        try {
-            return forEachByte(start, thisLen - start, new IndexOfProcessor((byte) ch));
-        } catch (Exception e) {
-            PlatformDependent.throwException(e);
-            return -1;
-        }
+        return INDEX_NOT_FOUND;
     }
 
     /**
@@ -766,44 +756,35 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @throws NullPointerException if {@code subString} is {@code null}.
      */
     public int lastIndexOf(CharSequence subString, int start) {
-        final int thisLen = length();
         final int subCount = subString.length();
-
-        if (subCount > thisLen || start < 0) {
-            return -1;
+        if (start < 0) {
+            start = 0;
         }
-
         if (subCount <= 0) {
-            return start < thisLen ? start : thisLen;
+            return start < length ? start : length;
+        }
+        if (subCount > length - start) {
+            return INDEX_NOT_FOUND;
         }
 
-        start = Math.min(start, thisLen - subCount);
-
-        // count and subCount are both >= 1
         final char firstChar = subString.charAt(0);
         if (firstChar > MAX_CHAR_VALUE) {
-            return -1;
+            return INDEX_NOT_FOUND;
         }
-        ByteProcessor IndexOfVisitor = new IndexOfProcessor((byte) firstChar);
-        try {
-            for (;;) {
-                int i = forEachByteDesc(start, thisLen - start, IndexOfVisitor);
-                if (i == -1) {
-                    return -1;
-                }
+        final byte firstCharAsByte = c2b0(firstChar);
+        final int end = offset + start;
+        for (int i = offset + length - subCount; i >= end; --i) {
+            if (value[i] == firstCharAsByte) {
                 int o1 = i, o2 = 0;
-                while (++o2 < subCount && b2c(value[++o1 + arrayOffset()]) == subString.charAt(o2)) {
+                while (++o2 < subCount && b2c(value[++o1]) == subString.charAt(o2)) {
                     // Intentionally empty
                 }
                 if (o2 == subCount) {
-                    return i;
+                    return i - offset;
                 }
-                start = i - 1;
             }
-        } catch (Exception e) {
-            PlatformDependent.throwException(e);
-            return -1;
         }
+        return INDEX_NOT_FOUND;
     }
 
     /**
@@ -895,29 +876,23 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return this;
         }
 
-        final int index;
-        final byte oldCharByte = c2b(oldChar);
-        try {
-            index = forEachByte(new IndexOfProcessor(oldCharByte));
-        } catch (Exception e) {
-            PlatformDependent.throwException(e);
-            return this;
-        }
-        if (index == -1) {
-            return this;
-        }
-
-        final byte newCharByte = c2b(newChar);
-        byte[] buffer = new byte[length()];
-        for (int i = 0, j = arrayOffset(); i < buffer.length; i++, j++) {
-            byte b = value[j];
-            if (b == oldCharByte) {
-                b = newCharByte;
+        final byte oldCharAsByte = c2b0(oldChar);
+        final byte newCharAsByte = c2b(newChar);
+        final int len = offset + length;
+        for (int i = offset; i < len; ++i) {
+            if (value[i] == oldCharAsByte) {
+                byte[] buffer = new byte[length()];
+                System.arraycopy(value, offset, buffer, 0, i - offset);
+                buffer[i - offset] = newCharAsByte;
+                ++i;
+                for (; i < len; ++i) {
+                    byte oldValue = value[i];
+                    buffer[i - offset] = oldValue != oldCharAsByte ? oldValue : newCharAsByte;
+                }
+                return new AsciiString(buffer, false);
             }
-            buffer[i] = b;
         }
-
-        return new AsciiString(buffer, false);
+        return this;
     }
 
     /**
@@ -1140,7 +1115,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             }
         }
 
-        return res.toArray(new AsciiString[res.size()]);
+        return res.toArray(new AsciiString[0]);
     }
 
     /**
@@ -1832,10 +1807,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return INDEX_NOT_FOUND;
         }
         final int sz = cs.length();
-        if (start < 0) {
-            start = 0;
-        }
-        for (int i = start; i < sz; i++) {
+        for (int i = start < 0 ? 0 : start; i < sz; i++) {
             if (cs.charAt(i) == searchChar) {
                 return i;
             }
@@ -1877,6 +1849,10 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
 
     public static byte c2b(char c) {
         return (byte) ((c > MAX_CHAR_VALUE) ? '?' : c);
+    }
+
+    private static byte c2b0(char c) {
+        return (byte) c;
     }
 
     public static char b2c(byte b) {

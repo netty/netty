@@ -49,11 +49,11 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509KeyManager;
 import javax.net.ssl.X509TrustManager;
@@ -75,21 +75,6 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 public abstract class ReferenceCountedOpenSslContext extends SslContext implements ReferenceCounted {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(ReferenceCountedOpenSslContext.class);
-    /**
-     * To make it easier for users to replace JDK implementation with OpenSsl version we also use
-     * {@code jdk.tls.rejectClientInitiatedRenegotiation} to allow disabling client initiated renegotiation.
-     * Java8+ uses this system property as well.
-     * <p>
-     * See also <a href="http://blog.ivanristic.com/2014/03/ssl-tls-improvements-in-java-8.html">
-     * Significant SSL/TLS improvements in Java 8</a>
-     */
-    private static final boolean JDK_REJECT_CLIENT_INITIATED_RENEGOTIATION =
-            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                @Override
-                public Boolean run() {
-                    return SystemPropertyUtil.getBoolean("jdk.tls.rejectClientInitiatedRenegotiation", false);
-                }
-            });
 
     private static final int DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE =
             AccessController.doPrivileged(new PrivilegedAction<Integer>() {
@@ -149,7 +134,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final OpenSslEngineMap engineMap = new DefaultOpenSslEngineMap();
     final ReadWriteLock ctxLock = new ReentrantReadWriteLock();
 
-    private volatile boolean rejectRemoteInitiatedRenegotiation;
     private volatile int bioNonApplicationBufferSize = DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE;
 
     @SuppressWarnings("deprecation")
@@ -230,10 +214,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         this.protocols = protocols;
         this.enableOcsp = enableOcsp;
 
-        if (mode == SSL.SSL_MODE_SERVER) {
-            rejectRemoteInitiatedRenegotiation =
-                    JDK_REJECT_CLIENT_INITIATED_RENEGOTIATION;
-        }
         this.keyCertChain = keyCertChain == null ? null : keyCertChain.clone();
 
         unmodifiableCiphers = Arrays.asList(checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
@@ -245,24 +225,71 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         boolean success = false;
         try {
             try {
-                ctx = SSLContext.make(SSL.SSL_PROTOCOL_ALL, mode);
+                int protocolOpts = SSL.SSL_PROTOCOL_SSLV3 | SSL.SSL_PROTOCOL_TLSV1 |
+                                   SSL.SSL_PROTOCOL_TLSV1_1 | SSL.SSL_PROTOCOL_TLSV1_2;
+                if (OpenSsl.isTlsv13Supported()) {
+                    protocolOpts |= SSL.SSL_PROTOCOL_TLSV1_3;
+                }
+                ctx = SSLContext.make(protocolOpts, mode);
             } catch (Exception e) {
                 throw new SSLException("failed to create an SSL_CTX", e);
             }
 
-            SSLContext.setOptions(ctx, SSLContext.getOptions(ctx) |
-                    SSL.SSL_OP_NO_SSLv2 |
-                    SSL.SSL_OP_NO_SSLv3 |
-                    SSL.SSL_OP_CIPHER_SERVER_PREFERENCE |
+            boolean tlsv13Supported = OpenSsl.isTlsv13Supported();
+            StringBuilder cipherBuilder = new StringBuilder();
+            StringBuilder cipherTLSv13Builder = new StringBuilder();
 
-                    // We do not support compression at the moment so we should explicitly disable it.
-                    SSL.SSL_OP_NO_COMPRESSION |
+            /* List the ciphers that are permitted to negotiate. */
+            try {
+                if (unmodifiableCiphers.isEmpty()) {
+                    // Set non TLSv1.3 ciphers.
+                    SSLContext.setCipherSuite(ctx, StringUtil.EMPTY_STRING, false);
+                    if (tlsv13Supported) {
+                        // Set TLSv1.3 ciphers.
+                        SSLContext.setCipherSuite(ctx, StringUtil.EMPTY_STRING, true);
+                    }
+                } else {
+                    CipherSuiteConverter.convertToCipherStrings(
+                            unmodifiableCiphers, cipherBuilder, cipherTLSv13Builder);
 
-                    // Disable ticket support by default to be more inline with SSLEngineImpl of the JDK.
-                    // This also let SSLSession.getId() work the same way for the JDK implementation and the
-                    // OpenSSLEngine. If tickets are supported SSLSession.getId() will only return an ID on the
-                    // server-side if it could make use of tickets.
-                    SSL.SSL_OP_NO_TICKET);
+                    // Set non TLSv1.3 ciphers.
+                    SSLContext.setCipherSuite(ctx, cipherBuilder.toString(), false);
+                    if (tlsv13Supported) {
+                        // Set TLSv1.3 ciphers.
+                        SSLContext.setCipherSuite(ctx, cipherTLSv13Builder.toString(), true);
+                    }
+                }
+            } catch (SSLException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new SSLException("failed to set cipher suite: " + unmodifiableCiphers, e);
+            }
+
+            int options = SSLContext.getOptions(ctx) |
+                          SSL.SSL_OP_NO_SSLv2 |
+                          SSL.SSL_OP_NO_SSLv3 |
+                          // Disable TLSv1.3 by default for now. Even if TLSv1.3 is not supported this will
+                          // work fine as in this case SSL_OP_NO_TLSv1_3 will be 0.
+                          SSL.SSL_OP_NO_TLSv1_3 |
+
+                          SSL.SSL_OP_CIPHER_SERVER_PREFERENCE |
+
+                          // We do not support compression at the moment so we should explicitly disable it.
+                          SSL.SSL_OP_NO_COMPRESSION |
+
+                          // Disable ticket support by default to be more inline with SSLEngineImpl of the JDK.
+                          // This also let SSLSession.getId() work the same way for the JDK implementation and the
+                          // OpenSSLEngine. If tickets are supported SSLSession.getId() will only return an ID on the
+                          // server-side if it could make use of tickets.
+                          SSL.SSL_OP_NO_TICKET;
+
+            if (cipherBuilder.length() == 0) {
+                // No ciphers that are compatible with SSLv2 / SSLv3 / TLSv1 / TLSv1.1 / TLSv1.2
+                options |= SSL.SSL_OP_NO_SSLv2 | SSL.SSL_OP_NO_SSLv3 | SSL.SSL_OP_NO_TLSv1
+                           | SSL.SSL_OP_NO_TLSv1_1 | SSL.SSL_OP_NO_TLSv1_2;
+            }
+
+            SSLContext.setOptions(ctx, options);
 
             // We need to enable SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER as the memory address may change between
             // calling OpenSSLEngine.wrap(...).
@@ -273,19 +300,10 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 SSLContext.setTmpDHLength(ctx, DH_KEY_LENGTH);
             }
 
-                /* List the ciphers that are permitted to negotiate. */
-            try {
-                SSLContext.setCipherSuite(ctx, CipherSuiteConverter.toOpenSsl(unmodifiableCiphers));
-            } catch (SSLException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new SSLException("failed to set cipher suite: " + unmodifiableCiphers, e);
-            }
-
             List<String> nextProtoList = apn.protocols();
                 /* Set next protocols for next protocol negotiation extension, if specified */
             if (!nextProtoList.isEmpty()) {
-                String[] appProtocols = nextProtoList.toArray(new String[nextProtoList.size()]);
+                String[] appProtocols = nextProtoList.toArray(new String[0]);
                 int selectorBehavior = opensslSelectorFailureBehavior(apn.selectorFailureBehavior());
 
                 switch (apn.protocol()) {
@@ -305,26 +323,20 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             }
 
             /* Set session cache size, if specified */
-            if (sessionCacheSize > 0) {
-                this.sessionCacheSize = sessionCacheSize;
-                SSLContext.setSessionCacheSize(ctx, sessionCacheSize);
-            } else {
+            if (sessionCacheSize <= 0) {
                 // Get the default session cache size using SSLContext.setSessionCacheSize()
-                this.sessionCacheSize = sessionCacheSize = SSLContext.setSessionCacheSize(ctx, 20480);
-                // Revert the session cache size to the default value.
-                SSLContext.setSessionCacheSize(ctx, sessionCacheSize);
+                sessionCacheSize = SSLContext.setSessionCacheSize(ctx, 20480);
             }
+            this.sessionCacheSize = sessionCacheSize;
+            SSLContext.setSessionCacheSize(ctx, sessionCacheSize);
 
             /* Set session timeout, if specified */
-            if (sessionTimeout > 0) {
-                this.sessionTimeout = sessionTimeout;
-                SSLContext.setSessionCacheTimeout(ctx, sessionTimeout);
-            } else {
+            if (sessionTimeout <= 0) {
                 // Get the default session timeout using SSLContext.setSessionCacheTimeout()
-                this.sessionTimeout = sessionTimeout = SSLContext.setSessionCacheTimeout(ctx, 300);
-                // Revert the session timeout to the default value.
-                SSLContext.setSessionCacheTimeout(ctx, sessionTimeout);
+                sessionTimeout = SSLContext.setSessionCacheTimeout(ctx, 300);
             }
+            this.sessionTimeout = sessionTimeout;
+            SSLContext.setSessionCacheTimeout(ctx, sessionTimeout);
 
             if (enableOcsp) {
                 SSLContext.enableOcsp(ctx, isClient());
@@ -392,8 +404,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         return new ReferenceCountedOpenSslEngine(this, alloc, peerHost, peerPort, jdkCompatibilityMode, true);
     }
 
-    abstract OpenSslKeyMaterialManager keyMaterialManager();
-
     /**
      * Returns a new server-side {@link SSLEngine} with the current configuration.
      */
@@ -431,18 +441,24 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     /**
+     * {@deprecated Renegotiation is not supported}
      * Specify if remote initiated renegotiation is supported or not. If not supported and the remote side tries
      * to initiate a renegotiation a {@link SSLHandshakeException} will be thrown during decoding.
      */
+    @Deprecated
     public void setRejectRemoteInitiatedRenegotiation(boolean rejectRemoteInitiatedRenegotiation) {
-        this.rejectRemoteInitiatedRenegotiation = rejectRemoteInitiatedRenegotiation;
+        if (!rejectRemoteInitiatedRenegotiation) {
+            throw new UnsupportedOperationException("Renegotiation is not supported");
+        }
     }
 
     /**
-     * Returns if remote initiated renegotiation is supported or not.
+     * {@deprecated Renegotiation is not supported}
+     * @return {@code true} because renegotiation is not supported.
      */
+    @Deprecated
     public boolean getRejectRemoteInitiatedRenegotiation() {
-        return rejectRemoteInitiatedRenegotiation;
+        return true;
     }
 
     /**
@@ -506,6 +522,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
                 SSLContext.free(ctx);
                 ctx = 0;
+
+                OpenSslSessionContext context = sessionContext();
+                if (context != null) {
+                    context.destroy();
+                }
             }
         } finally {
             writerLock.unlock();
@@ -523,7 +544,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     protected static X509TrustManager chooseTrustManager(TrustManager[] managers) {
         for (TrustManager m : managers) {
             if (m instanceof X509TrustManager) {
-                return (X509TrustManager) m;
+                return OpenSslX509TrustManagerWrapper.wrapIfNeeded((X509TrustManager) m);
             }
         }
         throw new IllegalStateException("no X509TrustManager found");
@@ -584,10 +605,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     static boolean useExtendedTrustManager(X509TrustManager trustManager) {
         return PlatformDependent.javaVersion() >= 7 && trustManager instanceof X509ExtendedTrustManager;
-    }
-
-    static boolean useExtendedKeyManager(X509KeyManager keyManager) {
-        return PlatformDependent.javaVersion() >= 7 && keyManager instanceof X509ExtendedKeyManager;
     }
 
     @Override
@@ -730,7 +747,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             keyCertChainBio2 = toBIO(ByteBufAllocator.DEFAULT, encoded.retain());
 
             if (key != null) {
-                keyBio = toBIO(key);
+                keyBio = toBIO(ByteBufAllocator.DEFAULT, key);
             }
 
             SSLContext.setCertificateBio(
@@ -762,12 +779,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      * Return the pointer to a <a href="https://www.openssl.org/docs/crypto/BIO_get_mem_ptr.html">in-memory BIO</a>
      * or {@code 0} if the {@code key} is {@code null}. The BIO contains the content of the {@code key}.
      */
-    static long toBIO(PrivateKey key) throws Exception {
+    static long toBIO(ByteBufAllocator allocator, PrivateKey key) throws Exception {
         if (key == null) {
             return 0;
         }
 
-        ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
         PemEncoded pem = PemPrivateKey.toPEM(allocator, true, key);
         try {
             return toBIO(allocator, pem.retain());
@@ -780,7 +796,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      * Return the pointer to a <a href="https://www.openssl.org/docs/crypto/BIO_get_mem_ptr.html">in-memory BIO</a>
      * or {@code 0} if the {@code certChain} is {@code null}. The BIO contains the content of the {@code certChain}.
      */
-    static long toBIO(X509Certificate... certChain) throws Exception {
+    static long toBIO(ByteBufAllocator allocator, X509Certificate... certChain) throws Exception {
         if (certChain == null) {
             return 0;
         }
@@ -789,7 +805,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             throw new IllegalArgumentException("certChain can't be empty");
         }
 
-        ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
         PemEncoded pem = PemX509Certificate.toPEM(allocator, true, certChain);
         try {
             return toBIO(allocator, pem.retain());
@@ -840,5 +855,24 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         } finally {
             buffer.release();
         }
+    }
+
+    /**
+     * Returns the {@link OpenSslKeyMaterialProvider} that should be used for OpenSSL. Depending on the given
+     * {@link KeyManagerFactory} this may cache the {@link OpenSslKeyMaterial} for better performance if it can
+     * ensure that the same material is always returned for the same alias.
+     */
+    static OpenSslKeyMaterialProvider providerFor(KeyManagerFactory factory, String password) {
+        if (factory instanceof OpenSslX509KeyManagerFactory) {
+            return ((OpenSslX509KeyManagerFactory) factory).newProvider();
+        }
+
+        X509KeyManager keyManager = chooseX509KeyManager(factory.getKeyManagers());
+        if (factory instanceof OpenSslCachingX509KeyManagerFactory) {
+            // The user explicit used OpenSslCachingX509KeyManagerFactory which signals us that its fine to cache.
+            return new OpenSslCachingKeyMaterialProvider(keyManager, password);
+        }
+        // We can not be sure if the material may change at runtime so we will not cache it.
+        return new OpenSslKeyMaterialProvider(keyManager, password);
     }
 }

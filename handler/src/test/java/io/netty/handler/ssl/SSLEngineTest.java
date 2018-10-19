@@ -33,8 +33,10 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -44,6 +46,8 @@ import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import org.junit.After;
+import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -57,29 +61,38 @@ import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.Provider;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.ManagerFactoryParameters;
+import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.TrustManagerFactorySpi;
+import javax.net.ssl.X509TrustManager;
 import javax.security.cert.X509Certificate;
 
-import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1;
-import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_2;
-import static io.netty.handler.ssl.SslUtils.SSL_RECORD_HEADER_LENGTH;
-
+import static io.netty.handler.ssl.SslUtils.*;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -203,10 +216,42 @@ public abstract class SSLEngineTest {
         Mixed
     }
 
-    private final BufferType type;
+    static final class ProtocolCipherCombo {
+        private static final ProtocolCipherCombo TLSV12 = new ProtocolCipherCombo(
+                PROTOCOL_TLS_V1_2, "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256");
+        private static final ProtocolCipherCombo TLSV13 = new ProtocolCipherCombo(
+                PROTOCOL_TLS_V1_3, "TLS_AES_128_GCM_SHA256");
+        final String protocol;
+        final String cipher;
 
-    protected SSLEngineTest(BufferType type) {
+        private ProtocolCipherCombo(String protocol, String cipher) {
+            this.protocol = protocol;
+            this.cipher = cipher;
+        }
+
+        static ProtocolCipherCombo tlsv12() {
+            return TLSV12;
+        }
+
+        static ProtocolCipherCombo tlsv13() {
+            return TLSV13;
+        }
+
+        @Override
+        public String toString() {
+            return "ProtocolCipherCombo{" +
+                   "protocol='" + protocol + '\'' +
+                   ", cipher='" + cipher + '\'' +
+                   '}';
+        }
+    }
+
+    private final BufferType type;
+    private final ProtocolCipherCombo protocolCipherCombo;
+
+    protected SSLEngineTest(BufferType type, ProtocolCipherCombo protocolCipherCombo) {
         this.type = type;
+        this.protocolCipherCombo = protocolCipherCombo;
     }
 
     protected ByteBuffer allocateBuffer(int len) {
@@ -603,10 +648,15 @@ public abstract class SSLEngineTest {
     }
 
     protected boolean mySetupMutualAuthServerIsValidException(Throwable cause) {
-        return cause instanceof SSLHandshakeException || cause instanceof ClosedChannelException;
+        // As in TLSv1.3 the handshake is sent without an extra roundtrip an SSLException is valid as well.
+        return cause instanceof SSLException || cause instanceof ClosedChannelException;
     }
 
     protected void mySetupMutualAuthServerInitSslHandler(SslHandler handler) {
+    }
+
+    private SslContextBuilder configureProtocolForMutualAuth(SslContextBuilder ctx) {
+        return OpenSslTestUtils.configureProtocolForMutualAuth(ctx, sslClientProvider(), sslServerProvider());
     }
 
     private void mySetupMutualAuth(KeyManagerFactory serverKMF, final File serverTrustManager,
@@ -614,25 +664,30 @@ public abstract class SSLEngineTest {
                                    ClientAuth clientAuth, final boolean failureExpected,
                                    final boolean serverInitEngine)
             throws SSLException, InterruptedException {
-        serverSslCtx = SslContextBuilder.forServer(serverKMF)
-                .sslProvider(sslServerProvider())
-                .sslContextProvider(serverSslContextProvider())
-                .trustManager(serverTrustManager)
-                .clientAuth(clientAuth)
-                .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
-                .sessionCacheSize(0)
-                .sessionTimeout(0)
-                .build();
+        serverSslCtx = configureProtocolForMutualAuth(
+                SslContextBuilder.forServer(serverKMF)
+                                 .protocols(protocols())
+                                 .ciphers(ciphers())
+                                 .sslProvider(sslServerProvider())
+                                 .sslContextProvider(serverSslContextProvider())
+                                 .trustManager(serverTrustManager)
+                                 .clientAuth(clientAuth)
+                                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                                 .sessionCacheSize(0)
+                                 .sessionTimeout(0)).build();
 
-        clientSslCtx = SslContextBuilder.forClient()
-                .sslProvider(sslClientProvider())
-                .sslContextProvider(clientSslContextProvider())
-                .trustManager(clientTrustManager)
-                .keyManager(clientKMF)
-                .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
-                .sessionCacheSize(0)
-                .sessionTimeout(0)
-                .build();
+        clientSslCtx =  configureProtocolForMutualAuth(
+                SslContextBuilder.forClient()
+                                 .protocols(protocols())
+                                 .ciphers(ciphers())
+                                 .sslProvider(sslClientProvider())
+                                 .sslContextProvider(clientSslContextProvider())
+                                 .trustManager(clientTrustManager)
+                                 .keyManager(clientKMF)
+                                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                                 .sessionCacheSize(0)
+                                 .sessionTimeout(0)).build();
+
         serverConnectedChannel = null;
         sb = new ServerBootstrap();
         cb = new Bootstrap();
@@ -694,10 +749,11 @@ public abstract class SSLEngineTest {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
-                            if (failureExpected) {
-                                clientException = new IllegalStateException("handshake complete. expected failure");
+                            // With TLS1.3 a mutal auth error will not be propagated as a handshake error most of the
+                            // time as the handshake needs NO extra roundtrip.
+                            if (!failureExpected) {
+                                clientLatch.countDown();
                             }
-                            clientLatch.countDown();
                         } else if (evt instanceof SslHandshakeCompletionEvent) {
                             clientException = ((SslHandshakeCompletionEvent) evt).cause();
                             clientLatch.countDown();
@@ -707,7 +763,7 @@ public abstract class SSLEngineTest {
 
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                        if (cause.getCause() instanceof SSLHandshakeException) {
+                        if (cause.getCause() instanceof SSLException) {
                             clientException = cause.getCause();
                             clientLatch.countDown();
                         } else {
@@ -718,7 +774,7 @@ public abstract class SSLEngineTest {
             }
         });
 
-        serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
+        serverChannel = sb.bind(new InetSocketAddress(8443)).sync().channel();
         int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
         ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
@@ -759,6 +815,8 @@ public abstract class SSLEngineTest {
         final String expectedHost = "localhost";
         serverSslCtx = SslContextBuilder.forServer(serverCrtFile, serverKeyFile, null)
                 .sslProvider(sslServerProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .sslContextProvider(serverSslContextProvider())
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
@@ -768,12 +826,15 @@ public abstract class SSLEngineTest {
 
         clientSslCtx = SslContextBuilder.forClient()
                 .sslProvider(sslClientProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .sslContextProvider(clientSslContextProvider())
                 .trustManager(clientTrustCrtFile)
                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
                 .sessionCacheSize(0)
                 .sessionTimeout(0)
                 .build();
+
         serverConnectedChannel = null;
         sb = new ServerBootstrap();
         cb = new Bootstrap();
@@ -827,6 +888,10 @@ public abstract class SSLEngineTest {
                 InetSocketAddress remoteAddress = (InetSocketAddress) serverChannel.localAddress();
                 SslHandler sslHandler = clientSslCtx.newHandler(ch.alloc(), expectedHost, 0);
                 SSLParameters parameters = sslHandler.engine().getSSLParameters();
+                if (SslUtils.isValidHostNameForSNI(expectedHost)) {
+                    assertEquals(1, parameters.getServerNames().size());
+                    assertEquals(new SNIHostName(expectedHost), parameters.getServerNames().get(0));
+                }
                 parameters.setEndpointIdentificationAlgorithm("HTTPS");
                 sslHandler.engine().setSSLParameters(parameters);
                 p.addLast(sslHandler);
@@ -876,24 +941,28 @@ public abstract class SSLEngineTest {
             File servertTrustCrtFile, File serverKeyFile, final File serverCrtFile, String serverKeyPassword,
             File clientTrustCrtFile, File clientKeyFile, File clientCrtFile, String clientKeyPassword)
             throws InterruptedException, SSLException {
-        serverSslCtx = SslContextBuilder.forServer(serverCrtFile, serverKeyFile, serverKeyPassword)
-                .sslProvider(sslServerProvider())
-                .sslContextProvider(serverSslContextProvider())
-                .trustManager(servertTrustCrtFile)
-                .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
-                .sessionCacheSize(0)
-                .sessionTimeout(0)
-                .build();
+        serverSslCtx = configureProtocolForMutualAuth(
+                SslContextBuilder.forServer(serverCrtFile, serverKeyFile, serverKeyPassword)
+                                 .sslProvider(sslServerProvider())
+                                 .sslContextProvider(serverSslContextProvider())
+                                 .protocols(protocols())
+                                 .ciphers(ciphers())
+                                 .trustManager(servertTrustCrtFile)
+                                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                                 .sessionCacheSize(0)
+                                 .sessionTimeout(0)).build();
+        clientSslCtx = configureProtocolForMutualAuth(
+                SslContextBuilder.forClient()
+                                 .sslProvider(sslClientProvider())
+                                 .sslContextProvider(clientSslContextProvider())
+                                 .protocols(protocols())
+                                 .ciphers(ciphers())
+                                 .trustManager(clientTrustCrtFile)
+                                 .keyManager(clientCrtFile, clientKeyFile, clientKeyPassword)
+                                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                                 .sessionCacheSize(0)
+                                 .sessionTimeout(0)).build();
 
-        clientSslCtx = SslContextBuilder.forClient()
-                .sslProvider(sslClientProvider())
-                .sslContextProvider(clientSslContextProvider())
-                .trustManager(clientTrustCrtFile)
-                .keyManager(clientCrtFile, clientKeyFile, clientKeyPassword)
-                .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
-                .sessionCacheSize(0)
-                .sessionTimeout(0)
-                .build();
         serverConnectedChannel = null;
         sb = new ServerBootstrap();
         cb = new Bootstrap();
@@ -902,13 +971,14 @@ public abstract class SSLEngineTest {
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
 
                 ChannelPipeline p = ch.pipeline();
                 SSLEngine engine = serverSslCtx.newEngine(ch.alloc());
                 engine.setUseClientMode(false);
                 engine.setNeedClientAuth(true);
+
                 p.addLast(new SslHandler(engine));
                 p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
                 p.addLast(new ChannelInboundHandlerAdapter() {
@@ -965,13 +1035,14 @@ public abstract class SSLEngineTest {
             protected void initChannel(Channel ch) throws Exception {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
 
+                SslHandler handler = clientSslCtx.newHandler(ch.alloc());
+                handler.engine().setNeedClientAuth(true);
                 ChannelPipeline p = ch.pipeline();
-                p.addLast(clientSslCtx.newHandler(ch.alloc()));
+                p.addLast(handler);
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                        cause.printStackTrace();
                         if (cause.getCause() instanceof SSLHandshakeException) {
                             clientException = cause.getCause();
                             clientLatch.countDown();
@@ -1009,7 +1080,7 @@ public abstract class SSLEngineTest {
         SslHandler handler = channel.pipeline().get(SslHandler.class);
         assertNotNull(handler);
         String appProto = handler.applicationProtocol();
-        assertEquals(appProto, expectedApplicationProtocol);
+        assertEquals(expectedApplicationProtocol, appProto);
 
         SSLEngine engine = handler.engine();
         if (engine instanceof Java9SslEngine) {
@@ -1047,7 +1118,7 @@ public abstract class SSLEngineTest {
                 .sslContextProvider(clientSslContextProvider()).build();
         SSLEngine engine = null;
         try {
-            engine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            engine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             assertTrue(engine.getSession().getCreationTime() <= System.currentTimeMillis());
         } finally {
             cleanupClientSslEngine(engine);
@@ -1060,17 +1131,21 @@ public abstract class SSLEngineTest {
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(sslClientProvider())
                 .sslContextProvider(clientSslContextProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
-            serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             handshake(clientEngine, serverEngine);
 
             SSLSession session = serverEngine.getSession();
@@ -1089,18 +1164,22 @@ public abstract class SSLEngineTest {
         clientSslCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(sslClientProvider())
+                // This test only works for non TLSv1.3 for now
+                .protocols(PROTOCOL_TLS_V1_2)
                 .sslContextProvider(clientSslContextProvider())
                 .build();
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
+                // This test only works for non TLSv1.3 for now
+                .protocols(PROTOCOL_TLS_V1_2)
                 .sslContextProvider(serverSslContextProvider())
                 .build();
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
-            serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
             // Before the handshake the id should have length == 0
             assertEquals(0, clientEngine.getSession().getId().length);
@@ -1122,10 +1201,14 @@ public abstract class SSLEngineTest {
     @Test(timeout = 30000)
     public void clientInitiatedRenegotiationWithFatalAlertDoesNotInfiniteLoopServer()
             throws CertificateException, SSLException, InterruptedException, ExecutionException {
+        Assume.assumeTrue(PlatformDependent.javaVersion() >= 11);
         final SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                .sslProvider(sslServerProvider())
-                .sslContextProvider(serverSslContextProvider()).build();
+                                        .sslProvider(sslServerProvider())
+                                        .sslContextProvider(serverSslContextProvider())
+                                        .protocols(protocols())
+                                        .ciphers(ciphers())
+                                        .build();
         sb = new ServerBootstrap()
                 .group(new NioEventLoopGroup(1))
                 .channel(NioServerSocketChannel.class)
@@ -1175,8 +1258,12 @@ public abstract class SSLEngineTest {
         serverChannel = sb.bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
 
         clientSslCtx = SslContextBuilder.forClient()
-                .sslProvider(SslProvider.JDK) // OpenSslEngine doesn't support renegotiation on client side
-                .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+                                        // OpenSslEngine doesn't support renegotiation on client side
+                                        .sslProvider(SslProvider.JDK)
+                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                                        .protocols(protocols())
+                                        .ciphers(ciphers())
+                                        .build();
 
         cb = new Bootstrap();
         cb.group(new NioEventLoopGroup(1))
@@ -1236,11 +1323,13 @@ public abstract class SSLEngineTest {
             File serverKeyFile = new File(getClass().getResource("test_unencrypted.pem").getFile());
             File serverCrtFile = new File(getClass().getResource("test.crt").getFile());
             serverSslCtx = SslContextBuilder.forServer(serverCrtFile, serverKeyFile)
-               .sslProvider(sslServerProvider())
-               .sslContextProvider(serverSslContextProvider())
-               .build();
+                                            .sslProvider(sslServerProvider())
+                                            .sslContextProvider(serverSslContextProvider())
+                                            .protocols(protocols())
+                                            .ciphers(ciphers())
+                                            .build();
 
-            sslEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            sslEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
             // Disable all protocols
             sslEngine.setEnabledProtocols(EmptyArrays.EMPTY_STRINGS);
@@ -1317,7 +1406,10 @@ public abstract class SSLEngineTest {
             cTOsPos = cTOs.position();
             sTOcPos = sTOc.position();
 
-            if (!clientHandshakeFinished) {
+            if (!clientHandshakeFinished ||
+                // After the handshake completes it is possible we have more data that was send by the server as
+                // the server will send session updates after the handshake. In this case continue to unwrap.
+                SslUtils.PROTOCOL_TLS_V1_3.equals(clientEngine.getSession().getProtocol())) {
                 int clientAppReadBufferPos = clientAppReadBuffer.position();
                 clientResult = clientEngine.unwrap(sTOc, clientAppReadBuffer);
 
@@ -1329,7 +1421,7 @@ public abstract class SSLEngineTest {
                     clientHandshakeFinished = true;
                 }
             } else {
-                assertFalse(sTOc.hasRemaining());
+                assertEquals(0, sTOc.remaining());
             }
 
             if (!serverHandshakeFinished) {
@@ -1412,24 +1504,35 @@ public abstract class SSLEngineTest {
         SelfSignedCertificate ssc = new SelfSignedCertificate();
 
         try {
-          setupHandlers(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey(), null)
-                          .sslProvider(sslServerProvider())
-                          .sslContextProvider(serverSslContextProvider())
-                          .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
-                          .applicationProtocolConfig(serverApn)
-                          .sessionCacheSize(0)
-                          .sessionTimeout(0)
-                          .build(),
+            SslContextBuilder serverCtxBuilder = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey(), null)
+                                                         .sslProvider(sslServerProvider())
+                                                         .sslContextProvider(serverSslContextProvider())
+                                                         .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                                                         .applicationProtocolConfig(serverApn)
+                                                         .sessionCacheSize(0)
+                                                         .sessionTimeout(0);
+            if (serverApn.protocol() == Protocol.NPN || serverApn.protocol() == Protocol.NPN_AND_ALPN) {
+                // NPN is not really well supported with TLSv1.3 so force to use TLSv1.2
+                // See https://github.com/openssl/openssl/issues/3665
+                serverCtxBuilder.protocols(PROTOCOL_TLS_V1_2);
+            }
 
-                  SslContextBuilder.forClient()
-                          .sslProvider(sslClientProvider())
-                          .sslContextProvider(clientSslContextProvider())
-                          .applicationProtocolConfig(clientApn)
-                          .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                          .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
-                          .sessionCacheSize(0)
-                          .sessionTimeout(0)
-                          .build());
+            SslContextBuilder clientCtxBuilder = SslContextBuilder.forClient()
+                             .sslProvider(sslClientProvider())
+                             .sslContextProvider(clientSslContextProvider())
+                             .applicationProtocolConfig(clientApn)
+                             .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                             .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                             .sessionCacheSize(0)
+                             .sessionTimeout(0);
+
+            if (clientApn.protocol() == Protocol.NPN || clientApn.protocol() == Protocol.NPN_AND_ALPN) {
+                // NPN is not really well supported with TLSv1.3 so force to use TLSv1.2
+                // See https://github.com/openssl/openssl/issues/3665
+                clientCtxBuilder.protocols(PROTOCOL_TLS_V1_2);
+            }
+
+            setupHandlers(serverCtxBuilder.build(), clientCtxBuilder.build());
         } finally {
           ssc.delete();
         }
@@ -1490,6 +1593,11 @@ public abstract class SSLEngineTest {
                             ctx.fireExceptionCaught(cause);
                         }
                     }
+
+                    @Override
+                    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                        clientLatch.countDown();
+                    }
                 });
             }
         });
@@ -1503,12 +1611,15 @@ public abstract class SSLEngineTest {
 
     @Test(timeout = 30000)
     public void testMutualAuthSameCertChain() throws Exception {
-        serverSslCtx = SslContextBuilder.forServer(
-                new ByteArrayInputStream(X509_CERT_PEM.getBytes(CharsetUtil.UTF_8)),
-                new ByteArrayInputStream(PRIVATE_KEY_PEM.getBytes(CharsetUtil.UTF_8)))
-                .trustManager(new ByteArrayInputStream(X509_CERT_PEM.getBytes(CharsetUtil.UTF_8)))
-                .clientAuth(ClientAuth.REQUIRE).sslProvider(sslServerProvider())
-                .sslContextProvider(serverSslContextProvider()).build();
+        serverSslCtx = configureProtocolForMutualAuth(
+                SslContextBuilder.forServer(
+                        new ByteArrayInputStream(X509_CERT_PEM.getBytes(CharsetUtil.UTF_8)),
+                        new ByteArrayInputStream(PRIVATE_KEY_PEM.getBytes(CharsetUtil.UTF_8)))
+                                 .trustManager(new ByteArrayInputStream(X509_CERT_PEM.getBytes(CharsetUtil.UTF_8)))
+                                 .clientAuth(ClientAuth.REQUIRE).sslProvider(sslServerProvider())
+                                 .sslContextProvider(serverSslContextProvider())
+                                 .protocols(protocols())
+                                 .ciphers(ciphers())).build();
 
         sb = new ServerBootstrap();
         sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
@@ -1559,13 +1670,14 @@ public abstract class SSLEngineTest {
             }
         }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
 
-        clientSslCtx = SslContextBuilder.forClient()
-                .keyManager(
+        clientSslCtx = configureProtocolForMutualAuth(
+                SslContextBuilder.forClient().keyManager(
                         new ByteArrayInputStream(CLIENT_X509_CERT_CHAIN_PEM.getBytes(CharsetUtil.UTF_8)),
                         new ByteArrayInputStream(CLIENT_PRIVATE_KEY_PEM.getBytes(CharsetUtil.UTF_8)))
                 .trustManager(new ByteArrayInputStream(X509_CERT_PEM.getBytes(CharsetUtil.UTF_8)))
                 .sslProvider(sslClientProvider())
-                .sslContextProvider(clientSslContextProvider()).build();
+                .sslContextProvider(clientSslContextProvider())
+                .protocols(protocols()).ciphers(ciphers())).build();
         cb = new Bootstrap();
         cb.group(new NioEventLoopGroup());
         cb.channel(NioSocketChannel.class);
@@ -1589,14 +1701,18 @@ public abstract class SSLEngineTest {
                 .forClient()
                 .trustManager(cert.cert())
                 .sslProvider(sslClientProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
-        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         serverSslCtx = SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
                 .sslProvider(sslServerProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
-        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         byte[] bytes = "Hello World".getBytes(CharsetUtil.US_ASCII);
 
@@ -1681,14 +1797,14 @@ public abstract class SSLEngineTest {
                 .sslProvider(sslClientProvider())
                 .protocols(clientProtocols)
                 .build();
-        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         serverSslCtx = SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
                 .sslProvider(sslServerProvider())
                 .protocols(serverProtocols)
                 .build();
-        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         try {
             handshake(client, server);
@@ -1720,8 +1836,8 @@ public abstract class SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
-            serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             handshake(clientEngine, serverEngine);
         } finally {
             cleanupClientSslEngine(clientEngine);
@@ -1751,8 +1867,8 @@ public abstract class SSLEngineTest {
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
         try {
-            clientEngine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
-            serverEngine = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             handshake(clientEngine, serverEngine);
         } finally {
             cleanupClientSslEngine(clientEngine);
@@ -1769,14 +1885,18 @@ public abstract class SSLEngineTest {
                 .forClient()
                 .trustManager(cert.cert())
                 .sslProvider(sslClientProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
-        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         serverSslCtx = SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
                 .sslProvider(sslServerProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
-        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         try {
             // Allocate an buffer that is bigger then the max plain record size.
@@ -1808,8 +1928,10 @@ public abstract class SSLEngineTest {
         clientSslCtx = SslContextBuilder
                 .forClient()
                 .sslProvider(sslClientProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
-        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         try {
             ByteBuffer src = allocateBuffer(client.getSession().getApplicationBufferSize());
@@ -1836,8 +1958,10 @@ public abstract class SSLEngineTest {
         clientSslCtx = SslContextBuilder
                 .forClient()
                 .sslProvider(sslClientProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
-        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         try {
             client.closeInbound();
@@ -1860,14 +1984,18 @@ public abstract class SSLEngineTest {
         clientSslCtx = SslContextBuilder
                 .forClient()
                 .sslProvider(sslClientProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
-        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         serverSslCtx = SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
                 .sslProvider(sslServerProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
-        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         try {
             testBeginHandshakeCloseOutbound(client);
@@ -1907,14 +2035,18 @@ public abstract class SSLEngineTest {
         clientSslCtx = SslContextBuilder
                 .forClient()
                 .sslProvider(sslClientProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
-        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         serverSslCtx = SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
                 .sslProvider(sslServerProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
-        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         try {
             testCloseInboundAfterBeginHandshake(client);
@@ -1944,14 +2076,18 @@ public abstract class SSLEngineTest {
                 .forClient()
                 .trustManager(cert.cert())
                 .sslProvider(sslClientProvider())
+                // This test only works for non TLSv1.3 for now
+                .protocols(PROTOCOL_TLS_V1_2)
                 .build();
-        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         serverSslCtx = SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
                 .sslProvider(sslServerProvider())
+                // This test only works for non TLSv1.3 for now
+                .protocols(PROTOCOL_TLS_V1_2)
                 .build();
-        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         try {
             ByteBuffer plainClientOut = allocateBuffer(client.getSession().getApplicationBufferSize());
@@ -2011,6 +2147,7 @@ public abstract class SSLEngineTest {
 
             result = server.wrap(empty, encryptedServerToClient);
             encryptedServerToClient.flip();
+
             assertEquals(SSLEngineResult.Status.CLOSED, result.getStatus());
             // UNWRAP/WRAP are not expected after this point
             assertEquals(SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, result.getHandshakeStatus());
@@ -2025,6 +2162,7 @@ public abstract class SSLEngineTest {
             assertTrue(server.isInboundDone());
 
             result = client.unwrap(encryptedServerToClient, plainClientOut);
+
             plainClientOut.flip();
             assertEquals(SSLEngineResult.Status.CLOSED, result.getStatus());
             // UNWRAP/WRAP are not expected after this point
@@ -2085,14 +2223,18 @@ public abstract class SSLEngineTest {
                 .forClient()
                 .trustManager(cert.cert())
                 .sslProvider(sslClientProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
-        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         serverSslCtx = SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
                 .sslProvider(sslServerProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
-        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         try {
             ByteBuffer dst = allocateBuffer(client.getSession().getPacketBufferSize());
@@ -2124,14 +2266,18 @@ public abstract class SSLEngineTest {
                 .forClient()
                 .trustManager(cert.cert())
                 .sslProvider(sslClientProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
-        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         serverSslCtx = SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
                 .sslProvider(sslServerProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
-        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         try {
             // Choose buffer size small enough that we can put multiple buffers into one buffer and pass it into the
@@ -2199,14 +2345,18 @@ public abstract class SSLEngineTest {
                 .forClient()
                 .trustManager(cert.cert())
                 .sslProvider(sslClientProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
-        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         serverSslCtx = SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
                 .sslProvider(sslServerProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
-        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         try {
             ByteBuffer plainClientOut = allocateBuffer(4096);
@@ -2219,21 +2369,35 @@ public abstract class SSLEngineTest {
             int srcLen = plainClientOut.remaining();
             SSLEngineResult result;
 
-            while (encClientToServer.position() <= server.getSession().getPacketBufferSize()) {
+            int count = 0;
+            do {
+                int plainClientOutPosition = plainClientOut.position();
+                int encClientToServerPosition = encClientToServer.position();
                 result = client.wrap(plainClientOut, encClientToServer);
+                if (result.getStatus() == Status.BUFFER_OVERFLOW) {
+                    // We did not have enough room to wrap
+                    assertEquals(plainClientOutPosition, plainClientOut.position());
+                    assertEquals(encClientToServerPosition, encClientToServer.position());
+                    break;
+                }
                 assertEquals(SSLEngineResult.Status.OK, result.getStatus());
                 assertEquals(srcLen, result.bytesConsumed());
                 assertTrue(result.bytesProduced() > 0);
 
                 plainClientOut.clear();
-            }
 
+                ++count;
+            } while (encClientToServer.position() < server.getSession().getPacketBufferSize());
+
+            // Check that we were able to wrap multiple times.
+            assertTrue(count >= 2);
             encClientToServer.flip();
 
             result = server.unwrap(encClientToServer, plainServerOut);
             assertEquals(SSLEngineResult.Status.OK, result.getStatus());
             assertTrue(result.bytesConsumed() > 0);
             assertTrue(result.bytesProduced() > 0);
+            assertTrue(encClientToServer.hasRemaining());
         } finally {
             cert.delete();
             cleanupClientSslEngine(client);
@@ -2249,14 +2413,18 @@ public abstract class SSLEngineTest {
                 .forClient()
                 .trustManager(cert.cert())
                 .sslProvider(sslClientProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
-        SSLEngine client = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         serverSslCtx = SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
                 .sslProvider(sslServerProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
                 .build();
-        SSLEngine server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         try {
             ByteBuffer plainClient = allocateBuffer(1024);
@@ -2310,5 +2478,182 @@ public abstract class SSLEngineTest {
         assertEquals(SSLEngineResult.Status.BUFFER_UNDERFLOW, result.getStatus());
         assertEquals(0, result.bytesConsumed());
         assertEquals(0, result.bytesProduced());
+    }
+
+    @Test
+    public void testWrapDoesNotZeroOutSrc() throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+
+        clientSslCtx = SslContextBuilder
+                .forClient()
+                .trustManager(cert.cert())
+                .sslProvider(sslClientProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
+                .build();
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+
+        serverSslCtx = SslContextBuilder
+                .forServer(cert.certificate(), cert.privateKey())
+                .sslProvider(sslServerProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
+                .build();
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+
+        try {
+            ByteBuffer plainServerOut = allocateBuffer(server.getSession().getApplicationBufferSize() / 2);
+
+            handshake(client, server);
+
+            // Fill the whole buffer and flip it.
+            for (int i = 0; i < plainServerOut.capacity(); i++) {
+                plainServerOut.put(i, (byte) i);
+            }
+            plainServerOut.position(plainServerOut.capacity());
+            plainServerOut.flip();
+
+            ByteBuffer encryptedServerToClient = allocateBuffer(server.getSession().getPacketBufferSize());
+            SSLEngineResult result = server.wrap(plainServerOut, encryptedServerToClient);
+            assertEquals(SSLEngineResult.Status.OK, result.getStatus());
+            assertTrue(result.bytesConsumed() > 0);
+
+            for (int i = 0; i < plainServerOut.capacity(); i++) {
+                assertEquals((byte) i, plainServerOut.get(i));
+            }
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+            cert.delete();
+        }
+    }
+
+    @Test
+    public void testDisableProtocols() throws Exception {
+        testDisableProtocols(PROTOCOL_SSL_V2, PROTOCOL_SSL_V2);
+        testDisableProtocols(PROTOCOL_SSL_V3, PROTOCOL_SSL_V2, PROTOCOL_SSL_V3);
+        testDisableProtocols(PROTOCOL_TLS_V1, PROTOCOL_SSL_V2, PROTOCOL_SSL_V3, PROTOCOL_TLS_V1);
+        testDisableProtocols(PROTOCOL_TLS_V1_1, PROTOCOL_SSL_V2, PROTOCOL_SSL_V3, PROTOCOL_TLS_V1, PROTOCOL_TLS_V1_1);
+        testDisableProtocols(PROTOCOL_TLS_V1_2, PROTOCOL_SSL_V2,
+                PROTOCOL_SSL_V3, PROTOCOL_TLS_V1, PROTOCOL_TLS_V1_1, PROTOCOL_TLS_V1_2);
+    }
+
+    private void testDisableProtocols(String protocol, String... disabledProtocols) throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+
+        SslContext ctx = SslContextBuilder
+                .forServer(cert.certificate(), cert.privateKey())
+                .sslProvider(sslServerProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
+                .build();
+        SSLEngine server = wrapEngine(ctx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+
+        try {
+            Set<String> supported = new HashSet<String>(Arrays.asList(server.getSupportedProtocols()));
+            if (supported.contains(protocol)) {
+                server.setEnabledProtocols(server.getSupportedProtocols());
+                assertEquals(supported, new HashSet<String>(Arrays.asList(server.getSupportedProtocols())));
+
+                for (String disabled : disabledProtocols) {
+                    supported.remove(disabled);
+                }
+                if (supported.contains(PROTOCOL_SSL_V2_HELLO) && supported.size() == 1) {
+                    // It's not allowed to set only PROTOCOL_SSL_V2_HELLO if using JDK SSLEngine.
+                    return;
+                }
+                server.setEnabledProtocols(supported.toArray(new String[0]));
+                assertEquals(supported, new HashSet<String>(Arrays.asList(server.getEnabledProtocols())));
+                server.setEnabledProtocols(server.getSupportedProtocols());
+            }
+        } finally {
+            cleanupServerSslEngine(server);
+            cleanupClientSslContext(ctx);
+            cert.delete();
+        }
+    }
+
+    @Test
+    public void testUsingX509TrustManagerVerifiesHostname() throws Exception {
+        SslProvider clientProvider = sslClientProvider();
+        if (clientProvider == SslProvider.OPENSSL || clientProvider == SslProvider.OPENSSL_REFCNT) {
+            // Need to check if we support hostname validation in the current used OpenSSL version before running
+            // the test.
+            Assume.assumeTrue(OpenSsl.supportsHostnameValidation());
+        }
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        clientSslCtx = SslContextBuilder
+                .forClient()
+                .trustManager(new TrustManagerFactory(new TrustManagerFactorySpi() {
+                    @Override
+                    protected void engineInit(KeyStore keyStore) {
+                        // NOOP
+                    }
+                    @Override
+                    protected TrustManager[] engineGetTrustManagers() {
+                        // Provide a custom trust manager, this manager trust all certificates
+                        return new TrustManager[] {
+                                new X509TrustManager() {
+                                    @Override
+                                    public void checkClientTrusted(
+                                            java.security.cert.X509Certificate[] x509Certificates, String s) {
+                                        // NOOP
+                                    }
+
+                                    @Override
+                                    public void checkServerTrusted(
+                                            java.security.cert.X509Certificate[] x509Certificates, String s) {
+                                        // NOOP
+                                    }
+
+                                    @Override
+                                    public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                                        return EmptyArrays.EMPTY_X509_CERTIFICATES;
+                                    }
+                                }
+                        };
+                    }
+
+                    @Override
+                    protected void engineInit(ManagerFactoryParameters managerFactoryParameters) {
+                    }
+                }, null, TrustManagerFactory.getDefaultAlgorithm()) {
+                })
+                .sslProvider(sslClientProvider())
+                .build();
+
+        SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT, "netty.io", 1234));
+        SSLParameters sslParameters = client.getSSLParameters();
+        sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
+        client.setSSLParameters(sslParameters);
+
+        serverSslCtx = SslContextBuilder
+                .forServer(cert.certificate(), cert.privateKey())
+                .sslProvider(sslServerProvider())
+                .build();
+
+        SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        try {
+            handshake(client, server);
+            fail();
+        } catch (SSLException expected) {
+            // expected as the hostname not matches.
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+            cert.delete();
+        }
+    }
+
+    protected SSLEngine wrapEngine(SSLEngine engine) {
+        return engine;
+    }
+
+    protected List<String> ciphers() {
+        return Collections.singletonList(protocolCipherCombo.cipher);
+    }
+
+    protected String[] protocols() {
+        return new String[] { protocolCipherCombo.protocol };
     }
 }

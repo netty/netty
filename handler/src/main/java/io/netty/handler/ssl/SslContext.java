@@ -53,7 +53,6 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
-import java.security.Security;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -85,6 +84,8 @@ import java.util.List;
  * </pre>
  */
 public abstract class SslContext {
+    static final String ALIAS = "key";
+
     static final CertificateFactory X509_CERT_FACTORY;
     static {
         try {
@@ -998,9 +999,9 @@ public abstract class SslContext {
     static KeyStore buildKeyStore(X509Certificate[] certChain, PrivateKey key, char[] keyPasswordChars)
             throws KeyStoreException, NoSuchAlgorithmException,
                    CertificateException, IOException {
-        KeyStore ks = KeyStore.getInstance("JKS");
+        KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
         ks.load(null, null);
-        ks.setKeyEntry("key", key, keyPasswordChars, certChain);
+        ks.setKeyEntry(ALIAS, key, keyPasswordChars, certChain);
         return ks;
     }
 
@@ -1040,7 +1041,7 @@ public abstract class SslContext {
                 return KeyFactory.getInstance("DSA").generatePrivate(encodedKeySpec);
             } catch (InvalidKeySpecException ignore2) {
                 try {
-                    return  KeyFactory.getInstance("EC").generatePrivate(encodedKeySpec);
+                    return KeyFactory.getInstance("EC").generatePrivate(encodedKeySpec);
                 } catch (InvalidKeySpecException e) {
                     throw new InvalidKeySpecException("Neither RSA, DSA nor EC worked", e);
                 }
@@ -1107,7 +1108,7 @@ public abstract class SslContext {
     static TrustManagerFactory buildTrustManagerFactory(
             X509Certificate[] certCollection, TrustManagerFactory trustManagerFactory)
             throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException {
-        KeyStore ks = KeyStore.getInstance("JKS");
+        final KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
         ks.load(null, null);
 
         int i = 1;
@@ -1146,11 +1147,7 @@ public abstract class SslContext {
                                                     KeyManagerFactory kmf)
             throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException,
             CertificateException, IOException {
-        String algorithm = Security.getProperty("ssl.KeyManagerFactory.algorithm");
-        if (algorithm == null) {
-            algorithm = "SunX509";
-        }
-        return buildKeyManagerFactory(certChain, algorithm, key, keyPassword, kmf);
+        return buildKeyManagerFactory(certChain, KeyManagerFactory.getDefaultAlgorithm(), key, keyPassword, kmf);
     }
 
     static KeyManagerFactory buildKeyManagerFactory(X509Certificate[] certChainFile,
@@ -1158,8 +1155,15 @@ public abstract class SslContext {
                                                     String keyPassword, KeyManagerFactory kmf)
             throws KeyStoreException, NoSuchAlgorithmException, IOException,
             CertificateException, UnrecoverableKeyException {
-        char[] keyPasswordChars = keyPassword == null ? EmptyArrays.EMPTY_CHARS : keyPassword.toCharArray();
+        char[] keyPasswordChars = keyStorePassword(keyPassword);
         KeyStore ks = buildKeyStore(certChainFile, key, keyPasswordChars);
+        return buildKeyManagerFactory(ks, keyAlgorithm, keyPasswordChars, kmf);
+    }
+
+    static KeyManagerFactory buildKeyManagerFactory(KeyStore ks,
+                                                    String keyAlgorithm,
+                                                    char[] keyPasswordChars, KeyManagerFactory kmf)
+            throws KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
         // Set up key manager factory to use our key store
         if (kmf == null) {
             kmf = KeyManagerFactory.getInstance(keyAlgorithm);
@@ -1167,5 +1171,9 @@ public abstract class SslContext {
         kmf.init(ks, keyPasswordChars);
 
         return kmf;
+    }
+
+    static char[] keyStorePassword(String keyPassword) {
+        return keyPassword == null ? EmptyArrays.EMPTY_CHARS : keyPassword.toCharArray();
     }
 }

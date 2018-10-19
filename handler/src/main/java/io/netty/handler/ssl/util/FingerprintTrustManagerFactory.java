@@ -172,7 +172,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
             list.add(f.clone());
         }
 
-        this.fingerprints = list.toArray(new byte[list.size()][]);
+        this.fingerprints = list.toArray(new byte[0][]);
     }
 
     private static byte[][] toFingerprintArray(Iterable<String> fingerprints) {
@@ -197,7 +197,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
             list.add(StringUtil.decodeHexDump(f));
         }
 
-        return list.toArray(new byte[list.size()][]);
+        return list.toArray(new byte[0][]);
     }
 
     @Override

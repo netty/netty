@@ -39,13 +39,15 @@ final class PlatformDependent0 {
     private static final long ADDRESS_FIELD_OFFSET;
     private static final long BYTE_ARRAY_BASE_OFFSET;
     private static final Constructor<?> DIRECT_BUFFER_CONSTRUCTOR;
-    private static final boolean IS_EXPLICIT_NO_UNSAFE = explicitNoUnsafe0();
+    private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
     private static final Method ALLOCATE_ARRAY_METHOD;
     private static final int JAVA_VERSION = javaVersion0();
     private static final boolean IS_ANDROID = isAndroid0();
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE;
     private static final Object INTERNAL_UNSAFE;
+    private static final boolean IS_EXPLICIT_TRY_REFLECTION_SET_ACCESSIBLE = explicitTryReflectionSetAccessible0();
+
     static final Unsafe UNSAFE;
 
     // constants borrowed from murmur3
@@ -69,10 +71,9 @@ final class PlatformDependent0 {
         Unsafe unsafe;
         Object internalUnsafe = null;
 
-        if (isExplicitNoUnsafe()) {
+        if ((unsafeUnavailabilityCause = EXPLICIT_NO_UNSAFE_CAUSE) != null) {
             direct = null;
             addressField = null;
-            unsafeUnavailabilityCause = new UnsupportedOperationException("Unsafe explicitly disabled");
             unsafe = null;
             internalUnsafe = null;
         } else {
@@ -84,7 +85,9 @@ final class PlatformDependent0 {
                 public Object run() {
                     try {
                         final Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
-                        Throwable cause = ReflectionUtil.trySetAccessible(unsafeField);
+                        // We always want to try using Unsafe as the access still works on java9 as well and
+                        // we need it for out native-transports and many optimizations.
+                        Throwable cause = ReflectionUtil.trySetAccessible(unsafeField, false);
                         if (cause != null) {
                             return cause;
                         }
@@ -218,7 +221,7 @@ final class PlatformDependent0 {
                                 try {
                                     final Constructor<?> constructor =
                                             direct.getClass().getDeclaredConstructor(long.class, int.class);
-                                    Throwable cause = ReflectionUtil.trySetAccessible(constructor);
+                                    Throwable cause = ReflectionUtil.trySetAccessible(constructor, true);
                                     if (cause != null) {
                                         return cause;
                                     }
@@ -259,15 +262,34 @@ final class PlatformDependent0 {
             DIRECT_BUFFER_CONSTRUCTOR = directBufferConstructor;
             ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField);
             BYTE_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
-            boolean unaligned;
+            final boolean unaligned;
             Object maybeUnaligned = AccessController.doPrivileged(new PrivilegedAction<Object>() {
                 @Override
                 public Object run() {
                     try {
                         Class<?> bitsClass =
                                 Class.forName("java.nio.Bits", false, getSystemClassLoader());
+                        int version = javaVersion();
+                        if (version >= 9) {
+                            // Java9/10 use all lowercase and later versions all uppercase.
+                            String fieldName = version >= 11 ? "UNALIGNED" : "unaligned";
+                            // On Java9 and later we try to directly access the field as we can do this without
+                            // adjust the accessible levels.
+                            try {
+                                Field unalignedField = bitsClass.getDeclaredField(fieldName);
+                                if (unalignedField.getType() == boolean.class) {
+                                    long offset = UNSAFE.staticFieldOffset(unalignedField);
+                                    Object object = UNSAFE.staticFieldBase(unalignedField);
+                                    return UNSAFE.getBoolean(object, offset);
+                                }
+                                // There is something unexpected stored in the field,
+                                // let us fall-back and try to use a reflective method call as last resort.
+                            } catch (NoSuchFieldException ignore) {
+                                // We did not find the field we expected, move on.
+                            }
+                        }
                         Method unalignedMethod = bitsClass.getDeclaredMethod("unaligned");
-                        Throwable cause = ReflectionUtil.trySetAccessible(unalignedMethod);
+                        Throwable cause = ReflectionUtil.trySetAccessible(unalignedMethod, true);
                         if (cause != null) {
                             return cause;
                         }
@@ -365,32 +387,33 @@ final class PlatformDependent0 {
     }
 
     static boolean isExplicitNoUnsafe() {
-        return IS_EXPLICIT_NO_UNSAFE;
+        return EXPLICIT_NO_UNSAFE_CAUSE != null;
     }
 
-    private static boolean explicitNoUnsafe0() {
+    private static Throwable explicitNoUnsafeCause0() {
         final boolean noUnsafe = SystemPropertyUtil.getBoolean("io.netty.noUnsafe", false);
         logger.debug("-Dio.netty.noUnsafe: {}", noUnsafe);
 
         if (noUnsafe) {
             logger.debug("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
-            return true;
+            return new UnsupportedOperationException("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
         }
 
         // Legacy properties
-        boolean tryUnsafe;
+        String unsafePropName;
         if (SystemPropertyUtil.contains("io.netty.tryUnsafe")) {
-            tryUnsafe = SystemPropertyUtil.getBoolean("io.netty.tryUnsafe", true);
+            unsafePropName = "io.netty.tryUnsafe";
         } else {
-            tryUnsafe = SystemPropertyUtil.getBoolean("org.jboss.netty.tryUnsafe", true);
+            unsafePropName = "org.jboss.netty.tryUnsafe";
         }
 
-        if (!tryUnsafe) {
-            logger.debug("sun.misc.Unsafe: unavailable (io.netty.tryUnsafe/org.jboss.netty.tryUnsafe)");
-            return true;
+        if (!SystemPropertyUtil.getBoolean(unsafePropName, true)) {
+            String msg = "sun.misc.Unsafe: unavailable (" + unsafePropName + ")";
+            logger.debug(msg);
+            return new UnsupportedOperationException(msg);
         }
 
-        return false;
+        return null;
     }
 
     static boolean isUnaligned() {
@@ -423,7 +446,10 @@ final class PlatformDependent0 {
     }
 
     static ByteBuffer allocateDirectNoCleaner(int capacity) {
-        return newDirectBuffer(UNSAFE.allocateMemory(capacity), capacity);
+        // Calling malloc with capacity of 0 may return a null ptr or a memory address that can be used.
+        // Just use 1 to make it safe to use in all cases:
+        // See: http://pubs.opengroup.org/onlinepubs/009695399/functions/malloc.html
+        return newDirectBuffer(UNSAFE.allocateMemory(Math.max(1, capacity)), capacity);
     }
 
     static boolean hasAllocateArrayMethod() {
@@ -542,8 +568,21 @@ final class PlatformDependent0 {
         UNSAFE.putLong(data, BYTE_ARRAY_BASE_OFFSET + index, value);
     }
 
+    static void putObject(Object o, long offset, Object x) {
+        UNSAFE.putObject(o, offset, x);
+    }
+
     static void copyMemory(long srcAddr, long dstAddr, long length) {
-        //UNSAFE.copyMemory(srcAddr, dstAddr, length);
+        // Manual safe-point polling is only needed prior Java9:
+        // See https://bugs.openjdk.java.net/browse/JDK-8149596
+        if (javaVersion() <= 8) {
+            copyMemoryWithSafePointPolling(srcAddr, dstAddr, length);
+        } else {
+            UNSAFE.copyMemory(srcAddr, dstAddr, length);
+        }
+    }
+
+    private static void copyMemoryWithSafePointPolling(long srcAddr, long dstAddr, long length) {
         while (length > 0) {
             long size = Math.min(length, UNSAFE_COPY_THRESHOLD);
             UNSAFE.copyMemory(srcAddr, dstAddr, size);
@@ -554,7 +593,17 @@ final class PlatformDependent0 {
     }
 
     static void copyMemory(Object src, long srcOffset, Object dst, long dstOffset, long length) {
-        //UNSAFE.copyMemory(src, srcOffset, dst, dstOffset, length);
+        // Manual safe-point polling is only needed prior Java9:
+        // See https://bugs.openjdk.java.net/browse/JDK-8149596
+        if (javaVersion() <= 8) {
+            copyMemoryWithSafePointPolling(src, srcOffset, dst, dstOffset, length);
+        } else {
+            UNSAFE.copyMemory(src, srcOffset, dst, dstOffset, length);
+        }
+    }
+
+    private static void copyMemoryWithSafePointPolling(
+            Object src, long srcOffset, Object dst, long dstOffset, long length) {
         while (length > 0) {
             long size = Math.min(length, UNSAFE_COPY_THRESHOLD);
             UNSAFE.copyMemory(src, srcOffset, dst, dstOffset, size);
@@ -782,19 +831,28 @@ final class PlatformDependent0 {
     }
 
     private static boolean isAndroid0() {
-        boolean android;
-        try {
-            Class.forName("android.app.Application", false, getSystemClassLoader());
-            android = true;
-        } catch (Throwable ignored) {
-            // Failed to load the class uniquely available in Android.
-            android = false;
-        }
+        // Idea: Sometimes java binaries include Android classes on the classpath, even if it isn't actually Android.
+        // Rather than check if certain classes are present, just check the VM, which is tied to the JDK.
 
-        if (android) {
+        // Optional improvement: check if `android.os.Build.VERSION` is >= 24. On later versions of Android, the
+        // OpenJDK is used, which means `Unsafe` will actually work as expected.
+
+        // Android sets this property to Dalvik, regardless of whether it actually is.
+        String vmName = SystemPropertyUtil.get("java.vm.name");
+        boolean isAndroid = "Dalvik".equals(vmName);
+        if (isAndroid) {
             logger.debug("Platform: Android");
         }
-        return android;
+        return isAndroid;
+    }
+
+    private static boolean explicitTryReflectionSetAccessible0() {
+        // we disable reflective access
+        return SystemPropertyUtil.getBoolean("io.netty.tryReflectionSetAccessible", javaVersion() < 9);
+    }
+
+    static boolean isExplicitTryReflectionSetAccessible() {
+        return IS_EXPLICIT_TRY_REFLECTION_SET_ACCESSIBLE;
     }
 
     static int javaVersion() {

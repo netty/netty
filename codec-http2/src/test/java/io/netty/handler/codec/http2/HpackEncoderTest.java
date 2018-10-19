@@ -31,7 +31,7 @@ public class HpackEncoderTest {
     private Http2Headers mockHeaders;
 
     @Before
-    public void setUp() throws Http2Exception {
+    public void setUp() {
         hpackEncoder = new HpackEncoder();
         hpackDecoder = new HpackDecoder(DEFAULT_HEADER_LIST_SIZE, 32);
         mockHeaders = mock(Http2Headers.class);
@@ -42,7 +42,7 @@ public class HpackEncoderTest {
         ByteBuf buf = Unpooled.buffer();
         hpackEncoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE);
         hpackDecoder.setMaxHeaderTableSize(MAX_HEADER_TABLE_SIZE);
-        hpackDecoder.decode(0, buf, mockHeaders);
+        hpackDecoder.decode(0, buf, mockHeaders, true);
         assertEquals(MAX_HEADER_TABLE_SIZE, hpackDecoder.getMaxHeaderTableSize());
         buf.release();
     }
@@ -52,6 +52,48 @@ public class HpackEncoderTest {
         ByteBuf buf = Unpooled.buffer();
         try {
             hpackEncoder.setMaxHeaderTableSize(buf, MAX_HEADER_TABLE_SIZE + 1);
+        } finally {
+            buf.release();
+        }
+    }
+
+    /**
+     * The encoder should not impose an arbitrary limit on the header size if
+     * the server has not specified any limit.
+     * @throws Http2Exception
+     */
+    @Test
+    public void testWillEncode16MBHeaderByDefault() throws Http2Exception {
+        ByteBuf buf = Unpooled.buffer();
+        String bigHeaderName = "x-big-header";
+        int bigHeaderSize = 1024 * 1024 * 16;
+        String bigHeaderVal = new String(new char[bigHeaderSize]).replace('\0', 'X');
+        Http2Headers headersIn = new DefaultHttp2Headers().add(
+                "x-big-header", bigHeaderVal);
+        Http2Headers headersOut = new DefaultHttp2Headers();
+
+        try {
+            hpackEncoder.encodeHeaders(0, buf, headersIn, Http2HeadersEncoder.NEVER_SENSITIVE);
+            hpackDecoder.setMaxHeaderListSize(bigHeaderSize + 1024);
+            hpackDecoder.decode(0, buf, headersOut, false);
+        } finally {
+            buf.release();
+        }
+        assertEquals(headersOut.get(bigHeaderName).toString(), bigHeaderVal);
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void testSetMaxHeaderListSizeEnforcedAfterSet() throws Http2Exception {
+        ByteBuf buf = Unpooled.buffer();
+        Http2Headers headers = new DefaultHttp2Headers().add(
+                "x-big-header",
+                new String(new char[1024 * 16]).replace('\0', 'X')
+        );
+
+        hpackEncoder.setMaxHeaderListSize(1000);
+
+        try {
+            hpackEncoder.encodeHeaders(0, buf, headers, Http2HeadersEncoder.NEVER_SENSITIVE);
         } finally {
             buf.release();
         }

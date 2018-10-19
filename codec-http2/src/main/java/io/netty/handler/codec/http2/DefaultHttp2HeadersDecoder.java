@@ -22,6 +22,7 @@ import io.netty.util.internal.UnstableApi;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_INITIAL_HUFFMAN_DECODE_CAPACITY;
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
 @UnstableApi
@@ -31,6 +32,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
 
     private final HpackDecoder hpackDecoder;
     private final boolean validateHeaders;
+    private long maxHeaderListSizeGoAway;
 
     /**
      * Used to calculate an exponential moving average of header sizes to get an estimate of how large the data
@@ -79,6 +81,8 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     DefaultHttp2HeadersDecoder(boolean validateHeaders, HpackDecoder hpackDecoder) {
         this.hpackDecoder = ObjectUtil.checkNotNull(hpackDecoder, "hpackDecoder");
         this.validateHeaders = validateHeaders;
+        this.maxHeaderListSizeGoAway =
+                Http2CodecUtil.calculateMaxHeaderListSizeGoAway(hpackDecoder.getMaxHeaderListSize());
     }
 
     @Override
@@ -93,7 +97,12 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
 
     @Override
     public void maxHeaderListSize(long max, long goAwayMax) throws Http2Exception {
-        hpackDecoder.setMaxHeaderListSize(max, goAwayMax);
+        if (goAwayMax < max || goAwayMax < 0) {
+            throw connectionError(INTERNAL_ERROR, "Header List Size GO_AWAY %d must be non-negative and >= %d",
+                    goAwayMax, max);
+        }
+        hpackDecoder.setMaxHeaderListSize(max);
+        this.maxHeaderListSizeGoAway = goAwayMax;
     }
 
     @Override
@@ -103,7 +112,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
 
     @Override
     public long maxHeaderListSizeGoAway() {
-        return hpackDecoder.getMaxHeaderListSizeGoAway();
+        return maxHeaderListSizeGoAway;
     }
 
     @Override
@@ -115,7 +124,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
     public Http2Headers decodeHeaders(int streamId, ByteBuf headerBlock) throws Http2Exception {
         try {
             final Http2Headers headers = newHeaders();
-            hpackDecoder.decode(streamId, headerBlock, headers);
+            hpackDecoder.decode(streamId, headerBlock, headers, validateHeaders);
             headerArraySizeAccumulator = HEADERS_COUNT_WEIGHT_NEW * headers.size() +
                                          HEADERS_COUNT_WEIGHT_HISTORICAL * headerArraySizeAccumulator;
             return headers;
@@ -123,7 +132,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
             throw e;
         } catch (Throwable e) {
             // Default handler for any other types of errors that may have occurred. For example,
-            // the the Header builder throws IllegalArgumentException if the key or value was invalid
+            // the Header builder throws IllegalArgumentException if the key or value was invalid
             // for any reason (e.g. the key was an invalid pseudo-header).
             throw connectionError(COMPRESSION_ERROR, e, e.getMessage());
         }

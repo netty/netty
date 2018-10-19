@@ -16,6 +16,7 @@
 package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty.util.internal.PlatformDependent;
 
@@ -24,11 +25,6 @@ import java.nio.ByteBuffer;
 import static io.netty.channel.unix.Limits.IOV_MAX;
 import static io.netty.channel.unix.Limits.SSIZE_MAX;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
-import static io.netty.util.internal.PlatformDependent.allocateMemory;
-import static io.netty.util.internal.PlatformDependent.directBufferAddress;
-import static io.netty.util.internal.PlatformDependent.freeMemory;
-import static io.netty.util.internal.PlatformDependent.putInt;
-import static io.netty.util.internal.PlatformDependent.putLong;
 import static java.lang.Math.min;
 
 /**
@@ -51,7 +47,7 @@ import static java.lang.Math.min;
 public final class IovArray implements MessageProcessor {
 
     /** The size of an address which should be 8 for 64 bits and 4 for 32 bits. */
-    private static final int ADDRESS_SIZE = PlatformDependent.addressSize();
+    private static final int ADDRESS_SIZE = Buffer.addressSize();
 
     /**
      * The size of an {@code iovec} struct in bytes. This is calculated as we have 2 entries each of the size of the
@@ -65,13 +61,15 @@ public final class IovArray implements MessageProcessor {
      */
     private static final int CAPACITY = IOV_MAX * IOV_SIZE;
 
+    private final ByteBuffer memory;
     private final long memoryAddress;
     private int count;
     private long size;
     private long maxBytes = SSIZE_MAX;
 
     public IovArray() {
-        memoryAddress = allocateMemory(CAPACITY);
+        memory = Buffer.allocateDirectWithNativeOrder(CAPACITY);
+        memoryAddress = Buffer.memoryAddress(memory);
     }
 
     public void clear() {
@@ -80,8 +78,11 @@ public final class IovArray implements MessageProcessor {
     }
 
     /**
-     * Try to add the given {@link ByteBuf}. Returns {@code true} on success,
-     * {@code false} otherwise.
+     * Add a {@link ByteBuf} to this {@link IovArray}.
+     * @param buf The {@link ByteBuf} to add.
+     * @return {@code true} if the entire {@link ByteBuf} has been added to this {@link IovArray}. Note in the event
+     * that {@link ByteBuf} is a {@link CompositeByteBuf} {@code false} may be returned even if some of the components
+     * have been added.
      */
     public boolean add(ByteBuf buf) {
         if (count == IOV_MAX) {
@@ -89,13 +90,22 @@ public final class IovArray implements MessageProcessor {
             return false;
         } else if (buf.nioBufferCount() == 1) {
             final int len = buf.readableBytes();
-            return len == 0 || add(buf.memoryAddress(), buf.readerIndex(), len);
+            if (len == 0) {
+                return true;
+            }
+            if (buf.hasMemoryAddress()) {
+                return add(buf.memoryAddress(), buf.readerIndex(), len);
+            } else {
+                ByteBuffer nioBuffer = buf.internalNioBuffer(buf.readerIndex(), len);
+                return add(Buffer.memoryAddress(nioBuffer), nioBuffer.position(), len);
+            }
         } else {
             ByteBuffer[] buffers = buf.nioBuffers();
             for (ByteBuffer nioBuffer : buffers) {
                 final int len = nioBuffer.remaining();
-                if (len != 0 && (!add(directBufferAddress(nioBuffer), nioBuffer.position(), len) || count == IOV_MAX)) {
-                    break;
+                if (len != 0 &&
+                    (!add(Buffer.memoryAddress(nioBuffer), nioBuffer.position(), len) || count == IOV_MAX)) {
+                    return false;
                 }
             }
             return true;
@@ -103,13 +113,7 @@ public final class IovArray implements MessageProcessor {
     }
 
     private boolean add(long addr, int offset, int len) {
-        if (len == 0) {
-            // No need to add an empty buffer.
-            return true;
-        }
-
-        final long baseOffset = memoryAddress(count);
-        final long lengthOffset = baseOffset + ADDRESS_SIZE;
+        assert addr != 0;
 
         // If there is at least 1 entry then we enforce the maximum bytes. We want to accept at least one entry so we
         // will attempt to write some data and make progress.
@@ -122,17 +126,30 @@ public final class IovArray implements MessageProcessor {
             // - http://linux.die.net/man/2/writev
             return false;
         }
+        final int baseOffset = idx(count);
+        final int lengthOffset = baseOffset + ADDRESS_SIZE;
+
         size += len;
         ++count;
 
         if (ADDRESS_SIZE == 8) {
             // 64bit
-            putLong(baseOffset, addr + offset);
-            putLong(lengthOffset, len);
+            if (PlatformDependent.hasUnsafe()) {
+                PlatformDependent.putLong(baseOffset + memoryAddress, addr + offset);
+                PlatformDependent.putLong(lengthOffset + memoryAddress, len);
+            } else {
+                memory.putLong(baseOffset, addr + offset);
+                memory.putLong(lengthOffset, len);
+            }
         } else {
             assert ADDRESS_SIZE == 4;
-            putInt(baseOffset, (int) addr + offset);
-            putInt(lengthOffset, len);
+            if (PlatformDependent.hasUnsafe()) {
+                PlatformDependent.putInt(baseOffset + memoryAddress, (int) addr + offset);
+                PlatformDependent.putInt(lengthOffset + memoryAddress, len);
+            } else {
+                memory.putInt(baseOffset, (int) addr + offset);
+                memory.putInt(lengthOffset, len);
+            }
         }
         return true;
     }
@@ -177,18 +194,22 @@ public final class IovArray implements MessageProcessor {
      * Returns the {@code memoryAddress} for the given {@code offset}.
      */
     public long memoryAddress(int offset) {
-        return memoryAddress + IOV_SIZE * offset;
+        return memoryAddress + idx(offset);
     }
 
     /**
      * Release the {@link IovArray}. Once release further using of it may crash the JVM!
      */
     public void release() {
-        freeMemory(memoryAddress);
+        Buffer.free(memory);
     }
 
     @Override
     public boolean processMessage(Object msg) throws Exception {
-        return (msg instanceof ByteBuf) && add((ByteBuf) msg);
+        return msg instanceof ByteBuf && add((ByteBuf) msg);
+    }
+
+    private static int idx(int index) {
+        return IOV_SIZE * index;
     }
 }

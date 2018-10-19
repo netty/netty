@@ -424,6 +424,11 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     }
 
     @Override
+    int internalRefCnt() {
+        return wrapped.internalRefCnt();
+    }
+
+    @Override
     public ByteBuf duplicate() {
         return wrapped.duplicate();
     }

@@ -113,12 +113,11 @@ public final class ChannelOutboundBuffer {
         Entry entry = Entry.newInstance(msg, size, total(msg), promise);
         if (tailEntry == null) {
             flushedEntry = null;
-            tailEntry = entry;
         } else {
             Entry tail = tailEntry;
             tail.next = entry;
-            tailEntry = entry;
         }
+        tailEntry = entry;
         if (unflushedEntry == null) {
             unflushedEntry = entry;
         }

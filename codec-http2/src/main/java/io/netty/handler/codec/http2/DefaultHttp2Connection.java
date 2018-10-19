@@ -25,7 +25,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.UnaryPromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -225,7 +224,12 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     @Override
-    public void goAwayReceived(final int lastKnownStream, long errorCode, ByteBuf debugData) {
+    public void goAwayReceived(final int lastKnownStream, long errorCode, ByteBuf debugData) throws Http2Exception {
+        if (localEndpoint.lastStreamKnownByPeer() >= 0 && localEndpoint.lastStreamKnownByPeer() < lastKnownStream) {
+            throw connectionError(PROTOCOL_ERROR, "lastStreamId MUST NOT increase. Current value: %d new value: %d",
+                    localEndpoint.lastStreamKnownByPeer(), lastKnownStream);
+        }
+
         localEndpoint.lastStreamKnownByPeer(lastKnownStream);
         for (int i = 0; i < listeners.size(); ++i) {
             try {
@@ -235,19 +239,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
         }
 
-        try {
-            forEachActiveStream(new Http2StreamVisitor() {
-                @Override
-                public boolean visit(Http2Stream stream) {
-                    if (stream.id() > lastKnownStream && localEndpoint.isValidStreamId(stream.id())) {
-                        stream.close();
-                    }
-                    return true;
-                }
-            });
-        } catch (Http2Exception e) {
-            PlatformDependent.throwException(e);
-        }
+        closeStreamsGreaterThanLastKnownStreamId(lastKnownStream, localEndpoint);
     }
 
     @Override
@@ -256,7 +248,20 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     @Override
-    public void goAwaySent(final int lastKnownStream, long errorCode, ByteBuf debugData) {
+    public boolean goAwaySent(final int lastKnownStream, long errorCode, ByteBuf debugData) throws Http2Exception {
+        if (remoteEndpoint.lastStreamKnownByPeer() >= 0) {
+            // Protect against re-entrancy. Could happen if writing the frame fails, and error handling
+            // treating this is a connection handler and doing a graceful shutdown...
+            if (lastKnownStream == remoteEndpoint.lastStreamKnownByPeer()) {
+                return false;
+            }
+            if (lastKnownStream > remoteEndpoint.lastStreamKnownByPeer()) {
+                throw connectionError(PROTOCOL_ERROR, "Last stream identifier must not increase between " +
+                                "sending multiple GOAWAY frames (was '%d', is '%d').",
+                        remoteEndpoint.lastStreamKnownByPeer(), lastKnownStream);
+            }
+        }
+
         remoteEndpoint.lastStreamKnownByPeer(lastKnownStream);
         for (int i = 0; i < listeners.size(); ++i) {
             try {
@@ -266,19 +271,21 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
         }
 
-        try {
-            forEachActiveStream(new Http2StreamVisitor() {
-                @Override
-                public boolean visit(Http2Stream stream) {
-                    if (stream.id() > lastKnownStream && remoteEndpoint.isValidStreamId(stream.id())) {
-                        stream.close();
-                    }
-                    return true;
+        closeStreamsGreaterThanLastKnownStreamId(lastKnownStream, remoteEndpoint);
+        return true;
+    }
+
+    private void closeStreamsGreaterThanLastKnownStreamId(final int lastKnownStream,
+                                                          final DefaultEndpoint<?> endpoint) throws Http2Exception {
+        forEachActiveStream(new Http2StreamVisitor() {
+            @Override
+            public boolean visit(Http2Stream stream) {
+                if (stream.id() > lastKnownStream && endpoint.isValidStreamId(stream.id())) {
+                    stream.close();
                 }
-            });
-        } catch (Http2Exception e) {
-            PlatformDependent.throwException(e);
-        }
+                return true;
+            }
+        });
     }
 
     /**
@@ -478,11 +485,19 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (!createdBy().canOpenStream()) {
                 throw connectionError(PROTOCOL_ERROR, "Maximum active streams violated for this endpoint.");
             }
+
             activate();
             return this;
         }
 
         void activate() {
+            // If the stream is opened in a half-closed state, the headers must have either
+            // been sent if this is a local stream, or received if it is a remote stream.
+            if (state == HALF_CLOSED_LOCAL) {
+                headersSent(/*isInformational*/ false);
+            } else if (state == HALF_CLOSED_REMOTE) {
+                headersReceived(/*isInformational*/ false);
+            }
             activeStreams.activate(this);
         }
 
@@ -855,10 +870,10 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         private void checkNewStreamAllowed(int streamId, State state) throws Http2Exception {
             assert state != IDLE;
-            if (goAwayReceived() && streamId > localEndpoint.lastStreamKnownByPeer()) {
-                throw connectionError(PROTOCOL_ERROR, "Cannot create stream %d since this endpoint has received a " +
-                                                      "GOAWAY frame with last stream id %d.", streamId,
-                                                      localEndpoint.lastStreamKnownByPeer());
+            if (lastStreamKnownByPeer >= 0 && streamId > lastStreamKnownByPeer) {
+                throw streamError(streamId, REFUSED_STREAM,
+                        "Cannot create stream %d greater than Last-Stream-ID %d from GOAWAY.",
+                        streamId, lastStreamKnownByPeer);
             }
             if (!isValidStreamId(streamId)) {
                 if (streamId < 0) {

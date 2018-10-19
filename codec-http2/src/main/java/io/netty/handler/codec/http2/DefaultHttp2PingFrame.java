@@ -16,8 +16,6 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -25,19 +23,20 @@ import io.netty.util.internal.UnstableApi;
  * The default {@link Http2PingFrame} implementation.
  */
 @UnstableApi
-public class DefaultHttp2PingFrame extends DefaultByteBufHolder implements Http2PingFrame {
+public class DefaultHttp2PingFrame implements Http2PingFrame {
 
+    private final long content;
     private final boolean ack;
 
-    public DefaultHttp2PingFrame(ByteBuf content) {
+    public DefaultHttp2PingFrame(long content) {
         this(content, false);
     }
 
     /**
      * A user cannot send a ping ack, as this is done automatically when a ping is received.
      */
-    DefaultHttp2PingFrame(ByteBuf content, boolean ack) {
-        super(mustBeEightBytes(content));
+    DefaultHttp2PingFrame(long content, boolean ack) {
+        this.content = content;
         this.ack = ack;
     }
 
@@ -52,47 +51,8 @@ public class DefaultHttp2PingFrame extends DefaultByteBufHolder implements Http2
     }
 
     @Override
-    public DefaultHttp2PingFrame copy() {
-        return replace(content().copy());
-    }
-
-    @Override
-    public DefaultHttp2PingFrame duplicate() {
-        return replace(content().duplicate());
-    }
-
-    @Override
-    public DefaultHttp2PingFrame retainedDuplicate() {
-        return replace(content().retainedDuplicate());
-    }
-
-    @Override
-    public DefaultHttp2PingFrame replace(ByteBuf content) {
-        return new DefaultHttp2PingFrame(content, ack);
-    }
-
-    @Override
-    public DefaultHttp2PingFrame retain() {
-        super.retain();
-        return this;
-    }
-
-    @Override
-    public DefaultHttp2PingFrame retain(int increment) {
-        super.retain(increment);
-        return this;
-    }
-
-    @Override
-    public DefaultHttp2PingFrame touch() {
-        super.touch();
-        return this;
-    }
-
-    @Override
-    public DefaultHttp2PingFrame touch(Object hint) {
-        super.touch(hint);
-        return this;
+    public long content() {
+        return content;
     }
 
     @Override
@@ -101,7 +61,7 @@ public class DefaultHttp2PingFrame extends DefaultByteBufHolder implements Http2
             return false;
         }
         Http2PingFrame other = (Http2PingFrame) o;
-        return super.equals(o) && ack == other.ack();
+        return ack == other.ack() &&  content == other.content();
     }
 
     @Override
@@ -111,16 +71,8 @@ public class DefaultHttp2PingFrame extends DefaultByteBufHolder implements Http2
         return hash;
     }
 
-    private static ByteBuf mustBeEightBytes(ByteBuf content) {
-        if (content.readableBytes() != 8) {
-            throw new IllegalArgumentException("PING frames require 8 bytes of content. Was " +
-                                               content.readableBytes() + " bytes.");
-        }
-        return content;
-    }
-
     @Override
     public String toString() {
-        return StringUtil.simpleClassName(this) + "(content=" + contentToString() + ", ack=" + ack + ')';
+        return StringUtil.simpleClassName(this) + "(content=" + content + ", ack=" + ack + ')';
     }
 }

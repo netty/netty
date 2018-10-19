@@ -28,104 +28,100 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.Mapping;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.TrustManagerFactory;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 
+@RunWith(Parameterized.class)
 public class SniClientTest {
 
-    @Test(timeout = 30000)
-    public void testSniClientJdkSslServerJdkSsl() throws Exception {
-        testSniClient(SslProvider.JDK, SslProvider.JDK);
+    @Parameters(name = "{index}: serverSslProvider = {0}, clientSslProvider = {1}")
+    public static Collection<Object[]> parameters() {
+        List<SslProvider> providers = new ArrayList<SslProvider>(Arrays.asList(SslProvider.values()));
+        if (!OpenSsl.isAvailable()) {
+            providers.remove(SslProvider.OPENSSL);
+            providers.remove(SslProvider.OPENSSL_REFCNT);
+        }
+
+        List<Object[]> params = new ArrayList<Object[]>();
+        for (SslProvider sp: providers) {
+            for (SslProvider cp: providers) {
+                params.add(new Object[] { sp, cp });
+            }
+        }
+        return params;
+    }
+
+    private final SslProvider serverProvider;
+    private final SslProvider clientProvider;
+
+    public SniClientTest(SslProvider serverProvider, SslProvider clientProvider) {
+        this.serverProvider = serverProvider;
+        this.clientProvider = clientProvider;
     }
 
     @Test(timeout = 30000)
-    public void testSniClientOpenSslServerOpenSsl() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
-        testSniClient(SslProvider.OPENSSL, SslProvider.OPENSSL);
+    public void testSniClient() throws Exception {
+        testSniClient(serverProvider, clientProvider);
     }
 
     @Test(timeout = 30000)
-    public void testSniClientJdkSslServerOpenSsl() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
-        testSniClient(SslProvider.JDK, SslProvider.OPENSSL);
-    }
-
-    @Test(timeout = 30000)
-    public void testSniClientOpenSslServerJdkSsl() throws Exception {
-        Assume.assumeTrue(OpenSsl.isAvailable());
-        testSniClient(SslProvider.OPENSSL, SslProvider.JDK);
-    }
-
-    @Test(timeout = 30000)
-    public void testSniSNIMatcherMatchesClientJdkSslServerJdkSsl() throws Exception {
+    public void testSniSNIMatcherMatchesClient() throws Exception {
         Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
-        SniClientJava8TestUtil.testSniClient(SslProvider.JDK, SslProvider.JDK, true);
+        SniClientJava8TestUtil.testSniClient(serverProvider, clientProvider, true);
     }
 
     @Test(timeout = 30000, expected = SSLException.class)
-    public void testSniSNIMatcherDoesNotMatchClientJdkSslServerJdkSsl() throws Exception {
+    public void testSniSNIMatcherDoesNotMatchClient() throws Exception {
         Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
-        SniClientJava8TestUtil.testSniClient(SslProvider.JDK, SslProvider.JDK, false);
+        SniClientJava8TestUtil.testSniClient(serverProvider, clientProvider, false);
     }
 
-    @Test(timeout = 30000)
-    public void testSniSNIMatcherMatchesClientOpenSslServerOpenSsl() throws Exception {
-        Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
-        Assume.assumeTrue(OpenSsl.isAvailable());
-        SniClientJava8TestUtil.testSniClient(SslProvider.OPENSSL, SslProvider.OPENSSL, true);
-    }
-
-    @Test(timeout = 30000, expected = SSLException.class)
-    public void testSniSNIMatcherDoesNotMatchClientOpenSslServerOpenSsl() throws Exception {
-        Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
-        Assume.assumeTrue(OpenSsl.isAvailable());
-        SniClientJava8TestUtil.testSniClient(SslProvider.OPENSSL, SslProvider.OPENSSL, false);
-    }
-
-    @Test(timeout = 30000)
-    public void testSniSNIMatcherMatchesClientJdkSslServerOpenSsl() throws Exception {
-        Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
-        Assume.assumeTrue(OpenSsl.isAvailable());
-        SniClientJava8TestUtil.testSniClient(SslProvider.JDK, SslProvider.OPENSSL, true);
-    }
-
-    @Test(timeout = 30000, expected = SSLException.class)
-    public void testSniSNIMatcherDoesNotMatchClientJdkSslServerOpenSsl() throws Exception {
-        Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
-        Assume.assumeTrue(OpenSsl.isAvailable());
-        SniClientJava8TestUtil.testSniClient(SslProvider.JDK, SslProvider.OPENSSL, false);
-    }
-
-    @Test(timeout = 30000)
-    public void testSniSNIMatcherMatchesClientOpenSslServerJdkSsl() throws Exception {
-        Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
-        Assume.assumeTrue(OpenSsl.isAvailable());
-        SniClientJava8TestUtil.testSniClient(SslProvider.OPENSSL, SslProvider.JDK, true);
-    }
-
-    @Test(timeout = 30000, expected = SSLException.class)
-    public void testSniSNIMatcherDoesNotMatchClientOpenSslServerJdkSsl() throws Exception {
-        Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
-        Assume.assumeTrue(OpenSsl.isAvailable());
-        SniClientJava8TestUtil.testSniClient(SslProvider.OPENSSL, SslProvider.JDK, false);
-    }
-
-    private static void testSniClient(SslProvider sslClientProvider, SslProvider sslServerProvider) throws Exception {
-        final String sniHost = "sni.netty.io";
+    private static void testSniClient(SslProvider sslServerProvider, SslProvider sslClientProvider) throws Exception {
+        String sniHostName = "sni.netty.io";
         LocalAddress address = new LocalAddress("test");
         EventLoopGroup group = new DefaultEventLoopGroup(1);
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SslContext sslServerContext = null;
+        SslContext sslClientContext = null;
+
         Channel sc = null;
         Channel cc = null;
         try {
-            SelfSignedCertificate cert = new SelfSignedCertificate();
-            final SslContext sslServerContext = SslContextBuilder.forServer(cert.key(), cert.cert())
-                    .sslProvider(sslServerProvider).build();
+            if ((sslServerProvider == SslProvider.OPENSSL || sslServerProvider == SslProvider.OPENSSL_REFCNT)
+                && !OpenSsl.useKeyManagerFactory()) {
+                sslServerContext = SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
+                                                    .sslProvider(sslServerProvider)
+                                                    .build();
+            } else {
+                // The used OpenSSL version does support a KeyManagerFactory, so use it.
+                KeyManagerFactory kmf = PlatformDependent.javaVersion() >= 8 ?
+                        SniClientJava8TestUtil.newSniX509KeyManagerFactory(cert, sniHostName) :
+                        SslContext.buildKeyManagerFactory(
+                                new X509Certificate[] { cert.cert() }, cert.key(), null, null);
 
+               sslServerContext = SslContextBuilder.forServer(kmf)
+                                                   .sslProvider(sslServerProvider)
+                                                   .build();
+            }
+
+            final SslContext finalContext = sslServerContext;
             final Promise<String> promise = group.next().newPromise();
             ServerBootstrap sb = new ServerBootstrap();
             sc = sb.group(group).channel(LocalServerChannel.class).childHandler(new ChannelInitializer<Channel>() {
@@ -135,19 +131,33 @@ public class SniClientTest {
                         @Override
                         public SslContext map(String input) {
                             promise.setSuccess(input);
-                            return sslServerContext;
+                            return finalContext;
                         }
                     }));
                 }
             }).bind(address).syncUninterruptibly().channel();
 
-            SslContext sslContext = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
-                    .sslProvider(sslClientProvider).build();
+            TrustManagerFactory tmf = PlatformDependent.javaVersion() >= 8 ?
+                    SniClientJava8TestUtil.newSniX509TrustmanagerFactory(sniHostName) :
+                    InsecureTrustManagerFactory.INSTANCE;
+            sslClientContext = SslContextBuilder.forClient().trustManager(tmf)
+                                                     .sslProvider(sslClientProvider).build();
             Bootstrap cb = new Bootstrap();
-            cc = cb.group(group).channel(LocalChannel.class).handler(new SslHandler(
-                    sslContext.newEngine(ByteBufAllocator.DEFAULT, sniHost, -1)))
+
+            SslHandler handler = new SslHandler(
+                    sslClientContext.newEngine(ByteBufAllocator.DEFAULT, sniHostName, -1));
+            cc = cb.group(group).channel(LocalChannel.class).handler(handler)
                     .connect(address).syncUninterruptibly().channel();
-            Assert.assertEquals(sniHost, promise.syncUninterruptibly().getNow());
+            Assert.assertEquals(sniHostName, promise.syncUninterruptibly().getNow());
+
+            // After we are done with handshaking getHandshakeSession() should return null.
+            handler.handshakeFuture().syncUninterruptibly();
+            Assert.assertNull(handler.engine().getHandshakeSession());
+
+            if (PlatformDependent.javaVersion() >= 8) {
+                SniClientJava8TestUtil.assertSSLSession(
+                        handler.engine().getUseClientMode(), handler.engine().getSession(), sniHostName);
+            }
         } finally {
             if (cc != null) {
                 cc.close().syncUninterruptibly();
@@ -155,6 +165,11 @@ public class SniClientTest {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
+            ReferenceCountUtil.release(sslServerContext);
+            ReferenceCountUtil.release(sslClientContext);
+
+            cert.delete();
+
             group.shutdownGracefully();
         }
     }

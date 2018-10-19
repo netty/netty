@@ -59,7 +59,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     private volatile boolean connected;
 
     public EpollDatagramChannel() {
-        super(newSocketDgram(), Native.EPOLLIN);
+        super(newSocketDgram());
         config = new EpollDatagramChannelConfig(this);
     }
 
@@ -68,7 +68,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     EpollDatagramChannel(LinuxSocket fd) {
-        super(null, fd, Native.EPOLLIN, true);
+        super(null, fd, true);
         config = new EpollDatagramChannelConfig(this);
     }
 
@@ -270,7 +270,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             try {
                 // Check if sendmmsg(...) is supported which is only the case for GLIBC 2.14+
                 if (Native.IS_SUPPORTING_SENDMMSG && in.size() > 1) {
-                    NativeDatagramPacketArray array = NativeDatagramPacketArray.getInstance(in);
+                    NativeDatagramPacketArray array = ((EpollEventLoop) eventLoop()).cleanDatagramPacketArray();
+                    in.forEachFlushedMessage(array);
                     int cnt = array.count();
 
                     if (cnt >= 1) {
@@ -347,7 +348,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         remoteAddress.getAddress(), remoteAddress.getPort());
             }
         } else if (data.nioBufferCount() > 1) {
-            IovArray array = ((EpollEventLoop) eventLoop()).cleanArray();
+            IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
             array.add(data);
             int cnt = array.count();
             assert cnt != 0;
@@ -470,13 +471,18 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                             break;
                         }
 
+                        InetSocketAddress localAddress = remoteAddress.localAddress();
+                        if (localAddress == null) {
+                            localAddress = (InetSocketAddress) localAddress();
+                        }
+
                         allocHandle.incMessagesRead(1);
                         allocHandle.lastBytesRead(remoteAddress.receivedAmount());
                         data.writerIndex(data.writerIndex() + allocHandle.lastBytesRead());
 
                         readPending = false;
                         pipeline.fireChannelRead(
-                                new DatagramPacket(data, (InetSocketAddress) localAddress(), remoteAddress));
+                                new DatagramPacket(data, localAddress, remoteAddress));
 
                         data = null;
                     } while (allocHandle.continueReading());

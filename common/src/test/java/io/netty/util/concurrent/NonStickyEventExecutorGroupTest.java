@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -87,6 +88,35 @@ public class NonStickyEventExecutorGroupTest {
             Throwable cause = error.get();
             if (cause != null) {
                 throw cause;
+            }
+        } finally {
+            nonStickyGroup.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void testRaceCondition() throws InterruptedException {
+        EventExecutorGroup group = new UnorderedThreadPoolEventExecutor(1);
+        NonStickyEventExecutorGroup nonStickyGroup = new NonStickyEventExecutorGroup(group, maxTaskExecutePerRun);
+
+        try {
+            EventExecutor executor = nonStickyGroup.next();
+
+            for (int j = 0; j < 5000; j++) {
+                final CountDownLatch firstCompleted = new CountDownLatch(1);
+                final CountDownLatch latch = new CountDownLatch(2);
+                for (int i = 0; i < 2; i++) {
+                    executor.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            firstCompleted.countDown();
+                            latch.countDown();
+                        }
+                    });
+                    Assert.assertTrue(firstCompleted.await(1, TimeUnit.SECONDS));
+                }
+
+                Assert.assertTrue(latch.await(5, TimeUnit.SECONDS));
             }
         } finally {
             nonStickyGroup.shutdownGracefully();

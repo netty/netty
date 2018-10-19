@@ -16,15 +16,38 @@
 package io.netty.util.internal.logging;
 
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.spi.LocationAwareLogger;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class Slf4JLoggerFactoryTest {
 
     @Test
     public void testCreation() {
         InternalLogger logger = Slf4JLoggerFactory.INSTANCE.newInstance("foo");
-        assertTrue(logger instanceof Slf4JLogger);
+        assertTrue(logger instanceof Slf4JLogger || logger instanceof LocationAwareSlf4JLogger);
         assertEquals("foo", logger.name());
+    }
+
+    @Test
+    public void testCreationLogger() {
+        Logger logger = mock(Logger.class);
+        when(logger.getName()).thenReturn("testlogger");
+        InternalLogger internalLogger = Slf4JLoggerFactory.wrapLogger(logger);
+        assertTrue(internalLogger instanceof Slf4JLogger);
+        assertEquals("testlogger", internalLogger.name());
+    }
+
+    @Test
+    public void testCreationLocationAwareLogger() {
+        Logger logger = mock(LocationAwareLogger.class);
+        when(logger.getName()).thenReturn("testlogger");
+        InternalLogger internalLogger = Slf4JLoggerFactory.wrapLogger(logger);
+        assertTrue(internalLogger instanceof LocationAwareSlf4JLogger);
+        assertEquals("testlogger", internalLogger.name());
     }
 }

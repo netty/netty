@@ -20,10 +20,16 @@ import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class ObjectCleanerTest {
 
     private Thread temporaryThread;
+    private Object temporaryObject;
 
     @Test(timeout = 5000)
     public void testCleanup() throws Exception {
@@ -59,5 +65,73 @@ public class ObjectCleanerTest {
             System.runFinalization();
             Thread.sleep(100);
         }
+    }
+
+    @Test(timeout = 5000)
+    public void testCleanupContinuesDespiteThrowing() throws InterruptedException {
+        final AtomicInteger freeCalledCount = new AtomicInteger();
+        final CountDownLatch latch = new CountDownLatch(1);
+        temporaryThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    latch.await();
+                } catch (InterruptedException ignore) {
+                    // just ignore
+                }
+            }
+        });
+        temporaryThread.start();
+        temporaryObject = new Object();
+        ObjectCleaner.register(temporaryThread, new Runnable() {
+            @Override
+            public void run() {
+                freeCalledCount.incrementAndGet();
+                throw new RuntimeException("expected");
+            }
+        });
+        ObjectCleaner.register(temporaryObject, new Runnable() {
+            @Override
+            public void run() {
+                freeCalledCount.incrementAndGet();
+                throw new RuntimeException("expected");
+            }
+        });
+
+        latch.countDown();
+        temporaryThread.join();
+        assertEquals(0, freeCalledCount.get());
+
+        // Null out the temporary object to ensure it is enqueued for GC.
+        temporaryThread = null;
+        temporaryObject = null;
+
+        while (freeCalledCount.get() != 2) {
+            System.gc();
+            System.runFinalization();
+            Thread.sleep(100);
+        }
+    }
+
+    @Test(timeout = 5000)
+    public void testCleanerThreadIsDaemon() throws Exception {
+        temporaryObject = new Object();
+        ObjectCleaner.register(temporaryObject, new Runnable() {
+            @Override
+            public void run() {
+                // NOOP
+            }
+        });
+
+        Thread cleanerThread = null;
+
+        for (Thread thread : Thread.getAllStackTraces().keySet()) {
+            if (thread.getName().equals(ObjectCleaner.CLEANER_THREAD_NAME)) {
+                cleanerThread = thread;
+                break;
+            }
+        }
+        assertNotNull(cleanerThread);
+        assertTrue(cleanerThread.isDaemon());
     }
 }

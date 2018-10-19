@@ -22,6 +22,27 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import java.util.List;
 
 abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocketFrame> {
+
+    private final boolean dropPongFrames;
+
+    /**
+     * Creates a new {@link WebSocketProtocolHandler} that will <i>drop</i> {@link PongWebSocketFrame}s.
+     */
+    WebSocketProtocolHandler() {
+        this(true);
+    }
+
+    /**
+     * Creates a new {@link WebSocketProtocolHandler}, given a parameter that determines whether or not to drop {@link
+     * PongWebSocketFrame}s.
+     *
+     * @param dropPongFrames
+     *            {@code true} if {@link PongWebSocketFrame}s should be dropped
+     */
+    WebSocketProtocolHandler(boolean dropPongFrames) {
+        this.dropPongFrames = dropPongFrames;
+    }
+
     @Override
     protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, List<Object> out) throws Exception {
         if (frame instanceof PingWebSocketFrame) {
@@ -29,8 +50,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             ctx.channel().writeAndFlush(new PongWebSocketFrame(frame.content()));
             return;
         }
-        if (frame instanceof PongWebSocketFrame) {
-            // Pong frames need to get ignored
+        if (frame instanceof PongWebSocketFrame && dropPongFrames) {
             return;
         }
 

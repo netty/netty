@@ -34,6 +34,7 @@ import junit.framework.AssertionFailedError;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -45,7 +46,6 @@ import java.util.List;
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.emptyPingBuf;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
@@ -66,6 +66,7 @@ import static org.mockito.Mockito.anyShort;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -639,15 +640,15 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void pingWriteAfterGoAwayShouldSucceed() throws Exception {
         ChannelPromise promise = newPromise();
         goAwayReceived(0);
-        encoder.writePing(ctx, false, emptyPingBuf(), promise);
-        verify(writer).writePing(eq(ctx), eq(false), eq(emptyPingBuf()), eq(promise));
+        encoder.writePing(ctx, false, 0L, promise);
+        verify(writer).writePing(eq(ctx), eq(false), eq(0L), eq(promise));
     }
 
     @Test
     public void pingWriteShouldSucceed() throws Exception {
         ChannelPromise promise = newPromise();
-        encoder.writePing(ctx, false, emptyPingBuf(), promise);
-        verify(writer).writePing(eq(ctx), eq(false), eq(emptyPingBuf()), eq(promise));
+        encoder.writePing(ctx, false, 0L, promise);
+        verify(writer).writePing(eq(ctx), eq(false), eq(0L), eq(promise));
     }
 
     @Test
@@ -706,6 +707,32 @@ public class DefaultHttp2ConnectionEncoderTest {
         assertEquals(HALF_CLOSED_REMOTE, stream.state());
         assertTrue(promise.isSuccess());
         verify(lifecycleManager).closeStreamLocal(eq(stream), eq(promise));
+    }
+
+    @Test
+    public void headersWriteShouldHalfCloseAfterOnError() throws Exception {
+        final ChannelPromise promise = newPromise();
+        final Throwable ex = new RuntimeException();
+        // Fake an encoding error, like HPACK's HeaderListSizeException
+        when(writer.writeHeaders(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(promise)))
+            .thenAnswer(new Answer<ChannelFuture>() {
+                @Override
+                public ChannelFuture answer(InvocationOnMock invocation) {
+                    promise.setFailure(ex);
+                    return promise;
+                }
+            });
+
+        writeAllFlowControlledFrames();
+        createStream(STREAM_ID, false);
+        encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true, promise);
+
+        assertTrue(promise.isDone());
+        assertFalse(promise.isSuccess());
+        InOrder inOrder = inOrder(lifecycleManager);
+        inOrder.verify(lifecycleManager).onError(eq(ctx), eq(true), eq(ex));
+        inOrder.verify(lifecycleManager).closeStreamLocal(eq(stream(STREAM_ID)), eq(promise));
     }
 
     @Test
@@ -771,7 +798,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
-    public void canWriteHeaderFrameAfterGoAwayReceived() {
+    public void canWriteHeaderFrameAfterGoAwayReceived() throws Http2Exception {
         writeAllFlowControlledFrames();
         goAwayReceived(STREAM_ID);
         ChannelPromise promise = newPromise();
@@ -804,11 +831,11 @@ public class DefaultHttp2ConnectionEncoderTest {
         return connection.stream(streamId);
     }
 
-    private void goAwayReceived(int lastStreamId) {
+    private void goAwayReceived(int lastStreamId) throws Http2Exception {
         connection.goAwayReceived(lastStreamId, 0, EMPTY_BUFFER);
     }
 
-    private void goAwaySent(int lastStreamId) {
+    private void goAwaySent(int lastStreamId) throws Http2Exception {
         connection.goAwaySent(lastStreamId, 0, EMPTY_BUFFER);
     }
 

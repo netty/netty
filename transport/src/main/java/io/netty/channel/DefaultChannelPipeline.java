@@ -457,6 +457,26 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return (T) remove(getContextOrDie(handlerType)).handler();
     }
 
+    public final <T extends ChannelHandler> T removeIfExists(String name) {
+        return removeIfExists(context(name));
+    }
+
+    public final <T extends ChannelHandler> T removeIfExists(Class<T> handlerType) {
+        return removeIfExists(context(handlerType));
+    }
+
+    public final <T extends ChannelHandler> T removeIfExists(ChannelHandler handler) {
+        return removeIfExists(context(handler));
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T extends ChannelHandler> T removeIfExists(ChannelHandlerContext ctx) {
+        if (ctx == null) {
+            return null;
+        }
+        return (T) remove((AbstractChannelHandlerContext) ctx).handler();
+    }
+
     private AbstractChannelHandlerContext remove(final AbstractChannelHandlerContext ctx) {
         assert ctx != head && ctx != tail;
 
@@ -611,8 +631,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private void callHandlerAdded0(final AbstractChannelHandlerContext ctx) {
         try {
-            ctx.handler().handlerAdded(ctx);
+            // We must call setAddComplete before calling handlerAdded. Otherwise if the handlerAdded method generates
+            // any pipeline events ctx.handler() will miss them because the state will not allow it.
             ctx.setAddComplete();
+            ctx.handler().handlerAdded(ctx);
         } catch (Throwable t) {
             boolean removed = false;
             try {

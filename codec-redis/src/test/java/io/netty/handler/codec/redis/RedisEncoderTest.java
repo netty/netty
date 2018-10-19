@@ -49,6 +49,18 @@ public class RedisEncoderTest {
     }
 
     @Test
+    public void shouldEncodeInlineCommand() {
+        RedisMessage msg = new InlineCommandRedisMessage("ping");
+
+        boolean result = channel.writeOutbound(msg);
+        assertThat(result, is(true));
+
+        ByteBuf written = readAll(channel);
+        assertThat(bytesOf(written), is(bytesOf("ping\r\n")));
+        written.release();
+    }
+
+    @Test
     public void shouldEncodeSimpleString() {
         RedisMessage msg = new SimpleStringRedisMessage("simple");
 

@@ -16,7 +16,10 @@
 package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.UnpooledHeapByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -27,10 +30,7 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class ByteToMessageDecoderTest {
 
@@ -304,5 +304,45 @@ public class ByteToMessageDecoderTest {
         assertFalse(channel.writeInbound(Unpooled.buffer(8).writeByte(1).asReadOnly()));
         assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(new byte[] { (byte) 2 })));
         assertFalse(channel.finish());
+    }
+
+    @Test
+    public void releaseWhenMergeCumulateThrows() {
+        final Error error = new Error();
+
+        ByteBuf cumulation = new UnpooledHeapByteBuf(UnpooledByteBufAllocator.DEFAULT, 0, 64) {
+            @Override
+            public ByteBuf writeBytes(ByteBuf src) {
+                throw error;
+            }
+        };
+        ByteBuf in = Unpooled.buffer().writeZero(12);
+        try {
+            ByteToMessageDecoder.MERGE_CUMULATOR.cumulate(UnpooledByteBufAllocator.DEFAULT, cumulation, in);
+            fail();
+        } catch (Error expected) {
+            assertSame(error, expected);
+            assertEquals(0, in.refCnt());
+        }
+    }
+
+    @Test
+    public void releaseWhenCompositeCumulateThrows() {
+        final Error error = new Error();
+
+        ByteBuf cumulation = new CompositeByteBuf(UnpooledByteBufAllocator.DEFAULT, false, 64) {
+            @Override
+            public CompositeByteBuf addComponent(boolean increaseWriterIndex, ByteBuf buffer) {
+                throw error;
+            }
+        };
+        ByteBuf in = Unpooled.buffer().writeZero(12);
+        try {
+            ByteToMessageDecoder.COMPOSITE_CUMULATOR.cumulate(UnpooledByteBufAllocator.DEFAULT, cumulation, in);
+            fail();
+        } catch (Error expected) {
+            assertSame(error, expected);
+            assertEquals(0, in.refCnt());
+        }
     }
 }

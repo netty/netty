@@ -73,7 +73,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     private final Runnable flushTask = new Runnable() {
         @Override
         public void run() {
-            flush();
+            // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
+            // meantime.
+            ((AbstractEpollUnsafe) unsafe()).flush0();
         }
     };
     private Queue<SpliceInTask> spliceQueue;
@@ -97,19 +99,19 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     }
 
     AbstractEpollStreamChannel(Channel parent, LinuxSocket fd) {
-        super(parent, fd, Native.EPOLLIN, true);
+        super(parent, fd, true);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
     }
 
     AbstractEpollStreamChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
-        super(parent, fd, Native.EPOLLIN, remote);
+        super(parent, fd, remote);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
     }
 
     protected AbstractEpollStreamChannel(LinuxSocket fd, boolean active) {
-        super(null, fd, Native.EPOLLIN, active);
+        super(null, fd, active);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
     }
@@ -445,6 +447,12 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         } while (writeSpinCount > 0);
 
         if (writeSpinCount == 0) {
+            // It is possible that we have set EPOLLOUT, woken up by EPOLL because the socket is writable, and then use
+            // our write quantum. In this case we no longer want to set the EPOLLOUT flag because the socket is still
+            // writable (as far as we know). We will find out next time we attempt to write if the socket is writable
+            // and set the EPOLLOUT if necessary.
+            clearFlag(Native.EPOLLOUT);
+
             // We used our writeSpin quantum, and should try to write again later.
             eventLoop().execute(flushTask);
         } else {
@@ -505,22 +513,13 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      */
     private int doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
         final long maxBytesPerGatheringWrite = config().getMaxBytesPerGatheringWrite();
-        if (PlatformDependent.hasUnsafe()) {
-            IovArray array = ((EpollEventLoop) eventLoop()).cleanArray();
-            array.maxBytes(maxBytesPerGatheringWrite);
-            in.forEachFlushedMessage(array);
+        IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
+        array.maxBytes(maxBytesPerGatheringWrite);
+        in.forEachFlushedMessage(array);
 
-            if (array.count() >= 1) {
-                // TODO: Handle the case where cnt == 1 specially.
-                return writeBytesMultiple(in, array);
-            }
-        } else {
-            ByteBuffer[] buffers = in.nioBuffers();
-            int cnt = in.nioBufferCount();
-            if (cnt >= 1) {
-                // TODO: Handle the case where cnt == 1 specially.
-                return writeBytesMultiple(in, buffers, cnt, in.nioBufferSize(), maxBytesPerGatheringWrite);
-            }
+        if (array.count() >= 1) {
+            // TODO: Handle the case where cnt == 1 specially.
+            return writeBytesMultiple(in, array);
         }
         // cnt == 0, which means the outbound buffer contained empty buffers only.
         in.removeBytes(0);

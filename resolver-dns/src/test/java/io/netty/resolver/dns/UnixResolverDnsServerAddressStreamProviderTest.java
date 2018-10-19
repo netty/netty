@@ -25,6 +25,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import static io.netty.resolver.dns.UnixResolverDnsServerAddressStreamProvider.DEFAULT_NDOTS;
 import static io.netty.resolver.dns.UnixResolverDnsServerAddressStreamProvider.parseEtcResolverFirstNdots;
@@ -109,6 +112,56 @@ public class UnixResolverDnsServerAddressStreamProviderTest {
 
         DnsServerAddressStream stream = p.nameServerAddressStream("somehost");
         assertHostNameEquals("127.0.0.2", stream.next());
+    }
+
+    @Test
+    public void searchDomainsWithOnlyDomain() throws IOException {
+        File f = buildFile("domain linecorp.local\n" +
+                           "nameserver 127.0.0.2\n");
+        List<String> domains = UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains(f);
+        assertEquals(Collections.singletonList("linecorp.local"), domains);
+    }
+
+    @Test
+    public void searchDomainsWithOnlySearch() throws IOException {
+        File f = buildFile("search linecorp.local\n" +
+                           "nameserver 127.0.0.2\n");
+        List<String> domains = UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains(f);
+        assertEquals(Collections.singletonList("linecorp.local"), domains);
+    }
+
+    @Test
+    public void searchDomainsWithMultipleSearch() throws IOException {
+        File f = buildFile("search linecorp.local\n" +
+                           "search squarecorp.local\n" +
+                           "nameserver 127.0.0.2\n");
+        List<String> domains = UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains(f);
+        assertEquals(Arrays.asList("linecorp.local", "squarecorp.local"), domains);
+    }
+
+    @Test
+    public void searchDomainsWithMultipleSearchSeperatedByWhitespace() throws IOException {
+        File f = buildFile("search linecorp.local squarecorp.local\n" +
+                           "nameserver 127.0.0.2\n");
+        List<String> domains = UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains(f);
+        assertEquals(Arrays.asList("linecorp.local", "squarecorp.local"), domains);
+    }
+
+    @Test
+    public void searchDomainsWithMultipleSearchSeperatedByTab() throws IOException {
+        File f = buildFile("search linecorp.local\tsquarecorp.local\n" +
+                "nameserver 127.0.0.2\n");
+        List<String> domains = UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains(f);
+        assertEquals(Arrays.asList("linecorp.local", "squarecorp.local"), domains);
+    }
+
+    @Test
+    public void searchDomainsPrecedence() throws IOException {
+        File f = buildFile("domain linecorp.local\n" +
+                           "search squarecorp.local\n" +
+                           "nameserver 127.0.0.2\n");
+        List<String> domains = UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains(f);
+        assertEquals(Collections.singletonList("squarecorp.local"), domains);
     }
 
     private File buildFile(String contents) throws IOException {

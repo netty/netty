@@ -124,9 +124,10 @@ public class SslErrorTest {
         Assume.assumeTrue(OpenSsl.isAvailable());
 
         SelfSignedCertificate ssc = new SelfSignedCertificate();
-        final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                .sslProvider(serverProvider)
-                .trustManager(new SimpleTrustManagerFactory() {
+        final SslContext sslServerCtx = OpenSslTestUtils.configureProtocolForMutualAuth(
+                SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                                 .sslProvider(serverProvider)
+                                 .trustManager(new SimpleTrustManagerFactory() {
             @Override
             protected void engineInit(KeyStore keyStore) { }
             @Override
@@ -154,13 +155,13 @@ public class SslErrorTest {
                     }
                 } };
             }
-        }).clientAuth(ClientAuth.REQUIRE).build();
+        }).clientAuth(ClientAuth.REQUIRE), clientProvider, serverProvider).build();
 
-        final SslContext sslClientCtx = SslContextBuilder.forClient()
+        final SslContext sslClientCtx = OpenSslTestUtils.configureProtocolForMutualAuth(SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .keyManager(new File(getClass().getResource("test.crt").getFile()),
                         new File(getClass().getResource("test_unencrypted.pem").getFile()))
-                .sslProvider(clientProvider).build();
+                .sslProvider(clientProvider), clientProvider, serverProvider).build();
 
         Channel serverChannel = null;
         Channel clientChannel = null;
@@ -203,14 +204,24 @@ public class SslErrorTest {
                                             if (reason == CertPathValidatorException.BasicReason.EXPIRED) {
                                                 verifyException(unwrappedCause, "expired", promise);
                                             } else if (reason == CertPathValidatorException.BasicReason.NOT_YET_VALID) {
-                                                verifyException(unwrappedCause, "bad", promise);
+                                                // BoringSSL uses "expired" in this case while others use "bad"
+                                                if (OpenSslTestUtils.isBoringSSL()) {
+                                                    verifyException(unwrappedCause, "expired", promise);
+                                                } else {
+                                                    verifyException(unwrappedCause, "bad", promise);
+                                                }
                                             } else if (reason == CertPathValidatorException.BasicReason.REVOKED) {
                                                 verifyException(unwrappedCause, "revoked", promise);
                                             }
                                         } else if (exception instanceof CertificateExpiredException) {
                                             verifyException(unwrappedCause, "expired", promise);
                                         } else if (exception instanceof CertificateNotYetValidException) {
-                                            verifyException(unwrappedCause, "bad", promise);
+                                            // BoringSSL uses "expired" in this case while others use "bad"
+                                            if (OpenSslTestUtils.isBoringSSL()) {
+                                                verifyException(unwrappedCause, "expired", promise);
+                                            } else {
+                                                verifyException(unwrappedCause, "bad", promise);
+                                            }
                                         } else if (exception instanceof CertificateRevokedException) {
                                             verifyException(unwrappedCause, "revoked", promise);
                                         }
@@ -242,7 +253,9 @@ public class SslErrorTest {
         if (message.toLowerCase(Locale.UK).contains(messagePart.toLowerCase(Locale.UK))) {
             promise.setSuccess(null);
         } else {
-            promise.setFailure(new AssertionError("message not contains '" + messagePart + "': " + message));
+            Throwable error = new AssertionError("message not contains '" + messagePart + "': " + message);
+            error.initCause(cause);
+            promise.setFailure(error);
         }
     }
 

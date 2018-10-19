@@ -340,7 +340,7 @@ public class ParameterizedSslHandlerTest {
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                     if (cause.getCause() instanceof SSLException) {
                                         // We received the alert and so produce an SSLException.
-                                        promise.setSuccess(null);
+                                        promise.trySuccess(null);
                                     }
                                 }
                             });
@@ -381,12 +381,21 @@ public class ParameterizedSslHandlerTest {
         SelfSignedCertificate ssc = new SelfSignedCertificate();
 
         final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                .sslProvider(serverProvider)
-                .build();
+                                                         .sslProvider(serverProvider)
+                                                         // Use TLSv1.2 as we depend on the fact that the handshake
+                                                         // is done in an extra round trip in the test which
+                                                         // is not true in TLSv1.3
+                                                         .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                                                         .build();
 
         final SslContext sslClientCtx = SslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .sslProvider(clientProvider).build();
+                                                         .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                                                         .sslProvider(clientProvider)
+                                                         // Use TLSv1.2 as we depend on the fact that the handshake
+                                                         // is done in an extra round trip in the test which
+                                                         // is not true in TLSv1.3
+                                                         .protocols(SslUtils.PROTOCOL_TLS_V1_2)
+                                                         .build();
 
         EventLoopGroup group = new NioEventLoopGroup();
         Channel sc = null;

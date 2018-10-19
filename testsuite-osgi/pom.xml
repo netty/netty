@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.20.Final-SNAPSHOT</version>
+    <version>4.1.31.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite-osgi</artifactId>
@@ -30,7 +30,7 @@
 
   <properties>
     <exam.version>4.9.1</exam.version>
-    <argLine.java9.extras>--add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.security=ALL-UNNAMED</argLine.java9.extras>
+    <argLine.java9.extras>--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/jdk.internal.loader=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.security=ALL-UNNAMED</argLine.java9.extras>
   </properties>
 
   <profiles>
@@ -209,7 +209,7 @@
     <dependency>
       <groupId>org.apache.felix</groupId>
       <artifactId>org.apache.felix.framework</artifactId>
-      <version>5.4.0</version>
+      <version>5.6.10</version>
       <scope>test</scope>
     </dependency>
 

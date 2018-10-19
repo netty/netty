@@ -1467,7 +1467,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         valueStart = HttpPostBodyUtil.findNonWhitespace(sb, colonEnd);
         valueEnd = HttpPostBodyUtil.findEndOfString(sb);
         headers.add(sb.substring(nameStart, nameEnd));
-        String svalue = sb.substring(valueStart, valueEnd);
+        String svalue = (valueStart >= valueEnd) ? StringUtil.EMPTY_STRING : sb.substring(valueStart, valueEnd);
         String[] values;
         if (svalue.indexOf(';') >= 0) {
             values = splitMultipartHeaderValues(svalue);
@@ -1515,6 +1515,6 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             }
         }
         values.add(svalue.substring(start));
-        return values.toArray(new String[values.size()]);
+        return values.toArray(new String[0]);
     }
 }

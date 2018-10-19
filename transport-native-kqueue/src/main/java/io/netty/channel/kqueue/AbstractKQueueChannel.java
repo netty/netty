@@ -33,11 +33,13 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -63,7 +65,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private SocketAddress requestedRemoteAddress;
 
     final BsdSocket socket;
-    private boolean readFilterEnabled = true;
+    private boolean readFilterEnabled;
     private boolean writeFilterEnabled;
     boolean readReadyRunnablePending;
     boolean inputClosedSeenErrorOnRead;
@@ -81,14 +83,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private volatile SocketAddress remote;
 
     AbstractKQueueChannel(Channel parent, BsdSocket fd, boolean active) {
-        this(parent, fd, active, false);
-    }
-
-    AbstractKQueueChannel(Channel parent, BsdSocket fd, boolean active, boolean writeFilterEnabled) {
         super(parent);
         socket = checkNotNull(fd, "fd");
         this.active = active;
-        this.writeFilterEnabled = writeFilterEnabled;
         if (active) {
             // Directly cache the remote and local addresses
             // See https://github.com/netty/netty/issues/2359
@@ -190,9 +187,6 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         evSet0(Native.EVFILT_SOCK, Native.EV_DELETE, 0);
 
         ((KQueueEventLoop) eventLoop()).remove(this);
-
-        // Set the filters back to the initial state in case this channel is registered with another event loop.
-        readFilterEnabled = true;
     }
 
     @Override
@@ -326,8 +320,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     private static boolean isAllowHalfClosure(ChannelConfig config) {
-        return config instanceof KQueueSocketChannelConfig &&
-                ((KQueueSocketChannelConfig) config).isAllowHalfClosure();
+        return config instanceof SocketChannelConfig &&
+                ((SocketChannelConfig) config).isAllowHalfClosure();
     }
 
     final void clearReadFilter() {
@@ -408,15 +402,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
         final void readReadyFinally(ChannelConfig config) {
             maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
-            // Check if there is a readPending which was not processed yet.
-            // This could be for two reasons:
-            // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
-            // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
-            //
-            // See https://github.com/netty/netty/issues/2254
-            if (!readPending && !config.isAutoRead()) {
-                clearReadFilter0();
-            } else if (readPending && maybeMoreDataToRead) {
+
+            if (allocHandle.isReadEOF() || (readPending && maybeMoreDataToRead)) {
                 // trigger a read again as there may be something left to read and because of ET we
                 // will not get notified again until we read everything from the socket
                 //
@@ -425,7 +412,31 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 // to false before every read operation to prevent re-entry into readReady() we will not read from
                 // the underlying OS again unless the user happens to call read again.
                 executeReadReadyRunnable(config);
+            } else if (!readPending && !config.isAutoRead()) {
+                // Check if there is a readPending which was not processed yet.
+                // This could be for two reasons:
+                // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
+                // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
+                //
+                // See https://github.com/netty/netty/issues/2254
+                clearReadFilter0();
             }
+        }
+
+        final boolean failConnectPromise(Throwable cause) {
+            if (connectPromise != null) {
+                // SO_ERROR has been shown to return 0 on macOS if detect an error via read() and the write filter was
+                // not set before calling connect. This means finishConnect will not detect any error and would
+                // successfully complete the connectPromise and update the channel state to active (which is incorrect).
+                ChannelPromise connectPromise = AbstractKQueueChannel.this.connectPromise;
+                AbstractKQueueChannel.this.connectPromise = null;
+                if (connectPromise.tryFailure((cause instanceof ConnectException) ? cause
+                                : new ConnectException("failed to connect").initCause(cause))) {
+                    closeIfClosed();
+                    return true;
+                }
+            }
+            return false;
         }
 
         final void writeReady() {
@@ -496,6 +507,16 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                         (RecvByteBufAllocator.ExtendedHandle) super.recvBufAllocHandle());
             }
             return allocHandle;
+        }
+
+        @Override
+        protected final void flush0() {
+            // Flush immediately only when there's no pending flush.
+            // If there's a pending flush operation, event loop will call forceFlush() later,
+            // and thus there's no need to call it now.
+            if (!writeFilterEnabled) {
+                super.flush0();
+            }
         }
 
         final void executeReadReadyRunnable(ChannelConfig config) {

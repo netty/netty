@@ -66,12 +66,6 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
             return kqueueWaitNow();
         }
     };
-    private final Callable<Integer> pendingTasksCallable = new Callable<Integer>() {
-        @Override
-        public Integer call() throws Exception {
-            return KQueueEventLoop.super.pendingTasks();
-        }
-    };
 
     private volatile int wakenUp;
     private volatile int ioRatio = 50;
@@ -214,6 +208,10 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
                 switch (strategy) {
                     case SelectStrategy.CONTINUE:
                         continue;
+
+                    case SelectStrategy.BUSY_WAIT:
+                        // fall-through to SELECT since the busy-wait is not supported with kqueue
+
                     case SelectStrategy.SELECT:
                         strategy = kqueueWait(WAKEN_UP_UPDATER.getAndSet(this, 0) == 1);
 
@@ -299,14 +297,6 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
         // This event loop never calls takeTask()
         return maxPendingTasks == Integer.MAX_VALUE ? PlatformDependent.<Runnable>newMpscQueue()
                                                     : PlatformDependent.<Runnable>newMpscQueue(maxPendingTasks);
-    }
-
-    @Override
-    public int pendingTasks() {
-        // As we use a MpscQueue we need to ensure pendingTasks() is only executed from within the EventLoop as
-        // otherwise we may see unexpected behavior (as size() is only allowed to be called by a single consumer).
-        // See https://github.com/netty/netty/issues/5297
-        return inEventLoop() ? super.pendingTasks() : submit(pendingTasksCallable).syncUninterruptibly().getNow();
     }
 
     /**

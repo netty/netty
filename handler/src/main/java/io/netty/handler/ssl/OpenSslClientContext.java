@@ -203,9 +203,4 @@ public final class OpenSslClientContext extends OpenSslContext {
     public OpenSslSessionContext sessionContext() {
         return sessionContext;
     }
-
-    @Override
-    OpenSslKeyMaterialManager keyMaterialManager() {
-        return null;
-    }
 }

@@ -50,6 +50,11 @@
 #define TCP_NOTSENT_LOWAT 25
 #endif
 
+// SO_BUSY_POLL is defined in linux 3.11. We define this here so older kernels can compile.
+#ifndef SO_BUSY_POLL
+#define SO_BUSY_POLL 46
+#endif
+
 static jclass peerCredentialsClass = NULL;
 static jmethodID peerCredentialsMethodId = NULL;
 
@@ -105,6 +110,14 @@ static void netty_epoll_linuxsocket_setIpFreeBind(JNIEnv* env, jclass clazz, jin
 
 static void netty_epoll_linuxsocket_setIpTransparent(JNIEnv* env, jclass clazz, jint fd, jint optval) {
     netty_unix_socket_setOption(env, fd, SOL_IP, IP_TRANSPARENT, &optval, sizeof(optval));
+}
+
+static void netty_epoll_linuxsocket_setIpRecvOrigDestAddr(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_RECVORIGDSTADDR, &optval, sizeof(optval));
+}
+
+static void netty_epoll_linuxsocket_setSoBusyPoll(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty_unix_socket_setOption(env, fd, SOL_SOCKET, SO_BUSY_POLL, &optval, sizeof(optval));
 }
 
 static void netty_epoll_linuxsocket_setTcpMd5Sig(JNIEnv* env, jclass clazz, jint fd, jbyteArray address, jint scopeId, jbyteArray key) {
@@ -193,6 +206,14 @@ static jint netty_epoll_linuxsocket_isIpTransparent(JNIEnv* env, jclass clazz, j
      return optval;
 }
 
+static jint netty_epoll_linuxsocket_isIpRecvOrigDestAddr(JNIEnv* env, jclass clazz, jint fd) {
+     int optval;
+     if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_RECVORIGDSTADDR, &optval, sizeof(optval)) == -1) {
+         return -1;
+     }
+     return optval;
+}
+
 static void netty_epoll_linuxsocket_getTcpInfo(JNIEnv* env, jclass clazz, jint fd, jlongArray array) {
      struct tcp_info tcp_info;
      if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_INFO, &tcp_info, sizeof(tcp_info)) == -1) {
@@ -239,6 +260,14 @@ static void netty_epoll_linuxsocket_getTcpInfo(JNIEnv* env, jclass clazz, jint f
 static jint netty_epoll_linuxsocket_isTcpCork(JNIEnv* env, jclass clazz, jint fd) {
     int optval;
     if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_CORK, &optval, sizeof(optval)) == -1) {
+        return -1;
+    }
+    return optval;
+}
+
+static jint netty_epoll_linuxsocket_getSoBusyPoll(JNIEnv* env, jclass clazz, jint fd) {
+    int optval;
+    if (netty_unix_socket_getOption(env, fd, SOL_SOCKET, SO_BUSY_POLL, &optval, sizeof(optval)) == -1) {
         return -1;
     }
     return optval;
@@ -329,10 +358,12 @@ static jlong netty_epoll_linuxsocket_sendFile(JNIEnv* env, jclass clazz, jint fd
 // JNI Method Registration Table Begin
 static const JNINativeMethod fixed_method_table[] = {
   { "setTcpCork", "(II)V", (void *) netty_epoll_linuxsocket_setTcpCork },
+  { "setSoBusyPoll", "(II)V", (void *) netty_epoll_linuxsocket_setSoBusyPoll },
   { "setTcpQuickAck", "(II)V", (void *) netty_epoll_linuxsocket_setTcpQuickAck },
   { "setTcpDeferAccept", "(II)V", (void *) netty_epoll_linuxsocket_setTcpDeferAccept },
   { "setTcpNotSentLowAt", "(II)V", (void *) netty_epoll_linuxsocket_setTcpNotSentLowAt },
   { "isTcpCork", "(I)I", (void *) netty_epoll_linuxsocket_isTcpCork },
+  { "getSoBusyPoll", "(I)I", (void *) netty_epoll_linuxsocket_getSoBusyPoll },
   { "getTcpDeferAccept", "(I)I", (void *) netty_epoll_linuxsocket_getTcpDeferAccept },
   { "getTcpNotSentLowAt", "(I)I", (void *) netty_epoll_linuxsocket_getTcpNotSentLowAt },
   { "isTcpQuickAck", "(I)I", (void *) netty_epoll_linuxsocket_isTcpQuickAck },
@@ -345,12 +376,14 @@ static const JNINativeMethod fixed_method_table[] = {
   { "setTcpUserTimeout", "(II)V", (void *) netty_epoll_linuxsocket_setTcpUserTimeout },
   { "setIpFreeBind", "(II)V", (void *) netty_epoll_linuxsocket_setIpFreeBind },
   { "setIpTransparent", "(II)V", (void *) netty_epoll_linuxsocket_setIpTransparent },
+  { "setIpRecvOrigDestAddr", "(II)V", (void *) netty_epoll_linuxsocket_setIpRecvOrigDestAddr },
   { "getTcpKeepIdle", "(I)I", (void *) netty_epoll_linuxsocket_getTcpKeepIdle },
   { "getTcpKeepIntvl", "(I)I", (void *) netty_epoll_linuxsocket_getTcpKeepIntvl },
   { "getTcpKeepCnt", "(I)I", (void *) netty_epoll_linuxsocket_getTcpKeepCnt },
   { "getTcpUserTimeout", "(I)I", (void *) netty_epoll_linuxsocket_getTcpUserTimeout },
   { "isIpFreeBind", "(I)I", (void *) netty_epoll_linuxsocket_isIpFreeBind },
   { "isIpTransparent", "(I)I", (void *) netty_epoll_linuxsocket_isIpTransparent },
+  { "isIpRecvOrigDestAddr", "(I)I", (void *) netty_epoll_linuxsocket_isIpRecvOrigDestAddr },
   { "getTcpInfo", "(I[J)V", (void *) netty_epoll_linuxsocket_getTcpInfo },
   { "setTcpMd5Sig", "(I[BI[B)V", (void *) netty_epoll_linuxsocket_setTcpMd5Sig }
   // "sendFile" has a dynamic signature

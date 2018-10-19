@@ -16,7 +16,7 @@
 package io.netty.channel.kqueue;
 
 import io.netty.channel.unix.FileDescriptor;
-import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -25,33 +25,29 @@ import io.netty.util.internal.UnstableApi;
 @UnstableApi
 public final class KQueue {
     private static final Throwable UNAVAILABILITY_CAUSE;
-
     static  {
         Throwable cause = null;
-        FileDescriptor kqueueFd = null;
-        try {
-            kqueueFd = Native.newKQueue();
-        } catch (Throwable t) {
-            cause = t;
-        } finally {
-            if (kqueueFd != null) {
-                try {
-                    kqueueFd.close();
-                } catch (Exception ignore) {
-                    // ignore
+        if (SystemPropertyUtil.getBoolean("io.netty.transport.noNative", false)) {
+            cause = new UnsupportedOperationException(
+                    "Native transport was explicit disabled with -Dio.netty.transport.noNative=true");
+        } else {
+            FileDescriptor kqueueFd = null;
+            try {
+                kqueueFd = Native.newKQueue();
+            } catch (Throwable t) {
+                cause = t;
+            } finally {
+                if (kqueueFd != null) {
+                    try {
+                        kqueueFd.close();
+                    } catch (Exception ignore) {
+                        // ignore
+                    }
                 }
             }
         }
 
-        if (cause != null) {
-            UNAVAILABILITY_CAUSE = cause;
-        } else {
-            UNAVAILABILITY_CAUSE = PlatformDependent.hasUnsafe()
-                    ? null
-                    : new IllegalStateException(
-                            "sun.misc.Unsafe not available",
-                            PlatformDependent.getUnsafeUnavailabilityCause());
-        }
+        UNAVAILABILITY_CAUSE = cause;
     }
 
     /**

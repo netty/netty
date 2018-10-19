@@ -603,7 +603,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public Boolean getBoolean(K name) {
         V v = get(name);
-        return v != null ? valueConverter.convertToBoolean(v) : null;
+        try {
+            return v != null ? valueConverter.convertToBoolean(v) : null;
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
@@ -615,7 +619,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public Byte getByte(K name) {
         V v = get(name);
-        return v != null ? valueConverter.convertToByte(v) : null;
+        try {
+            return v != null ? valueConverter.convertToByte(v) : null;
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
@@ -627,7 +635,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public Character getChar(K name) {
         V v = get(name);
-        return v != null ? valueConverter.convertToChar(v) : null;
+        try {
+            return v != null ? valueConverter.convertToChar(v) : null;
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
@@ -639,7 +651,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public Short getShort(K name) {
         V v = get(name);
-        return v != null ? valueConverter.convertToShort(v) : null;
+        try {
+            return v != null ? valueConverter.convertToShort(v) : null;
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
@@ -651,7 +667,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public Integer getInt(K name) {
         V v = get(name);
-        return v != null ? valueConverter.convertToInt(v) : null;
+        try {
+            return v != null ? valueConverter.convertToInt(v) : null;
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
@@ -663,7 +683,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public Long getLong(K name) {
         V v = get(name);
-        return v != null ? valueConverter.convertToLong(v) : null;
+        try {
+            return v != null ? valueConverter.convertToLong(v) : null;
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
@@ -675,7 +699,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public Float getFloat(K name) {
         V v = get(name);
-        return v != null ? valueConverter.convertToFloat(v) : null;
+        try {
+            return v != null ? valueConverter.convertToFloat(v) : null;
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
@@ -687,7 +715,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public Double getDouble(K name) {
         V v = get(name);
-        return v != null ? valueConverter.convertToDouble(v) : null;
+        try {
+            return v != null ? valueConverter.convertToDouble(v) : null;
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
@@ -699,7 +731,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public Long getTimeMillis(K name) {
         V v = get(name);
-        return v != null ? valueConverter.convertToTimeMillis(v) : null;
+        try {
+            return v != null ? valueConverter.convertToTimeMillis(v) : null;
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
@@ -711,7 +747,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public Boolean getBooleanAndRemove(K name) {
         V v = getAndRemove(name);
-        return v != null ? valueConverter.convertToBoolean(v) : null;
+        try {
+            return v != null ? valueConverter.convertToBoolean(v) : null;
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
@@ -723,7 +763,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public Byte getByteAndRemove(K name) {
         V v = getAndRemove(name);
-        return v != null ? valueConverter.convertToByte(v) : null;
+        try {
+            return v != null ? valueConverter.convertToByte(v) : null;
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
@@ -735,12 +779,9 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public Character getCharAndRemove(K name) {
         V v = getAndRemove(name);
-        if (v == null) {
-            return null;
-        }
         try {
-            return valueConverter.convertToChar(v);
-        } catch (Throwable ignored) {
+            return v != null ? valueConverter.convertToChar(v) : null;
+        } catch (RuntimeException ignore) {
             return null;
         }
     }
@@ -754,7 +795,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public Short getShortAndRemove(K name) {
         V v = getAndRemove(name);
-        return v != null ? valueConverter.convertToShort(v) : null;
+        try {
+            return v != null ? valueConverter.convertToShort(v) : null;
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
@@ -766,7 +811,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public Integer getIntAndRemove(K name) {
         V v = getAndRemove(name);
-        return v != null ? valueConverter.convertToInt(v) : null;
+        try {
+            return v != null ? valueConverter.convertToInt(v) : null;
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
@@ -778,7 +827,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public Long getLongAndRemove(K name) {
         V v = getAndRemove(name);
-        return v != null ? valueConverter.convertToLong(v) : null;
+        try {
+            return v != null ? valueConverter.convertToLong(v) : null;
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
@@ -790,7 +843,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public Float getFloatAndRemove(K name) {
         V v = getAndRemove(name);
-        return v != null ? valueConverter.convertToFloat(v) : null;
+        try {
+            return v != null ? valueConverter.convertToFloat(v) : null;
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
@@ -802,7 +859,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public Double getDoubleAndRemove(K name) {
         V v = getAndRemove(name);
-        return v != null ? valueConverter.convertToDouble(v) : null;
+        try {
+            return v != null ? valueConverter.convertToDouble(v) : null;
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
@@ -814,7 +875,11 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public Long getTimeMillisAndRemove(K name) {
         V v = getAndRemove(name);
-        return v != null ? valueConverter.convertToTimeMillis(v) : null;
+        try {
+            return v != null ? valueConverter.convertToTimeMillis(v) : null;
+        } catch (RuntimeException ignore) {
+            return null;
+        }
     }
 
     @Override
@@ -1104,6 +1169,21 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         @Override
         public final String toString() {
             return key.toString() + '=' + value.toString();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof Map.Entry)) {
+                return false;
+            }
+            Map.Entry<?, ?> other = (Map.Entry<?, ?>) o;
+            return (getKey() == null ? other.getKey() == null : getKey().equals(other.getKey()))  &&
+                   (getValue() == null ? other.getValue() == null : getValue().equals(other.getValue()));
+        }
+
+        @Override
+        public int hashCode() {
+            return (key == null ? 0 : key.hashCode()) ^ (value == null ? 0 : value.hashCode());
         }
     }
 }

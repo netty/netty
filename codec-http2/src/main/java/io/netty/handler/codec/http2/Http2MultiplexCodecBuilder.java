@@ -29,6 +29,7 @@ public class Http2MultiplexCodecBuilder
         extends AbstractHttp2ConnectionHandlerBuilder<Http2MultiplexCodec, Http2MultiplexCodecBuilder> {
 
     final ChannelHandler childHandler;
+    private ChannelHandler upgradeStreamHandler;
 
     Http2MultiplexCodecBuilder(boolean server, ChannelHandler childHandler) {
         server(server);
@@ -81,6 +82,14 @@ public class Http2MultiplexCodecBuilder
     @Override
     public Http2MultiplexCodecBuilder gracefulShutdownTimeoutMillis(long gracefulShutdownTimeoutMillis) {
         return super.gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis);
+    }
+
+    public Http2MultiplexCodecBuilder withUpgradeStreamHandler(ChannelHandler upgradeStreamHandler) {
+        if (this.isServer()) {
+            throw new IllegalArgumentException("Server codecs don't use an extra handler for the upgrade stream");
+        }
+        this.upgradeStreamHandler = upgradeStreamHandler;
+        return this;
     }
 
     @Override
@@ -157,6 +166,6 @@ public class Http2MultiplexCodecBuilder
     @Override
     protected Http2MultiplexCodec build(
             Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder, Http2Settings initialSettings) {
-        return new Http2MultiplexCodec(encoder, decoder, initialSettings, childHandler);
+        return new Http2MultiplexCodec(encoder, decoder, initialSettings, childHandler, upgradeStreamHandler);
     }
 }

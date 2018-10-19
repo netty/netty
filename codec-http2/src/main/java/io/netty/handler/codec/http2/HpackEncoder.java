@@ -41,7 +41,6 @@ import java.util.Arrays;
 import java.util.Map;
 
 import static io.netty.handler.codec.http2.HpackUtil.equalsConstantTime;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
@@ -86,7 +85,7 @@ final class HpackEncoder {
     public HpackEncoder(boolean ignoreMaxHeaderListSize, int arraySizeHint) {
         this.ignoreMaxHeaderListSize = ignoreMaxHeaderListSize;
         maxHeaderTableSize = DEFAULT_HEADER_TABLE_SIZE;
-        maxHeaderListSize = DEFAULT_HEADER_LIST_SIZE;
+        maxHeaderListSize = MAX_HEADER_LIST_SIZE;
         // Enforce a bound of [2, 128] because hashMask is a byte. The max possible value of hashMask is one less
         // than the length of this array, and we want the mask to be > 0.
         headerFields = new HeaderEntry[findNextPositivePowerOfTwo(max(2, min(arraySizeHint, 128)))];

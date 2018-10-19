@@ -98,7 +98,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
     public void testSslSessionReuse(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         final ReadAndDiscardHandler sh = new ReadAndDiscardHandler(true, true);
         final ReadAndDiscardHandler ch = new ReadAndDiscardHandler(false, true);
-        final String[] protocols = new String[]{ "TLSv1", "TLSv1.1", "TLSv1.2" };
+        final String[] protocols = { "TLSv1", "TLSv1.1", "TLSv1.2" };
 
         sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override

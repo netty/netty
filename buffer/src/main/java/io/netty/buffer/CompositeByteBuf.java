@@ -61,7 +61,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         this.alloc = alloc;
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
-        components = newList(maxNumComponents);
+        components = newList(0, maxNumComponents);
     }
 
     public CompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents, ByteBuf... buffers) {
@@ -82,7 +82,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         this.alloc = alloc;
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
-        components = newList(maxNumComponents);
+        components = newList(len, maxNumComponents);
 
         addComponents0(false, 0, buffers, offset, len);
         consolidateIfNeeded();
@@ -100,18 +100,21 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                     "maxNumComponents: " + maxNumComponents + " (expected: >= 2)");
         }
 
+        int len = buffers instanceof Collection ? ((Collection<ByteBuf>) buffers).size() : 0;
+
         this.alloc = alloc;
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
-        components = newList(maxNumComponents);
+        components = newList(len, maxNumComponents);
 
         addComponents0(false, 0, buffers);
         consolidateIfNeeded();
         setIndex(0, capacity());
     }
 
-    private static ComponentList newList(int maxNumComponents) {
-        return new ComponentList(Math.min(AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS, maxNumComponents));
+    private static ComponentList newList(int initComponents, int maxNumComponents) {
+        int capacityGuess = Math.min(AbstractByteBufAllocator.DEFAULT_MAX_COMPONENTS, maxNumComponents);
+        return new ComponentList(Math.max(initComponents, capacityGuess));
     }
 
     // Special constructor used by WrappedCompositeByteBuf
@@ -388,7 +391,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         }
 
         Collection<ByteBuf> col = (Collection<ByteBuf>) buffers;
-        return addComponents0(increaseIndex, cIndex, col.toArray(new ByteBuf[col.size()]), 0 , col.size());
+        return addComponents0(increaseIndex, cIndex, col.toArray(new ByteBuf[0]), 0 , col.size());
     }
 
     /**
@@ -1464,9 +1467,13 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             }
         }
 
-        ByteBuffer merged = ByteBuffer.allocate(length).order(order());
         ByteBuffer[] buffers = nioBuffers(index, length);
 
+        if (buffers.length == 1) {
+            return buffers[0].duplicate();
+        }
+
+        ByteBuffer merged = ByteBuffer.allocate(length).order(order());
         for (ByteBuffer buf: buffers) {
             merged.put(buf);
         }
@@ -1504,7 +1511,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             i ++;
         }
 
-        return buffers.toArray(new ByteBuffer[buffers.size()]);
+        return buffers.toArray(new ByteBuffer[0]);
     }
 
     /**

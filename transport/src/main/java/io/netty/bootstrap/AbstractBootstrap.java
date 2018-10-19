@@ -126,7 +126,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * {@link io.netty.channel.ChannelFactory} which is used to create {@link Channel} instances from
      * when calling {@link #bind()}. This method is usually only used if {@link #channel(Class)}
      * is not working for you because of some more complex needs. If your {@link Channel} implementation
-     * has a no-args constructor, its highly recommend to just use {@link #channel(Class)} for
+     * has a no-args constructor, its highly recommend to just use {@link #channel(Class)} to
      * simplify your code.
      */
     @SuppressWarnings({ "unchecked", "deprecation" })
@@ -323,9 +323,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             if (channel != null) {
                 // channel can be null if newChannel crashed (eg SocketException("too many open files"))
                 channel.unsafe().closeForcibly();
+                // as the Channel is not registered yet we need to force the usage of the GlobalEventExecutor
+                return new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE).setFailure(t);
             }
             // as the Channel is not registered yet we need to force the usage of the GlobalEventExecutor
-            return new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE).setFailure(t);
+            return new DefaultChannelPromise(new FailedChannel(), GlobalEventExecutor.INSTANCE).setFailure(t);
         }
 
         ChannelFuture regFuture = config().group().register(channel);

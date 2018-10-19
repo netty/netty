@@ -419,6 +419,11 @@ public class HashedWheelTimer implements Timer {
         // Add the timeout to the timeout queue which will be processed on the next tick.
         // During processing all the queued HashedWheelTimeouts will be added to the correct HashedWheelBucket.
         long deadline = System.nanoTime() + unit.toNanos(delay) - startTime;
+
+        // Guard against overflow.
+        if (delay > 0 && deadline < 0) {
+            deadline = Long.MAX_VALUE;
+        }
         HashedWheelTimeout timeout = new HashedWheelTimeout(this, task, deadline);
         timeouts.add(timeout);
         return timeout;
@@ -432,10 +437,12 @@ public class HashedWheelTimer implements Timer {
     }
 
     private static void reportTooManyInstances() {
-        String resourceType = simpleClassName(HashedWheelTimer.class);
-        logger.error("You are creating too many " + resourceType + " instances. " +
-                resourceType + " is a shared resource that must be reused across the JVM," +
-                "so that only a few instances are created.");
+        if (logger.isErrorEnabled()) {
+            String resourceType = simpleClassName(HashedWheelTimer.class);
+            logger.error("You are creating too many " + resourceType + " instances. " +
+                    resourceType + " is a shared resource that must be reused across the JVM," +
+                    "so that only a few instances are created.");
+        }
     }
 
     private final class Worker implements Runnable {

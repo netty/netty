@@ -17,13 +17,15 @@
 package io.netty.resolver.dns;
 
 import java.net.InetSocketAddress;
+import java.util.Collection;
+import java.util.List;
 
 final class SequentialDnsServerAddressStream implements DnsServerAddressStream {
 
-    private final InetSocketAddress[] addresses;
+    private final List<? extends InetSocketAddress> addresses;
     private int i;
 
-    SequentialDnsServerAddressStream(InetSocketAddress[] addresses, int startIdx) {
+    SequentialDnsServerAddressStream(List<? extends InetSocketAddress> addresses, int startIdx) {
         this.addresses = addresses;
         i = startIdx;
     }
@@ -31,8 +33,8 @@ final class SequentialDnsServerAddressStream implements DnsServerAddressStream {
     @Override
     public InetSocketAddress next() {
         int i = this.i;
-        InetSocketAddress next = addresses[i];
-        if (++ i < addresses.length) {
+        InetSocketAddress next = addresses.get(i);
+        if (++ i < addresses.size()) {
             this.i = i;
         } else {
             this.i = 0;
@@ -42,7 +44,7 @@ final class SequentialDnsServerAddressStream implements DnsServerAddressStream {
 
     @Override
     public int size() {
-        return addresses.length;
+        return addresses.size();
     }
 
     @Override
@@ -55,8 +57,8 @@ final class SequentialDnsServerAddressStream implements DnsServerAddressStream {
         return toString("sequential", i, addresses);
     }
 
-    static String toString(String type, int index, InetSocketAddress[] addresses) {
-        final StringBuilder buf = new StringBuilder(type.length() + 2 + addresses.length * 16);
+    static String toString(String type, int index, Collection<? extends InetSocketAddress> addresses) {
+        final StringBuilder buf = new StringBuilder(type.length() + 2 + addresses.size() * 16);
         buf.append(type).append("(index: ").append(index);
         buf.append(", addrs: (");
         for (InetSocketAddress a: addresses) {

@@ -26,6 +26,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoop;
@@ -45,11 +46,13 @@ import java.net.ConnectException;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
@@ -943,6 +946,260 @@ public class LocalChannelTest {
         } finally {
             closeChannel(cc);
             closeChannel(sc);
+        }
+    }
+
+    private static void writeAndFlushReadOnSuccess(final ChannelHandlerContext ctx, Object msg) {
+        ctx.writeAndFlush(msg).addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                if (future.isSuccess()) {
+                    ctx.read();
+                }
+            }
+        });
+    }
+
+    @Test(timeout = 5000)
+    public void testAutoReadDisabledSharedGroup() throws Exception {
+        testAutoReadDisabled(sharedGroup, sharedGroup);
+    }
+
+    @Test(timeout = 5000)
+    public void testAutoReadDisabledDifferentGroup() throws Exception {
+        testAutoReadDisabled(group1, group2);
+    }
+
+    private static void testAutoReadDisabled(EventLoopGroup serverGroup, EventLoopGroup clientGroup) throws Exception {
+        final CountDownLatch latch = new CountDownLatch(100);
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+
+        cb.group(serverGroup)
+                .channel(LocalChannel.class)
+                .option(ChannelOption.AUTO_READ, false)
+                .handler(new ChannelInboundHandlerAdapter() {
+
+                    @Override
+                    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+                        writeAndFlushReadOnSuccess(ctx, "test");
+                    }
+
+                    @Override
+                    public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
+                        writeAndFlushReadOnSuccess(ctx, msg);
+                    }
+                });
+
+        sb.group(clientGroup)
+                .channel(LocalServerChannel.class)
+                .childOption(ChannelOption.AUTO_READ, false)
+                .childHandler(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+                        ctx.read();
+                    }
+
+                    @Override
+                    public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
+                        latch.countDown();
+                        if (latch.getCount() > 0) {
+                            writeAndFlushReadOnSuccess(ctx, msg);
+                        }
+                    }
+                });
+
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            // Start server
+            sc = sb.bind(TEST_ADDRESS).sync().channel();
+            cc = cb.connect(TEST_ADDRESS).sync().channel();
+
+            latch.await();
+        } finally {
+            closeChannel(cc);
+            closeChannel(sc);
+        }
+    }
+
+    @Test(timeout = 5000)
+    public void testMaxMessagesPerReadRespectedWithAutoReadSharedGroup() throws Exception {
+        testMaxMessagesPerReadRespected(sharedGroup, sharedGroup, true);
+    }
+
+    @Test(timeout = 5000)
+    public void testMaxMessagesPerReadRespectedWithoutAutoReadSharedGroup() throws Exception {
+        testMaxMessagesPerReadRespected(sharedGroup, sharedGroup, false);
+    }
+
+    @Test(timeout = 5000)
+    public void testMaxMessagesPerReadRespectedWithAutoReadDifferentGroup() throws Exception {
+        testMaxMessagesPerReadRespected(group1, group2, true);
+    }
+
+    @Test(timeout = 5000)
+    public void testMaxMessagesPerReadRespectedWithoutAutoReadDifferentGroup() throws Exception {
+        testMaxMessagesPerReadRespected(group1, group2, false);
+    }
+
+    private static void testMaxMessagesPerReadRespected(
+            EventLoopGroup serverGroup, EventLoopGroup clientGroup, final boolean autoRead) throws Exception {
+        final CountDownLatch countDownLatch = new CountDownLatch(5);
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+
+        cb.group(serverGroup)
+                .channel(LocalChannel.class)
+                .option(ChannelOption.AUTO_READ, autoRead)
+                .option(ChannelOption.MAX_MESSAGES_PER_READ, 1)
+                .handler(new ChannelReadHandler(countDownLatch, autoRead));
+        sb.group(clientGroup)
+                .channel(LocalServerChannel.class)
+                .childHandler(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelActive(final ChannelHandlerContext ctx) {
+                        for (int i = 0; i < 10; i++) {
+                            ctx.write(i);
+                        }
+                        ctx.flush();
+                    }
+                });
+
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            // Start server
+            sc = sb.bind(TEST_ADDRESS).sync().channel();
+            cc = cb.connect(TEST_ADDRESS).sync().channel();
+
+            countDownLatch.await();
+        } finally {
+            closeChannel(cc);
+            closeChannel(sc);
+        }
+    }
+
+    @Test(timeout = 5000)
+    public void testServerMaxMessagesPerReadRespectedWithAutoReadSharedGroup() throws Exception {
+        testServerMaxMessagesPerReadRespected(sharedGroup, sharedGroup, true);
+    }
+
+    @Test(timeout = 5000)
+    public void testServerMaxMessagesPerReadRespectedWithoutAutoReadSharedGroup() throws Exception {
+        testServerMaxMessagesPerReadRespected(sharedGroup, sharedGroup, false);
+    }
+
+    @Test(timeout = 5000)
+    public void testServerMaxMessagesPerReadRespectedWithAutoReadDifferentGroup() throws Exception {
+        testServerMaxMessagesPerReadRespected(group1, group2, true);
+    }
+
+    @Test(timeout = 5000)
+    public void testServerMaxMessagesPerReadRespectedWithoutAutoReadDifferentGroup() throws Exception {
+        testServerMaxMessagesPerReadRespected(group1, group2, false);
+    }
+
+    private void testServerMaxMessagesPerReadRespected(
+            EventLoopGroup serverGroup, EventLoopGroup clientGroup, final boolean autoRead) throws Exception {
+        final CountDownLatch countDownLatch = new CountDownLatch(5);
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+
+        cb.group(serverGroup)
+                .channel(LocalChannel.class)
+                .handler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) {
+                        // NOOP
+                    }
+                });
+
+        sb.group(clientGroup)
+                .channel(LocalServerChannel.class)
+                .option(ChannelOption.AUTO_READ, autoRead)
+                .option(ChannelOption.MAX_MESSAGES_PER_READ, 1)
+                .handler(new ChannelReadHandler(countDownLatch, autoRead))
+                .childHandler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) {
+                        // NOOP
+                    }
+                });
+
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            // Start server
+            sc = sb.bind(TEST_ADDRESS).sync().channel();
+            for (int i = 0; i < 5; i++) {
+                try {
+                    cc = cb.connect(TEST_ADDRESS).sync().channel();
+                } finally {
+                    closeChannel(cc);
+                }
+            }
+
+            countDownLatch.await();
+        } finally {
+            closeChannel(sc);
+        }
+    }
+
+    private static final class ChannelReadHandler extends ChannelInboundHandlerAdapter {
+
+        private final CountDownLatch latch;
+        private final boolean autoRead;
+        private int read;
+
+        ChannelReadHandler(CountDownLatch latch, boolean autoRead) {
+            this.latch = latch;
+            this.autoRead = autoRead;
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) {
+            if (!autoRead) {
+                ctx.read();
+            }
+            ctx.fireChannelActive();
+        }
+
+        @Override
+        public void channelRead(final ChannelHandlerContext ctx, Object msg) {
+            assertEquals(0, read);
+            read++;
+            ctx.fireChannelRead(msg);
+        }
+
+        @Override
+        public void channelReadComplete(final ChannelHandlerContext ctx) {
+            assertEquals(1, read);
+            latch.countDown();
+            if (latch.getCount() > 0) {
+                if (!autoRead) {
+                    // The read will be scheduled 100ms in the future to ensure we not receive any
+                    // channelRead calls in the meantime.
+                    ctx.executor().schedule(new Runnable() {
+                        @Override
+                        public void run() {
+                            read = 0;
+                            ctx.read();
+                        }
+                    }, 100, TimeUnit.MILLISECONDS);
+                } else {
+                    read = 0;
+                }
+            } else {
+                read = 0;
+            }
+            ctx.fireChannelReadComplete();
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            ctx.fireExceptionCaught(cause);
+            ctx.close();
         }
     }
 }

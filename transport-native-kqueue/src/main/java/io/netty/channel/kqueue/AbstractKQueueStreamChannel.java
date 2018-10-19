@@ -33,7 +33,6 @@ import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.SocketWritableByteChannel;
 import io.netty.channel.unix.UnixChannelUtil;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -59,12 +58,14 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     private final Runnable flushTask = new Runnable() {
         @Override
         public void run() {
-            flush();
+            // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
+            // meantime.
+            ((AbstractKQueueUnsafe) unsafe()).flush0();
         }
     };
 
     AbstractKQueueStreamChannel(Channel parent, BsdSocket fd, boolean active) {
-        super(parent, fd, active, true);
+        super(parent, fd, active);
     }
 
     AbstractKQueueStreamChannel(Channel parent, BsdSocket fd, SocketAddress remote) {
@@ -283,6 +284,12 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         } while (writeSpinCount > 0);
 
         if (writeSpinCount == 0) {
+            // It is possible that we have set the write filter, woken up by KQUEUE because the socket is writable, and
+            // then use our write quantum. In this case we no longer want to set the write filter because the socket is
+            // still writable (as far as we know). We will find out next time we attempt to write if the socket is
+            // writable and set the write filter if necessary.
+            writeFilter(false);
+
             // We used our writeSpin quantum, and should try to write again later.
             eventLoop().execute(flushTask);
         } else {
@@ -337,22 +344,13 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
      */
     private int doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
         final long maxBytesPerGatheringWrite = config().getMaxBytesPerGatheringWrite();
-        if (PlatformDependent.hasUnsafe()) {
-            IovArray array = ((KQueueEventLoop) eventLoop()).cleanArray();
-            array.maxBytes(maxBytesPerGatheringWrite);
-            in.forEachFlushedMessage(array);
+        IovArray array = ((KQueueEventLoop) eventLoop()).cleanArray();
+        array.maxBytes(maxBytesPerGatheringWrite);
+        in.forEachFlushedMessage(array);
 
-            if (array.count() >= 1) {
-                // TODO: Handle the case where cnt == 1 specially.
-                return writeBytesMultiple(in, array);
-            }
-        } else {
-            ByteBuffer[] buffers = in.nioBuffers();
-            int cnt = in.nioBufferCount();
-            if (cnt >= 1) {
-                // TODO: Handle the case where cnt == 1 specially.
-                return writeBytesMultiple(in, buffers, cnt, in.nioBufferSize(), maxBytesPerGatheringWrite);
-            }
+        if (array.count() >= 1) {
+            // TODO: Handle the case where cnt == 1 specially.
+            return writeBytesMultiple(in, array);
         }
         // cnt == 0, which means the outbound buffer contained empty buffers only.
         in.removeBytes(0);
@@ -582,11 +580,13 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                     byteBuf.release();
                 }
             }
-            allocHandle.readComplete();
-            pipeline.fireChannelReadComplete();
-            pipeline.fireExceptionCaught(cause);
-            if (close || cause instanceof IOException) {
-                shutdownInput(false);
+            if (!failConnectPromise(cause)) {
+                allocHandle.readComplete();
+                pipeline.fireChannelReadComplete();
+                pipeline.fireExceptionCaught(cause);
+                if (close || cause instanceof IOException) {
+                    shutdownInput(false);
+                }
             }
         }
     }

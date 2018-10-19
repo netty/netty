@@ -816,13 +816,19 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
                 next.invokeWrite(m, promise);
             }
         } else {
-            AbstractWriteTask task;
+            final AbstractWriteTask task;
             if (flush) {
                 task = WriteAndFlushTask.newInstance(next, m, promise);
             }  else {
                 task = WriteTask.newInstance(next, m, promise);
             }
-            safeExecute(executor, task, promise, m);
+            if (!safeExecute(executor, task, promise, m)) {
+                // We failed to submit the AbstractWriteTask. We need to cancel it so we decrement the pending bytes
+                // and put it back in the Recycler for re-use later.
+                //
+                // See https://github.com/netty/netty/issues/8343.
+                task.cancel();
+            }
         }
     }
 
@@ -1002,9 +1008,10 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         return channel().hasAttr(key);
     }
 
-    private static void safeExecute(EventExecutor executor, Runnable runnable, ChannelPromise promise, Object msg) {
+    private static boolean safeExecute(EventExecutor executor, Runnable runnable, ChannelPromise promise, Object msg) {
         try {
             executor.execute(runnable);
+            return true;
         } catch (Throwable cause) {
             try {
                 promise.setFailure(cause);
@@ -1013,6 +1020,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
                     ReferenceCountUtil.release(msg);
                 }
             }
+            return false;
         }
     }
 
@@ -1063,18 +1071,33 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         @Override
         public final void run() {
             try {
-                // Check for null as it may be set to null if the channel is closed already
-                if (ESTIMATE_TASK_SIZE_ON_SUBMIT) {
-                    ctx.pipeline.decrementPendingOutboundBytes(size);
-                }
+                decrementPendingOutboundBytes();
                 write(ctx, msg, promise);
             } finally {
-                // Set to null so the GC can collect them directly
-                ctx = null;
-                msg = null;
-                promise = null;
-                handle.recycle(this);
+                recycle();
             }
+        }
+
+        void cancel() {
+            try {
+                decrementPendingOutboundBytes();
+            } finally {
+                recycle();
+            }
+        }
+
+        private void decrementPendingOutboundBytes() {
+            if (ESTIMATE_TASK_SIZE_ON_SUBMIT) {
+                ctx.pipeline.decrementPendingOutboundBytes(size);
+            }
+        }
+
+        private void recycle() {
+            // Set to null so the GC can collect them directly
+            ctx = null;
+            msg = null;
+            promise = null;
+            handle.recycle(this);
         }
 
         protected void write(AbstractChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
@@ -1091,7 +1114,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
             }
         };
 
-        private static WriteTask newInstance(
+        static WriteTask newInstance(
                 AbstractChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             WriteTask task = RECYCLER.get();
             init(task, ctx, msg, promise);
@@ -1112,7 +1135,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
             }
         };
 
-        private static WriteAndFlushTask newInstance(
+        static WriteAndFlushTask newInstance(
                 AbstractChannelHandlerContext ctx, Object msg,  ChannelPromise promise) {
             WriteAndFlushTask task = RECYCLER.get();
             init(task, ctx, msg, promise);

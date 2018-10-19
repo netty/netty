@@ -15,13 +15,18 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
+import java.nio.channels.FileChannel;
 
 public class ReadOnlyDirectByteBufferBufTest {
 
@@ -36,6 +41,58 @@ public class ReadOnlyDirectByteBufferBufTest {
     @Test(expected = IllegalArgumentException.class)
     public void testConstructWithWritable() {
         buffer(allocate(1));
+    }
+
+    @Test
+    public void shouldIndicateNotWritable() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer()).clear();
+        try {
+            Assert.assertFalse(buf.isWritable());
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    public void shouldIndicateNotWritableAnyNumber() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer()).clear();
+        try {
+            Assert.assertFalse(buf.isWritable(1));
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    public void ensureWritableIntStatusShouldFailButNotThrow() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer()).clear();
+        try {
+            int result = buf.ensureWritable(1, false);
+            Assert.assertEquals(1, result);
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    public void ensureWritableForceIntStatusShouldFailButNotThrow() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer()).clear();
+        try {
+            int result = buf.ensureWritable(1, true);
+            Assert.assertEquals(1, result);
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test(expected = ReadOnlyBufferException.class)
+    public void ensureWritableShouldThrow() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer()).clear();
+        try {
+            buf.ensureWritable(1);
+        } finally {
+            buf.release();
+        }
     }
 
     @Test(expected = ReadOnlyBufferException.class)
@@ -225,5 +282,64 @@ public class ReadOnlyDirectByteBufferBufTest {
         Assert.assertEquals(2, nioBuffer.getInt());
 
         buf.release();
+    }
+
+    @Test
+    public void testWrapMemoryMapped() throws Exception {
+        File file = File.createTempFile("netty-test", "tmp");
+        FileChannel output = null;
+        FileChannel input = null;
+        ByteBuf b1 = null;
+        ByteBuf b2 = null;
+
+        try {
+            output = new FileOutputStream(file).getChannel();
+            byte[] bytes = new byte[1024];
+            PlatformDependent.threadLocalRandom().nextBytes(bytes);
+            output.write(ByteBuffer.wrap(bytes));
+
+            input = new FileInputStream(file).getChannel();
+            ByteBuffer m = input.map(FileChannel.MapMode.READ_ONLY, 0, input.size());
+
+            b1 = buffer(m);
+
+            ByteBuffer dup = m.duplicate();
+            dup.position(2);
+            dup.limit(4);
+
+            b2 = buffer(dup);
+
+            Assert.assertEquals(b2, b1.slice(2, 2));
+        } finally {
+            if (b1 != null) {
+                b1.release();
+            }
+            if (b2 != null) {
+                b2.release();
+            }
+            if (output != null) {
+                output.close();
+            }
+            if (input != null) {
+                input.close();
+            }
+            file.delete();
+        }
+    }
+
+    @Test
+    public void testMemoryAddress() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        try {
+            Assert.assertFalse(buf.hasMemoryAddress());
+            try {
+                buf.memoryAddress();
+                Assert.fail();
+            } catch (UnsupportedOperationException expected) {
+                // expected
+            }
+        } finally {
+            buf.release();
+        }
     }
 }

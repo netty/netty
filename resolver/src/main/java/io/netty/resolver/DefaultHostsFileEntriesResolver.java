@@ -15,11 +15,14 @@
  */
 package io.netty.resolver;
 
+import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.nio.charset.Charset;
 import java.util.Locale;
 import java.util.Map;
 
@@ -33,7 +36,7 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
     private final Map<String, Inet6Address> inet6Entries;
 
     public DefaultHostsFileEntriesResolver() {
-        this(HostsFileParser.parseSilently());
+        this(parseEntries());
     }
 
     // for testing purpose only
@@ -64,5 +67,15 @@ public final class DefaultHostsFileEntriesResolver implements HostsFileEntriesRe
     // package-private for testing purposes
     String normalize(String inetHost) {
         return inetHost.toLowerCase(Locale.ENGLISH);
+    }
+
+    private static HostsFileEntries parseEntries() {
+        if (PlatformDependent.isWindows()) {
+            // Ony windows there seems to be no standard for the encoding used for the hosts file, so let us
+            // try multiple until we either were able to parse it or there is none left and so we return an
+            // empty intstance.
+            return HostsFileParser.parseSilently(Charset.defaultCharset(), CharsetUtil.UTF_16, CharsetUtil.UTF_8);
+        }
+        return HostsFileParser.parseSilently();
     }
 }

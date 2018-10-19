@@ -230,6 +230,21 @@ public class HashedWheelTimerTest {
         timer.stop();
     }
 
+    @Test
+    public void testOverflow() throws InterruptedException  {
+        final HashedWheelTimer timer = new HashedWheelTimer();
+        final CountDownLatch latch = new CountDownLatch(1);
+        Timeout timeout = timer.newTimeout(new TimerTask() {
+            @Override
+            public void run(Timeout timeout) {
+                latch.countDown();
+            }
+        }, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+        assertFalse(latch.await(1, TimeUnit.SECONDS));
+        timeout.cancel();
+        timer.stop();
+    }
+
     private static TimerTask createNoOpTimerTask() {
         return new TimerTask() {
             @Override

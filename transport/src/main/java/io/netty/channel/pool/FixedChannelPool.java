@@ -20,6 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.ThrowableUtil;
@@ -27,6 +28,7 @@ import io.netty.util.internal.ThrowableUtil;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -43,10 +45,10 @@ public class FixedChannelPool extends SimpleChannelPool {
             new TimeoutException("Acquire operation took longer then configured maximum time"),
             FixedChannelPool.class, "<init>(...)");
     static final IllegalStateException POOL_CLOSED_ON_RELEASE_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new IllegalStateException("FixedChannelPooled was closed"),
+            new IllegalStateException("FixedChannelPool was closed"),
             FixedChannelPool.class, "release(...)");
     static final IllegalStateException POOL_CLOSED_ON_ACQUIRE_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new IllegalStateException("FixedChannelPooled was closed"),
+            new IllegalStateException("FixedChannelPool was closed"),
             FixedChannelPool.class, "acquire0(...)");
     public enum AcquireTimeoutAction {
         /**
@@ -69,7 +71,7 @@ public class FixedChannelPool extends SimpleChannelPool {
     private final Queue<AcquireTask> pendingAcquireQueue = new ArrayDeque<AcquireTask>();
     private final int maxConnections;
     private final int maxPendingAcquires;
-    private int acquiredChannelCount;
+    private final AtomicInteger acquiredChannelCount = new AtomicInteger();
     private int pendingAcquireCount;
     private boolean closed;
 
@@ -228,6 +230,11 @@ public class FixedChannelPool extends SimpleChannelPool {
         this.maxPendingAcquires = maxPendingAcquires;
     }
 
+    /** Returns the number of acquired channels that this pool thinks it has. */
+    public int acquiredChannelCount() {
+        return acquiredChannelCount.get();
+    }
+
     @Override
     public Future<Channel> acquire(final Promise<Channel> promise) {
         try {
@@ -254,8 +261,8 @@ public class FixedChannelPool extends SimpleChannelPool {
             promise.setFailure(POOL_CLOSED_ON_ACQUIRE_EXCEPTION);
             return;
         }
-        if (acquiredChannelCount < maxConnections) {
-            assert acquiredChannelCount >= 0;
+        if (acquiredChannelCount.get() < maxConnections) {
+            assert acquiredChannelCount.get() >= 0;
 
             // We need to create a new promise as we need to ensure the AcquireListener runs in the correct
             // EventLoop
@@ -318,10 +325,9 @@ public class FixedChannelPool extends SimpleChannelPool {
     }
 
     private void decrementAndRunTaskQueue() {
-        --acquiredChannelCount;
-
         // We should never have a negative value.
-        assert acquiredChannelCount >= 0;
+        int currentCount = acquiredChannelCount.decrementAndGet();
+        assert currentCount >= 0;
 
         // Run the pending acquire tasks before notify the original promise so if the user would
         // try to acquire again from the ChannelFutureListener and the pendingAcquireCount is >=
@@ -331,7 +337,7 @@ public class FixedChannelPool extends SimpleChannelPool {
     }
 
     private void runTaskQueue() {
-        while (acquiredChannelCount < maxConnections) {
+        while (acquiredChannelCount.get() < maxConnections) {
             AcquireTask task = pendingAcquireQueue.poll();
             if (task == null) {
                 break;
@@ -351,7 +357,7 @@ public class FixedChannelPool extends SimpleChannelPool {
 
         // We should never have a negative value.
         assert pendingAcquireCount >= 0;
-        assert acquiredChannelCount >= 0;
+        assert acquiredChannelCount.get() >= 0;
     }
 
     // AcquireTask extends AcquireListener to reduce object creations and so GC pressure
@@ -430,34 +436,50 @@ public class FixedChannelPool extends SimpleChannelPool {
             if (acquired) {
                 return;
             }
-            acquiredChannelCount++;
+            acquiredChannelCount.incrementAndGet();
             acquired = true;
         }
     }
 
     @Override
     public void close() {
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                if (!closed) {
-                    closed = true;
-                    for (;;) {
-                        AcquireTask task = pendingAcquireQueue.poll();
-                        if (task == null) {
-                            break;
-                        }
-                        ScheduledFuture<?> f = task.timeoutFuture;
-                        if (f != null) {
-                            f.cancel(false);
-                        }
-                        task.promise.setFailure(new ClosedChannelException());
-                    }
-                    acquiredChannelCount = 0;
-                    pendingAcquireCount = 0;
+        if (executor.inEventLoop()) {
+            close0();
+        } else {
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    close0();
+                }
+            }).awaitUninterruptibly();
+        }
+    }
+
+    private void close0() {
+        if (!closed) {
+            closed = true;
+            for (;;) {
+                AcquireTask task = pendingAcquireQueue.poll();
+                if (task == null) {
+                    break;
+                }
+                ScheduledFuture<?> f = task.timeoutFuture;
+                if (f != null) {
+                    f.cancel(false);
+                }
+                task.promise.setFailure(new ClosedChannelException());
+            }
+            acquiredChannelCount.set(0);
+            pendingAcquireCount = 0;
+
+            // Ensure we dispatch this on another Thread as close0 will be called from the EventExecutor and we need
+            // to ensure we will not block in a EventExecutor.
+            GlobalEventExecutor.INSTANCE.execute(new Runnable() {
+                @Override
+                public void run() {
                     FixedChannelPool.super.close();
                 }
-            }
-        });
+            });
+        }
     }
 }

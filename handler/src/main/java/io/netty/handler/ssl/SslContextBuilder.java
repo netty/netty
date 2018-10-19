@@ -121,6 +121,9 @@ public final class SslContextBuilder {
     /**
      * Creates a builder for new server-side {@link SslContext}.
      *
+     * If you use {@link SslProvider#OPENSSL} or {@link SslProvider#OPENSSL_REFCNT} consider using
+     * {@link OpenSslX509KeyManagerFactory} or {@link OpenSslCachingX509KeyManagerFactory}.
+     *
      * @param keyManagerFactory non-{@code null} factory for server's private key
      * @see #keyManager(KeyManagerFactory)
      */
@@ -335,6 +338,9 @@ public final class SslContextBuilder {
      * if the used openssl version is 1.0.1+. You can check if your openssl version supports using a
      * {@link KeyManagerFactory} by calling {@link OpenSsl#supportsKeyManagerFactory()}. If this is not the case
      * you must use {@link #keyManager(File, File)} or {@link #keyManager(File, File, String)}.
+     *
+     * If you use {@link SslProvider#OPENSSL} or {@link SslProvider#OPENSSL_REFCNT} consider using
+     * {@link OpenSslX509KeyManagerFactory} or {@link OpenSslCachingX509KeyManagerFactory}.
      */
     public SslContextBuilder keyManager(KeyManagerFactory keyManagerFactory) {
         if (forServer) {

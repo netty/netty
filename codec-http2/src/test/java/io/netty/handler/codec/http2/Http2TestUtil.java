@@ -249,13 +249,13 @@ public final class Http2TestUtil {
                 }
 
                 @Override
-                public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+                public void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
                     listener.onPingRead(ctx, data);
                     latch.countDown();
                 }
 
                 @Override
-                public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+                public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
                     listener.onPingAckRead(ctx, data);
                     latch.countDown();
                 }
@@ -384,13 +384,13 @@ public final class Http2TestUtil {
         }
 
         @Override
-        public void onPingRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+        public void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
             listener.onPingRead(ctx, data);
             messageLatch.countDown();
         }
 
         @Override
-        public void onPingAckRead(ChannelHandlerContext ctx, ByteBuf data) throws Http2Exception {
+        public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
             listener.onPingAckRead(ctx, data);
             messageLatch.countDown();
         }

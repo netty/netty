@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -83,11 +84,11 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         setIndex(0, initialArray.length);
     }
 
-    byte[] allocateArray(int initialCapacity) {
+    protected byte[] allocateArray(int initialCapacity) {
         return new byte[initialCapacity];
     }
 
-    void freeArray(byte[] array) {
+    protected void freeArray(byte[] array) {
         // NOOP
     }
 
@@ -113,7 +114,6 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public int capacity() {
-        ensureAccessible();
         return array.length;
     }
 
@@ -552,7 +552,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     protected void deallocate() {
         freeArray(array);
-        array = null;
+        array = EmptyArrays.EMPTY_BYTES;
     }
 
     @Override

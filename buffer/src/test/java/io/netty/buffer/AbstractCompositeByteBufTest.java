@@ -87,7 +87,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
             buffers.add(EMPTY_BUFFER);
         }
 
-        ByteBuf buffer = wrappedBuffer(Integer.MAX_VALUE, buffers.toArray(new ByteBuf[buffers.size()])).order(order);
+        ByteBuf buffer = wrappedBuffer(Integer.MAX_VALUE, buffers.toArray(new ByteBuf[0])).order(order);
 
         // Truncate to the requested capacity.
         buffer.capacity(length);

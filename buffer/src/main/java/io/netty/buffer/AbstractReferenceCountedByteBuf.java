@@ -17,6 +17,7 @@
 package io.netty.buffer;
 
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.internal.PlatformDependent;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -26,15 +27,37 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
  * Abstract base class for {@link ByteBuf} implementations that count references.
  */
 public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
-
+    private static final long REFCNT_FIELD_OFFSET;
     private static final AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> refCntUpdater =
             AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCountedByteBuf.class, "refCnt");
 
-    private volatile int refCnt;
+    private volatile int refCnt = 1;
+
+    static {
+        long refCntFieldOffset = -1;
+        try {
+            if (PlatformDependent.hasUnsafe()) {
+                refCntFieldOffset = PlatformDependent.objectFieldOffset(
+                        AbstractReferenceCountedByteBuf.class.getDeclaredField("refCnt"));
+            }
+        } catch (Throwable ignore) {
+            refCntFieldOffset = -1;
+        }
+
+        REFCNT_FIELD_OFFSET = refCntFieldOffset;
+    }
 
     protected AbstractReferenceCountedByteBuf(int maxCapacity) {
         super(maxCapacity);
-        refCntUpdater.set(this, 1);
+    }
+
+    @Override
+    int internalRefCnt() {
+        // Try to do non-volatile read for performance as the ensureAccessible() is racy anyway and only provide
+        // a best-effort guard.
+        //
+        // TODO: Once we compile against later versions of Java we can replace the Unsafe usage here by varhandles.
+        return REFCNT_FIELD_OFFSET != -1 ? PlatformDependent.getInt(this, REFCNT_FIELD_OFFSET) : refCnt();
     }
 
     @Override
@@ -94,10 +117,11 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         if (oldRef == decrement) {
             deallocate();
             return true;
-        } else if (oldRef < decrement || oldRef - decrement > oldRef) {
+        }
+        if (oldRef < decrement || oldRef - decrement > oldRef) {
             // Ensure we don't over-release, and avoid underflow.
             refCntUpdater.getAndAdd(this, decrement);
-            throw new IllegalReferenceCountException(oldRef, decrement);
+            throw new IllegalReferenceCountException(oldRef, -decrement);
         }
         return false;
     }

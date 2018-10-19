@@ -35,7 +35,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Queue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -44,7 +43,7 @@ import static java.lang.Math.min;
 /**
  * {@link EventLoop} which uses epoll under the covers. Only works on Linux!
  */
-final class EpollEventLoop extends SingleThreadEventLoop {
+class EpollEventLoop extends SingleThreadEventLoop {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollEventLoop.class);
     private static final AtomicIntegerFieldUpdater<EpollEventLoop> WAKEN_UP_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(EpollEventLoop.class, "wakenUp");
@@ -55,13 +54,19 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         Epoll.ensureAvailability();
     }
 
+    // Pick a number that no task could have previously used.
+    private long prevDeadlineNanos = nanoTime() - 1;
     private final FileDescriptor epollFd;
     private final FileDescriptor eventFd;
     private final FileDescriptor timerFd;
     private final IntObjectMap<AbstractEpollChannel> channels = new IntObjectHashMap<AbstractEpollChannel>(4096);
     private final boolean allowGrowing;
     private final EpollEventArray events;
-    private final IovArray iovArray = new IovArray();
+
+    // These are initialized on first use
+    private IovArray iovArray;
+    private NativeDatagramPacketArray datagramPacketArray;
+
     private final SelectStrategy selectStrategy;
     private final IntSupplier selectNowSupplier = new IntSupplier() {
         @Override
@@ -69,14 +74,12 @@ final class EpollEventLoop extends SingleThreadEventLoop {
             return epollWaitNow();
         }
     };
-    private final Callable<Integer> pendingTasksCallable = new Callable<Integer>() {
-        @Override
-        public Integer call() throws Exception {
-            return EpollEventLoop.super.pendingTasks();
-        }
-    };
+    @SuppressWarnings("unused") // AtomicIntegerFieldUpdater
     private volatile int wakenUp;
     private volatile int ioRatio = 50;
+
+    // See http://man7.org/linux/man-pages/man2/timerfd_create.2.html.
+    private static final long MAX_SCHEDULED_TIMERFD_NS = 999999999;
 
     EpollEventLoop(EventLoopGroup parent, Executor executor, int maxEvents,
                    SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler) {
@@ -138,9 +141,25 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     /**
      * Return a cleared {@link IovArray} that can be used for writes in this {@link EventLoop}.
      */
-    IovArray cleanArray() {
-        iovArray.clear();
+    IovArray cleanIovArray() {
+        if (iovArray == null) {
+            iovArray = new IovArray();
+        } else {
+            iovArray.clear();
+        }
         return iovArray;
+    }
+
+    /**
+     * Return a cleared {@link NativeDatagramPacketArray} that can be used for writes in this {@link EventLoop}.
+     */
+    NativeDatagramPacketArray cleanDatagramPacketArray() {
+        if (datagramPacketArray == null) {
+            datagramPacketArray = new NativeDatagramPacketArray();
+        } else {
+            datagramPacketArray.clear();
+        }
+        return datagramPacketArray;
     }
 
     @Override
@@ -192,17 +211,6 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                                                     : PlatformDependent.<Runnable>newMpscQueue(maxPendingTasks);
     }
 
-    @Override
-    public int pendingTasks() {
-        // As we use a MpscQueue we need to ensure pendingTasks() is only executed from within the EventLoop as
-        // otherwise we may see unexpected behavior (as size() is only allowed to be called by a single consumer).
-        // See https://github.com/netty/netty/issues/5297
-        if (inEventLoop()) {
-            return super.pendingTasks();
-        } else {
-            return submit(pendingTasksCallable).syncUninterruptibly().getNow();
-        }
-    }
     /**
      * Returns the percentage of the desired amount of time spent for I/O in the event loop.
      */
@@ -230,14 +238,27 @@ final class EpollEventLoop extends SingleThreadEventLoop {
             return epollWaitNow();
         }
 
-        long totalDelay = delayNanos(System.nanoTime());
-        int delaySeconds = (int) min(totalDelay / 1000000000L, Integer.MAX_VALUE);
-        return Native.epollWait(epollFd, events, timerFd, delaySeconds,
-                (int) min(totalDelay - delaySeconds * 1000000000L, Integer.MAX_VALUE));
+        int delaySeconds;
+        int delayNanos;
+        long curDeadlineNanos = deadlineNanos();
+        if (curDeadlineNanos == prevDeadlineNanos) {
+            delaySeconds = -1;
+            delayNanos = -1;
+        } else {
+            long totalDelay = delayNanos(System.nanoTime());
+            prevDeadlineNanos = curDeadlineNanos;
+            delaySeconds = (int) min(totalDelay / 1000000000L, Integer.MAX_VALUE);
+            delayNanos = (int) min(totalDelay - delaySeconds * 1000000000L, MAX_SCHEDULED_TIMERFD_NS);
+        }
+        return Native.epollWait(epollFd, events, timerFd, delaySeconds, delayNanos);
     }
 
     private int epollWaitNow() throws IOException {
         return Native.epollWait(epollFd, events, timerFd, 0, 0);
+    }
+
+    private int epollBusyWait() throws IOException {
+        return Native.epollBusyWait(epollFd, events);
     }
 
     @Override
@@ -248,6 +269,11 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                 switch (strategy) {
                     case SelectStrategy.CONTINUE:
                         continue;
+
+                    case SelectStrategy.BUSY_WAIT:
+                        strategy = epollBusyWait();
+                        break;
+
                     case SelectStrategy.SELECT:
                         strategy = epollWait(WAKEN_UP_UPDATER.getAndSet(this, 0) == 1);
 
@@ -330,7 +356,10 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    private static void handleLoopException(Throwable t) {
+    /**
+     * Visible only for testing!
+     */
+    void handleLoopException(Throwable t) {
         logger.warn("Unexpected exception in the selector loop.", t);
 
         // Prevent possible consecutive immediate failures that lead to
@@ -445,7 +474,14 @@ final class EpollEventLoop extends SingleThreadEventLoop {
             }
         } finally {
             // release native memory
-            iovArray.release();
+            if (iovArray != null) {
+                iovArray.release();
+                iovArray = null;
+            }
+            if (datagramPacketArray != null) {
+                datagramPacketArray.release();
+                datagramPacketArray = null;
+            }
             events.free();
         }
     }

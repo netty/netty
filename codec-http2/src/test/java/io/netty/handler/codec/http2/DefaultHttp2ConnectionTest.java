@@ -47,8 +47,8 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
-import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -294,12 +294,14 @@ public class DefaultHttp2ConnectionTest {
         assertEquals(State.HALF_CLOSED_REMOTE, stream.state());
         assertEquals(2, client.numActiveStreams());
         assertEquals(4, client.remote().lastStreamCreated());
+        assertTrue(stream.isHeadersReceived());
 
         stream = client.local().createStream(3, true);
         assertEquals(3, stream.id());
         assertEquals(State.HALF_CLOSED_LOCAL, stream.state());
         assertEquals(3, client.numActiveStreams());
         assertEquals(3, client.local().lastStreamCreated());
+        assertTrue(stream.isHeadersSent());
 
         stream = client.local().createStream(5, false);
         assertEquals(5, stream.id());
@@ -421,9 +423,27 @@ public class DefaultHttp2ConnectionTest {
     }
 
     @Test(expected = Http2Exception.class)
-    public void goAwayReceivedShouldDisallowCreation() throws Http2Exception {
+    public void goAwayReceivedShouldDisallowLocalCreation() throws Http2Exception {
+        server.goAwayReceived(0, 1L, Unpooled.EMPTY_BUFFER);
+        server.local().createStream(3, true);
+    }
+
+    @Test
+    public void goAwayReceivedShouldAllowRemoteCreation() throws Http2Exception {
         server.goAwayReceived(0, 1L, Unpooled.EMPTY_BUFFER);
         server.remote().createStream(3, true);
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void goAwaySentShouldDisallowRemoteCreation() throws Http2Exception {
+        server.goAwaySent(0, 1L, Unpooled.EMPTY_BUFFER);
+        server.remote().createStream(2, true);
+    }
+
+    @Test
+    public void goAwaySentShouldAllowLocalCreation() throws Http2Exception {
+        server.goAwaySent(0, 1L, Unpooled.EMPTY_BUFFER);
+        server.local().createStream(2, true);
     }
 
     @Test

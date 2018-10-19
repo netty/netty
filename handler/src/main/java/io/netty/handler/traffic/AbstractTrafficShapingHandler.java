@@ -17,6 +17,7 @@ package io.netty.handler.traffic;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
@@ -426,7 +427,8 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
 
         @Override
         public void run() {
-            ChannelConfig config = ctx.channel().config();
+            Channel channel = ctx.channel();
+            ChannelConfig config = channel.config();
             if (!config.isAutoRead() && isHandlerActive(ctx)) {
                 // If AutoRead is False and Active is True, user make a direct setAutoRead(false)
                 // Then Just reset the status
@@ -434,21 +436,25 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
                     logger.debug("Not unsuspend: " + config.isAutoRead() + ':' +
                             isHandlerActive(ctx));
                 }
-                ctx.attr(READ_SUSPENDED).set(false);
+                channel.attr(READ_SUSPENDED).set(false);
             } else {
                 // Anything else allows the handler to reset the AutoRead
                 if (logger.isDebugEnabled()) {
                     if (config.isAutoRead() && !isHandlerActive(ctx)) {
-                        logger.debug("Unsuspend: " + config.isAutoRead() + ':' +
-                                isHandlerActive(ctx));
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("Unsuspend: " + config.isAutoRead() + ':' +
+                                    isHandlerActive(ctx));
+                        }
                     } else {
-                        logger.debug("Normal unsuspend: " + config.isAutoRead() + ':'
-                                + isHandlerActive(ctx));
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("Normal unsuspend: " + config.isAutoRead() + ':'
+                                    + isHandlerActive(ctx));
+                        }
                     }
                 }
-                ctx.attr(READ_SUSPENDED).set(false);
+                channel.attr(READ_SUSPENDED).set(false);
                 config.setAutoRead(true);
-                ctx.channel().read();
+                channel.read();
             }
             if (logger.isDebugEnabled()) {
                 logger.debug("Unsuspend final status => " + config.isAutoRead() + ':'
@@ -461,8 +467,9 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      * Release the Read suspension
      */
     void releaseReadSuspended(ChannelHandlerContext ctx) {
-        ctx.attr(READ_SUSPENDED).set(false);
-        ctx.channel().config().setAutoRead(true);
+        Channel channel = ctx.channel();
+        channel.attr(READ_SUSPENDED).set(false);
+        channel.config().setAutoRead(true);
     }
 
     @Override
@@ -476,17 +483,18 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
             if (wait >= MINIMAL_WAIT) { // At least 10ms seems a minimal
                 // time in order to try to limit the traffic
                 // Only AutoRead AND HandlerActive True means Context Active
-                ChannelConfig config = ctx.channel().config();
+                Channel channel = ctx.channel();
+                ChannelConfig config = channel.config();
                 if (logger.isDebugEnabled()) {
                     logger.debug("Read suspend: " + wait + ':' + config.isAutoRead() + ':'
                             + isHandlerActive(ctx));
                 }
                 if (config.isAutoRead() && isHandlerActive(ctx)) {
                     config.setAutoRead(false);
-                    ctx.attr(READ_SUSPENDED).set(true);
+                    channel.attr(READ_SUSPENDED).set(true);
                     // Create a Runnable to reactive the read if needed. If one was create before it will just be
                     // reused to limit object creation
-                    Attribute<Runnable> attr = ctx.attr(REOPEN_TASK);
+                    Attribute<Runnable> attr = channel.attr(REOPEN_TASK);
                     Runnable reopenTask = attr.get();
                     if (reopenTask == null) {
                         reopenTask = new ReopenReadTimerTask(ctx);
@@ -524,7 +532,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     }
 
     protected static boolean isHandlerActive(ChannelHandlerContext ctx) {
-        Boolean suspended = ctx.attr(READ_SUSPENDED).get();
+        Boolean suspended = ctx.channel().attr(READ_SUSPENDED).get();
         return suspended == null || Boolean.FALSE.equals(suspended);
     }
 

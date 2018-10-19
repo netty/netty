@@ -42,23 +42,27 @@ import static io.netty.util.internal.PlatformDependent.newConcurrentHashMap;
 @UnstableApi
 public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddress> {
 
-    private final ChannelFactory<? extends DatagramChannel> channelFactory;
-    private final DnsServerAddressStreamProvider nameServerProvider;
+    private final DnsNameResolverBuilder dnsResolverBuilder;
 
     private final ConcurrentMap<String, Promise<InetAddress>> resolvesInProgress = newConcurrentHashMap();
     private final ConcurrentMap<String, Promise<List<InetAddress>>> resolveAllsInProgress = newConcurrentHashMap();
 
+    public DnsAddressResolverGroup(DnsNameResolverBuilder dnsResolverBuilder) {
+        this.dnsResolverBuilder = dnsResolverBuilder.copy();
+    }
+
     public DnsAddressResolverGroup(
             Class<? extends DatagramChannel> channelType,
             DnsServerAddressStreamProvider nameServerProvider) {
-        this(new ReflectiveChannelFactory<DatagramChannel>(channelType), nameServerProvider);
+        this(new DnsNameResolverBuilder());
+        dnsResolverBuilder.channelType(channelType).nameServerProvider(nameServerProvider);
     }
 
     public DnsAddressResolverGroup(
             ChannelFactory<? extends DatagramChannel> channelFactory,
             DnsServerAddressStreamProvider nameServerProvider) {
-        this.channelFactory = channelFactory;
-        this.nameServerProvider = nameServerProvider;
+        this(new DnsNameResolverBuilder());
+        dnsResolverBuilder.channelFactory(channelFactory).nameServerProvider(nameServerProvider);
     }
 
     @SuppressWarnings("deprecation")
@@ -70,7 +74,11 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
                     " (expected: " + StringUtil.simpleClassName(EventLoop.class));
         }
 
-        return newResolver((EventLoop) executor, channelFactory, nameServerProvider);
+        // we don't really need to pass channelFactory and nameServerProvider separately,
+        // but still keep this to ensure backward compatibility with (potentially) override methods
+        return newResolver((EventLoop) executor,
+                dnsResolverBuilder.channelFactory(),
+                dnsResolverBuilder.nameServerProvider());
     }
 
     /**
@@ -98,7 +106,9 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
                                                         ChannelFactory<? extends DatagramChannel> channelFactory,
                                                         DnsServerAddressStreamProvider nameServerProvider)
             throws Exception {
-        return new DnsNameResolverBuilder(eventLoop)
+        // once again, channelFactory and nameServerProvider are most probably set in builder already,
+        // but I do reassign them again to avoid corner cases with override methods
+        return dnsResolverBuilder.eventLoop(eventLoop)
                 .channelFactory(channelFactory)
                 .nameServerProvider(nameServerProvider)
                 .build();

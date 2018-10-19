@@ -76,7 +76,7 @@ public class DecoratingHttp2FrameWriter implements Http2FrameWriter {
     }
 
     @Override
-    public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, ByteBuf data, ChannelPromise promise) {
+    public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, long data, ChannelPromise promise) {
         return delegate.writePing(ctx, ack, data, promise);
     }
 

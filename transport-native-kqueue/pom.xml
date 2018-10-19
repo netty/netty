@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.20.Final-SNAPSHOT</version>
+    <version>4.1.31.Final-SNAPSHOT</version>
   </parent>
   <artifactId>netty-transport-native-kqueue</artifactId>
 
@@ -80,10 +80,10 @@
                   <configureArgs>
                     <arg>${jni.compiler.args.ldflags}</arg>
                     <arg>${jni.compiler.args.cflags}</arg>
-                    <!-- support for __attribute__((weak_import)) by the linker was added in 10.2 so ensure we
+                    <!-- support for __attribute__((weak_import)) by the linker was added in 10.2 (but 10.6 is the minimum we can use on 10.14) so ensure we
                          explicitly set the target platform. Otherwise we may get fatal link errors due to weakly linked
                          methods which are not expected to be present on MacOS (e.g. accept4). -->
-                    <arg>MACOSX_DEPLOYMENT_TARGET=10.2</arg>
+                    <arg>MACOSX_DEPLOYMENT_TARGET=10.6</arg>
                   </configureArgs>
                 </configuration>
                 <goals>
@@ -361,7 +361,7 @@
     <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>
     <unix.common.lib.unpacked.dir>${unix.common.lib.dir}/META-INF/native/lib</unix.common.lib.unpacked.dir>
     <unix.common.include.unpacked.dir>${unix.common.lib.dir}/META-INF/native/include</unix.common.include.unpacked.dir>
-    <jni.compiler.args.cflags>CFLAGS=-O3 -Werror -fno-omit-frame-pointer -Wunused-variable -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
+    <jni.compiler.args.cflags>CFLAGS=-O3 -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
     <jni.compiler.args.ldflags>LDFLAGS=-z now -L${unix.common.lib.unpacked.dir} -Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive</jni.compiler.args.ldflags>
     <skipTests>true</skipTests>
   </properties>

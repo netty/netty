@@ -140,6 +140,11 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
         return false;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @param mayInterruptIfRunning this value has no effect in this implementation.
+     */
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
         return false;

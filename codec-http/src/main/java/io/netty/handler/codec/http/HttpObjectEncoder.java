@@ -83,7 +83,8 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         ByteBuf buf = null;
         if (msg instanceof HttpMessage) {
             if (state != ST_INIT) {
-                throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
+                throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg)
+                        + ", state: " + state);
             }
 
             @SuppressWarnings({ "unchecked", "CastConflictsWithInstanceof" })

@@ -20,19 +20,21 @@ import org.conscrypt.OpenSSLProvider;
 
 import javax.net.ssl.SNIMatcher;
 import javax.net.ssl.SNIServerName;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 import java.security.Provider;
+import java.util.Arrays;
 import java.util.Collections;
 
 final class Java8SslTestUtils {
 
     private Java8SslTestUtils() { }
 
-    static void setSNIMatcher(SSLParameters parameters) {
+    static void setSNIMatcher(SSLParameters parameters, final byte[] match) {
         SNIMatcher matcher = new SNIMatcher(0) {
             @Override
             public boolean matches(SNIServerName sniServerName) {
-                return false;
+                return Arrays.equals(match, sniServerName.getEncoded());
             }
         };
         parameters.setSNIMatchers(Collections.singleton(matcher));
@@ -40,5 +42,15 @@ final class Java8SslTestUtils {
 
     static Provider conscryptProvider() {
         return new OpenSSLProvider();
+    }
+
+    /**
+     * Wraps the given {@link SSLEngine} to add extra tests while executing methods if possible / needed.
+     */
+    static SSLEngine wrapSSLEngineForTesting(SSLEngine engine) {
+        if (engine instanceof ReferenceCountedOpenSslEngine) {
+            return new OpenSslErrorStackAssertSSLEngine((ReferenceCountedOpenSslEngine) engine);
+        }
+        return engine;
     }
 }

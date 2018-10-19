@@ -15,6 +15,7 @@
  */
 package io.netty.util.internal;
 
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -47,6 +48,11 @@ public final class NativeLibraryLoader {
     private static final String NATIVE_RESOURCE_HOME = "META-INF/native/";
     private static final File WORKDIR;
     private static final boolean DELETE_NATIVE_LIB_AFTER_LOADING;
+    private static final boolean TRY_TO_PATCH_SHADED_ID;
+
+    // Just use a-Z and numbers as valid ID bytes.
+    private static final byte[] UNIQUE_ID_BYTES =
+            "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".getBytes(CharsetUtil.US_ASCII);
 
     static {
         String workdir = SystemPropertyUtil.get("io.netty.native.workdir");
@@ -69,6 +75,11 @@ public final class NativeLibraryLoader {
 
         DELETE_NATIVE_LIB_AFTER_LOADING = SystemPropertyUtil.getBoolean(
                 "io.netty.native.deleteLibAfterLoading", true);
+        logger.debug("-Dio.netty.native.deleteLibAfterLoading: {}", DELETE_NATIVE_LIB_AFTER_LOADING);
+
+        TRY_TO_PATCH_SHADED_ID = SystemPropertyUtil.getBoolean(
+                "io.netty.native.tryPatchShadedId", true);
+        logger.debug("-Dio.netty.native.tryPatchShadedId: {}", TRY_TO_PATCH_SHADED_ID);
     }
 
     /**
@@ -117,7 +128,8 @@ public final class NativeLibraryLoader {
      */
     public static void load(String originalName, ClassLoader loader) {
         // Adjust expected name to support shading of native libraries.
-        String name = calculatePackagePrefix().replace('.', '_') + originalName;
+        String packagePrefix = calculatePackagePrefix().replace('.', '_');
+        String name = packagePrefix + originalName;
         List<Throwable> suppressed = new ArrayList<Throwable>();
         try {
             // first try to load from java.library.path
@@ -174,8 +186,25 @@ public final class NativeLibraryLoader {
 
             byte[] buffer = new byte[8192];
             int length;
-            while ((length = in.read(buffer)) > 0) {
-                out.write(buffer, 0, length);
+            if (TRY_TO_PATCH_SHADED_ID && PlatformDependent.isOsx() && !packagePrefix.isEmpty()) {
+                // We read the whole native lib into memory to make it easier to monkey-patch the id.
+                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(in.available());
+
+                while ((length = in.read(buffer)) > 0) {
+                    byteArrayOutputStream.write(buffer, 0, length);
+                }
+                byteArrayOutputStream.flush();
+                byte[] bytes = byteArrayOutputStream.toByteArray();
+                byteArrayOutputStream.close();
+
+                // Try to patch the library id.
+                patchShadedLibraryId(bytes, originalName, name);
+
+                out.write(bytes);
+            } else {
+                while ((length = in.read(buffer)) > 0) {
+                    out.write(buffer, 0, length);
+                }
             }
             out.flush();
 
@@ -183,7 +212,6 @@ public final class NativeLibraryLoader {
             // because otherwise Windows will refuse to load it when it's in use by other process.
             closeQuietly(out);
             out = null;
-
             loadLibrary(loader, tmpFile.getPath(), true);
         } catch (UnsatisfiedLinkError e) {
             try {
@@ -214,6 +242,51 @@ public final class NativeLibraryLoader {
             // and if this fails fallback to deleting on JVM exit.
             if (tmpFile != null && (!DELETE_NATIVE_LIB_AFTER_LOADING || !tmpFile.delete())) {
                 tmpFile.deleteOnExit();
+            }
+        }
+    }
+
+    /**
+     * Try to patch shaded library to ensure it uses a unique ID.
+     */
+    private static void patchShadedLibraryId(byte[] bytes, String originalName, String name) {
+        // Our native libs always have the name as part of their id so we can search for it and replace it
+        // to make the ID unique if shading is used.
+        byte[] nameBytes = originalName.getBytes(CharsetUtil.UTF_8);
+        int idIdx = -1;
+
+        // Be aware this is a really raw way of patching a dylib but it does all we need without implementing
+        // a full mach-o parser and writer. Basically we just replace the the original bytes with some
+        // random bytes as part of the ID regeneration. The important thing here is that we need to use the same
+        // length to not corrupt the mach-o header.
+        outerLoop: for (int i = 0; i < bytes.length && bytes.length - i >= nameBytes.length; i++) {
+            int idx = i;
+            for (int j = 0; j < nameBytes.length;) {
+                if (bytes[idx++] != nameBytes[j++]) {
+                    // Did not match the name, increase the index and try again.
+                    break;
+                } else if (j == nameBytes.length) {
+                    // We found the index within the id.
+                    idIdx = i;
+                    break outerLoop;
+                }
+            }
+        }
+
+        if (idIdx == -1) {
+            logger.debug("Was not able to find the ID of the shaded native library {}, can't adjust it.", name);
+        } else {
+            // We found our ID... now monkey-patch it!
+            for (int i = 0; i < nameBytes.length; i++) {
+                // We should only use bytes as replacement that are in our UNIQUE_ID_BYTES array.
+                bytes[idIdx + i] = UNIQUE_ID_BYTES[PlatformDependent.threadLocalRandom()
+                                                                    .nextInt(UNIQUE_ID_BYTES.length)];
+            }
+
+            if (logger.isDebugEnabled()) {
+                logger.debug(
+                        "Found the ID of the shaded native library {}. Replacing ID part {} with {}",
+                        name, originalName, new String(bytes, idIdx, nameBytes.length, CharsetUtil.UTF_8));
             }
         }
     }
