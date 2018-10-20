@@ -159,8 +159,8 @@ public class ResourceLeakDetector<T> {
     }
 
     /** the collection of active resources */
-    private final ConcurrentMap<DefaultResourceLeak<?>, LeakEntry> allLeaks = PlatformDependent.newConcurrentHashMap();
-
+    private final DefaultResourceLeak<Object> refListHead = new DefaultResourceLeak<Object>();
+    
     private final ReferenceQueue<Object> refQueue = new ReferenceQueue<Object>();
     private final ConcurrentMap<String, Boolean> reportedLeaks = PlatformDependent.newConcurrentHashMap();
 
@@ -255,12 +255,12 @@ public class ResourceLeakDetector<T> {
         if (level.ordinal() < Level.PARANOID.ordinal()) {
             if ((PlatformDependent.threadLocalRandom().nextInt(samplingInterval)) == 0) {
                 reportLeak();
-                return new DefaultResourceLeak(obj, refQueue, allLeaks);
+                return new DefaultResourceLeak(obj, refQueue, refListHead);
             }
             return null;
         }
         reportLeak();
-        return new DefaultResourceLeak(obj, refQueue, allLeaks);
+        return new DefaultResourceLeak(obj, refQueue, refListHead);
     }
 
     private void clearRefQueue() {
@@ -353,25 +353,71 @@ public class ResourceLeakDetector<T> {
         @SuppressWarnings("unused")
         private volatile int droppedRecords;
 
-        private final ConcurrentMap<DefaultResourceLeak<?>, LeakEntry> allLeaks;
+        // Doubly-linked list of live DefaultResourceLeaks, which prevents the DefaultResourceLeaks
+        // from being GC'd before their referents (which will prevent them being enqueued)
+        private final DefaultResourceLeak refListHead;
+        private DefaultResourceLeak next = this, prev = this;
         private final int trackedHash;
 
         DefaultResourceLeak(
                 Object referent,
                 ReferenceQueue<Object> refQueue,
-                ConcurrentMap<DefaultResourceLeak<?>, LeakEntry> allLeaks) {
+                DefaultResourceLeak refListHead) {
             super(referent, refQueue);
 
             assert referent != null;
 
+            this.refListHead = refListHead;
             // Store the hash of the tracked object to later assert it in the close(...) method.
             // It's important that we not store a reference to the referent as this would disallow it from
             // be collected via the WeakReference.
             trackedHash = System.identityHashCode(referent);
-            allLeaks.put(this, LeakEntry.INSTANCE);
             // Create a new Record so we always have the creation stacktrace included.
             headUpdater.set(this, new Record(Record.BOTTOM));
-            this.allLeaks = allLeaks;
+            
+            synchronized (referent)
+            {
+                insert();
+            }
+
+            // jdk.internal.ref.PhantomCleanable has the following code at the end of the method,
+            // suggesting that the referent might already be unreachable?! What?!
+            // I guess I have to insert a synchronization block around `insert`.
+    //        // Ensure referent and cleaner remain accessible
+    //        Reference.reachabilityFence(referent);
+    //        Reference.reachabilityFence(cleaner);
+        }
+    
+        /**
+         * Construct a new root of the list; not inserted.
+         */
+        DefaultResourceLeak() {
+        
+            super(null, null);
+            this.refListHead = this;
+            this.trackedHash = 0;
+        }
+    
+        private void insert() {
+            synchronized (refListHead) {
+                prev = refListHead;
+                next = refListHead.next;
+                next.prev = this;
+                refListHead.next = this;
+            }
+        }
+
+        private boolean remove() {
+            synchronized (refListHead) {
+                if (next != this) {
+                    next.prev = prev;
+                    prev.next = next;
+                    prev = this;
+                    next = this;
+                    return true;
+                }
+                return false;
+            }
         }
 
         @Override
@@ -441,13 +487,12 @@ public class ResourceLeakDetector<T> {
 
         boolean dispose() {
             clear();
-            return allLeaks.remove(this, LeakEntry.INSTANCE);
+            return remove();
         }
 
         @Override
         public boolean close() {
-            // Use the ConcurrentMap remove method, which avoids allocating an iterator.
-            if (allLeaks.remove(this, LeakEntry.INSTANCE)) {
+            if (remove()) {
                 // Call clear so the reference is not even enqueued.
                 clear();
                 headUpdater.set(this, null);
@@ -604,24 +649,6 @@ public class ResourceLeakDetector<T> {
                 buf.append(NEWLINE);
             }
             return buf.toString();
-        }
-    }
-
-    private static final class LeakEntry {
-        static final LeakEntry INSTANCE = new LeakEntry();
-        private static final int HASH = System.identityHashCode(INSTANCE);
-
-        private LeakEntry() {
-        }
-
-        @Override
-        public int hashCode() {
-            return HASH;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return obj == this;
         }
     }
 }
