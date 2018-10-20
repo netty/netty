@@ -79,7 +79,7 @@ public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark 
 
     @Benchmark
     public int forEachByte() {
-        buffer.writerIndex(buffer.capacity()).readerIndex(0);
+        buffer.setIndex(0, buffer.capacity());
         buffer.forEachByte(TEST_PROCESSOR);
         return buffer.forEachByteDesc(TEST_PROCESSOR);
     }

@@ -258,13 +258,13 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
             // No need to consolidate - just add a component to the list.
             @SuppressWarnings("deprecation")
-            Component c = new Component(buffer.order(ByteOrder.BIG_ENDIAN).slice());
+            Component c = new Component(buffer.order(ByteOrder.BIG_ENDIAN));
             int readableBytes = c.length();
 
             if (cIndex == components.size()) {
                 wasAdded = components.add(c);
                 if (cIndex > 0) {
-                    c.setOffset(components.get(cIndex - 1).endOffset);
+                    c.reposition(components.get(cIndex - 1).endOffset);
                 }
             } else {
                 components.add(cIndex, c);
@@ -403,15 +403,14 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             final int capacity = components.get(numComponents - 1).endOffset;
 
             ByteBuf consolidated = allocBuffer(capacity);
+            lastAccessed = null;
 
             // We're not using foreach to avoid creating an iterator.
             for (int i = 0; i < numComponents; i ++) {
-                Component c = components.get(i);
-                consolidated.writeBytes(c.buf);
-                c.freeIfNecessary();
+                components.get(i).transferTo(consolidated);
             }
-            lastAccessed = null;
-            Component c = new Component(consolidated);
+
+            Component c = new Component(consolidated, 0, capacity);
             components.clear();
             components.add(c);
         }
@@ -444,12 +443,12 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
         Component c = components.get(cIndex);
         if (cIndex == 0) {
-            c.setOffset(0);
+            c.reposition(0);
             cIndex ++;
         }
 
         for (int i = cIndex; i < size; i ++) {
-            components.get(i).setOffset(components.get(i - 1).endOffset);
+            components.get(i).reposition(components.get(i - 1).endOffset);
         }
     }
 
@@ -525,14 +524,14 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 continue; // empty
             }
             ByteBuf s = c.buf;
-            int localStart = start - c.offset;
+            int localStart = c.idx(start);
             int localLength = Math.min(length, c.endOffset - start);
             // avoid additional checks in AbstractByteBuf case
             int result = s instanceof AbstractByteBuf
                 ? ((AbstractByteBuf) s).forEachByteAsc0(localStart, localStart + localLength, processor)
                 : s.forEachByte(localStart, localLength, processor);
             if (result != -1) {
-                return c.offset + result;
+                return result - c.adjustment;
             }
             start += localLength;
             length -= localLength;
@@ -551,7 +550,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 continue; // empty
             }
             ByteBuf s = c.buf;
-            int localRStart = length + rEnd - c.offset;
+            int localRStart = c.idx(length + rEnd);
             int localLength = Math.min(length, localRStart), localIndex = localRStart - localLength;
             // avoid additional checks in AbstractByteBuf case
             int result = s instanceof AbstractByteBuf
@@ -559,7 +558,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 : s.forEachByteDesc(localIndex, localLength, processor);
 
             if (result != -1) {
-                return c.offset + result;
+                return result - c.adjustment;
             }
             length -= localLength;
         }
@@ -579,10 +578,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         int bytesToSlice = length;
         // The first component
         Component firstC = components.get(componentId);
-        int firstBufOffset = offset - firstC.offset;
 
-        ByteBuf slice = firstC.buf.slice(firstBufOffset + firstC.buf.readerIndex(),
-                                         Math.min(firstC.endOffset - offset, bytesToSlice));
+        ByteBuf slice = firstC.buf.slice(firstC.idx(offset), Math.min(firstC.endOffset - offset, bytesToSlice));
         bytesToSlice -= slice.readableBytes();
 
         if (bytesToSlice == 0) {
@@ -595,7 +592,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         // Add all the slices until there is nothing more left and then return the List.
         do {
             Component component = components.get(++componentId);
-            slice = component.buf.slice(component.buf.readerIndex(), Math.min(component.length(), bytesToSlice));
+            slice = component.buf.slice(component.idx(component.offset), Math.min(component.length(), bytesToSlice));
             bytesToSlice -= slice.readableBytes();
             sliceList.add(slice);
         } while (bytesToSlice > 0);
@@ -647,7 +644,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         case 0:
             return 0;
         case 1:
-            return components.get(0).buf.arrayOffset();
+            Component c = components.get(0);
+            return c.idx(c.buf.arrayOffset());
         default:
             throw new UnsupportedOperationException();
         }
@@ -671,7 +669,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         case 0:
             return Unpooled.EMPTY_BUFFER.memoryAddress();
         case 1:
-            return components.get(0).buf.memoryAddress();
+            Component c = components.get(0);
+            return c.buf.memoryAddress() + c.adjustment;
         default:
             throw new UnsupportedOperationException();
         }
@@ -718,8 +717,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                     continue;
                 }
 
-                // Replace the last component with the trimmed slice.
-                i.set(new Component(c.buf.slice(0, cLength - bytesToTrim), c.offset));
+                // Trim the last component.
+                c.endOffset -= bytesToTrim;
                 break;
             }
 
@@ -790,14 +789,14 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     @Override
     protected byte _getByte(int index) {
         Component c = findComponent(index);
-        return c.buf.getByte(index - c.offset);
+        return c.buf.getByte(c.idx(index));
     }
 
     @Override
     protected short _getShort(int index) {
         Component c = findComponent(index);
         if (index + 2 <= c.endOffset) {
-            return c.buf.getShort(index - c.offset);
+            return c.buf.getShort(c.idx(index));
         } else if (order() == ByteOrder.BIG_ENDIAN) {
             return (short) ((_getByte(index) & 0xff) << 8 | _getByte(index + 1) & 0xff);
         } else {
@@ -809,7 +808,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     protected short _getShortLE(int index) {
         Component c = findComponent(index);
         if (index + 2 <= c.endOffset) {
-            return c.buf.getShortLE(index - c.offset);
+            return c.buf.getShortLE(c.idx(index));
         } else if (order() == ByteOrder.BIG_ENDIAN) {
             return (short) (_getByte(index) & 0xff | (_getByte(index + 1) & 0xff) << 8);
         } else {
@@ -821,7 +820,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     protected int _getUnsignedMedium(int index) {
         Component c = findComponent(index);
         if (index + 3 <= c.endOffset) {
-            return c.buf.getUnsignedMedium(index - c.offset);
+            return c.buf.getUnsignedMedium(c.idx(index));
         } else if (order() == ByteOrder.BIG_ENDIAN) {
             return (_getShort(index) & 0xffff) << 8 | _getByte(index + 2) & 0xff;
         } else {
@@ -833,7 +832,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     protected int _getUnsignedMediumLE(int index) {
         Component c = findComponent(index);
         if (index + 3 <= c.endOffset) {
-            return c.buf.getUnsignedMediumLE(index - c.offset);
+            return c.buf.getUnsignedMediumLE(c.idx(index));
         } else if (order() == ByteOrder.BIG_ENDIAN) {
             return _getShortLE(index) & 0xffff | (_getByte(index + 2) & 0xff) << 16;
         } else {
@@ -845,7 +844,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     protected int _getInt(int index) {
         Component c = findComponent(index);
         if (index + 4 <= c.endOffset) {
-            return c.buf.getInt(index - c.offset);
+            return c.buf.getInt(c.idx(index));
         } else if (order() == ByteOrder.BIG_ENDIAN) {
             return (_getShort(index) & 0xffff) << 16 | _getShort(index + 2) & 0xffff;
         } else {
@@ -857,7 +856,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     protected int _getIntLE(int index) {
         Component c = findComponent(index);
         if (index + 4 <= c.endOffset) {
-            return c.buf.getIntLE(index - c.offset);
+            return c.buf.getIntLE(c.idx(index));
         } else if (order() == ByteOrder.BIG_ENDIAN) {
             return _getShortLE(index) & 0xffff | (_getShortLE(index + 2) & 0xffff) << 16;
         } else {
@@ -869,7 +868,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     protected long _getLong(int index) {
         Component c = findComponent(index);
         if (index + 8 <= c.endOffset) {
-            return c.buf.getLong(index - c.offset);
+            return c.buf.getLong(c.idx(index));
         } else if (order() == ByteOrder.BIG_ENDIAN) {
             return (_getInt(index) & 0xffffffffL) << 32 | _getInt(index + 4) & 0xffffffffL;
         } else {
@@ -881,7 +880,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     protected long _getLongLE(int index) {
         Component c = findComponent(index);
         if (index + 8 <= c.endOffset) {
-            return c.buf.getLongLE(index - c.offset);
+            return c.buf.getLongLE(c.idx(index));
         } else if (order() == ByteOrder.BIG_ENDIAN) {
             return _getIntLE(index) & 0xffffffffL | (_getIntLE(index + 4) & 0xffffffffL) << 32;
         } else {
@@ -900,7 +899,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         while (length > 0) {
             Component c = components.get(i);
             int localLength = Math.min(length, c.endOffset - index);
-            c.buf.getBytes(index - c.offset, dst, dstIndex, localLength);
+            c.buf.getBytes(c.idx(index), dst, dstIndex, localLength);
             index += localLength;
             dstIndex += localLength;
             length -= localLength;
@@ -925,7 +924,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 Component c = components.get(i);
                 int localLength = Math.min(length, c.endOffset - index);
                 dst.limit(dst.position() + localLength);
-                c.buf.getBytes(index - c.offset, dst);
+                c.buf.getBytes(c.idx(index), dst);
                 index += localLength;
                 length -= localLength;
                 i ++;
@@ -947,7 +946,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         while (length > 0) {
             Component c = components.get(i);
             int localLength = Math.min(length, c.endOffset - index);
-            c.buf.getBytes(index - c.offset, dst, dstIndex, localLength);
+            c.buf.getBytes(c.idx(index), dst, dstIndex, localLength);
             index += localLength;
             dstIndex += localLength;
             length -= localLength;
@@ -1001,7 +1000,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         while (length > 0) {
             Component c = components.get(i);
             int localLength = Math.min(length, c.endOffset - index);
-            c.buf.getBytes(index - c.offset, out, localLength);
+            c.buf.getBytes(c.idx(index), out, localLength);
             index += localLength;
             length -= localLength;
             i ++;
@@ -1012,7 +1011,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     @Override
     public CompositeByteBuf setByte(int index, int value) {
         Component c = findComponent(index);
-        c.buf.setByte(index - c.offset, value);
+        c.buf.setByte(c.idx(index), value);
         return this;
     }
 
@@ -1030,7 +1029,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     protected void _setShort(int index, int value) {
         Component c = findComponent(index);
         if (index + 2 <= c.endOffset) {
-            c.buf.setShort(index - c.offset, value);
+            c.buf.setShort(c.idx(index), value);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
             _setByte(index, (byte) (value >>> 8));
             _setByte(index + 1, (byte) value);
@@ -1044,7 +1043,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     protected void _setShortLE(int index, int value) {
         Component c = findComponent(index);
         if (index + 2 <= c.endOffset) {
-            c.buf.setShortLE(index - c.offset, value);
+            c.buf.setShortLE(c.idx(index), value);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
             _setByte(index, (byte) value);
             _setByte(index + 1, (byte) (value >>> 8));
@@ -1063,7 +1062,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     protected void _setMedium(int index, int value) {
         Component c = findComponent(index);
         if (index + 3 <= c.endOffset) {
-            c.buf.setMedium(index - c.offset, value);
+            c.buf.setMedium(c.idx(index), value);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
             _setShort(index, (short) (value >> 8));
             _setByte(index + 2, (byte) value);
@@ -1077,7 +1076,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     protected void _setMediumLE(int index, int value) {
         Component c = findComponent(index);
         if (index + 3 <= c.endOffset) {
-            c.buf.setMediumLE(index - c.offset, value);
+            c.buf.setMediumLE(c.idx(index), value);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
             _setShortLE(index, (short) value);
             _setByte(index + 2, (byte) (value >>> 16));
@@ -1096,7 +1095,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     protected void _setInt(int index, int value) {
         Component c = findComponent(index);
         if (index + 4 <= c.endOffset) {
-            c.buf.setInt(index - c.offset, value);
+            c.buf.setInt(c.idx(index), value);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
             _setShort(index, (short) (value >>> 16));
             _setShort(index + 2, (short) value);
@@ -1110,7 +1109,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     protected void _setIntLE(int index, int value) {
         Component c = findComponent(index);
         if (index + 4 <= c.endOffset) {
-            c.buf.setIntLE(index - c.offset, value);
+            c.buf.setIntLE(c.idx(index), value);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
             _setShortLE(index, (short) value);
             _setShortLE(index + 2, (short) (value >>> 16));
@@ -1129,7 +1128,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     protected void _setLong(int index, long value) {
         Component c = findComponent(index);
         if (index + 8 <= c.endOffset) {
-            c.buf.setLong(index - c.offset, value);
+            c.buf.setLong(c.idx(index), value);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
             _setInt(index, (int) (value >>> 32));
             _setInt(index + 4, (int) value);
@@ -1143,7 +1142,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     protected void _setLongLE(int index, long value) {
         Component c = findComponent(index);
         if (index + 8 <= c.endOffset) {
-            c.buf.setLongLE(index - c.offset, value);
+            c.buf.setLongLE(c.idx(index), value);
         } else if (order() == ByteOrder.BIG_ENDIAN) {
             _setIntLE(index, (int) value);
             _setIntLE(index + 4, (int) (value >>> 32));
@@ -1164,7 +1163,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         while (length > 0) {
             Component c = components.get(i);
             int localLength = Math.min(length, c.endOffset - index);
-            c.buf.setBytes(index - c.offset, src, srcIndex, localLength);
+            c.buf.setBytes(c.idx(index), src, srcIndex, localLength);
             index += localLength;
             srcIndex += localLength;
             length -= localLength;
@@ -1189,7 +1188,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 Component c = components.get(i);
                 int localLength = Math.min(length, c.endOffset - index);
                 src.limit(src.position() + localLength);
-                c.buf.setBytes(index - c.offset, src);
+                c.buf.setBytes(c.idx(index), src);
                 index += localLength;
                 length -= localLength;
                 i ++;
@@ -1211,7 +1210,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         while (length > 0) {
             Component c = components.get(i);
             int localLength = Math.min(length, c.endOffset - index);
-            c.buf.setBytes(index - c.offset, src, srcIndex, localLength);
+            c.buf.setBytes(c.idx(index), src, srcIndex, localLength);
             index += localLength;
             srcIndex += localLength;
             length -= localLength;
@@ -1238,7 +1237,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 i++;
                 continue;
             }
-            int localReadBytes = c.buf.setBytes(index - c.offset, in, localLength);
+            int localReadBytes = c.buf.setBytes(c.idx(index), in, localLength);
             if (localReadBytes < 0) {
                 if (readBytes == 0) {
                     return -1;
@@ -1279,7 +1278,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 i++;
                 continue;
             }
-            int localReadBytes = c.buf.setBytes(index - c.offset, in, localLength);
+            int localReadBytes = c.buf.setBytes(c.idx(index), in, localLength);
 
             if (localReadBytes == 0) {
                 break;
@@ -1325,7 +1324,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 i++;
                 continue;
             }
-            int localReadBytes = c.buf.setBytes(index - c.offset, in, position + readBytes, localLength);
+            int localReadBytes = c.buf.setBytes(c.idx(index), in, position + readBytes, localLength);
 
             if (localReadBytes == 0) {
                 break;
@@ -1371,7 +1370,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         while (length > 0) {
             Component c = components.get(i);
             int localLength = Math.min(length, c.endOffset - index);
-            c.buf.getBytes(index - c.offset, dst, dstIndex, localLength);
+            c.buf.getBytes(c.idx(index), dst, dstIndex, localLength);
             index += localLength;
             dstIndex += localLength;
             length -= localLength;
@@ -1388,7 +1387,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * @return buf the {@link ByteBuf} on the specified index
      */
     public ByteBuf component(int cIndex) {
-        return internalComponent(cIndex).duplicate();
+        checkComponentIndex(cIndex);
+        return components.get(cIndex).duplicate();
     }
 
     /**
@@ -1398,7 +1398,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * @return the {@link ByteBuf} on the specified index
      */
     public ByteBuf componentAtOffset(int offset) {
-        return internalComponentAtOffset(offset).duplicate();
+        return findComponent(offset).duplicate();
     }
 
     /**
@@ -1409,7 +1409,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      */
     public ByteBuf internalComponent(int cIndex) {
         checkComponentIndex(cIndex);
-        return components.get(cIndex).buf;
+        return components.get(cIndex).slice(); //TODO really necessary to slice here?
     }
 
     /**
@@ -1419,7 +1419,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * @param offset the offset for which the {@link ByteBuf} should be returned
      */
     public ByteBuf internalComponentAtOffset(int offset) {
-        return findComponent(offset).buf;
+        return findComponent(offset).slice(); //TODO really necessary to slice here?
     }
 
     // weak cache - check it first when looking for component
@@ -1440,7 +1440,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             } else if (offset < c.offset) {
                 high = mid - 1;
             } else {
-                assert c.endOffset > c.offset;
                 lastAccessed = c;
                 return c;
             }
@@ -1460,8 +1459,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             int count = 0;
             int componentsCount = components.size();
             for (int i = 0; i < componentsCount; i++) {
-                Component c = components.get(i);
-                count += c.buf.nioBufferCount();
+                count += components.get(i).buf.nioBufferCount();
             }
             return count;
         }
@@ -1473,7 +1471,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         case 0:
             return EMPTY_NIO_BUFFER;
         case 1:
-            return components.get(0).buf.internalNioBuffer(index, length);
+            Component c = components.get(0);
+            return c.buf.internalNioBuffer(c.idx(index), length);
         default:
             throw new UnsupportedOperationException();
         }
@@ -1487,9 +1486,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         case 0:
             return EMPTY_NIO_BUFFER;
         case 1:
-            ByteBuf buf = components.get(0).buf;
+            Component c = components.get(0);
+            ByteBuf buf = c.buf;
             if (buf.nioBufferCount() == 1) {
-                return components.get(0).buf.nioBuffer(index, length);
+                return buf.nioBuffer(c.idx(index), length);
             }
         }
 
@@ -1525,10 +1525,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 case 0:
                     throw new UnsupportedOperationException();
                 case 1:
-                    buffers.add(s.nioBuffer(index - c.offset, localLength));
+                    buffers.add(s.nioBuffer(c.idx(index), localLength));
                     break;
                 default:
-                    Collections.addAll(buffers, s.nioBuffers(index - c.offset, localLength));
+                    Collections.addAll(buffers, s.nioBuffers(c.idx(index), localLength));
             }
 
             index += localLength;
@@ -1549,18 +1549,15 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             return this;
         }
 
-        final Component last = components.get(numComponents - 1);
-        final int capacity = last.endOffset;
+        final int capacity = components.get(numComponents - 1).endOffset;
         final ByteBuf consolidated = allocBuffer(capacity);
 
         for (int i = 0; i < numComponents; i ++) {
-            Component c = components.get(i);
-            consolidated.writeBytes(c.buf);
-            c.freeIfNecessary();
+            components.get(i).transferTo(consolidated);
         }
         lastAccessed = null;
         components.clear();
-        components.add(new Component(consolidated));
+        components.add(new Component(consolidated, 0, capacity));
         updateComponentOffsets(0);
         return this;
     }
@@ -1583,16 +1580,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         final ByteBuf consolidated = allocBuffer(capacity);
 
         for (int i = cIndex; i < endCIndex; i ++) {
-            Component c = components.get(i);
-            consolidated.writeBytes(c.buf);
-            if (lastAccessed == c) {
-                lastAccessed = null;
-            }
-            c.freeIfNecessary();
+            components.get(i).transferTo(consolidated);
         }
-
+        lastAccessed = null;
         components.removeRange(cIndex + 1, endCIndex);
-        components.set(cIndex, new Component(consolidated));
+        components.set(cIndex, new Component(consolidated, 0, capacity));
         updateComponentOffsets(cIndex);
         return this;
     }
@@ -1663,18 +1655,26 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         // Remove read components.
         int firstComponentId = toComponentIndex(readerIndex);
         for (int i = 0; i < firstComponentId; i ++) {
-            components.get(i).freeIfNecessary();
+            Component c = components.get(i);
+            c.freeIfNecessary();
+            if (lastAccessed == c) {
+                lastAccessed = null;
+            }
         }
 
         // Remove or replace the first readable component with a new slice.
         Component c = components.get(firstComponentId);
         if (readerIndex == c.endOffset) {
             // new slice would be empty, so remove instead
+            c.freeIfNecessary();
+            if (lastAccessed == c) {
+                lastAccessed = null;
+            }
             firstComponentId++;
         } else {
-            Component newC = new Component(
-                c.buf.slice(readerIndex - c.offset, c.endOffset - readerIndex));
-            components.set(firstComponentId, newC);
+            c.offset = 0;
+            c.endOffset -= readerIndex;
+            c.adjustment += readerIndex;
         }
 
         components.removeRange(0, firstComponentId);
@@ -1699,26 +1699,47 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     private static final class Component {
         final ByteBuf buf;
+        int adjustment;
         int offset;
         int endOffset;
 
         Component(ByteBuf buf) {
-            this(buf, 0);
+            this(buf, 0, buf.readableBytes());
         }
 
-        Component(ByteBuf buf, int offset) {
+        Component(ByteBuf buf, int srcOffset, int len) {
             this.buf = buf;
-            this.offset = offset;
-            this.endOffset = offset + buf.readableBytes();
+            this.endOffset = len;
+            this.adjustment = srcOffset;
+        }
+
+        int idx(int index) {
+            return index + adjustment;
         }
 
         int length() {
-            return endOffset - offset; // invariant
+            return endOffset - offset;
         }
 
-        void setOffset(int newOffset) {
-            endOffset = newOffset + length();
+        void reposition(int newOffset) {
+            int move = newOffset - offset;
+            endOffset += move;
+            adjustment -= move;
             offset = newOffset;
+        }
+
+        // copy then release
+        void transferTo(ByteBuf dst) {
+            dst.writeBytes(buf, offset + adjustment, endOffset - offset);
+            buf.release();
+        }
+
+        ByteBuf slice() {
+            return buf.slice(offset + adjustment, endOffset - offset);
+        }
+
+        ByteBuf duplicate() {
+            return buf.duplicate().setIndex(offset + adjustment, endOffset - offset);
         }
 
         void freeIfNecessary() {
@@ -2014,7 +2035,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 throw new NoSuchElementException();
             }
             try {
-                return components.get(index++).buf;
+                return components.get(index++).slice();
             } catch (IndexOutOfBoundsException e) {
                 throw new ConcurrentModificationException();
             }
