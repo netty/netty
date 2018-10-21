@@ -258,7 +258,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
             // No need to consolidate - just add a component to the list.
             @SuppressWarnings("deprecation")
-            Component c = new Component(buffer.order(ByteOrder.BIG_ENDIAN));
+            Component c = newComponent(buffer.order(ByteOrder.BIG_ENDIAN));
             int readableBytes = c.length();
 
             if (cIndex == components.size()) {
@@ -282,6 +282,20 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 buffer.release();
             }
         }
+    }
+
+    // unwrap if already sliced
+    private Component newComponent(ByteBuf buf) {
+        int srcIndex = buf.readerIndex(), len = buf.readableBytes();
+        ByteBuf slice = null;
+        if (buf instanceof AbstractUnpooledSlicedByteBuf) {
+            srcIndex += ((AbstractUnpooledSlicedByteBuf) buf).idx(0);
+            slice = buf;
+        } else if (buf instanceof PooledSlicedByteBuf) {
+            srcIndex += ((PooledSlicedByteBuf) buf).adjustment;
+            slice = buf;
+        }
+        return new Component(slice == null ? buf : buf.unwrap(), srcIndex, len, slice);
     }
 
     /**
@@ -410,7 +424,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 components.get(i).transferTo(consolidated);
             }
 
-            Component c = new Component(consolidated, 0, capacity);
+            Component c = new Component(consolidated, 0, capacity, consolidated);
             components.clear();
             components.add(c);
         }
@@ -1409,7 +1423,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      */
     public ByteBuf internalComponent(int cIndex) {
         checkComponentIndex(cIndex);
-        return components.get(cIndex).slice(); //TODO really necessary to slice here?
+        return components.get(cIndex).slice();
     }
 
     /**
@@ -1419,7 +1433,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * @param offset the offset for which the {@link ByteBuf} should be returned
      */
     public ByteBuf internalComponentAtOffset(int offset) {
-        return findComponent(offset).slice(); //TODO really necessary to slice here?
+        return findComponent(offset).slice();
     }
 
     // weak cache - check it first when looking for component
@@ -1557,7 +1571,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         }
         lastAccessed = null;
         components.clear();
-        components.add(new Component(consolidated, 0, capacity));
+        components.add(new Component(consolidated, 0, capacity, consolidated));
         updateComponentOffsets(0);
         return this;
     }
@@ -1584,7 +1598,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         }
         lastAccessed = null;
         components.removeRange(cIndex + 1, endCIndex);
-        components.set(cIndex, new Component(consolidated, 0, capacity));
+        components.set(cIndex, new Component(consolidated, 0, capacity, consolidated));
         updateComponentOffsets(cIndex);
         return this;
     }
@@ -1703,14 +1717,13 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         int offset;
         int endOffset;
 
-        Component(ByteBuf buf) {
-            this(buf, 0, buf.readableBytes());
-        }
+        private ByteBuf slice; // cached slice, may be null
 
-        Component(ByteBuf buf, int srcOffset, int len) {
+        Component(ByteBuf buf, int srcOffset, int len, ByteBuf slice) {
             this.buf = buf;
             this.endOffset = len;
             this.adjustment = srcOffset;
+            this.slice = slice;
         }
 
         int idx(int index) {
@@ -1730,16 +1743,16 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
         // copy then release
         void transferTo(ByteBuf dst) {
-            dst.writeBytes(buf, offset + adjustment, endOffset - offset);
+            dst.writeBytes(buf, idx(offset), length());
             buf.release();
         }
 
         ByteBuf slice() {
-            return buf.slice(offset + adjustment, endOffset - offset);
+            return slice != null ? slice : (slice = buf.slice(idx(offset), length()));
         }
 
         ByteBuf duplicate() {
-            return buf.duplicate().setIndex(offset + adjustment, endOffset - offset);
+            return buf.duplicate().setIndex(idx(offset), idx(endOffset));
         }
 
         void freeIfNecessary() {
