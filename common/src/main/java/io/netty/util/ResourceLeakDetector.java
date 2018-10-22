@@ -501,7 +501,7 @@ public class ResourceLeakDetector<T> {
 
             if (duped > 0) {
                 buf.append(": ")
-                        .append(dropped)
+                        .append(duped)
                         .append(" leak records were discarded because they were duplicates")
                         .append(NEWLINE);
             }
