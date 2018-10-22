@@ -446,26 +446,41 @@ public class ResourceLeakDetector<T> {
 
         @Override
         public boolean close() {
-            // Use the ConcurrentMap remove method, which avoids allocating an iterator.
-            if (allLeaks.remove(this, LeakEntry.INSTANCE)) {
-                // Call clear so the reference is not even enqueued.
-                clear();
-                headUpdater.set(this, null);
-                return true;
-            }
-            return false;
+            return close0(null);
         }
 
         @Override
         public boolean close(T trackedObject) {
             // Ensure that the object that was tracked is the same as the one that was passed to close(...).
             assert trackedHash == System.identityHashCode(trackedObject);
+            return close0(trackedObject);
+        }
 
-            // We need to actually do the null check of the trackedObject after we close the leak because otherwise
-            // we may get false-positives reported by the ResourceLeakDetector. This can happen as the JIT / GC may
-            // be able to figure out that we do not need the trackedObject anymore and so already enqueue it for
-            // collection before we actually get a chance to close the enclosing ResourceLeak.
-            return close() && trackedObject != null;
+        private boolean close0(Object trackedObject) {
+            // Use the ConcurrentMap remove method, which avoids allocating an iterator.
+            if (allLeaks.remove(this, LeakEntry.INSTANCE)) {
+                // Call clear so the reference is not even enqueued.
+                clear();
+
+                Record old = headUpdater.getAndSet(this, null);
+                // We need use the trackedObject after we close the leak because otherwise we may get false-positives
+                // reported by the ResourceLeakDetector. This can happen as the JIT / GC may
+                // be able to figure out that we do not need the trackedObject anymore and so already enqueue it for
+                // collection before we actually get a chance to close the enclosing ResourceLeak.
+                // It's important to note that this only works headUpdater is atomic and so the JIT is not allowed to
+                // reorder the operations and so its is guaranteed that we call clear() before and it can not collect
+                // trackedObject before.
+                //
+                // TODO: Replace this with Reference.reachabilityFence(...) once we depend on Java9+:
+                //       https://docs.oracle.com/javase/9/docs/api/java/lang/ref/
+                //               Reference.html#reachabilityFence-java.lang.Object-
+                if (trackedObject != null && trackedObject == old) {
+                    // This should never happen!
+                    throw new IllegalStateException(trackedObject + " should never been a Record stored internally");
+                }
+                return true;
+            }
+            return false;
         }
 
         @Override
