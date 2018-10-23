@@ -208,7 +208,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     @Override
     public CompositeByteBuf compositeHeapBuffer(int maxNumComponents) {
-        return toLeakAwareBuffer(new CompositeByteBuf(this, false, maxNumComponents));
+        return toLeakAwareBufferInternal(new CompositeByteBuf(this, false, maxNumComponents));
     }
 
     @Override
@@ -218,7 +218,15 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     @Override
     public CompositeByteBuf compositeDirectBuffer(int maxNumComponents) {
-        return toLeakAwareBuffer(new CompositeByteBuf(this, true, maxNumComponents));
+        return toLeakAwareBufferInternal(new CompositeByteBuf(this, true, maxNumComponents));
+    }
+
+    ByteBuf toLeakAwareBufferInternal(ByteBuf buf) {
+        return toLeakAwareBuffer(buf);
+    }
+
+    CompositeByteBuf toLeakAwareBufferInternal(CompositeByteBuf buf) {
+        return toLeakAwareBuffer(buf);
     }
 
     private static void validate(int initialCapacity, int maxCapacity) {

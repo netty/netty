@@ -311,7 +311,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
                     new UnpooledHeapByteBuf(this, initialCapacity, maxCapacity);
         }
 
-        return toLeakAwareBuffer(buf);
+        return toLeakAwareBufferInternal(buf);
     }
 
     @Override
@@ -328,7 +328,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
                     new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
         }
 
-        return toLeakAwareBuffer(buf);
+        return toLeakAwareBufferInternal(buf);
     }
 
     /**

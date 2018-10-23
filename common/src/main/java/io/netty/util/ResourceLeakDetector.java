@@ -245,18 +245,24 @@ public class ResourceLeakDetector<T> {
         return track0(obj);
     }
 
-    @SuppressWarnings("unchecked")
-    private DefaultResourceLeak track0(T obj) {
+    protected boolean shouldTrack(T obj) {
         Level level = ResourceLeakDetector.level;
         if (level == Level.DISABLED) {
-            return null;
+            return false;
         }
 
         if (level.ordinal() < Level.PARANOID.ordinal()) {
             if ((PlatformDependent.threadLocalRandom().nextInt(samplingInterval)) == 0) {
-                reportLeak();
-                return new DefaultResourceLeak(obj, refQueue, allLeaks);
+                return true;
             }
+            return false;
+        }
+        return true;
+    }
+
+    @SuppressWarnings("unchecked")
+    private DefaultResourceLeak track0(T obj) {
+        if (!shouldTrack(obj)) {
             return null;
         }
         reportLeak();
@@ -275,7 +281,7 @@ public class ResourceLeakDetector<T> {
     }
 
     private void reportLeak() {
-        if (!logger.isErrorEnabled()) {
+        if (!isLeakReportingEnabled()) {
             clearRefQueue();
             return;
         }
@@ -293,6 +299,34 @@ public class ResourceLeakDetector<T> {
             }
 
             String records = ref.toString();
+            if (reportedLeaks.putIfAbsent(records, Boolean.TRUE) == null) {
+                if (records.isEmpty()) {
+                    reportUntracedLeak(resourceType);
+                } else {
+                    reportTracedLeak(resourceType, records);
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns {@code true} if the report leak methods should be called when a leak is discovered.
+     */
+    protected boolean isLeakReportingEnabled() {
+        return logger.isErrorEnabled();
+    }
+
+    /**
+     * Disposes of all tracked resources, and reports a leak if any resource is still referenced.
+     */
+    protected void disposeAllReferences() {
+        // Free all references and report leaks
+        for (DefaultResourceLeak<?> defaultResourceLeak : allLeaks.keySet()) {
+            if (!defaultResourceLeak.dispose()) {
+                continue;
+            }
+
+            String records = defaultResourceLeak.toString();
             if (reportedLeaks.putIfAbsent(records, Boolean.TRUE) == null) {
                 if (records.isEmpty()) {
                     reportUntracedLeak(resourceType);
