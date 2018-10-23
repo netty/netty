@@ -20,12 +20,14 @@ import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.internal.UnstableApi;
 
 import java.io.Serializable;
 import java.util.Date;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
+@UnstableApi
 public class HttpCacheEntry implements Serializable {
     private static final long serialVersionUID = -7024260271684161731L;
 

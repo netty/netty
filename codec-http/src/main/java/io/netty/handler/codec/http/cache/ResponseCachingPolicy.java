@@ -30,7 +30,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class ResponseCachingPolicy {
+class ResponseCachingPolicy {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(RequestCachingPolicy.class);
 
@@ -40,7 +40,7 @@ public class ResponseCachingPolicy {
 
     private final boolean sharedCache;
 
-    public ResponseCachingPolicy(final boolean sharedCache) {
+    ResponseCachingPolicy(final boolean sharedCache) {
         this.sharedCache = sharedCache;
     }
 

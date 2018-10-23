@@ -31,7 +31,7 @@ import java.util.Date;
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.handler.codec.http.cache.CacheControlDecoder.*;
 
-public class HttpResponseFromCacheGenerator {
+class HttpResponseFromCacheGenerator {
 
     FullHttpResponse generate(final HttpRequest request, final HttpCacheEntry cacheEntry) {
         final Date now = new Date();

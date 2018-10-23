@@ -17,6 +17,11 @@ package io.netty.handler.codec.http.cache;
 
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -24,22 +29,26 @@ import java.util.Date;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
-public class HttpCache {
+class HttpCache {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpCache.class);
 
     private final HttpCacheStorage storage;
     private final CacheKeyGenerator keyGenerator;
+    private final EventExecutor executor;
 
-    public HttpCache(final HttpCacheStorage storage) {
-        this(storage, new CacheKeyGenerator());
+    HttpCache(final HttpCacheStorage storage, final EventExecutor executor) {
+        this(storage, new CacheKeyGenerator(), executor);
     }
 
-    public HttpCache(final HttpCacheStorage storage, final CacheKeyGenerator keyGenerator) {
+    HttpCache(final HttpCacheStorage storage,
+              final CacheKeyGenerator keyGenerator,
+              final EventExecutor executor) {
         this.storage = checkNotNull(storage, "storage");
         this.keyGenerator = checkNotNull(keyGenerator, "keyGenerator");
+        this.executor = checkNotNull(executor, "executor");
     }
 
-    public HttpCacheEntry cache(final HttpRequest request,
+    public Future<HttpCacheEntry> cache(final HttpRequest request,
                                 final FullHttpResponse response,
                                 final Date requestSent,
                                 final Date responseReceived) {
@@ -48,35 +57,50 @@ public class HttpCache {
         final HttpCacheEntry entry = new HttpCacheEntry(response.copy(), requestSent, responseReceived,
                                                         response.status(), response.headers());
 
-        storage.put(cacheKey, entry);
-        return entry;
+        final Promise<HttpCacheEntry> promise = executor.newPromise();
+        storage.put(cacheKey, entry, executor.<Void>newPromise())
+               .addListener(new GenericFutureListener<Future<? super Void>>() {
+                   @Override
+                   public void operationComplete(Future<? super Void> future) throws Exception {
+                       if (future.isSuccess()) {
+                           promise.setSuccess(entry);
+                       } else {
+                           logger.error("Error putting entry in the cache", future.cause());
+                           promise.setFailure(future.cause());
+                       }
+                   }
+               });
+
+        return promise;
     }
 
-    public HttpCacheEntry getCacheEntry(HttpRequest request) {
-        final HttpCacheEntry cacheEntry;
-        try {
-            final String cacheKey = keyGenerator.generateKey(request);
-            cacheEntry = storage.get(cacheKey);
-        } catch (Exception e) {
-            logger.error("Error while retrieving cache entry.", e);
-            return null;
-        }
-
-        return cacheEntry;
+    public Future<HttpCacheEntry> getCacheEntry(final HttpRequest request, final Promise<HttpCacheEntry> promise) {
+        final String cacheKey = keyGenerator.generateKey(request);
+        return storage.get(cacheKey, promise);
     }
 
-    public void invalidate(final HttpRequest request) {
+    public Future<Void> invalidate(final HttpRequest request, final Promise<Void> promise) {
         if (logger.isDebugEnabled()) {
             logger.debug("Invalid cache entries");
         }
 
         final String cacheKey = keyGenerator.generateKey(request);
-        final HttpCacheEntry cacheEntry = getCacheEntry(request);
-        if (cacheEntry != null) {
+        getCacheEntry(request, executor.<HttpCacheEntry>newPromise()).addListener(new FutureListener<HttpCacheEntry>() {
+            @Override
+            public void operationComplete(Future<HttpCacheEntry> future) throws Exception {
+                if (future.isSuccess() && future.getNow() != null) {
+                    // TODO: remove variants
+                    storage.remove(cacheKey, executor.<Void>newPromise())
+                           .addListener(new GenericFutureListener<Future<? super Void>>() {
+                               @Override
+                               public void operationComplete(Future<? super Void> future) throws Exception {
+                                   promise.setSuccess(null);
+                               }
+                           });
+                }
+            }
+        });
 
-            // TODO: remove variants
-
-            storage.remove(cacheKey);
-        }
+        return promise;
     }
 }

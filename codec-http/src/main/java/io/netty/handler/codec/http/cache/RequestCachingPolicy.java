@@ -15,13 +15,14 @@
  */
 package io.netty.handler.codec.http.cache;
 
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-public class RequestCachingPolicy {
+class RequestCachingPolicy {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(RequestCachingPolicy.class);
 
@@ -36,6 +37,12 @@ public class RequestCachingPolicy {
             if (logger.isDebugEnabled()) {
                 logger.debug(method + " request can not be served from cache.");
             }
+            return false;
+        }
+
+        if (request.headers().contains(HttpHeaderNames.VARY)) {
+            // TODO: handle Vary
+            logger.debug("Vary header is not yet supported, request can not be served from cache.");
             return false;
         }
 

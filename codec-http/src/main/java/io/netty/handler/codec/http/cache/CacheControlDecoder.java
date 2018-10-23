@@ -22,7 +22,7 @@ import java.util.EnumSet;
 
 import static io.netty.handler.codec.http.HttpHeaderValues.*;
 
-public final class CacheControlDecoder {
+final class CacheControlDecoder {
     // https://blogs.msdn.microsoft.com/ie/2010/07/14/caching-improvements-in-internet-explorer-9
     public static final int MAXIMUM_AGE = Integer.MAX_VALUE;
 

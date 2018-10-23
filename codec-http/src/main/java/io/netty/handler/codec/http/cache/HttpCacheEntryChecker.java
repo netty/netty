@@ -20,12 +20,12 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.Date;
 
-public class HttpCacheEntryChecker {
+class HttpCacheEntryChecker {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(HttpCacheEntryChecker.class);
 
     private final boolean sharedCache;
 
-    public HttpCacheEntryChecker(final boolean sharedCache) {
+    HttpCacheEntryChecker(final boolean sharedCache) {
         this.sharedCache = sharedCache;
     }
 

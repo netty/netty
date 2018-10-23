@@ -15,28 +15,35 @@
  */
 package io.netty.handler.codec.http.cache;
 
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-public class HttpCacheMemoryStorage implements HttpCacheStorage {
+class HttpCacheMemoryStorage implements HttpCacheStorage {
     private final ConcurrentMap<String, HttpCacheEntry> cache;
 
-    public HttpCacheMemoryStorage() {
+    HttpCacheMemoryStorage() {
         cache = new ConcurrentHashMap<String, HttpCacheEntry>();
     }
 
     @Override
-    public void put(final String key, final HttpCacheEntry entry) {
+    public Future<Void> put(final String key, final HttpCacheEntry entry, final Promise<Void> promise) {
         cache.put(key, entry);
+        return promise.setSuccess(null);
     }
 
     @Override
-    public HttpCacheEntry get(final String key) {
-        return cache.get(key);
+    public Future<HttpCacheEntry> get(final String key, final Promise<HttpCacheEntry> promise) {
+        return promise.setSuccess(cache.get(key));
     }
 
     @Override
-    public void remove(final String key) {
-        cache.remove(key);
+    public Future<Void> remove(final String key, Promise<Void> promise) {
+        final HttpCacheEntry cacheEntry = cache.remove(key);
+        cacheEntry.getContent().release();
+        promise.setSuccess(null);
+        return promise;
     }
 }

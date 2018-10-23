@@ -15,11 +15,16 @@
  */
 package io.netty.handler.codec.http.cache;
 
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.UnstableApi;
+
+@UnstableApi
 public interface HttpCacheStorage {
 
-    void put(String key, HttpCacheEntry entry);
+    Future<Void> put(String key, HttpCacheEntry entry, Promise<Void> promise);
 
-    HttpCacheEntry get(String key);
+    Future<HttpCacheEntry> get(String key, Promise<HttpCacheEntry> promise);
 
-    void remove(String key);
+    Future<Void> remove(String key, Promise<Void> promise);
 }

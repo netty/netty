@@ -28,52 +28,52 @@ public class CacheControlDirectivesBuilder {
     private int staleIfError = -1;
 
     public CacheControlDirectivesBuilder publicCache() {
-        this.flags.add(CacheControlDirectives.CacheControlFlags.PUBLIC);
+        flags.add(CacheControlDirectives.CacheControlFlags.PUBLIC);
         return this;
     }
 
     public CacheControlDirectivesBuilder privateCache() {
-        this.flags.add(CacheControlDirectives.CacheControlFlags.PRIVATE);
+        flags.add(CacheControlDirectives.CacheControlFlags.PRIVATE);
         return this;
     }
 
     public CacheControlDirectivesBuilder noCache() {
-        this.flags.add(CacheControlDirectives.CacheControlFlags.NO_CACHE);
+        flags.add(CacheControlDirectives.CacheControlFlags.NO_CACHE);
         return this;
     }
 
     public CacheControlDirectivesBuilder noStore() {
-        this.flags.add(CacheControlDirectives.CacheControlFlags.NO_STORE);
+        flags.add(CacheControlDirectives.CacheControlFlags.NO_STORE);
         return this;
     }
 
     public CacheControlDirectivesBuilder noTransform() {
-        this.flags.add(CacheControlDirectives.CacheControlFlags.NO_TRANSFORM);
+        flags.add(CacheControlDirectives.CacheControlFlags.NO_TRANSFORM);
         return this;
     }
 
     public CacheControlDirectivesBuilder mustRevalidate() {
-        this.flags.add(CacheControlDirectives.CacheControlFlags.MUST_REVALIDATE);
+        flags.add(CacheControlDirectives.CacheControlFlags.MUST_REVALIDATE);
         return this;
     }
 
     public CacheControlDirectivesBuilder proxyRevalidate() {
-        this.flags.add(CacheControlDirectives.CacheControlFlags.PROXY_REVALIDATE);
+        flags.add(CacheControlDirectives.CacheControlFlags.PROXY_REVALIDATE);
         return this;
     }
 
     public CacheControlDirectivesBuilder onlyIfCached() {
-        this.flags.add(CacheControlDirectives.CacheControlFlags.ONLY_IF_CACHED);
+        flags.add(CacheControlDirectives.CacheControlFlags.ONLY_IF_CACHED);
         return this;
     }
 
     public CacheControlDirectivesBuilder immutable() {
-        this.flags.add(CacheControlDirectives.CacheControlFlags.IMMUTABLE);
+        flags.add(CacheControlDirectives.CacheControlFlags.IMMUTABLE);
         return this;
     }
 
     public CacheControlDirectivesBuilder flags(final EnumSet<CacheControlDirectives.CacheControlFlags> flags) {
-        this.flags = flags;
+        this.flags = EnumSet.copyOf(flags);
         return this;
     }
 

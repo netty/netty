@@ -17,7 +17,7 @@ package io.netty.handler.codec.http.cache;
 
 import java.util.EnumSet;
 
-public class CacheControlDirectives {
+class CacheControlDirectives {
     public static final CacheControlDirectives EMPTY = builder().build();
 
     private final EnumSet<CacheControlFlags> flags;
