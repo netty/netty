@@ -461,11 +461,41 @@ public class ResourceLeakDetector<T> {
             // Ensure that the object that was tracked is the same as the one that was passed to close(...).
             assert trackedHash == System.identityHashCode(trackedObject);
 
-            // We need to actually do the null check of the trackedObject after we close the leak because otherwise
-            // we may get false-positives reported by the ResourceLeakDetector. This can happen as the JIT / GC may
-            // be able to figure out that we do not need the trackedObject anymore and so already enqueue it for
-            // collection before we actually get a chance to close the enclosing ResourceLeak.
-            return close() && trackedObject != null;
+            try {
+                return close();
+            } finally {
+                // This method will do `synchronized(trackedObject)` and we should be sure this will not cause deadlock.
+                // It should not, because somewhere up the callstack should be a (successful) `trackedObject.release`,
+                // therefore it is unreasonable that anyone else, anywhere, is holding a lock on the trackedObject.
+                // (Unreasonable but possible, unfortunately.)
+                reachabilityFence0(trackedObject);
+            }
+        }
+
+         /**
+         * Ensures that the object referenced by the given reference remains
+         * <a href="package-summary.html#reachability"><em>strongly reachable</em></a>,
+         * regardless of any prior actions of the program that might otherwise cause
+         * the object to become unreachable; thus, the referenced object is not
+         * reclaimable by garbage collection at least until after the invocation of
+         * this method.
+         *
+         * <p> Recent versions of the JDK have a nasty habit of prematurely deciding objects are unreachable.
+         * see: https://stackoverflow.com/questions/26642153/finalize-called-on-strongly-reachable-object-in-java-8
+         * The Java 9 method Reference.reachabilityFence offers a solution to this problem.
+         *
+         * <p> This method is always implemented as a synchronization on {@code ref}, not as
+         * {@code Reference.reachabilityFence} for consistency across platforms and to allow building on JDK 6-8.
+         * <b>It is the caller's responsibility to ensure that this synchronization will not cause deadlock.</b>
+         *
+         * @param ref the reference. If {@code null}, this method has no effect.
+         * @see java.lang.ref.Reference#reachabilityFence
+         */
+        private static void reachabilityFence0(Object ref) {
+            if (ref != null) {
+                // Empty synchronized is ok: https://stackoverflow.com/a/31933260/1151521
+                synchronized (ref) { }
+            }
         }
 
         @Override
