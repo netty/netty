@@ -17,6 +17,8 @@ package io.netty.channel.kqueue;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.testsuite.transport.AbstractSingleThreadEventLoopTest;
 import io.netty.util.concurrent.Future;
 import org.junit.Test;
 
@@ -25,7 +27,17 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class KQueueEventLoopTest {
+public class KQueueEventLoopTest extends AbstractSingleThreadEventLoopTest {
+
+    @Override
+    protected EventLoopGroup newEventLoopGroup() {
+        return new KQueueEventLoopGroup();
+    }
+
+    @Override
+    protected ServerSocketChannel newChannel() {
+        return new KQueueServerSocketChannel();
+    }
 
     @Test
     public void testScheduleBigDelayNotOverflow() {
