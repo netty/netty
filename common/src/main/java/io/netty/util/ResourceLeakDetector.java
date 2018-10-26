@@ -263,23 +263,7 @@ public class ResourceLeakDetector<T> {
         return new DefaultResourceLeak(obj, refQueue, allLeaks);
     }
 
-    private void clearRefQueue() {
-        for (;;) {
-            @SuppressWarnings("unchecked")
-            DefaultResourceLeak ref = (DefaultResourceLeak) refQueue.poll();
-            if (ref == null) {
-                break;
-            }
-            ref.dispose();
-        }
-    }
-
     private void reportLeak() {
-        if (!logger.isErrorEnabled()) {
-            clearRefQueue();
-            return;
-        }
-
         // Detect and report previous leaks.
         for (;;) {
             @SuppressWarnings("unchecked")
@@ -300,6 +284,42 @@ public class ResourceLeakDetector<T> {
                     reportTracedLeak(resourceType, records);
                 }
             }
+        }
+    }
+
+    /**
+     * Throws AssertionError if there's been any leaks.
+     * The current thread should have already been synchronized with any other threads that were responsible for
+     * releasing tracked objects. Any tracked object which has not been disposed (whether or not it is reachable
+     * or has been collected by the GC) will be considered a leak.
+     */
+    public void assertAllResourcesDisposed() {
+        // All hetherto unreported leaks, whether they've already been queued by the GC or not, will be here.
+        for (DefaultResourceLeak<?> leak : allLeaks.keySet()) {
+            leak.dispose(); // will always return true
+            String records = leak.toString();
+            if (reportedLeaks.putIfAbsent(records, Boolean.TRUE) == null) {
+                if (records.isEmpty()) {
+                    reportUntracedLeak(resourceType);
+                } else {
+                    reportTracedLeak(resourceType, records);
+                }
+            }
+        }
+        if (!reportedLeaks.keySet().isEmpty()) {
+            StringBuilder buf = new StringBuilder()
+                    .append("LEAK: ").append(reportedLeaks.size()).append(" resource leak(s) detected. ")
+                    .append(resourceType).append(".release() was not called before it's garbage-collected. ")
+                    .append("See http://netty.io/wiki/reference-counted-objects.html for more information.");
+            int i = 1;
+            for (String leak : reportedLeaks.keySet()) {
+                buf.append(NEWLINE)
+                        .append("== leak ")
+                        .append(i++)
+                        .append(": ")
+                        .append(leak);
+            }
+            throw new AssertionError(buf);
         }
     }
 

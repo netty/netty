@@ -90,7 +90,7 @@ public class ResourceLeakDetectorTest {
         }
 
         // Check if we had any leak reports in the ResourceLeakDetector itself
-        DefaultResource.detector.assertNoErrors();
+        DefaultResource.detector.assertAllResourcesDisposed();
 
         assertNoErrors(error);
     }
@@ -118,8 +118,7 @@ public class ResourceLeakDetectorTest {
 
     private static final class DefaultResource implements Resource {
         // Sample every allocation
-        static final TestResourceLeakDetector<Resource> detector = new TestResourceLeakDetector<Resource>(
-                Resource.class, 1, Integer.MAX_VALUE);
+        static final ResourceLeakDetector<Resource> detector = new ResourceLeakDetector<Resource>(Resource.class, 1);
 
         @Override
         public boolean close() {
@@ -135,38 +134,6 @@ public class ResourceLeakDetectorTest {
         Throwable error = ref.get();
         if (error != null) {
             throw error;
-        }
-    }
-
-    private static final class TestResourceLeakDetector<T> extends ResourceLeakDetector<T> {
-
-        private final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
-
-        TestResourceLeakDetector(Class<?> resourceType, int samplingInterval, long maxActive) {
-            super(resourceType, samplingInterval, maxActive);
-        }
-
-        @Override
-        protected void reportTracedLeak(String resourceType, String records) {
-            reportError(new AssertionError("Leak reported for '" + resourceType + "':\n" + records));
-        }
-
-        @Override
-        protected void reportUntracedLeak(String resourceType) {
-            reportError(new AssertionError("Leak reported for '" + resourceType + '\''));
-        }
-
-        @Override
-        protected void reportInstancesLeak(String resourceType) {
-            reportError(new AssertionError("Leak reported for '" + resourceType + '\''));
-        }
-
-        private void reportError(AssertionError cause) {
-            error.compareAndSet(null, cause);
-        }
-
-        void assertNoErrors() throws Throwable {
-            ResourceLeakDetectorTest.assertNoErrors(error);
         }
     }
 }

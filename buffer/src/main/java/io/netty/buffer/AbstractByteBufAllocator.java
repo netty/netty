@@ -34,7 +34,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
         ResourceLeakDetector.addExclusions(AbstractByteBufAllocator.class, "toLeakAwareBuffer");
     }
 
-    protected static ByteBuf toLeakAwareBuffer(ByteBuf buf) {
+    protected ByteBuf toLeakAwareBuffer(ByteBuf buf) {
         ResourceLeakTracker<ByteBuf> leak;
         switch (ResourceLeakDetector.getLevel()) {
             case SIMPLE:
@@ -56,7 +56,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
         return buf;
     }
 
-    protected static CompositeByteBuf toLeakAwareBuffer(CompositeByteBuf buf) {
+    protected CompositeByteBuf toLeakAwareBuffer(CompositeByteBuf buf) {
         ResourceLeakTracker<ByteBuf> leak;
         switch (ResourceLeakDetector.getLevel()) {
             case SIMPLE:
