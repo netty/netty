@@ -247,20 +247,26 @@ public class ResourceLeakDetector<T> {
 
     @SuppressWarnings("unchecked")
     private DefaultResourceLeak track0(T obj) {
-        Level level = ResourceLeakDetector.level;
-        if (level == Level.DISABLED) {
-            return null;
-        }
-
-        if (level.ordinal() < Level.PARANOID.ordinal()) {
-            if ((PlatformDependent.threadLocalRandom().nextInt(samplingInterval)) == 0) {
-                reportLeak();
-                return new DefaultResourceLeak(obj, refQueue, allLeaks);
-            }
+        if (!shouldTrack(obj)) {
             return null;
         }
         reportLeak();
         return new DefaultResourceLeak(obj, refQueue, allLeaks);
+    }
+    
+    protected boolean shouldTrack(T obj) {
+        Level level = ResourceLeakDetector.level;
+        if (level == Level.DISABLED) {
+            return false;
+        }
+
+        if (level.ordinal() < Level.PARANOID.ordinal()) {
+            if ((PlatformDependent.threadLocalRandom().nextInt(samplingInterval)) == 0) {
+                return true;
+            }
+            return false;
+        }
+        return true;
     }
 
     private void reportLeak() {
