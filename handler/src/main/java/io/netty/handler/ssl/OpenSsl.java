@@ -66,7 +66,7 @@ public final class OpenSsl {
                                                  "TLS_AES_128_CCM_8_SHA256" + ':' +
                                                  "TLS_AES_128_CCM_SHA256";
     private static final boolean TLSV13_SUPPORTED;
-
+    private static final boolean IS_BORINGSSL;
     static final Set<String> SUPPORTED_PROTOCOLS_SET;
 
     static {
@@ -141,6 +141,8 @@ public final class OpenSsl {
             boolean supportsHostNameValidation = false;
             boolean tlsv13Supported = false;
 
+            IS_BORINGSSL = "BoringSSL".equals(versionString());
+
             try {
                 final long sslCtx = SSLContext.make(SSL.SSL_PROTOCOL_ALL, SSL.SSL_MODE_SERVER);
                 long certBio = 0;
@@ -160,12 +162,19 @@ public final class OpenSsl {
                             // Filter out bad input.
                             if (c == null || c.isEmpty() || availableOpenSslCipherSuites.contains(c) ||
                                 // Filter out TLSv1.3 ciphers if not supported.
-                                !tlsv13Supported && SslUtils.isTLSv13Cipher(c)) {
+                                !tlsv13Supported && isTLSv13Cipher(c)) {
                                 continue;
                             }
                             availableOpenSslCipherSuites.add(c);
                         }
-
+                        if (IS_BORINGSSL) {
+                            // Currently BoringSSL does not include these when calling SSL.getCiphers() even when these
+                            // are supported.
+                            Collections.addAll(availableOpenSslCipherSuites,
+                                               "TLS_AES_128_GCM_SHA256",
+                                               "TLS_AES_256_GCM_SHA384" ,
+                                               "TLS_CHACHA20_POLY1305_SHA256");
+                        }
                         try {
                             SSL.setHostNameValidation(ssl, 0, "netty.io");
                             supportsHostNameValidation = true;
@@ -240,7 +249,7 @@ public final class OpenSsl {
                     AVAILABLE_OPENSSL_CIPHER_SUITES.size() * 2);
             for (String cipher: AVAILABLE_OPENSSL_CIPHER_SUITES) {
                 // Included converted but also openssl cipher name
-                if (!SslUtils.isTLSv13Cipher(cipher)) {
+                if (!isTLSv13Cipher(cipher)) {
                     availableJavaCipherSuites.add(CipherSuiteConverter.toJava(cipher, "TLS"));
                     availableJavaCipherSuites.add(CipherSuiteConverter.toJava(cipher, "SSL"));
                 } else {
@@ -312,6 +321,7 @@ public final class OpenSsl {
             SUPPORTED_PROTOCOLS_SET = Collections.emptySet();
             SUPPORTS_OCSP = false;
             TLSV13_SUPPORTED = false;
+            IS_BORINGSSL = false;
         }
     }
 
@@ -509,5 +519,9 @@ public final class OpenSsl {
 
     static boolean isTlsv13Supported() {
         return TLSV13_SUPPORTED;
+    }
+
+    static boolean isBoringSSL() {
+        return IS_BORINGSSL;
     }
 }

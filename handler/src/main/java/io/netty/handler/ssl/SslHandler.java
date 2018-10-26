@@ -1385,13 +1385,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             wrapLater = true;
                             continue;
                         }
-                        if (flushedBeforeHandshake) {
-                            // We need to call wrap(...) in case there was a flush done before the handshake completed.
-                            //
-                            // See https://github.com/netty/netty/pull/2437
-                            flushedBeforeHandshake = false;
-                            wrapLater = true;
-                        }
+
                         // If we are not handshaking and there is no more data to unwrap then the next call to unwrap
                         // will not produce any data. We can avoid the potentially costly unwrap operation and break
                         // out of the loop.
@@ -1412,6 +1406,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
                     break;
                 }
+            }
+
+            if (flushedBeforeHandshake && handshakePromise.isDone()) {
+                // We need to call wrap(...) in case there was a flush done before the handshake completed to ensure
+                // we do not stale.
+                //
+                // See https://github.com/netty/netty/pull/2437
+                flushedBeforeHandshake = false;
+                wrapLater = true;
             }
 
             if (wrapLater) {
