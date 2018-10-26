@@ -24,6 +24,8 @@ import org.junit.Test;
 import static io.netty.handler.codec.compression.Snappy.*;
 import static org.junit.Assert.*;
 
+import java.nio.CharBuffer;
+
 public class SnappyTest {
     private final Snappy snappy = new Snappy();
 
@@ -219,7 +221,8 @@ public class SnappyTest {
         // Decode
         ByteBuf outDecoded = Unpooled.buffer();
         snappy.decode(out, outDecoded);
-        assertEquals(srcStr, outDecoded.getCharSequence(0, outDecoded.writerIndex(), CharsetUtil.US_ASCII));
+        assertEquals(CharBuffer.wrap(srcStr),
+            CharBuffer.wrap(outDecoded.getCharSequence(0, outDecoded.writerIndex(), CharsetUtil.US_ASCII)));
 
         in.release();
         out.release();
