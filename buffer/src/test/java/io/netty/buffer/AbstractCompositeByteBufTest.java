@@ -1026,6 +1026,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         ByteBuf buf2 = buffer().writeByte((byte) 2);
         cbuf.addComponent(true, buf2);
 
+        // insert empty one between the first two
         cbuf.addComponent(true, 1, EMPTY_BUFFER);
 
         assertEquals(2, cbuf.readableBytes());
@@ -1036,12 +1037,11 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertEquals(3, cbuf.numComponents());
 
         byte[] dest = new byte[2];
+        // should skip over the empty one, not throw a java.lang.Error :)
         cbuf.getBytes(0, dest);
 
         assertArrayEquals(new byte[] {1, 2}, dest);
 
-        assertSame(EMPTY_BUFFER, cbuf.internalComponent(1));
-        assertNotSame(EMPTY_BUFFER, cbuf.internalComponentAtOffset(1));
         cbuf.release();
     }
 
@@ -1147,20 +1147,21 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     @Test
     public void testReleasesOnShrink() {
 
-        ByteBuf b1 = PooledByteBufAllocator.DEFAULT.buffer(2).writeShort(1);
-        ByteBuf b2 = PooledByteBufAllocator.DEFAULT.buffer(2).writeShort(2);
+        ByteBuf b1 = Unpooled.buffer(2).writeShort(1);
+        ByteBuf b2 = Unpooled.buffer(2).writeShort(2);
 
         // composite takes ownership of s1 and s2
-        ByteBuf composite = PooledByteBufAllocator.DEFAULT.compositeBuffer()
+        ByteBuf composite = Unpooled.compositeBuffer()
             .addComponents(b1, b2);
 
         assertEquals(4, composite.capacity());
 
+        // reduce capacity down to two, will drop the second component
         composite.capacity(2);
         assertEquals(2, composite.capacity());
 
         // releasing composite should release the components
-        ReferenceCountUtil.release(composite);
+        composite.release();
         assertEquals(0, composite.refCnt());
         assertEquals(0, b1.refCnt());
         assertEquals(0, b2.refCnt());
