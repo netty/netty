@@ -415,7 +415,7 @@ public class SimpleChannelPool implements ChannelPool {
         }
         if (channelsToClose.isEmpty()) {
             // no idle channels in the pool - nothing to close
-            result.setSuccess(null);
+            result.trySuccess(null);
         }
 
         for (final Channel channel : channelsToClose) {
