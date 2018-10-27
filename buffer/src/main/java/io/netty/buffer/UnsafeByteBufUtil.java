@@ -595,7 +595,8 @@ final class UnsafeByteBufUtil {
                     tmpBuf.release();
                 }
             } else {
-                getBytes(addr, new byte[len], 0, len, out, length);
+                byte[] tmp = PlatformDependent.allocateUninitializedArray(len);
+                getBytes(addr, tmp, 0, len, out, length);
             }
         }
     }

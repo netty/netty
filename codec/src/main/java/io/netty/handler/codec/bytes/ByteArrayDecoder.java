@@ -16,6 +16,7 @@
 package io.netty.handler.codec.bytes;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
@@ -52,9 +53,6 @@ public class ByteArrayDecoder extends MessageToMessageDecoder<ByteBuf> {
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
          // copy the ByteBuf content to a byte array
-        byte[] array = new byte[msg.readableBytes()];
-        msg.getBytes(0, array);
-
-        out.add(array);
+        out.add(ByteBufUtil.getBytes(msg));
     }
 }

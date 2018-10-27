@@ -400,7 +400,7 @@ public final class Unpooled {
         if (length == 0) {
             return EMPTY_BUFFER;
         }
-        byte[] copy = new byte[length];
+        byte[] copy = PlatformDependent.allocateUninitializedArray(length);
         System.arraycopy(array, offset, copy, 0, length);
         return wrappedBuffer(copy);
     }
@@ -416,7 +416,7 @@ public final class Unpooled {
         if (length == 0) {
             return EMPTY_BUFFER;
         }
-        byte[] copy = new byte[length];
+        byte[] copy = PlatformDependent.allocateUninitializedArray(length);
         // Duplicate the buffer so we not adjust the position during our get operation.
         // See https://github.com/netty/netty/issues/3896
         ByteBuffer duplicate = buffer.duplicate();
@@ -473,7 +473,7 @@ public final class Unpooled {
             return EMPTY_BUFFER;
         }
 
-        byte[] mergedArray = new byte[length];
+        byte[] mergedArray = PlatformDependent.allocateUninitializedArray(length);
         for (int i = 0, j = 0; i < arrays.length; i ++) {
             byte[] a = arrays[i];
             System.arraycopy(a, 0, mergedArray, j, a.length);
@@ -527,7 +527,7 @@ public final class Unpooled {
             return EMPTY_BUFFER;
         }
 
-        byte[] mergedArray = new byte[length];
+        byte[] mergedArray = PlatformDependent.allocateUninitializedArray(length);
         for (int i = 0, j = 0; i < buffers.length; i ++) {
             ByteBuf b = buffers[i];
             int bLen = b.readableBytes();
@@ -582,7 +582,7 @@ public final class Unpooled {
             return EMPTY_BUFFER;
         }
 
-        byte[] mergedArray = new byte[length];
+        byte[] mergedArray = PlatformDependent.allocateUninitializedArray(length);
         for (int i = 0, j = 0; i < buffers.length; i ++) {
             // Duplicate the buffer so we not adjust the position during our get operation.
             // See https://github.com/netty/netty/issues/3896
