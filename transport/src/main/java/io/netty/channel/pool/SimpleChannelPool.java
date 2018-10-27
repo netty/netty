@@ -400,7 +400,7 @@ public class SimpleChannelPool implements ChannelPool {
         Promise<Void> result = executor.newPromise();
         closeIdleChannels(result);
         if (!executor.inEventLoop()) {
-            result.awaitUninterruptibly();
+            result.syncUninterruptibly();
         }
     }
 
