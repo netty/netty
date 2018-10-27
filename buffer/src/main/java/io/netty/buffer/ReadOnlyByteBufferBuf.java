@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -355,7 +356,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
         if (buffer.hasArray()) {
             out.write(buffer.array(), index + buffer.arrayOffset(), length);
         } else {
-            byte[] tmp = new byte[length];
+            byte[] tmp = PlatformDependent.allocateUninitializedArray(length);
             ByteBuffer tmpBuf = internalNioBuffer();
             tmpBuf.clear().position(index);
             tmpBuf.get(tmp);

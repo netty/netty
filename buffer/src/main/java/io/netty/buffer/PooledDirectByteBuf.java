@@ -17,6 +17,7 @@
 package io.netty.buffer;
 
 import io.netty.util.Recycler;
+import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -351,7 +352,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
         checkIndex(index, length);
-        byte[] tmp = new byte[length];
+        byte[] tmp = PlatformDependent.allocateUninitializedArray(length);
         int readBytes = in.read(tmp);
         if (readBytes <= 0) {
             return readBytes;

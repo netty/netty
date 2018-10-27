@@ -837,7 +837,7 @@ public final class ByteBufUtil {
             }
         }
 
-        byte[] v = new byte[length];
+        byte[] v = PlatformDependent.allocateUninitializedArray(length);
         buf.getBytes(start, v);
         return v;
     }
@@ -1403,7 +1403,8 @@ public final class ByteBufUtil {
                     tmpBuf.release();
                 }
             } else {
-                getBytes(buffer, new byte[chunkLen], 0, chunkLen, out, length);
+                byte[] tmp = PlatformDependent.allocateUninitializedArray(length);
+                getBytes(buffer, tmp, 0, chunkLen, out, length);
             }
         }
     }
