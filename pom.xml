@@ -142,6 +142,13 @@
     </profile>
 
     <profile>
+      <id>boringssl</id>
+      <properties>
+        <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
+        <tcnative.classifier/>
+      </properties>
+    </profile>
+    <profile>
       <id>leak</id>
       <properties>
         <argLine.leak>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.maxRecords=32</argLine.leak>
