@@ -260,24 +260,18 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             // No need to consolidate - just add a component to the list.
             @SuppressWarnings("deprecation")
             Component c = new Component(buffer.order(ByteOrder.BIG_ENDIAN).slice());
-            if (cIndex == components.size()) {
-                wasAdded = components.add(c);
-                if (cIndex == 0) {
-                    c.endOffset = readableBytes;
-                } else {
-                    Component prev = components.get(cIndex - 1);
-                    c.offset = prev.endOffset;
-                    c.endOffset = c.offset + readableBytes;
-                }
+            components.add(cIndex, c);
+            wasAdded = true;
+            if (readableBytes > 0 && cIndex < components.size() - 1) {
+                updateComponentOffsets(cIndex);
+            } else if (cIndex == 0) {
+                c.endOffset = readableBytes;
             } else {
-                components.add(cIndex, c);
-                wasAdded = true;
-                if (readableBytes != 0) {
-                    updateComponentOffsets(cIndex);
-                }
+                c.offset = components.get(cIndex - 1).endOffset;
+                c.endOffset = c.offset + readableBytes;
             }
             if (increaseWriterIndex) {
-                writerIndex(writerIndex() + buffer.readableBytes());
+                writerIndex(writerIndex() + readableBytes);
             }
             return cIndex;
         } finally {
@@ -663,6 +657,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 Component c = i.previous();
                 if (bytesToTrim >= c.length) {
                     bytesToTrim -= c.length;
+                    c.freeIfNecessary();
                     i.remove();
                     continue;
                 }
@@ -1635,6 +1630,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         if (adjustment == c.length) {
             // new slice would be empty, so remove instead
             firstComponentId++;
+            c.freeIfNecessary();
         } else {
             Component newC = new Component(c.buf.slice(adjustment, c.length - adjustment));
             components.set(firstComponentId, newC);

@@ -1019,6 +1019,33 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     }
 
     @Test
+    public void testInsertEmptyBufferInMiddle() {
+        CompositeByteBuf cbuf = compositeBuffer();
+        ByteBuf buf1 = buffer().writeByte((byte) 1);
+        cbuf.addComponent(true, buf1);
+        ByteBuf buf2 = buffer().writeByte((byte) 2);
+        cbuf.addComponent(true, buf2);
+
+        // insert empty one between the first two
+        cbuf.addComponent(true, 1, EMPTY_BUFFER);
+
+        assertEquals(2, cbuf.readableBytes());
+        assertEquals((byte) 1, cbuf.readByte());
+        assertEquals((byte) 2, cbuf.readByte());
+
+        assertEquals(2, cbuf.capacity());
+        assertEquals(3, cbuf.numComponents());
+
+        byte[] dest = new byte[2];
+        // should skip over the empty one, not throw a java.lang.Error :)
+        cbuf.getBytes(0, dest);
+
+        assertArrayEquals(new byte[] {1, 2}, dest);
+
+        cbuf.release();
+    }
+
+    @Test
     public void testIterator() {
         CompositeByteBuf cbuf = compositeBuffer();
         cbuf.addComponent(EMPTY_BUFFER);
@@ -1115,6 +1142,29 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         // last remaining ref to buffer
         ReferenceCountUtil.release(buffer);
         assertEquals(0, buffer.refCnt());
+    }
+
+    @Test
+    public void testReleasesOnShrink() {
+
+        ByteBuf b1 = Unpooled.buffer(2).writeShort(1);
+        ByteBuf b2 = Unpooled.buffer(2).writeShort(2);
+
+        // composite takes ownership of s1 and s2
+        ByteBuf composite = Unpooled.compositeBuffer()
+            .addComponents(b1, b2);
+
+        assertEquals(4, composite.capacity());
+
+        // reduce capacity down to two, will drop the second component
+        composite.capacity(2);
+        assertEquals(2, composite.capacity());
+
+        // releasing composite should release the components
+        composite.release();
+        assertEquals(0, composite.refCnt());
+        assertEquals(0, b1.refCnt());
+        assertEquals(0, b2.refCnt());
     }
 
     @Test
