@@ -50,8 +50,8 @@ final class OpenSslTlsv13X509ExtendedTrustManager extends X509ExtendedTrustManag
 
     static X509ExtendedTrustManager wrap(X509ExtendedTrustManager tm, boolean client) {
         if (PlatformDependent.javaVersion() < 11) {
-            X509Certificate[] certs = new X509Certificate[1];
             try {
+                X509Certificate[] certs = { OpenSsl.selfSignedCertificate() };
                 if (client) {
                     tm.checkServerTrusted(certs, "RSA", new DummySSLEngine(true));
                 } else {
