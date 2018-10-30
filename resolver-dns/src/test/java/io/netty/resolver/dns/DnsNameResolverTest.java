@@ -2403,4 +2403,27 @@ public class DnsNameResolverTest {
             }
         }
     }
+
+    @Test
+    public void testInstanceWithNullPreferredAddressType() {
+        new DnsNameResolver(
+                group.next(), // eventLoop
+                new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class), // channelFactory
+                NoopDnsCache.INSTANCE, // resolveCache
+                NoopAuthoritativeDnsServerCache.INSTANCE, // authoritativeDnsServerCache
+                NoopDnsQueryLifecycleObserverFactory.INSTANCE, // dnsQueryLifecycleObserverFactory
+                100, // queryTimeoutMillis
+                null, // resolvedAddressTypes, see https://github.com/netty/netty/pull/8445
+                true, // recursionDesired
+                1, // maxQueriesPerResolve
+                false, // traceEnabled
+                4096, // maxPayloadSize
+                true, // optResourceEnabled
+                HostsFileEntriesResolver.DEFAULT, // hostsFileEntriesResolver
+                DnsServerAddressStreamProviders.platformDefault(), // dnsServerAddressStreamProvider
+                null, // searchDomains
+                1, // ndots
+                true // decodeIdn
+        ).close();
+    }
 }
