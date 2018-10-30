@@ -374,7 +374,7 @@ public class DnsNameResolver extends InetNameResolver {
             default:
                 throw new IllegalArgumentException("Unknown ResolvedAddressTypes " + resolvedAddressTypes);
         }
-        preferredAddressType = preferredAddressType(resolvedAddressTypes);
+        preferredAddressType = preferredAddressType(this.resolvedAddressTypes);
         this.authoritativeDnsServerCache = checkNotNull(authoritativeDnsServerCache, "authoritativeDnsServerCache");
         nameServerComparator = new NameServerComparator(preferredAddressType.addressType());
 
