@@ -53,61 +53,81 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     private boolean freed;
 
-    public CompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents) {
+    private CompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents, int initSize) {
         super(AbstractByteBufAllocator.DEFAULT_MAX_CAPACITY);
         if (alloc == null) {
             throw new NullPointerException("alloc");
         }
+        if (maxNumComponents < 2) {
+            throw new IllegalArgumentException(
+                    "maxNumComponents: " + maxNumComponents + " (expected: >= 2)");
+        }
         this.alloc = alloc;
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
-        components = newList(0, maxNumComponents);
+        components = newList(initSize, maxNumComponents);
+    }
+
+    public CompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents) {
+        this(alloc, direct, maxNumComponents, 0);
     }
 
     public CompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents, ByteBuf... buffers) {
         this(alloc, direct, maxNumComponents, buffers, 0, buffers.length);
     }
 
-    CompositeByteBuf(
-            ByteBufAllocator alloc, boolean direct, int maxNumComponents, ByteBuf[] buffers, int offset, int len) {
-        super(AbstractByteBufAllocator.DEFAULT_MAX_CAPACITY);
-        if (alloc == null) {
-            throw new NullPointerException("alloc");
-        }
-        if (maxNumComponents < 2) {
-            throw new IllegalArgumentException(
-                    "maxNumComponents: " + maxNumComponents + " (expected: >= 2)");
-        }
+    CompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents,
+            ByteBuf[] buffers, int offset, int endOffset) {
+        this(alloc, direct, maxNumComponents, endOffset - offset);
 
-        this.alloc = alloc;
-        this.direct = direct;
-        this.maxNumComponents = maxNumComponents;
-        components = newList(len, maxNumComponents);
-
-        addComponents0(false, 0, buffers, offset, len);
+        addComponents0(false, 0, buffers, offset, endOffset);
         consolidateIfNeeded();
         setIndex(0, capacity());
     }
 
     public CompositeByteBuf(
             ByteBufAllocator alloc, boolean direct, int maxNumComponents, Iterable<ByteBuf> buffers) {
-        super(AbstractByteBufAllocator.DEFAULT_MAX_CAPACITY);
-        if (alloc == null) {
-            throw new NullPointerException("alloc");
-        }
-        if (maxNumComponents < 2) {
-            throw new IllegalArgumentException(
-                    "maxNumComponents: " + maxNumComponents + " (expected: >= 2)");
-        }
-
-        int len = buffers instanceof Collection ? ((Collection<ByteBuf>) buffers).size() : 0;
-
-        this.alloc = alloc;
-        this.direct = direct;
-        this.maxNumComponents = maxNumComponents;
-        components = newList(len, maxNumComponents);
+        this(alloc, direct, maxNumComponents,
+                buffers instanceof Collection ? ((Collection<ByteBuf>) buffers).size() : 0);
 
         addComponents0(false, 0, buffers);
+        consolidateIfNeeded();
+        setIndex(0, capacity());
+    }
+
+    // support passing arrays of other types instead of having to copy to a ByteBuf[] first
+    interface ByteWrapper<T> {
+        ByteBuf wrap(T bytes);
+        boolean isEmpty(T bytes);
+    }
+
+    static final ByteWrapper<byte[]> BYTE_ARRAY_WRAPPER = new ByteWrapper<byte[]>() {
+        @Override
+        public ByteBuf wrap(byte[] bytes) {
+            return Unpooled.wrappedBuffer(bytes);
+        }
+        @Override
+        public boolean isEmpty(byte[] bytes) {
+            return bytes.length == 0;
+        }
+    };
+
+    static final ByteWrapper<ByteBuffer> BYTE_BUFFER_WRAPPER = new ByteWrapper<ByteBuffer>() {
+        @Override
+        public ByteBuf wrap(ByteBuffer bytes) {
+            return Unpooled.wrappedBuffer(bytes);
+        }
+        @Override
+        public boolean isEmpty(ByteBuffer bytes) {
+            return !bytes.hasRemaining();
+        }
+    };
+
+    <T> CompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents,
+            ByteWrapper<T> wrapper, T[] buffers, int offset) {
+        this(alloc, direct, maxNumComponents, buffers.length - offset);
+
+        addComponents0(false, 0, wrapper, buffers, offset);
         consolidateIfNeeded();
         setIndex(0, capacity());
     }
@@ -301,14 +321,15 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         return this;
     }
 
-    private int addComponents0(boolean increaseWriterIndex, int cIndex, ByteBuf[] buffers, int offset, int len) {
+    private int addComponents0(boolean increaseWriterIndex, int cIndex,
+            ByteBuf[] buffers, int offset, int endOffset) {
         checkNotNull(buffers, "buffers");
         int i = offset;
         try {
             checkComponentIndex(cIndex);
 
             // No need for consolidation
-            while (i < len) {
+            while (i < endOffset) {
                 // Increment i now to prepare for the next iteration and prevent a duplicate release (addComponent0
                 // will release if an exception occurs, and we also release in the finally block here).
                 ByteBuf b = buffers[i++];
@@ -323,7 +344,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             }
             return cIndex;
         } finally {
-            for (; i < len; ++i) {
+            for (; i < endOffset; ++i) {
                 ByteBuf b = buffers[i];
                 if (b != null) {
                     try {
@@ -334,6 +355,28 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 }
             }
         }
+    }
+
+    private <T> int addComponents0(boolean increaseWriterIndex, int cIndex,
+            ByteWrapper<T> wrapper, T[] buffers, int offset) {
+        checkNotNull(buffers, "buffers");
+        checkComponentIndex(cIndex);
+
+        // No need for consolidation
+        for (int i = offset, len = buffers.length; i < len; i++) {
+            T b = buffers[i];
+            if (b == null) {
+                break;
+            }
+            if (!wrapper.isEmpty(b)) {
+                cIndex = addComponent0(increaseWriterIndex, cIndex, wrapper.wrap(b)) + 1;
+                int size = components.size();
+                if (cIndex > size) {
+                    cIndex = size;
+                }
+            }
+        }
+        return cIndex;
     }
 
     /**
