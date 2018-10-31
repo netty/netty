@@ -878,12 +878,13 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelPromise newPromise() {
-        return new DefaultChannelPromise(channel(), executor());
+        return DefaultChannelPipeline.fireExceptionOndFailure(new DefaultChannelPromise(channel(), executor()));
     }
 
     @Override
     public ChannelProgressivePromise newProgressivePromise() {
-        return new DefaultChannelProgressivePromise(channel(), executor());
+        return DefaultChannelPipeline.fireExceptionOndFailure(
+                new DefaultChannelProgressivePromise(channel(), executor()));
     }
 
     @Override
@@ -897,7 +898,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelFuture newFailedFuture(Throwable cause) {
-        return new FailedChannelFuture(channel(), executor(), cause);
+        return DefaultChannelPipeline.fireExceptionOndFailure(new FailedChannelFuture(channel(), executor(), cause));
     }
 
     private boolean isNotValidPromise(ChannelPromise promise, boolean allowVoidPromise) {

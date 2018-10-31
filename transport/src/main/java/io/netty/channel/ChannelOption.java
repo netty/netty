@@ -130,6 +130,12 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
             valueOf("SINGLE_EVENTEXECUTOR_PER_GROUP");
 
     /**
+     * If {@code true} {@link ChannelPipeline#fireExceptionCaught(Throwable)} is called whenever a {@link ChannelFuture}
+     * is failed.
+     */
+    public static final ChannelOption<Boolean> FIRE_EXCEPTION_ON_FAILURE = valueOf("FIRE_EXCEPTION_ON_FAILURE");
+
+    /**
      * Creates a new {@link ChannelOption} with the specified unique {@code name}.
      */
     private ChannelOption(int id, String name) {

@@ -67,6 +67,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final Channel channel;
     private final ChannelFuture succeededFuture;
     private final VoidChannelPromise voidPromise;
+
     private final boolean touch = ResourceLeakDetector.isEnabled();
 
     private Map<EventExecutorGroup, EventExecutor> childExecutors;
@@ -1073,12 +1074,20 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPromise newPromise() {
-        return new DefaultChannelPromise(channel);
+        return fireExceptionOndFailure(new DefaultChannelPromise(channel));
+    }
+
+    static <F extends ChannelFuture> F fireExceptionOndFailure(F future) {
+        ChannelConfig config = future.channel().config();
+        if (config instanceof DefaultChannelConfig && ((DefaultChannelConfig) config).getFireExceptionOnFailure()) {
+            future.addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
+        }
+        return future;
     }
 
     @Override
     public final ChannelProgressivePromise newProgressivePromise() {
-        return new DefaultChannelProgressivePromise(channel);
+        return fireExceptionOndFailure(new DefaultChannelProgressivePromise(channel));
     }
 
     @Override
@@ -1088,11 +1097,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelFuture newFailedFuture(Throwable cause) {
-        return new FailedChannelFuture(channel, null, cause);
+        return fireExceptionOndFailure(new FailedChannelFuture(channel, null, cause));
     }
 
     @Override
     public final ChannelPromise voidPromise() {
+        // The voidPromise always calls fireExceptionCaught(...) so we do not need to take
+        // ChannelOption.FIRE_EXCEPTION_ON_FAILURE into account.
         return voidPromise;
     }
 
