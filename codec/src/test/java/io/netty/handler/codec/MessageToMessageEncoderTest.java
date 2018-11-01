@@ -73,5 +73,6 @@ public class MessageToMessageEncoderTest {
         ChannelFuture write = channel.writeAndFlush(msg);
         assertEquals(firstWriteException, write.cause());
         assertEquals(msg, channel.readOutbound());
+        assertFalse(channel.finish());
     }
 }

@@ -124,14 +124,14 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
         }
     }
 
-    private void writeVoidPromise(ChannelHandlerContext ctx, CodecOutputList out) {
+    private static void writeVoidPromise(ChannelHandlerContext ctx, CodecOutputList out) {
         final ChannelPromise voidPromise = ctx.voidPromise();
         for (int i = 0; i < out.size(); i++) {
             ctx.write(out.getUnsafe(i), voidPromise);
         }
     }
 
-    private void writePromiseCombiner(ChannelHandlerContext ctx, CodecOutputList out, ChannelPromise promise) {
+    private static void writePromiseCombiner(ChannelHandlerContext ctx, CodecOutputList out, ChannelPromise promise) {
         final PromiseCombiner combiner = new PromiseCombiner();
         for (int i = 0; i < out.size(); i++) {
             combiner.add(ctx.write(out.getUnsafe(i)));
