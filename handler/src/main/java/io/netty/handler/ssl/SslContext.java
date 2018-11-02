@@ -1082,10 +1082,9 @@ public abstract class SslContext {
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
         X509Certificate[] x509Certs = new X509Certificate[certs.length];
 
-        int i = 0;
         try {
-            for (; i < certs.length; i++) {
-                InputStream is = new ByteBufInputStream(certs[i], true);
+            for (int i = 0; i < certs.length; i++) {
+                InputStream is = new ByteBufInputStream(certs[i], false);
                 try {
                     x509Certs[i] = (X509Certificate) cf.generateCertificate(is);
                 } finally {
@@ -1098,8 +1097,8 @@ public abstract class SslContext {
                 }
             }
         } finally {
-            for (; i < certs.length; i++) {
-                certs[i].release();
+            for (ByteBuf buf: certs) {
+                buf.release();
             }
         }
         return x509Certs;
