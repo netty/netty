@@ -71,8 +71,8 @@ public class MessageToMessageEncoderTest {
         EmbeddedChannel channel = new EmbeddedChannel(writeThrower, encoder);
         Object msg = new Object();
         ChannelFuture write = channel.writeAndFlush(msg);
-        assertEquals(firstWriteException, write.cause());
-        assertEquals(msg, channel.readOutbound());
+        assertSame(firstWriteException, write.cause());
+        assertSame(msg, channel.readOutbound());
         assertFalse(channel.finish());
     }
 }
