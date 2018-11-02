@@ -418,7 +418,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         return this;
     }
 
-    //TODO optimize further, similar to ByteBuf[] version
+    // TODO optimize further, similar to ByteBuf[] version
     // (difference here is that we don't know *always* know precise size increase in advance,
     // but we do in the most common case that the Iterable is a Collection)
     private int addComponents0(boolean increaseIndex, int cIndex, Iterable<ByteBuf> buffers) {
@@ -1632,7 +1632,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         lastAccessed = null;
         components[0] = new Component(consolidated, 0, 0, capacity, consolidated);
         removeCompRange(1, numComponents);
-        updateComponentOffsets(0);
         return this;
     }
 
@@ -1804,7 +1803,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         // copy then release
         void transferTo(ByteBuf dst) {
             dst.writeBytes(buf, idx(offset), length());
-            buf.release();
+            freeIfNecessary();
         }
 
         ByteBuf slice() {
@@ -2164,10 +2163,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     // Component array manipulation - range checking omitted
 
     private void clearComps() {
-        final int size = componentCount;
-        if (size > 0) {
-            removeCompRange(0, size);
-        }
+        removeCompRange(0, componentCount);
     }
 
     private void removeComp(int i) {
@@ -2179,7 +2175,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             return;
         }
         final int size = componentCount;
-        // assert from >= 0 && from < to && to <= size
+        assert from >= 0 && to <= size;
         if (to < size) {
             System.arraycopy(components, to, components, from, size - to);
         }
@@ -2192,14 +2188,13 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     }
 
     private void addComp(int i, Component c) {
-        // assert i >= 0 && i <= size
         shiftComps(i, 1);
         components[i] = c;
     }
 
     private void shiftComps(int i, int count) {
-        // assert i >= 0 && i <= size && count > 0
         final int size = componentCount, newSize = size + count;
+        assert i >= 0 && i <= size && count > 0;
         if (newSize > components.length) {
             // grow the array
             int newArrSize = Math.max(size + (size >> 1), newSize);
