@@ -154,8 +154,8 @@ public final class PlatformDependent {
                 DIRECT_MEMORY_COUNTER = new AtomicLong();
             }
         }
-        DIRECT_MEMORY_LIMIT = maxDirectMemory;
         logger.debug("-Dio.netty.maxDirectMemory: {} bytes", maxDirectMemory);
+        DIRECT_MEMORY_LIMIT = maxDirectMemory >= 1 ? maxDirectMemory : MAX_DIRECT_MEMORY;
 
         int tryAllocateUninitializedArray =
                 SystemPropertyUtil.getInt("io.netty.uninitializedArrayAllocationThreshold", 1024);
@@ -284,7 +284,7 @@ public final class PlatformDependent {
      * Returns the maximum memory reserved for direct buffer allocation.
      */
     public static long maxDirectMemory() {
-        return MAX_DIRECT_MEMORY;
+        return DIRECT_MEMORY_LIMIT;
     }
 
     /**
