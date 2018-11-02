@@ -225,12 +225,8 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
                         logger.info(" 100% (FinalSize: " + partialContent.length() + ")");
                         partialContent = null;
                     }
-                    try {
-                        // new value
-                        writeHttpData(data);
-                    } finally {
-                        data.release();
-                    }
+                    // new value
+                    writeHttpData(data);
                 }
             }
             // Check partial decoding for a FileUpload
