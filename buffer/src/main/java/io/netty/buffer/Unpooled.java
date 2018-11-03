@@ -319,7 +319,7 @@ public final class Unpooled {
             for (int i = 0; i < buffers.length; i++) {
                 ByteBuf buf = buffers[i];
                 if (buf.isReadable()) {
-                    return new CompositeByteBuf(ALLOC, false, maxNumComponents, buffers, i, buffers.length);
+                    return new CompositeByteBuf(ALLOC, false, maxNumComponents, buffers, i);
                 }
                 buf.release();
             }
