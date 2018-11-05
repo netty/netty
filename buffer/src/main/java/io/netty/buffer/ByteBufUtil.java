@@ -56,7 +56,7 @@ public final class ByteBufUtil {
     private static final FastThreadLocal<byte[]> BYTE_ARRAYS = new FastThreadLocal<byte[]>() {
         @Override
         protected byte[] initialValue() throws Exception {
-            return PlatformDependent.allocateUninitializedArray(1024);
+            return PlatformDependent.allocateUninitializedArray(MAX_TL_ARRAY_LEN);
         }
     };
 
@@ -93,6 +93,16 @@ public final class ByteBufUtil {
 
         MAX_CHAR_BUFFER_SIZE = SystemPropertyUtil.getInt("io.netty.maxThreadLocalCharBufferSize", 16 * 1024);
         logger.debug("-Dio.netty.maxThreadLocalCharBufferSize: {}", MAX_CHAR_BUFFER_SIZE);
+    }
+
+    static final int MAX_TL_ARRAY_LEN = 1024;
+
+    /**
+     * Allocates a new array if minLength > {@link ByteBufUtil#MAX_TL_ARRAY_LEN}
+     */
+    static byte[] threadLocalTempArray(int minLength) {
+        return minLength <= MAX_TL_ARRAY_LEN ? BYTE_ARRAYS.get()
+            : PlatformDependent.allocateUninitializedArray(minLength);
     }
 
     /**
@@ -768,11 +778,7 @@ public final class ByteBufUtil {
             array = src.array();
             offset = src.arrayOffset() + readerIndex;
         } else {
-            if (len <= 1024) {
-                array = BYTE_ARRAYS.get();
-            } else {
-                array = PlatformDependent.allocateUninitializedArray(len);
-            }
+            array = threadLocalTempArray(len);
             offset = 0;
             src.getBytes(readerIndex, array, 0, len);
         }
@@ -1392,7 +1398,9 @@ public final class ByteBufUtil {
             int chunkLen = Math.min(length, WRITE_CHUNK_SIZE);
             buffer.clear().position(position);
 
-            if (allocator.isDirectBufferPooled()) {
+            if (length <= MAX_TL_ARRAY_LEN || !allocator.isDirectBufferPooled()) {
+                getBytes(buffer, threadLocalTempArray(length), 0, chunkLen, out, length);
+            } else {
                 // if direct buffers are pooled chances are good that heap buffers are pooled as well.
                 ByteBuf tmpBuf = allocator.heapBuffer(chunkLen);
                 try {
@@ -1402,9 +1410,6 @@ public final class ByteBufUtil {
                 } finally {
                     tmpBuf.release();
                 }
-            } else {
-                byte[] tmp = PlatformDependent.allocateUninitializedArray(length);
-                getBytes(buffer, tmp, 0, chunkLen, out, length);
             }
         }
     }
