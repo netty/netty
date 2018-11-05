@@ -561,8 +561,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         if (buffer.hasArray()) {
             return in.read(buffer.array(), buffer.arrayOffset() + index, length);
         } else {
-            byte[] tmp = PlatformDependent.allocateUninitializedArray(length);
-            int readBytes = in.read(tmp);
+            byte[] tmp = ByteBufUtil.threadLocalTempArray(length);
+            int readBytes = in.read(tmp, 0, length);
             if (readBytes <= 0) {
                 return readBytes;
             }
