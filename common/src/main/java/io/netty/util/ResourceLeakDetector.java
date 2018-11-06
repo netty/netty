@@ -367,9 +367,9 @@ public class ResourceLeakDetector<T> {
             assert referent != null;
 
             // Store the hash of the tracked object to later assert it in the close(...) method.
-            trackedHash = System.identityHashCode(referent);
             // It's important that we not store a reference to the referent as this would disallow it from
             // be collected via the WeakReference.
+            trackedHash = System.identityHashCode(referent);
             allLeaks.add(this);
             // Create a new Record so we always have the creation stacktrace included.
             headUpdater.set(this, new Record(Record.BOTTOM));
