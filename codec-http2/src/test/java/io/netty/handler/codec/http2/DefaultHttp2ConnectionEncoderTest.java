@@ -710,7 +710,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
-    public void headersWriteShouldHalfCloseAfterOnError() throws Exception {
+    public void headersWriteShouldHalfCloseAfterOnErrorForPreCreatedStream() throws Exception {
         final ChannelPromise promise = newPromise();
         final Throwable ex = new RuntimeException();
         // Fake an encoding error, like HPACK's HeaderListSizeException
@@ -725,11 +725,38 @@ public class DefaultHttp2ConnectionEncoderTest {
             });
 
         writeAllFlowControlledFrames();
-        createStream(STREAM_ID, false);
+        Http2Stream stream = createStream(STREAM_ID, false);
         encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true, promise);
 
         assertTrue(promise.isDone());
         assertFalse(promise.isSuccess());
+        assertFalse(stream.isHeadersSent());
+        InOrder inOrder = inOrder(lifecycleManager);
+        inOrder.verify(lifecycleManager).onError(eq(ctx), eq(true), eq(ex));
+        inOrder.verify(lifecycleManager).closeStreamLocal(eq(stream(STREAM_ID)), eq(promise));
+    }
+
+    @Test
+    public void headersWriteShouldHalfCloseAfterOnErrorForImplicitlyCreatedStream() throws Exception {
+        final ChannelPromise promise = newPromise();
+        final Throwable ex = new RuntimeException();
+        // Fake an encoding error, like HPACK's HeaderListSizeException
+        when(writer.writeHeaders(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
+            eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(true), eq(promise)))
+            .thenAnswer(new Answer<ChannelFuture>() {
+                @Override
+                public ChannelFuture answer(InvocationOnMock invocation) {
+                    promise.setFailure(ex);
+                    return promise;
+                }
+            });
+
+        writeAllFlowControlledFrames();
+        encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true, promise);
+
+        assertTrue(promise.isDone());
+        assertFalse(promise.isSuccess());
+        assertFalse(stream(STREAM_ID).isHeadersSent());
         InOrder inOrder = inOrder(lifecycleManager);
         inOrder.verify(lifecycleManager).onError(eq(ctx), eq(true), eq(ex));
         inOrder.verify(lifecycleManager).closeStreamLocal(eq(stream(STREAM_ID)), eq(promise));
