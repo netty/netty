@@ -26,8 +26,10 @@ import java.lang.ref.WeakReference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReference;
@@ -159,7 +161,8 @@ public class ResourceLeakDetector<T> {
     }
 
     /** the collection of active resources */
-    private final ConcurrentMap<DefaultResourceLeak<?>, LeakEntry> allLeaks = PlatformDependent.newConcurrentHashMap();
+    private final Set<DefaultResourceLeak<?>> allLeaks =
+            Collections.newSetFromMap(new ConcurrentHashMap<DefaultResourceLeak<?>, Boolean>());
 
     private final ReferenceQueue<Object> refQueue = new ReferenceQueue<Object>();
     private final ConcurrentMap<String, Boolean> reportedLeaks = PlatformDependent.newConcurrentHashMap();
@@ -353,13 +356,13 @@ public class ResourceLeakDetector<T> {
         @SuppressWarnings("unused")
         private volatile int droppedRecords;
 
-        private final ConcurrentMap<DefaultResourceLeak<?>, LeakEntry> allLeaks;
+        private final Set<DefaultResourceLeak<?>> allLeaks;
         private final int trackedHash;
 
         DefaultResourceLeak(
                 Object referent,
                 ReferenceQueue<Object> refQueue,
-                ConcurrentMap<DefaultResourceLeak<?>, LeakEntry> allLeaks) {
+                Set<DefaultResourceLeak<?>> allLeaks) {
             super(referent, refQueue);
 
             assert referent != null;
@@ -368,7 +371,7 @@ public class ResourceLeakDetector<T> {
             // It's important that we not store a reference to the referent as this would disallow it from
             // be collected via the WeakReference.
             trackedHash = System.identityHashCode(referent);
-            allLeaks.put(this, LeakEntry.INSTANCE);
+            allLeaks.add(this);
             // Create a new Record so we always have the creation stacktrace included.
             headUpdater.set(this, new Record(Record.BOTTOM));
             this.allLeaks = allLeaks;
@@ -441,13 +444,12 @@ public class ResourceLeakDetector<T> {
 
         boolean dispose() {
             clear();
-            return allLeaks.remove(this, LeakEntry.INSTANCE);
+            return allLeaks.remove(this);
         }
 
         @Override
         public boolean close() {
-            // Use the ConcurrentMap remove method, which avoids allocating an iterator.
-            if (allLeaks.remove(this, LeakEntry.INSTANCE)) {
+            if (allLeaks.remove(this)) {
                 // Call clear so the reference is not even enqueued.
                 clear();
                 headUpdater.set(this, null);
@@ -634,24 +636,6 @@ public class ResourceLeakDetector<T> {
                 buf.append(NEWLINE);
             }
             return buf.toString();
-        }
-    }
-
-    private static final class LeakEntry {
-        static final LeakEntry INSTANCE = new LeakEntry();
-        private static final int HASH = System.identityHashCode(INSTANCE);
-
-        private LeakEntry() {
-        }
-
-        @Override
-        public int hashCode() {
-            return HASH;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return obj == this;
         }
     }
 }
