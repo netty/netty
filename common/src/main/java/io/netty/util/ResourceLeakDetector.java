@@ -448,7 +448,6 @@ public class ResourceLeakDetector<T> {
 
         @Override
         public boolean close() {
-            // Use the ConcurrentMap remove method, which avoids allocating an iterator.
             if (allLeaks.remove(this)) {
                 // Call clear so the reference is not even enqueued.
                 clear();
