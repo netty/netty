@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+
 import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
@@ -81,17 +82,24 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
          *
          * See https://github.com/netty/netty/issues/3888.
          */
+        //1、优先取系统参数”io.netty.allocator.numHeapArenas”或者”io.netty.allocator.numDirectArenas”设定的值；
+        //2、若系统参数没有设定则取设定的默认值，默认值为cpu核心线程数两倍 与 最大堆内存/2/（3*chunkSize） 这两个数中的较小者。
+        // （除以2是为了确保系统分配的所有PoolArena占用的内存不超过系统可用内存的一半，除以3是为了保证每个PoolArena至少可以由3个PoolChunk组成。）
+
+        //cpu核心线程数两倍
         final int defaultMinNumArena = NettyRuntime.availableProcessors() * 2;
         final int defaultChunkSize = DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER;
+        // DEFAULT_NUM_HEAP_ARENA 为 PoolArena数量
         DEFAULT_NUM_HEAP_ARENA = Math.max(0,
                 SystemPropertyUtil.getInt(
-                        "io.netty.allocator.numHeapArenas",
-                        (int) Math.min(
+                        "io.netty.allocator.numHeapArenas", //优先取系统参数”io.netty.allocator.numHeapArenas”或者”io.netty.allocator.numDirectArenas”设定的值；
+                        (int) Math.min(//若系统参数没有设定则取设定的默认值，默认值为cpu核心线程数两倍 与 最大堆内存/2/（3*chunkSize） 这两个数中的较小者
                                 defaultMinNumArena,
-                                runtime.maxMemory() / defaultChunkSize / 2 / 3)));
+                                runtime.maxMemory() / defaultChunkSize / 2 / 3))); // 最大堆内存/2/（3*chunkSize）
+        // DEFAULT_NUM_HEAP_ARENA 为 PoolArena数量
         DEFAULT_NUM_DIRECT_ARENA = Math.max(0,
                 SystemPropertyUtil.getInt(
-                        "io.netty.allocator.numDirectArenas",
+                        "io.netty.allocator.numDirectArenas", //优先取系统参数”io.netty.allocator.numHeapArenas”或者”io.netty.allocator.numDirectArenas”设定的值；
                         (int) Math.min(
                                 defaultMinNumArena,
                                 PlatformDependent.maxDirectMemory() / defaultChunkSize / 2 / 3)));
@@ -450,6 +458,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             threadCache.free();
         }
 
+        // 新增一个线程时，会选取“绑定线程数最少的PoolArena”进行绑定，如下代码所示：
         private <T> PoolArena<T> leastUsedArena(PoolArena<T>[] arenas) {
             if (arenas == null || arenas.length == 0) {
                 return null;
@@ -579,6 +588,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     final long usedDirectMemory() {
         return usedMemory(directArenas);
     }
+
 
     private static long usedMemory(PoolArena<?>... arenas) {
         if (arenas == null) {

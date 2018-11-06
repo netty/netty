@@ -26,6 +26,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
     private final Recycler.Handle<PooledByteBuf<T>> recyclerHandle;
 
+    // PoolChunk, 该类主要负责内存块的分配与回收
     protected PoolChunk<T> chunk;
     protected long handle;
     protected T memory;

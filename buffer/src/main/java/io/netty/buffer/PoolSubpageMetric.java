@@ -27,6 +27,7 @@ public interface PoolSubpageMetric {
 
     /**
      * Return the number of available elements to be allocated.
+     *
      */
     int numAvailable();
 

@@ -47,6 +47,7 @@ import java.util.Map;
  * <p>When not used in a {@link ServerBootstrap} context, the {@link #bind()} methods are useful for connectionless
  * transports such as datagram (UDP).</p>
  */
+//子类B是其父类型的一个类型参数，因此可以返回此运行实例的引用以支持方法的链式调用；
 public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Channel> implements Cloneable {
 
     volatile EventLoopGroup group;

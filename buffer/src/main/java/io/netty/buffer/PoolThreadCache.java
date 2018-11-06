@@ -36,7 +36,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <a href="https://www.facebook.com/notes/facebook-engineering/scalable-memory-allocation-using-jemalloc/480222803919">
  * Scalable memory allocation using jemalloc</a>.
  */
+
+// 作为线程内存用于分配；
 final class PoolThreadCache {
+
+
+    // 尝试从PoolThreadCache中获取可用内存，如果成功则完成此次分配，否则继续往下走，注意后面的内存分配都会加锁；
+    // 内存使用完成后进行释放，释放的时候首先判断是否和分配的时候是同一个线程，如果是则尝试将其放入PoolThreadCache，
+    // 这块内存将会在下一次同一个线程申请内存时使用；
+    // 从netty本身的线程模型可知，ThreadLocal被使用到的几率是很大的
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PoolThreadCache.class);
 
@@ -44,6 +52,10 @@ final class PoolThreadCache {
     final PoolArena<ByteBuffer> directArena;
 
     // Hold the caches for the different size classes, which are tiny, small and normal.
+    // 由于tiny\small\normal在内存分配上的不同（tiny和small使用subpage,normal使用page），
+    // PoolThreadCache中也分了tinySubPageHeapCaches、smallSubPageHeapCaches、
+    // normalSubPageHeapCaches三个数组，数据的使用方式与PoolArena中的subpagePools相同
+
     private final MemoryRegionCache<byte[]>[] tinySubPageHeapCaches;
     private final MemoryRegionCache<byte[]>[] smallSubPageHeapCaches;
     private final MemoryRegionCache<ByteBuffer>[] tinySubPageDirectCaches;
@@ -362,12 +374,15 @@ final class PoolThreadCache {
         @Override
         protected void initBuf(
                 PoolChunk<T> chunk, long handle, PooledByteBuf<T> buf, int reqCapacity) {
-            chunk.initBuf(buf, handle, reqCapacity);
+            chunk.initBufinitBuf(buf, handle, reqCapacity);
         }
     }
 
     private abstract static class MemoryRegionCache<T> {
+
+
         private final int size;
+        // entries：存放可分配内存的数组，entry维护一个chunk的一段内存标识；
         private final Queue<Entry<T>> queue;
         private final SizeClass sizeClass;
         private int allocations;
@@ -460,6 +475,7 @@ final class PoolThreadCache {
             chunk.arena.freeChunk(chunk, handle, sizeClass);
         }
 
+        // entries：存放可分配内存的数组，entry维护一个chunk的一段内存标识；
         static final class Entry<T> {
             final Handle<Entry<?>> recyclerHandle;
             PoolChunk<T> chunk;

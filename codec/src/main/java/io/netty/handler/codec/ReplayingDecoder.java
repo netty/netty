@@ -265,10 +265,14 @@ import java.util.List;
  *        the state type which is usually an {@link Enum}; use {@link Void} if state management is
  *        unused
  */
+// 􏰓􏰔􏶁􏰚类型参数 S 指􏵾定了用于􏶂状态管􏶄理的类型􏰓􏰔，其中代表 Void 􏰽􏱩不需要􏶂􏶃􏶄状态管理；
 public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
+
 
     static final Signal REPLAY = Signal.valueOf(ReplayingDecoder.class, "REPLAY");
 
+
+    // 自定义的ByteBuf实现；􏳈􏳚􏳑包装传入的ByteBuf；
     private final ReplayingDecoderByteBuf replayable = new ReplayingDecoderByteBuf();
     private S state;
     private int checkpoint = -1;
