@@ -33,7 +33,7 @@ public final class DnsServerAddressStreamProviders {
     // https://msdn.microsoft.com/en-us/library/aa365968(VS.85).aspx.
     private static final DnsServerAddressStreamProvider DEFAULT_DNS_SERVER_ADDRESS_STREAM_PROVIDER =
             new DnsServerAddressStreamProvider() {
-        private volatile DnsServerAddressStreamProvider currentProvider;
+        private volatile DnsServerAddressStreamProvider currentProvider = provider();
         private final AtomicLong lastRefresh = new AtomicLong(System.nanoTime());
 
         @Override
@@ -41,6 +41,8 @@ public final class DnsServerAddressStreamProviders {
             long last = lastRefresh.get();
             DnsServerAddressStreamProvider current = currentProvider;
             if (System.nanoTime() - last > REFRESH_INTERVAL) {
+                // This is slightly racy which means it will be possible still use the old configuration for a small
+                // amount of time, but that's ok.
                 if (lastRefresh.compareAndSet(last, System.nanoTime())) {
                     current = currentProvider = provider();
                 }
