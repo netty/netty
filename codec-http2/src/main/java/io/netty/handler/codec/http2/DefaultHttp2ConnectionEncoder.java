@@ -164,9 +164,10 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             if (stream == null) {
                 try {
                     // We don't create the stream in a `halfClosed` state because if this is an initial
-                    // HEADERS frame we don't want to connection state to transition until after the
-                    // headers have been encoded and placed in the outbound buffer. The `LifeCycleManager`
-                    // will take care of transitioning the state as appropriate.
+                    // HEADERS frame we don't want the connection state to signify that the HEADERS have
+                    // been sent until after they have been encoded and placed in the outbound buffer.
+                    // Therefore, we let the `LifeCycleManager` will take care of transitioning the state
+                    // as appropriate.
                     stream = connection.local().createStream(streamId, /*endOfStream*/ false);
                 } catch (Http2Exception cause) {
                     if (connection.remote().mayHaveCreatedStream(streamId)) {
