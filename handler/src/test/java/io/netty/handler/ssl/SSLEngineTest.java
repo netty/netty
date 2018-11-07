@@ -969,7 +969,7 @@ public abstract class SSLEngineTest {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
 
                 ChannelPipeline p = ch.pipeline();
-                SSLEngine engine = serverSslCtx.newEngine(ch.alloc());
+                SSLEngine engine = wrapEngine(serverSslCtx.newEngine(ch.alloc()));
                 engine.setUseClientMode(false);
                 engine.setNeedClientAuth(true);
 
@@ -1679,7 +1679,7 @@ public abstract class SSLEngineTest {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
-                ch.pipeline().addLast(new SslHandler(clientSslCtx.newEngine(ch.alloc())));
+                ch.pipeline().addLast(new SslHandler(wrapEngine(clientSslCtx.newEngine(ch.alloc()))));
             }
 
         }).connect(serverChannel.localAddress()).syncUninterruptibly().channel();
@@ -2649,7 +2649,7 @@ public abstract class SSLEngineTest {
         try {
             serverSslCtx = SslContextBuilder.forServer(cert.key(), cert.cert()).sslProvider(sslClientProvider())
                                             .ciphers(cipherList).build();
-            server = serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+            server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             fail();
         } catch (IllegalArgumentException expected) {
             // expected when invalid cipher is used.
