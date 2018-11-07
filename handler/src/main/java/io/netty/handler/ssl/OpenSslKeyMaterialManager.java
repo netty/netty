@@ -74,36 +74,30 @@ final class OpenSslKeyMaterialManager {
             if (type != null) {
                 String alias = chooseServerAlias(engine, type);
                 if (alias != null && aliases.add(alias)) {
-                    OpenSslKeyMaterial keyMaterial = null;
-                    try {
-                        keyMaterial = provider.chooseKeyMaterial(engine.alloc, alias);
-                        if (keyMaterial != null) {
-                            SSL.setKeyMaterialServerSide(
-                                    ssl, keyMaterial.certificateChainAddress(), keyMaterial.privateKeyAddress());
-                        }
-                    } catch (SSLException e) {
-                        throw e;
-                    } catch (Exception e) {
-                        throw new SSLException(e);
-                    } finally {
-                        if (keyMaterial != null) {
-                            keyMaterial.release();
-                        }
-                    }
+                    setKeyMaterial(engine, alias);
                 }
             }
         }
     }
 
-    void setKeyMaterialClientSide(ReferenceCountedOpenSslEngine engine, long certOut, long keyOut, String[] keyTypes,
+    void setKeyMaterialClientSide(ReferenceCountedOpenSslEngine engine, String[] keyTypes,
                                   X500Principal[] issuer) throws SSLException {
         String alias = chooseClientAlias(engine, keyTypes, issuer);
+        // Only try to set the keymaterial if we have a match. This is also consistent with what OpenJDK does:
+        // http://hg.openjdk.java.net/jdk/jdk11/file/76072a077ee1/
+        // src/java.base/share/classes/sun/security/ssl/CertificateRequest.java#l362
+        if (alias != null) {
+            setKeyMaterial(engine, alias);
+        }
+    }
+
+    private void setKeyMaterial(ReferenceCountedOpenSslEngine engine, String alias) throws SSLException {
         OpenSslKeyMaterial keyMaterial = null;
         try {
             keyMaterial = provider.chooseKeyMaterial(engine.alloc, alias);
             if (keyMaterial != null) {
-                SSL.setKeyMaterialClientSide(engine.sslPointer(), certOut, keyOut,
-                        keyMaterial.certificateChainAddress(), keyMaterial.privateKeyAddress());
+                SSL.setKeyMaterial(engine.sslPointer(),
+                                   keyMaterial.certificateChainAddress(), keyMaterial.privateKeyAddress());
             }
         } catch (SSLException e) {
             throw e;
@@ -115,7 +109,6 @@ final class OpenSslKeyMaterialManager {
             }
         }
     }
-
     private String chooseClientAlias(ReferenceCountedOpenSslEngine engine,
                                        String[] keyTypes, X500Principal[] issuer) {
         X509KeyManager manager = provider.keyManager();

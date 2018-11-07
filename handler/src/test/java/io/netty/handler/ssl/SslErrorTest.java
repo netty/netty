@@ -124,9 +124,10 @@ public class SslErrorTest {
         Assume.assumeTrue(OpenSsl.isAvailable());
 
         SelfSignedCertificate ssc = new SelfSignedCertificate();
-        final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                .sslProvider(serverProvider)
-                .trustManager(new SimpleTrustManagerFactory() {
+        final SslContext sslServerCtx =
+                SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                                 .sslProvider(serverProvider)
+                                 .trustManager(new SimpleTrustManagerFactory() {
             @Override
             protected void engineInit(KeyStore keyStore) { }
             @Override
@@ -204,7 +205,7 @@ public class SslErrorTest {
                                                 verifyException(unwrappedCause, "expired", promise);
                                             } else if (reason == CertPathValidatorException.BasicReason.NOT_YET_VALID) {
                                                 // BoringSSL uses "expired" in this case while others use "bad"
-                                                if ("BoringSSL".equals(OpenSsl.versionString())) {
+                                                if (OpenSsl.isBoringSSL()) {
                                                     verifyException(unwrappedCause, "expired", promise);
                                                 } else {
                                                     verifyException(unwrappedCause, "bad", promise);
@@ -216,7 +217,7 @@ public class SslErrorTest {
                                             verifyException(unwrappedCause, "expired", promise);
                                         } else if (exception instanceof CertificateNotYetValidException) {
                                             // BoringSSL uses "expired" in this case while others use "bad"
-                                            if ("BoringSSL".equals(OpenSsl.versionString())) {
+                                            if (OpenSsl.isBoringSSL()) {
                                                 verifyException(unwrappedCause, "expired", promise);
                                             } else {
                                                 verifyException(unwrappedCause, "bad", promise);

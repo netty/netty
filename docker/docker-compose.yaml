@@ -17,13 +17,17 @@ services:
       - ..:/code
     working_dir: /code
 
+  test-leak:
+    <<: *common
+    command: /bin/bash -cl "./mvnw -Pleak clean install -Dio.netty.testsuite.badHost=netty.io"
+
   test:
     <<: *common
     command: /bin/bash -cl "./mvnw clean install -Dio.netty.testsuite.badHost=netty.io"
 
   test-boringssl-static:
     <<: *common
-    command: /bin/bash -cl "./mvnw clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.artifactId=netty-tcnative-boringssl-static"
+    command: /bin/bash -cl "./mvnw -P boringssl clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true"
 
   shell:
     <<: *common

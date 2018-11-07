@@ -7,9 +7,12 @@ services:
     build:
       args:
         centos_version : "7"
-        java_version : "1.11.0-28"
+        java_version : "openjdk@1.11.0-1"
 
   test:
+    image: netty:centos-7-1.11
+
+  test-leak:
     image: netty:centos-7-1.11
 
   test-boringssl-static:

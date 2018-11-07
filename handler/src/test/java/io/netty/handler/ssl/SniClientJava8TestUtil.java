@@ -30,6 +30,7 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ThrowableUtil;
@@ -63,6 +64,7 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -76,20 +78,25 @@ final class SniClientJava8TestUtil {
     static void testSniClient(SslProvider sslClientProvider, SslProvider sslServerProvider, final boolean match)
             throws Exception {
         final String sniHost = "sni.netty.io";
+        SelfSignedCertificate cert = new SelfSignedCertificate();
         LocalAddress address = new LocalAddress("test");
         EventLoopGroup group = new DefaultEventLoopGroup(1);
+        SslContext sslServerContext = null;
+        SslContext sslClientContext = null;
+
         Channel sc = null;
         Channel cc = null;
         try {
-            SelfSignedCertificate cert = new SelfSignedCertificate();
-            final SslContext sslServerContext = SslContextBuilder.forServer(cert.key(), cert.cert())
+            sslServerContext = SslContextBuilder.forServer(cert.key(), cert.cert())
                     .sslProvider(sslServerProvider).build();
             final Promise<Void> promise = group.next().newPromise();
             ServerBootstrap sb = new ServerBootstrap();
+
+            final SslContext finalContext = sslServerContext;
             sc = sb.group(group).channel(LocalServerChannel.class).childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    SslHandler handler = sslServerContext.newHandler(ch.alloc());
+                    SslHandler handler = finalContext.newHandler(ch.alloc());
                     SSLParameters parameters = handler.engine().getSSLParameters();
                     SNIMatcher matcher = new SNIMatcher(0) {
                         @Override
@@ -132,11 +139,11 @@ final class SniClientJava8TestUtil {
                 }
             }).bind(address).syncUninterruptibly().channel();
 
-            SslContext sslContext = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
+            sslClientContext = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
                     .sslProvider(sslClientProvider).build();
 
             SslHandler sslHandler = new SslHandler(
-                    sslContext.newEngine(ByteBufAllocator.DEFAULT, sniHost, -1));
+                    sslClientContext.newEngine(ByteBufAllocator.DEFAULT, sniHost, -1));
             Bootstrap cb = new Bootstrap();
             cc = cb.group(group).channel(LocalChannel.class).handler(sslHandler)
                     .connect(address).syncUninterruptibly().channel();
@@ -150,15 +157,21 @@ final class SniClientJava8TestUtil {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
+
+            ReferenceCountUtil.release(sslServerContext);
+            ReferenceCountUtil.release(sslClientContext);
+
+            cert.delete();
+
             group.shutdownGracefully();
         }
     }
 
-    static void assertSSLSession(SSLSession session, String name) {
-        assertSSLSession(session, new SNIHostName(name));
+    static void assertSSLSession(boolean clientSide, SSLSession session, String name) {
+        assertSSLSession(clientSide, session, new SNIHostName(name));
     }
 
-    private static void assertSSLSession(SSLSession session, SNIServerName name) {
+    private static void assertSSLSession(boolean clientSide, SSLSession session, SNIServerName name) {
         Assert.assertNotNull(session);
         if (session instanceof ExtendedSSLSession) {
             ExtendedSSLSession extendedSSLSession = (ExtendedSSLSession) session;
@@ -166,6 +179,17 @@ final class SniClientJava8TestUtil {
             Assert.assertEquals(1, names.size());
             Assert.assertEquals(name, names.get(0));
             Assert.assertTrue(extendedSSLSession.getLocalSupportedSignatureAlgorithms().length > 0);
+            if (clientSide) {
+                Assert.assertEquals(0, extendedSSLSession.getPeerSupportedSignatureAlgorithms().length);
+            } else {
+                if (session instanceof OpenSslSession && OpenSsl.isBoringSSL()) {
+                    // BoringSSL does not support SSL_get_sigalgs(...)
+                    // https://boringssl.googlesource.com/boringssl/+/ba16a1e405c617f4179bd780ad15522fb25b0a65%5E%21/
+                    Assert.assertEquals(0, extendedSSLSession.getPeerSupportedSignatureAlgorithms().length);
+                } else {
+                    Assert.assertTrue(extendedSSLSession.getPeerSupportedSignatureAlgorithms().length > 0);
+                }
+            }
         }
     }
 
@@ -215,7 +239,7 @@ final class SniClientJava8TestUtil {
                 @Override
                 public void checkServerTrusted(X509Certificate[] x509Certificates, String s, SSLEngine sslEngine)
                         throws CertificateException {
-                    assertSSLSession(sslEngine.getHandshakeSession(), name);
+                    assertSSLSession(sslEngine.getUseClientMode(), sslEngine.getHandshakeSession(), name);
                 }
 
                 @Override
@@ -311,7 +335,7 @@ final class SniClientJava8TestUtil {
                                                                       SSLEngine sslEngine) {
 
                                     SSLSession session = sslEngine.getHandshakeSession();
-                                    assertSSLSession(session, name);
+                                    assertSSLSession(sslEngine.getUseClientMode(), session, name);
                                     return ((X509ExtendedKeyManager) km)
                                             .chooseEngineServerAlias(s, principals, sslEngine);
                                 }

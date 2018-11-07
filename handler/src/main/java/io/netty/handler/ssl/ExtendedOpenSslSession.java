@@ -15,8 +15,6 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.EmptyArrays;
-
 import javax.net.ssl.ExtendedSSLSession;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLPeerUnverifiedException;
@@ -44,7 +42,6 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
     private final OpenSslSession wrapped;
 
     ExtendedOpenSslSession(OpenSslSession wrapped) {
-        assert !(wrapped instanceof ExtendedSSLSession);
         this.wrapped = wrapped;
     }
 
@@ -60,103 +57,97 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
     }
 
     @Override
-    public void handshakeFinished() throws SSLException {
+    public final void handshakeFinished() throws SSLException {
         wrapped.handshakeFinished();
     }
 
     @Override
-    public void tryExpandApplicationBufferSize(int packetLengthDataOnly) {
+    public final void tryExpandApplicationBufferSize(int packetLengthDataOnly) {
         wrapped.tryExpandApplicationBufferSize(packetLengthDataOnly);
     }
 
     @Override
-    public String[] getLocalSupportedSignatureAlgorithms() {
+    public final String[] getLocalSupportedSignatureAlgorithms() {
         return LOCAL_SUPPORTED_SIGNATURE_ALGORITHMS.clone();
     }
 
     @Override
-    public String[] getPeerSupportedSignatureAlgorithms() {
-        // Always return empty for now.
-        return EmptyArrays.EMPTY_STRINGS;
-    }
-
-    @Override
-    public byte[] getId() {
+    public final byte[] getId() {
         return wrapped.getId();
     }
 
     @Override
-    public SSLSessionContext getSessionContext() {
+    public final SSLSessionContext getSessionContext() {
         return wrapped.getSessionContext();
     }
 
     @Override
-    public long getCreationTime() {
+    public final long getCreationTime() {
         return wrapped.getCreationTime();
     }
 
     @Override
-    public long getLastAccessedTime() {
+    public final long getLastAccessedTime() {
         return wrapped.getLastAccessedTime();
     }
 
     @Override
-    public void invalidate() {
+    public final void invalidate() {
         wrapped.invalidate();
     }
 
     @Override
-    public boolean isValid() {
+    public final boolean isValid() {
         return wrapped.isValid();
     }
 
     @Override
-    public void putValue(String s, Object o) {
+    public final void putValue(String s, Object o) {
         wrapped.putValue(s, o);
     }
 
     @Override
-    public Object getValue(String s) {
+    public final Object getValue(String s) {
         return wrapped.getValue(s);
     }
 
     @Override
-    public void removeValue(String s) {
+    public final void removeValue(String s) {
         wrapped.removeValue(s);
     }
 
     @Override
-    public String[] getValueNames() {
+    public final String[] getValueNames() {
         return wrapped.getValueNames();
     }
 
     @Override
-    public Certificate[] getPeerCertificates() throws SSLPeerUnverifiedException {
+    public final Certificate[] getPeerCertificates() throws SSLPeerUnverifiedException {
         return wrapped.getPeerCertificates();
     }
 
     @Override
-    public Certificate[] getLocalCertificates() {
+    public final Certificate[] getLocalCertificates() {
         return wrapped.getLocalCertificates();
     }
 
     @Override
-    public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException {
+    public final X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException {
         return wrapped.getPeerCertificateChain();
     }
 
     @Override
-    public Principal getPeerPrincipal() throws SSLPeerUnverifiedException {
+    public final Principal getPeerPrincipal() throws SSLPeerUnverifiedException {
         return wrapped.getPeerPrincipal();
     }
 
     @Override
-    public Principal getLocalPrincipal() {
+    public final Principal getLocalPrincipal() {
         return wrapped.getLocalPrincipal();
     }
 
     @Override
-    public String getCipherSuite() {
+    public final String getCipherSuite() {
         return wrapped.getCipherSuite();
     }
 
@@ -166,22 +157,22 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
     }
 
     @Override
-    public String getPeerHost() {
+    public final String getPeerHost() {
         return wrapped.getPeerHost();
     }
 
     @Override
-    public int getPeerPort() {
+    public final int getPeerPort() {
         return wrapped.getPeerPort();
     }
 
     @Override
-    public int getPacketBufferSize() {
+    public final int getPacketBufferSize() {
         return wrapped.getPacketBufferSize();
     }
 
     @Override
-    public int getApplicationBufferSize() {
+    public final int getApplicationBufferSize() {
         return wrapped.getApplicationBufferSize();
     }
 }

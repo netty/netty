@@ -589,8 +589,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         return usedMemory(directArenas);
     }
 
-
-    private static long usedMemory(PoolArena<?>... arenas) {
+    private static long usedMemory(PoolArena<?>[] arenas) {
         if (arenas == null) {
             return -1;
         }

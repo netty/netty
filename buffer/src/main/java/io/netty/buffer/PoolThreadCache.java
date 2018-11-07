@@ -55,7 +55,7 @@ final class PoolThreadCache {
     // 由于tiny\small\normal在内存分配上的不同（tiny和small使用subpage,normal使用page），
     // PoolThreadCache中也分了tinySubPageHeapCaches、smallSubPageHeapCaches、
     // normalSubPageHeapCaches三个数组，数据的使用方式与PoolArena中的subpagePools相同
-
+    // 各类型的Cache数组
     private final MemoryRegionCache<byte[]>[] tinySubPageHeapCaches;
     private final MemoryRegionCache<byte[]>[] smallSubPageHeapCaches;
     private final MemoryRegionCache<ByteBuffer>[] tinySubPageDirectCaches;
@@ -64,12 +64,13 @@ final class PoolThreadCache {
     private final MemoryRegionCache<ByteBuffer>[] normalDirectCaches;
 
     // Used for bitshifting when calculate the index of normal caches later
+    // 用于计算normal请求的数组索引 = log2(pageSize)
     private final int numShiftsNormalDirect;
     private final int numShiftsNormalHeap;
-    private final int freeSweepAllocationThreshold;
+    private final int freeSweepAllocationThreshold;// 分配次数到达该阈值则检测释放
     private final AtomicBoolean freed = new AtomicBoolean();
 
-    private int allocations;
+    private int allocations;// 分配次数
 
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
@@ -77,10 +78,12 @@ final class PoolThreadCache {
     PoolThreadCache(PoolArena<byte[]> heapArena, PoolArena<ByteBuffer> directArena,
                     int tinyCacheSize, int smallCacheSize, int normalCacheSize,
                     int maxCachedBufferCapacity, int freeSweepAllocationThreshold) {
+
         if (maxCachedBufferCapacity < 0) {
             throw new IllegalArgumentException("maxCachedBufferCapacity: "
                     + maxCachedBufferCapacity + " (expected: >= 0)");
         }
+        //分配次数到达该阈值则检测释放
         this.freeSweepAllocationThreshold = freeSweepAllocationThreshold;
         this.heapArena = heapArena;
         this.directArena = directArena;
@@ -146,8 +149,16 @@ final class PoolThreadCache {
         }
     }
 
+    //maxCachedBufferCapacity为缓存Buf的最大容量
+    /*
+    * 其中的参数maxCachedBufferCapacity为缓存Buf的最大容量，
+    * 因为Normal的ByteBuf最大容量为16MB，且默认缓存64个，这是巨大的内存开销，
+    * 所以设置该参数调节缓存Buf的最大容量。比如设置为16KB，那么只有16KB和8KB的ByteBuf缓存，
+    * 其他容量的Normal请求就不缓存，这样大大减小了内存占用。在Netty中，该参数的默认值为32KB。
+    */
     private static <T> MemoryRegionCache<T>[] createNormalCaches(
             int cacheSize, int maxCachedBufferCapacity, PoolArena<T> area) {
+
         if (cacheSize > 0 && maxCachedBufferCapacity > 0) {
             int max = Math.min(area.chunkSize, maxCachedBufferCapacity);
             int arraySize = Math.max(1, log2(max / area.pageSize) + 1);

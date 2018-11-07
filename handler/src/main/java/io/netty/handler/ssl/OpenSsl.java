@@ -18,7 +18,6 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.internal.tcnative.Buffer;
 import io.netty.internal.tcnative.Library;
 import io.netty.internal.tcnative.SSL;
@@ -31,23 +30,19 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.ByteArrayInputStream;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import static io.netty.handler.ssl.SslUtils.DEFAULT_CIPHER_SUITES;
-import static io.netty.handler.ssl.SslUtils.addIfSupported;
-import static io.netty.handler.ssl.SslUtils.useFallbackCiphersIfDefaultIsEmpty;
-import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V2;
-import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V2_HELLO;
-import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V3;
-import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1;
-import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_1;
-import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_2;
+import static io.netty.handler.ssl.SslUtils.*;
 
 /**
  * Tells if <a href="http://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and its OpenSSL support
@@ -66,7 +61,13 @@ public final class OpenSsl {
     private static final boolean SUPPORTS_HOSTNAME_VALIDATION;
     private static final boolean USE_KEYMANAGER_FACTORY;
     private static final boolean SUPPORTS_OCSP;
-
+    private static final String TLSV13_CIPHERS = "TLS_AES_256_GCM_SHA384" + ':' +
+                                                 "TLS_CHACHA20_POLY1305_SHA256" + ':' +
+                                                 "TLS_AES_128_GCM_SHA256" + ':' +
+                                                 "TLS_AES_128_CCM_8_SHA256" + ':' +
+                                                 "TLS_AES_128_CCM_SHA256";
+    private static final boolean TLSV13_SUPPORTED;
+    private static final boolean IS_BORINGSSL;
     static final Set<String> SUPPORTED_PROTOCOLS_SET;
 
     static {
@@ -139,22 +140,42 @@ public final class OpenSsl {
             boolean supportsKeyManagerFactory = false;
             boolean useKeyManagerFactory = false;
             boolean supportsHostNameValidation = false;
+            boolean tlsv13Supported = false;
+
+            IS_BORINGSSL = "BoringSSL".equals(versionString());
+
             try {
                 final long sslCtx = SSLContext.make(SSL.SSL_PROTOCOL_ALL, SSL.SSL_MODE_SERVER);
                 long certBio = 0;
-                SelfSignedCertificate cert = null;
                 try {
-                    SSLContext.setCipherSuite(sslCtx, "ALL");
+                    try {
+                        SSLContext.setCipherSuite(sslCtx, TLSV13_CIPHERS, true);
+                        tlsv13Supported = true;
+                    } catch (Exception ignore) {
+                        tlsv13Supported = false;
+                    }
+
+                    SSLContext.setCipherSuite(sslCtx, "ALL", false);
+
                     final long ssl = SSL.newSSL(sslCtx, true);
                     try {
                         for (String c: SSL.getCiphers(ssl)) {
                             // Filter out bad input.
-                            if (c == null || c.isEmpty() || availableOpenSslCipherSuites.contains(c)) {
+                            if (c == null || c.isEmpty() || availableOpenSslCipherSuites.contains(c) ||
+                                // Filter out TLSv1.3 ciphers if not supported.
+                                !tlsv13Supported && isTLSv13Cipher(c)) {
                                 continue;
                             }
                             availableOpenSslCipherSuites.add(c);
                         }
-
+                        if (IS_BORINGSSL) {
+                            // Currently BoringSSL does not include these when calling SSL.getCiphers() even when these
+                            // are supported.
+                            Collections.addAll(availableOpenSslCipherSuites,
+                                               "TLS_AES_128_GCM_SHA256",
+                                               "TLS_AES_256_GCM_SHA384" ,
+                                               "TLS_CHACHA20_POLY1305_SHA256");
+                        }
                         try {
                             SSL.setHostNameValidation(ssl, 0, "netty.io");
                             supportsHostNameValidation = true;
@@ -162,8 +183,8 @@ public final class OpenSsl {
                             logger.debug("Hostname Verification not supported.");
                         }
                         try {
-                            cert = new SelfSignedCertificate();
-                            certBio = ReferenceCountedOpenSslContext.toBIO(ByteBufAllocator.DEFAULT, cert.cert());
+                            X509Certificate certificate = selfSignedCertificate();
+                            certBio = ReferenceCountedOpenSslContext.toBIO(ByteBufAllocator.DEFAULT, certificate);
                             SSL.setCertificateChainBio(ssl, certBio, false);
                             supportsKeyManagerFactory = true;
                             try {
@@ -185,9 +206,6 @@ public final class OpenSsl {
                         if (certBio != 0) {
                             SSL.freeBIO(certBio);
                         }
-                        if (cert != null) {
-                            cert.delete();
-                        }
                     }
                 } finally {
                     SSLContext.free(sslCtx);
@@ -200,11 +218,18 @@ public final class OpenSsl {
                     AVAILABLE_OPENSSL_CIPHER_SUITES.size() * 2);
             for (String cipher: AVAILABLE_OPENSSL_CIPHER_SUITES) {
                 // Included converted but also openssl cipher name
-                availableJavaCipherSuites.add(CipherSuiteConverter.toJava(cipher, "TLS"));
-                availableJavaCipherSuites.add(CipherSuiteConverter.toJava(cipher, "SSL"));
+                if (!isTLSv13Cipher(cipher)) {
+                    availableJavaCipherSuites.add(CipherSuiteConverter.toJava(cipher, "TLS"));
+                    availableJavaCipherSuites.add(CipherSuiteConverter.toJava(cipher, "SSL"));
+                } else {
+                    // TLSv1.3 ciphers have the correct format.
+                    availableJavaCipherSuites.add(cipher);
+                }
             }
 
             addIfSupported(availableJavaCipherSuites, defaultCiphers, DEFAULT_CIPHER_SUITES);
+            addIfSupported(availableJavaCipherSuites, defaultCiphers, TLSV13_CIPHER_SUITES);
+
             useFallbackCiphersIfDefaultIsEmpty(defaultCiphers, availableJavaCipherSuites);
             DEFAULT_CIPHERS = Collections.unmodifiableList(defaultCiphers);
 
@@ -239,6 +264,14 @@ public final class OpenSsl {
                 protocols.add(PROTOCOL_TLS_V1_2);
             }
 
+            // This is only supported by java11 and later.
+            if (tlsv13Supported && doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1_3, SSL.SSL_OP_NO_TLSv1_3)) {
+                protocols.add(PROTOCOL_TLS_V1_3);
+                TLSV13_SUPPORTED = true;
+            } else {
+                TLSV13_SUPPORTED = false;
+            }
+
             SUPPORTED_PROTOCOLS_SET = Collections.unmodifiableSet(protocols);
             SUPPORTS_OCSP = doesSupportOcsp();
 
@@ -256,7 +289,48 @@ public final class OpenSsl {
             USE_KEYMANAGER_FACTORY = false;
             SUPPORTED_PROTOCOLS_SET = Collections.emptySet();
             SUPPORTS_OCSP = false;
+            TLSV13_SUPPORTED = false;
+            IS_BORINGSSL = false;
         }
+    }
+
+    /**
+     * Returns a self-signed {@link X509Certificate} for {@code netty.io}.
+     */
+    static X509Certificate selfSignedCertificate() throws CertificateException {
+        // Bytes of self-signed certificate for netty.io
+        byte[] certBytes = {
+                48, -126, 1, -92, 48, -126, 1, 13, -96, 3, 2, 1, 2, 2, 9, 0, -9, 61,
+                44, 121, -118, -4, -45, -120, 48, 13, 6, 9, 42, -122, 72, -122,
+                -9, 13, 1, 1, 5, 5, 0, 48, 19, 49, 17, 48, 15, 6, 3, 85, 4, 3, 19,
+                8, 110, 101, 116, 116, 121, 46, 105, 111, 48, 32, 23, 13, 49, 55,
+                49, 48, 50, 48, 49, 56, 49, 54, 51, 54, 90, 24, 15, 57, 57, 57, 57,
+                49, 50, 51, 49, 50, 51, 53, 57, 53, 57, 90, 48, 19, 49, 17, 48, 15,
+                6, 3, 85, 4, 3, 19, 8, 110, 101, 116, 116, 121, 46, 105, 111, 48, -127,
+                -97, 48, 13, 6, 9, 42, -122, 72, -122, -9, 13, 1, 1, 1, 5, 0, 3, -127,
+                -115, 0, 48, -127, -119, 2, -127, -127, 0, -116, 37, 122, -53, 28, 46,
+                13, -90, -14, -33, 111, -108, -41, 59, 90, 124, 113, -112, -66, -17,
+                -102, 44, 13, 7, -33, -28, 24, -79, -126, -76, 40, 111, -126, -103,
+                -102, 34, 11, 45, 16, -38, 63, 24, 80, 24, 76, 88, -93, 96, 11, 38,
+                -19, -64, -11, 87, -49, -52, -65, 24, 36, -22, 53, 8, -42, 14, -121,
+                114, 6, 17, -82, 10, 92, -91, -127, 81, -12, -75, 105, -10, -106, 91,
+                -38, 111, 50, 57, -97, -125, 109, 42, -87, -1, -19, 80, 78, 49, -97, -4,
+                23, -2, -103, 122, -107, -43, 4, -31, -21, 90, 39, -9, -106, 34, -101,
+                -116, 31, -94, -84, 80, -6, -78, -33, 87, -90, 31, 103, 100, 56, -103,
+                -5, 11, 2, 3, 1, 0, 1, 48, 13, 6, 9, 42, -122, 72, -122, -9, 13, 1, 1,
+                5, 5, 0, 3, -127, -127, 0, 112, 45, -73, 5, 64, 49, 59, 101, 51, 73,
+                -96, 62, 23, -84, 90, -41, -58, 83, -20, -72, 38, 123, -108, -45, 28,
+                96, -122, -18, 30, 42, 86, 87, -87, -28, 107, 110, 11, -59, 91, 100,
+                101, -18, 26, -103, -78, -80, -3, 38, 113, 83, -48, -108, 109, 41, -15,
+                6, 112, 105, 7, -46, -11, -3, -51, 40, -66, -73, -83, -46, -94, -121,
+                -88, 51, -106, -77, 109, 53, -7, 123, 91, 75, -105, -22, 64, 121, -72,
+                -59, -21, -44, 84, 12, 9, 120, 21, -26, 13, 49, -81, -58, -47, 117,
+                -44, -18, -17, 124, 49, -48, 19, 16, -41, 71, -52, -107, 99, -19, -29,
+                105, -93, -71, -38, -97, -128, -2, 118, 119, 49, -126, 109, 119 };
+
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+        return (X509Certificate) cf.generateCertificate(
+                new ByteArrayInputStream(certBytes));
     }
 
     private static boolean doesSupportOcsp() {
@@ -449,5 +523,13 @@ public final class OpenSsl {
         if (counted.refCnt() > 0) {
             ReferenceCountUtil.safeRelease(counted);
         }
+    }
+
+    static boolean isTlsv13Supported() {
+        return TLSV13_SUPPORTED;
+    }
+
+    static boolean isBoringSSL() {
+        return IS_BORINGSSL;
     }
 }

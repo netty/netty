@@ -213,6 +213,33 @@ static jint netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, j
     return -err;
 }
 
+static inline void cpu_relax() {
+#if defined(__x86_64__)
+    asm volatile("pause\n": : :"memory");
+#endif
+}
+
+static jint netty_epoll_native_epollBusyWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len) {
+    struct epoll_event *ev = (struct epoll_event*) (intptr_t) address;
+    int result, err;
+
+    // Zeros = poll (aka return immediately).
+    do {
+        result = epoll_wait(efd, ev, len, 0);
+        if (result == 0) {
+            // Since we're always polling epoll_wait with no timeout,
+            // signal CPU that we're in a busy loop
+            cpu_relax();
+        }
+
+        if (result >= 0) {
+            return result;
+        }
+    } while((err = errno) == EINTR);
+
+    return -err;
+}
+
 static jint netty_epoll_native_epollCtlAdd0(JNIEnv* env, jclass clazz, jint efd, jint fd, jint flags) {
     int res = epollCtl(env, efd, EPOLL_CTL_ADD, fd, flags);
     if (res < 0) {
@@ -387,6 +414,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "timerFdRead", "(I)V", (void *) netty_epoll_native_timerFdRead },
   { "epollCreate", "()I", (void *) netty_epoll_native_epollCreate },
   { "epollWait0", "(IJIIII)I", (void *) netty_epoll_native_epollWait0 },
+  { "epollBusyWait0", "(IJI)I", (void *) netty_epoll_native_epollBusyWait0 },
   { "epollCtlAdd0", "(III)I", (void *) netty_epoll_native_epollCtlAdd0 },
   { "epollCtlMod0", "(III)I", (void *) netty_epoll_native_epollCtlMod0 },
   { "epollCtlDel0", "(II)I", (void *) netty_epoll_native_epollCtlDel0 },

@@ -132,6 +132,13 @@ abstract class DnsResolveContext<T> {
     }
 
     /**
+     * The {@link DnsCnameCache} that is used for resolving.
+     */
+    DnsCnameCache cnameCache() {
+        return parent.cnameCache();
+    }
+
+    /**
      * The {@link AuthoritativeDnsServerCache} to use while resolving.
      */
     AuthoritativeDnsServerCache authoritativeDnsServerCache() {
@@ -237,7 +244,23 @@ abstract class DnsResolveContext<T> {
         nextContext.internalResolve(hostname, nextPromise);
     }
 
+    private static String hostnameWithDot(String name) {
+        if (StringUtil.endsWith(name, '.')) {
+            return name;
+        }
+        return name + '.';
+    }
+
     private void internalResolve(String name, Promise<List<T>> promise) {
+        for (;;) {
+            // Resolve from cnameCache() until there is no more cname entry cached.
+            String mapping = cnameCache().get(hostnameWithDot(name));
+            if (mapping == null) {
+                break;
+            }
+            name = mapping;
+        }
+
         DnsServerAddressStream nameServerAddressStream = getNameServers(name);
 
         final int end = expectedTypes.length - 1;
@@ -448,7 +471,8 @@ abstract class DnsResolveContext<T> {
                 final DnsRecordType type = question.type();
 
                 if (type == DnsRecordType.CNAME) {
-                    onResponseCNAME(question, buildAliasMap(envelope.content()), queryLifecycleObserver, promise);
+                    onResponseCNAME(question, buildAliasMap(envelope.content(), cnameCache(), parent.executor()),
+                                    queryLifecycleObserver, promise);
                     return;
                 }
 
@@ -600,7 +624,7 @@ abstract class DnsResolveContext<T> {
 
         // We often get a bunch of CNAMES as well when we asked for A/AAAA.
         final DnsResponse response = envelope.content();
-        final Map<String, String> cnames = buildAliasMap(response);
+        final Map<String, String> cnames = buildAliasMap(response, cnameCache(), parent.executor());
         final int answerCount = response.count(DnsSection.ANSWER);
 
         boolean found = false;
@@ -695,7 +719,7 @@ abstract class DnsResolveContext<T> {
         }
     }
 
-    private static Map<String, String> buildAliasMap(DnsResponse response) {
+    private static Map<String, String> buildAliasMap(DnsResponse response, DnsCnameCache cache, EventLoop loop) {
         final int answerCount = response.count(DnsSection.ANSWER);
         Map<String, String> cnames = null;
         for (int i = 0; i < answerCount; i ++) {
@@ -719,7 +743,12 @@ abstract class DnsResolveContext<T> {
                 cnames = new HashMap<String, String>(min(8, answerCount));
             }
 
-            cnames.put(r.name().toLowerCase(Locale.US), domainName.toLowerCase(Locale.US));
+            String name = r.name().toLowerCase(Locale.US);
+            String mapping = domainName.toLowerCase(Locale.US);
+
+            // Cache the CNAME as well.
+            cache.cache(hostnameWithDot(name), hostnameWithDot(mapping), r.timeToLive(), loop);
+            cnames.put(name, mapping);
         }
 
         return cnames != null? cnames : Collections.<String, String>emptyMap();
@@ -843,6 +872,15 @@ abstract class DnsResolveContext<T> {
 
     private void followCname(DnsQuestion question, String cname, DnsQueryLifecycleObserver queryLifecycleObserver,
                              Promise<List<T>> promise) {
+        for (;;) {
+            // Resolve from cnameCache() until there is no more cname entry cached.
+            String mapping = cnameCache().get(hostnameWithDot(cname));
+            if (mapping == null) {
+                break;
+            }
+            cname = mapping;
+        }
+
         DnsServerAddressStream stream = getNameServers(cname);
 
         final DnsQuestion cnameQuestion;
@@ -865,7 +903,7 @@ abstract class DnsResolveContext<T> {
             // Assume a single failure means that queries will succeed. If the hostname is invalid for one type
             // there is no case where it is known to be valid for another type.
             promise.tryFailure(new IllegalArgumentException("Unable to create DNS Question for: [" + hostname + ", " +
-                    type + "]", cause));
+                    type + ']', cause));
             return false;
         }
         query(dnsServerAddressStream, 0, question, promise, null);
