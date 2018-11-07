@@ -23,11 +23,11 @@ import java.util.IdentityHashMap;
 import java.util.Set;
 
 /**
- * A special variant of {@link ThreadLocal} that yields higher access performance when accessed from a
+ * A special variant 变体；转化 of {@link ThreadLocal} that yields  生产 higher access performance when accessed from a
  * {@link FastThreadLocalThread}.
  * <p>
  * Internally, a {@link FastThreadLocal} uses a constant index in an array, instead of using hash code and hash table,
- * to look for a variable.  Although seemingly very subtle, it yields slight performance advantage over using a hash
+ * to look for a variable.  Although seemingly very subtle 微妙的；精细的, it yields slight performance advantage over using a hash
  * table, and it is useful when accessed frequently.
  * </p><p>
  * To take advantage of this thread-local variable, your thread must be a {@link FastThreadLocalThread} or its subtype.

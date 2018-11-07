@@ -31,7 +31,7 @@ import java.nio.channels.ScatteringByteChannel;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * Big endian Java heap buffer implementation. It is recommended to use
+ * Big endian Java heap buffer implementation. It is recommended 推荐 to use
  * {@link UnpooledByteBufAllocator#heapBuffer(int, int)}, {@link Unpooled#buffer(int)} and
  * {@link Unpooled#wrappedBuffer(byte[])} instead of calling the constructor explicitly.
  */
@@ -84,6 +84,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         setIndex(0, initialArray.length);
     }
 
+    //
     protected byte[] allocateArray(int initialCapacity) {
         return new byte[initialCapacity];
     }
@@ -121,8 +122,8 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     public ByteBuf capacity(int newCapacity) {
         checkNewCapacity(newCapacity);
 
-        int oldCapacity = array.length;
-        byte[] oldArray = array;
+        int oldCapacity = array.length;//
+        byte[] oldArray = array;//
         if (newCapacity > oldCapacity) {
             byte[] newArray = allocateArray(newCapacity);
             System.arraycopy(oldArray, 0, newArray, 0, oldArray.length);
@@ -172,9 +173,12 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         throw new UnsupportedOperationException();
     }
 
+    //
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
+        //
         checkDstIndex(index, length, dstIndex, dst.capacity());
+        //
         if (dst.hasMemoryAddress()) {
             PlatformDependent.copyMemory(array, index, dst.memoryAddress() + dstIndex, length);
         } else if (dst.hasArray()) {
@@ -187,6 +191,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
+        //
         checkDstIndex(index, length, dstIndex, dst.length);
         System.arraycopy(array, index, dst, dstIndex, length);
         return this;
@@ -320,6 +325,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         return new ByteBuffer[] { nioBuffer(index, length) };
     }
 
+    //
     @Override
     public ByteBuffer internalNioBuffer(int index, int length) {
         checkIndex(index, length);
@@ -533,9 +539,12 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         HeapByteBufUtil.setLongLE(array, index, value);
     }
 
+    //
     @Override
     public ByteBuf copy(int index, int length) {
+
         checkIndex(index, length);
+
         byte[] copiedArray = PlatformDependent.allocateUninitializedArray(length);
         System.arraycopy(array, index, copiedArray, 0, length);
         return new UnpooledHeapByteBuf(alloc(), copiedArray, maxCapacity());

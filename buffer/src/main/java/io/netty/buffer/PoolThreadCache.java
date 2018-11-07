@@ -36,7 +36,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <a href="https://www.facebook.com/notes/facebook-engineering/scalable-memory-allocation-using-jemalloc/480222803919">
  * Scalable memory allocation using jemalloc</a>.
  */
+
+// 作为线程内存用于分配；
 final class PoolThreadCache {
+
+
+    // 尝试从PoolThreadCache中获取可用内存，如果成功则完成此次分配，否则继续往下走，注意后面的内存分配都会加锁；
+    // 内存使用完成后进行释放，释放的时候首先判断是否和分配的时候是同一个线程，如果是则尝试将其放入PoolThreadCache，
+    // 这块内存将会在下一次同一个线程申请内存时使用；
+    // 从netty本身的线程模型可知，ThreadLocal被使用到的几率是很大的
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PoolThreadCache.class);
 
@@ -44,6 +52,10 @@ final class PoolThreadCache {
     final PoolArena<ByteBuffer> directArena;
 
     // Hold the caches for the different size classes, which are tiny, small and normal.
+    // 由于tiny\small\normal在内存分配上的不同（tiny和small使用subpage,normal使用page），
+    // PoolThreadCache中也分了tinySubPageHeapCaches、smallSubPageHeapCaches、
+    // normalSubPageHeapCaches三个数组，数据的使用方式与PoolArena中的subpagePools相同
+    // 各类型的Cache数组
     private final MemoryRegionCache<byte[]>[] tinySubPageHeapCaches;
     private final MemoryRegionCache<byte[]>[] smallSubPageHeapCaches;
     private final MemoryRegionCache<ByteBuffer>[] tinySubPageDirectCaches;
@@ -52,12 +64,13 @@ final class PoolThreadCache {
     private final MemoryRegionCache<ByteBuffer>[] normalDirectCaches;
 
     // Used for bitshifting when calculate the index of normal caches later
+    // 用于计算normal请求的数组索引 = log2(pageSize)
     private final int numShiftsNormalDirect;
     private final int numShiftsNormalHeap;
-    private final int freeSweepAllocationThreshold;
+    private final int freeSweepAllocationThreshold;// 分配次数到达该阈值则检测释放
     private final AtomicBoolean freed = new AtomicBoolean();
 
-    private int allocations;
+    private int allocations;// 分配次数
 
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
@@ -65,10 +78,12 @@ final class PoolThreadCache {
     PoolThreadCache(PoolArena<byte[]> heapArena, PoolArena<ByteBuffer> directArena,
                     int tinyCacheSize, int smallCacheSize, int normalCacheSize,
                     int maxCachedBufferCapacity, int freeSweepAllocationThreshold) {
+
         if (maxCachedBufferCapacity < 0) {
             throw new IllegalArgumentException("maxCachedBufferCapacity: "
                     + maxCachedBufferCapacity + " (expected: >= 0)");
         }
+        //分配次数到达该阈值则检测释放
         this.freeSweepAllocationThreshold = freeSweepAllocationThreshold;
         this.heapArena = heapArena;
         this.directArena = directArena;
@@ -134,8 +149,16 @@ final class PoolThreadCache {
         }
     }
 
+    //maxCachedBufferCapacity为缓存Buf的最大容量
+    /*
+    * 其中的参数maxCachedBufferCapacity为缓存Buf的最大容量，
+    * 因为Normal的ByteBuf最大容量为16MB，且默认缓存64个，这是巨大的内存开销，
+    * 所以设置该参数调节缓存Buf的最大容量。比如设置为16KB，那么只有16KB和8KB的ByteBuf缓存，
+    * 其他容量的Normal请求就不缓存，这样大大减小了内存占用。在Netty中，该参数的默认值为32KB。
+    */
     private static <T> MemoryRegionCache<T>[] createNormalCaches(
             int cacheSize, int maxCachedBufferCapacity, PoolArena<T> area) {
+
         if (cacheSize > 0 && maxCachedBufferCapacity > 0) {
             int max = Math.min(area.chunkSize, maxCachedBufferCapacity);
             int arraySize = Math.max(1, log2(max / area.pageSize) + 1);
@@ -362,12 +385,15 @@ final class PoolThreadCache {
         @Override
         protected void initBuf(
                 PoolChunk<T> chunk, long handle, PooledByteBuf<T> buf, int reqCapacity) {
-            chunk.initBuf(buf, handle, reqCapacity);
+            chunk.initBufinitBuf(buf, handle, reqCapacity);
         }
     }
 
     private abstract static class MemoryRegionCache<T> {
+
+
         private final int size;
+        // entries：存放可分配内存的数组，entry维护一个chunk的一段内存标识；
         private final Queue<Entry<T>> queue;
         private final SizeClass sizeClass;
         private int allocations;
@@ -460,6 +486,7 @@ final class PoolThreadCache {
             chunk.arena.freeChunk(chunk, handle, sizeClass);
         }
 
+        // entries：存放可分配内存的数组，entry维护一个chunk的一段内存标识；
         static final class Entry<T> {
             final Handle<Entry<?>> recyclerHandle;
             PoolChunk<T> chunk;

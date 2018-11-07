@@ -25,14 +25,20 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 /**
  * Abstract base class for {@link ByteBuf} implementations that count references.
+ * 从类的名称看该类主要对引用进行计数，类似于JVM内存回收的对象引用计数器，用于跟踪对象的分配和销毁，做自动内存回收。
  */
 public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
-    private static final long REFCNT_FIELD_OFFSET;
+
+    // 用于标识refCnt字段在AtomicIntegerFieldUpdater中的内存地址，该内存地址的获取是JDK强关联的；
+    private static final long REFCNT_FIELD_OFFSET;//
+    //AtomicIntegerFieldUpdater 通过原子的方式对成员变量进行更新等操作，以实现线程安全，消除锁；
     private static final AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> refCntUpdater =
             AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCountedByteBuf.class, "refCnt");
 
+    // 跟踪对象的 引用次数
     private volatile int refCnt = 1;
 
+    // 获得内存地址；
     static {
         long refCntFieldOffset = -1;
         try {
@@ -44,7 +50,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
             refCntFieldOffset = -1;
         }
 
-        REFCNT_FIELD_OFFSET = refCntFieldOffset;
+        REFCNT_FIELD_OFFSET = refCntFieldOffset;//抵消，补偿；平版印刷；支管
     }
 
     protected AbstractReferenceCountedByteBuf(int maxCapacity) {
@@ -53,7 +59,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
 
     @Override
     int internalRefCnt() {
-        // Try to do non-volatile read for performance as the ensureAccessible() is racy anyway and only provide
+        // Try to do non-volatile挥发性的；不稳定的；爆炸性的；反复无常的 read for performance 性能；绩效；表演；执行；表现 as the ensureAccessible() is racy生动的；保持原味的；适于赛跑的；猥亵的 anyway and only provide
         // a best-effort guard.
         //
         // TODO: Once we compile against later versions of Java we can replace the Unsafe usage here by varhandles.
@@ -72,6 +78,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         refCntUpdater.set(this, refCnt);
     }
 
+    //
     @Override
     public ByteBuf retain() {
         return retain0(1);
@@ -82,10 +89,12 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         return retain0(checkPositive(increment, "increment"));
     }
 
+    //
     private ByteBuf retain0(final int increment) {
+
         int oldRef = refCntUpdater.getAndAdd(this, increment);
         if (oldRef <= 0 || oldRef + increment < oldRef) {
-            // Ensure we don't resurrect (which means the refCnt was 0) and also that we encountered an overflow.
+            // Ensure we don't resurrect（使复活；复兴；挖出） (which means the refCnt was 0) and also that we encountered an overflow.
             refCntUpdater.getAndAdd(this, -increment);
             throw new IllegalReferenceCountException(oldRef, increment);
         }

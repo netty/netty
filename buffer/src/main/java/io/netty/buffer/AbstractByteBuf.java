@@ -43,13 +43,19 @@ import static io.netty.util.internal.MathUtil.isOutOfBounds;
  * A skeletal implementation of a buffer.
  */
 public abstract class AbstractByteBuf extends ByteBuf {
+
+
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractByteBuf.class);
+
     private static final String LEGACY_PROP_CHECK_ACCESSIBLE = "io.netty.buffer.bytebuf.checkAccessible";
     private static final String PROP_CHECK_ACCESSIBLE = "io.netty.buffer.checkAccessible";
     static final boolean checkAccessible; // accessed from CompositeByteBuf
     private static final String PROP_CHECK_BOUNDS = "io.netty.buffer.checkBounds";
     private static final boolean checkBounds;
 
+    // static关键字还有一个比较关键的作用就是 用来形成静态代码块以优化程序性能。
+    // static块可以置于类中的任何地方，类中可以有多个static块。
+    // 在类初次被加载的时候，会按照static块的顺序来执行每个static块，并且只会执行一次。
     static {
         if (SystemPropertyUtil.contains(PROP_CHECK_ACCESSIBLE)) {
             checkAccessible = SystemPropertyUtil.getBoolean(PROP_CHECK_ACCESSIBLE, true);
@@ -62,10 +68,11 @@ public abstract class AbstractByteBuf extends ByteBuf {
             logger.debug("-D{}: {}", PROP_CHECK_BOUNDS, checkBounds);
         }
     }
-
+    // 用于检测对象是否泄漏；
     static final ResourceLeakDetector<ByteBuf> leakDetector =
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(ByteBuf.class);
 
+    //
     int readerIndex;
     int writerIndex;
     private int markedReaderIndex;
@@ -84,7 +91,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         return false;
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings("deprecation")//祈免；贬低；反对
     @Override
     public ByteBuf asReadOnly() {
         if (isReadOnly()) {
@@ -107,7 +114,9 @@ public abstract class AbstractByteBuf extends ByteBuf {
         return readerIndex;
     }
 
+
     private static void checkIndexBounds(final int readerIndex, final int writerIndex, final int capacity) {
+        //
         if (readerIndex < 0 || readerIndex > writerIndex || writerIndex > capacity) {
             throw new IndexOutOfBoundsException(String.format(
                     "readerIndex: %d, writerIndex: %d (expected: 0 <= readerIndex <= writerIndex <= capacity(%d))",
@@ -138,6 +147,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         return this;
     }
 
+    //
     @Override
     public ByteBuf setIndex(int readerIndex, int writerIndex) {
         if (checkBounds) {
@@ -153,6 +163,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         return this;
     }
 
+    //
     @Override
     public boolean isReadable() {
         return writerIndex > readerIndex;
@@ -292,10 +303,11 @@ public abstract class AbstractByteBuf extends ByteBuf {
             }
         }
 
-        // Normalize the current capacity to the power of 2.
+        // Normalize( 使正常化；使规格化，使标准化) the current capacity to the power of 2.
         int newCapacity = alloc().calculateNewCapacity(writerIndex + minWritableBytes, maxCapacity);
 
-        // Adjust to the new capacity.
+        // Adjust(调整) to the new capacity.
+        //
         capacity(newCapacity);
     }
 
@@ -310,7 +322,12 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (minWritableBytes <= writableBytes()) {
             return 0;
         }
-
+        /*
+         *   {@code 0} if the buffer has enough writable bytes, and its capacity is unchanged.
+         *   {@code 1} if the buffer does not have enough bytes, and its capacity is unchanged.
+         *   {@code 2} if the buffer has enough writable bytes, and its capacity has been increased.
+         *   {@code 3} if the buffer does not have enough bytes, but its capacity has been increased to its maximum.
+         */
         final int maxCapacity = maxCapacity();
         final int writerIndex = writerIndex();
         if (minWritableBytes > maxCapacity - writerIndex) {
@@ -318,6 +335,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
                 return 1;
             }
 
+            // ?
             capacity(maxCapacity);
             return 3;
         }
@@ -335,6 +353,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (endianness == order()) {
             return this;
         }
+
         if (endianness == null) {
             throw new NullPointerException("endianness");
         }
@@ -348,6 +367,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         return new SwappedByteBuf(this);
     }
 
+    //
     @Override
     public byte getByte(int index) {
         checkIndex(index);
@@ -382,11 +402,14 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     protected abstract short _getShortLE(int index);
 
+    //
     @Override
     public int getUnsignedShort(int index) {
+        // 无符号变换，高16位为零，低16位直接拷贝；
         return getShort(index) & 0xFFFF;
     }
 
+    // LE ：Little Endian Byte Order
     @Override
     public int getUnsignedShortLE(int index) {
         return getShortLE(index) & 0xFFFF;
@@ -444,6 +467,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public long getUnsignedInt(int index) {
+        // 无符号转换需强制类型转换
         return getInt(index) & 0xFFFFFFFFL;
     }
 
@@ -475,6 +499,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public float getFloat(int index) {
+        // 把int bits转换为 float；
         return Float.intBitsToFloat(getInt(index));
     }
 
@@ -483,6 +508,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         return Double.longBitsToDouble(getLong(index));
     }
 
+    //
     @Override
     public ByteBuf getBytes(int index, byte[] dst) {
         getBytes(index, dst, 0, dst.length);
@@ -1194,6 +1220,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         return copy(readerIndex, readableBytes());
     }
 
+    //duplicate复制；使加倍
     @Override
     public ByteBuf duplicate() {
         ensureAccessible();
@@ -1352,7 +1379,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     @Override
     public String toString() {
         if (refCnt() == 0) {
-            return StringUtil.simpleClassName(this) + "(freed)";
+            return StringUtil.simpleClassName(this) + "(freed-释放的)";
         }
 
         StringBuilder buf = new StringBuilder()
@@ -1442,7 +1469,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     /**
-     * Should be called by every method that tries to access the buffers content to check
+     * Should be called by every method that tries to access(访问) the buffers content to check
      * if the buffer was released before.
      */
     protected final void ensureAccessible() {
@@ -1452,8 +1479,9 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     /**
-     * Returns the reference count that is used internally by {@link #ensureAccessible()} to try to guard
+     * Returns the reference count that is used internally(内部地；国内地；内在地) by {@link #ensureAccessible()} to try to guard(守卫；警戒；护卫队；防护装置)
      * against using the buffer after it was released (best-effort).
+     *
      */
     int internalRefCnt() {
         return refCnt();

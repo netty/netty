@@ -245,19 +245,22 @@ import java.nio.charset.UnsupportedCharsetException;
  * Please refer to {@link ByteBufInputStream} and
  * {@link ByteBufOutputStream}.
  */
+// 常用的缓冲区
 @SuppressWarnings("ClassMayBeInterface")
 public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
 
     /**
      * Returns the number of bytes (octets) this buffer can contain.
+     * 这个buffer的容量
      */
     public abstract int capacity();
 
     /**
      * Adjusts the capacity of this buffer.  If the {@code newCapacity} is less than the current
-     * capacity, the content of this buffer is truncated.  If the {@code newCapacity} is greater
+     * capacity, the content of this buffer is truncated（缩短了的；被删节的；切去顶端的）.  If the {@code newCapacity} is greater
      * than the current capacity, the buffer is appended with unspecified data whose length is
      * {@code (newCapacity - currentCapacity)}.
+     * 调整buffer的容量
      */
     public abstract ByteBuf capacity(int newCapacity);
 
@@ -266,26 +269,29 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * capacity of this buffer beyond the maximum capacity using {@link #capacity(int)} or
      * {@link #ensureWritable(int)}, those methods will raise an
      * {@link IllegalArgumentException}.
+     * 这个buffer的最大容量
      */
     public abstract int maxCapacity();
 
     /**
-     * Returns the {@link ByteBufAllocator} which created this buffer.
+     * Returns the {@link ByteBufAllocator（分配器）} which created this buffer.
+     * 返回byteBuf的分配器
      */
     public abstract ByteBufAllocator alloc();
 
     /**
-     * Returns the <a href="http://en.wikipedia.org/wiki/Endianness">endianness</a>
+     * Returns the <a href="http://en.wikipedia.org/wiki/Endianness">endianness（字节顺序）</a>
      * of this buffer.
      *
      * @deprecated use the Little Endian accessors, e.g. {@code getShortLE}, {@code getIntLE}
      * instead of creating a buffer with swapped {@code endianness}.
+     *
      */
     @Deprecated
     public abstract ByteOrder order();
 
     /**
-     * Returns a buffer with the specified {@code endianness} which shares the whole region,
+     * Returns a buffer with the specified {@code endianness 字节顺序} which shares the whole region 地区；范围；部位,
      * indexes, and marks of this buffer.  Modifying the content, the indexes, or the marks of the
      * returned buffer or this buffer affects each other's content, indexes, and marks.  If the
      * specified {@code endianness} is identical to this buffer's byte order, this method can
@@ -299,20 +305,22 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBuf order(ByteOrder endianness);
 
     /**
-     * Return the underlying buffer instance if this buffer is a wrapper of another buffer.
+     * Return the underlying（ 潜在的；根本的；在下面的；优先的） buffer instance if this buffer is a wrapper（包装材料；[包装] 包装纸；书皮） of another buffer.
      *
      * @return {@code null} if this buffer is not a wrapper
      */
     public abstract ByteBuf unwrap();
 
     /**
-     * Returns {@code true} if and only if this buffer is backed by an
+     * Returns {@code true} if and only if this buffer is backed（ 支持；使后退（back的过去分词） by an
      * NIO direct buffer.
+     *
      */
     public abstract boolean isDirect();
 
     /**
      * Returns {@code true} if and only if this buffer is read-only.
+     *
      */
     public abstract boolean isReadOnly();
 
@@ -354,7 +362,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     /**
      * Sets the {@code readerIndex} and {@code writerIndex} of this buffer
      * in one shot.  This method is useful when you have to worry about the
-     * invocation order of {@link #readerIndex(int)} and {@link #writerIndex(int)}
+     * invocation调用) order of {@link #readerIndex(int)} and {@link #writerIndex(int)}
      * methods.  For example, the following code will fail:
      *
      * <pre>
@@ -450,7 +458,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     /**
      * Sets the {@code readerIndex} and {@code writerIndex} of this buffer to
      * {@code 0}.
-     * This method is identical to {@link #setIndex(int, int) setIndex(0, 0)}.
+     * This method is identical（同一的；完全相同的） to {@link #setIndex(int, int) setIndex(0, 0)}.
      * <p>
      * Please note that the behavior of this method is different
      * from that of NIO buffer, which sets the {@code limit} to
@@ -460,9 +468,10 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
 
     /**
      * Marks the current {@code readerIndex} in this buffer.  You can
-     * reposition the current {@code readerIndex} to the marked
+     * reposition（复位；贮藏；放回） the current {@code readerIndex} to the marked
      * {@code readerIndex} by calling {@link #resetReaderIndex()}.
      * The initial value of the marked {@code readerIndex} is {@code 0}.
+     *
      */
     public abstract ByteBuf markReaderIndex();
 
@@ -507,8 +516,9 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     /**
      * Similar to {@link ByteBuf#discardReadBytes()} except that this method might discard
      * some, all, or none of read bytes depending on its internal implementation to reduce
-     * overall memory bandwidth consumption at the cost of potentially additional memory
+     * overall（全部的；全体的；一切在内的） memory bandwidth consumption at the cost of potentially additional memory
      * consumption.
+     *
      */
     public abstract ByteBuf discardSomeReadBytes();
 
@@ -867,7 +877,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBuf getBytes(int index, byte[] dst);
 
     /**
-     * Transfers this buffer's data to the specified destination starting at
+     * Transfers(转移；变换；调任) this buffer's data to the specified destination starting at
      * the specified absolute {@code index}.
      * This method does not modify {@code readerIndex} or {@code writerIndex}
      * of this buffer.
@@ -1158,7 +1168,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     }
 
     /**
-     * Transfers the specified source buffer's data to this buffer starting at
+     * Transfers（转移；变换；调任） the specified source buffer's data to this buffer starting at
      * the specified absolute {@code index} until the source buffer becomes
      * unreadable.  This method is basically same with
      * {@link #setBytes(int, ByteBuf, int, int)}, except that this
@@ -2102,7 +2112,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     /**
      * Locates the first occurrence of the specified {@code value} in this
      * buffer.  The search starts from the current {@code readerIndex}
-     * (inclusive) and lasts for the specified {@code length}.
+     * (inclusive) and lasts（ 持续，延续（动词last的单数）） for the specified {@code length}.
      * <p>
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
@@ -2113,6 +2123,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * @throws IndexOutOfBoundsException
      *         if {@code length} is greater than {@code this.readableBytes}
      */
+    // 只在指定的长度中进行索搜；
     public abstract int bytesBefore(int length, byte value);
 
     /**
@@ -2132,7 +2143,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract int bytesBefore(int index, int length, byte value);
 
     /**
-     * Iterates over the readable bytes of this buffer with the specified {@code processor} in ascending order.
+     * Iterates over the readable bytes of this buffer with the specified {@code processor} in ascending（ 上升的） order.
      *
      * @return {@code -1} if the processor iterated to or beyond the end of the readable bytes.
      *         The last-visited index If the {@link ByteProcessor#process(byte)} returned {@code false}.
@@ -2157,7 +2168,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract int forEachByteDesc(ByteProcessor processor);
 
     /**
-     * Iterates over the specified area of this buffer with the specified {@code processor} in descending order.
+     * Iterates over the specified area of this buffer with the specified {@code processor} in descending下降的；下行的 order.
      * (i.e. {@code (index + length - 1)}, {@code (index + length - 2)}, ... {@code index})
      *
      *
@@ -2236,7 +2247,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBuf retainedSlice(int index, int length);
 
     /**
-     * Returns a buffer which shares the whole region of this buffer.
+     * Returns a buffer which shares the whole region（地区；范围；部位） of this buffer.
      * Modifying the content of the returned buffer or this buffer affects
      * each other's content while they maintain separate indexes and marks.
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
@@ -2457,6 +2468,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     @Override
     public abstract ByteBuf retain(int increment);
 
+    //保持；雇；记住
     @Override
     public abstract ByteBuf retain();
 

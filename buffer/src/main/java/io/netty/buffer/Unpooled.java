@@ -26,8 +26,9 @@ import java.util.Arrays;
 
 
 /**
- * Creates a new {@link ByteBuf} by allocating new space or by wrapping
+ * Creates a new {@link ByteBuf} by allocating（分配） new space or by wrapping
  * or copying existing byte arrays, byte buffers and a string.
+ * 通过分配新的空间或包装或拷贝已有的byte数组、byte buffer 或string，构建新的byteBuf
  *
  * <h3>Use static import</h3>
  * This classes is intended to be used with Java 5 static import statement:
@@ -68,6 +69,7 @@ import java.util.Arrays;
  * provided and their name is all {@code copiedBuffer()}.  It is also convenient
  * to use this operation to merge multiple buffers into one buffer.
  */
+// 使用byte数组表示数据缓冲区；
 public final class Unpooled {
 
     private static final ByteBufAllocator ALLOC = UnpooledByteBufAllocator.DEFAULT;
@@ -671,7 +673,7 @@ public final class Unpooled {
     }
 
     /**
-     * Creates a new 4-byte big-endian buffer that holds the specified 32-bit integer.
+     * Creates a new 4-byte big-endian(字节存储次序，元组排列顺序) buffer that holds the specified 32-bit integer.
      */
     public static ByteBuf copyInt(int value) {
         ByteBuf buf = buffer(4);

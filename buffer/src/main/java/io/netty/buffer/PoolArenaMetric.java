@@ -19,12 +19,12 @@ package io.netty.buffer;
 import java.util.List;
 
 /**
- * Expose metrics for an arena.
+ * Expose metrics 度量 for an arena.
  */
 public interface PoolArenaMetric {
 
     /**
-     * Returns the number of thread caches backed by this arena.
+     * Returns the number of thread caches backed 支持 by this arena.
      */
     int numThreadCaches();
 
