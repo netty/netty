@@ -24,14 +24,18 @@ public class CacheConfig {
     private static final int DEFAULT_MAX_OBJECT_SIZE_IN_BYTES = 8192;
     private static final int DEFAULT_MAX_CACHE_ENTRIES = 1000;
     private static final boolean DEFAULT_SHARED_CACHED = true;
+    private static final boolean DEFAULT_CHECK_FRESHNESS = true;
+
     private final long maxObjectSize;
     private final int maxCacheEntries;
     private final boolean sharedCache;
+    private final boolean checkFreshness;
 
-    CacheConfig(long maxObjectSize, int maxCacheEntries, boolean sharedCache) {
+    CacheConfig(long maxObjectSize, int maxCacheEntries, boolean sharedCache, boolean checkFreshness) {
         this.maxObjectSize = maxObjectSize;
         this.maxCacheEntries = maxCacheEntries;
         this.sharedCache = sharedCache;
+        this.checkFreshness = checkFreshness;
     }
 
     public static Builder custom() {
@@ -59,15 +63,21 @@ public class CacheConfig {
         return sharedCache;
     }
 
+    public boolean shoulCheckFreshness() {
+        return checkFreshness;
+    }
+
     public static class Builder {
         private long maxObjectSize;
         private int maxCacheEntries;
         private boolean sharedCache;
+        private boolean checkFreshness;
 
         Builder() {
             maxObjectSize = DEFAULT_MAX_OBJECT_SIZE_IN_BYTES;
             maxCacheEntries = DEFAULT_MAX_CACHE_ENTRIES;
             sharedCache = DEFAULT_SHARED_CACHED;
+            checkFreshness = DEFAULT_CHECK_FRESHNESS;
         }
 
         /**
@@ -94,8 +104,16 @@ public class CacheConfig {
             return this;
         }
 
+        /**
+         * Set whether the cache should check entry freshness before returning response, true by default.
+         */
+        public Builder shouldCheckFreshness(final boolean checkFreshness) {
+            this.checkFreshness = checkFreshness;
+            return this;
+        }
+
         public CacheConfig build() {
-            return new CacheConfig(maxObjectSize, maxCacheEntries, sharedCache);
+            return new CacheConfig(maxObjectSize, maxCacheEntries, sharedCache, checkFreshness);
         }
     }
 }

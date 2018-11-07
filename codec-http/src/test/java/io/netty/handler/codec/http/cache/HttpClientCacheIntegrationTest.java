@@ -69,12 +69,7 @@ public class HttpClientCacheIntegrationTest {
                                                                            copiedBuffer("Hello World",
                                                                                         CharsetUtil.UTF_8), headers,
                                                                            new ReadOnlyHttpHeaders(false)))
-                                .addListener(new ChannelFutureListener() {
-                                    @Override
-                                    public void operationComplete(final ChannelFuture future) {
-                                        sChannel.shutdownOutput();
-                                    }
-                                });
+                                .addListener(ChannelFutureListener.CLOSE);
                     }
                 });
                 serverChannelLatch.countDown();
@@ -214,7 +209,10 @@ public class HttpClientCacheIntegrationTest {
             sb.config().childGroup().shutdownGracefully();
             cb.config().group().shutdownGracefully();
         }
-
     }
 
+    @Test
+    public void shouldRevalidateCacheEntry() {
+
+    }
 }

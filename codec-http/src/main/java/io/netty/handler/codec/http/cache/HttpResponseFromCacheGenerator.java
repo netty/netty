@@ -19,14 +19,22 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.ReadOnlyHttpHeaders;
+import io.netty.util.AsciiString;
 
+import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.handler.codec.http.cache.CacheControlDecoder.*;
@@ -61,5 +69,21 @@ class HttpResponseFromCacheGenerator {
 
         return new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, cacheEntry.getStatus(), content, headers,
                                            new ReadOnlyHttpHeaders(false));
+    }
+
+    HttpResponse generateNotModifiedResponse(final HttpCacheEntry entry) {
+
+        HttpHeaders headers = new DefaultHttpHeaders();
+        Set<AsciiString> headerNames = new HashSet<AsciiString>(Arrays.asList(
+                HttpHeaderNames.DATE, HttpHeaderNames.ETAG, HttpHeaderNames.CONTENT_LOCATION, HttpHeaderNames.EXPIRES,
+                HttpHeaderNames.CACHE_CONTROL, HttpHeaderNames.VARY));
+        for (AsciiString headerName : headerNames) {
+            final String headerValue = entry.getResponseHeaders().get(headerName);
+            if (headerValue != null) {
+                headers.add(headerName, headerValue);
+            }
+        }
+
+        return new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_MODIFIED, headers);
     }
 }

@@ -16,7 +16,12 @@
 package io.netty.handler.codec.http.cache;
 
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -49,9 +54,9 @@ class HttpCache {
     }
 
     public Future<HttpCacheEntry> cache(final HttpRequest request,
-                                final FullHttpResponse response,
-                                final Date requestSent,
-                                final Date responseReceived) {
+                                        final FullHttpResponse response,
+                                        final Date requestSent,
+                                        final Date responseReceived) {
         final String cacheKey = keyGenerator.generateKey(request);
 
         final HttpCacheEntry entry = new HttpCacheEntry(response.copy(), requestSent, responseReceived,
@@ -80,9 +85,7 @@ class HttpCache {
     }
 
     public Future<Void> invalidate(final HttpRequest request, final Promise<Void> promise) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("Invalid cache entries");
-        }
+        logger.debug("Invalid cache entries");
 
         final String cacheKey = keyGenerator.generateKey(request);
         getCacheEntry(request, executor.<HttpCacheEntry>newPromise()).addListener(new FutureListener<HttpCacheEntry>() {
@@ -102,5 +105,66 @@ class HttpCache {
         });
 
         return promise;
+    }
+
+    /**
+     * @see <a href="https://tools.ietf.org/html/rfc7234#section-4.4">RFC 7234 - Invalidation</a>
+     */
+    public Future<Void> flushCacheEntriesInvalidatedByExchange(final HttpRequest request,
+                                                                      final HttpResponse response,
+                                                                      Promise<Void> promise) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Flush cache entries invalidated by exchange: " + request.headers().get(HttpHeaderNames.HOST) + "; " +
+                         request.method() + ' ' + request.uri() + request.protocolVersion() + " -> " +
+                         response.protocolVersion() + ' ' + response.status());
+        }
+
+        if (!isHttpMethodSafe(request.method())) {
+
+            final HttpResponseStatus status = response.status();
+            if (status.codeClass() != HttpStatusClass.SUCCESS) {
+                return promise.setSuccess(null);
+            }
+
+            // get request uri
+
+            // TODO: flush content location uri if present
+
+            // TODO: flush location uri if present
+
+        }
+
+        return promise;
+    }
+
+    public Future<Void> flushCacheEntriesFor(final HttpRequest request, Promise<Void> promise) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Flush cache entries: " + request.headers().get(HttpHeaderNames.HOST));
+        }
+
+        final HttpMethod method = request.method();
+        if (!isHttpMethodSafe(method)) {
+            return invalidate(request, promise);
+        }
+
+        return promise.setSuccess(null);
+    }
+
+    public Future<HttpCacheEntry> updateCacheEntry(final HttpRequest request,
+                                         final HttpResponse response,
+                                         final Date requestSent,
+                                         final Date responseReceived) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Update cache entry: " + request.headers().get(HttpHeaderNames.HOST));
+        }
+
+        final String cacheKey = keyGenerator.generateKey(request);
+
+        // TODO cacheUpdateHandler.updateCacheEntry
+        return getCacheEntry(request, executor.<HttpCacheEntry>newPromise());
+    }
+
+    private static boolean isHttpMethodSafe(HttpMethod method) {
+        return method == HttpMethod.GET || method == HttpMethod.HEAD || method == HttpMethod.TRACE;
     }
 }

@@ -25,7 +25,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,9 +34,10 @@ class ResponseCachingPolicy {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(RequestCachingPolicy.class);
 
-    private final Set<HttpResponseStatus> uncacheableStatusCodes = new HashSet<HttpResponseStatus>(Arrays.asList(
-            HttpResponseStatus.PARTIAL_CONTENT
-    ));
+    private final Set<HttpResponseStatus> uncacheableStatusCodes = new HashSet<HttpResponseStatus>(
+            Collections.singletonList(
+                    HttpResponseStatus.PARTIAL_CONTENT
+            ));
 
     private final boolean sharedCache;
 
@@ -66,7 +67,9 @@ class ResponseCachingPolicy {
             }
 
             return false;
-        } else if (unknownStatusCode(status)) {
+        }
+
+        if (unknownStatusCode(status)) {
             if (logger.isDebugEnabled()) {
                 logger.debug(status + " response status is unknown.");
             }

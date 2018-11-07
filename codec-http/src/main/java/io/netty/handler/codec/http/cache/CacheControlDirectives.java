@@ -35,7 +35,7 @@ class CacheControlDirectives {
     public CacheControlDirectives(final EnumSet<CacheControlFlags> flags, final int maxAge, final int sMaxAge,
                                   final int maxStale, final int minFresh, final int staleWhileRevalidate,
                                   final int staleIfError) {
-        this.flags = flags;
+        this.flags = EnumSet.copyOf(flags);
         this.maxAge = maxAge;
         this.sMaxAge = sMaxAge;
         this.maxStale = maxStale;

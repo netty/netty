@@ -5,9 +5,11 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.EmptyHttpHeaders;
@@ -242,6 +244,8 @@ public class HttpClientCacheHandlerTest {
         when(responseCachingPolicy.canBeCached((HttpRequest) any(), eq(response))).thenReturn(true);
         when(cache.cache((HttpRequest) any(), (FullHttpResponse) any(), (Date) any(), (Date) any()))
                 .thenReturn(new SucceededFuture<HttpCacheEntry>(ImmediateEventExecutor.INSTANCE, null));
+        when(cache.getCacheEntry((HttpRequest) any(), any(Promise.class)))
+                .thenReturn(new SucceededFuture(ImmediateEventExecutor.INSTANCE, null));
 
         channel.writeInbound(response);
 
@@ -305,6 +309,38 @@ public class HttpClientCacheHandlerTest {
     }
 
     @Test
+    public void shouldInvalidateEntryIfResponseIsNotCacheable() {
+        final EmbeddedChannel channel = new EmbeddedChannel(
+                new HttpClientCacheHandler(requestCachingPolicy, cache, responseCachingPolicy, httpCacheEntryChecker,
+                                           httpResponseFromCacheGenerator, CacheConfig.DEFAULT));
+
+        final DefaultFullHttpResponse response = fullHttpResponse();
+
+        when(responseCachingPolicy.canBeCached((HttpRequest) any(), eq(response))).thenReturn(false);
+
+        channel.writeInbound(response);
+
+        verify(cache, never()).flushCacheEntriesFor(any(HttpRequest.class), any(Promise.class));
+    }
+
+    @Test
+    public void shouldFlushCacheEntriesInvalidatedByExchange() {
+        final EmbeddedChannel channel = new EmbeddedChannel(
+                new HttpClientCacheHandler(requestCachingPolicy, cache, responseCachingPolicy, httpCacheEntryChecker,
+                                           httpResponseFromCacheGenerator, CacheConfig.DEFAULT));
+
+        final HttpResponse response = httpResponse();
+        final ByteBuf content = copiedBuffer("Hello World", CharsetUtil.UTF_8);
+
+        when(responseCachingPolicy.canBeCached((HttpRequest) any(), eq(response))).thenReturn(true);
+
+        channel.writeInbound(response);
+        channel.writeInbound(new DefaultHttpContent(content));
+
+        verify(cache).flushCacheEntriesInvalidatedByExchange((HttpRequest) any(), any(HttpResponse.class), any(Promise.class));
+    }
+
+    @Test
     public void shouldCacheHttpResponseWithContentIfCacheable() {
         final EmbeddedChannel channel = new EmbeddedChannel(
                 new HttpClientCacheHandler(requestCachingPolicy, cache, responseCachingPolicy, httpCacheEntryChecker,
@@ -316,6 +352,8 @@ public class HttpClientCacheHandlerTest {
         when(responseCachingPolicy.canBeCached((HttpRequest) any(), eq(response))).thenReturn(true);
         when(cache.cache((HttpRequest) any(), (FullHttpResponse) any(), (Date) any(), (Date) any()))
                 .thenReturn(new SucceededFuture<HttpCacheEntry>(ImmediateEventExecutor.INSTANCE, null));
+        when(cache.getCacheEntry((HttpRequest) any(), any(Promise.class)))
+                .thenReturn(new SucceededFuture(ImmediateEventExecutor.INSTANCE, null));
 
         channel.writeInbound(response);
         channel.writeInbound(new DefaultHttpContent(content));
@@ -326,6 +364,33 @@ public class HttpClientCacheHandlerTest {
 
         final FullHttpResponse cachedResponse = argumentCaptor.getValue();
         assertThat(cachedResponse.content().compareTo(content), is(0));
+    }
+
+    @Test
+    public void shouldNotCacheHttpResponseIfCacheEntryIsFresher() {
+        final EmbeddedChannel channel = new EmbeddedChannel(
+                new HttpClientCacheHandler(requestCachingPolicy, cache, responseCachingPolicy, httpCacheEntryChecker,
+                                           httpResponseFromCacheGenerator, CacheConfig.DEFAULT));
+
+        final HttpResponse response = httpResponse();
+        final Date before = new Date(1000L);
+        final Date after = new Date(2000L);
+        response.headers().add(HttpHeaderNames.DATE, DateFormatter.format(before));
+        final ByteBuf content = copiedBuffer("Hello World", CharsetUtil.UTF_8);
+
+        when(responseCachingPolicy.canBeCached((HttpRequest) any(), eq(response))).thenReturn(true);
+
+        final HttpCacheEntry httpCacheEntry = new HttpCacheEntry(fullHttpResponse(), after, after,
+                                                                 HttpResponseStatus.OK, EmptyHttpHeaders.INSTANCE);
+        when(cache.getCacheEntry((HttpRequest) any(), any(Promise.class)))
+                .thenReturn(new SucceededFuture(ImmediateEventExecutor.INSTANCE, httpCacheEntry));
+
+        channel.writeInbound(response);
+        channel.writeInbound(new DefaultHttpContent(content));
+        channel.writeInbound(new DefaultLastHttpContent());
+
+        final ArgumentCaptor<FullHttpResponse> argumentCaptor = ArgumentCaptor.forClass(FullHttpResponse.class);
+        verify(cache, never()).cache((HttpRequest) any(), argumentCaptor.capture(), (Date) any(), (Date) any());
     }
 
     @Test
@@ -392,12 +457,75 @@ public class HttpClientCacheHandlerTest {
         assertThat(echoHandler.getCallCount(), is(1));
     }
 
+    @Test
+    public void shouldRevalidateCachedEntry() {
+        final EchoHandler echoHandler = new EchoHandler();
+        final ImmediateEventExecutor eventExecutor = ImmediateEventExecutor.INSTANCE;
+        final EmbeddedChannel channel = new EmbeddedChannel(echoHandler,
+                                                            new HttpClientCacheHandler(requestCachingPolicy,
+                                                                                       cache,
+                                                                                       responseCachingPolicy,
+                                                                                       httpCacheEntryChecker,
+                                                                                       httpResponseFromCacheGenerator,
+                                                                                       CacheConfig.DEFAULT));
+
+        final DefaultFullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/info");
+        request.headers().add(HOST, "example.com");
+
+        final DefaultFullHttpResponse cachedResponse = fullHttpResponse();
+        final DefaultHttpHeaders cacheEntryHeaders = new DefaultHttpHeaders();
+        cacheEntryHeaders.add(ETAG, "etagValue");
+        final HttpCacheEntry httpCacheEntry = new HttpCacheEntry(cachedResponse, new Date(), new Date(),
+                                                                 HttpResponseStatus.OK, cacheEntryHeaders);
+
+        when(cache.getCacheEntry(any(HttpRequest.class), any(Promise.class)))
+                .thenReturn(new SucceededFuture(eventExecutor, null),
+                            new SucceededFuture(eventExecutor, httpCacheEntry));
+        when(cache.updateCacheEntry(any(HttpRequest.class), any(HttpResponse.class), (Date) any(), (Date) any()))
+                .thenReturn(new SucceededFuture(eventExecutor, httpCacheEntry));
+        when(requestCachingPolicy.canBeServedFromCache(request)).thenReturn(true);
+        when(responseCachingPolicy.canBeCached(any(HttpRequest.class), any(HttpResponse.class))).thenReturn(true);
+        when(httpCacheEntryChecker.canUseCachedResponse(any(CacheControlDirectives.class), any(HttpCacheEntry.class),
+                                                        any(Date.class))).thenReturn(false);
+        final HttpResponse notModifiedHttpResponse = notModifiedHttpResponse();
+        when(httpResponseFromCacheGenerator.generateNotModifiedResponse(any(HttpCacheEntry.class))).thenReturn(
+                notModifiedHttpResponse);
+
+        channel.writeOutbound(request);
+        channel.readInbound();
+
+        request.headers().add(IF_NONE_MATCH, "etagValue");
+        channel.writeOutbound(request);
+        final HttpResponse response = channel.readInbound();
+
+        assertThat("", response, is(notModifiedHttpResponse));
+        assertThat(echoHandler.getCallCount(), is(1));
+    }
+
+    private static HttpResponse notModifiedHttpResponse() {
+        return new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.NOT_MODIFIED,
+                                           copiedBuffer("Hello World", CharsetUtil.UTF_8));
+    }
+
     private static class EchoHandler extends ChannelOutboundHandlerAdapter {
 
         private final AtomicInteger callCount = new AtomicInteger();
+        private final AtomicInteger callCount304 = new AtomicInteger();
 
         @Override
-        public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
+        public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) throws Exception {
+            if (!(msg instanceof HttpRequest)) {
+                super.write(ctx, msg, promise);
+                return;
+            }
+
+            final HttpRequest httpRequest = (HttpRequest) msg;
+            if (httpRequest.headers().contains(IF_NONE_MATCH)) {
+                callCount304.incrementAndGet();
+                ctx.fireChannelRead(new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.NOT_MODIFIED, EMPTY_BUFFER));
+                return;
+            }
+
             final DefaultFullHttpResponse response = fullHttpResponse();
             response.headers().add(CACHE_CONTROL, "max-age=3600");
 
@@ -407,6 +535,10 @@ public class HttpClientCacheHandlerTest {
 
         public int getCallCount() {
             return callCount.get();
+        }
+
+        public int getCallCount304() {
+            return callCount304.get();
         }
     }
 }
