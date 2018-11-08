@@ -35,8 +35,19 @@ final class SignatureAlgorithmConverter {
     //              dsa_with_SHA224
     //
     // For more details see https://github.com/openssl/openssl/blob/OpenSSL_1_0_2p/crypto/objects/obj_dat.h
+    //
+    // BoringSSL uses a different format:
+    // https://github.com/google/boringssl/blob/master/ssl/ssl_privkey.cc#L436
+    //
     private static final Pattern PATTERN = Pattern.compile(
-            "((^[a-zA-Z].+)With(.+)Encryption$)|((^[a-zA-Z].+)(_with_|-with-)(.+$))");
+            // group 1 - 3
+            "((^[a-zA-Z].+)With(.+)Encryption$)|" +
+            // group 4 - 7
+            "((^[a-zA-Z].+)(_with_|-with-)(.+$))|" +
+            // group 8 - 11
+            "((^[a-zA-Z].+)(_pkcs1_|_pss_rsae_)(.+$))|" +
+            // group 12 - 14
+            "((^[a-zA-Z].+)_(.+$))");
 
     /**
      * Converts an OpenSSL algorithm name to a Java algorithm name and return it,
@@ -54,6 +65,18 @@ final class SignatureAlgorithmConverter {
             }
             if (matcher.group(4) != null) {
                 return matcher.group(7).toUpperCase(Locale.ROOT) + "with" + matcher.group(5).toUpperCase(Locale.ROOT);
+            }
+
+            if (matcher.group(8) != null) {
+                return matcher.group(11).toUpperCase(Locale.ROOT) + "with" + matcher.group(9).toUpperCase(Locale.ROOT);
+            }
+
+            if (matcher.group(8) != null) {
+                return matcher.group(10).toUpperCase(Locale.ROOT) + "with" + matcher.group(5).toUpperCase(Locale.ROOT);
+            }
+
+            if (matcher.group(12) != null) {
+                return matcher.group(14).toUpperCase(Locale.ROOT) + "with" + matcher.group(13).toUpperCase(Locale.ROOT);
             }
         }
         return null;
