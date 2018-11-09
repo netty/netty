@@ -235,7 +235,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
 
     private static HttpScheme connectionScheme(ChannelHandlerContext ctx) {
         final HttpScheme scheme = connectionSchemeAttribute(ctx).get();
-        return (scheme == null) ? HttpScheme.HTTP : scheme;
+        return scheme == null ? HttpScheme.HTTP : scheme;
     }
 
     private static Attribute<HttpScheme> connectionSchemeAttribute(ChannelHandlerContext ctx) {
@@ -245,6 +245,6 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
 
     private static Channel connectionChannel(ChannelHandlerContext ctx) {
         final Channel ch = ctx.channel();
-        return (ch instanceof Http2StreamChannel) ? ch.parent() : ch;
+        return ch instanceof Http2StreamChannel ? ch.parent() : ch;
     }
 }

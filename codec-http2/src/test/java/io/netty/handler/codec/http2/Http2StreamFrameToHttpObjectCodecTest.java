@@ -905,7 +905,6 @@ public class Http2StreamFrameToHttpObjectCodecTest {
                 }
             }, sharedHandler);
 
-
         FullHttpRequest req = new DefaultFullHttpRequest(
             HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world");
         assertTrue(tlsCh.writeOutbound(req));
