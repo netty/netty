@@ -1745,9 +1745,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // is in progress. See https://github.com/netty/netty/issues/4718.
             return;
         } else {
+            if (handshakePromise.isDone()) {
+                // If the handshake is done already lets just return directly as there is no need to trigger it again.
+                return;
+            }
             // Forced to reuse the old handshake.
             p = handshakePromise;
-            assert !p.isDone();
         }
 
         // Begin handshake.
