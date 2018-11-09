@@ -462,8 +462,9 @@ public final class ByteBufUtil {
     }
 
     private static int lastIndexOf(ByteBuf buffer, int fromIndex, int toIndex, byte value) {
-        fromIndex = Math.min(fromIndex, buffer.capacity());
-        if (fromIndex < 0 || buffer.capacity() == 0) {
+        int capacity = buffer.capacity();
+        fromIndex = Math.min(fromIndex, capacity);
+        if (fromIndex < 0 || capacity == 0) {
             return -1;
         }
 
@@ -829,13 +830,14 @@ public final class ByteBufUtil {
      * If {@code copy} is false the underlying storage will be shared, if possible.
      */
     public static byte[] getBytes(ByteBuf buf, int start, int length, boolean copy) {
-        if (isOutOfBounds(start, length, buf.capacity())) {
+        int capacity = buf.capacity();
+        if (isOutOfBounds(start, length, capacity)) {
             throw new IndexOutOfBoundsException("expected: " + "0 <= start(" + start + ") <= start + length(" + length
-                    + ") <= " + "buf.capacity(" + buf.capacity() + ')');
+                    + ") <= " + "buf.capacity(" + capacity + ')');
         }
 
         if (buf.hasArray()) {
-            if (copy || start != 0 || length != buf.capacity()) {
+            if (copy || start != 0 || length != capacity) {
                 int baseOffset = buf.arrayOffset() + start;
                 return Arrays.copyOfRange(buf.array(), baseOffset, baseOffset + length);
             } else {
@@ -1399,7 +1401,7 @@ public final class ByteBufUtil {
             buffer.clear().position(position);
 
             if (length <= MAX_TL_ARRAY_LEN || !allocator.isDirectBufferPooled()) {
-                getBytes(buffer, threadLocalTempArray(length), 0, chunkLen, out, length);
+                getBytes(buffer, threadLocalTempArray(chunkLen), 0, chunkLen, out, length);
             } else {
                 // if direct buffers are pooled chances are good that heap buffers are pooled as well.
                 ByteBuf tmpBuf = allocator.heapBuffer(chunkLen);
