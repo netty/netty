@@ -1747,6 +1747,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         } else {
             if (handshakePromise.isDone()) {
                 // If the handshake is done already lets just return directly as there is no need to trigger it again.
+                // This can happen if the handshake(...) was triggered before we called channelActive(...) by a
+                // flush() that was triggered by a ChannelFutureListener that was added to the ChannelFuture returned
+                // from the connect(...) method. In this case we will see the flush() happen before we had a chance to
+                // call fireChannelActive() on the pipeline.
                 return;
             }
             // Forced to reuse the old handshake.
