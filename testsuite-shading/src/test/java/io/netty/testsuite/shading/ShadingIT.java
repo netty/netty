@@ -16,7 +16,6 @@
 package io.netty.testsuite.shading;
 
 import io.netty.util.internal.PlatformDependent;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.lang.reflect.Method;
@@ -34,7 +33,6 @@ public class ShadingIT {
         testShading0(SHADING_PREFIX2, className);
     }
 
-    @Ignore("Figure out why this sometimes fail on the CI")
     @Test
     public void testShadingTcnative() throws Exception {
         String className = "io.netty.handler.ssl.OpenSsl";
