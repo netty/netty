@@ -54,6 +54,7 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
+import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
@@ -63,6 +64,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -678,5 +680,78 @@ public class SslHandlerTest {
         channel.close().syncUninterruptibly();
 
         assertTrue(engine.isOutboundDone());
+    }
+
+    @Test(timeout = 10000)
+    public void testHandshakeFailedByWriteBeforeChannelActive() throws Exception {
+        final SslContext sslClientCtx = SslContextBuilder.forClient()
+                                                         .protocols(SslUtils.PROTOCOL_SSL_V3)
+                                                         .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                                                         .sslProvider(SslProvider.JDK).build();
+
+        EventLoopGroup group = new NioEventLoopGroup();
+        Channel sc = null;
+        Channel cc = null;
+        final CountDownLatch activeLatch = new CountDownLatch(1);
+        final AtomicReference<AssertionError> errorRef = new AtomicReference<AssertionError>();
+        final SslHandler sslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
+        try {
+            sc = new ServerBootstrap()
+                    .group(group)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInboundHandlerAdapter())
+                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+
+            cc = new Bootstrap()
+                    .group(group)
+                    .channel(NioSocketChannel.class)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) throws Exception {
+                            ch.pipeline().addLast(sslHandler);
+                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                @Override
+                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+                                        throws Exception {
+                                    if (cause instanceof AssertionError) {
+                                        errorRef.set((AssertionError) cause);
+                                    }
+                                }
+
+                                @Override
+                                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                                    activeLatch.countDown();
+                                }
+                            });
+                        }
+                    }).connect(sc.localAddress()).addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            // Write something to trigger the handshake before fireChannelActive is called.
+                            future.channel().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
+                        }
+                    }).syncUninterruptibly().channel();
+
+            // Ensure there is no AssertionError thrown by having the handshake failed by the writeAndFlush(...) before
+            // channelActive(...) was called. Let's first wait for the activeLatch countdown to happen and after this
+            // check if we saw and AssertionError (even if we timed out waiting).
+            activeLatch.await(5, TimeUnit.SECONDS);
+            AssertionError error = errorRef.get();
+            if (error != null) {
+                throw error;
+            }
+            assertThat(sslHandler.handshakeFuture().await().cause(),
+                       CoreMatchers.<Throwable>instanceOf(SSLException.class));
+        } finally {
+            if (cc != null) {
+                cc.close().syncUninterruptibly();
+            }
+            if (sc != null) {
+                sc.close().syncUninterruptibly();
+            }
+            group.shutdownGracefully();
+
+            ReferenceCountUtil.release(sslClientCtx);
+        }
     }
 }
