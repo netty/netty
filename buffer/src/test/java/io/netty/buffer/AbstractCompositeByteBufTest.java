@@ -1145,6 +1145,36 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     }
 
     @Test
+    public void testReleasesItsComponents2() {
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer(); // 1
+
+        buffer.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+
+        // use readRetainedSlice this time - produces different kind of slices
+        ByteBuf s1 = buffer.readRetainedSlice(2); // 2
+        ByteBuf s2 = s1.readRetainedSlice(2); // 3
+        ByteBuf s3 = s2.readRetainedSlice(2); // 4
+        ByteBuf s4 = s3.readRetainedSlice(2); // 5
+
+        ByteBuf composite = PooledByteBufAllocator.DEFAULT.compositeBuffer()
+            .addComponent(s1)
+            .addComponents(s2, s3, s4)
+            .order(ByteOrder.LITTLE_ENDIAN);
+
+        assertEquals(1, composite.refCnt());
+        assertEquals(2, buffer.refCnt());
+
+        // releasing composite should release the 4 components
+        ReferenceCountUtil.release(composite);
+        assertEquals(0, composite.refCnt());
+        assertEquals(1, buffer.refCnt());
+
+        // last remaining ref to buffer
+        ReferenceCountUtil.release(buffer);
+        assertEquals(0, buffer.refCnt());
+    }
+
+    @Test
     public void testReleasesOnShrink() {
 
         ByteBuf b1 = Unpooled.buffer(2).writeShort(1);

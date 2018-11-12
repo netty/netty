@@ -513,11 +513,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     public CompositeByteBuf removeComponent(int cIndex) {
         checkComponentIndex(cIndex);
         Component comp = components[cIndex];
-        removeComp(cIndex);
         if (lastAccessed == comp) {
             lastAccessed = null;
         }
         comp.freeIfNecessary();
+        removeComp(cIndex);
         if (comp.length() > 0) {
             // Only need to call updateComponentOffsets if the length was > 0
             updateComponentOffsets(cIndex);
@@ -1815,7 +1815,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         }
 
         void freeIfNecessary() {
-            buf.release(); // We should not get a NPE here. If so, it must be a bug.
+            // Release the slice if present since it may have a different
+            // refcount to the unwrapped buf if it is a PooledSlicedByteBuf
+            ByteBuf s = slice;
+            (s != null ? s : buf).release();
+            // null out in both cases since it could be racy
             slice = null;
         }
     }
@@ -2181,7 +2185,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         }
         int newSize = size - to + from;
         for (int i = newSize; i < size; i++) {
-            components[i].slice = null;
             components[i] = null;
         }
         componentCount = newSize;
