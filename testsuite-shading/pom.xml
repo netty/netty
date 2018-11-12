@@ -66,6 +66,35 @@
   </dependencies>
   <profiles>
     <profile>
+      <id>windows</id>
+      <activation>
+        <os>
+          <family>windows</family>
+        </os>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-common</artifactId>
+          <version>${project.version}</version>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-handler</artifactId>
+          <version>${project.version}</version>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>${tcnative.artifactId}</artifactId>
+          <version>${tcnative.version}</version>
+          <classifier>${tcnative.classifier}</classifier>
+          <scope>compile</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
       <id>mac</id>
       <activation>
         <os>
@@ -76,6 +105,12 @@
         <nativeTransportLib>netty_transport_native_kqueue_${os.detected.arch}.jnilib</nativeTransportLib>
       </properties>
       <dependencies>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-common</artifactId>
+          <version>${project.version}</version>
+          <scope>compile</scope>
+        </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-kqueue</artifactId>
@@ -214,6 +249,12 @@
         <nativeTransportLib>netty_transport_native_epoll_${os.detected.arch}.so</nativeTransportLib>
       </properties>
       <dependencies>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-common</artifactId>
+          <version>${project.version}</version>
+          <scope>compile</scope>
+        </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
