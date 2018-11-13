@@ -1146,6 +1146,10 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
     @Test
     public void testReleasesItsComponents2() {
+        // It is important to use a pooled allocator here to ensure
+        // the slices returned by readRetainedSlice are of type
+        // PooledSlicedByteBuf, which maintains an independent refcount
+        // (so that we can be sure to cover this case)
         ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer(); // 1
 
         buffer.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
@@ -1156,7 +1160,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         ByteBuf s3 = s2.readRetainedSlice(2); // 4
         ByteBuf s4 = s3.readRetainedSlice(2); // 5
 
-        ByteBuf composite = PooledByteBufAllocator.DEFAULT.compositeBuffer()
+        ByteBuf composite = Unpooled.compositeBuffer()
             .addComponent(s1)
             .addComponents(s2, s3, s4)
             .order(ByteOrder.LITTLE_ENDIAN);
@@ -1165,12 +1169,12 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertEquals(2, buffer.refCnt());
 
         // releasing composite should release the 4 components
-        ReferenceCountUtil.release(composite);
+        composite.release();
         assertEquals(0, composite.refCnt());
         assertEquals(1, buffer.refCnt());
 
         // last remaining ref to buffer
-        ReferenceCountUtil.release(buffer);
+        buffer.release();
         assertEquals(0, buffer.refCnt());
     }
 
