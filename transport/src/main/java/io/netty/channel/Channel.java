@@ -147,6 +147,17 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     SocketAddress remoteAddress();
 
     /**
+     * Returns the remote address where this channel has been requested connected to. The
+     * returned {@link SocketAddress} is supposed to be down-cast into more
+     * concrete type such as {@link InetSocketAddress} to retrieve the detailed
+     * information.
+     *
+     * @return the requested remote address of this channel.
+     *         {@code null} if this channel has not been requested to connect yet.
+     */
+    SocketAddress requestedRemoteAddress();
+
+    /**
      * Returns the {@link ChannelFuture} which will be notified when this
      * channel is closed.  This method always returns the same future instance.
      */

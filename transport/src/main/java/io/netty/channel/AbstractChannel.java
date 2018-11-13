@@ -64,6 +64,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
+    private volatile SocketAddress requestedRemoteAddress;
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
     private boolean closeInitiated;
@@ -220,11 +221,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress) {
+        this.requestedRemoteAddress = remoteAddress;
         return pipeline.connect(remoteAddress);
     }
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        this.requestedRemoteAddress = remoteAddress;
         return pipeline.connect(remoteAddress, localAddress);
     }
 
@@ -1196,4 +1199,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return this;
         }
     }
+
+    protected void invalidateRequestedRemoteAddress() {
+        requestedRemoteAddress = null;
+    }
+
+    @Override
+    public SocketAddress requestedRemoteAddress() {
+        return requestedRemoteAddress;
+    }
+
 }

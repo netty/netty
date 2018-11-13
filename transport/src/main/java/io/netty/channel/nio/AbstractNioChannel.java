@@ -71,7 +71,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      */
     private ChannelPromise connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
-    private SocketAddress requestedRemoteAddress;
 
     /**
      * Create a new instance
@@ -255,7 +254,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     fulfillConnectPromise(promise, wasActive);
                 } else {
                     connectPromise = promise;
-                    requestedRemoteAddress = remoteAddress;
 
                     // Schedule connect timeout.
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
@@ -340,7 +338,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 doFinishConnect();
                 fulfillConnectPromise(connectPromise, wasActive);
             } catch (Throwable t) {
-                fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
+                fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress()));
             } finally {
                 // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
                 // See https://github.com/netty/netty/issues/1770

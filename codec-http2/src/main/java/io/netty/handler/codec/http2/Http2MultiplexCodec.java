@@ -460,6 +460,8 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         // We start with the writability of the channel when creating the StreamChannel.
         private volatile boolean writable;
 
+        private volatile SocketAddress requestedRemoteAddress;
+
         private boolean outboundClosed;
         /**
          * This variable represents if a read is in progress for the current channel. Note that depending upon the
@@ -568,6 +570,11 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         }
 
         @Override
+        public SocketAddress requestedRemoteAddress() {
+            return requestedRemoteAddress;
+        }
+
+        @Override
         public ChannelFuture closeFuture() {
             return closePromise;
         }
@@ -618,11 +625,13 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
         @Override
         public ChannelFuture connect(SocketAddress remoteAddress) {
+            this.requestedRemoteAddress = remoteAddress;
             return pipeline().connect(remoteAddress);
         }
 
         @Override
         public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+            this.requestedRemoteAddress = remoteAddress;
             return pipeline().connect(remoteAddress, localAddress);
         }
 

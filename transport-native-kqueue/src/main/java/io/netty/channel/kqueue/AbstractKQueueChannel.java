@@ -62,7 +62,6 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
      */
     private ChannelPromise connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
-    private SocketAddress requestedRemoteAddress;
 
     final BsdSocket socket;
     private boolean readFilterEnabled;
@@ -562,7 +561,6 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                     fulfillConnectPromise(promise, wasActive);
                 } else {
                     connectPromise = promise;
-                    requestedRemoteAddress = remoteAddress;
 
                     // Schedule connect timeout.
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
@@ -651,7 +649,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 }
                 fulfillConnectPromise(connectPromise, wasActive);
             } catch (Throwable t) {
-                fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
+                fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress()));
             } finally {
                 if (!connectStillInProgress) {
                     // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
@@ -667,10 +665,11 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         private boolean doFinishConnect() throws Exception {
             if (socket.finishConnect()) {
                 writeFilter(false);
+                SocketAddress requestedRemoteAddress = requestedRemoteAddress();
                 if (requestedRemoteAddress instanceof InetSocketAddress) {
                     remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
                 }
-                requestedRemoteAddress = null;
+                invalidateRequestedRemoteAddress();
                 return true;
             }
             writeFilter(true);

@@ -67,7 +67,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
      */
     private ChannelPromise connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
-    private SocketAddress requestedRemoteAddress;
 
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
@@ -556,7 +555,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                     fulfillConnectPromise(promise, wasActive);
                 } else {
                     connectPromise = promise;
-                    requestedRemoteAddress = remoteAddress;
 
                     // Schedule connect timeout.
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
@@ -645,7 +643,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 }
                 fulfillConnectPromise(connectPromise, wasActive);
             } catch (Throwable t) {
-                fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
+                fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress()));
             } finally {
                 if (!connectStillInProgress) {
                     // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
@@ -664,10 +662,11 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         private boolean doFinishConnect() throws Exception {
             if (socket.finishConnect()) {
                 clearFlag(Native.EPOLLOUT);
+                SocketAddress requestedRemoteAddress = requestedRemoteAddress();
                 if (requestedRemoteAddress instanceof InetSocketAddress) {
                     remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
                 }
-                requestedRemoteAddress = null;
+                invalidateRequestedRemoteAddress();
 
                 return true;
             }
