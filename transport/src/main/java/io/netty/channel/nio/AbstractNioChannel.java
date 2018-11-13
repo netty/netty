@@ -515,4 +515,13 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             connectTimeoutFuture = null;
         }
     }
+
+    @Override
+    public SocketAddress remoteAddress() {
+        final SocketAddress remoteAddress = super.remoteAddress();
+        if (remoteAddress == null) {
+            return requestedRemoteAddress;
+        }
+        return remoteAddress;
+    }
 }
