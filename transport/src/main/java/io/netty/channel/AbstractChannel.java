@@ -172,6 +172,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 this.localAddress = localAddress = unsafe().localAddress();
             } catch (Throwable t) {
                 // Sometimes fails on a closed socket in Windows.
+                logger.error(t.getMessage(), t);
                 return null;
             }
         }
@@ -194,6 +195,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 this.remoteAddress = remoteAddress = unsafe().remoteAddress();
             } catch (Throwable t) {
                 // Sometimes fails on a closed socket in Windows.
+                logger.error(t.getMessage(), t);
                 return null;
             }
         }
