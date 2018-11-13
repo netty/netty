@@ -1817,9 +1817,13 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         void freeIfNecessary() {
             // Release the slice if present since it may have a different
             // refcount to the unwrapped buf if it is a PooledSlicedByteBuf
-            ByteBuf s = slice, toRelease = s == null ? buf : s;
-            toRelease.release();
-            // null out in both cases since it could be racy
+            ByteBuf buffer = slice;
+            if (buffer != null) {
+                buffer.release();
+            } else {
+                buf.release();
+            }
+            // null out in either case since it could be racy
             slice = null;
         }
     }
