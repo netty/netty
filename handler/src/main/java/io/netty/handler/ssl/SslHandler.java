@@ -42,6 +42,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
@@ -1721,16 +1722,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         if (!oldHandshakePromise.isDone()) {
             // There's no need to handshake because handshake is in progress already.
             // Merge the new promise into the old one.
-            oldHandshakePromise.addListener(new FutureListener<Channel>() {
-                @Override
-                public void operationComplete(Future<Channel> future) throws Exception {
-                    if (future.isSuccess()) {
-                        newHandshakePromise.setSuccess(future.getNow());
-                    } else {
-                        newHandshakePromise.setFailure(future.cause());
-                    }
-                }
-            });
+            oldHandshakePromise.addListener(new PromiseNotifier<Channel, Future<Channel>>(newHandshakePromise));
         } else {
             handshakePromise = newHandshakePromise;
             handshake();
