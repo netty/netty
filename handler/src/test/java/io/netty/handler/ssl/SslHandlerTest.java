@@ -74,9 +74,7 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLProtocolException;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
@@ -751,6 +749,78 @@ public class SslHandlerTest {
             }
             group.shutdownGracefully();
 
+            ReferenceCountUtil.release(sslClientCtx);
+        }
+    }
+
+    @Test(timeout = 10000)
+    public void testHandshakeTimeoutFlushStartsHandshake() throws Exception {
+        testHandshakeTimeout0(false);
+    }
+
+    @Test(timeout = 10000)
+    public void testHandshakeTimeoutStartTLS() throws Exception {
+        testHandshakeTimeout0(true);
+    }
+
+    private static void testHandshakeTimeout0(final boolean startTls) throws Exception {
+        final SslContext sslClientCtx = SslContextBuilder.forClient()
+                                                         .startTls(true)
+                                                         .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                                                         .sslProvider(SslProvider.JDK).build();
+
+        EventLoopGroup group = new NioEventLoopGroup();
+        Channel sc = null;
+        Channel cc = null;
+        final SslHandler sslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
+        sslHandler.setHandshakeTimeout(500, TimeUnit.MILLISECONDS);
+
+        try {
+            sc = new ServerBootstrap()
+                    .group(group)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInboundHandlerAdapter())
+                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+
+            ChannelFuture future = new Bootstrap()
+                    .group(group)
+                    .channel(NioSocketChannel.class)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) throws Exception {
+                            ch.pipeline().addLast(sslHandler);
+                            if (startTls) {
+                                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                    @Override
+                                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                                        ctx.writeAndFlush(wrappedBuffer(new byte[] { 1, 2, 3, 4 }));
+                                    }
+                                });
+                            }
+                        }
+                    }).connect(sc.localAddress());
+            if (!startTls) {
+                future.addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        // Write something to trigger the handshake before fireChannelActive is called.
+                        future.channel().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
+                    }
+                });
+            }
+            cc = future.syncUninterruptibly().channel();
+
+            Throwable cause = sslHandler.handshakeFuture().await().cause();
+            assertThat(cause, CoreMatchers.<Throwable>instanceOf(SSLException.class));
+            assertThat(cause.getMessage(), containsString("timed out"));
+        } finally {
+            if (cc != null) {
+                cc.close().syncUninterruptibly();
+            }
+            if (sc != null) {
+                sc.close().syncUninterruptibly();
+            }
+            group.shutdownGracefully();
             ReferenceCountUtil.release(sslClientCtx);
         }
     }

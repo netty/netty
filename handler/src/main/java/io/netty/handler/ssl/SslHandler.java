@@ -767,6 +767,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             sentFirstMessage = true;
             pendingUnencryptedWrites.writeAndRemoveAll(ctx);
             forceFlush(ctx);
+            // Explicit start handshake processing once we send the first message. This will also ensure
+            // we will schedule the timeout if needed.
+            startHandshakeProcessing();
             return;
         }
 
@@ -1661,14 +1664,16 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     private void startHandshakeProcessing() {
-        handshakeStarted = true;
-        if (engine.getUseClientMode()) {
-            // Begin the initial handshake.
-            // channelActive() event has been fired already, which means this.channelActive() will
-            // not be invoked. We have to initialize here instead.
-            handshake(null);
-        } else {
-            applyHandshakeTimeout(null);
+        if (!handshakeStarted) {
+            handshakeStarted = true;
+            if (engine.getUseClientMode()) {
+                // Begin the initial handshake.
+                // channelActive() event has been fired already, which means this.channelActive() will
+                // not be invoked. We have to initialize here instead.
+                handshake(null, true);
+            } else {
+                applyHandshakeTimeout(null);
+            }
         }
     }
 
@@ -1702,13 +1707,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    handshake(promise);
+                    handshake(promise, false);
                 }
             });
             return promise;
         }
 
-        handshake(promise);
+        handshake(promise, false);
         return promise;
     }
 
@@ -1719,7 +1724,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      *                            assuming that the current negotiation has not been finished.
      *                            Currently, {@code null} is expected only for the initial handshake.
      */
-    private void handshake(final Promise<Channel> newHandshakePromise) {
+    private void handshake(final Promise<Channel> newHandshakePromise, boolean initialHandshake) {
         final Promise<Channel> p;
         if (newHandshakePromise != null) {
             final Promise<Channel> oldHandshakePromise = handshakePromise;
@@ -1741,6 +1746,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
             handshakePromise = p = newHandshakePromise;
         } else if (engine.getHandshakeStatus() != HandshakeStatus.NOT_HANDSHAKING) {
+            if (initialHandshake) {
+                // This is the intial handshake either triggered by handlerAdded(...), channelActive(...) or
+                // flush(...) when starttls was used. In all the cases we need to ensure we schedule a timeout.
+                applyHandshakeTimeout(null);
+            }
             // Not all SSLEngine implementations support calling beginHandshake multiple times while a handshake
             // is in progress. See https://github.com/netty/netty/issues/4718.
             return;
