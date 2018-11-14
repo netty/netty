@@ -1,3 +1,7 @@
+2018-11-14日从官方netty fork过来的版本，此时最高的branch是4.1 因此我们在4.0的基础上创建一个分支，进行代码的熟悉 我以前的netty不知道什么版本的，代码读了一部分，但是没有办法运行，因为缺少jar包，因此放弃，从这个官方netty版本开始学习
+
+aixuebo4.0
+
 # Netty Project
 
 Netty is an asynchronous event-driven network application framework for rapid development of maintainable high performance protocol servers & clients.
