@@ -43,16 +43,16 @@ final class PoolThreadCache {
     final PoolArena<ByteBuffer> directArena;
 
     // Hold the caches for the different size classes, which are tiny, small and normal.
-    private final MemoryRegionCache<byte[]>[] tinySubPageHeapCaches;
+    private final MemoryRegionCache<byte[]>[] tinySubPageHeapCaches;//每一种字节大小的类型一个缓冲区间
     private final MemoryRegionCache<byte[]>[] smallSubPageHeapCaches;
     private final MemoryRegionCache<ByteBuffer>[] tinySubPageDirectCaches;
     private final MemoryRegionCache<ByteBuffer>[] smallSubPageDirectCaches;
-    private final MemoryRegionCache<byte[]>[] normalHeapCaches;
+    private final MemoryRegionCache<byte[]>[] normalHeapCaches;//13个不同类型,一直到8k结束
     private final MemoryRegionCache<ByteBuffer>[] normalDirectCaches;
 
     // Used for bitshifting when calculate the index of normal caches later
     private final int numShiftsNormalDirect;
-    private final int numShiftsNormalHeap;
+    private final int numShiftsNormalHeap;//13
     private final int freeSweepAllocationThreshold;
 
     private int allocations;
@@ -95,7 +95,7 @@ final class PoolThreadCache {
             smallSubPageHeapCaches = createSubPageCaches(
                     smallCacheSize, heapArena.numSmallSubpagePools, SizeClass.Small);
 
-            numShiftsNormalHeap = log2(heapArena.pageSize);
+            numShiftsNormalHeap = log2(heapArena.pageSize);//8k,需要13个不同类型的缓冲区
             normalHeapCaches = createNormalCaches(
                     normalCacheSize, maxCachedBufferCapacity, heapArena);
 
@@ -121,7 +121,7 @@ final class PoolThreadCache {
             int cacheSize, int numCaches, SizeClass sizeClass) {
         if (cacheSize > 0 && numCaches > 0) {
             @SuppressWarnings("unchecked")
-            MemoryRegionCache<T>[] cache = new MemoryRegionCache[numCaches];
+            MemoryRegionCache<T>[] cache = new MemoryRegionCache[numCaches];//tiny创建32个,small创建4个
             for (int i = 0; i < cache.length; i++) {
                 // TODO: maybe use cacheSize / cache.length
                 cache[i] = new SubPageMemoryRegionCache<T>(cacheSize, sizeClass);
@@ -288,7 +288,7 @@ final class PoolThreadCache {
     }
 
     private MemoryRegionCache<?> cacheForTiny(PoolArena<?> area, int normCapacity) {
-        int idx = PoolArena.tinyIdx(normCapacity);
+        int idx = PoolArena.tinyIdx(normCapacity);//tiny字节大小型号
         if (area.isDirect()) {
             return cache(tinySubPageDirectCaches, idx);
         }
@@ -312,6 +312,7 @@ final class PoolThreadCache {
         return cache(normalHeapCaches, idx);
     }
 
+    //找到该型号对应的缓冲区间
     private static <T> MemoryRegionCache<T> cache(MemoryRegionCache<T>[] cache, int idx) {
         if (cache == null || idx > cache.length - 1) {
             return null;
