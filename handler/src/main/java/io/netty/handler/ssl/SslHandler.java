@@ -42,6 +42,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
@@ -1670,10 +1671,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 // Begin the initial handshake.
                 // channelActive() event has been fired already, which means this.channelActive() will
                 // not be invoked. We have to initialize here instead.
-                handshake(null, true);
-            } else {
-                applyHandshakeTimeout(null);
+                handshake();
             }
+            applyHandshakeTimeout();
         }
     }
 
@@ -1707,50 +1707,34 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    handshake(promise, false);
+                    renegotiateOnEventLoop(promise);
                 }
             });
             return promise;
         }
 
-        handshake(promise, false);
+        renegotiateOnEventLoop(promise);
         return promise;
+    }
+
+    private void renegotiateOnEventLoop(final Promise<Channel> newHandshakePromise) {
+        final Promise<Channel> oldHandshakePromise = handshakePromise;
+        if (!oldHandshakePromise.isDone()) {
+            // There's no need to handshake because handshake is in progress already.
+            // Merge the new promise into the old one.
+            oldHandshakePromise.addListener(new PromiseNotifier<Channel, Future<Channel>>(newHandshakePromise));
+        } else {
+            handshakePromise = newHandshakePromise;
+            handshake();
+            applyHandshakeTimeout();
+        }
     }
 
     /**
      * Performs TLS (re)negotiation.
-     *
-     * @param newHandshakePromise if {@code null}, use the existing {@link #handshakePromise},
-     *                            assuming that the current negotiation has not been finished.
-     *                            Currently, {@code null} is expected only for the initial handshake.
      */
-    private void handshake(final Promise<Channel> newHandshakePromise, boolean initialHandshake) {
-        final Promise<Channel> p;
-        if (newHandshakePromise != null) {
-            final Promise<Channel> oldHandshakePromise = handshakePromise;
-            if (!oldHandshakePromise.isDone()) {
-                // There's no need to handshake because handshake is in progress already.
-                // Merge the new promise into the old one.
-                oldHandshakePromise.addListener(new FutureListener<Channel>() {
-                    @Override
-                    public void operationComplete(Future<Channel> future) throws Exception {
-                        if (future.isSuccess()) {
-                            newHandshakePromise.setSuccess(future.getNow());
-                        } else {
-                            newHandshakePromise.setFailure(future.cause());
-                        }
-                    }
-                });
-                return;
-            }
-
-            handshakePromise = p = newHandshakePromise;
-        } else if (engine.getHandshakeStatus() != HandshakeStatus.NOT_HANDSHAKING) {
-            if (initialHandshake) {
-                // This is the intial handshake either triggered by handlerAdded(...), channelActive(...) or
-                // flush(...) when starttls was used. In all the cases we need to ensure we schedule a timeout.
-                applyHandshakeTimeout(null);
-            }
+    private void handshake() {
+        if (engine.getHandshakeStatus() != HandshakeStatus.NOT_HANDSHAKING) {
             // Not all SSLEngine implementations support calling beginHandshake multiple times while a handshake
             // is in progress. See https://github.com/netty/netty/issues/4718.
             return;
@@ -1763,8 +1747,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 // call fireChannelActive() on the pipeline.
                 return;
             }
-            // Forced to reuse the old handshake.
-            p = handshakePromise;
         }
 
         // Begin handshake.
@@ -1775,27 +1757,27 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         } catch (Throwable e) {
             setHandshakeFailure(ctx, e);
         } finally {
-           forceFlush(ctx);
+            forceFlush(ctx);
         }
-        applyHandshakeTimeout(p);
     }
 
-    private void applyHandshakeTimeout(Promise<Channel> p) {
-        final Promise<Channel> promise = p == null ? handshakePromise : p;
+    private void applyHandshakeTimeout() {
+        final Promise<Channel> localHandshakePromise = this.handshakePromise;
+
         // Set timeout if necessary.
         final long handshakeTimeoutMillis = this.handshakeTimeoutMillis;
-        if (handshakeTimeoutMillis <= 0 || promise.isDone()) {
+        if (handshakeTimeoutMillis <= 0 || localHandshakePromise.isDone()) {
             return;
         }
 
         final ScheduledFuture<?> timeoutFuture = ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {
-                if (promise.isDone()) {
+                if (localHandshakePromise.isDone()) {
                     return;
                 }
                 try {
-                    if (handshakePromise.tryFailure(HANDSHAKE_TIMED_OUT)) {
+                    if (localHandshakePromise.tryFailure(HANDSHAKE_TIMED_OUT)) {
                         SslUtils.handleHandshakeFailure(ctx, HANDSHAKE_TIMED_OUT, true);
                     }
                 } finally {
@@ -1805,7 +1787,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
 
         // Cancel the handshake timeout when handshake is finished.
-        promise.addListener(new FutureListener<Channel>() {
+        localHandshakePromise.addListener(new FutureListener<Channel>() {
             @Override
             public void operationComplete(Future<Channel> f) throws Exception {
                 timeoutFuture.cancel(false);
