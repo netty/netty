@@ -497,13 +497,16 @@ public abstract class SSLEngineTest {
     }
 
     @Test
-    public void testMutualAuthSameCerts() throws Exception {
+    public void testMutualAuthSameCerts() throws Throwable {
         mySetupMutualAuth(new File(getClass().getResource("test_unencrypted.pem").getFile()),
                           new File(getClass().getResource("test.crt").getFile()),
                           null);
         runTest(null);
         assertTrue(serverLatch.await(2, TimeUnit.SECONDS));
-        assertNull(serverException);
+        Throwable cause = serverException;
+        if (cause != null) {
+            throw cause;
+        }
     }
 
     @Test
@@ -931,9 +934,43 @@ public abstract class SSLEngineTest {
         mySetupMutualAuth(crtFile, keyFile, crtFile, keyPassword, crtFile, keyFile, crtFile, keyPassword);
     }
 
+    private void verifySSLSessionForMutualAuth(SSLSession session, File certFile, String principalName)
+            throws Exception {
+        InputStream in = null;
+        try {
+            assertEquals(principalName, session.getLocalPrincipal().getName());
+            assertEquals(principalName, session.getPeerPrincipal().getName());
+            assertNotNull(session.getId());
+            assertEquals(protocolCipherCombo.cipher, session.getCipherSuite());
+            assertEquals(protocolCipherCombo.protocol, session.getProtocol());
+            assertTrue(session.getApplicationBufferSize() > 0);
+            assertTrue(session.getCreationTime() > 0);
+            assertTrue(session.isValid());
+            assertTrue(session.getLastAccessedTime() > 0);
+
+            in = new FileInputStream(certFile);
+            final byte[] certBytes = SslContext.X509_CERT_FACTORY
+                    .generateCertificate(in).getEncoded();
+
+            // Verify session
+            assertEquals(1, session.getPeerCertificates().length);
+            assertArrayEquals(certBytes, session.getPeerCertificates()[0].getEncoded());
+
+            assertEquals(1, session.getPeerCertificateChain().length);
+            assertArrayEquals(certBytes, session.getPeerCertificateChain()[0].getEncoded());
+
+            assertEquals(1, session.getLocalCertificates().length);
+            assertArrayEquals(certBytes, session.getLocalCertificates()[0].getEncoded());
+        } finally {
+            if (in != null) {
+                in.close();
+            }
+        }
+    }
+
     private void mySetupMutualAuth(
             File servertTrustCrtFile, File serverKeyFile, final File serverCrtFile, String serverKeyPassword,
-            File clientTrustCrtFile, File clientKeyFile, File clientCrtFile, String clientKeyPassword)
+            File clientTrustCrtFile, File clientKeyFile, final File clientCrtFile, String clientKeyPassword)
             throws InterruptedException, SSLException {
         serverSslCtx =
                 SslContextBuilder.forServer(serverCrtFile, serverKeyFile, serverKeyPassword)
@@ -969,7 +1006,7 @@ public abstract class SSLEngineTest {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
 
                 ChannelPipeline p = ch.pipeline();
-                SSLEngine engine = wrapEngine(serverSslCtx.newEngine(ch.alloc()));
+                final SSLEngine engine = wrapEngine(serverSslCtx.newEngine(ch.alloc()));
                 engine.setUseClientMode(false);
                 engine.setNeedClientAuth(true);
 
@@ -991,27 +1028,8 @@ public abstract class SSLEngineTest {
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
                             try {
-                                InputStream in = new FileInputStream(serverCrtFile);
-                                try {
-                                    final byte[] cert = SslContext.X509_CERT_FACTORY
-                                            .generateCertificate(in).getEncoded();
-
-                                    // Verify session
-                                    SSLSession session = ctx.pipeline().get(SslHandler.class).engine().getSession();
-                                    assertEquals(1, session.getPeerCertificates().length);
-                                    assertArrayEquals(cert, session.getPeerCertificates()[0].getEncoded());
-
-                                    assertEquals(1, session.getPeerCertificateChain().length);
-                                    assertArrayEquals(cert, session.getPeerCertificateChain()[0].getEncoded());
-
-                                    assertEquals(1, session.getLocalCertificates().length);
-                                    assertArrayEquals(cert, session.getLocalCertificates()[0].getEncoded());
-
-                                    assertEquals(PRINCIPAL_NAME, session.getLocalPrincipal().getName());
-                                    assertEquals(PRINCIPAL_NAME, session.getPeerPrincipal().getName());
-                                } finally {
-                                    in.close();
-                                }
+                                verifySSLSessionForMutualAuth(
+                                        engine.getSession(), serverCrtFile, PRINCIPAL_NAME);
                             } catch (Throwable cause) {
                                 serverException = cause;
                             }
@@ -1029,12 +1047,24 @@ public abstract class SSLEngineTest {
             protected void initChannel(Channel ch) throws Exception {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
 
-                SslHandler handler = clientSslCtx.newHandler(ch.alloc());
+                final SslHandler handler = clientSslCtx.newHandler(ch.alloc());
                 handler.engine().setNeedClientAuth(true);
                 ChannelPipeline p = ch.pipeline();
                 p.addLast(handler);
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
                 p.addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        if (evt == SslHandshakeCompletionEvent.SUCCESS) {
+                            try {
+                                verifySSLSessionForMutualAuth(
+                                        handler.engine().getSession(), clientCrtFile, PRINCIPAL_NAME);
+                            } catch (Throwable cause) {
+                                clientException = cause;
+                            }
+                        }
+                    }
+
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                         if (cause.getCause() instanceof SSLHandshakeException) {
@@ -2658,6 +2688,41 @@ public abstract class SSLEngineTest {
         } finally {
             cert.delete();
             cleanupServerSslEngine(server);
+        }
+    }
+
+    @Test
+    public void testGetCiphersuite() throws Exception {
+        clientSslCtx = SslContextBuilder.forClient()
+                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                                        .sslProvider(sslClientProvider())
+                                        .sslContextProvider(clientSslContextProvider())
+                                        .protocols(protocols())
+                                        .ciphers(ciphers())
+                                        .build();
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                                        .sslProvider(sslServerProvider())
+                                        .sslContextProvider(serverSslContextProvider())
+                                        .protocols(protocols())
+                                        .ciphers(ciphers())
+                                        .build();
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            handshake(clientEngine, serverEngine);
+
+            String clientCipher = clientEngine.getSession().getCipherSuite();
+            String serverCipher = serverEngine.getSession().getCipherSuite();
+            assertEquals(clientCipher, serverCipher);
+
+            assertEquals(protocolCipherCombo.cipher, clientCipher);
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
+            ssc.delete();
         }
     }
 
