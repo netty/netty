@@ -29,7 +29,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -42,7 +42,7 @@ import static java.util.Arrays.asList;
  */
 final class SslUtils {
     // See https://tools.ietf.org/html/rfc8446#appendix-B.4
-    private static final Set<String> TLSV13_CIPHERS = Collections.unmodifiableSet(new HashSet<String>(
+    static final Set<String> TLSV13_CIPHERS = Collections.unmodifiableSet(new LinkedHashSet<String>(
             asList("TLS_AES_256_GCM_SHA384", "TLS_CHACHA20_POLY1305_SHA256",
                           "TLS_AES_128_GCM_SHA256", "TLS_AES_128_CCM_8_SHA256",
                           "TLS_AES_128_CCM_SHA256")));
@@ -54,6 +54,8 @@ final class SslUtils {
     static final String PROTOCOL_TLS_V1_1 = "TLSv1.1";
     static final String PROTOCOL_TLS_V1_2 = "TLSv1.2";
     static final String PROTOCOL_TLS_V1_3 = "TLSv1.3";
+
+    static final String INVALID_CIPHER = "SSL_NULL_WITH_NULL_NULL";
 
     /**
      * change cipher spec

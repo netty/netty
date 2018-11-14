@@ -61,11 +61,6 @@ public final class OpenSsl {
     private static final boolean SUPPORTS_HOSTNAME_VALIDATION;
     private static final boolean USE_KEYMANAGER_FACTORY;
     private static final boolean SUPPORTS_OCSP;
-    private static final String TLSV13_CIPHERS = "TLS_AES_256_GCM_SHA384" + ':' +
-                                                 "TLS_CHACHA20_POLY1305_SHA256" + ':' +
-                                                 "TLS_AES_128_GCM_SHA256" + ':' +
-                                                 "TLS_AES_128_CCM_8_SHA256" + ':' +
-                                                 "TLS_AES_128_CCM_SHA256";
     private static final boolean TLSV13_SUPPORTED;
     private static final boolean IS_BORINGSSL;
     static final Set<String> SUPPORTED_PROTOCOLS_SET;
@@ -149,8 +144,22 @@ public final class OpenSsl {
                 long certBio = 0;
                 try {
                     try {
-                        SSLContext.setCipherSuite(sslCtx, TLSV13_CIPHERS, true);
-                        tlsv13Supported = true;
+                        StringBuilder tlsv13Ciphers = new StringBuilder();
+
+                        for (String cipher: TLSV13_CIPHERS) {
+                            String converted = CipherSuiteConverter.toOpenSsl(cipher, IS_BORINGSSL);
+                            if (converted != null) {
+                                tlsv13Ciphers.append(converted).append(':');
+                            }
+                        }
+                        if (tlsv13Ciphers.length() == 0) {
+                            tlsv13Supported = false;
+                        } else {
+                            tlsv13Ciphers.setLength(tlsv13Ciphers.length() - 1);
+                            SSLContext.setCipherSuite(sslCtx, tlsv13Ciphers.toString() , true);
+                            tlsv13Supported = true;
+                        }
+
                     } catch (Exception ignore) {
                         tlsv13Supported = false;
                     }
@@ -174,7 +183,10 @@ public final class OpenSsl {
                             Collections.addAll(availableOpenSslCipherSuites,
                                                "TLS_AES_128_GCM_SHA256",
                                                "TLS_AES_256_GCM_SHA384" ,
-                                               "TLS_CHACHA20_POLY1305_SHA256");
+                                               "TLS_CHACHA20_POLY1305_SHA256",
+                                               "AEAD-AES128-GCM-SHA256",
+                                               "AEAD-AES256-GCM-SHA384",
+                                               "AEAD-CHACHA20-POLY1305-SHA256");
                         }
                         try {
                             SSL.setHostNameValidation(ssl, 0, "netty.io");
@@ -461,7 +473,7 @@ public final class OpenSsl {
      * Both Java-style cipher suite and OpenSSL-style cipher suite are accepted.
      */
     public static boolean isCipherSuiteAvailable(String cipherSuite) {
-        String converted = CipherSuiteConverter.toOpenSsl(cipherSuite);
+        String converted = CipherSuiteConverter.toOpenSsl(cipherSuite, IS_BORINGSSL);
         if (converted != null) {
             cipherSuite = converted;
         }
