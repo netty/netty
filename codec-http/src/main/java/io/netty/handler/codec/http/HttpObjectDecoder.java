@@ -714,7 +714,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         aEnd = findWhitespace(sb, aStart);
 
         bStart = findNonWhitespace(sb, aEnd);
-        bEnd = findWhitespace(sb, bStart);
+        bEnd = findLastWhitespace(sb, bStart);
 
         cStart = findNonWhitespace(sb, bEnd);
         cEnd = findEndOfString(sb);
@@ -783,6 +783,20 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
         }
         return 0;
+    }
+
+    private static int findLastWhitespace(AppendableCharSequence sb, int offset) {
+        boolean isStartedNonWhitespace = false;
+        for (int result = sb.length() - 1; result >= offset; --result) {
+            if (Character.isWhitespace(sb.charAtUnsafe(result))) {
+                if (isStartedNonWhitespace) {
+                    return result;
+                }
+            } else {
+                isStartedNonWhitespace = true;
+            }
+        }
+        return sb.length();
     }
 
     private static class HeaderParser implements ByteProcessor {
