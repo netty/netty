@@ -37,17 +37,15 @@ final class SignatureAlgorithmConverter {
     // For more details see https://github.com/openssl/openssl/blob/OpenSSL_1_0_2p/crypto/objects/obj_dat.h
     //
     // BoringSSL uses a different format:
-    // https://github.com/google/boringssl/blob/master/ssl/ssl_privkey.cc#L436
+    // https://github.com/google/boringssl/blob/8525ff3/ssl/ssl_privkey.cc#L436
     //
     private static final Pattern PATTERN = Pattern.compile(
-            // group 1 - 3
-            "((^[a-zA-Z].+)With(.+)Encryption$)|" +
-            // group 4 - 7
-            "((^[a-zA-Z].+)(_with_|-with-)(.+$))|" +
-            // group 8 - 11
-            "((^[a-zA-Z].+)(_pkcs1_|_pss_rsae_)(.+$))|" +
-            // group 12 - 14
-            "((^[a-zA-Z].+)_(.+$))");
+            // group 1 - 2
+            "(?:(^[a-zA-Z].+)With(.+)Encryption$)|" +
+            // group 3 - 4
+            "(?:(^[a-zA-Z].+)(?:_with_|-with-|_pkcs1_|_pss_rsae_)(.+$))|" +
+            // group 5 - 6
+            "(?:(^[a-zA-Z].+)_(.+$))");
 
     /**
      * Converts an OpenSSL algorithm name to a Java algorithm name and return it,
@@ -59,24 +57,16 @@ final class SignatureAlgorithmConverter {
         }
         Matcher matcher = PATTERN.matcher(opensslName);
         if (matcher.matches()) {
-            String group2 = matcher.group(2);
-            if (group2 != null) {
-                return group2.toUpperCase(Locale.ROOT) + "with" + matcher.group(3).toUpperCase(Locale.ROOT);
+            String group1 = matcher.group(1);
+            if (group1 != null) {
+                return group1.toUpperCase(Locale.ROOT) + "with" + matcher.group(2).toUpperCase(Locale.ROOT);
             }
-            if (matcher.group(4) != null) {
-                return matcher.group(7).toUpperCase(Locale.ROOT) + "with" + matcher.group(5).toUpperCase(Locale.ROOT);
-            }
-
-            if (matcher.group(8) != null) {
-                return matcher.group(11).toUpperCase(Locale.ROOT) + "with" + matcher.group(9).toUpperCase(Locale.ROOT);
+            if (matcher.group(3) != null) {
+                return matcher.group(4).toUpperCase(Locale.ROOT) + "with" + matcher.group(3).toUpperCase(Locale.ROOT);
             }
 
-            if (matcher.group(8) != null) {
-                return matcher.group(10).toUpperCase(Locale.ROOT) + "with" + matcher.group(5).toUpperCase(Locale.ROOT);
-            }
-
-            if (matcher.group(12) != null) {
-                return matcher.group(14).toUpperCase(Locale.ROOT) + "with" + matcher.group(13).toUpperCase(Locale.ROOT);
+            if (matcher.group(5) != null) {
+                return matcher.group(6).toUpperCase(Locale.ROOT) + "with" + matcher.group(5).toUpperCase(Locale.ROOT);
             }
         }
         return null;
