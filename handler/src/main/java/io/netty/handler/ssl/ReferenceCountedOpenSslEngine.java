@@ -42,8 +42,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.locks.Lock;
 
@@ -287,9 +289,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                 if (algs == null) {
                                     peerSupportedSignatureAlgorithms = EmptyArrays.EMPTY_STRINGS;
                                 } else {
-                                    List<String> algorithmList = new ArrayList<String>(algs.length);
+                                    Set<String> algorithmList = new LinkedHashSet<String>(algs.length);
                                     for (String alg: algs) {
                                         String converted = SignatureAlgorithmConverter.toJavaName(alg);
+
                                         if (converted != null) {
                                             algorithmList.add(converted);
                                         }
