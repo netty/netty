@@ -22,18 +22,27 @@ import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
 import io.netty.util.ResourceLeakTracker;
 
+import java.security.cert.X509Certificate;
+
 final class DefaultOpenSslKeyMaterial extends AbstractReferenceCounted implements OpenSslKeyMaterial {
 
     private static final ResourceLeakDetector<DefaultOpenSslKeyMaterial> leakDetector =
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(DefaultOpenSslKeyMaterial.class);
     private final ResourceLeakTracker<DefaultOpenSslKeyMaterial> leak;
+    private final X509Certificate[] x509CertificateChain;
     private long chain;
     private long privateKey;
 
-    DefaultOpenSslKeyMaterial(long chain, long privateKey) {
+    DefaultOpenSslKeyMaterial(long chain, long privateKey, X509Certificate[] x509CertificateChain) {
         this.chain = chain;
         this.privateKey = privateKey;
+        this.x509CertificateChain = x509CertificateChain;
         leak = leakDetector.track(this);
+    }
+
+    @Override
+    public X509Certificate[] certificateChain() {
+        return x509CertificateChain.clone();
     }
 
     @Override
