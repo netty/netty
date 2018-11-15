@@ -203,7 +203,7 @@ public final class HttpHeaderValues {
     /**
      * {@code "upgrade"}
      */
-    public static final AsciiString UPGRADE = AsciiString.cached("upgrade");
+    public static final AsciiString UPGRADE = AsciiString.cached("Upgrade");
     /**
      * {@code "websocket"}
      */
