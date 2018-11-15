@@ -22,6 +22,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.concurrent.Future;
+import org.hamcrest.core.IsInstanceOf;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
@@ -29,7 +30,9 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
 
@@ -171,4 +174,41 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             group.shutdownGracefully();
         }
     }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void testTaskRemovalOnShutdownThrowsNoUnsupportedOperationException() throws Exception {
+        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        final Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                // NOOP
+            }
+        };
+        // Just run often enough to trigger it normally.
+        for (int i = 0; i < 1000; i++) {
+            NioEventLoopGroup group = new NioEventLoopGroup(1);
+            final NioEventLoop loop = (NioEventLoop) group.next();
+
+            Thread t = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        for (;;) {
+                            loop.execute(task);
+                        }
+                    } catch (Throwable cause) {
+                        error.set(cause);
+                    }
+                }
+            });
+            t.start();
+            group.shutdownNow();
+            t.join();
+            group.terminationFuture().syncUninterruptibly();
+            assertThat(error.get(), IsInstanceOf.instanceOf(RejectedExecutionException.class));
+            error.set(null);
+        }
+    }
+
 }
