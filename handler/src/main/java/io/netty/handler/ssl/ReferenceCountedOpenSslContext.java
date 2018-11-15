@@ -421,13 +421,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      */
     @Deprecated
     public final long context() {
-        Lock readerLock = ctxLock.readLock();
-        readerLock.lock();
-        try {
-            return ctx;
-        } finally {
-            readerLock.unlock();
-        }
+        return sslCtxPointer();
     }
 
     /**
@@ -502,7 +496,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         Lock readerLock = ctxLock.readLock();
         readerLock.lock();
         try {
-            return ctx;
+            return SSLContext.getSslCtx(ctx);
         } finally {
             readerLock.unlock();
         }
