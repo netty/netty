@@ -778,8 +778,20 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         addTask(task);
         if (!inEventLoop) {
             startThread();
-            if (isShutdown() && removeTask(task)) {
-                reject();
+            if (isShutdown()) {
+                boolean reject = false;
+                try {
+                    if (removeTask(task)) {
+                        reject = true;
+                    }
+                } catch (UnsupportedOperationException e) {
+                    // The task queue does not support removal so the best thing we can do is to just move on and
+                    // hope we will be able to pick-up the task before its completely terminated.
+                    // In worst case we will log on termination.
+                }
+                if (reject) {
+                    reject();
+                }
             }
         }
 
