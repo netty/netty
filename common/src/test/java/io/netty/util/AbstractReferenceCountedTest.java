@@ -15,7 +15,20 @@
  */
 package io.netty.util;
 
+import io.netty.util.internal.ThreadLocalRandom;
 import org.junit.Test;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -72,6 +85,107 @@ public class AbstractReferenceCountedTest {
         assertTrue(referenceCounted.release());
         assertEquals(0, referenceCounted.refCnt());
         referenceCounted.retain(2);
+    }
+
+    @Test(timeout = 30000)
+    public void testRetainFromMultipleThreadsThrowsReferenceCountException() throws Exception {
+        int threads = 4;
+        Queue<Future<?>> futures = new ArrayDeque<Future<?>>(threads);
+        ExecutorService service = Executors.newFixedThreadPool(threads);
+        final AtomicInteger refCountExceptions = new AtomicInteger();
+
+        try {
+            for (int i = 0; i < 10000; i++) {
+                final AbstractReferenceCounted referenceCounted = newReferenceCounted();
+                final CountDownLatch retainLatch = new CountDownLatch(1);
+                assertTrue(referenceCounted.release());
+
+                for (int a = 0; a < threads; a++) {
+                    final int retainCnt = ThreadLocalRandom.current().nextInt(1, Integer.MAX_VALUE);
+                    futures.add(service.submit(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                retainLatch.await();
+                                try {
+                                    referenceCounted.retain(retainCnt);
+                                } catch (IllegalReferenceCountException e) {
+                                    refCountExceptions.incrementAndGet();
+                                }
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                        }
+                    }));
+                }
+                retainLatch.countDown();
+
+                for (;;) {
+                    Future<?> f = futures.poll();
+                    if (f == null) {
+                        break;
+                    }
+                    f.get();
+                }
+                assertEquals(4, refCountExceptions.get());
+                refCountExceptions.set(0);
+            }
+        } finally {
+            service.shutdown();
+        }
+    }
+
+    @Test(timeout = 30000)
+    public void testReleaseFromMultipleThreadsThrowsReferenceCountException() throws Exception {
+        int threads = 4;
+        Queue<Future<?>> futures = new ArrayDeque<Future<?>>(threads);
+        ExecutorService service = Executors.newFixedThreadPool(threads);
+        final AtomicInteger refCountExceptions = new AtomicInteger();
+
+        try {
+            for (int i = 0; i < 10000; i++) {
+                final AbstractReferenceCounted referenceCounted = newReferenceCounted();
+                final CountDownLatch releaseLatch = new CountDownLatch(1);
+                final AtomicInteger releasedCount = new AtomicInteger();
+
+                for (int a = 0; a < threads; a++) {
+                    final AtomicInteger releaseCnt = new AtomicInteger(0);
+
+                    futures.add(service.submit(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                releaseLatch.await();
+                                try {
+                                    if (referenceCounted.release(releaseCnt.incrementAndGet())) {
+                                        releasedCount.incrementAndGet();
+                                    }
+                                } catch (IllegalReferenceCountException e) {
+                                    refCountExceptions.incrementAndGet();
+                                }
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                        }
+                    }));
+                }
+                releaseLatch.countDown();
+
+                for (;;) {
+                    Future<?> f = futures.poll();
+                    if (f == null) {
+                        break;
+                    }
+                    f.get();
+                }
+                assertEquals(3, refCountExceptions.get());
+                assertEquals(1, releasedCount.get());
+
+                refCountExceptions.set(0);
+            }
+        } finally {
+            service.shutdown();
+        }
     }
 
     private static AbstractReferenceCounted newReferenceCounted() {
