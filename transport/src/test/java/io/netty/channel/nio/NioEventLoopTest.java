@@ -19,16 +19,22 @@ import io.netty.channel.AbstractEventLoopTest;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SelectStrategy;
+import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.util.IntSupplier;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import org.hamcrest.core.IsInstanceOf;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.spi.SelectorProvider;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -208,6 +214,47 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             group.terminationFuture().syncUninterruptibly();
             assertThat(error.get(), IsInstanceOf.instanceOf(RejectedExecutionException.class));
             error.set(null);
+        }
+    }
+
+    @Test
+    public void testRebuildSelectorOnIOException() {
+        SelectStrategyFactory selectStrategyFactory = new SelectStrategyFactory() {
+            @Override
+            public SelectStrategy newSelectStrategy() {
+                return new SelectStrategy() {
+
+                    private boolean thrown;
+
+                    @Override
+                    public int calculateStrategy(IntSupplier selectSupplier, boolean hasTasks) throws Exception {
+                        if (!thrown) {
+                            thrown = true;
+                            throw new IOException();
+                        }
+                        return -1;
+                    }
+                };
+            }
+        };
+
+        EventLoopGroup group = new NioEventLoopGroup(1, new DefaultThreadFactory("ioPool"),
+                                                     SelectorProvider.provider(), selectStrategyFactory);
+        final NioEventLoop loop = (NioEventLoop) group.next();
+        try {
+            Channel channel = new NioServerSocketChannel();
+            Selector selector = loop.unwrappedSelector();
+
+            loop.register(channel).syncUninterruptibly();
+
+            Selector newSelector = ((NioEventLoop) channel.eventLoop()).unwrappedSelector();
+            assertTrue(newSelector.isOpen());
+            assertNotSame(selector, newSelector);
+            assertFalse(selector.isOpen());
+
+            channel.close().syncUninterruptibly();
+        } finally {
+            group.shutdownGracefully();
         }
     }
 
