@@ -193,6 +193,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     };
 
     private volatile ClientAuth clientAuth = ClientAuth.NONE;
+    private volatile Certificate[] localCertificateChain;
 
     // Updated once a new handshake is started and so the SSLSession reused.
     private volatile long lastAccessed = -1;
@@ -216,7 +217,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private final OpenSslEngineMap engineMap;
     private final OpenSslApplicationProtocolNegotiator apn;
     private final OpenSslSession session;
-    private final Certificate[] localCerts;
     private final ByteBuffer[] singleSrcBuffer = new ByteBuffer[1];
     private final ByteBuffer[] singleDstBuffer = new ByteBuffer[1];
     private final boolean enableOcsp;
@@ -323,8 +323,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             session = new DefaultOpenSslSession(context.sessionContext());
         }
         engineMap = context.engineMap;
-        localCerts = context.keyCertChain;
         enableOcsp = context.enableOcsp;
+        // context.keyCertChain will only be non-null if we do not use the KeyManagerFactory. In this case
+        // localCertificateChain will be set in setKeyMaterial(...).
+        localCertificateChain = context.keyCertChain;
+
         this.jdkCompatibilityMode = jdkCompatibilityMode;
         Lock readerLock = context.ctxLock.readLock();
         readerLock.lock();
@@ -377,6 +380,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // Only create the leak after everything else was executed and so ensure we don't produce a false-positive for
         // the ResourceLeakDetector.
         leak = leakDetection ? leakDetector.track(this) : null;
+    }
+
+    final void setKeyMaterial(OpenSslKeyMaterial keyMaterial) throws  Exception {
+        SSL.setKeyMaterial(ssl, keyMaterial.certificateChainAddress(), keyMaterial.privateKeyAddress());
+        localCertificateChain = keyMaterial.certificateChain();
     }
 
     /**
@@ -1930,6 +1938,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // thread.
         private X509Certificate[] x509PeerCerts;
         private Certificate[] peerCerts;
+        private Certificate[] localCerts;
+
         private String protocol;
         private String cipher;
         private byte[] id;
@@ -2070,6 +2080,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     id = SSL.getSessionId(ssl);
                     cipher = toJavaCipherSuite(SSL.getCipherForSSL(ssl));
                     protocol = SSL.getVersion(ssl);
+                    localCerts = localCertificateChain;
 
                     initPeerCerts();
                     selectApplicationProtocol();

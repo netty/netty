@@ -96,8 +96,7 @@ final class OpenSslKeyMaterialManager {
         try {
             keyMaterial = provider.chooseKeyMaterial(engine.alloc, alias);
             if (keyMaterial != null) {
-                SSL.setKeyMaterial(engine.sslPointer(),
-                                   keyMaterial.certificateChainAddress(), keyMaterial.privateKeyAddress());
+                engine.setKeyMaterial(keyMaterial);
             }
         } catch (SSLException e) {
             throw e;
