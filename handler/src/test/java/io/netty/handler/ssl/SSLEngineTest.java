@@ -60,6 +60,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.security.KeyStore;
+import java.security.Principal;
 import java.security.Provider;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
@@ -82,6 +83,7 @@ import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
@@ -97,6 +99,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.verify;
@@ -2719,6 +2722,183 @@ public abstract class SSLEngineTest {
             assertEquals(clientCipher, serverCipher);
 
             assertEquals(protocolCipherCombo.cipher, clientCipher);
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
+            ssc.delete();
+        }
+    }
+
+    @Test
+    public void testSessionAfterHandshake() throws Exception {
+        testSessionAfterHandshake0(false, false);
+    }
+
+    @Test
+    public void testSessionAfterHandshakeMutualAuth() throws Exception {
+        testSessionAfterHandshake0(false, true);
+    }
+
+    @Test
+    public void testSessionAfterHandshakeKeyManagerFactory() throws Exception {
+        testSessionAfterHandshake0(true, false);
+    }
+
+    @Test
+    public void testSessionAfterHandshakeKeyManagerFactoryMutualAuth() throws Exception {
+        testSessionAfterHandshake0(true, true);
+    }
+
+    private void testSessionAfterHandshake0(boolean useKeyManagerFactory, boolean mutualAuth) throws Exception {
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        KeyManagerFactory kmf = useKeyManagerFactory ?
+                SslContext.buildKeyManagerFactory(
+                        new java.security.cert.X509Certificate[] { ssc.cert()}, ssc.key(), null, null) : null;
+
+        SslContextBuilder clientContextBuilder = SslContextBuilder.forClient();
+        if (mutualAuth) {
+            if (kmf != null) {
+                clientContextBuilder.keyManager(kmf);
+            } else {
+                clientContextBuilder.keyManager(ssc.key(), ssc.cert());
+            }
+        }
+        clientSslCtx = clientContextBuilder
+                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                                        .sslProvider(sslClientProvider())
+                                        .sslContextProvider(clientSslContextProvider())
+                                        .protocols(protocols())
+                                        .ciphers(ciphers())
+                                        .build();
+
+        SslContextBuilder serverContextBuilder = kmf != null ?
+                SslContextBuilder.forServer(kmf) :
+                SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
+        if (mutualAuth) {
+            serverContextBuilder.clientAuth(ClientAuth.REQUIRE);
+        }
+        serverSslCtx = serverContextBuilder.trustManager(InsecureTrustManagerFactory.INSTANCE)
+                                     .sslProvider(sslServerProvider())
+                                     .sslContextProvider(serverSslContextProvider())
+                                     .protocols(protocols())
+                                     .ciphers(ciphers())
+                                     .build();
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+
+            handshake(clientEngine, serverEngine);
+
+            SSLSession clientSession = clientEngine.getSession();
+            SSLSession serverSession = serverEngine.getSession();
+
+            assertNull(clientSession.getPeerHost());
+            assertNull(serverSession.getPeerHost());
+            assertEquals(-1, clientSession.getPeerPort());
+            assertEquals(-1, serverSession.getPeerPort());
+
+            assertTrue(clientSession.getCreationTime() > 0);
+            assertTrue(serverSession.getCreationTime() > 0);
+
+            assertTrue(clientSession.getLastAccessedTime() > 0);
+            assertTrue(serverSession.getLastAccessedTime() > 0);
+
+            assertEquals(protocolCipherCombo.protocol, clientSession.getProtocol());
+            assertEquals(protocolCipherCombo.protocol, serverSession.getProtocol());
+
+            assertEquals(protocolCipherCombo.cipher, clientSession.getCipherSuite());
+            assertEquals(protocolCipherCombo.cipher, serverSession.getCipherSuite());
+
+            assertNotNull(clientSession.getId());
+            assertNotNull(serverSession.getId());
+
+            assertTrue(clientSession.getApplicationBufferSize() > 0);
+            assertTrue(serverSession.getApplicationBufferSize() > 0);
+
+            assertTrue(clientSession.getPacketBufferSize() > 0);
+            assertTrue(serverSession.getPacketBufferSize() > 0);
+
+            assertNotNull(clientSession.getSessionContext());
+            assertNotNull(serverSession.getSessionContext());
+
+            Object value = new Object();
+
+            assertEquals(0, clientSession.getValueNames().length);
+            clientSession.putValue("test", value);
+            assertEquals("test", clientSession.getValueNames()[0]);
+            assertSame(value, clientSession.getValue("test"));
+            clientSession.removeValue("test");
+            assertEquals(0, clientSession.getValueNames().length);
+
+            assertEquals(0, serverSession.getValueNames().length);
+            serverSession.putValue("test", value);
+            assertEquals("test", serverSession.getValueNames()[0]);
+            assertSame(value, serverSession.getValue("test"));
+            serverSession.removeValue("test");
+            assertEquals(0, serverSession.getValueNames().length);
+
+            Certificate[] serverLocalCertificates = serverSession.getLocalCertificates();
+            assertEquals(1, serverLocalCertificates.length);
+            assertArrayEquals(ssc.cert().getEncoded(), serverLocalCertificates[0].getEncoded());
+
+            Principal serverLocalPrincipal = serverSession.getLocalPrincipal();
+            assertNotNull(serverLocalPrincipal);
+
+            if (mutualAuth) {
+                Certificate[] clientLocalCertificates = clientSession.getLocalCertificates();
+                assertEquals(1, clientLocalCertificates.length);
+
+                Certificate[] serverPeerCertificates = serverSession.getPeerCertificates();
+                assertEquals(1, serverPeerCertificates.length);
+                assertArrayEquals(clientLocalCertificates[0].getEncoded(), serverPeerCertificates[0].getEncoded());
+
+                X509Certificate[] serverPeerX509Certificates = serverSession.getPeerCertificateChain();
+                assertEquals(1, serverPeerX509Certificates.length);
+                assertArrayEquals(clientLocalCertificates[0].getEncoded(), serverPeerX509Certificates[0].getEncoded());
+
+                Principal clientLocalPrincipial = clientSession.getLocalPrincipal();
+                assertNotNull(clientLocalPrincipial);
+
+                Principal serverPeerPrincipal = serverSession.getPeerPrincipal();
+                assertEquals(clientLocalPrincipial, serverPeerPrincipal);
+            } else {
+                assertNull(clientSession.getLocalCertificates());
+                assertNull(clientSession.getLocalPrincipal());
+
+                try {
+                    serverSession.getPeerCertificates();
+                    fail();
+                } catch (SSLPeerUnverifiedException expected) {
+                    // As we did not use mutual auth this is expected
+                }
+
+                try {
+                    serverSession.getPeerCertificateChain();
+                    fail();
+                } catch (SSLPeerUnverifiedException expected) {
+                    // As we did not use mutual auth this is expected
+                }
+
+                try {
+                    serverSession.getPeerPrincipal();
+                    fail();
+                } catch (SSLPeerUnverifiedException expected) {
+                    // As we did not use mutual auth this is expected
+                }
+            }
+
+            Certificate[] clientPeerCertificates = clientSession.getPeerCertificates();
+            assertEquals(1, clientPeerCertificates.length);
+            assertArrayEquals(serverLocalCertificates[0].getEncoded(), clientPeerCertificates[0].getEncoded());
+
+            X509Certificate[] clientPeerX509Certificates = clientSession.getPeerCertificateChain();
+            assertEquals(1, clientPeerX509Certificates.length);
+            assertArrayEquals(serverLocalCertificates[0].getEncoded(), clientPeerX509Certificates[0].getEncoded());
+
+            Principal clientPeerPrincipal = clientSession.getPeerPrincipal();
+            assertEquals(serverLocalPrincipal, clientPeerPrincipal);
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
