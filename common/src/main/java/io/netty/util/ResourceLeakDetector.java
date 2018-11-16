@@ -48,7 +48,12 @@ public class ResourceLeakDetector<T> {
     private static final String PROP_TARGET_RECORDS = "io.netty.leakDetection.targetRecords";
     private static final int DEFAULT_TARGET_RECORDS = 4;
 
+    private static final String PROP_SAMPLING_INTERVAL = "io.netty.leakDetection.samplingInterval";
+    // There is a minor performance benefit in TLR if this is a power of 2.
+    private static final int DEFAULT_SAMPLING_INTERVAL = 128;
+
     private static final int TARGET_RECORDS;
+    static final int SAMPLING_INTERVAL;
 
     /**
      * Represents the level of resource leak detection.
@@ -117,6 +122,7 @@ public class ResourceLeakDetector<T> {
         Level level = Level.parseLevel(levelStr);
 
         TARGET_RECORDS = SystemPropertyUtil.getInt(PROP_TARGET_RECORDS, DEFAULT_TARGET_RECORDS);
+        SAMPLING_INTERVAL = SystemPropertyUtil.getInt(PROP_SAMPLING_INTERVAL, DEFAULT_SAMPLING_INTERVAL);
 
         ResourceLeakDetector.level = level;
         if (logger.isDebugEnabled()) {
@@ -124,9 +130,6 @@ public class ResourceLeakDetector<T> {
             logger.debug("-D{}: {}", PROP_TARGET_RECORDS, TARGET_RECORDS);
         }
     }
-
-    // There is a minor performance benefit in TLR if this is a power of 2.
-    static final int DEFAULT_SAMPLING_INTERVAL = 128;
 
     /**
      * @deprecated Use {@link #setLevel(Level)} instead.

@@ -62,7 +62,7 @@ public abstract class ResourceLeakDetectorFactory {
      * @return a new instance of {@link ResourceLeakDetector}
      */
     public final <T> ResourceLeakDetector<T> newResourceLeakDetector(Class<T> resource) {
-        return newResourceLeakDetector(resource, ResourceLeakDetector.DEFAULT_SAMPLING_INTERVAL);
+        return newResourceLeakDetector(resource, ResourceLeakDetector.SAMPLING_INTERVAL);
     }
 
     /**
@@ -90,7 +90,7 @@ public abstract class ResourceLeakDetectorFactory {
      */
     @SuppressWarnings("deprecation")
     public <T> ResourceLeakDetector<T> newResourceLeakDetector(Class<T> resource, int samplingInterval) {
-        return newResourceLeakDetector(resource, ResourceLeakDetector.DEFAULT_SAMPLING_INTERVAL, Long.MAX_VALUE);
+        return newResourceLeakDetector(resource, ResourceLeakDetector.SAMPLING_INTERVAL, Long.MAX_VALUE);
     }
 
     /**
