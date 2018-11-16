@@ -1,3 +1,18 @@
+/*
+ * Copyright 2018 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.handler.codec.http.cache;
 
 import io.netty.buffer.ByteBuf;
@@ -42,7 +57,7 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @SuppressWarnings("unchecked")
@@ -76,6 +91,11 @@ public class HttpClientCacheHandlerTest {
         return new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK);
     }
 
+    private static HttpResponse notModifiedHttpResponse() {
+        return new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.NOT_MODIFIED,
+                                           copiedBuffer("Hello World", CharsetUtil.UTF_8));
+    }
+
     /**
      * Outbound: HttpRequest
      */
@@ -95,7 +115,8 @@ public class HttpClientCacheHandlerTest {
         when(cache.getCacheEntry(eq(request), any(Promise.class)))
                 .thenReturn(new SucceededFuture<HttpCacheEntry>(ImmediateEventExecutor.INSTANCE, httpCacheEntry));
         when(httpCacheEntryChecker
-                     .canUseCachedResponse(any(CacheControlDirectives.class), eq(httpCacheEntry), any(Date.class)))
+                     .canUseCachedResponse(any(HttpRequest.class), any(CacheControlDirectives.class),
+                                           eq(httpCacheEntry), any(Date.class)))
                 .thenReturn(true);
         when(httpResponseFromCacheGenerator.generate(eq(request), eq(httpCacheEntry))).thenReturn(cachedResponse);
 
@@ -122,7 +143,8 @@ public class HttpClientCacheHandlerTest {
         when(cache.getCacheEntry(eq(request), any(Promise.class)))
                 .thenReturn(new SucceededFuture<HttpCacheEntry>(ImmediateEventExecutor.INSTANCE, httpCacheEntry));
         when(httpCacheEntryChecker
-                     .canUseCachedResponse(any(CacheControlDirectives.class), eq(httpCacheEntry), any(Date.class)))
+                     .canUseCachedResponse(any(HttpRequest.class), any(CacheControlDirectives.class),
+                                           eq(httpCacheEntry), any(Date.class)))
                 .thenReturn(false);
 
         channel.writeOutbound(request);
@@ -150,7 +172,8 @@ public class HttpClientCacheHandlerTest {
         when(cache.getCacheEntry(eq(request), any(Promise.class)))
                 .thenReturn(new SucceededFuture<HttpCacheEntry>(ImmediateEventExecutor.INSTANCE, httpCacheEntry));
         when(httpCacheEntryChecker
-                     .canUseCachedResponse(any(CacheControlDirectives.class), eq(httpCacheEntry), any(Date.class)))
+                     .canUseCachedResponse(any(HttpRequest.class), any(CacheControlDirectives.class),
+                                           eq(httpCacheEntry), any(Date.class)))
                 .thenReturn(false);
 
         channel.writeOutbound(request);
@@ -187,7 +210,6 @@ public class HttpClientCacheHandlerTest {
         verify(cache, never()).getCacheEntry(eq(request), any(Promise.class));
         assertThat((HttpRequest) channel.readOutbound(), is(request));
     }
-
 
     @Test
     public void shouldPassNonCachedRequestThrough() {
@@ -337,7 +359,8 @@ public class HttpClientCacheHandlerTest {
         channel.writeInbound(response);
         channel.writeInbound(new DefaultHttpContent(content));
 
-        verify(cache).flushCacheEntriesInvalidatedByExchange((HttpRequest) any(), any(HttpResponse.class), any(Promise.class));
+        verify(cache).flushCacheEntriesInvalidatedByExchange((HttpRequest) any(), any(HttpResponse.class),
+                                                             any(Promise.class));
     }
 
     @Test
@@ -431,11 +454,12 @@ public class HttpClientCacheHandlerTest {
     public void shouldUseCachedResponseForNextRequest() {
         final EchoHandler echoHandler = new EchoHandler();
         final ImmediateEventExecutor eventExecutor = ImmediateEventExecutor.INSTANCE;
+        final HttpCache httpCache = new HttpCache(
+                new HttpCacheMemoryStorage(),
+                eventExecutor);
         final EmbeddedChannel channel = new EmbeddedChannel(echoHandler,
                                                             new HttpClientCacheHandler(requestCachingPolicy,
-                                                                                       new HttpCache(
-                                                                                               new HttpCacheMemoryStorage(),
-                                                                                               eventExecutor),
+                                                                                       httpCache,
                                                                                        responseCachingPolicy,
                                                                                        httpCacheEntryChecker,
                                                                                        httpResponseFromCacheGenerator,
@@ -446,7 +470,8 @@ public class HttpClientCacheHandlerTest {
 
         when(requestCachingPolicy.canBeServedFromCache(request)).thenReturn(true);
         when(responseCachingPolicy.canBeCached(any(HttpRequest.class), any(HttpResponse.class))).thenReturn(true);
-        when(httpCacheEntryChecker.canUseCachedResponse(any(CacheControlDirectives.class), any(HttpCacheEntry.class),
+        when(httpCacheEntryChecker.canUseCachedResponse(any(HttpRequest.class), any(CacheControlDirectives.class),
+                                                        any(HttpCacheEntry.class),
                                                         any(Date.class))).thenReturn(true);
         when(httpResponseFromCacheGenerator.generate(any(HttpRequest.class), any(HttpCacheEntry.class))).thenReturn(
                 fullHttpResponse());
@@ -485,7 +510,8 @@ public class HttpClientCacheHandlerTest {
                 .thenReturn(new SucceededFuture(eventExecutor, httpCacheEntry));
         when(requestCachingPolicy.canBeServedFromCache(request)).thenReturn(true);
         when(responseCachingPolicy.canBeCached(any(HttpRequest.class), any(HttpResponse.class))).thenReturn(true);
-        when(httpCacheEntryChecker.canUseCachedResponse(any(CacheControlDirectives.class), any(HttpCacheEntry.class),
+        when(httpCacheEntryChecker.canUseCachedResponse(any(HttpRequest.class), any(CacheControlDirectives.class),
+                                                        any(HttpCacheEntry.class),
                                                         any(Date.class))).thenReturn(false);
         final HttpResponse notModifiedHttpResponse = notModifiedHttpResponse();
         when(httpResponseFromCacheGenerator.generateNotModifiedResponse(any(HttpCacheEntry.class))).thenReturn(
@@ -502,18 +528,14 @@ public class HttpClientCacheHandlerTest {
         assertThat(echoHandler.getCallCount(), is(1));
     }
 
-    private static HttpResponse notModifiedHttpResponse() {
-        return new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.NOT_MODIFIED,
-                                           copiedBuffer("Hello World", CharsetUtil.UTF_8));
-    }
-
     private static class EchoHandler extends ChannelOutboundHandlerAdapter {
 
         private final AtomicInteger callCount = new AtomicInteger();
         private final AtomicInteger callCount304 = new AtomicInteger();
 
         @Override
-        public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) throws Exception {
+        public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
+                throws Exception {
             if (!(msg instanceof HttpRequest)) {
                 super.write(ctx, msg, promise);
                 return;
@@ -522,7 +544,8 @@ public class HttpClientCacheHandlerTest {
             final HttpRequest httpRequest = (HttpRequest) msg;
             if (httpRequest.headers().contains(IF_NONE_MATCH)) {
                 callCount304.incrementAndGet();
-                ctx.fireChannelRead(new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.NOT_MODIFIED, EMPTY_BUFFER));
+                ctx.fireChannelRead(
+                        new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.NOT_MODIFIED, EMPTY_BUFFER));
                 return;
             }
 

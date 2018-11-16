@@ -22,23 +22,14 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
-import io.netty.handler.codec.DateFormatter;
-import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.DefaultHttpHeaders;
-import io.netty.handler.codec.http.DefaultHttpRequest;
-import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -48,8 +39,8 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.Date;
-import java.util.Map.Entry;
 
+import static io.netty.handler.codec.http.cache.HttpCacheEntryChecker.*;
 import static io.netty.util.ReferenceCountUtil.*;
 import static io.netty.util.internal.ObjectUtil.*;
 
@@ -66,12 +57,14 @@ public class HttpClientCacheHandler extends ChannelDuplexHandler {
     private final HttpCacheEntryChecker httpCacheEntryChecker;
     private final HttpResponseFromCacheGenerator httpResponseFromCacheGenerator;
     private final CacheConfig cacheConfig;
+    private final ConditionalRequestBuilder conditionalRequestBuilder;
 
     private HttpRequest request;
-    private AggregatedFullHttpResponse inFlightResponse;
+    private AggregatedCacheFullHttpResponse inFlightResponse;
     private Date requestSent;
 
     private boolean waitingOnConditionalResponse;
+    private HttpCacheEntry conditionResponseCacheEntry;
 
     public HttpClientCacheHandler(final HttpCacheStorage cacheStorage,
                                   final CacheConfig cacheConfig,
@@ -81,6 +74,7 @@ public class HttpClientCacheHandler extends ChannelDuplexHandler {
         this.responseCachingPolicy = new ResponseCachingPolicy(cacheConfig.isSharedCache());
         this.httpCacheEntryChecker = new HttpCacheEntryChecker(cacheConfig.isSharedCache());
         this.httpResponseFromCacheGenerator = new HttpResponseFromCacheGenerator();
+        this.conditionalRequestBuilder = new ConditionalRequestBuilder();
         this.cacheConfig = cacheConfig;
     }
 
@@ -96,6 +90,7 @@ public class HttpClientCacheHandler extends ChannelDuplexHandler {
         this.httpCacheEntryChecker = checkNotNull(httpCacheEntryChecker, "httpCacheEntryChecker");
         this.httpResponseFromCacheGenerator =
                 checkNotNull(httpResponseFromCacheGenerator, "httpResponseFromCacheGenerator");
+        this.conditionalRequestBuilder = new ConditionalRequestBuilder();
         this.cacheConfig = checkNotNull(cacheConfig, "cacheConfig");
     }
 
@@ -135,7 +130,6 @@ public class HttpClientCacheHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
-
         if (waitingOnConditionalResponse) {
             handleConditionalRequestResponse(ctx, msg);
         } else {
@@ -143,17 +137,19 @@ public class HttpClientCacheHandler extends ChannelDuplexHandler {
         }
     }
 
-    private void handleConditionalRequestResponse(final ChannelHandlerContext ctx, final Object msg) {
+    private void handleConditionalRequestResponse(final ChannelHandlerContext ctx, final Object msg) throws Exception {
         if (msg instanceof HttpResponse) {
             final HttpResponse httpResponse = (HttpResponse) msg;
 
-            // TODO revalidationResponseIsTooOld
+            if (revalidationResponseIsTooOld(httpResponse, conditionResponseCacheEntry)) {
+                release(httpResponse);
+                final HttpRequest unconditionalRequest = conditionalRequestBuilder.unconditionalRequest(null);
 
-            final HttpResponseStatus status = httpResponse.status();
-            if (status == HttpResponseStatus.NOT_MODIFIED || status == HttpResponseStatus.OK) {
-                // TODO: record cache update
+                ctx.pipeline().write(unconditionalRequest);
+                return;
             }
 
+            final HttpResponseStatus status = httpResponse.status();
             if (status == HttpResponseStatus.NOT_MODIFIED) {
                 httpCache.updateCacheEntry(request, httpResponse, null, null)
                          .addListener(new GenericFutureListener<Future<HttpCacheEntry>>() {
@@ -163,8 +159,10 @@ public class HttpClientCacheHandler extends ChannelDuplexHandler {
                                      final HttpCacheEntry cacheEntry = future.getNow();
 
                                      HttpResponse httpResponse;
-                                     if (isConditional(request) && allConditionsMatch(request, cacheEntry)) {
-                                         httpResponse = httpResponseFromCacheGenerator.generateNotModifiedResponse(cacheEntry);
+                                     if (isConditional(request) &&
+                                         allConditionsMatch(request, cacheEntry, new Date())) {
+                                         httpResponse =
+                                                 httpResponseFromCacheGenerator.generateNotModifiedResponse(cacheEntry);
                                      } else {
                                          httpResponse = httpResponseFromCacheGenerator.generate(request, cacheEntry);
                                      }
@@ -173,14 +171,68 @@ public class HttpClientCacheHandler extends ChannelDuplexHandler {
                                  }
                              }
                          });
-            } else if (true) {
-                // TODO staleIfErrorAppliesTo
+            } else if (serverError(httpResponse) &&
+                       staleResponseAllowed(request, conditionResponseCacheEntry, new Date()) &&
+                       mayReturnStaleIfError(request, conditionResponseCacheEntry, new Date())) {
+                final FullHttpResponse staleResponse =
+                        httpResponseFromCacheGenerator.generate(request, conditionResponseCacheEntry);
+
+                // https://tools.ietf.org/html/rfc7234#section-5.5.1
+                staleResponse.headers().add(HttpHeaderNames.WARNING, "110 - \"Response is Stale\"");
+
+                release(httpResponse);
+                ctx.fireChannelRead(staleResponse);
             } else {
-                // TODO handleBackendResponse
+                handleBackendResponse(ctx, msg);
             }
-
-
         }
+    }
+
+    private boolean mayReturnStaleIfError(final HttpRequest request, final HttpCacheEntry entry, final Date now) {
+        final long stalenessInSeconds = entry.getStalenessInSeconds(cacheConfig.isSharedCache(), now);
+        final CacheControlDirectives requestCacheControlDirectives = CacheControlDecoder.decode(request.headers());
+
+        return stalenessInSeconds <= requestCacheControlDirectives.getStaleIfError() ||
+               stalenessInSeconds <= entry.getCacheControlDirectives().getStaleIfError();
+    }
+
+    private boolean staleResponseAllowed(final HttpRequest request, final HttpCacheEntry entry, final Date now) {
+        return !entry.mustRevalidate() &&
+               !(cacheConfig.isSharedCache() && entry.proxyRevalidate()) &&
+               !explicitFreshnessRequest(request, entry, now);
+    }
+
+    private boolean serverError(final HttpResponse response) {
+        final HttpResponseStatus status = response.status();
+        return status == HttpResponseStatus.INTERNAL_SERVER_ERROR ||
+               status == HttpResponseStatus.BAD_GATEWAY ||
+               status == HttpResponseStatus.SERVICE_UNAVAILABLE ||
+               status == HttpResponseStatus.GATEWAY_TIMEOUT;
+    }
+
+    private boolean explicitFreshnessRequest(final HttpRequest request, final HttpCacheEntry entry, final Date now) {
+        final CacheControlDirectives requestCacheControlDirectives = CacheControlDecoder.decode(request.headers());
+        final int maxStale = requestCacheControlDirectives.getMaxStale();
+        if (maxStale != -1) {
+            final long currentAgeInSeconds = entry.getCurrentAgeInSeconds(now);
+            final long freshnessLifetimeInSeconds = entry.getFreshnessLifetimeInSeconds(cacheConfig.isSharedCache());
+            if (currentAgeInSeconds - freshnessLifetimeInSeconds > maxStale) {
+                return true;
+            }
+        }
+
+        return requestCacheControlDirectives.getMinFresh() != -1 ||
+               requestCacheControlDirectives.getMaxAge() != -1;
+    }
+
+    /**
+     * <a href="https://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html#sec13.2.6">Disambiguating Multiple
+     * Responses</a>
+     */
+    private boolean revalidationResponseIsTooOld(HttpResponse httpResponse, HttpCacheEntry httpCacheEntry) {
+        final long responseDate = httpResponse.headers().getTimeMillis(HttpHeaderNames.DATE, 0L);
+        final long cacheEntryDate = httpCacheEntry.getResponseHeaders().getTimeMillis(HttpHeaderNames.DATE, 0L);
+        return responseDate < cacheEntryDate;
     }
 
     private void handleBackendResponse(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -203,7 +255,7 @@ public class HttpClientCacheHandler extends ChannelDuplexHandler {
                         appendPartialContent(content, ((ByteBufHolder) httpResponse).content());
                     }
 
-                    inFlightResponse = new AggregatedFullHttpResponse(httpResponse, content.retain(), null);
+                    inFlightResponse = new AggregatedCacheFullHttpResponse(httpResponse, content.retain(), null);
                 }
             } else {
                 logger.debug("Response is not cacheable.");
@@ -272,7 +324,7 @@ public class HttpClientCacheHandler extends ChannelDuplexHandler {
                              HttpCacheEntry existingCacheEntry = future.getNow();
                              if (existingCacheEntry != null) {
                                  final Long responseTimestamp = response.headers().getTimeMillis(HttpHeaderNames.DATE);
-                                 final long cacheTimestamp  = existingCacheEntry.getResponseDate().getTime();
+                                 final long cacheTimestamp = existingCacheEntry.getResponseDate().getTime();
                                  if (cacheTimestamp > responseTimestamp) {
                                      logger.debug("Cache already contains fresher cache entry");
                                      releaseInFlightResponse();
@@ -288,16 +340,16 @@ public class HttpClientCacheHandler extends ChannelDuplexHandler {
 
     private Future<HttpCacheEntry> cache(FullHttpResponse response) {
         return httpCache.cache(request, response, requestSent, new Date())
-                 .addListener(new GenericFutureListener<Future<? super HttpCacheEntry>>() {
-                     @Override
-                     public void operationComplete(Future<? super HttpCacheEntry> future) throws Exception {
-                         if (future.isSuccess()) {
-                             logger.debug("Response has been cached");
-                         }
+                        .addListener(new GenericFutureListener<Future<? super HttpCacheEntry>>() {
+                            @Override
+                            public void operationComplete(Future<? super HttpCacheEntry> future) throws Exception {
+                                if (future.isSuccess()) {
+                                    logger.debug("Response has been cached");
+                                }
 
-                         releaseInFlightResponse();
-                     }
-                 });
+                                releaseInFlightResponse();
+                            }
+                        });
     }
 
     private void releaseInFlightResponse() {
@@ -310,7 +362,8 @@ public class HttpClientCacheHandler extends ChannelDuplexHandler {
     protected void aggregate(FullHttpMessage aggregated, HttpContent content) throws Exception {
         if (content instanceof LastHttpContent) {
             // Merge trailing headers into the message.
-            ((AggregatedFullHttpResponse) aggregated).setTrailingHeaders(((LastHttpContent) content).trailingHeaders());
+            ((AggregatedCacheFullHttpResponse) aggregated)
+                    .setTrailingHeaders(((LastHttpContent) content).trailingHeaders());
         }
     }
 
@@ -348,7 +401,7 @@ public class HttpClientCacheHandler extends ChannelDuplexHandler {
         // TODO record cache hit
 
         final Date now = new Date();
-        if (httpCacheEntryChecker.canUseCachedResponse(requestCacheControlDirectives, cacheEntry, now)) {
+        if (httpCacheEntryChecker.canUseCachedResponse(request, requestCacheControlDirectives, cacheEntry, now)) {
             logger.debug("Cache hit");
 
             final FullHttpResponse httpResponse = httpResponseFromCacheGenerator.generate(request, cacheEntry);
@@ -357,7 +410,7 @@ public class HttpClientCacheHandler extends ChannelDuplexHandler {
         } else if (!mayCallBackend(requestCacheControlDirectives)) {
             logger.debug("Cache entry not suitable but only-if-cached requested");
             sendGatewayTimeout(ctx, request);
-        } else if (cacheEntry.getStatus() != HttpResponseStatus.NOT_MODIFIED || isConditional(request))  {
+        } else if (cacheEntry.getStatus() != HttpResponseStatus.NOT_MODIFIED || isConditional(request)) {
             logger.debug("Revalidating cache entry");
 
             revalidateCacheEntry(ctx, request, cacheEntry, promise);
@@ -375,108 +428,11 @@ public class HttpClientCacheHandler extends ChannelDuplexHandler {
                                       final HttpCacheEntry cacheEntry,
                                       final ChannelPromise promise) throws Exception {
 
-        final HttpRequest conditionalRequest = buildConditionalRequest(request, cacheEntry);
         waitingOnConditionalResponse = true;
+        conditionResponseCacheEntry = cacheEntry;
+        final HttpRequest conditionalRequest = conditionalRequestBuilder.conditionalRequest(request, cacheEntry);
 
         ctx.pipeline().write(conditionalRequest, promise);
-    }
-
-    private HttpRequest buildConditionalRequest(HttpRequest request, HttpCacheEntry cacheEntry) {
-        final DefaultHttpHeaders copiedHeaders = new DefaultHttpHeaders();
-        for (Entry<String, String> header : request.headers()) {
-            copiedHeaders.add(header.getKey(), header.getValue());
-        }
-
-        final HttpRequest newRequest =
-                new DefaultHttpRequest(request.protocolVersion(), request.method(), request.uri(), copiedHeaders);
-
-        final String etag = cacheEntry.getResponseHeaders().get(HttpHeaderNames.ETAG);
-        if (etag != null) {
-            copiedHeaders.set(HttpHeaderNames.IF_NONE_MATCH, etag);
-        }
-
-        final String lastModified = cacheEntry.getResponseHeaders().get(HttpHeaderNames.LAST_MODIFIED);
-        if (lastModified != null) {
-            copiedHeaders.set(HttpHeaderNames.IF_MODIFIED_SINCE, lastModified);
-        }
-
-        final CacheControlDirectives cacheEntryCacheControlDirectives = CacheControlDecoder.decode(cacheEntry.getResponseHeaders());
-        boolean mustRevalidate = cacheEntryCacheControlDirectives.mustRevalidate() ||
-                                 cacheEntryCacheControlDirectives.proxyRevalidate();
-
-        if (mustRevalidate) {
-            copiedHeaders.add(HttpHeaderNames.CACHE_CONTROL, HttpHeaderValues.MAX_AGE + "=0");
-        }
-
-        return newRequest;
-    }
-
-    private static boolean isConditional(HttpRequest request) {
-        if (request.headers().contains(HttpHeaderNames.IF_NONE_MATCH)) {
-            return true;
-        }
-
-        final String ifModifiedHeader = request.headers().get(HttpHeaderNames.IF_MODIFIED_SINCE);
-        if (ifModifiedHeader == null) {
-            return false;
-        }
-
-        return DateFormatter.parseHttpDate(ifModifiedHeader) != null;
-    }
-
-    private static boolean allConditionsMatch(final HttpRequest request, final HttpCacheEntry cacheEntry) {
-        final boolean hasIfNoneMatchHeader = request.headers().contains(HttpHeaderNames.IF_NONE_MATCH);
-        final String ifModifiedHeader = request.headers().get(HttpHeaderNames.IF_MODIFIED_SINCE);
-        final boolean hasIfModifiedSinceHeader = ifModifiedHeader != null && DateFormatter.parseHttpDate(ifModifiedHeader) != null;
-
-        final boolean etagMatches = hasIfNoneMatchHeader && etagMatches(request, cacheEntry);
-        final boolean lastModifiedMatches = hasIfModifiedSinceHeader && ifModifiedMatches(request, cacheEntry, new Date());
-
-        if (hasIfNoneMatchHeader && hasIfModifiedSinceHeader &&
-            !(etagMatches && lastModifiedMatches)) {
-            return false;
-        }
-
-        if (hasIfNoneMatchHeader && !etagMatches) {
-            return false;
-        }
-
-        if (hasIfModifiedSinceHeader && !lastModifiedMatches) {
-            return false;
-        }
-
-        return true;
-    }
-
-    private static boolean etagMatches(final HttpRequest request, final HttpCacheEntry cacheEntry) {
-        final String cachedEtag = cacheEntry.getResponseHeaders().get(HttpHeaderNames.ETAG);
-        for (String ifNoneMatchHeader : request.headers().getAll(HttpHeaderNames.IF_NONE_MATCH)) {
-            if ("*".equals(ifNoneMatchHeader) && cachedEtag != null ||
-                ifNoneMatchHeader.equals(cachedEtag)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static boolean ifModifiedMatches(final HttpRequest request, final HttpCacheEntry cacheEntry, final Date now) {
-        final Date lastModified =
-                DateFormatter.parseHttpDate(cacheEntry.getResponseHeaders().get(HttpHeaderNames.LAST_MODIFIED));
-        if (lastModified == null) {
-            return false;
-        }
-
-        for (String ifModified : request.headers().getAll(HttpHeaderNames.IF_MODIFIED_SINCE)) {
-            final Date ifModifiedSince = DateFormatter.parseHttpDate(ifModified);
-            if (ifModifiedSince != null) {
-                if (ifModifiedSince.after(now) || lastModified.after(ifModifiedSince)) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
     }
 
     private void handleCacheMiss(final ChannelHandlerContext ctx, final HttpRequest request,
@@ -497,149 +453,4 @@ public class HttpClientCacheHandler extends ChannelDuplexHandler {
         super.write(ctx, request, promise);
     }
 
-    private static final class AggregatedFullHttpResponse implements FullHttpResponse {
-
-        private final HttpMessage message;
-        private final CompositeByteBuf content;
-        private HttpHeaders trailingHeaders;
-
-        AggregatedFullHttpResponse(HttpMessage message, CompositeByteBuf content, HttpHeaders trailingHeaders) {
-            this.message = message;
-            this.content = content;
-            this.trailingHeaders = trailingHeaders;
-        }
-
-        @Override
-        public HttpHeaders trailingHeaders() {
-            HttpHeaders trailingHeaders = this.trailingHeaders;
-            if (trailingHeaders == null) {
-                return EmptyHttpHeaders.INSTANCE;
-            } else {
-                return trailingHeaders;
-            }
-        }
-
-        void setTrailingHeaders(HttpHeaders trailingHeaders) {
-            this.trailingHeaders = trailingHeaders;
-        }
-
-        @Override
-        public HttpVersion getProtocolVersion() {
-            return message.protocolVersion();
-        }
-
-        @Override
-        public HttpVersion protocolVersion() {
-            return message.protocolVersion();
-        }
-
-        @Override
-        public FullHttpResponse setProtocolVersion(HttpVersion version) {
-            message.setProtocolVersion(version);
-            return this;
-        }
-
-        @Override
-        public HttpHeaders headers() {
-            return message.headers();
-        }
-
-        @Override
-        public DecoderResult decoderResult() {
-            return message.decoderResult();
-        }
-
-        @Override
-        public DecoderResult getDecoderResult() {
-            return message.decoderResult();
-        }
-
-        @Override
-        public void setDecoderResult(DecoderResult result) {
-            message.setDecoderResult(result);
-        }
-
-        @Override
-        public CompositeByteBuf content() {
-            return content;
-        }
-
-        @Override
-        public int refCnt() {
-            return content.refCnt();
-        }
-
-        @Override
-        public FullHttpResponse retain() {
-            content.retain();
-            return this;
-        }
-
-        @Override
-        public FullHttpResponse retain(int increment) {
-            content.retain(increment);
-            return this;
-        }
-
-        @Override
-        public FullHttpResponse touch(Object hint) {
-            content.touch(hint);
-            return this;
-        }
-
-        @Override
-        public FullHttpResponse touch() {
-            content.touch();
-            return this;
-        }
-
-        @Override
-        public boolean release() {
-            return content.release();
-        }
-
-        @Override
-        public boolean release(int decrement) {
-            return content.release(decrement);
-        }
-
-        @Override
-        public FullHttpResponse copy() {
-            return replace(content().copy());
-        }
-
-        @Override
-        public FullHttpResponse duplicate() {
-            return replace(content().duplicate());
-        }
-
-        @Override
-        public FullHttpResponse retainedDuplicate() {
-            return replace(content().retainedDuplicate());
-        }
-
-        @Override
-        public FullHttpResponse replace(ByteBuf content) {
-            DefaultFullHttpResponse dup = new DefaultFullHttpResponse(getProtocolVersion(), getStatus(), content,
-                                                                      headers().copy(), trailingHeaders().copy());
-            dup.setDecoderResult(decoderResult());
-            return dup;
-        }
-
-        @Override
-        public FullHttpResponse setStatus(HttpResponseStatus status) {
-            ((HttpResponse) message).setStatus(status);
-            return this;
-        }
-
-        @Override
-        public HttpResponseStatus getStatus() {
-            return ((HttpResponse) message).status();
-        }
-
-        @Override
-        public HttpResponseStatus status() {
-            return getStatus();
-        }
-    }
 }

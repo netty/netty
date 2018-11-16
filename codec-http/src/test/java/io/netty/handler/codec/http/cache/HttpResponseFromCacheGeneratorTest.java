@@ -1,3 +1,18 @@
+/*
+ * Copyright 2018 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.handler.codec.http.cache;
 
 import io.netty.buffer.ByteBuf;
@@ -18,14 +33,12 @@ import org.mockito.junit.MockitoRule;
 
 import java.util.Date;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.handler.codec.http.cache.CacheControlDecoder.MAXIMUM_AGE;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertThat;
+import static io.netty.buffer.Unpooled.*;
+import static io.netty.handler.codec.http.cache.CacheControlDecoder.*;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class HttpResponseFromCacheGeneratorTest {
     @Rule
@@ -40,8 +53,9 @@ public class HttpResponseFromCacheGeneratorTest {
 
     @Test
     public void contentLengthHeaderIsPopulated() {
-        final byte[] content = {1, 2, 3, 4, 5};
-        final HttpCacheEntry cacheEntry = cacheEntry(HttpResponseStatus.NO_CONTENT, 0L, Unpooled.wrappedBuffer(content));
+        final byte[] content = { 1, 2, 3, 4, 5 };
+        final HttpCacheEntry cacheEntry =
+                cacheEntry(HttpResponseStatus.NO_CONTENT, 0L, Unpooled.wrappedBuffer(content));
 
         final FullHttpResponse response = responseGenerator.generate(request(), cacheEntry);
 
@@ -50,9 +64,10 @@ public class HttpResponseFromCacheGeneratorTest {
 
     @Test
     public void contentLengthHeaderIsNotPopulatedWhenTransferEncodingHeaderIsPresent() {
-        final byte[] content = {1, 2, 3, 4, 5};
+        final byte[] content = { 1, 2, 3, 4, 5 };
         final HttpCacheEntry cacheEntry = cacheEntry(HttpResponseStatus.NO_CONTENT, 0L,
-                Unpooled.wrappedBuffer(content), HttpHeaderNames.TRANSFER_ENCODING, "gzip");
+                                                     Unpooled.wrappedBuffer(content), HttpHeaderNames.TRANSFER_ENCODING,
+                                                     "gzip");
 
         final FullHttpResponse response = responseGenerator.generate(request(), cacheEntry);
 
@@ -97,14 +112,16 @@ public class HttpResponseFromCacheGeneratorTest {
 
     private DefaultFullHttpRequest request(CharSequence... headerNameValuePairs) {
         return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/test", EMPTY_BUFFER,
-                new ReadOnlyHttpHeaders(false, headerNameValuePairs), new ReadOnlyHttpHeaders(false));
+                                          new ReadOnlyHttpHeaders(false, headerNameValuePairs),
+                                          new ReadOnlyHttpHeaders(false));
     }
 
     private HttpCacheEntry cacheEntry(HttpResponseStatus status, long age) {
         return cacheEntry(status, age, EMPTY_BUFFER);
     }
 
-    private HttpCacheEntry cacheEntry(HttpResponseStatus status, long age, ByteBuf content, CharSequence... headerNameValuePairs) {
+    private HttpCacheEntry cacheEntry(HttpResponseStatus status, long age, ByteBuf content,
+                                      CharSequence... headerNameValuePairs) {
         final HttpCacheEntry cacheEntry = mock(HttpCacheEntry.class);
         when(cacheEntry.getResponseHeaders()).thenReturn(new ReadOnlyHttpHeaders(false, headerNameValuePairs));
         when(cacheEntry.getCurrentAgeInSeconds(any(Date.class))).thenReturn(age);
@@ -113,6 +130,4 @@ public class HttpResponseFromCacheGeneratorTest {
 
         return cacheEntry;
     }
-
-
 }

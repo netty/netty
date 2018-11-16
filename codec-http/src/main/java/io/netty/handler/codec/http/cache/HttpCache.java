@@ -53,6 +53,10 @@ class HttpCache {
         this.executor = checkNotNull(executor, "executor");
     }
 
+    private static boolean isHttpMethodSafe(HttpMethod method) {
+        return method == HttpMethod.GET || method == HttpMethod.HEAD || method == HttpMethod.TRACE;
+    }
+
     public Future<HttpCacheEntry> cache(final HttpRequest request,
                                         final FullHttpResponse response,
                                         final Date requestSent,
@@ -111,11 +115,11 @@ class HttpCache {
      * @see <a href="https://tools.ietf.org/html/rfc7234#section-4.4">RFC 7234 - Invalidation</a>
      */
     public Future<Void> flushCacheEntriesInvalidatedByExchange(final HttpRequest request,
-                                                                      final HttpResponse response,
-                                                                      Promise<Void> promise) {
+                                                               final HttpResponse response,
+                                                               Promise<Void> promise) {
         if (logger.isDebugEnabled()) {
-            logger.debug("Flush cache entries invalidated by exchange: " + request.headers().get(HttpHeaderNames.HOST) + "; " +
-                         request.method() + ' ' + request.uri() + request.protocolVersion() + " -> " +
+            logger.debug("Flush cache entries invalidated by exchange: " + request.headers().get(HttpHeaderNames.HOST) +
+                         "; " + request.method() + ' ' + request.uri() + request.protocolVersion() + " -> " +
                          response.protocolVersion() + ' ' + response.status());
         }
 
@@ -131,7 +135,6 @@ class HttpCache {
             // TODO: flush content location uri if present
 
             // TODO: flush location uri if present
-
         }
 
         return promise;
@@ -151,9 +154,9 @@ class HttpCache {
     }
 
     public Future<HttpCacheEntry> updateCacheEntry(final HttpRequest request,
-                                         final HttpResponse response,
-                                         final Date requestSent,
-                                         final Date responseReceived) {
+                                                   final HttpResponse response,
+                                                   final Date requestSent,
+                                                   final Date responseReceived) {
         if (logger.isDebugEnabled()) {
             logger.debug("Update cache entry: " + request.headers().get(HttpHeaderNames.HOST));
         }
@@ -162,9 +165,5 @@ class HttpCache {
 
         // TODO cacheUpdateHandler.updateCacheEntry
         return getCacheEntry(request, executor.<HttpCacheEntry>newPromise());
-    }
-
-    private static boolean isHttpMethodSafe(HttpMethod method) {
-        return method == HttpMethod.GET || method == HttpMethod.HEAD || method == HttpMethod.TRACE;
     }
 }

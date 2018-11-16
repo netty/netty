@@ -1,3 +1,18 @@
+/*
+ * Copyright 2018 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.handler.codec.http.cache;
 
 import io.netty.handler.codec.DateFormatter;
@@ -31,7 +46,7 @@ import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.*;
 
@@ -49,6 +64,28 @@ public class HttpCacheTest {
     private EventExecutor eventExecutor;
 
     private HttpCache cache;
+
+    private static DefaultFullHttpRequest request(final HttpMethod httpMethod) {
+        return request(HttpVersion.HTTP_1_1, httpMethod);
+    }
+
+    private static DefaultFullHttpRequest request(final HttpVersion httpVersion, final HttpMethod httpMethod) {
+        return new DefaultFullHttpRequest(httpVersion, httpMethod, "/test", EMPTY_BUFFER);
+    }
+
+    private static DefaultFullHttpResponse response(final HttpResponseStatus partialContent,
+                                                    CharSequence... headerNameValuePairs) {
+        final DefaultFullHttpResponse response =
+                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, partialContent, EMPTY_BUFFER,
+                                            new DefaultHttpHeaders(false), new ReadOnlyHttpHeaders(false));
+        response.headers().add(HttpHeaderNames.DATE, DateFormatter.format(new Date()));
+
+        for (int i = 0; i < headerNameValuePairs.length; i += 2) {
+            response.headers().add(headerNameValuePairs[i], headerNameValuePairs[i + 1]);
+        }
+
+        return response;
+    }
 
     @Before
     public void setUp() throws Exception {
@@ -96,31 +133,10 @@ public class HttpCacheTest {
         when(storage.get(anyString(), any(Promise.class)))
                 .thenReturn(new SucceededFuture<HttpCacheEntry>(ImmediateEventExecutor.INSTANCE, cacheEntry));
 
-        final Future<HttpCacheEntry> cacheEntryFuture = cache.getCacheEntry(request(HttpMethod.GET),
-                                                                            ImmediateEventExecutor.INSTANCE.<HttpCacheEntry>newPromise());
+        final Future<HttpCacheEntry> cacheEntryFuture =
+                cache.getCacheEntry(request(HttpMethod.GET),
+                                    ImmediateEventExecutor.INSTANCE.<HttpCacheEntry>newPromise());
         assertThat(cacheEntryFuture.get(), is(cacheEntry));
-    }
-
-    private static DefaultFullHttpRequest request(final HttpMethod httpMethod) {
-        return request(HttpVersion.HTTP_1_1, httpMethod);
-    }
-
-    private static DefaultFullHttpRequest request(final HttpVersion httpVersion, final HttpMethod httpMethod) {
-        return new DefaultFullHttpRequest(httpVersion, httpMethod, "/test", EMPTY_BUFFER);
-    }
-
-    private static DefaultFullHttpResponse response(final HttpResponseStatus partialContent,
-                                                    CharSequence... headerNameValuePairs) {
-        final DefaultFullHttpResponse response =
-                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, partialContent, EMPTY_BUFFER,
-                                            new DefaultHttpHeaders(false), new ReadOnlyHttpHeaders(false));
-        response.headers().add(HttpHeaderNames.DATE, DateFormatter.format(new Date()));
-
-        for (int i = 0; i < headerNameValuePairs.length; i += 2) {
-            response.headers().add(headerNameValuePairs[i], headerNameValuePairs[i + 1]);
-        }
-
-        return response;
     }
 
 }

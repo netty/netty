@@ -21,10 +21,13 @@ import io.netty.util.concurrent.Promise;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-class HttpCacheMemoryStorage implements HttpCacheStorage {
+/**
+ * TODO: Enforce config like maxCacheEntries
+ */
+public class HttpCacheMemoryStorage implements HttpCacheStorage {
     private final ConcurrentMap<String, HttpCacheEntry> cache;
 
-    HttpCacheMemoryStorage() {
+    public HttpCacheMemoryStorage() {
         cache = new ConcurrentHashMap<String, HttpCacheEntry>();
     }
 

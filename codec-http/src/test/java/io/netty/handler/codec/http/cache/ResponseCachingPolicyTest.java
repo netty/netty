@@ -1,3 +1,18 @@
+/*
+ * Copyright 2018 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.handler.codec.http.cache;
 
 import io.netty.handler.codec.DateFormatter;
@@ -17,15 +32,11 @@ import org.mockito.junit.MockitoRule;
 
 import java.util.Date;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.handler.codec.http.HttpHeaderNames.AUTHORIZATION;
-import static io.netty.handler.codec.http.HttpHeaderNames.CACHE_CONTROL;
-import static io.netty.handler.codec.http.HttpHeaderValues.MUST_REVALIDATE;
-import static io.netty.handler.codec.http.HttpHeaderValues.NO_CACHE;
-import static io.netty.handler.codec.http.HttpHeaderValues.NO_STORE;
-import static io.netty.handler.codec.http.HttpHeaderValues.PUBLIC;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static io.netty.buffer.Unpooled.*;
+import static io.netty.handler.codec.http.HttpHeaderNames.*;
+import static io.netty.handler.codec.http.HttpHeaderValues.*;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 public class ResponseCachingPolicyTest {
     @Rule
@@ -41,7 +52,8 @@ public class ResponseCachingPolicyTest {
     @Test
     public void http1RequestCanNotBeCached() {
         final DefaultFullHttpResponse response = response(HttpResponseStatus.OK);
-        assertThat(responseCachingPolicy.canBeCached(request(HttpVersion.HTTP_1_0, HttpMethod.GET), response), is(false));
+        assertThat(responseCachingPolicy.canBeCached(request(HttpVersion.HTTP_1_0, HttpMethod.GET), response),
+                   is(false));
     }
 
     @Test
@@ -76,8 +88,10 @@ public class ResponseCachingPolicyTest {
 
     @Test
     public void responseWithDateHeaderCanNotBeCached() {
-        final DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                EMPTY_BUFFER, new ReadOnlyHttpHeaders(false), new ReadOnlyHttpHeaders(false));
+        final DefaultFullHttpResponse response =
+                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
+                                            EMPTY_BUFFER, new ReadOnlyHttpHeaders(false),
+                                            new ReadOnlyHttpHeaders(false));
         assertThat(responseCachingPolicy.canBeCached(request(HttpMethod.GET), response), is(false));
     }
 
@@ -122,7 +136,8 @@ public class ResponseCachingPolicyTest {
     @Test
     public void authorizedResponseWithSMaxAgeCanBeCachedBySharedCache() {
         final DefaultFullHttpResponse response = response(HttpResponseStatus.OK,
-                AUTHORIZATION, "Basic abcdefgh", CACHE_CONTROL, "s-maxage=3600");
+                                                          AUTHORIZATION, "Basic abcdefgh", CACHE_CONTROL,
+                                                          "s-maxage=3600");
         responseCachingPolicy = new ResponseCachingPolicy(true);
         assertThat(responseCachingPolicy.canBeCached(request(HttpMethod.HEAD), response), is(true));
     }
@@ -130,7 +145,8 @@ public class ResponseCachingPolicyTest {
     @Test
     public void authorizedResponseWithMustRevalidateCanBeCachedBySharedCache() {
         final DefaultFullHttpResponse response = response(HttpResponseStatus.OK,
-                AUTHORIZATION, "Basic abcdefgh", CACHE_CONTROL, MUST_REVALIDATE);
+                                                          AUTHORIZATION, "Basic abcdefgh", CACHE_CONTROL,
+                                                          MUST_REVALIDATE);
         responseCachingPolicy = new ResponseCachingPolicy(true);
         assertThat(responseCachingPolicy.canBeCached(request(HttpMethod.HEAD), response), is(true));
     }
@@ -138,7 +154,7 @@ public class ResponseCachingPolicyTest {
     @Test
     public void authorizedResponseWithPublicCanBeCachedBySharedCache() {
         final DefaultFullHttpResponse response = response(HttpResponseStatus.OK,
-                AUTHORIZATION, "Basic abcdefgh", CACHE_CONTROL, PUBLIC);
+                                                          AUTHORIZATION, "Basic abcdefgh", CACHE_CONTROL, PUBLIC);
         responseCachingPolicy = new ResponseCachingPolicy(true);
         assertThat(responseCachingPolicy.canBeCached(request(HttpMethod.HEAD), response), is(true));
     }
@@ -146,7 +162,8 @@ public class ResponseCachingPolicyTest {
     @Test
     public void authorizedResponseWithMaxAgeCanNotBeCachedBySharedCache() {
         final DefaultFullHttpResponse response = response(HttpResponseStatus.OK,
-                AUTHORIZATION, "Basic abcdefgh", CACHE_CONTROL, "max-age=3600");
+                                                          AUTHORIZATION, "Basic abcdefgh", CACHE_CONTROL,
+                                                          "max-age=3600");
         responseCachingPolicy = new ResponseCachingPolicy(true);
         assertThat(responseCachingPolicy.canBeCached(request(HttpMethod.HEAD), response), is(false));
     }
@@ -159,8 +176,11 @@ public class ResponseCachingPolicyTest {
         return new DefaultFullHttpRequest(httpVersion, httpMethod, "/test", EMPTY_BUFFER);
     }
 
-    private DefaultFullHttpResponse response(final HttpResponseStatus partialContent, CharSequence... headerNameValuePairs) {
-        final DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, partialContent, EMPTY_BUFFER, new DefaultHttpHeaders(false), new ReadOnlyHttpHeaders(false));
+    private DefaultFullHttpResponse response(final HttpResponseStatus partialContent,
+                                             CharSequence... headerNameValuePairs) {
+        final DefaultFullHttpResponse response =
+                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, partialContent, EMPTY_BUFFER,
+                                            new DefaultHttpHeaders(false), new ReadOnlyHttpHeaders(false));
         response.headers().add(HttpHeaderNames.DATE, DateFormatter.format(new Date()));
 
         for (int i = 0; i < headerNameValuePairs.length; i += 2) {
@@ -169,5 +189,4 @@ public class ResponseCachingPolicyTest {
 
         return response;
     }
-
 }

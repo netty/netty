@@ -172,4 +172,16 @@ public class HttpCacheEntry implements Serializable {
         long responseDelayInSeconds = (responseDate.getTime() - requestDate.getTime()) / 1000L;
         return getAgeInSeconds() + responseDelayInSeconds;
     }
+
+    boolean mustRevalidate() {
+        return responseCacheControlDirectives.mustRevalidate();
+    }
+
+    boolean proxyRevalidate() {
+        return responseCacheControlDirectives.proxyRevalidate();
+    }
+
+    CacheControlDirectives getCacheControlDirectives() {
+        return responseCacheControlDirectives;
+    }
 }
