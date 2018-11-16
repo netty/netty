@@ -1570,7 +1570,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         //
                         // See https://github.com/netty/netty/issues/1340
                         String msg = e.getMessage();
-                        if (msg == null || !msg.contains("possible truncation attack")) {
+                        if (msg == null || !(msg.contains("possible truncation attack") ||
+                                msg.contains("closing inbound before receiving peer's close_notify"))) {
                             logger.debug("{} SSLEngine.closeInbound() raised an exception.", ctx.channel(), e);
                         }
                     }
