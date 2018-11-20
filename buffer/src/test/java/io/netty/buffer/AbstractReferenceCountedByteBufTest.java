@@ -38,16 +38,18 @@ public class AbstractReferenceCountedByteBufTest {
         AbstractReferenceCountedByteBuf referenceCounted = newReferenceCounted();
         referenceCounted.setRefCnt(Integer.MAX_VALUE);
         assertEquals(Integer.MAX_VALUE, referenceCounted.refCnt());
-        // extra retain since we can actually go one higher before overflowing
-        referenceCounted.retain().retain();
+        referenceCounted.retain();
+    }
+    
+    public static void main(String[] args) {
+        System.out.println(Integer.MAX_VALUE << 1);
     }
 
     @Test(expected = IllegalReferenceCountException.class)
     public void testRetainOverflow2() {
         AbstractReferenceCountedByteBuf referenceCounted = newReferenceCounted();
         assertEquals(1, referenceCounted.refCnt());
-        // extra retain since we can actually go one higher before overflowing
-        referenceCounted.retain().retain(Integer.MAX_VALUE);
+        referenceCounted.retain(Integer.MAX_VALUE);
     }
 
     @Test(expected = IllegalReferenceCountException.class)
