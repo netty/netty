@@ -34,6 +34,8 @@ import java.io.IOException;
 
 /**
  * Abstract base class for OIO which reads and writes bytes from/to a Socket
+ *
+ * @deprecated use NIO / EPOLL / KQUEUE transport.
  */
 public abstract class AbstractOioByteChannel extends AbstractOioChannel {
 
