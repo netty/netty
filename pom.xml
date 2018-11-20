@@ -292,7 +292,6 @@
     <module>transport-native-kqueue</module>
     <module>transport-rxtx</module>
     <module>transport-sctp</module>
-    <module>transport-udt</module>
     <module>handler</module>
     <module>handler-proxy</module>
     <module>example</module>
@@ -447,12 +446,6 @@
         <groupId>org.rxtx</groupId>
         <artifactId>rxtx</artifactId>
         <version>2.1.7</version>
-      </dependency>
-
-      <dependency>
-        <groupId>com.barchart.udt</groupId>
-        <artifactId>barchart-udt-bundle</artifactId>
-        <version>2.3.0</version>
       </dependency>
 
       <dependency>

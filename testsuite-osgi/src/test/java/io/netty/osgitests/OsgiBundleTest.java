@@ -94,7 +94,6 @@ public class OsgiBundleTest {
         options.add(systemProperty("pax.exam.osgi.unresolved.fail").value("true"));
         options.addAll(Arrays.asList(junitBundles()));
 
-        options.add(mavenBundle("com.barchart.udt", "barchart-udt-bundle").versionAsInProject());
         options.add(wrappedBundle(mavenBundle("org.rxtx", "rxtx").versionAsInProject()));
 
         for (String name : BUNDLES) {
