@@ -466,6 +466,11 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     @Override
+    public ChannelFuture register() {
+        return register(newPromise());
+    }
+
+    @Override
     public ChannelFuture deregister() {
         return deregister(newPromise());
     }
@@ -627,6 +632,41 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
             }
         } else {
             close(promise);
+        }
+    }
+
+    @Override
+    public ChannelFuture register(final ChannelPromise promise) {
+        if (isNotValidPromise(promise, false)) {
+            // cancelled
+            return promise;
+        }
+
+        final AbstractChannelHandlerContext next = findContextOutbound();
+        EventExecutor executor = next.executor();
+        if (executor.inEventLoop()) {
+            next.invokeRegister(promise);
+        } else {
+            safeExecute(executor, new Runnable() {
+                @Override
+                public void run() {
+                    next.invokeRegister(promise);
+                }
+            }, promise, null);
+        }
+
+        return promise;
+    }
+
+    private void invokeRegister(ChannelPromise promise) {
+        if (invokeHandler()) {
+            try {
+                ((ChannelOutboundHandler) handler()).register(this, promise);
+            } catch (Throwable t) {
+                notifyOutboundHandlerException(t, promise);
+            }
+        } else {
+            register(promise);
         }
     }
 

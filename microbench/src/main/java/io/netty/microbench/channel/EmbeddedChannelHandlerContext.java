@@ -163,6 +163,22 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
+    public ChannelFuture register() {
+        return register(newPromise());
+    }
+
+    @Override
+    public ChannelFuture register(ChannelPromise promise) {
+        try {
+            channel().register(promise);
+        } catch (Exception e) {
+            promise.setFailure(e);
+            handleException(e);
+        }
+        return promise;
+    }
+
+    @Override
     public final ChannelFuture deregister() {
         return deregister(newPromise());
     }

@@ -251,6 +251,11 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
+        public ChannelFuture register() {
+            return channel.register();
+        }
+
+        @Override
         public ChannelFuture deregister() {
             return channel.deregister();
         }
@@ -278,6 +283,11 @@ final class Http2FrameInboundWriter {
         @Override
         public ChannelFuture close(ChannelPromise promise) {
             return channel.close(promise);
+        }
+
+        @Override
+        public ChannelFuture register(ChannelPromise promise) {
+            return channel.register(promise);
         }
 
         @Override

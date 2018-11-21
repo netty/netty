@@ -27,6 +27,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -84,10 +85,10 @@ public class ChannelInitializerTest {
         final Exception exception = new Exception();
         final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
 
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
 
         if (registerFirst) {
-            group.register(pipeline.channel()).syncUninterruptibly();
+           pipeline.channel().register().syncUninterruptibly();
         }
         pipeline.addFirst(new ChannelInitializer<Channel>() {
             @Override
@@ -103,7 +104,7 @@ public class ChannelInitializerTest {
         });
 
         if (!registerFirst) {
-            group.register(pipeline.channel()).syncUninterruptibly();
+            assertTrue(pipeline.channel().register().awaitUninterruptibly().cause() instanceof ClosedChannelException);
         }
         pipeline.channel().close().syncUninterruptibly();
         pipeline.channel().closeFuture().syncUninterruptibly();

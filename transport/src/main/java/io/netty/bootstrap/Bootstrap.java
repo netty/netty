@@ -16,6 +16,7 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
@@ -23,6 +24,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.NameResolver;
@@ -46,7 +48,7 @@ import java.util.Map.Entry;
  * <p>The {@link #bind()} methods are useful in combination with connectionless transports such as datagram (UDP).
  * For regular TCP connections, please use the provided {@link #connect()} methods.</p>
  */
-public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
+public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFactory<? extends Channel>> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Bootstrap.class);
 
@@ -58,6 +60,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     private volatile AddressResolverGroup<SocketAddress> resolver =
             (AddressResolverGroup<SocketAddress>) DEFAULT_RESOLVER;
     private volatile SocketAddress remoteAddress;
+    volatile ChannelFactory<? extends Channel> channelFactory;
 
     public Bootstrap() { }
 
@@ -65,6 +68,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         super(bootstrap);
         resolver = bootstrap.resolver;
         remoteAddress = bootstrap.remoteAddress;
+        channelFactory = bootstrap.channelFactory;
     }
 
     /**
@@ -73,7 +77,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
      * @param resolver the {@link NameResolver} for this {@code Bootstrap}; may be {@code null}, in which case a default
      *                 resolver will be used
      *
-     * @see io.netty.resolver.DefaultAddressResolverGroup
+     * @see DefaultAddressResolverGroup
      */
     @SuppressWarnings("unchecked")
     public Bootstrap resolver(AddressResolverGroup<?> resolver) {
@@ -103,6 +107,37 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
      */
     public Bootstrap remoteAddress(InetAddress inetHost, int inetPort) {
         remoteAddress = new InetSocketAddress(inetHost, inetPort);
+        return this;
+    }
+
+    /**
+     * The {@link Class} which is used to create {@link Channel} instances from.
+     * You either use this or {@link #channelFactory(ChannelFactory)} if your
+     * {@link Channel} implementation has no no-args constructor.
+     */
+    public Bootstrap channel(Class<? extends Channel> channelClass) {
+        if (channelClass == null) {
+            throw new NullPointerException("channelClass");
+        }
+        return channelFactory(new ReflectiveChannelFactory<Channel>(channelClass));
+    }
+
+    /**
+     * {@link ChannelFactory} which is used to create {@link Channel} instances from
+     * when calling {@link #bind()}. This method is usually only used if {@link #channel(Class)}
+     * is not working for you because of some more complex needs. If your {@link Channel} implementation
+     * has a no-args constructor, its highly recommend to just use {@link #channel(Class)} to
+     * simplify your code.
+     */
+    public Bootstrap channelFactory(ChannelFactory<? extends Channel> channelFactory) {
+        if (channelFactory == null) {
+            throw new NullPointerException("channelFactory");
+        }
+        if (this.channelFactory != null) {
+            throw new IllegalStateException("channelFactory set already");
+        }
+
+        this.channelFactory = channelFactory;
         return this;
     }
 
@@ -170,7 +205,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
             return doResolveAndConnect0(channel, remoteAddress, localAddress, channel.newPromise());
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
-            final PendingRegistrationPromise promise = new PendingRegistrationPromise(channel);
+            final ChannelPromise promise = channel.newPromise();
             regFuture.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
@@ -182,9 +217,6 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
                         // IllegalStateException once we try to access the EventLoop of the Channel.
                         promise.setFailure(cause);
                     } else {
-                        // Registration was successful, so set the correct executor to use.
-                        // See https://github.com/netty/netty/issues/2586
-                        promise.registered();
                         doResolveAndConnect0(channel, remoteAddress, localAddress, promise);
                     }
                 }
@@ -260,7 +292,8 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
     @Override
     @SuppressWarnings("unchecked")
-    void init(Channel channel) throws Exception {
+    ChannelFuture init(Channel channel) {
+        ChannelPromise promise = channel.newPromise();
         ChannelPipeline p = channel.pipeline();
         p.addLast(config.handler());
 
@@ -275,6 +308,12 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
                 channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
             }
         }
+        return promise.setSuccess();
+    }
+
+    @Override
+    Channel newChannel(EventLoop eventLoop) throws Exception {
+        return channelFactory.newChannel(eventLoop);
     }
 
     @Override
@@ -282,6 +321,9 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         super.validate();
         if (config.handler() == null) {
             throw new IllegalStateException("handler not set");
+        }
+        if (config.channelFactory() == null) {
+            throw new IllegalStateException("channelFactory not set");
         }
         return this;
     }

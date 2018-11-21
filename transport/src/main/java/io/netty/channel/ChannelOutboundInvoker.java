@@ -87,6 +87,19 @@ public interface ChannelOutboundInvoker {
     ChannelFuture close();
 
     /**
+     * Request to register on the {@link EventExecutor} for I/O processing.
+     * {@link ChannelFuture} once the operation completes, either because the operation was successful or because of
+     * an error.
+     * <p>
+     * This will result in having the
+     * {@link ChannelOutboundHandler#register(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
+     * {@link Channel}.
+     *
+     */
+    ChannelFuture register();
+
+    /**
      * Request to deregister from the previous assigned {@link EventExecutor} and notify the
      * {@link ChannelFuture} once the operation completes, either because the operation was successful or because of
      * an error.
@@ -171,6 +184,20 @@ public interface ChannelOutboundInvoker {
      * {@link Channel}.
      */
     ChannelFuture close(ChannelPromise promise);
+
+    /**
+     * Request to register on the {@link EventExecutor} for I/O processing.
+     * {@link ChannelFuture} once the operation completes, either because the operation was successful or because of
+     * an error.
+     *
+     * The given {@link ChannelPromise} will be notified.
+     * <p>
+     * This will result in having the
+     * {@link ChannelOutboundHandler#register(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelFuture register(ChannelPromise promise);
 
     /**
      * Request to deregister from the previous assigned {@link EventExecutor} and notify the

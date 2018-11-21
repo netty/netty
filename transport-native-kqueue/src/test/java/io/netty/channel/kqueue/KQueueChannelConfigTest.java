@@ -35,27 +35,37 @@ public class KQueueChannelConfigTest {
 
     @Test
     public void testOptionGetThrowsChannelException() throws Exception {
-        KQueueSocketChannel channel = new KQueueSocketChannel();
-        channel.config().getSoLinger();
-        channel.fd().close();
+        KQueueEventLoopGroup group = new KQueueEventLoopGroup(1);
         try {
+            KQueueSocketChannel channel = new KQueueSocketChannel(group.next());
             channel.config().getSoLinger();
-            fail();
-        } catch (ChannelException e) {
-            // expected
+            channel.fd().close();
+            try {
+                channel.config().getSoLinger();
+                fail();
+            } catch (ChannelException e) {
+                // expected
+            }
+        } finally {
+            group.shutdownGracefully();
         }
     }
 
     @Test
     public void testOptionSetThrowsChannelException() throws Exception {
-        KQueueSocketChannel channel = new KQueueSocketChannel();
-        channel.config().setKeepAlive(true);
-        channel.fd().close();
+        KQueueEventLoopGroup group = new KQueueEventLoopGroup(1);
         try {
+            KQueueSocketChannel channel = new KQueueSocketChannel(group.next());
             channel.config().setKeepAlive(true);
-            fail();
-        } catch (ChannelException e) {
-            // expected
+            channel.fd().close();
+            try {
+                channel.config().setKeepAlive(true);
+                fail();
+            } catch (ChannelException e) {
+                // expected
+            }
+        } finally {
+            group.shutdownGracefully();
         }
     }
 

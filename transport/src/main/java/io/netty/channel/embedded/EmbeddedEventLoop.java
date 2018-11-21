@@ -15,15 +15,10 @@
  */
 package io.netty.channel.embedded;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.AbstractScheduledEventExecutor;
 import io.netty.util.concurrent.Future;
-import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -117,25 +112,6 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     @Override
     public boolean awaitTermination(long timeout, TimeUnit unit) {
         return false;
-    }
-
-    @Override
-    public ChannelFuture register(Channel channel) {
-        return register(new DefaultChannelPromise(channel, this));
-    }
-
-    @Override
-    public ChannelFuture register(ChannelPromise promise) {
-        ObjectUtil.checkNotNull(promise, "promise");
-        promise.channel().unsafe().register(this, promise);
-        return promise;
-    }
-
-    @Deprecated
-    @Override
-    public ChannelFuture register(Channel channel, ChannelPromise promise) {
-        channel.unsafe().register(this, promise);
-        return promise;
     }
 
     @Override

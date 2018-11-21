@@ -16,6 +16,7 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
 import io.netty.resolver.AddressResolverGroup;
 
 import java.net.SocketAddress;
@@ -23,10 +24,16 @@ import java.net.SocketAddress;
 /**
  * Exposes the configuration of a {@link Bootstrap}.
  */
-public final class BootstrapConfig extends AbstractBootstrapConfig<Bootstrap, Channel> {
+public final class BootstrapConfig extends
+                                   AbstractBootstrapConfig<Bootstrap, Channel, ChannelFactory<? extends Channel>> {
 
     BootstrapConfig(Bootstrap bootstrap) {
         super(bootstrap);
+    }
+
+    @Override
+    public ChannelFactory<? extends Channel> channelFactory() {
+        return bootstrap.channelFactory;
     }
 
     /**

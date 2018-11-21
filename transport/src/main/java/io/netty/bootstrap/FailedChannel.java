@@ -29,8 +29,8 @@ final class FailedChannel extends AbstractChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private final ChannelConfig config = new DefaultChannelConfig(this);
 
-    FailedChannel() {
-        super(null);
+    FailedChannel(EventLoop eventLoop) {
+        super(null, eventLoop);
     }
 
     @Override
@@ -40,7 +40,7 @@ final class FailedChannel extends AbstractChannel {
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return false;
+        return true;
     }
 
     @Override

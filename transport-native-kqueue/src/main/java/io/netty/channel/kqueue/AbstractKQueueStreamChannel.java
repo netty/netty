@@ -64,16 +64,16 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         }
     };
 
-    AbstractKQueueStreamChannel(Channel parent, BsdSocket fd, boolean active) {
-        super(parent, fd, active);
+    AbstractKQueueStreamChannel(Channel parent, EventLoop eventLoop, BsdSocket fd, boolean active) {
+        super(parent, eventLoop, fd, active);
     }
 
-    AbstractKQueueStreamChannel(Channel parent, BsdSocket fd, SocketAddress remote) {
-        super(parent, fd, remote);
+    AbstractKQueueStreamChannel(Channel parent, EventLoop eventLoop, BsdSocket fd, SocketAddress remote) {
+        super(parent, eventLoop, fd, remote);
     }
 
-    AbstractKQueueStreamChannel(BsdSocket fd) {
-        this(null, fd, isSoErrorZero(fd));
+    AbstractKQueueStreamChannel(EventLoop eventLoop, BsdSocket fd) {
+        this(null, eventLoop, fd, isSoErrorZero(fd));
     }
 
     @Override

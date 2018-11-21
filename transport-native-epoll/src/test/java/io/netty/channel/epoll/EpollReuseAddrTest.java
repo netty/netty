@@ -77,7 +77,7 @@ public class EpollReuseAddrTest {
         testMultipleBindDatagramChannelWithoutReusePortFails0(createBootstrap());
     }
 
-    private static void testMultipleBindDatagramChannelWithoutReusePortFails0(AbstractBootstrap<?, ?> bootstrap) {
+    private static void testMultipleBindDatagramChannelWithoutReusePortFails0(AbstractBootstrap<?, ?, ?> bootstrap) {
         bootstrap.handler(new DummyHandler());
         ChannelFuture future = bootstrap.bind().syncUninterruptibly();
         try {

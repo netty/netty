@@ -16,6 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ConnectTimeoutException;
@@ -51,10 +52,10 @@ public class EpollSocketTcpMd5Test {
 
     @Before
     public void setup() {
-        Bootstrap bootstrap = new Bootstrap();
+        ServerBootstrap bootstrap = new ServerBootstrap();
         server = (EpollServerSocketChannel) bootstrap.group(GROUP)
                 .channel(EpollServerSocketChannel.class)
-                .handler(new ChannelInboundHandlerAdapter())
+                .childHandler(new ChannelInboundHandlerAdapter())
                 .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).syncUninterruptibly().channel();
     }
 
@@ -72,10 +73,10 @@ public class EpollSocketTcpMd5Test {
 
     @Test
     public void testServerOption() throws Exception {
-        Bootstrap bootstrap = new Bootstrap();
+        ServerBootstrap bootstrap = new ServerBootstrap();
         EpollServerSocketChannel ch = (EpollServerSocketChannel) bootstrap.group(GROUP)
                 .channel(EpollServerSocketChannel.class)
-                .handler(new ChannelInboundHandlerAdapter())
+                .childHandler(new ChannelInboundHandlerAdapter())
                 .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
 
         ch.config().setOption(EpollChannelOption.TCP_MD5SIG,

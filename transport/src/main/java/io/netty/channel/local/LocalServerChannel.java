@@ -20,6 +20,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
@@ -48,7 +49,8 @@ public class LocalServerChannel extends AbstractServerChannel {
     private volatile LocalAddress localAddress;
     private volatile boolean acceptInProgress;
 
-    public LocalServerChannel() {
+    public LocalServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+        super(eventLoop, childEventLoopGroup);
         config().setAllocator(new PreferHeapByteBufAllocator(config.getAllocator()));
     }
 
@@ -166,7 +168,7 @@ public class LocalServerChannel extends AbstractServerChannel {
      * to create custom instances of {@link LocalChannel}s.
      */
     protected LocalChannel newLocalChannel(LocalChannel peer) {
-        return new LocalChannel(this, peer);
+        return new LocalChannel(this, childEventLoopGroup().next(), peer);
     }
 
     private void serve0(final LocalChannel child) {

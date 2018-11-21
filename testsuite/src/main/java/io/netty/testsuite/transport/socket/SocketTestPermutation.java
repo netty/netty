@@ -20,6 +20,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.InternetProtocolFamily;
@@ -58,7 +59,7 @@ public class SocketTestPermutation {
     protected final EventLoopGroup nioWorkerGroup =
             new NioEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-nio-worker", true));
 
-    protected <A extends AbstractBootstrap<?, ?>, B extends AbstractBootstrap<?, ?>>
+    protected <A extends AbstractBootstrap<?, ?, ?>, B extends AbstractBootstrap<?, ?, ?>>
     List<BootstrapComboFactory<A, B>> combo(List<BootstrapFactory<A>> sbfs, List<BootstrapFactory<B>> cbfs) {
 
         List<BootstrapComboFactory<A, B>> list = new ArrayList<BootstrapComboFactory<A, B>>();
@@ -104,8 +105,8 @@ public class SocketTestPermutation {
                     public Bootstrap newInstance() {
                         return new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
                             @Override
-                            public Channel newChannel() {
-                                return new NioDatagramChannel(InternetProtocolFamily.IPv4);
+                            public Channel newChannel(EventLoop eventLoop) {
+                                return new NioDatagramChannel(eventLoop, InternetProtocolFamily.IPv4);
                             }
 
                             @Override

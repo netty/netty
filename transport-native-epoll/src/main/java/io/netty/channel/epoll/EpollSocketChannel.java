@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -41,23 +42,23 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
 
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
-    public EpollSocketChannel() {
-        super(newSocketStream(), false);
+    public EpollSocketChannel(EventLoop eventLoop) {
+        super(eventLoop, newSocketStream(), false);
         config = new EpollSocketChannelConfig(this);
     }
 
-    public EpollSocketChannel(int fd) {
-        super(fd);
+    public EpollSocketChannel(EventLoop eventLoop, int fd) {
+        super(eventLoop, fd);
         config = new EpollSocketChannelConfig(this);
     }
 
-    EpollSocketChannel(LinuxSocket fd, boolean active) {
-        super(fd, active);
+    EpollSocketChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
+        super(eventLoop, fd, active);
         config = new EpollSocketChannelConfig(this);
     }
 
-    EpollSocketChannel(Channel parent, LinuxSocket fd, InetSocketAddress remoteAddress) {
-        super(parent, fd, remoteAddress);
+    EpollSocketChannel(Channel parent, EventLoop eventLoop, LinuxSocket fd, InetSocketAddress remoteAddress) {
+        super(parent, eventLoop, fd, remoteAddress);
         config = new EpollSocketChannelConfig(this);
 
         if (parent instanceof EpollServerSocketChannel) {

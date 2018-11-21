@@ -28,7 +28,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 
-public abstract class AbstractTestsuiteTest<T extends AbstractBootstrap<?, ?>> {
+public abstract class AbstractTestsuiteTest<T extends AbstractBootstrap<?, ?, ?>> {
     private final Class<T> clazz;
     protected final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
     protected volatile T cb;

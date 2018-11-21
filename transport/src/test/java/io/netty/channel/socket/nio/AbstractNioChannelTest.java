@@ -16,7 +16,9 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.AbstractNioChannel;
+import io.netty.channel.nio.NioEventLoopGroup;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -28,7 +30,7 @@ import static org.junit.Assert.*;
 
 public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
 
-    protected abstract T newNioChannel();
+    protected abstract T newNioChannel(EventLoopGroup group);
 
     protected abstract NetworkChannel jdkChannel(T channel);
 
@@ -36,7 +38,8 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
 
     @Test
     public void testNioChannelOption() throws IOException {
-        T channel = newNioChannel();
+        NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(1);
+        T channel = newNioChannel(eventLoopGroup);
         try {
             NetworkChannel jdkChannel = jdkChannel(channel);
             ChannelOption<Boolean> option = NioChannelOption.of(StandardSocketOptions.SO_REUSEADDR);
@@ -51,29 +54,34 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
             assertEquals(value3, value4);
             assertNotEquals(value1, value4);
         } finally {
-            channel.unsafe().closeForcibly();
+            channel.close().syncUninterruptibly();
+            eventLoopGroup.shutdownGracefully();
         }
     }
 
     @Test
     public void testInvalidNioChannelOption() {
-        T channel = newNioChannel();
+        NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(1);
+        T channel = newNioChannel(eventLoopGroup);
         try {
             ChannelOption<?> option = NioChannelOption.of(newInvalidOption());
             assertFalse(channel.config().setOption(option, null));
             assertNull(channel.config().getOption(option));
         } finally {
-            channel.unsafe().closeForcibly();
+            channel.close().syncUninterruptibly();
+            eventLoopGroup.shutdownGracefully();
         }
     }
 
     @Test
     public void testGetOptions()  {
-        T channel = newNioChannel();
+        NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(1);
+        T channel = newNioChannel(eventLoopGroup);
         try {
             channel.config().getOptions();
         } finally {
-            channel.unsafe().closeForcibly();
+            channel.close().syncUninterruptibly();
+            eventLoopGroup.shutdownGracefully();
         }
     }
 }

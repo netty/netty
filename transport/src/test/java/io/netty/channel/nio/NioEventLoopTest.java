@@ -59,8 +59,8 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         EventLoopGroup group = new NioEventLoopGroup(1);
         final NioEventLoop loop = (NioEventLoop) group.next();
         try {
-            Channel channel = new NioServerSocketChannel();
-            loop.register(channel).syncUninterruptibly();
+            Channel channel = new NioServerSocketChannel(loop, group);
+            channel.register().syncUninterruptibly();
 
             Selector selector = loop.unwrappedSelector();
             assertSame(selector, ((NioEventLoop) channel.eventLoop()).unwrappedSelector());
@@ -151,8 +151,8 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         NioEventLoop loop = (NioEventLoop) group.next();
 
         try {
-            Channel channel = new NioServerSocketChannel();
-            loop.register(channel).syncUninterruptibly();
+            Channel channel = new NioServerSocketChannel(loop, group);
+            channel.register().syncUninterruptibly();
             channel.bind(new InetSocketAddress(0)).syncUninterruptibly();
 
             SocketChannel selectableChannel = SocketChannel.open();
@@ -242,10 +242,10 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
                                                      SelectorProvider.provider(), selectStrategyFactory);
         final NioEventLoop loop = (NioEventLoop) group.next();
         try {
-            Channel channel = new NioServerSocketChannel();
+            Channel channel = new NioServerSocketChannel(loop, group);
             Selector selector = loop.unwrappedSelector();
 
-            loop.register(channel).syncUninterruptibly();
+            channel.register().syncUninterruptibly();
 
             Selector newSelector = ((NioEventLoop) channel.eventLoop()).unwrappedSelector();
             assertTrue(newSelector.isOpen());

@@ -322,6 +322,16 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     }
 
     @Override
+    public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        assert ctx == outboundCtx.ctx;
+        if (!outboundCtx.removed) {
+            outboundHandler.register(outboundCtx, promise);
+        } else {
+            outboundCtx.register(promise);
+        }
+    }
+
+    @Override
     public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
@@ -477,6 +487,11 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
 
         @Override
+        public ChannelFuture register() {
+            return ctx.register();
+        }
+
+        @Override
         public ChannelFuture deregister() {
             return ctx.deregister();
         }
@@ -505,6 +520,11 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         @Override
         public ChannelFuture close(ChannelPromise promise) {
             return ctx.close(promise);
+        }
+
+        @Override
+        public ChannelFuture register(ChannelPromise promise) {
+            return ctx.register(promise);
         }
 
         @Override

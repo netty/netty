@@ -80,20 +80,4 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
 
     @Override
     protected abstract EventLoop newChild(Executor executor, Object... args) throws Exception;
-
-    @Override
-    public ChannelFuture register(Channel channel) {
-        return next().register(channel);
-    }
-
-    @Override
-    public ChannelFuture register(ChannelPromise promise) {
-        return next().register(promise);
-    }
-
-    @Deprecated
-    @Override
-    public ChannelFuture register(Channel channel, ChannelPromise promise) {
-        return next().register(channel, promise);
-    }
 }

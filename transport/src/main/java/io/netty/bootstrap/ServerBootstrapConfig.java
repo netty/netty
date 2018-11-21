@@ -19,6 +19,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.ServerChannelFactory;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.StringUtil;
 
@@ -27,7 +28,8 @@ import java.util.Map;
 /**
  * Exposes the configuration of a {@link ServerBootstrapConfig}.
  */
-public final class ServerBootstrapConfig extends AbstractBootstrapConfig<ServerBootstrap, ServerChannel> {
+public final class ServerBootstrapConfig extends AbstractBootstrapConfig<ServerBootstrap, ServerChannel,
+        ServerChannelFactory<? extends ServerChannel>> {
 
     ServerBootstrapConfig(ServerBootstrap bootstrap) {
         super(bootstrap);
@@ -62,6 +64,11 @@ public final class ServerBootstrapConfig extends AbstractBootstrapConfig<ServerB
      */
     public Map<AttributeKey<?>, Object> childAttrs() {
         return bootstrap.childAttrs();
+    }
+
+    @Override
+    public ServerChannelFactory<? extends ServerChannel> channelFactory() {
+        return bootstrap.channelFactory;
     }
 
     @Override

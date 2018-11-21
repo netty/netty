@@ -86,32 +86,32 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     private WritableByteChannel byteChannel;
 
-    protected AbstractEpollStreamChannel(Channel parent, int fd) {
-        this(parent, new LinuxSocket(fd));
+    protected AbstractEpollStreamChannel(Channel parent, EventLoop eventLoop, int fd) {
+        this(parent, eventLoop, new LinuxSocket(fd));
     }
 
-    protected AbstractEpollStreamChannel(int fd) {
-        this(new LinuxSocket(fd));
+    protected AbstractEpollStreamChannel(EventLoop eventLoop, int fd) {
+        this(eventLoop, new LinuxSocket(fd));
     }
 
-    AbstractEpollStreamChannel(LinuxSocket fd) {
-        this(fd, isSoErrorZero(fd));
+    AbstractEpollStreamChannel(EventLoop eventLoop, LinuxSocket fd) {
+        this(eventLoop, fd, isSoErrorZero(fd));
     }
 
-    AbstractEpollStreamChannel(Channel parent, LinuxSocket fd) {
-        super(parent, fd, true);
+    AbstractEpollStreamChannel(Channel parent, EventLoop eventLoop, LinuxSocket fd) {
+        super(parent, eventLoop, fd, true);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
     }
 
-    AbstractEpollStreamChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
-        super(parent, fd, remote);
+    AbstractEpollStreamChannel(Channel parent, EventLoop eventLoop, LinuxSocket fd, SocketAddress remote) {
+        super(parent, eventLoop, fd, remote);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
     }
 
-    protected AbstractEpollStreamChannel(LinuxSocket fd, boolean active) {
-        super(null, fd, active);
+    protected AbstractEpollStreamChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
+        super(null, eventLoop, fd, active);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
     }
