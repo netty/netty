@@ -40,10 +40,6 @@ public class AbstractReferenceCountedByteBufTest {
         assertEquals(Integer.MAX_VALUE, referenceCounted.refCnt());
         referenceCounted.retain();
     }
-    
-    public static void main(String[] args) {
-        System.out.println(Integer.MAX_VALUE << 1);
-    }
 
     @Test(expected = IllegalReferenceCountException.class)
     public void testRetainOverflow2() {
