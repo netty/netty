@@ -290,7 +290,6 @@
     <module>transport-native-unix-common</module>
     <module>transport-native-epoll</module>
     <module>transport-native-kqueue</module>
-    <module>transport-rxtx</module>
     <module>transport-sctp</module>
     <module>handler</module>
     <module>handler-proxy</module>
@@ -440,12 +439,6 @@
         <groupId>org.jctools</groupId>
         <artifactId>jctools-core</artifactId>
         <version>2.1.1</version>
-      </dependency>
-
-      <dependency>
-        <groupId>org.rxtx</groupId>
-        <artifactId>rxtx</artifactId>
-        <version>2.1.7</version>
       </dependency>
 
       <dependency>

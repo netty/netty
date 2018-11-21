@@ -23,7 +23,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.socket.oio.OioDatagramChannel;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.SocketUtils;
 import org.junit.Test;
@@ -63,13 +62,6 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
         cb.localAddress(addr.getPort());
 
-        if (sc instanceof OioDatagramChannel) {
-            // skip the test for OIO, as it fails because of
-            // No route to host which makes no sense.
-            // Maybe a JDK bug ?
-            sc.close().awaitUninterruptibly();
-            return;
-        }
         DatagramChannel cc = (DatagramChannel) cb.bind().sync().channel();
 
         String group = "230.0.0.1";

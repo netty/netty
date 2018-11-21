@@ -21,7 +21,6 @@ import static org.ops4j.pax.exam.CoreOptions.frameworkProperty;
 import static org.ops4j.pax.exam.CoreOptions.junitBundles;
 import static org.ops4j.pax.exam.CoreOptions.mavenBundle;
 import static org.ops4j.pax.exam.CoreOptions.systemProperty;
-import static org.ops4j.pax.exam.CoreOptions.wrappedBundle;
 import static org.osgi.framework.Constants.FRAMEWORK_BOOTDELEGATION;
 
 import java.io.BufferedReader;
@@ -93,8 +92,6 @@ public class OsgiBundleTest {
         options.add(frameworkProperty(FRAMEWORK_BOOTDELEGATION).value("com.sun.*"));
         options.add(systemProperty("pax.exam.osgi.unresolved.fail").value("true"));
         options.addAll(Arrays.asList(junitBundles()));
-
-        options.add(wrappedBundle(mavenBundle("org.rxtx", "rxtx").versionAsInProject()));
 
         for (String name : BUNDLES) {
             options.add(mavenBundle(GROUP, name).versionAsInProject());

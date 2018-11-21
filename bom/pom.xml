@@ -168,11 +168,6 @@
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
-        <artifactId>netty-transport-rxtx</artifactId>
-        <version>5.0.0.Final-SNAPSHOT</version>
-      </dependency>
-      <dependency>
-        <groupId>io.netty</groupId>
         <artifactId>netty-transport-sctp</artifactId>
         <version>5.0.0.Final-SNAPSHOT</version>
       </dependency>

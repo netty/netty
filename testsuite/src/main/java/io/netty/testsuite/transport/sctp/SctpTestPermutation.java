@@ -19,11 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.channel.sctp.nio.NioSctpChannel;
 import io.netty.channel.sctp.nio.NioSctpServerChannel;
-import io.netty.channel.sctp.oio.OioSctpChannel;
-import io.netty.channel.sctp.oio.OioSctpServerChannel;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapComboFactory;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
@@ -41,19 +38,14 @@ public final class SctpTestPermutation {
             new NioEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-sctp-nio-boss", true));
     private static final EventLoopGroup nioWorkerGroup =
             new NioEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-sctp-nio-worker", true));
-    private static final EventLoopGroup oioBossGroup =
-            new OioEventLoopGroup(Integer.MAX_VALUE, new DefaultThreadFactory("testsuite-sctp-oio-boss", true));
-    private static final EventLoopGroup oioWorkerGroup =
-            new OioEventLoopGroup(Integer.MAX_VALUE, new DefaultThreadFactory("testsuite-sctp-oio-worker", true));
 
     static List<BootstrapFactory<ServerBootstrap>> sctpServerChannel() {
         if (!TestUtils.isSctpSupported()) {
             return Collections.emptyList();
         }
 
-        List<BootstrapFactory<ServerBootstrap>> list = new ArrayList<BootstrapFactory<ServerBootstrap>>();
         // Make the list of ServerBootstrap factories.
-        list.add(new BootstrapFactory<ServerBootstrap>() {
+        return Collections.<BootstrapFactory<ServerBootstrap>>singletonList(new BootstrapFactory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
                 return new ServerBootstrap().
@@ -61,16 +53,6 @@ public final class SctpTestPermutation {
                         channel(NioSctpServerChannel.class);
             }
         });
-        list.add(new BootstrapFactory<ServerBootstrap>() {
-            @Override
-            public ServerBootstrap newInstance() {
-                return new ServerBootstrap().
-                        group(oioBossGroup, oioWorkerGroup).
-                        channel(OioSctpServerChannel.class);
-            }
-        });
-
-        return list;
     }
 
     static List<BootstrapFactory<Bootstrap>> sctpClientChannel() {
@@ -78,20 +60,12 @@ public final class SctpTestPermutation {
             return Collections.emptyList();
         }
 
-        List<BootstrapFactory<Bootstrap>> list = new ArrayList<BootstrapFactory<Bootstrap>>();
-        list.add(new BootstrapFactory<Bootstrap>() {
+        return Collections.<BootstrapFactory<Bootstrap>>singletonList(new BootstrapFactory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
                 return new Bootstrap().group(nioWorkerGroup).channel(NioSctpChannel.class);
             }
         });
-        list.add(new BootstrapFactory<Bootstrap>() {
-            @Override
-            public Bootstrap newInstance() {
-                return new Bootstrap().group(oioWorkerGroup).channel(OioSctpChannel.class);
-            }
-        });
-        return list;
     }
 
     static List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> sctpChannel() {

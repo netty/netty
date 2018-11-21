@@ -109,16 +109,6 @@
       <scope>runtime</scope>
     </dependency>
 
-    <!-- see https://github.com/netty/netty/issues/874 -->
-    <dependency>
-      <groupId>com.yammer.metrics</groupId>
-      <artifactId>metrics-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport-rxtx</artifactId>
-      <version>${project.version}</version>
-    </dependency>
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
