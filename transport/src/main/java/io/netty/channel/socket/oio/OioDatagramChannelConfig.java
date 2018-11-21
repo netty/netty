@@ -24,6 +24,10 @@ import io.netty.channel.socket.DatagramChannelConfig;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 
+/**
+ * @deprecated use NIO / EPOLL / KQUEUE transport.
+ */
+@Deprecated
 public interface OioDatagramChannelConfig extends DatagramChannelConfig {
     /**
      * Sets the maximal time a operation on the underlying socket may block.
