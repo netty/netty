@@ -20,5 +20,4 @@
  *
  * @deprecated use NIO / EPOLL / KQUEUE transport.
  */
-@Deprecated
 package io.netty.channel.socket.oio;

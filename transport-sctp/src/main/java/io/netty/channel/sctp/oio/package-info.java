@@ -20,5 +20,4 @@
  *
  * @deprecated use NIO based SCTP implementation.
  */
-@Deprecated
 package io.netty.channel.sctp.oio;
