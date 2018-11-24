@@ -451,7 +451,7 @@ public final class ChannelOutboundBuffer {
         return nioBuffers;
     }
 
-    private int nioBuffers(Entry entry, ByteBuf buf, ByteBuffer[] nioBuffers, int nioBufferCount, int maxCount) {
+    private static int nioBuffers(Entry entry, ByteBuf buf, ByteBuffer[] nioBuffers, int nioBufferCount, int maxCount) {
         ByteBuffer[] nioBufs = entry.bufs;
         if (nioBufs == null) {
             // cached ByteBuffers as they may be expensive to create in terms
