@@ -1331,7 +1331,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         private final Unsafe unsafe;
 
         HeadContext(DefaultChannelPipeline pipeline) {
-            super(pipeline, null, HEAD_NAME, false, true);
+            super(pipeline, null, HEAD_NAME, true, true);
             unsafe = pipeline.channel().unsafe();
             setAddComplete();
         }
