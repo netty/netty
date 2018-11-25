@@ -793,17 +793,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     selectCnt = 1;
                 } else if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&
                         selectCnt >= SELECTOR_AUTO_REBUILD_THRESHOLD) {
-                    // The selector returned prematurely many times in a row.
-                    // Rebuild the selector to work around the problem.
-                    logger.warn(
-                            "Selector.select() returned prematurely {} times in a row; rebuilding Selector {}.",
-                            selectCnt, selector);
-
-                    rebuildSelector();
-                    selector = this.selector;
-
-                    // Select again to populate selectedKeys.
-                    selector.selectNow();
+                    // The code exists in an extra method to ensure the method is not too big to inline as this
+                    // branch is not very likely to get hit very frequently.
+                    selector = selectRebuildSelector(selectCnt);
                     selectCnt = 1;
                     break;
                 }
@@ -824,6 +816,21 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
             // Harmless exception - log anyway
         }
+    }
+
+    private Selector selectRebuildSelector(int selectCnt) throws IOException {
+        // The selector returned prematurely many times in a row.
+        // Rebuild the selector to work around the problem.
+        logger.warn(
+                "Selector.select() returned prematurely {} times in a row; rebuilding Selector {}.",
+                selectCnt, selector);
+
+        rebuildSelector();
+        Selector selector = this.selector;
+
+        // Select again to populate selectedKeys.
+        selector.selectNow();
+        return selector;
     }
 
     private void selectAgain() {
