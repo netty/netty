@@ -47,8 +47,8 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
         REFCNT_FIELD_OFFSET = refCntFieldOffset;
     }
 
-    private static int realRef(int refCnt) {
-        return (refCnt & 1) != 0 ? 0 : refCnt >>> 1;
+    private static int realRefCnt(int rawCnt) {
+        return (rawCnt & 1) != 0 ? 0 : rawCnt >>> 1;
     }
 
     private int nonVolatileRawCnt() {
@@ -59,14 +59,14 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
 
     @Override
     public int refCnt() {
-        return realRef(refCntUpdater.get(this));
+        return realRefCnt(refCntUpdater.get(this));
     }
 
     /**
      * An unsafe operation intended for use by a subclass that sets the reference count of the buffer directly
      */
-    protected final void setRefCnt(int refCnt) {
-        refCntUpdater.set(this, refCnt << 1); // overflow OK here
+    protected final void setRefCnt(int newRefCnt) {
+        refCntUpdater.set(this, newRefCnt << 1); // overflow OK here
     }
 
     @Override
@@ -81,17 +81,17 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
 
     private ReferenceCounted retain0(final int increment) {
         // all changes to the raw count are 2x the "real" change
-        int adjustIncrement = increment << 1; // overflow OK here
-        int oldRef = refCntUpdater.getAndAdd(this, adjustIncrement);
+        int adjustedIncrement = increment << 1; // overflow OK here
+        int oldRef = refCntUpdater.getAndAdd(this, adjustedIncrement);
         if ((oldRef & 1) != 0) {
             throw new IllegalReferenceCountException(0, increment);
         }
         // don't pass 0!
-        if ((oldRef <= 0 && oldRef + adjustIncrement >= 0)
-                || (oldRef >= 0 && oldRef + adjustIncrement < oldRef)) {
+        if ((oldRef <= 0 && oldRef + adjustedIncrement >= 0)
+                || (oldRef >= 0 && oldRef + adjustedIncrement < oldRef)) {
             // overflow case
-            refCntUpdater.getAndAdd(this, -increment);
-            throw new IllegalReferenceCountException(realRef(oldRef), increment);
+            refCntUpdater.getAndAdd(this, -adjustedIncrement);
+            throw new IllegalReferenceCountException(realRefCnt(oldRef), increment);
         }
         return this;
     }
