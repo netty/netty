@@ -33,6 +33,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ResourcesUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
@@ -302,8 +303,8 @@ public class ParameterizedSslHandlerTest {
 
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .keyManager(new File(getClass().getResource("test.crt").getFile()),
-                        new File(getClass().getResource("test_unencrypted.pem").getFile()))
+                .keyManager(ResourcesUtil.getFile(getClass(),  "test.crt"),
+                        ResourcesUtil.getFile(getClass(), "test_unencrypted.pem"))
                 .sslProvider(clientProvider).build();
 
         NioEventLoopGroup group = new NioEventLoopGroup();
