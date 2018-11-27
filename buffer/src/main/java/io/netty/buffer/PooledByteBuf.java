@@ -56,13 +56,13 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
         this.chunk = chunk;
         memory = chunk.memory;
+        tmpNioBuf = chunk.pollCachedNioBuffer();
         allocator = chunk.arena.parent;
         this.cache = cache;
         this.handle = handle;
         this.offset = offset;
         this.length = length;
         this.maxLength = maxLength;
-        tmpNioBuf = null;
     }
 
     /**
@@ -166,7 +166,11 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             final long handle = this.handle;
             this.handle = -1;
             memory = null;
-            tmpNioBuf = null;
+            if (tmpNioBuf != null) {
+                // Try to put back into the cache for later usage.
+                chunk.offerCachedNioBuffer(tmpNioBuf);
+                tmpNioBuf = null;
+            }
             chunk.arena.free(chunk, handle, maxLength, cache);
             chunk = null;
             recycle();
