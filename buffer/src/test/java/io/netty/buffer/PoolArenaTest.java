@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -40,6 +41,25 @@ public class PoolArenaTest {
         int[] expectedResult = {0, 64, 512, 1024, 1024, 2048};
         for (int i = 0; i < reqCapacities.length; i ++) {
             Assert.assertEquals(expectedResult[i], arena.normalizeCapacity(reqCapacities[i]));
+        }
+    }
+
+    @Test
+    public void testDirectArenaOffsetCacheLine() throws Exception {
+        int capacity = 5;
+        int alignment = 128;
+
+        for (int i = 0; i < 1000; i++) {
+            ByteBuffer bb = PlatformDependent.useDirectBufferNoCleaner()
+                    ? PlatformDependent.allocateDirectNoCleaner(capacity + alignment)
+                    : ByteBuffer.allocateDirect(capacity + alignment);
+
+            PoolArena.DirectArena arena = new PoolArena.DirectArena(null, 0, 0, 9, 9, alignment);
+            int offset = arena.offsetCacheLine(bb);
+            long address = PlatformDependent.directBufferAddress(bb);
+
+            Assert.assertEquals(0, (offset + address) & (alignment - 1));
+            PlatformDependent.freeDirectBuffer(bb);
         }
     }
 
