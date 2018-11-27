@@ -49,18 +49,16 @@ public class PoolArenaTest {
         int capacity = 5;
         int alignment = 128;
 
-        for (int i = 0; i < 100000; i++) {
+        for (int i = 0; i < 1000; i++) {
             ByteBuffer bb = PlatformDependent.useDirectBufferNoCleaner()
                     ? PlatformDependent.allocateDirectNoCleaner(capacity + alignment)
                     : ByteBuffer.allocateDirect(capacity + alignment);
 
             PoolArena.DirectArena arena = new PoolArena.DirectArena(null, 0, 0, 9, 9, alignment);
             int offset = arena.offsetCacheLine(bb);
-
             long address = PlatformDependent.directBufferAddress(bb);
-            int expected = alignment - (int) (address & (alignment - 1));
 
-            Assert.assertEquals(expected, offset);
+            Assert.assertEquals(0, (offset + address) & (alignment - 1));
             PlatformDependent.freeDirectBuffer(bb);
         }
     }
