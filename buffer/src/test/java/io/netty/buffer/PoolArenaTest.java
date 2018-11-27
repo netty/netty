@@ -20,7 +20,6 @@ import io.netty.util.internal.PlatformDependent;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 
 public class PoolArenaTest {
@@ -50,16 +49,13 @@ public class PoolArenaTest {
         int capacity = 5;
         int alignment = 128;
 
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 100000; i++) {
             ByteBuffer bb = PlatformDependent.useDirectBufferNoCleaner()
                     ? PlatformDependent.allocateDirectNoCleaner(capacity + alignment)
                     : ByteBuffer.allocateDirect(capacity + alignment);
 
             PoolArena.DirectArena arena = new PoolArena.DirectArena(null, 0, 0, 9, 9, alignment);
-            Method offsetCacheLineMethod = arena.getClass().getDeclaredMethod("offsetCacheLine", ByteBuffer.class);
-            offsetCacheLineMethod.setAccessible(true);
-
-            int offset = (Integer) offsetCacheLineMethod.invoke(arena, bb);
+            int offset = arena.offsetCacheLine(bb);
 
             long address = PlatformDependent.directBufferAddress(bb);
             int expected = alignment - (int) (address & (alignment - 1));

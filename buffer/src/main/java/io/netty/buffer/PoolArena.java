@@ -725,7 +725,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             return true;
         }
 
-        private int offsetCacheLine(ByteBuffer memory) {
+        // mark as package-private, only for unit test
+        int offsetCacheLine(ByteBuffer memory) {
             // We can only calculate the offset if Unsafe is present as otherwise directBufferAddress(...) will
             // throw an NPE.
             int remainder = HAS_UNSAFE
