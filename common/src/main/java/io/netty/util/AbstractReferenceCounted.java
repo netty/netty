@@ -112,36 +112,55 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
     }
 
     private boolean release0(int decrement) {
-        int rawCnt = nonVolatileRawCnt();
-        for (boolean firstTry = true;; firstTry = false) {
-            if ((rawCnt & 1) != 0) {
-                throw new IllegalReferenceCountException(0, -decrement);
+        int rawCnt = nonVolatileRawCnt(), realCnt = toLiveRealCnt(rawCnt, decrement);
+        if (decrement == realCnt) {
+            if (refCntUpdater.compareAndSet(this, rawCnt, 1)) {
+                deallocate();
+                return true;
             }
-            int realCnt = rawCnt >>> 1;
+            return retryRelease0(decrement);
+        }
+        return releaseNonFinal0(decrement, rawCnt, realCnt);
+    }
+
+    private boolean releaseNonFinal0(int decrement, int rawCnt, int realCnt) {
+        if (decrement < realCnt
+                // all changes to the raw count are 2x the "real" change
+                && refCntUpdater.compareAndSet(this, rawCnt, rawCnt - (decrement << 1))) {
+            return false;
+        }
+        return retryRelease0(decrement);
+    }
+
+    private boolean retryRelease0(int decrement) {
+        for (;;) {
+            int rawCnt = refCntUpdater.get(this), realCnt = toLiveRealCnt(rawCnt, decrement);
             if (decrement == realCnt) {
-                // most likely case
-                if (refCntUpdater.compareAndSet(this, rawCnt, 1)) { // any odd number
+                if (refCntUpdater.compareAndSet(this, rawCnt, 1)) {
                     deallocate();
                     return true;
-                }
-                if (!firstTry) {
-                    // this benefits throughput under high contention
-                    Thread.yield();
                 }
             } else if (decrement < realCnt) {
                 // all changes to the raw count are 2x the "real" change
                 if (refCntUpdater.compareAndSet(this, rawCnt, rawCnt - (decrement << 1))) {
                     return false;
                 }
-                if (!firstTry) {
-                    // this benefits throughput under high contention
-                    Thread.yield();
-                }
-            } else if (!firstTry) {
+            } else {
                 throw new IllegalReferenceCountException(realCnt, -decrement);
             }
-            rawCnt = refCntUpdater.get(this);
+            Thread.yield(); // this benefits throughput under high contention
         }
+    }
+
+    /**
+     * Like {@link #realRefCnt(int)} but throws if refCnt == 0
+     */
+    private static int toLiveRealCnt(int rawCnt, int decrement) {
+        if ((rawCnt & 1) == 0) {
+            return rawCnt >>> 1;
+        }
+        // odd rawCnt => already deallocated
+        throw new IllegalReferenceCountException(0, -decrement);
     }
 
     /**
