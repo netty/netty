@@ -16,6 +16,10 @@
 
 package io.netty.buffer;
 
+import java.nio.ByteBuffer;
+import java.util.ArrayDeque;
+import java.util.Deque;
+
 /**
  * Description of algorithm for PageRun/PoolSubpage allocation from PoolChunk
  *
@@ -107,7 +111,6 @@ final class PoolChunk<T> implements PoolChunkMetric {
     final T memory;
     final boolean unpooled;
     final int offset;
-
     private final byte[] memoryMap;
     private final byte[] depthMap;
     private final PoolSubpage<T>[] subpages;
@@ -121,6 +124,13 @@ final class PoolChunk<T> implements PoolChunkMetric {
     private final int maxSubpageAllocs;
     /** Used to mark memory as unusable */
     private final byte unusable;
+
+    // Use as cache for ByteBuffer created from the memory. These are just duplicates and so are only a container
+    // around the memory itself. These are often needed for operations within the Pooled*DirectByteBuf and so
+    // may produce extra GC, which can be greatly reduced by caching the duplicates.
+    //
+    // This may be null if the PoolChunk is unpooled as pooling the ByteBuffer instances does not make any sense here.
+    private final Deque<ByteBuffer> cachedNioBuffers;
 
     private int freeBytes;
 
@@ -163,6 +173,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         }
 
         subpages = newSubpageArray(maxSubpageAllocs);
+        cachedNioBuffers = new ArrayDeque<ByteBuffer>();
     }
 
     /** Creates a special chunk that is not pooled. */
@@ -182,6 +193,21 @@ final class PoolChunk<T> implements PoolChunkMetric {
         chunkSize = size;
         log2ChunkSize = log2(chunkSize);
         maxSubpageAllocs = 0;
+        cachedNioBuffers = null;
+    }
+
+    ByteBuffer pollCachedNioBuffer() {
+        // We use LIFO to increase the chance that its still "hot" and so in the CPU / L* cache.
+        return cachedNioBuffers != null ? cachedNioBuffers.pollLast() : null;
+    }
+
+    void offerCachedNioBuffer(ByteBuffer nioBuffer) {
+        // Only cache if we did not reach the limit yet and if its not unpooled.
+        // If we do just drop it on the floor and let the GC collect it.
+        if (cachedNioBuffers != null &&
+                cachedNioBuffers.size() <= PooledByteBufAllocator.DEFAULT_MAX_CACHED_BYTEBUFFERS_PER_CHUNK) {
+            cachedNioBuffers.offer(nioBuffer);
+        }
     }
 
     @SuppressWarnings("unchecked")
