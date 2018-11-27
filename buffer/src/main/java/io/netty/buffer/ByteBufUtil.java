@@ -557,17 +557,8 @@ public final class ByteBufUtil {
                     buffer._setByte(writerIndex++, WRITE_UTF_UNKNOWN);
                     break;
                 }
-                if (!Character.isLowSurrogate(c2)) {
-                    buffer._setByte(writerIndex++, WRITE_UTF_UNKNOWN);
-                    buffer._setByte(writerIndex++, Character.isHighSurrogate(c2) ? WRITE_UTF_UNKNOWN : c2);
-                    continue;
-                }
-                int codePoint = Character.toCodePoint(c, c2);
-                // See http://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
-                buffer._setByte(writerIndex++, (byte) (0xf0 | (codePoint >> 18)));
-                buffer._setByte(writerIndex++, (byte) (0x80 | ((codePoint >> 12) & 0x3f)));
-                buffer._setByte(writerIndex++, (byte) (0x80 | ((codePoint >> 6) & 0x3f)));
-                buffer._setByte(writerIndex++, (byte) (0x80 | (codePoint & 0x3f)));
+                // Extra method to allow inlining the rest of writeUtf8 which is the most likely code path.
+                writerIndex = writeUtf8Surrogate(buffer, writerIndex, c, c2);
             } else {
                 buffer._setByte(writerIndex++, (byte) (0xe0 | (c >> 12)));
                 buffer._setByte(writerIndex++, (byte) (0x80 | ((c >> 6) & 0x3f)));
@@ -575,6 +566,21 @@ public final class ByteBufUtil {
             }
         }
         return writerIndex - oldWriterIndex;
+    }
+
+    private static int writeUtf8Surrogate(AbstractByteBuf buffer, int writerIndex, char c, char c2) {
+        if (!Character.isLowSurrogate(c2)) {
+            buffer._setByte(writerIndex++, WRITE_UTF_UNKNOWN);
+            buffer._setByte(writerIndex++, Character.isHighSurrogate(c2) ? WRITE_UTF_UNKNOWN : c2);
+            return writerIndex;
+        }
+        int codePoint = Character.toCodePoint(c, c2);
+        // See http://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
+        buffer._setByte(writerIndex++, (byte) (0xf0 | (codePoint >> 18)));
+        buffer._setByte(writerIndex++, (byte) (0x80 | ((codePoint >> 12) & 0x3f)));
+        buffer._setByte(writerIndex++, (byte) (0x80 | ((codePoint >> 6) & 0x3f)));
+        buffer._setByte(writerIndex++, (byte) (0x80 | (codePoint & 0x3f)));
+        return writerIndex;
     }
 
     /**
