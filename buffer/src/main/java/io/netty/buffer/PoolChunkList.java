@@ -89,7 +89,7 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
                     return false;
                 }
             } else {
-                cur.initBuf(buf, handle, reqCapacity);
+                cur.initBuf(buf, null, handle, reqCapacity);
                 if (cur.usage() >= maxUsage) {
                     remove(cur);
                     nextList.add(cur);
