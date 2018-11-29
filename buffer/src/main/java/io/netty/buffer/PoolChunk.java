@@ -17,6 +17,8 @@
 package io.netty.buffer;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 /**
  * Description of algorithm for PageRun/PoolSubpage allocation from PoolChunk
@@ -123,6 +125,13 @@ final class PoolChunk<T> implements PoolChunkMetric {
     /** Used to mark memory as unusable */
     private final byte unusable;
 
+    // Use as cache for ByteBuffer created from the memory. These are just duplicates and so are only a container
+    // around the memory itself. These are often needed for operations within the Pooled*ByteBuf and so
+    // may produce extra GC, which can be greatly reduced by caching the duplicates.
+    //
+    // This may be null if the PoolChunk is unpooled as pooling the ByteBuffer instances does not make any sense here.
+    private final Deque<ByteBuffer> cachedNioBuffers;
+
     private int freeBytes;
 
     PoolChunkList<T> parent;
@@ -164,6 +173,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         }
 
         subpages = newSubpageArray(maxSubpageAllocs);
+        cachedNioBuffers = new ArrayDeque<ByteBuffer>(8);
     }
 
     /** Creates a special chunk that is not pooled. */
@@ -183,6 +193,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         chunkSize = size;
         log2ChunkSize = log2(chunkSize);
         maxSubpageAllocs = 0;
+        cachedNioBuffers = null;
     }
 
     @SuppressWarnings("unchecked")
@@ -211,11 +222,11 @@ final class PoolChunk<T> implements PoolChunkMetric {
         return 100 - freePercentage;
     }
 
-    long allocate(int normCapacity) {
+    boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
         if ((normCapacity & subpageOverflowMask) != 0) { // >= pageSize
-            return allocateRun(normCapacity);
+            return allocateRun(buf, reqCapacity, normCapacity);
         } else {
-            return allocateSubpage(normCapacity);
+            return allocateSubpage(buf, reqCapacity, normCapacity);
         }
     }
 
@@ -298,34 +309,37 @@ final class PoolChunk<T> implements PoolChunkMetric {
      * Allocate a run of pages (>=1)
      *
      * @param normCapacity normalized capacity
-     * @return index in memoryMap
+     * @return {@code true} if we could allocate, {@code false} otherwise.
      */
-    private long allocateRun(int normCapacity) {
+    private boolean allocateRun(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
         int d = maxOrder - (log2(normCapacity) - pageShifts);
         int id = allocateNode(d);
         if (id < 0) {
-            return id;
+            return false;
         }
         freeBytes -= runLength(id);
-        return id;
+        ByteBuffer nioBuffer = cachedNioBuffers != null ? cachedNioBuffers.pollLast() : null;
+        initBuf(buf, nioBuffer, id, reqCapacity);
+        return true;
     }
 
     /**
-     * Create/ initialize a new PoolSubpage of normCapacity
-     * Any PoolSubpage created/ initialized here is added to subpage pool in the PoolArena that owns this PoolChunk
+     * Create / initialize a new PoolSubpage of normCapacity
+     * Any PoolSubpage created / initialized here is added to subpage pool in the PoolArena that owns this PoolChunk
      *
      * @param normCapacity normalized capacity
-     * @return index in memoryMap
+     * @return {@code true} if we could allocate, {@code false} otherwise.
      */
-    private long allocateSubpage(int normCapacity) {
+    private boolean allocateSubpage(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
         // Obtain the head of the PoolSubPage pool that is owned by the PoolArena and synchronize on it.
         // This is need as we may add it back and so alter the linked-list structure.
         PoolSubpage<T> head = arena.findSubpagePoolHead(normCapacity);
+        int d = maxOrder; // subpages are only be allocated from pages i.e., leaves
+        long handle;
         synchronized (head) {
-            int d = maxOrder; // subpages are only be allocated from pages i.e., leaves
             int id = allocateNode(d);
             if (id < 0) {
-                return id;
+                return false;
             }
 
             final PoolSubpage<T>[] subpages = this.subpages;
@@ -341,8 +355,14 @@ final class PoolChunk<T> implements PoolChunkMetric {
             } else {
                 subpage.init(head, normCapacity);
             }
-            return subpage.allocate();
+            handle = subpage.allocate();
         }
+        if (handle >= 0) {
+            // TODO: I think we could grab the ByteBuffer from
+            initBuf(buf, null, handle, reqCapacity);
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -353,7 +373,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
      *
      * @param handle handle to free
      */
-    void free(long handle) {
+    void free(long handle, ByteBuffer nioBuffer) {
         int memoryMapIdx = memoryMapIdx(handle);
         int bitmapIdx = bitmapIdx(handle);
 
@@ -366,6 +386,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
             PoolSubpage<T> head = arena.findSubpagePoolHead(subpage.elemSize);
             synchronized (head) {
                 if (subpage.free(head, bitmapIdx & 0x3FFFFFFF)) {
+                    // this may be overwriting with same thing, in theory this should never
+                    // overwrite non-null with null.
                     return;
                 }
             }
@@ -373,6 +395,11 @@ final class PoolChunk<T> implements PoolChunkMetric {
         freeBytes += runLength(memoryMapIdx);
         setValue(memoryMapIdx, depth(memoryMapIdx));
         updateParentsFree(memoryMapIdx);
+
+        if (nioBuffer != null && cachedNioBuffers != null &&
+                cachedNioBuffers.size() < PooledByteBufAllocator.DEFAULT_MAX_CACHED_BYTEBUFFERS_PER_CHUNK) {
+            cachedNioBuffers.offer(nioBuffer);
+        }
     }
 
     void initBuf(PooledByteBuf<T> buf, ByteBuffer nioBuffer, long handle, int reqCapacity) {

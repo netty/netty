@@ -454,11 +454,12 @@ final class PoolThreadCache {
         private  void freeEntry(Entry entry) {
             PoolChunk chunk = entry.chunk;
             long handle = entry.handle;
+            ByteBuffer nioBuffer = entry.nioBuffer;
 
             // recycle now so PoolChunk can be GC'ed.
             entry.recycle();
 
-            chunk.arena.freeChunk(chunk, handle, sizeClass);
+            chunk.arena.freeChunk(chunk, handle, sizeClass, nioBuffer);
         }
 
         static final class Entry<T> {
