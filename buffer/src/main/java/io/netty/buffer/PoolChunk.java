@@ -230,12 +230,12 @@ final class PoolChunk<T> implements PoolChunkMetric {
             handle = allocateSubpage(normCapacity);
         }
 
-        if (handle > 0) {
-            ByteBuffer nioBuffer = cachedNioBuffers != null ? cachedNioBuffers.pollLast() : null;
-            initBuf(buf, nioBuffer, handle, reqCapacity);
-            return true;
+        if (handle < 0) {
+            return false;
         }
-        return false;
+        ByteBuffer nioBuffer = cachedNioBuffers != null ? cachedNioBuffers.pollLast() : null;
+        initBuf(buf, nioBuffer, handle, reqCapacity);
+        return true;
     }
 
     /**
