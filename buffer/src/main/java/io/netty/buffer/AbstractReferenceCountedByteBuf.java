@@ -31,7 +31,9 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     private static final AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> refCntUpdater =
             AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCountedByteBuf.class, "refCnt");
 
-    private volatile int refCnt = 1;
+    // even => "real" refcount is (refCnt >>> 1); odd => "real" refcount is 0
+    @SuppressWarnings("unused")
+    private volatile int refCnt = 2;
 
     static {
         long refCntFieldOffset = -1;
@@ -47,29 +49,37 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         REFCNT_FIELD_OFFSET = refCntFieldOffset;
     }
 
+    private static int realRefCnt(int rawCnt) {
+        return (rawCnt & 1) != 0 ? 0 : rawCnt >>> 1;
+    }
+
     protected AbstractReferenceCountedByteBuf(int maxCapacity) {
         super(maxCapacity);
+    }
+
+    private int nonVolatileRawCnt() {
+        // TODO: Once we compile against later versions of Java we can replace the Unsafe usage here by varhandles.
+        return REFCNT_FIELD_OFFSET != -1 ? PlatformDependent.getInt(this, REFCNT_FIELD_OFFSET)
+                : refCntUpdater.get(this);
     }
 
     @Override
     int internalRefCnt() {
         // Try to do non-volatile read for performance as the ensureAccessible() is racy anyway and only provide
         // a best-effort guard.
-        //
-        // TODO: Once we compile against later versions of Java we can replace the Unsafe usage here by varhandles.
-        return REFCNT_FIELD_OFFSET != -1 ? PlatformDependent.getInt(this, REFCNT_FIELD_OFFSET) : refCnt();
+        return realRefCnt(nonVolatileRawCnt());
     }
 
     @Override
     public int refCnt() {
-        return refCnt;
+        return realRefCnt(refCntUpdater.get(this));
     }
 
     /**
      * An unsafe operation intended for use by a subclass that sets the reference count of the buffer directly
      */
-    protected final void setRefCnt(int refCnt) {
-        refCntUpdater.set(this, refCnt);
+    protected final void setRefCnt(int newRefCnt) {
+        refCntUpdater.set(this, newRefCnt << 1); // overflow OK here
     }
 
     @Override
@@ -83,11 +93,18 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     }
 
     private ByteBuf retain0(final int increment) {
-        int oldRef = refCntUpdater.getAndAdd(this, increment);
-        if (oldRef <= 0 || oldRef + increment < oldRef) {
-            // Ensure we don't resurrect (which means the refCnt was 0) and also that we encountered an overflow.
-            refCntUpdater.getAndAdd(this, -increment);
-            throw new IllegalReferenceCountException(oldRef, increment);
+        // all changes to the raw count are 2x the "real" change
+        int adjustedIncrement = increment << 1; // overflow OK here
+        int oldRef = refCntUpdater.getAndAdd(this, adjustedIncrement);
+        if ((oldRef & 1) != 0) {
+            throw new IllegalReferenceCountException(0, increment);
+        }
+        // don't pass 0!
+        if ((oldRef <= 0 && oldRef + adjustedIncrement >= 0)
+                || (oldRef >= 0 && oldRef + adjustedIncrement < oldRef)) {
+            // overflow case
+            refCntUpdater.getAndAdd(this, -adjustedIncrement);
+            throw new IllegalReferenceCountException(realRefCnt(oldRef), increment);
         }
         return this;
     }
@@ -113,18 +130,57 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     }
 
     private boolean release0(int decrement) {
-        int oldRef = refCntUpdater.getAndAdd(this, -decrement);
-        if (oldRef == decrement) {
-            deallocate();
-            return true;
+        int rawCnt = nonVolatileRawCnt(), realCnt = toLiveRealCnt(rawCnt, decrement);
+        if (decrement == realCnt) {
+            if (refCntUpdater.compareAndSet(this, rawCnt, 1)) {
+                deallocate();
+                return true;
+            }
+            return retryRelease0(decrement);
         }
-        if (oldRef < decrement || oldRef - decrement > oldRef) {
-            // Ensure we don't over-release, and avoid underflow.
-            refCntUpdater.getAndAdd(this, decrement);
-            throw new IllegalReferenceCountException(oldRef, -decrement);
-        }
-        return false;
+        return releaseNonFinal0(decrement, rawCnt, realCnt);
     }
+
+    private boolean releaseNonFinal0(int decrement, int rawCnt, int realCnt) {
+        if (decrement < realCnt
+                // all changes to the raw count are 2x the "real" change
+                && refCntUpdater.compareAndSet(this, rawCnt, rawCnt - (decrement << 1))) {
+            return false;
+        }
+        return retryRelease0(decrement);
+    }
+
+    private boolean retryRelease0(int decrement) {
+        for (;;) {
+            int rawCnt = refCntUpdater.get(this), realCnt = toLiveRealCnt(rawCnt, decrement);
+            if (decrement == realCnt) {
+                if (refCntUpdater.compareAndSet(this, rawCnt, 1)) {
+                    deallocate();
+                    return true;
+                }
+            } else if (decrement < realCnt) {
+                // all changes to the raw count are 2x the "real" change
+                if (refCntUpdater.compareAndSet(this, rawCnt, rawCnt - (decrement << 1))) {
+                    return false;
+                }
+            } else {
+                throw new IllegalReferenceCountException(realCnt, -decrement);
+            }
+            Thread.yield(); // this benefits throughput under high contention
+        }
+    }
+
+    /**
+     * Like {@link #realRefCnt(int)} but throws if refCnt == 0
+     */
+    private static int toLiveRealCnt(int rawCnt, int decrement) {
+        if ((rawCnt & 1) == 0) {
+            return rawCnt >>> 1;
+        }
+        // odd rawCnt => already deallocated
+        throw new IllegalReferenceCountException(0, -decrement);
+    }
+
     /**
      * Called once {@link #refCnt()} is equals 0.
      */
