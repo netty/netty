@@ -297,14 +297,19 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         if (inEventLoop()) {
             register0(ch, interestOps, task);
         } else {
-            // Offload to the EventLoop as otherwise java.nio.channels.spi.AbstractSelectableChannel.register
-            // may block for a long time while trying to obtain an internal lock that may be hold while selecting.
-            submit(new Runnable() {
-                @Override
-                public void run() {
-                    register0(ch, interestOps, task);
-                }
-            }).syncUninterruptibly();
+            try {
+                // Offload to the EventLoop as otherwise java.nio.channels.spi.AbstractSelectableChannel.register
+                // may block for a long time while trying to obtain an internal lock that may be hold while selecting.
+                submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        register0(ch, interestOps, task);
+                    }
+                }).sync();
+            } catch (InterruptedException ignore) {
+                // Even if interrupted we did schedule it so just mark the Thread as interrupted.
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
