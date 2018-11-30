@@ -33,8 +33,9 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectableChannel;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.nio.channels.SelectionKey;
+
 import java.nio.channels.spi.SelectorProvider;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -293,6 +294,21 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             throw new IllegalStateException("event loop shut down");
         }
 
+        if (inEventLoop()) {
+            register0(ch, interestOps, task);
+        } else {
+            // Offload to the EventLoop as otherwise java.nio.channels.spi.AbstractSelectableChannel.register
+            // may block for a long time while trying to obtain an internal lock that may be hold while selecting.
+            submit(new Runnable() {
+                @Override
+                public void run() {
+                    register0(ch, interestOps, task);
+                }
+            }).syncUninterruptibly();
+        }
+    }
+
+    private void register0(SelectableChannel ch, int interestOps, NioTask<?> task) {
         try {
             ch.register(unwrappedSelector, interestOps, task);
         } catch (Exception e) {
