@@ -385,8 +385,6 @@ final class PoolChunk<T> implements PoolChunkMetric {
             PoolSubpage<T> head = arena.findSubpagePoolHead(subpage.elemSize);
             synchronized (head) {
                 if (subpage.free(head, bitmapIdx & 0x3FFFFFFF)) {
-                    // this may be overwriting with same thing, in theory this should never
-                    // overwrite non-null with null.
                     return;
                 }
             }

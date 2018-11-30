@@ -117,8 +117,10 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT = SystemPropertyUtil.getInt(
                 "io.netty.allocator.directMemoryCacheAlignment", 0);
 
+        // Use 1023 by default as we use an ArrayDeque as backing storage which will then allocate an internal array
+        // of 1024 elements. Otherwise we would allocate 2048 and only use 1024 which is wasteful.
         DEFAULT_MAX_CACHED_BYTEBUFFERS_PER_CHUNK = SystemPropertyUtil.getInt(
-                "io.netty.allocator.maxCachedByteBuffersPerChunk", 1024);
+                "io.netty.allocator.maxCachedByteBuffersPerChunk", 1023);
 
         if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty.allocator.numHeapArenas: {}", DEFAULT_NUM_HEAP_ARENA);
