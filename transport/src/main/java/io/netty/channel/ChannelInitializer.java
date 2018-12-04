@@ -18,11 +18,12 @@ package io.netty.channel;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelHandler.Sharable;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.concurrent.ConcurrentMap;
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A special {@link ChannelInboundHandler} which offers an easy way to initialize a {@link Channel} once it was
@@ -53,9 +54,10 @@ import java.util.concurrent.ConcurrentMap;
 public abstract class ChannelInitializer<C extends Channel> extends ChannelInboundHandlerAdapter {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelInitializer.class);
-    // We use a ConcurrentMap as a ChannelInitializer is usually shared between all Channels in a Bootstrap /
+    // We use a Set as a ChannelInitializer is usually shared between all Channels in a Bootstrap /
     // ServerBootstrap. This way we can reduce the memory usage compared to use Attributes.
-    private final ConcurrentMap<ChannelHandlerContext, Boolean> initMap = PlatformDependent.newConcurrentHashMap();
+    private final Set<ChannelHandlerContext> initMap = Collections.newSetFromMap(
+            new ConcurrentHashMap<ChannelHandlerContext, Boolean>());
 
     /**
      * This method will be called once the {@link Channel} was registered. After the method returns this instance
@@ -108,9 +110,14 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
         }
     }
 
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        initMap.remove(ctx);
+    }
+
     @SuppressWarnings("unchecked")
     private boolean initChannel(ChannelHandlerContext ctx) throws Exception {
-        if (initMap.putIfAbsent(ctx, Boolean.TRUE) == null) { // Guard against re-entrance.
+        if (initMap.add(ctx)) { // Guard against re-entrance.
             try {
                 initChannel((C) ctx.channel());
             } catch (Throwable cause) {
@@ -125,14 +132,25 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
         return false;
     }
 
-    private void remove(ChannelHandlerContext ctx) {
+    private void remove(final ChannelHandlerContext ctx) {
         try {
             ChannelPipeline pipeline = ctx.pipeline();
             if (pipeline.context(this) != null) {
                 pipeline.remove(this);
             }
         } finally {
-            initMap.remove(ctx);
+            // The removal may happen in an async fashion if the EventExecutor we use does something funky.
+            if (ctx.isRemoved()) {
+                initMap.remove(ctx);
+            } else {
+                // Ensure we always remove from the Map in all cases to not produce a memory leak.
+                ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) {
+                        initMap.remove(ctx);
+                    }
+                });
+            }
         }
     }
 }
