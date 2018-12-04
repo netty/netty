@@ -52,6 +52,8 @@ import static org.junit.Assert.fail;
  */
 public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
+    private static final ByteBufAllocator ALLOC = UnpooledByteBufAllocator.DEFAULT;
+
     private final ByteOrder order;
 
     protected AbstractCompositeByteBufTest(ByteOrder order) {
@@ -1260,6 +1262,37 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         for (ByteBuf buffer: bufferList) {
             assertEquals(0, buffer.refCnt());
         }
+    }
+
+    @Test
+    public void testComponentsLessThanLowerBound() {
+        try {
+            new CompositeByteBuf(ALLOC, true, 0);
+            fail();
+        } catch (IllegalArgumentException e) {
+            assertEquals("maxNumComponents: 0 (expected: >= 1)", e.getMessage());
+        }
+    }
+
+    @Test
+    public void testComponentsEqualToLowerBound() {
+        assertCompositeBufCreated(1);
+    }
+
+    @Test
+    public void testComponentsGreaterThanLowerBound() {
+        assertCompositeBufCreated(5);
+    }
+
+    /**
+     * Assert that a new {@linkplain CompositeByteBuf} was created successfully with the desired number of max
+     * components.
+     */
+    private static void assertCompositeBufCreated(int expectedMaxComponents) {
+        CompositeByteBuf buf = new CompositeByteBuf(ALLOC, true, expectedMaxComponents);
+
+        assertEquals(expectedMaxComponents, buf.maxNumComponents());
+        assertTrue(buf.release());
     }
 
 }
