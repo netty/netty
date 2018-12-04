@@ -205,7 +205,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                     assert s.doNotDestroy && s.elemSize == normCapacity;
                     long handle = s.allocate();
                     assert handle >= 0;
-                    s.chunk.initBufWithSubpage(buf, handle, reqCapacity);
+                    s.chunk.initBufWithSubpage(buf, null, handle, reqCapacity);
                     incTinySmallAllocation(tiny);
                     return;
                 }
@@ -242,9 +242,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         // Add a new chunk.
         PoolChunk<T> c = newChunk(pageSize, maxOrder, pageShifts, chunkSize);
-        long handle = c.allocate(normCapacity);
-        assert handle > 0;
-        c.initBuf(buf, handle, reqCapacity);
+        boolean success = c.allocate(buf, reqCapacity, normCapacity);
+        assert success;
         qInit.add(c);
     }
 
@@ -263,7 +262,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         allocationsHuge.increment();
     }
 
-    void free(PoolChunk<T> chunk, long handle, int normCapacity, PoolThreadCache cache) {
+    void free(PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, int normCapacity, PoolThreadCache cache) {
         if (chunk.unpooled) {
             int size = chunk.chunkSize();
             destroyChunk(chunk);
@@ -271,12 +270,12 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             deallocationsHuge.increment();
         } else {
             SizeClass sizeClass = sizeClass(normCapacity);
-            if (cache != null && cache.add(this, chunk, handle, normCapacity, sizeClass)) {
+            if (cache != null && cache.add(this, chunk, nioBuffer, handle, normCapacity, sizeClass)) {
                 // cached so not free it.
                 return;
             }
 
-            freeChunk(chunk, handle, sizeClass);
+            freeChunk(chunk, handle, sizeClass, nioBuffer);
         }
     }
 
@@ -287,7 +286,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         return isTiny(normCapacity) ? SizeClass.Tiny : SizeClass.Small;
     }
 
-    void freeChunk(PoolChunk<T> chunk, long handle, SizeClass sizeClass) {
+    void freeChunk(PoolChunk<T> chunk, long handle, SizeClass sizeClass, ByteBuffer nioBuffer) {
         final boolean destroyChunk;
         synchronized (this) {
             switch (sizeClass) {
@@ -303,7 +302,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             default:
                 throw new Error();
             }
-            destroyChunk = !chunk.parent.free(chunk, handle);
+            destroyChunk = !chunk.parent.free(chunk, handle, nioBuffer);
         }
         if (destroyChunk) {
             // destroyChunk not need to be called while holding the synchronized lock.
@@ -387,6 +386,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         }
 
         PoolChunk<T> oldChunk = buf.chunk;
+        ByteBuffer oldNioBuffer = buf.tmpNioBuf;
         long oldHandle = buf.handle;
         T oldMemory = buf.memory;
         int oldOffset = buf.offset;
@@ -415,7 +415,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         buf.setIndex(readerIndex, writerIndex);
 
         if (freeOldMemory) {
-            free(oldChunk, oldHandle, oldMaxLength, buf.cache);
+            free(oldChunk, oldNioBuffer, oldHandle, oldMaxLength, buf.cache);
         }
     }
 
