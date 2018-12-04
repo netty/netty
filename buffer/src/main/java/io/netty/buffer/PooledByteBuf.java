@@ -33,7 +33,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     protected int length;
     int maxLength;
     PoolThreadCache cache;
-    private ByteBuffer tmpNioBuf;
+    ByteBuffer tmpNioBuf;
     private ByteBufAllocator allocator;
 
     @SuppressWarnings("unchecked")
@@ -42,27 +42,29 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         this.recyclerHandle = (Handle<PooledByteBuf<T>>) recyclerHandle;
     }
 
-    void init(PoolChunk<T> chunk, long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
-        init0(chunk, handle, offset, length, maxLength, cache);
+    void init(PoolChunk<T> chunk, ByteBuffer nioBuffer,
+              long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
+        init0(chunk, nioBuffer, handle, offset, length, maxLength, cache);
     }
 
     void initUnpooled(PoolChunk<T> chunk, int length) {
-        init0(chunk, 0, chunk.offset, length, length, null);
+        init0(chunk, null, 0, chunk.offset, length, length, null);
     }
 
-    private void init0(PoolChunk<T> chunk, long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
+    private void init0(PoolChunk<T> chunk, ByteBuffer nioBuffer,
+                       long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
         assert handle >= 0;
         assert chunk != null;
 
         this.chunk = chunk;
         memory = chunk.memory;
+        tmpNioBuf = nioBuffer;
         allocator = chunk.arena.parent;
         this.cache = cache;
         this.handle = handle;
         this.offset = offset;
         this.length = length;
         this.maxLength = maxLength;
-        tmpNioBuf = null;
     }
 
     /**
@@ -166,8 +168,8 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             final long handle = this.handle;
             this.handle = -1;
             memory = null;
+            chunk.arena.free(chunk, tmpNioBuf, handle, maxLength, cache);
             tmpNioBuf = null;
-            chunk.arena.free(chunk, handle, maxLength, cache);
             chunk = null;
             recycle();
         }
