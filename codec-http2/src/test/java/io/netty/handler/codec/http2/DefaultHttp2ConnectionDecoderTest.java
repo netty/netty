@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
 import junit.framework.AssertionFailedError;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,9 +39,11 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
+import static io.netty.handler.codec.http2.Http2TestUtil.newHttp2HeadersWithRequestPseudoHeaders;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -192,7 +195,8 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.write(any())).thenReturn(future);
 
-        decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
+        decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
+                Http2PromisedRequestVerifier.ALWAYS_VERIFY, true, true, true);
         decoder.lifecycleManager(lifecycleManager);
         decoder.frameListener(listener);
 
@@ -490,6 +494,64 @@ public class DefaultHttp2ConnectionDecoderTest {
         verify(stream).open(false);
         verify(listener).onHeadersRead(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0),
                 eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0), eq(false));
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void requestPseudoHeadersInResponseThrows() throws Exception {
+        when(connection.isServer()).thenReturn(false);
+        when(connection.stream(STREAM_ID)).thenReturn(null);
+        when(connection.streamMayHaveExisted(STREAM_ID)).thenReturn(false);
+        when(remote.createStream(eq(STREAM_ID), anyBoolean())).thenReturn(stream);
+        when(stream.state()).thenReturn(HALF_CLOSED_REMOTE);
+        final Http2Headers headers = newHttp2HeadersWithRequestPseudoHeaders();
+        decode().onHeadersRead(ctx, STREAM_ID, headers, 0, false);
+    }
+
+    @Test(expected = Http2Exception.class)
+    public void missingPseudoHeadersInLeadingHeaderThrows() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        when(connection.stream(STREAM_ID)).thenReturn(null);
+        when(connection.streamMayHaveExisted(STREAM_ID)).thenReturn(false);
+        when(remote.createStream(eq(STREAM_ID), anyBoolean())).thenReturn(stream);
+        when(stream.state()).thenReturn(HALF_CLOSED_REMOTE);
+        final Http2Headers headers = newHttp2HeadersWithRequestPseudoHeaders();
+        headers.remove(PseudoHeaderName.METHOD.value());
+        decode().onHeadersRead(ctx, STREAM_ID, headers, 0, false);
+    }
+
+    @Test
+    public void missingPseudoHeadersInLeadingHeaderShouldNotThrowsIfValidationDisabled() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        when(connection.stream(STREAM_ID)).thenReturn(null);
+        when(connection.streamMayHaveExisted(STREAM_ID)).thenReturn(false);
+        when(remote.createStream(eq(STREAM_ID), anyBoolean())).thenReturn(stream);
+        when(stream.state()).thenReturn(HALF_CLOSED_REMOTE);
+        final Http2Headers headers = newHttp2HeadersWithRequestPseudoHeaders();
+        headers.remove(PseudoHeaderName.METHOD.value());
+
+        decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
+                Http2PromisedRequestVerifier.ALWAYS_VERIFY, true, true, false);
+        decoder.lifecycleManager(lifecycleManager);
+        decoder.frameListener(listener);
+
+        // Simulate receiving the initial settings from the remote endpoint.
+        decode().onSettingsRead(ctx, new Http2Settings());
+        // Simulate receiving the SETTINGS ACK for the initial settings.
+        decode().onSettingsAckRead(ctx);
+
+        decode().onHeadersRead(ctx, STREAM_ID, headers, 0, false);
+    }
+
+    @Test
+    public void missingPseudoHeadersInTrailerHeaderDoesNotThrow() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        when(connection.stream(STREAM_ID)).thenReturn(stream);
+
+        decode().onHeadersRead(ctx, STREAM_ID, newHttp2HeadersWithRequestPseudoHeaders(), 0, false);
+
+        final Http2Headers headers = newHttp2HeadersWithRequestPseudoHeaders();
+        headers.remove(PseudoHeaderName.METHOD.value());
+        decode().onHeadersRead(ctx, STREAM_ID, headers, 0, true);
     }
 
     @Test(expected = Http2Exception.class)

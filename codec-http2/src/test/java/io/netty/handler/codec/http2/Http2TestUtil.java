@@ -98,6 +98,13 @@ public final class Http2TestUtil {
         return data;
     }
 
+    public static Http2Headers newHttp2HeadersWithRequestPseudoHeaders() {
+        return new DefaultHttp2Headers(true)
+            .method("GET")
+            .path("/")
+            .scheme("https");
+    }
+
     /**
      * Returns an {@link AsciiString} that wraps a randomly-filled byte array.
      */

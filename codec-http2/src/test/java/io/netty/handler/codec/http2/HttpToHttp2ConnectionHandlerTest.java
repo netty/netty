@@ -242,8 +242,8 @@ public class HttpToHttp2ConnectionHandlerTest {
         final HttpHeaders httpHeaders = request.headers();
         httpHeaders.setInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), 5);
         final Http2Headers http2Headers =
-                new DefaultHttp2Headers().method(new AsciiString("CONNECT")).path(new AsciiString("/"))
-                .scheme(new AsciiString("http")).authority(new AsciiString("www.example.com:80"));
+                new DefaultHttp2Headers().method(new AsciiString("CONNECT"))
+                                         .authority(new AsciiString("www.example.com:80"));
 
         ChannelPromise writePromise = newPromise();
         verifyHeadersOnly(http2Headers, writePromise, clientChannel.writeAndFlush(request, writePromise));
