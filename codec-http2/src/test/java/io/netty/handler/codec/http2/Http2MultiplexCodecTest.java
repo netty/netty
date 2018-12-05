@@ -260,6 +260,60 @@ public class Http2MultiplexCodecTest {
         verifyFramesMultiplexedToCorrectChannel(inboundStream, inboundHandler, 2);
     }
 
+    @Test
+    public void readInChannelReadWithoutAutoRead() {
+        useReadWithoutAutoRead(false);
+    }
+
+    @Test
+    public void readInChannelReadCompleteWithoutAutoRead() {
+        useReadWithoutAutoRead(true);
+    }
+
+    private void useReadWithoutAutoRead(final boolean readComplete) {
+        LastInboundHandler inboundHandler = streamActiveAndWriteHeaders(inboundStream);
+        Channel childChannel = inboundHandler.channel();
+        assertTrue(childChannel.config().isAutoRead());
+        childChannel.config().setAutoRead(false);
+        assertFalse(childChannel.config().isAutoRead());
+
+        Http2HeadersFrame headersFrame = inboundHandler.readInbound();
+        assertNotNull(headersFrame);
+
+        // Add a handler which will request reads.
+        childChannel.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                ctx.fireChannelRead(msg);
+                if (!readComplete) {
+                    ctx.read();
+                }
+            }
+
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) {
+                ctx.fireChannelReadComplete();
+                if (readComplete) {
+                    ctx.read();
+                }
+            }
+        });
+
+        codec.onHttp2Frame(
+                new DefaultHttp2DataFrame(bb("hello world"), false).stream(inboundStream));
+        codec.onHttp2Frame(new DefaultHttp2DataFrame(bb("foo"), false).stream(inboundStream));
+        codec.onHttp2Frame(new DefaultHttp2DataFrame(bb("bar"), true).stream(inboundStream));
+        codec.onChannelReadComplete();
+
+        codec.onHttp2Frame(
+                new DefaultHttp2DataFrame(bb("hello world"), false).stream(inboundStream));
+        codec.onHttp2Frame(new DefaultHttp2DataFrame(bb("foo"), false).stream(inboundStream));
+        codec.onHttp2Frame(new DefaultHttp2DataFrame(bb("bar"), true).stream(inboundStream));
+        codec.onChannelReadComplete();
+
+        verifyFramesMultiplexedToCorrectChannel(inboundStream, inboundHandler, 6);
+    }
+
     private Http2StreamChannel newOutboundStream() {
         return new Http2StreamChannelBootstrap(parentChannel).handler(childChannelInitializer)
                 .open().syncUninterruptibly().getNow();
