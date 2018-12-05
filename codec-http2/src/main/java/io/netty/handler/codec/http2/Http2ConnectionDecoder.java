@@ -60,7 +60,7 @@ public interface Http2ConnectionDecoder extends Closeable {
     /**
      * Called by the {@link Http2ConnectionHandler} to decode the next frame from the input buffer.
      */
-    void decodeFrame(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Http2Exception;
+    void decodeFrame(ChannelHandlerContext ctx, ByteBuf in) throws Http2Exception;
 
     /**
      * Gets the local settings for this endpoint of the HTTP/2 connection.

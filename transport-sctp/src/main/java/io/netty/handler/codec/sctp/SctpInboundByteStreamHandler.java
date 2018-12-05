@@ -22,8 +22,6 @@ import io.netty.channel.sctp.SctpMessage;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
-import java.util.List;
-
 /**
  * A ChannelHandler which receives {@link SctpMessage}s which belong to a application protocol form a specific
  * SCTP Stream  and decode it as {@link ByteBuf}.
@@ -54,11 +52,11 @@ public class SctpInboundByteStreamHandler extends MessageToMessageDecoder<SctpMe
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, SctpMessage msg, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
         if (!msg.isComplete()) {
             throw new CodecException(String.format("Received SctpMessage is not complete, please add %s in the " +
                     "pipeline before this handler", SctpMessageCompletionHandler.class.getSimpleName()));
         }
-        out.add(msg.content().retain());
+        ctx.fireChannelRead(msg.content().retain());
     }
 }

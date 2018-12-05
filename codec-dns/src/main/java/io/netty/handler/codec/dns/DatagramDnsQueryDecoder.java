@@ -23,7 +23,6 @@ import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.internal.UnstableApi;
 
-import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 
@@ -51,11 +50,10 @@ public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<DatagramPac
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, DatagramPacket packet, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
         final ByteBuf buf = packet.content();
 
-        final DnsQuery query = newQuery(packet, buf);
-        boolean success = false;
+        DnsQuery query = newQuery(packet, buf);
         try {
             final int questionCount = buf.readUnsignedShort();
             final int answerCount = buf.readUnsignedShort();
@@ -67,10 +65,11 @@ public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<DatagramPac
             decodeRecords(query, DnsSection.AUTHORITY, buf, authorityRecordCount);
             decodeRecords(query, DnsSection.ADDITIONAL, buf, additionalRecordCount);
 
-            out.add(query);
-            success = true;
+            DnsQuery q = query;
+            query = null;
+            ctx.fireChannelRead(q);
         } finally {
-            if (!success) {
+            if (query != null) {
                 query.release();
             }
         }

@@ -32,6 +32,7 @@ public class WebSocket08FrameDecoderTest {
     public void channelInactive() throws Exception {
         final WebSocket08FrameDecoder decoder = new WebSocket08FrameDecoder(true, true, 65535, false);
         final ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
+        decoder.handlerAdded(ctx);
         decoder.channelInactive(ctx);
         verify(ctx).fireChannelInactive();
     }

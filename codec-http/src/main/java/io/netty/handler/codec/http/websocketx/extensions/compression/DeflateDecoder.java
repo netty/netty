@@ -30,7 +30,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionDecoder;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter;
 
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -75,7 +74,7 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
     protected abstract int newRsv(WebSocketFrame msg);
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg) throws Exception {
         final ByteBuf decompressedContent = decompressContent(ctx, msg);
 
         final WebSocketFrame outMsg;
@@ -89,7 +88,7 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
             throw new CodecException("unexpected frame type: " + msg.getClass().getName());
         }
 
-        out.add(outMsg);
+        ctx.fireChannelRead(outMsg);
     }
 
     @Override

@@ -19,8 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 
-import java.util.List;
-
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
 
 /**
@@ -77,7 +75,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
     private int streamCRC;
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         if (!in.isReadable()) {
             return;
         }
@@ -302,7 +300,7 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                     int currentBlockCRC = blockDecompressor.checkCRC();
                     streamCRC = (streamCRC << 1 | streamCRC >>> 31) ^ currentBlockCRC;
 
-                    out.add(uncompressed);
+                    ctx.fireChannelRead(uncompressed);
                     success = true;
                 } finally {
                     if (!success) {

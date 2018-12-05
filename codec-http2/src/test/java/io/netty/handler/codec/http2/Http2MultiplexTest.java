@@ -64,7 +64,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyShort;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -108,7 +107,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         Http2Settings settings = new Http2Settings().initialWindowSize(initialRemoteStreamWindow);
         frameInboundWriter.writeInboundSettings(settings);
 
-        verify(frameWriter).writeSettingsAck(eqCodecCtx(), anyChannelPromise());
+        verify(frameWriter).writeSettingsAck(any(ChannelHandlerContext.class), anyChannelPromise());
 
         frameInboundWriter.writeInboundSettingsAck();
 
@@ -118,12 +117,8 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertNotNull(settingsAckFrame);
 
         // Handshake
-        verify(frameWriter).writeSettings(eqCodecCtx(),
+        verify(frameWriter).writeSettings(any(ChannelHandlerContext.class),
                 anyHttp2Settings(), anyChannelPromise());
-    }
-
-    private ChannelHandlerContext eqCodecCtx() {
-        return eq(codec.ctx);
     }
 
     @After
@@ -152,8 +147,8 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         });
         assertTrue(childChannel.isActive());
 
-        verify(frameWriter).writeFrame(eq(codec.ctx), eq((byte) 99), eqStreamId(childChannel), any(Http2Flags.class),
-                any(ByteBuf.class), any(ChannelPromise.class));
+        verify(frameWriter).writeFrame(any(ChannelHandlerContext.class), eq((byte) 99), eqStreamId(childChannel),
+                any(Http2Flags.class), any(ByteBuf.class), any(ChannelPromise.class));
     }
 
     private Http2StreamChannel newInboundStream(int streamId, boolean endStream, final ChannelHandler childHandler) {
@@ -418,13 +413,13 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertTrue(childChannel.isActive());
 
         childChannel.close();
-        verify(frameWriter).writeRstStream(eqCodecCtx(),
+        verify(frameWriter).writeRstStream(any(ChannelHandlerContext.class),
                 eqStreamId(childChannel), eq(Http2Error.CANCEL.code()), anyChannelPromise());
     }
 
     @Test
     public void outboundStreamShouldNotWriteResetFrameOnClose_IfStreamDidntExist() {
-        when(frameWriter.writeHeaders(eqCodecCtx(), anyInt(),
+        when(frameWriter.writeHeaders(any(ChannelHandlerContext.class), anyInt(),
                 any(Http2Headers.class), anyInt(), anyBoolean(),
                 any(ChannelPromise.class))).thenAnswer(new Answer<ChannelFuture>() {
 
@@ -453,8 +448,8 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         childChannel.close();
         // The channel was never active so we should not generate a RST frame.
-        verify(frameWriter, never()).writeRstStream(eqCodecCtx(), eqStreamId(childChannel), anyLong(),
-                anyChannelPromise());
+        verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class),
+                eqStreamId(childChannel), anyLong(), anyChannelPromise());
 
         assertTrue(parentChannel.outboundMessages().isEmpty());
     }
@@ -469,7 +464,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertFalse(inboundHandler.isChannelActive());
 
         // A RST_STREAM frame should NOT be emitted, as we received a RST_STREAM.
-        verify(frameWriter, Mockito.never()).writeRstStream(eqCodecCtx(), eqStreamId(channel),
+        verify(frameWriter, Mockito.never()).writeRstStream(any(ChannelHandlerContext.class), eqStreamId(channel),
                 anyLong(), anyChannelPromise());
     }
 
@@ -493,7 +488,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertTrue(childChannel.isActive());
 
         Http2Headers headers = new DefaultHttp2Headers();
-        when(frameWriter.writeHeaders(eqCodecCtx(), anyInt(),
+        when(frameWriter.writeHeaders(any(ChannelHandlerContext.class), anyInt(),
                 eq(headers), anyInt(), anyBoolean(),
                 any(ChannelPromise.class))).thenAnswer(invocationOnMock -> {
             return ((ChannelPromise) invocationOnMock.getArgument(5)).setFailure(
@@ -537,7 +532,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         childChannel.close();
 
         // An active outbound stream should emit a RST_STREAM frame.
-        verify(frameWriter).writeRstStream(eqCodecCtx(), eqStreamId(childChannel),
+        verify(frameWriter).writeRstStream(any(ChannelHandlerContext.class), eqStreamId(childChannel),
                 anyLong(), anyChannelPromise());
 
         assertFalse(childChannel.isOpen());
@@ -555,7 +550,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertTrue(childChannel.isActive());
 
         Http2Headers headers = new DefaultHttp2Headers();
-        when(frameWriter.writeHeaders(eqCodecCtx(), anyInt(),
+        when(frameWriter.writeHeaders(any(ChannelHandlerContext.class), anyInt(),
                eq(headers), anyInt(), anyBoolean(), any(ChannelPromise.class))).thenAnswer(invocationOnMock -> {
                return ((ChannelPromise) invocationOnMock.getArgument(5)).setFailure(
                        new Http2NoMoreStreamIdsException());
@@ -637,7 +632,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         final AtomicBoolean channelActive = new AtomicBoolean(true);
 
         Http2Headers headers = new DefaultHttp2Headers();
-        when(frameWriter.writeHeaders(eqCodecCtx(), anyInt(),
+        when(frameWriter.writeHeaders(any(ChannelHandlerContext.class), anyInt(),
                 eq(headers), anyInt(), anyBoolean(),
                 any(ChannelPromise.class))).thenAnswer(invocationOnMock -> {
             ChannelPromise promise = invocationOnMock.getArgument(5);

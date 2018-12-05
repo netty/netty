@@ -97,8 +97,7 @@ public final class WebSocketExtensionTestUtil {
 
     static class DummyDecoder extends WebSocketExtensionDecoder {
         @Override
-        protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg,
-                List<Object> out) throws Exception {
+        protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg) throws Exception {
             // unused
         }
     }
@@ -113,8 +112,7 @@ public final class WebSocketExtensionTestUtil {
 
     static class Dummy2Decoder extends WebSocketExtensionDecoder {
         @Override
-        protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg,
-                List<Object> out) throws Exception {
+        protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg) throws Exception {
             // unused
         }
     }

@@ -24,8 +24,6 @@ import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.socksx.SocksVersion;
 import io.netty.handler.codec.socksx.v5.Socks5InitialResponseDecoder.State;
 
-import java.util.List;
-
 /**
  * Decodes a single {@link Socks5InitialResponse} from the inbound {@link ByteBuf}s.
  * On successful decode, this decoder will forward the received data to the next handler, so that
@@ -45,7 +43,7 @@ public class Socks5InitialResponseDecoder extends ReplayingDecoder<State> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         try {
             switch (state()) {
             case INIT: {
@@ -56,13 +54,13 @@ public class Socks5InitialResponseDecoder extends ReplayingDecoder<State> {
                 }
 
                 final Socks5AuthMethod authMethod = Socks5AuthMethod.valueOf(in.readByte());
-                out.add(new DefaultSocks5InitialResponse(authMethod));
+                ctx.fireChannelRead(new DefaultSocks5InitialResponse(authMethod));
                 checkpoint(State.SUCCESS);
             }
             case SUCCESS: {
                 int readableBytes = actualReadableBytes();
                 if (readableBytes > 0) {
-                    out.add(in.readRetainedSlice(readableBytes));
+                    ctx.fireChannelRead(in.readRetainedSlice(readableBytes));
                 }
                 break;
             }
@@ -72,11 +70,11 @@ public class Socks5InitialResponseDecoder extends ReplayingDecoder<State> {
             }
             }
         } catch (Exception e) {
-            fail(out, e);
+            fail(ctx, e);
         }
     }
 
-    private void fail(List<Object> out, Exception cause) {
+    private void fail(ChannelHandlerContext ctx, Exception cause) {
         if (!(cause instanceof DecoderException)) {
             cause = new DecoderException(cause);
         }
@@ -85,6 +83,6 @@ public class Socks5InitialResponseDecoder extends ReplayingDecoder<State> {
 
         Socks5Message m = new DefaultSocks5InitialResponse(Socks5AuthMethod.UNACCEPTED);
         m.setDecoderResult(DecoderResult.failure(cause));
-        out.add(m);
+        ctx.fireChannelRead(m);
     }
 }

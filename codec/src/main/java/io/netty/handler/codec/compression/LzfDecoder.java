@@ -22,8 +22,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 
-import java.util.List;
-
 import static com.ning.compress.lzf.LZFChunk.BLOCK_TYPE_COMPRESSED;
 import static com.ning.compress.lzf.LZFChunk.BLOCK_TYPE_NON_COMPRESSED;
 import static com.ning.compress.lzf.LZFChunk.BYTE_V;
@@ -108,7 +106,7 @@ public class LzfDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         try {
             switch (currentState) {
             case INIT_BLOCK:
@@ -178,7 +176,7 @@ public class LzfDecoder extends ByteToMessageDecoder {
                     try {
                         decoder.decodeChunk(inputArray, inPos, outputArray, outPos, outPos + originalLength);
                         uncompressed.writerIndex(uncompressed.writerIndex() + originalLength);
-                        out.add(uncompressed);
+                        ctx.fireChannelRead(uncompressed);
                         in.skipBytes(chunkLength);
                         success = true;
                     } finally {
@@ -191,7 +189,7 @@ public class LzfDecoder extends ByteToMessageDecoder {
                         recycler.releaseInputBuffer(inputArray);
                     }
                 } else if (chunkLength > 0) {
-                    out.add(in.readRetainedSlice(chunkLength));
+                    ctx.fireChannelRead(in.readRetainedSlice(chunkLength));
                 }
 
                 currentState = State.INIT_BLOCK;

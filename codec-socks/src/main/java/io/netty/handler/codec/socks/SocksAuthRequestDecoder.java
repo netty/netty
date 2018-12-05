@@ -20,8 +20,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.socks.SocksAuthRequestDecoder.State;
 
-import java.util.List;
-
 /**
  * Decodes {@link ByteBuf}s into {@link SocksAuthRequest}.
  * Before returning SocksRequest decoder removes itself from pipeline.
@@ -35,11 +33,11 @@ public class SocksAuthRequestDecoder extends ReplayingDecoder<State> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
                 if (byteBuf.readByte() != SocksSubnegotiationVersion.AUTH_PASSWORD.byteValue()) {
-                    out.add(SocksCommonUtils.UNKNOWN_SOCKS_REQUEST);
+                    ctx.fireChannelRead(SocksCommonUtils.UNKNOWN_SOCKS_REQUEST);
                     break;
                 }
                 checkpoint(State.READ_USERNAME);
@@ -52,7 +50,7 @@ public class SocksAuthRequestDecoder extends ReplayingDecoder<State> {
             case READ_PASSWORD: {
                 int fieldLength = byteBuf.readByte();
                 String password = SocksCommonUtils.readUsAscii(byteBuf, fieldLength);
-                out.add(new SocksAuthRequest(username, password));
+                ctx.fireChannelRead(new SocksAuthRequest(username, password));
                 break;
             }
             default: {

@@ -20,7 +20,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.CombinedChannelDuplexHandler;
 
 import java.util.ArrayDeque;
-import java.util.List;
 import java.util.Queue;
 
 /**
@@ -81,6 +80,9 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
     }
 
     private final class HttpServerRequestDecoder extends HttpRequestDecoder {
+
+        private ChannelHandlerContext context;
+
         HttpServerRequestDecoder(int maxInitialLineLength, int maxHeaderSize) {
             super(maxInitialLineLength, maxHeaderSize);
         }
@@ -96,16 +98,23 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
         }
 
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
-            int oldSize = out.size();
-            super.decode(ctx, buffer, out);
-            int size = out.size();
-            for (int i = oldSize; i < size; i++) {
-                Object obj = out.get(i);
-                if (obj instanceof HttpRequest) {
-                    queue.add(((HttpRequest) obj).method());
+        protected void decode(final ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+            super.decode(context, buffer);
+        }
+
+        @Override
+        protected void handlerAdded0(final ChannelHandlerContext ctx) {
+            context = new DelegatingChannelHandlerContext(ctx) {
+
+                @Override
+                public ChannelHandlerContext fireChannelRead(Object msg) {
+                    if (msg instanceof HttpRequest) {
+                        queue.add(((HttpRequest) msg).method());
+                    }
+                    super.fireChannelRead(msg);
+                    return this;
                 }
-            }
+            };
         }
     }
 

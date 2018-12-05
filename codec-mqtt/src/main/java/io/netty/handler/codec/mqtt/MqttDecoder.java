@@ -69,7 +69,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         switch (state()) {
             case READ_FIXED_HEADER: try {
                 mqttFixedHeader = decodeFixedHeader(buffer);
@@ -77,7 +77,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 checkpoint(DecoderState.READ_VARIABLE_HEADER);
                 // fall through
             } catch (Exception cause) {
-                out.add(invalidMessage(cause));
+                ctx.fireChannelRead(invalidMessage(cause));
                 return;
             }
 
@@ -91,7 +91,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 checkpoint(DecoderState.READ_PAYLOAD);
                 // fall through
             } catch (Exception cause) {
-                out.add(invalidMessage(cause));
+                ctx.fireChannelRead(invalidMessage(cause));
                 return;
             }
 
@@ -113,10 +113,10 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                         mqttFixedHeader, variableHeader, decodedPayload.value);
                 mqttFixedHeader = null;
                 variableHeader = null;
-                out.add(message);
+                ctx.fireChannelRead(message);
                 break;
             } catch (Exception cause) {
-                out.add(invalidMessage(cause));
+                ctx.fireChannelRead(invalidMessage(cause));
                 return;
             }
 

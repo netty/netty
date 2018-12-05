@@ -30,8 +30,6 @@ import io.netty.handler.codec.socksx.v5.Socks5ServerEncoder;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.List;
-
 /**
  * Detects the version of the current SOCKS connection and initializes the pipeline with
  * {@link Socks4ServerDecoder} or {@link Socks5InitialRequestDecoder}.
@@ -61,7 +59,7 @@ public class SocksPortUnificationServerHandler extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         final int readerIndex = in.readerIndex();
         if (in.writerIndex() == readerIndex) {
             return;

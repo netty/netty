@@ -25,8 +25,6 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.util.internal.UnstableApi;
 
-import java.util.List;
-
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 
@@ -77,7 +75,7 @@ public final class CleartextHttp2ServerUpgradeHandler extends ChannelHandlerAdap
      */
     private final class PriorKnowledgeHandler extends ByteToMessageDecoder {
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             int prefaceLength = CONNECTION_PREFACE.readableBytes();
             int bytesRead = Math.min(in.readableBytes(), prefaceLength);
 

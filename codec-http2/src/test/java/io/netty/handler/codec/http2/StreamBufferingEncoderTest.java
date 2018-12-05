@@ -165,8 +165,8 @@ public class StreamBufferingEncoderTest {
         writeVerifyWriteHeaders(times(2), 3);
         // Contiguous data writes are coalesced
         ArgumentCaptor<ByteBuf> bufCaptor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(writer, times(1))
-                .writeData(eq(ctx), eq(3), bufCaptor.capture(), eq(0), eq(false), any(ChannelPromise.class));
+        verify(writer, times(1)).writeData(any(ChannelHandlerContext.class), eq(3),
+                bufCaptor.capture(), eq(0), eq(false), any(ChannelPromise.class));
         assertEquals(expectedBytes, bufCaptor.getValue().readableBytes());
     }
 

@@ -39,9 +39,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -49,7 +47,6 @@ import org.mockito.stubbing.Answer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
@@ -192,7 +189,8 @@ public class Http2ConnectionHandlerTest {
         when(connection.stream(STREAM_ID)).thenReturn(stream);
         when(connection.goAwaySent(anyInt(), anyLong(), any(ByteBuf.class))).thenReturn(true);
         when(stream.open(anyBoolean())).thenReturn(stream);
-        when(encoder.writeSettings(eq(ctx), any(Http2Settings.class), eq(promise))).thenReturn(future);
+        when(encoder.writeSettings(any(ChannelHandlerContext.class),
+                any(Http2Settings.class), eq(promise))).thenReturn(future);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
         when(ctx.newSucceededFuture()).thenReturn(future);
@@ -293,7 +291,7 @@ public class Http2ConnectionHandlerTest {
         handler = newHandler();
         handler.channelRead(ctx, copiedBuffer("BAD_PREFACE", UTF_8));
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(frameWriter).writeGoAway(eq(ctx), eq(0), eq(PROTOCOL_ERROR.code()),
+        verify(frameWriter).writeGoAway(any(ChannelHandlerContext.class), eq(0), eq(PROTOCOL_ERROR.code()),
                 captor.capture(), eq(promise));
         assertEquals(0, captor.getValue().refCnt());
     }
@@ -304,7 +302,7 @@ public class Http2ConnectionHandlerTest {
         handler = newHandler();
         handler.channelRead(ctx, copiedBuffer("GET /path HTTP/1.1", US_ASCII));
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(frameWriter).writeGoAway(eq(ctx), eq(0), eq(PROTOCOL_ERROR.code()),
+        verify(frameWriter).writeGoAway(any(ChannelHandlerContext.class), eq(0), eq(PROTOCOL_ERROR.code()),
             captor.capture(), eq(promise));
         assertEquals(0, captor.getValue().refCnt());
         assertTrue(goAwayDebugCap.contains("/path"));
@@ -320,8 +318,8 @@ public class Http2ConnectionHandlerTest {
         ByteBuf buf = Unpooled.buffer().writeBytes(connectionPrefaceBuf()).writeZero(10);
         handler.channelRead(ctx, buf);
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(frameWriter, atLeastOnce()).writeGoAway(eq(ctx), eq(0), eq(PROTOCOL_ERROR.code()),
-                captor.capture(), eq(promise));
+        verify(frameWriter, atLeastOnce()).writeGoAway(any(ChannelHandlerContext.class),
+                eq(0), eq(PROTOCOL_ERROR.code()), captor.capture(), eq(promise));
         assertEquals(0, captor.getValue().refCnt());
     }
 
@@ -332,7 +330,7 @@ public class Http2ConnectionHandlerTest {
         ByteBuf prefacePlusSome = addSettingsHeader(Unpooled.buffer().writeBytes(connectionPrefaceBuf()));
         handler.channelRead(ctx, prefacePlusSome);
         verify(decoder, atLeastOnce()).decodeFrame(any(ChannelHandlerContext.class),
-                any(ByteBuf.class), ArgumentMatchers.any());
+                any(ByteBuf.class));
     }
 
     @Test
@@ -344,7 +342,7 @@ public class Http2ConnectionHandlerTest {
         ByteBuf preface = connectionPrefaceBuf();
         handler.channelRead(ctx, preface);
         verify(decoder, never()).decodeFrame(any(ChannelHandlerContext.class),
-                any(ByteBuf.class), ArgumentMatchers.any());
+                any(ByteBuf.class));
 
         // Now remove and add the handler...this is setting up the test condition.
         handler.handlerRemoved(ctx);
@@ -353,7 +351,7 @@ public class Http2ConnectionHandlerTest {
         // Now verify we can continue as normal, reading connection preface plus more.
         ByteBuf prefacePlusSome = addSettingsHeader(Unpooled.buffer().writeBytes(connectionPrefaceBuf()));
         handler.channelRead(ctx, prefacePlusSome);
-        verify(decoder, atLeastOnce()).decodeFrame(eq(ctx), any(ByteBuf.class), ArgumentMatchers.any());
+        verify(decoder, atLeastOnce()).decodeFrame(any(ChannelHandlerContext.class), any(ByteBuf.class));
     }
 
     @SuppressWarnings("unchecked")

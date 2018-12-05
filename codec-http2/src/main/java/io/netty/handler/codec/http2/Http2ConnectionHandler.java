@@ -32,7 +32,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.buffer.ByteBufUtil.hexDump;
@@ -193,7 +192,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     private abstract class BaseDecoder {
-        public abstract void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception;
+        public abstract void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception;
         public void handlerRemoved(ChannelHandlerContext ctx) throws Exception { }
         public void channelActive(ChannelHandlerContext ctx) throws Exception { }
 
@@ -232,12 +231,12 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
 
         @Override
-        public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        public void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             try {
                 if (ctx.channel().isActive() && readClientPrefaceString(in) && verifyFirstFrameIsSettings(in)) {
                     // After the preface is read, it is time to hand over control to the post initialized decoder.
                     byteDecoder = new FrameDecoder();
-                    byteDecoder.decode(ctx, in, out);
+                    byteDecoder.decode(ctx, in);
                 }
             } catch (Throwable e) {
                 onError(ctx, false, e);
@@ -371,9 +370,9 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     private final class FrameDecoder extends BaseDecoder {
         @Override
-        public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        public void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             try {
-                decoder.decodeFrame(ctx, in, out);
+                decoder.decodeFrame(ctx, in);
             } catch (Throwable e) {
                 onError(ctx, false, e);
             }
@@ -381,7 +380,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded0(ChannelHandlerContext ctx) throws Exception {
         // Initialize the encoder, decoder, flow controllers, and internal state.
         encoder.lifecycleManager(this);
         decoder.lifecycleManager(this);
@@ -432,8 +431,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        byteDecoder.decode(ctx, in, out);
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        byteDecoder.decode(ctx, in);
     }
 
     @Override
