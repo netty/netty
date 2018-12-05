@@ -64,9 +64,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         if (alloc == null) {
             throw new NullPointerException("alloc");
         }
-        if (maxNumComponents < 2) {
+        if (maxNumComponents < 1) {
             throw new IllegalArgumentException(
-                    "maxNumComponents: " + maxNumComponents + " (expected: >= 2)");
+                    "maxNumComponents: " + maxNumComponents + " (expected: >= 1)");
         }
         this.alloc = alloc;
         this.direct = direct;
