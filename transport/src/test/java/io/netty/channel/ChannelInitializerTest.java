@@ -29,6 +29,7 @@ import org.junit.Test;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -312,6 +313,7 @@ public class ChannelInitializerTest {
             }
         };
 
+        final CountDownLatch latch = new CountDownLatch(1);
         ServerBootstrap serverBootstrap = new ServerBootstrap()
                 .channel(LocalServerChannel.class)
                 .group(group)
@@ -331,13 +333,20 @@ public class ChannelInitializerTest {
                                             public void channelRead(ChannelHandlerContext ctx, Object msg)  {
                                                 // just drop on the floor.
                                             }
+
+                                            @Override
+                                            public void channelUnregistered(ChannelHandlerContext ctx) {
+                                                latch.countDown();
+                                            }
                                         });
                                 completeCount.incrementAndGet();
                             }
 
                             @Override
                             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                                errorRef.set(cause);
+                                if (cause instanceof AssertionError) {
+                                    errorRef.set(cause);
+                                }
                             }
                         });
                     }
@@ -360,19 +369,18 @@ public class ChannelInitializerTest {
         client.closeFuture().sync();
         server.closeFuture().sync();
 
-        // Give some time to execute everything that was submitted before.
-        Thread.sleep(1000);
+        latch.await();
 
-        executor.shutdown();
-        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
-
-        assertEquals(invokeCount.get(), 1);
+        assertEquals(1, invokeCount.get());
         assertEquals(invokeCount.get(), completeCount.get());
 
         Throwable cause = errorRef.get();
         if (cause != null) {
             throw cause;
         }
+
+        executor.shutdown();
+        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
     }
 
     private static void closeChannel(Channel c) {

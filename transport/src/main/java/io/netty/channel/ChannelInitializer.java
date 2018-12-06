@@ -79,6 +79,9 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
             // we called initChannel(...) so we need to call now pipeline.fireChannelRegistered() to ensure we not
             // miss an event.
             ctx.pipeline().fireChannelRegistered();
+
+            // We are done with init the Channel, removing the initializer now.
+            remove(ctx);
         } else {
             // Called initChannel(...) before which is the expected behavior, so just forward the event.
             ctx.fireChannelRegistered();
@@ -106,7 +109,11 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
             // The good thing about calling initChannel(...) in handlerAdded(...) is that there will be no ordering
             // surprises if a ChannelInitializer will add another ChannelInitializer. This is as all handlers
             // will be added in the expected order.
-            initChannel(ctx);
+            if (initChannel(ctx)) {
+
+                // We are done with init the Channel, removing the initializer now.
+                remove(ctx);
+            }
         }
     }
 
@@ -125,7 +132,10 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
                 // We do so to prevent multiple calls to initChannel(...).
                 exceptionCaught(ctx, cause);
             } finally {
-                remove(ctx);
+                ChannelPipeline pipeline = ctx.pipeline();
+                if (pipeline.context(this) != null) {
+                    pipeline.remove(this);
+                }
             }
             return true;
         }
@@ -133,24 +143,18 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
     }
 
     private void remove(final ChannelHandlerContext ctx) {
-        try {
-            ChannelPipeline pipeline = ctx.pipeline();
-            if (pipeline.context(this) != null) {
-                pipeline.remove(this);
-            }
-        } finally {
-            // The removal may happen in an async fashion if the EventExecutor we use does something funky.
-            if (ctx.isRemoved()) {
-                initMap.remove(ctx);
-            } else {
-                // Ensure we always remove from the Map in all cases to not produce a memory leak.
-                ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) {
-                        initMap.remove(ctx);
-                    }
-                });
-            }
+        // The removal may happen in an async fashion if the EventExecutor we use does something funky.
+        if (ctx.isRemoved()) {
+            initMap.remove(ctx);
+        } else {
+            // The context is not removed yet which is most likely the case because a custom EventExecutor is used.
+            // Let's schedule it on the EventExecutor to give it some more time to be completed in case it is offloaded.
+            ctx.executor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    initMap.remove(ctx);
+                }
+            });
         }
     }
 }
