@@ -32,6 +32,11 @@
   <dependencies>
     <dependency>
       <groupId>io.netty</groupId>
+      <artifactId>netty-transport</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
       <artifactId>netty-transport-native-unix-common</artifactId>
       <version>${project.version}</version>
     </dependency>
