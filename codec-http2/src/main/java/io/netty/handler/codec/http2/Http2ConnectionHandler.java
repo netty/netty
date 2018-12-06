@@ -79,6 +79,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     private ChannelFutureListener closeListener;
     private BaseDecoder byteDecoder;
     private long gracefulShutdownTimeoutMillis;
+    private AutoReadFrameListener frameListener;
 
     protected Http2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                      Http2Settings initialSettings) {
@@ -401,6 +402,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         decoder.lifecycleManager(this);
         encoder.flowController().channelHandlerContext(ctx);
         decoder.flowController().channelHandlerContext(ctx);
+
+        // Ensure we can keep track of if we need to trigger read or not.
+        frameListener = new AutoReadFrameListener(decoder.frameListener());
+        decoder.frameListener(frameListener);
         byteDecoder = new PrefaceDecoder(ctx);
     }
 
@@ -527,8 +532,19 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
     }
 
-    void channelReadComplete0(ChannelHandlerContext ctx) throws Exception {
-        super.channelReadComplete(ctx);
+    void channelReadComplete0(ChannelHandlerContext ctx) {
+        // We do not call super.channelReadComplete() here  as we do not use the List to stored the decoded frames.
+        // When calling super.channelReadComplete() and AUTO_READ is false we would just keep reading even if the
+        // user did not call ctx.read() and frames were decoded.
+        discardSomeReadBytes();
+        if (!frameListener.frameDecoded) {
+            if (!ctx.channel().config().isAutoRead()) {
+                ctx.read();
+            }
+        } else {
+            frameListener.frameDecoded = false;
+        }
+        ctx.fireChannelReadComplete();
     }
 
     /**
@@ -937,6 +953,104 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 timeoutTask.cancel(false);
             }
             ctx.close(promise);
+        }
+    }
+
+    // Keeps track of if a frame was read and dispatched to the user or not. This is needed to decide if we should call
+    // ctx.read() or not when AUTO_READ is false to not stale.
+    private static final class AutoReadFrameListener extends Http2FrameListenerDecorator {
+
+        boolean frameDecoded;
+
+        AutoReadFrameListener(Http2FrameListener listener) {
+            super(listener == null ? new Http2FrameAdapter() : listener);
+        }
+
+        @Override
+        public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
+                throws Http2Exception {
+            frameDecoded = true;
+            return super.onDataRead(ctx, streamId, data, padding, endOfStream);
+        }
+
+        @Override
+        public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
+                                  Http2Headers headers, int padding, boolean endStream) throws Http2Exception {
+            frameDecoded = true;
+            super.onHeadersRead(ctx, streamId, headers, padding, endStream);
+        }
+
+        @Override
+        public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
+                                  Http2Headers headers, int streamDependency, short weight, boolean exclusive,
+                                  int padding, boolean endStream) throws Http2Exception {
+            frameDecoded = true;
+            super.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endStream);
+        }
+
+        @Override
+        public void onPriorityRead(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
+                                   boolean exclusive) throws Http2Exception {
+            frameDecoded = true;
+            super.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
+        }
+
+        @Override
+        public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
+            frameDecoded = true;
+            super.onRstStreamRead(ctx, streamId, errorCode);
+        }
+
+        @Override
+        public void onSettingsAckRead(ChannelHandlerContext ctx) throws Http2Exception {
+            frameDecoded = true;
+            super.onSettingsAckRead(ctx);
+        }
+
+        @Override
+        public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
+            frameDecoded = true;
+            super.onSettingsRead(ctx, settings);
+        }
+
+        @Override
+        public void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
+            frameDecoded = true;
+            super.onPingRead(ctx, data);
+        }
+
+        @Override
+        public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
+            frameDecoded = true;
+            super.onPingAckRead(ctx, data);
+        }
+
+        @Override
+        public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
+                                      Http2Headers headers, int padding) throws Http2Exception {
+            frameDecoded = true;
+            super.onPushPromiseRead(ctx, streamId, promisedStreamId, headers, padding);
+        }
+
+        @Override
+        public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
+                                 ByteBuf debugData) throws Http2Exception {
+            frameDecoded = true;
+            super.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
+        }
+
+        @Override
+        public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId,
+                                       int windowSizeIncrement) throws Http2Exception {
+            frameDecoded = true;
+            super.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
+        }
+
+        @Override
+        public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
+                                   Http2Flags flags, ByteBuf payload) throws Http2Exception {
+            frameDecoded = true;
+            super.onUnknownFrame(ctx, frameType, streamId, flags, payload);
         }
     }
 }

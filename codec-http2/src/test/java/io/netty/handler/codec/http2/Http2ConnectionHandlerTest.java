@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -65,9 +66,11 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -679,9 +682,93 @@ public class Http2ConnectionHandlerTest {
 
     @Test
     public void channelReadCompleteTriggersFlush() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        ChannelConfig config = mock(ChannelConfig.class);
+        when(config.isAutoRead()).thenReturn(false);
+        when(channel.config()).thenReturn(config);
+
         handler = newHandler();
         handler.channelReadComplete(ctx);
         verify(ctx, times(1)).flush();
+    }
+
+    @Test
+    public void readIsNotCalledWhenAutoReadOn() throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        ChannelConfig config = mock(ChannelConfig.class);
+        when(config.isAutoRead()).thenReturn(true);
+        when(channel.config()).thenReturn(config);
+
+        ArgumentCaptor<Http2FrameListener> frameListenerCaptor = ArgumentCaptor.forClass(Http2FrameListener.class);
+
+        handler = newHandler();
+        ByteBuf preface = Unpooled.buffer().writeBytes(connectionPrefaceBuf());
+        handler.channelRead(ctx, preface);
+        handler.channelReadComplete(ctx);
+
+        verify(decoder, atLeast(1)).frameListener(frameListenerCaptor.capture());
+
+        ByteBuf settings = addSettingsHeader(Unpooled.buffer());
+        handler.channelRead(ctx, settings);
+
+        verify(decoder).decodeFrame(any(ChannelHandlerContext.class),
+                any(ByteBuf.class), ArgumentMatchers.<List<Object>>any());
+
+        frameListenerCaptor.getValue().onSettingsRead(ctx, new Http2Settings());
+        handler.channelReadComplete(ctx);
+    }
+
+    @Test
+    public void readIsCalledWhenNoFrameDecodedAndAutoReadOff() throws Exception {
+        readIsCalledWhenNoFrameDecodedAndAutoReadOff(false);
+    }
+
+    @Test
+    public void readIsCalledWhenNoFrameDecodedAndAutoReadOffAndReadTriggeredByUser() throws Exception {
+        readIsCalledWhenNoFrameDecodedAndAutoReadOff(true);
+    }
+
+    private void readIsCalledWhenNoFrameDecodedAndAutoReadOff(final boolean triggerRead) throws Exception {
+        when(connection.isServer()).thenReturn(true);
+        ChannelConfig config = mock(ChannelConfig.class);
+        when(config.isAutoRead()).thenReturn(false);
+        when(channel.config()).thenReturn(config);
+
+        ArgumentCaptor<Http2FrameListener> frameListenerCaptor = ArgumentCaptor.forClass(Http2FrameListener.class);
+        if (triggerRead) {
+            when(decoder.frameListener()).thenReturn(new Http2FrameAdapter() {
+                @Override
+                public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) {
+                    if (triggerRead) {
+                        ctx.read();
+                    }
+                }
+            });
+        }
+
+        handler = newHandler();
+        ByteBuf preface = Unpooled.buffer().writeBytes(connectionPrefaceBuf());
+        handler.channelRead(ctx, preface);
+        handler.channelReadComplete(ctx);
+
+        verify(decoder, atLeast(1)).frameListener(frameListenerCaptor.capture());
+
+        ByteBuf settings = addSettingsHeader(Unpooled.buffer());
+        handler.channelRead(ctx, settings);
+
+        verify(decoder).decodeFrame(any(ChannelHandlerContext.class),
+                any(ByteBuf.class), ArgumentMatchers.<List<Object>>any());
+
+        frameListenerCaptor.getValue().onSettingsRead(ctx, new Http2Settings());
+
+        handler.channelReadComplete(ctx);
+        if (triggerRead) {
+            // Triggered ctx.read() explicitly.
+            verify(ctx, times(2)).read();
+        } else {
+            // We did not explicit trigger ctx.read() but received a settings frame.
+            verify(ctx, times(1)).read();
+        }
     }
 
     @Test

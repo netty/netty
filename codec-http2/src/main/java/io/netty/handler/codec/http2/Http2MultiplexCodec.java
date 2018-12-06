@@ -391,6 +391,12 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
             // We always flush as this is what Http2ConnectionHandler does for now.
             flush0(ctx);
         }
+
+        // Let's keep on reading for now. We will need to figure out how we coordinate this with the child channels
+        // in the future.
+        if (!ctx.channel().config().isAutoRead()) {
+            ctx.read();
+        }
         channelReadComplete0(ctx);
     }
 

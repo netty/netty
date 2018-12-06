@@ -558,17 +558,26 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         @Override
         public void onPriorityRead(
                 ChannelHandlerContext ctx, int streamId, int streamDependency, short weight, boolean exclusive) {
+            // The user has no way to trigger a read as we not forward the frame. Trigger a read if needed.
+            readIfNeeded(ctx);
+
             // TODO: Maybe handle me
         }
 
         @Override
         public void onSettingsAckRead(ChannelHandlerContext ctx) {
+            // The user has no way to trigger a read as we not forward the frame. Trigger a read if needed.
+            readIfNeeded(ctx);
+
             // TODO: Maybe handle me
         }
 
         @Override
         public void onPushPromiseRead(
                 ChannelHandlerContext ctx, int streamId, int promisedStreamId, Http2Headers headers, int padding)  {
+            // The user has no way to trigger a read as we not forward the frame. Trigger a read if needed.
+            readIfNeeded(ctx);
+
             // TODO: Maybe handle me
         }
 
@@ -578,6 +587,12 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 throw new IllegalStateException("Stream object required for identifier: " + streamId);
             }
             return stream;
+        }
+
+        private void readIfNeeded(ChannelHandlerContext ctx) {
+            if (!ctx.channel().config().isAutoRead()) {
+                ctx.read();
+            }
         }
     }
 
