@@ -201,10 +201,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      */
     protected Runnable pollTask() {
         assert inEventLoop();
-        return pollTaskFrom(taskQueue);
-    }
 
-    protected static Runnable pollTaskFrom(Queue<Runnable> taskQueue) {
         for (;;) {
             Runnable task = taskQueue.poll();
             if (task == WAKEUP_TASK) {
@@ -319,7 +316,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             throw new NullPointerException("task");
         }
         if (!offerTask(task)) {
-            reject(task);
+            rejectedExecutionHandler.rejected(task, this);
         }
     }
 
@@ -346,43 +343,30 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * @return {@code true} if and only if at least one task was run
      */
     protected boolean runAllTasks() {
-        assert inEventLoop();
         boolean fetchedAll;
-        boolean ranAtLeastOne = false;
-
         do {
             fetchedAll = fetchFromScheduledTaskQueue();
-            if (runAllTasksFrom(taskQueue)) {
-                ranAtLeastOne = true;
+            Runnable task = pollTask();
+            if (task == null) {
+                return false;
+            }
+
+            for (;;) {
+                try {
+                    task.run();
+                } catch (Throwable t) {
+                    logger.warn("A task raised an exception.", t);
+                }
+
+                task = pollTask();
+                if (task == null) {
+                    break;
+                }
             }
         } while (!fetchedAll); // keep on processing until we fetched all scheduled tasks.
 
-        if (ranAtLeastOne) {
-            lastExecutionTime = ScheduledFutureTask.nanoTime();
-        }
-        afterRunningAllTasks();
-        return ranAtLeastOne;
-    }
-
-    /**
-     * Runs all tasks from the passed {@code taskQueue}.
-     *
-     * @param taskQueue To poll and execute all tasks.
-     *
-     * @return {@code true} if at least one task was executed.
-     */
-    protected final boolean runAllTasksFrom(Queue<Runnable> taskQueue) {
-        Runnable task = pollTaskFrom(taskQueue);
-        if (task == null) {
-            return false;
-        }
-        for (;;) {
-            safeExecute(task);
-            task = pollTaskFrom(taskQueue);
-            if (task == null) {
-                return true;
-            }
-        }
+        lastExecutionTime = ScheduledFutureTask.nanoTime();
+        return true;
     }
 
     /**
@@ -393,7 +377,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         fetchFromScheduledTaskQueue();
         Runnable task = pollTask();
         if (task == null) {
-            afterRunningAllTasks();
             return false;
         }
 
@@ -401,7 +384,11 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         long runTasks = 0;
         long lastExecutionTime;
         for (;;) {
-            safeExecute(task);
+            try {
+                task.run();
+            } catch (Throwable t) {
+                logger.warn("A task raised an exception.", t);
+            }
 
             runTasks ++;
 
@@ -421,16 +408,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             }
         }
 
-        afterRunningAllTasks();
         this.lastExecutionTime = lastExecutionTime;
         return true;
     }
 
-    /**
-     * Invoked before returning from {@link #runAllTasks()} and {@link #runAllTasks(long)}.
-     */
-    @UnstableApi
-    protected void afterRunningAllTasks() { }
     /**
      * Returns the amount of time left until the scheduled task with the closest dead line is executed.
      */
@@ -865,15 +846,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     protected static void reject() {
         throw new RejectedExecutionException("event executor terminated");
-    }
-
-    /**
-     * Offers the task to the associated {@link RejectedExecutionHandler}.
-     *
-     * @param task to reject.
-     */
-    protected final void reject(Runnable task) {
-        rejectedExecutionHandler.rejected(task, this);
     }
 
     // ScheduledExecutorService implementation
