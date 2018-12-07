@@ -493,9 +493,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     @Override
     void channelReadComplete0(ChannelHandlerContext ctx) {
         if (!frameReceived) {
-            if (!ctx.channel().config().isAutoRead()) {
-                ctx.read();
-            }
+            readIfNeeded(ctx);
         } else {
             frameReceived = false;
         }

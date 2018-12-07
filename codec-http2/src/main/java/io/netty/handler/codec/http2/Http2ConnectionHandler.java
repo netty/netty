@@ -538,13 +538,17 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         // user did not call ctx.read() and frames were decoded.
         discardSomeReadBytes();
         if (!frameListener.frameDecoded) {
-            if (!ctx.channel().config().isAutoRead()) {
-                ctx.read();
-            }
+            readIfNeeded(ctx);
         } else {
             frameListener.frameDecoded = false;
         }
         ctx.fireChannelReadComplete();
+    }
+
+    static void readIfNeeded(ChannelHandlerContext ctx) {
+        if (!ctx.channel().config().isAutoRead()) {
+            ctx.read();
+        }
     }
 
     /**

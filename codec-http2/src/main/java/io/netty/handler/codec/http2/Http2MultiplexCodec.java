@@ -152,6 +152,8 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
     private int initialOutboundStreamWindow = Http2CodecUtil.DEFAULT_WINDOW_SIZE;
     private boolean parentReadInProgress;
+    private boolean parentNeedRead;
+
     private int idCount;
 
     // Linked-List for DefaultHttp2StreamChannel instances that need to be processed by channelReadComplete(...)
@@ -235,6 +237,9 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
             onHttp2GoAwayFrame(ctx, (Http2GoAwayFrame) frame);
             // Allow other handlers to act on GOAWAY frame
             ctx.fireChannelRead(frame);
+
+            // Ensure we will read again
+            parentNeedRead = true;
         } else if (frame instanceof Http2SettingsFrame) {
             Http2Settings settings = ((Http2SettingsFrame) frame).settings();
             if (settings.initialWindowSize() != null) {
@@ -242,9 +247,15 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
             }
             // Allow other handlers to act on SETTINGS frame
             ctx.fireChannelRead(frame);
+
+            // Ensure we will read again
+            parentNeedRead = true;
         } else {
             // Send any other frames down the pipeline
             ctx.fireChannelRead(frame);
+
+            // Ensure we will read again
+            parentNeedRead = true;
         }
     }
 
@@ -392,10 +403,10 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
             flush0(ctx);
         }
 
-        // Let's keep on reading for now. We will need to figure out how we coordinate this with the child channels
-        // in the future.
-        if (!ctx.channel().config().isAutoRead()) {
-            ctx.read();
+        // Check if we need to read or not.
+        if (parentNeedRead) {
+            parentNeedRead = false;
+            readIfNeeded(ctx);
         }
         channelReadComplete0(ctx);
     }
@@ -1019,13 +1030,28 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                 switch (readStatus) {
                     case IDLE:
                         readStatus = ReadStatus.IN_PROGRESS;
+
                         doBeginRead();
+
+                        parentRead();
                         break;
                     case IN_PROGRESS:
                         readStatus = ReadStatus.REQUESTED;
+
+                        parentRead();
                         break;
                     default:
                         break;
+                }
+            }
+
+            private void parentRead() {
+                // If we are in parentReadInProgress we will trigger the read in channelReadComplete0(...)
+                // otherwise we will just directly trigger a read.
+                if (parentReadInProgress) {
+                    parentNeedRead = true;
+                } else {
+                    readIfNeeded(ctx);
                 }
             }
 
