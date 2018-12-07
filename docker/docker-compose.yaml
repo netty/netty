@@ -31,6 +31,9 @@ services:
 
   shell:
     <<: *common
+    environment:
+      - SANOTYPE_USER
+      - SANOTYPE_PASSWORD
     volumes:
       - ~/.ssh:/root/.ssh
       - ~/.gnupg:/root/.gnupg
