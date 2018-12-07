@@ -153,6 +153,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     /** Number of buffered streams if the {@link StreamBufferingEncoder} is used. **/
     private int numBufferedStreams;
     private DefaultHttp2FrameStream frameStreamToInitialize;
+    private boolean frameReceived;
 
     Http2FrameCodec(Http2ConnectionEncoder encoder, Http2ConnectionDecoder decoder, Http2Settings initialSettings) {
         super(decoder, encoder, initialSettings);
@@ -489,32 +490,50 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         return super.isGracefulShutdownComplete() && numBufferedStreams == 0;
     }
 
+    @Override
+    void channelReadComplete0(ChannelHandlerContext ctx) {
+        if (!frameReceived) {
+            if (!ctx.channel().config().isAutoRead()) {
+                ctx.read();
+            }
+        } else {
+            frameReceived = false;
+        }
+
+        super.channelReadComplete0(ctx);
+    }
+
     private final class FrameListener implements Http2FrameListener {
 
         @Override
         public void onUnknownFrame(
                 ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags, ByteBuf payload) {
+            frameReceived = true;
             onHttp2Frame(ctx, new DefaultHttp2UnknownFrame(frameType, flags, payload)
                     .stream(requireStream(streamId)).retain());
         }
 
         @Override
         public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) {
+            frameReceived = true;
             onHttp2Frame(ctx, new DefaultHttp2SettingsFrame(settings));
         }
 
         @Override
         public void onPingRead(ChannelHandlerContext ctx, long data) {
+            frameReceived = true;
             onHttp2Frame(ctx, new DefaultHttp2PingFrame(data, false));
         }
 
         @Override
         public void onPingAckRead(ChannelHandlerContext ctx, long data) {
+            frameReceived = true;
             onHttp2Frame(ctx, new DefaultHttp2PingFrame(data, true));
         }
 
         @Override
         public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) {
+            frameReceived = true;
             onHttp2Frame(ctx, new DefaultHttp2ResetFrame(errorCode).stream(requireStream(streamId)));
         }
 
@@ -524,6 +543,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 // Ignore connection window updates.
                 return;
             }
+            frameReceived = true;
             onHttp2Frame(ctx, new DefaultHttp2WindowUpdateFrame(windowSizeIncrement).stream(requireStream(streamId)));
         }
 
@@ -531,12 +551,14 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
                                   Http2Headers headers, int streamDependency, short weight, boolean
                                           exclusive, int padding, boolean endStream) {
+            frameReceived = true;
             onHeadersRead(ctx, streamId, headers, padding, endStream);
         }
 
         @Override
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                                   int padding, boolean endOfStream) {
+            frameReceived = true;
             onHttp2Frame(ctx, new DefaultHttp2HeadersFrame(headers, endOfStream, padding)
                                         .stream(requireStream(streamId)));
         }
@@ -544,6 +566,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         @Override
         public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding,
                               boolean endOfStream) {
+            frameReceived = true;
             onHttp2Frame(ctx, new DefaultHttp2DataFrame(data, endOfStream, padding)
                                         .stream(requireStream(streamId)).retain());
             // We return the bytes in consumeBytes() once the stream channel consumed the bytes.
@@ -552,32 +575,24 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         @Override
         public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData) {
+            frameReceived = true;
             onHttp2Frame(ctx, new DefaultHttp2GoAwayFrame(lastStreamId, errorCode, debugData).retain());
         }
 
         @Override
         public void onPriorityRead(
                 ChannelHandlerContext ctx, int streamId, int streamDependency, short weight, boolean exclusive) {
-            // The user has no way to trigger a read as we not forward the frame. Trigger a read if needed.
-            readIfNeeded(ctx);
-
             // TODO: Maybe handle me
         }
 
         @Override
         public void onSettingsAckRead(ChannelHandlerContext ctx) {
-            // The user has no way to trigger a read as we not forward the frame. Trigger a read if needed.
-            readIfNeeded(ctx);
-
             // TODO: Maybe handle me
         }
 
         @Override
         public void onPushPromiseRead(
                 ChannelHandlerContext ctx, int streamId, int promisedStreamId, Http2Headers headers, int padding)  {
-            // The user has no way to trigger a read as we not forward the frame. Trigger a read if needed.
-            readIfNeeded(ctx);
-
             // TODO: Maybe handle me
         }
 
@@ -587,12 +602,6 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 throw new IllegalStateException("Stream object required for identifier: " + streamId);
             }
             return stream;
-        }
-
-        private void readIfNeeded(ChannelHandlerContext ctx) {
-            if (!ctx.channel().config().isAutoRead()) {
-                ctx.read();
-            }
         }
     }
 
