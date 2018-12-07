@@ -142,14 +142,14 @@ public class ByteBufUtilTest {
         ByteBuf buf = Unpooled.buffer(2).order(ByteOrder.BIG_ENDIAN);
         ByteBufUtil.writeShortBE(buf, expected);
         assertEquals(expected, buf.readShort());
-        buf.resetReaderIndex();
+        buf.readerIndex(0);
         assertEquals(ByteBufUtil.swapShort((short) expected), buf.readShortLE());
         buf.release();
 
         buf = Unpooled.buffer(2).order(ByteOrder.LITTLE_ENDIAN);
         ByteBufUtil.writeShortBE(buf, expected);
         assertEquals((short) expected, buf.readShortLE());
-        buf.resetReaderIndex();
+        buf.readerIndex(0);
         assertEquals(ByteBufUtil.swapShort((short) expected), buf.readShort());
         buf.release();
     }
@@ -162,14 +162,14 @@ public class ByteBufUtilTest {
         ByteBuf buf = Unpooled.wrappedBuffer(new byte[2]).order(ByteOrder.BIG_ENDIAN);
         ByteBufUtil.setShortBE(buf, 0, shortValue);
         assertEquals(shortValue, buf.readShort());
-        buf.resetReaderIndex();
+        buf.readerIndex(0);
         assertEquals(ByteBufUtil.swapShort((short) shortValue), buf.readShortLE());
         buf.release();
 
         buf = Unpooled.wrappedBuffer(new byte[2]).order(ByteOrder.LITTLE_ENDIAN);
         ByteBufUtil.setShortBE(buf, 0, shortValue);
         assertEquals((short) shortValue, buf.readShortLE());
-        buf.resetReaderIndex();
+        buf.readerIndex(0);
         assertEquals(ByteBufUtil.swapShort((short) shortValue), buf.readShort());
         buf.release();
     }
@@ -182,14 +182,14 @@ public class ByteBufUtilTest {
         ByteBuf buf = Unpooled.buffer(4).order(ByteOrder.BIG_ENDIAN);
         ByteBufUtil.writeMediumBE(buf, mediumValue);
         assertEquals(mediumValue, buf.readMedium());
-        buf.resetReaderIndex();
+        buf.readerIndex(0);
         assertEquals(ByteBufUtil.swapMedium(mediumValue), buf.readMediumLE());
         buf.release();
 
         buf = Unpooled.buffer(4).order(ByteOrder.LITTLE_ENDIAN);
         ByteBufUtil.writeMediumBE(buf, mediumValue);
         assertEquals(mediumValue, buf.readMediumLE());
-        buf.resetReaderIndex();
+        buf.readerIndex(0);
         assertEquals(ByteBufUtil.swapMedium(mediumValue), buf.readMedium());
         buf.release();
     }

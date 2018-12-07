@@ -178,30 +178,6 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
-    public ByteBuf markReaderIndex() {
-        buf.markReaderIndex();
-        return this;
-    }
-
-    @Override
-    public ByteBuf resetReaderIndex() {
-        buf.resetReaderIndex();
-        return this;
-    }
-
-    @Override
-    public ByteBuf markWriterIndex() {
-        buf.markWriterIndex();
-        return this;
-    }
-
-    @Override
-    public ByteBuf resetWriterIndex() {
-        buf.resetWriterIndex();
-        return this;
-    }
-
-    @Override
     public ByteBuf discardReadBytes() {
         buf.discardReadBytes();
         return this;

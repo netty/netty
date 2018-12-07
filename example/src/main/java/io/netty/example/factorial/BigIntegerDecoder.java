@@ -38,19 +38,19 @@ public class BigIntegerDecoder extends ByteToMessageDecoder {
             return;
         }
 
-        in.markReaderIndex();
+        int readerIndex = in.readerIndex();
 
         // Check the magic number.
         int magicNumber = in.readUnsignedByte();
         if (magicNumber != 'F') {
-            in.resetReaderIndex();
+            in.readerIndex(readerIndex);
             throw new CorruptedFrameException("Invalid magic number: " + magicNumber);
         }
 
         // Wait until the whole data is available.
         int dataLength = in.readInt();
         if (in.readableBytes() < dataLength) {
-            in.resetReaderIndex();
+            in.readerIndex(readerIndex);
             return;
         }
 

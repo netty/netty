@@ -192,26 +192,6 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
-    public ByteBuf markReaderIndex() {
-        return this;
-    }
-
-    @Override
-    public ByteBuf resetReaderIndex() {
-        return this;
-    }
-
-    @Override
-    public ByteBuf markWriterIndex() {
-        return this;
-    }
-
-    @Override
-    public ByteBuf resetWriterIndex() {
-        return this;
-    }
-
-    @Override
     public ByteBuf discardReadBytes() {
         return this;
     }

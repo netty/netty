@@ -455,17 +455,6 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
-    public ByteBuf markReaderIndex() {
-        buffer.markReaderIndex();
-        return this;
-    }
-
-    @Override
-    public ByteBuf markWriterIndex() {
-        throw reject();
-    }
-
-    @Override
     public ByteOrder order() {
         return buffer.order();
     }
@@ -711,17 +700,6 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     public CharSequence readCharSequence(int length, Charset charset) {
         checkReadableBytes(length);
         return buffer.readCharSequence(length, charset);
-    }
-
-    @Override
-    public ByteBuf resetReaderIndex() {
-        buffer.resetReaderIndex();
-        return this;
-    }
-
-    @Override
-    public ByteBuf resetWriterIndex() {
-        throw reject();
     }
 
     @Override

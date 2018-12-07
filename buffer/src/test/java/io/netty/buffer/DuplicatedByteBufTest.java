@@ -50,26 +50,4 @@ public class DuplicatedByteBufTest extends AbstractByteBufTest {
 
         assertEquals((byte) 0, buffer.readByte());
     }
-
-    @Test
-    public void testMarksInitialized() {
-        ByteBuf wrapped = Unpooled.buffer(8);
-        try {
-            wrapped.writerIndex(6);
-            wrapped.readerIndex(1);
-            ByteBuf duplicate = new DuplicatedByteBuf(wrapped);
-
-            // Test writer mark
-            duplicate.writerIndex(duplicate.writerIndex() + 1);
-            duplicate.resetWriterIndex();
-            assertEquals(wrapped.writerIndex(), duplicate.writerIndex());
-
-            // Test reader mark
-            duplicate.readerIndex(duplicate.readerIndex() + 1);
-            duplicate.resetReaderIndex();
-            assertEquals(wrapped.readerIndex(), duplicate.readerIndex());
-        } finally {
-            wrapped.release();
-        }
-    }
 }

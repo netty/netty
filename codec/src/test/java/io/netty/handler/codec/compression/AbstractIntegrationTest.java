@@ -160,7 +160,8 @@ public abstract class AbstractIntegrationTest {
         while ((msg = decoder.readInbound()) != null) {
             decompressed.addComponent(true, msg);
         }
-        assertEquals(in.resetReaderIndex(), decompressed);
+        in.readerIndex(0);
+        assertEquals(in, decompressed);
 
         compressed.release();
         decompressed.release();

@@ -43,31 +43,31 @@ public class WriteBytesVsShortOrMediumBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public ByteBuf shortInt() {
-        return ByteBufUtil.writeShortBE(buf, CRLF_SHORT).resetWriterIndex();
+        return ByteBufUtil.writeShortBE(buf, CRLF_SHORT).writerIndex(0);
     }
 
     @Benchmark
     public ByteBuf mediumInt() {
-        return ByteBufUtil.writeMediumBE(buf, ZERO_CRLF_MEDIUM).resetWriterIndex();
+        return ByteBufUtil.writeMediumBE(buf, ZERO_CRLF_MEDIUM).writerIndex(0);
     }
 
     @Benchmark
     public ByteBuf byteArray2() {
-        return buf.writeBytes(CRLF).resetWriterIndex();
+        return buf.writeBytes(CRLF).writerIndex(0);
     }
 
     @Benchmark
     public ByteBuf byteArray3() {
-        return buf.writeBytes(ZERO_CRLF).resetWriterIndex();
+        return buf.writeBytes(ZERO_CRLF).writerIndex(0);
     }
 
     @Benchmark
     public ByteBuf chainedBytes2() {
-        return buf.writeByte(CR).writeByte(LF).resetWriterIndex();
+        return buf.writeByte(CR).writeByte(LF).writerIndex(0);
     }
 
     @Benchmark
     public ByteBuf chainedBytes3() {
-        return buf.writeByte('0').writeByte(CR).writeByte(LF).resetWriterIndex();
+        return buf.writeByte('0').writeByte(CR).writeByte(LF).writerIndex(0);
     }
 }

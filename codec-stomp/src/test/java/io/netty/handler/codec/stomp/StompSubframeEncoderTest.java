@@ -58,7 +58,7 @@ public class StompSubframeEncoderTest {
         aggregatedBuffer.writeBytes(byteBuf);
         byteBuf.release();
 
-        aggregatedBuffer.resetReaderIndex();
+        aggregatedBuffer.readerIndex(0);
         String content = aggregatedBuffer.toString(CharsetUtil.UTF_8);
         assertEquals(StompTestConstants.CONNECT_FRAME, content);
         aggregatedBuffer.release();

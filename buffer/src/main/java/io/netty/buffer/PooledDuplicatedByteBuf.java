@@ -41,9 +41,6 @@ final class PooledDuplicatedByteBuf extends AbstractPooledDerivedByteBuf {
                                                int readerIndex, int writerIndex) {
         final PooledDuplicatedByteBuf duplicate = RECYCLER.get();
         duplicate.init(unwrapped, wrapped, readerIndex, writerIndex, unwrapped.maxCapacity());
-        duplicate.markReaderIndex();
-        duplicate.markWriterIndex();
-
         return duplicate;
     }
 

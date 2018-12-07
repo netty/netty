@@ -200,7 +200,7 @@ public class Http2MultiplexCodecBuilderTest {
         Http2DataFrame dataFrame = serverLastInboundHandler.blockingReadInbound();
         assertNotNull(dataFrame);
         assertEquals(3, dataFrame.stream().id());
-        assertEquals(data.resetReaderIndex(), dataFrame.content());
+        assertEquals(data.readerIndex(0), dataFrame.content());
         assertTrue(dataFrame.isEndStream());
         dataFrame.release();
 

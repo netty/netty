@@ -147,23 +147,21 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
     }
 
     @Test
-    public void testReaderIndexAndMarks() {
+    public void testReaderIndex() {
         ByteBuf wrapped = Unpooled.buffer(16);
         try {
             wrapped.writerIndex(14);
             wrapped.readerIndex(2);
-            wrapped.markWriterIndex();
-            wrapped.markReaderIndex();
             ByteBuf slice = wrapped.slice(4, 4);
             assertEquals(0, slice.readerIndex());
             assertEquals(4, slice.writerIndex());
 
             slice.readerIndex(slice.readerIndex() + 1);
-            slice.resetReaderIndex();
+            slice.readerIndex(0);
             assertEquals(0, slice.readerIndex());
 
             slice.writerIndex(slice.writerIndex() - 1);
-            slice.resetWriterIndex();
+            slice.writerIndex(0);
             assertEquals(0, slice.writerIndex());
         } finally {
             wrapped.release();

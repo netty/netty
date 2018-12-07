@@ -143,17 +143,13 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
                 wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 0, 5).order(order),
                 wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, 5, 5).order(order));
         a.skipBytes(6);
-        a.markReaderIndex();
         b.skipBytes(6);
-        b.markReaderIndex();
         assertEquals(a.readerIndex(), b.readerIndex());
         a.readerIndex(a.readerIndex() - 1);
         b.readerIndex(b.readerIndex() - 1);
         assertEquals(a.readerIndex(), b.readerIndex());
         a.writerIndex(a.writerIndex() - 1);
-        a.markWriterIndex();
         b.writerIndex(b.writerIndex() - 1);
-        b.markWriterIndex();
         assertEquals(a.writerIndex(), b.writerIndex());
         a.writerIndex(a.writerIndex() + 1);
         b.writerIndex(b.writerIndex() + 1);
@@ -165,12 +161,6 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertEquals(a.readerIndex(), b.readerIndex());
         assertEquals(a.writerIndex(), b.writerIndex());
         assertTrue(ByteBufUtil.equals(a, b));
-        a.resetReaderIndex();
-        b.resetReaderIndex();
-        assertEquals(a.readerIndex(), b.readerIndex());
-        a.resetWriterIndex();
-        b.resetWriterIndex();
-        assertEquals(a.writerIndex(), b.writerIndex());
         assertTrue(ByteBufUtil.equals(a, b));
 
         a.release();

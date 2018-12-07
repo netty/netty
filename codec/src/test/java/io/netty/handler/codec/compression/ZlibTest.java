@@ -118,7 +118,7 @@ public abstract class ZlibTest {
         try {
             chEncoder.writeOutbound(data.retain());
             chEncoder.flush();
-            data.resetReaderIndex();
+            data.readerIndex(0);
 
             for (;;) {
                 ByteBuf deflatedData = chEncoder.readOutbound();

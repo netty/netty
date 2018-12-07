@@ -1124,7 +1124,7 @@ public abstract class SSLEngineTest {
         try {
             assertTrue(sendChannel.writeAndFlush(message).await(5, TimeUnit.SECONDS));
             receiverLatch.await(5, TimeUnit.SECONDS);
-            message.resetReaderIndex();
+            message.readerIndex(0);
             ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
             verify(receiver).messageReceived(captor.capture());
             dataCapture = captor.getAllValues();

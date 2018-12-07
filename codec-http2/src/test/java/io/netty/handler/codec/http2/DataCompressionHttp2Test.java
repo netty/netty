@@ -255,7 +255,7 @@ public class DataCompressionHttp2Test {
                 }
             });
             awaitServer();
-            assertEquals(data.resetReaderIndex().toString(CharsetUtil.UTF_8),
+            assertEquals(data.readerIndex(0).toString(CharsetUtil.UTF_8),
                     serverOut.toString(CharsetUtil.UTF_8.name()));
         } finally {
             data.release();

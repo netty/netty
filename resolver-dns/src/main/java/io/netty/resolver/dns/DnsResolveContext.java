@@ -857,14 +857,14 @@ abstract class DnsResolveContext<T> {
     }
 
     static String decodeDomainName(ByteBuf in) {
-        in.markReaderIndex();
+        int readerIndex = in.readerIndex();
         try {
             return DefaultDnsRecordDecoder.decodeName(in);
         } catch (CorruptedFrameException e) {
             // In this case we just return null.
             return null;
         } finally {
-            in.resetReaderIndex();
+            in.readerIndex(readerIndex);
         }
     }
 

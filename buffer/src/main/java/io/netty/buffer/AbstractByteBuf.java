@@ -68,8 +68,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     int readerIndex;
     int writerIndex;
-    private int markedReaderIndex;
-    private int markedWriterIndex;
     private int maxCapacity;
 
     protected AbstractByteBuf(int maxCapacity) {
@@ -189,30 +187,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
-    public ByteBuf markReaderIndex() {
-        markedReaderIndex = readerIndex;
-        return this;
-    }
-
-    @Override
-    public ByteBuf resetReaderIndex() {
-        readerIndex(markedReaderIndex);
-        return this;
-    }
-
-    @Override
-    public ByteBuf markWriterIndex() {
-        markedWriterIndex = writerIndex;
-        return this;
-    }
-
-    @Override
-    public ByteBuf resetWriterIndex() {
-        writerIndex(markedWriterIndex);
-        return this;
-    }
-
-    @Override
     public ByteBuf discardReadBytes() {
         ensureAccessible();
         if (readerIndex == 0) {
@@ -222,10 +196,8 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (readerIndex != writerIndex) {
             setBytes(0, this, readerIndex, writerIndex - readerIndex);
             writerIndex -= readerIndex;
-            adjustMarkers(readerIndex);
             readerIndex = 0;
         } else {
-            adjustMarkers(readerIndex);
             writerIndex = readerIndex = 0;
         }
         return this;
@@ -239,7 +211,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
 
         if (readerIndex == writerIndex) {
-            adjustMarkers(readerIndex);
             writerIndex = readerIndex = 0;
             return this;
         }
@@ -247,26 +218,9 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (readerIndex >= capacity() >>> 1) {
             setBytes(0, this, readerIndex, writerIndex - readerIndex);
             writerIndex -= readerIndex;
-            adjustMarkers(readerIndex);
             readerIndex = 0;
         }
         return this;
-    }
-
-    protected final void adjustMarkers(int decrement) {
-        int markedReaderIndex = this.markedReaderIndex;
-        if (markedReaderIndex <= decrement) {
-            this.markedReaderIndex = 0;
-            int markedWriterIndex = this.markedWriterIndex;
-            if (markedWriterIndex <= decrement) {
-                this.markedWriterIndex = 0;
-            } else {
-                this.markedWriterIndex = markedWriterIndex - decrement;
-            }
-        } else {
-            this.markedReaderIndex = markedReaderIndex - decrement;
-            markedWriterIndex -= decrement;
-        }
     }
 
     @Override
@@ -1462,9 +1416,5 @@ public abstract class AbstractByteBuf extends ByteBuf {
     final void setIndex0(int readerIndex, int writerIndex) {
         this.readerIndex = readerIndex;
         this.writerIndex = writerIndex;
-    }
-
-    final void discardMarks() {
-        markedReaderIndex = markedWriterIndex = 0;
     }
 }

@@ -63,13 +63,13 @@ public class SlicedByteBufBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void writeAsciiStringSlice() {
-        slicedByteBuf.resetWriterIndex();
+        slicedByteBuf.writerIndex(0);
         ByteBufUtil.writeAscii(slicedByteBuf, ascii);
     }
 
     @Benchmark
     public void writeAsciiStringSliceAbstract() {
-        slicedAbstractByteBuf.resetWriterIndex();
+        slicedAbstractByteBuf.writerIndex(0);
         ByteBufUtil.writeAscii(slicedAbstractByteBuf, ascii);
     }
 }

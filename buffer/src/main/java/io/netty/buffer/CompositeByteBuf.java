@@ -1681,7 +1681,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             lastAccessed = null;
             clearComps();
             setIndex(0, 0);
-            adjustMarkers(readerIndex);
             return this;
         }
 
@@ -1698,7 +1697,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         int offset = first.offset;
         updateComponentOffsets(0);
         setIndex(readerIndex - offset, writerIndex - offset);
-        adjustMarkers(offset);
         return this;
     }
 
@@ -1719,7 +1717,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             lastAccessed = null;
             clearComps();
             setIndex(0, 0);
-            adjustMarkers(readerIndex);
             return this;
         }
 
@@ -1754,7 +1751,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         // Update indexes and markers.
         updateComponentOffsets(0);
         setIndex(0, writerIndex - readerIndex);
-        adjustMarkers(readerIndex);
         return this;
     }
 
@@ -1849,30 +1845,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     @Override
     public CompositeByteBuf clear() {
         super.clear();
-        return this;
-    }
-
-    @Override
-    public CompositeByteBuf markReaderIndex() {
-        super.markReaderIndex();
-        return this;
-    }
-
-    @Override
-    public CompositeByteBuf resetReaderIndex() {
-        super.resetReaderIndex();
-        return this;
-    }
-
-    @Override
-    public CompositeByteBuf markWriterIndex() {
-        super.markWriterIndex();
-        return this;
-    }
-
-    @Override
-    public CompositeByteBuf resetWriterIndex() {
-        super.resetWriterIndex();
         return this;
     }
 

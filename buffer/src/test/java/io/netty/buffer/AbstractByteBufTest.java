@@ -1775,9 +1775,9 @@ public abstract class AbstractByteBufTest {
 
         // Make sure there's no effect if called when readerIndex is 0.
         buffer.readerIndex(CAPACITY / 4);
-        buffer.markReaderIndex();
+        int readerIndex = buffer.readerIndex();
         buffer.writerIndex(CAPACITY / 3);
-        buffer.markWriterIndex();
+        int writerIndex = buffer.writerIndex();
         buffer.readerIndex(0);
         buffer.writerIndex(CAPACITY / 2);
         buffer.discardReadBytes();
@@ -1785,9 +1785,9 @@ public abstract class AbstractByteBufTest {
         assertEquals(0, buffer.readerIndex());
         assertEquals(CAPACITY / 2, buffer.writerIndex());
         assertEquals(copy.slice(0, CAPACITY / 2), buffer.slice(0, CAPACITY / 2));
-        buffer.resetReaderIndex();
+        buffer.readerIndex(readerIndex);
         assertEquals(CAPACITY / 4, buffer.readerIndex());
-        buffer.resetWriterIndex();
+        buffer.writerIndex(writerIndex);
         assertEquals(CAPACITY / 3, buffer.writerIndex());
 
         // Make sure bytes after writerIndex is not copied.
@@ -1806,11 +1806,6 @@ public abstract class AbstractByteBufTest {
             assertEquals(copy.slice(CAPACITY / 2, CAPACITY / 2), buffer.slice(CAPACITY / 2 - 1, CAPACITY / 2));
         }
 
-        // Marks also should be relocated.
-        buffer.resetReaderIndex();
-        assertEquals(CAPACITY / 4 - 1, buffer.readerIndex());
-        buffer.resetWriterIndex();
-        assertEquals(CAPACITY / 3 - 1, buffer.writerIndex());
         copy.release();
     }
 
@@ -3742,11 +3737,11 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testRetainedSliceAndRetainedDuplicateContentIsExpected() {
-        ByteBuf buf = newBuffer(8).resetWriterIndex();
-        ByteBuf expected1 = newBuffer(6).resetWriterIndex();
-        ByteBuf expected2 = newBuffer(5).resetWriterIndex();
-        ByteBuf expected3 = newBuffer(4).resetWriterIndex();
-        ByteBuf expected4 = newBuffer(3).resetWriterIndex();
+        ByteBuf buf = newBuffer(8).writerIndex(0);
+        ByteBuf expected1 = newBuffer(6).writerIndex(0);
+        ByteBuf expected2 = newBuffer(5).writerIndex(0);
+        ByteBuf expected3 = newBuffer(4).writerIndex(0);
+        ByteBuf expected4 = newBuffer(3).writerIndex(0);
         buf.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8});
         expected1.writeBytes(new byte[] {2, 3, 4, 5, 6, 7});
         expected2.writeBytes(new byte[] {3, 4, 5, 6, 7});
@@ -3805,10 +3800,10 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testRetainedDuplicateAndRetainedSliceContentIsExpected() {
-        ByteBuf buf = newBuffer(8).resetWriterIndex();
-        ByteBuf expected1 = newBuffer(6).resetWriterIndex();
-        ByteBuf expected2 = newBuffer(5).resetWriterIndex();
-        ByteBuf expected3 = newBuffer(4).resetWriterIndex();
+        ByteBuf buf = newBuffer(8).writerIndex(0);
+        ByteBuf expected1 = newBuffer(6).writerIndex(0);
+        ByteBuf expected2 = newBuffer(5).writerIndex(0);
+        ByteBuf expected3 = newBuffer(4).writerIndex(0);
         buf.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8});
         expected1.writeBytes(new byte[] {2, 3, 4, 5, 6, 7});
         expected2.writeBytes(new byte[] {3, 4, 5, 6, 7});
@@ -4157,8 +4152,8 @@ public abstract class AbstractByteBufTest {
     }
 
     private void testSliceContents(boolean retainedSlice) {
-        ByteBuf buf = newBuffer(8).resetWriterIndex();
-        ByteBuf expected = newBuffer(3).resetWriterIndex();
+        ByteBuf buf = newBuffer(8).writerIndex(0);
+        ByteBuf expected = newBuffer(3).writerIndex(0);
         buf.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8});
         expected.writeBytes(new byte[] {4, 5, 6});
         ByteBuf slice = retainedSlice ? buf.retainedSlice(buf.readerIndex() + 3, 3)
@@ -4180,9 +4175,9 @@ public abstract class AbstractByteBufTest {
     }
 
     private void testSliceReleaseOriginal(boolean retainedSlice1, boolean retainedSlice2) {
-        ByteBuf buf = newBuffer(8).resetWriterIndex();
-        ByteBuf expected1 = newBuffer(3).resetWriterIndex();
-        ByteBuf expected2 = newBuffer(2).resetWriterIndex();
+        ByteBuf buf = newBuffer(8).writerIndex(0);
+        ByteBuf expected1 = newBuffer(3).writerIndex(0);
+        ByteBuf expected2 = newBuffer(2).writerIndex(0);
         buf.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8});
         expected1.writeBytes(new byte[] {6, 7, 8});
         expected2.writeBytes(new byte[] {7, 8});
@@ -4214,12 +4209,12 @@ public abstract class AbstractByteBufTest {
     }
 
     private void testMultipleLevelRetainedSliceWithNonRetained(boolean doSlice1, boolean doSlice2) {
-        ByteBuf buf = newBuffer(8).resetWriterIndex();
-        ByteBuf expected1 = newBuffer(6).resetWriterIndex();
-        ByteBuf expected2 = newBuffer(4).resetWriterIndex();
-        ByteBuf expected3 = newBuffer(2).resetWriterIndex();
-        ByteBuf expected4SliceSlice = newBuffer(1).resetWriterIndex();
-        ByteBuf expected4DupSlice = newBuffer(1).resetWriterIndex();
+        ByteBuf buf = newBuffer(8).writerIndex(0);
+        ByteBuf expected1 = newBuffer(6).writerIndex(0);
+        ByteBuf expected2 = newBuffer(4).writerIndex(0);
+        ByteBuf expected3 = newBuffer(2).writerIndex(0);
+        ByteBuf expected4SliceSlice = newBuffer(1).writerIndex(0);
+        ByteBuf expected4DupSlice = newBuffer(1).writerIndex(0);
         buf.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8});
         expected1.writeBytes(new byte[] {2, 3, 4, 5, 6, 7});
         expected2.writeBytes(new byte[] {3, 4, 5, 6});
@@ -4284,8 +4279,8 @@ public abstract class AbstractByteBufTest {
     }
 
     private void testDuplicateReleaseOriginal(boolean retainedDuplicate1, boolean retainedDuplicate2) {
-        ByteBuf buf = newBuffer(8).resetWriterIndex();
-        ByteBuf expected = newBuffer(8).resetWriterIndex();
+        ByteBuf buf = newBuffer(8).writerIndex(0);
+        ByteBuf expected = newBuffer(8).writerIndex(0);
         buf.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8});
         expected.writeBytes(buf, buf.readerIndex(), buf.readableBytes());
         ByteBuf dup1 = retainedDuplicate1 ? buf.retainedDuplicate()
@@ -4315,10 +4310,10 @@ public abstract class AbstractByteBufTest {
     }
 
     private void testMultipleRetainedSliceReleaseOriginal(boolean retainedSlice1, boolean retainedSlice2) {
-        ByteBuf buf = newBuffer(8).resetWriterIndex();
-        ByteBuf expected1 = newBuffer(3).resetWriterIndex();
-        ByteBuf expected2 = newBuffer(2).resetWriterIndex();
-        ByteBuf expected3 = newBuffer(2).resetWriterIndex();
+        ByteBuf buf = newBuffer(8).writerIndex(0);
+        ByteBuf expected1 = newBuffer(3).writerIndex(0);
+        ByteBuf expected2 = newBuffer(2).writerIndex(0);
+        ByteBuf expected3 = newBuffer(2).writerIndex(0);
         buf.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8});
         expected1.writeBytes(new byte[] {6, 7, 8});
         expected2.writeBytes(new byte[] {7, 8});
@@ -4359,8 +4354,8 @@ public abstract class AbstractByteBufTest {
     }
 
     private void testMultipleRetainedDuplicateReleaseOriginal(boolean retainedDuplicate1, boolean retainedDuplicate2) {
-        ByteBuf buf = newBuffer(8).resetWriterIndex();
-        ByteBuf expected = newBuffer(8).resetWriterIndex();
+        ByteBuf buf = newBuffer(8).writerIndex(0);
+        ByteBuf expected = newBuffer(8).writerIndex(0);
         buf.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8});
         expected.writeBytes(buf, buf.readerIndex(), buf.readableBytes());
         ByteBuf dup1 = retainedDuplicate1 ? buf.retainedDuplicate()
@@ -4406,7 +4401,7 @@ public abstract class AbstractByteBufTest {
     }
 
     private void testDuplicateContents(boolean retainedDuplicate) {
-        ByteBuf buf = newBuffer(8).resetWriterIndex();
+        ByteBuf buf = newBuffer(8).writerIndex(0);
         buf.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8});
         ByteBuf dup = retainedDuplicate ? buf.retainedDuplicate() : buf.duplicate();
         try {
@@ -4497,9 +4492,7 @@ public abstract class AbstractByteBufTest {
 
             byte[] bytes = {'a', 'b', 'c', 'd'};
             int len = bytes.length;
-            ByteBuf buffer = newBuffer(len);
-            buffer.resetReaderIndex();
-            buffer.resetWriterIndex();
+            ByteBuf buffer = newBuffer(len).writerIndex(0);
             buffer.writeBytes(bytes);
 
             int oldReaderIndex = buffer.readerIndex();
@@ -4507,9 +4500,7 @@ public abstract class AbstractByteBufTest {
             assertEquals(oldReaderIndex + len, buffer.readerIndex());
             assertEquals(channelPosition, channel.position());
 
-            ByteBuf buffer2 = newBuffer(len);
-            buffer2.resetReaderIndex();
-            buffer2.resetWriterIndex();
+            ByteBuf buffer2 = newBuffer(len).writerIndex(0);
             int oldWriterIndex = buffer2.writerIndex();
             assertEquals(len, buffer2.writeBytes(channel, 10, len));
             assertEquals(channelPosition, channel.position());
@@ -4540,9 +4531,7 @@ public abstract class AbstractByteBufTest {
 
             byte[] bytes = {'a', 'b', 'c', 'd'};
             int len = bytes.length;
-            ByteBuf buffer = newBuffer(len);
-            buffer.resetReaderIndex();
-            buffer.resetWriterIndex();
+            ByteBuf buffer = newBuffer(len).writerIndex(0);
             buffer.writeBytes(bytes);
 
             int oldReaderIndex = buffer.readerIndex();
@@ -4550,9 +4539,7 @@ public abstract class AbstractByteBufTest {
             assertEquals(oldReaderIndex, buffer.readerIndex());
             assertEquals(channelPosition, channel.position());
 
-            ByteBuf buffer2 = newBuffer(len);
-            buffer2.resetReaderIndex();
-            buffer2.resetWriterIndex();
+            ByteBuf buffer2 = newBuffer(len).writerIndex(0);
             int oldWriterIndex = buffer2.writerIndex();
             assertEquals(buffer2.setBytes(oldWriterIndex, channel, 10, len), len);
             assertEquals(channelPosition, channel.position());
@@ -4866,14 +4853,13 @@ public abstract class AbstractByteBufTest {
         ByteBuf buffer = newBuffer(length);
         buffer.setIndex(0, 0);
         buffer.writeCharSequence(content1, CharsetUtil.US_ASCII);
-        buffer.markWriterIndex();
         buffer.skipBytes(content1.length());
         buffer.writeCharSequence(content2, CharsetUtil.US_ASCII);
         buffer.skipBytes(content2.length());
         assertTrue(buffer.readerIndex() <= buffer.writerIndex());
 
         try {
-            buffer.resetWriterIndex();
+            buffer.readerIndex(buffer.writerIndex() + 1);
         } finally {
             buffer.release();
         }
