@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2018 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -32,8 +32,8 @@ public class UniqueIpFilterTest {
         try {
             for (int round = 0; round < 10000; round++) {
                 final UniqueIpFilter handler = new UniqueIpFilter();
-                java.util.concurrent.Future<EmbeddedChannel> future1 = submit(handler, barrier, executorService);
-                java.util.concurrent.Future<EmbeddedChannel> future2 = submit(handler, barrier, executorService);
+                Future<EmbeddedChannel> future1 = submit(handler, barrier, executorService);
+                Future<EmbeddedChannel> future2 = submit(handler, barrier, executorService);
                 EmbeddedChannel channel1 = future1.get();
                 EmbeddedChannel channel2 = future2.get();
                 Assert.assertTrue(channel1.isActive() || channel2.isActive());
@@ -46,10 +46,9 @@ public class UniqueIpFilterTest {
         } finally {
             executorService.shutdown();
         }
-
     }
 
-    private java.util.concurrent.Future<EmbeddedChannel> submit(final UniqueIpFilter handler, final CyclicBarrier barrier, ExecutorService executorService) {
+    private static Future<EmbeddedChannel> submit(final UniqueIpFilter handler, final CyclicBarrier barrier, ExecutorService executorService) {
         return executorService.submit(new Callable<EmbeddedChannel>() {
             @Override
             public EmbeddedChannel call() throws Exception {
