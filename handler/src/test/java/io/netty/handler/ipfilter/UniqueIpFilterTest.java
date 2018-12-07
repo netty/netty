@@ -15,13 +15,19 @@
  */
 package io.netty.handler.ipfilter;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.SocketUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.net.SocketAddress;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class UniqueIpFilterTest {
 
@@ -31,24 +37,26 @@ public class UniqueIpFilterTest {
         ExecutorService executorService = Executors.newFixedThreadPool(2);
         try {
             for (int round = 0; round < 10000; round++) {
-                final UniqueIpFilter handler = new UniqueIpFilter();
-                Future<EmbeddedChannel> future1 = submit(handler, barrier, executorService);
-                Future<EmbeddedChannel> future2 = submit(handler, barrier, executorService);
-                EmbeddedChannel channel1 = future1.get();
-                EmbeddedChannel channel2 = future2.get();
-                Assert.assertTrue(channel1.isActive() || channel2.isActive());
-                Assert.assertFalse(channel1.isActive() && channel2.isActive());
+                final UniqueIpFilter ipFilter = new UniqueIpFilter();
+                Future<EmbeddedChannel> future1 = newChannelAsync(barrier, executorService, ipFilter);
+                Future<EmbeddedChannel> future2 = newChannelAsync(barrier, executorService, ipFilter);
+                EmbeddedChannel ch1 = future1.get();
+                EmbeddedChannel ch2 = future2.get();
+                Assert.assertTrue(ch1.isActive() || ch2.isActive());
+                Assert.assertFalse(ch1.isActive() && ch2.isActive());
 
                 barrier.reset();
-                channel1.close().await();
-                channel2.close().await();
+                ch1.close().await();
+                ch2.close().await();
             }
         } finally {
             executorService.shutdown();
         }
     }
 
-    private static Future<EmbeddedChannel> submit(final UniqueIpFilter handler, final CyclicBarrier barrier, ExecutorService executorService) {
+    private static Future<EmbeddedChannel> newChannelAsync(final CyclicBarrier barrier,
+            ExecutorService executorService,
+            final ChannelHandler... handler) {
         return executorService.submit(new Callable<EmbeddedChannel>() {
             @Override
             public EmbeddedChannel call() throws Exception {
