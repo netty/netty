@@ -23,6 +23,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpMethod;
@@ -43,11 +44,13 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.util.ReferenceCountUtil.release;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
@@ -312,6 +315,74 @@ public class Http2MultiplexCodecTest {
         codec.onChannelReadComplete();
 
         verifyFramesMultiplexedToCorrectChannel(inboundStream, inboundHandler, 6);
+    }
+
+    @Test
+    public void readInChannelReadCompleteOnChildTriggerReadOnParentWhenAutoReadOff() {
+        readParent(true, false);
+    }
+
+    @Test
+    public void readInChannelReadOnChildTriggerReadOnParentWhenAutoReadOff() {
+        readParent(false, false);
+    }
+
+    @Test
+    public void readInChannelReadCompleteOnChildTriggerNoReadOnParentWhenAutoRead() {
+        readParent(true, true);
+    }
+
+    @Test
+    public void readInChannelReadOnChildTriggerNoReadOnParentWhenAutoRead() {
+        readParent(true, true);
+    }
+
+    private void readParent(final boolean readComplete, boolean parentAutoRead) {
+        LastInboundHandler inboundHandler = streamActiveAndWriteHeaders(inboundStream);
+        Channel childChannel = inboundHandler.channel();
+        assertTrue(childChannel.config().isAutoRead());
+        childChannel.config().setAutoRead(false);
+        assertFalse(childChannel.config().isAutoRead());
+
+        childChannel.parent().config().setAutoRead(parentAutoRead);
+
+        Http2HeadersFrame headersFrame = inboundHandler.readInbound();
+        assertNotNull(headersFrame);
+
+        // Add a handler which will request reads.
+        childChannel.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                ctx.fireChannelRead(msg);
+                if (!readComplete) {
+                    ctx.read();
+                }
+            }
+
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) {
+                ctx.fireChannelReadComplete();
+                if (readComplete) {
+                    ctx.read();
+                }
+            }
+        });
+
+        final AtomicReference<Boolean> readCalled = new AtomicReference<Boolean>(false);
+        childChannel.parent().pipeline().addFirst(new ChannelOutboundHandlerAdapter() {
+            @Override
+            public void read(ChannelHandlerContext ctx) throws Exception {
+                super.read(ctx);
+                readCalled.set(true);
+            }
+        });
+        codec.onHttp2Frame(
+                new DefaultHttp2DataFrame(bb("hello world"), false).stream(inboundStream));
+        codec.onChannelReadComplete();
+
+        verifyFramesMultiplexedToCorrectChannel(inboundStream, inboundHandler, 1);
+
+        assertNotEquals(parentAutoRead, readCalled.get());
     }
 
     private Http2StreamChannel newOutboundStream() {
