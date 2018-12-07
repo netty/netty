@@ -805,7 +805,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
         void fireChildReadComplete() {
             assert eventLoop().inEventLoop();
-            assert readStatus == ReadStatus.IN_PROGRESS;
+            assert readStatus != ReadStatus.IDLE;
             unsafe.notifyReadComplete(unsafe.recvBufAllocHandle());
         }
 
