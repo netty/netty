@@ -80,8 +80,8 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
             // miss an event.
             ctx.pipeline().fireChannelRegistered();
 
-            // We are done with init the Channel, removing the initializer now.
-            remove(ctx);
+            // We are done with init the Channel, removing all the state for the Channel now.
+            removeState(ctx);
         } else {
             // Called initChannel(...) before which is the expected behavior, so just forward the event.
             ctx.fireChannelRegistered();
@@ -112,7 +112,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
             if (initChannel(ctx)) {
 
                 // We are done with init the Channel, removing the initializer now.
-                remove(ctx);
+                removeState(ctx);
             }
         }
     }
@@ -142,7 +142,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
         return false;
     }
 
-    private void remove(final ChannelHandlerContext ctx) {
+    private void removeState(final ChannelHandlerContext ctx) {
         // The removal may happen in an async fashion if the EventExecutor we use does something funky.
         if (ctx.isRemoved()) {
             initMap.remove(ctx);
