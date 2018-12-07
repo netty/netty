@@ -107,7 +107,7 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
 
     /**
      * Decode from one message to an other. This method will be called for each written message that can be handled
-     * by this encoder.
+     * by this decoder.
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageDecoder} belongs to
      * @param msg           the message to decode to an other one
