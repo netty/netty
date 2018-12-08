@@ -40,6 +40,7 @@ import io.netty.handler.stream.ChunkedFile;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 
+import java.io.IOException;
 import javax.activation.MimetypesFileTypeMap;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -165,7 +166,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             }
         }
 
-        RandomAccessFile raf;
+        final RandomAccessFile raf;
         try {
             raf = new RandomAccessFile(file, "r");
         } catch (FileNotFoundException ignore) {
@@ -214,6 +215,11 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             @Override
             public void operationComplete(ChannelProgressiveFuture future) {
                 System.err.println(future.channel() + " Transfer complete.");
+                try {
+                    raf.close();
+                } catch (IOException e) {
+                    throw new Error(e);
+                }
             }
         });
 
