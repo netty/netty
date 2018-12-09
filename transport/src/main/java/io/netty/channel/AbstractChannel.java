@@ -254,8 +254,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        return pipeline.bind(localAddress, promise);
+    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {// Tony: 核心的绑定实现在这个channel抽象类中
+        return pipeline.bind(localAddress, promise);// Tony: 这里触发一个netty职责链中的bind事件，由应用代码发起到底层，属于outBound
     }
 
     @Override

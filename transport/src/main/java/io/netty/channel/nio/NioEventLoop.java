@@ -398,8 +398,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
     @Override
-    protected void run() {
-        for (;;) {
+    protected void run() {// Tony: 有任务提交后，被触发执行
+        for (;;) {// Tony: 执行两件事selector,select的事件 和 taskQueue里面的内容
             try {
                 try {
                     switch (selectStrategy.calculateStrategy(selectNowSupplier, hasTasks())) {

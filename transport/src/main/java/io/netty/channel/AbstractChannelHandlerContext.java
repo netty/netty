@@ -479,10 +479,10 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
             // cancelled
             return promise;
         }
-
+        // Tony: bind事件，属于outbound，从尾到头执行
         final AbstractChannelHandlerContext next = findContextOutbound();
         EventExecutor executor = next.executor();
-        if (executor.inEventLoop()) {
+        if (executor.inEventLoop()) {// Tony: 此处可以发现，在netty的设计中，事件的处理一定要通过EventLoop执行
             next.invokeBind(localAddress, promise);
         } else {
             safeExecute(executor, new Runnable() {

@@ -773,10 +773,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         if (task == null) {
             throw new NullPointerException("task");
         }
-
+        // Tony: 判断execute方法的调用者是不是EventLoop同一个线程
         boolean inEventLoop = inEventLoop();
-        addTask(task);
-        if (!inEventLoop) {
+        addTask(task);// Tony: 增加到任务队列
+        if (!inEventLoop) {// Tony: 不是同一个线程，则调用启动方法
             startThread();
             if (isShutdown()) {
                 boolean reject = false;
@@ -884,7 +884,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         if (state == ST_NOT_STARTED) {
             if (STATE_UPDATER.compareAndSet(this, ST_NOT_STARTED, ST_STARTED)) {
                 try {
-                    doStartThread();
+                    doStartThread();// Tony: 未启动，则触发启动
                 } catch (Throwable cause) {
                     STATE_UPDATER.set(this, ST_NOT_STARTED);
                     PlatformDependent.throwException(cause);
@@ -895,7 +895,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     private void doStartThread() {
         assert thread == null;
-        executor.execute(new Runnable() {
+        executor.execute(new Runnable() {// Tony: 这里的executor是初始化EventLoop的时候传进来的
             @Override
             public void run() {
                 thread = Thread.currentThread();
@@ -905,7 +905,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
                 boolean success = false;
                 updateLastExecutionTime();
-                try {
+                try {// Tony: 创建线程开始执行run方法，所以，每个EventLoop都是执行run
                     SingleThreadEventExecutor.this.run();
                     success = true;
                 } catch (Throwable t) {

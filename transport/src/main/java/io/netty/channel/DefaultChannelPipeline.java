@@ -1016,7 +1016,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        return tail.bind(localAddress, promise);
+        return tail.bind(localAddress, promise);// Tony: outBound执行顺序是从职责链的末尾端开始
     }
 
     @Override
