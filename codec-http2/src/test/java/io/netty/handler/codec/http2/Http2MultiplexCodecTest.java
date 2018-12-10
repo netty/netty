@@ -824,7 +824,10 @@ public class Http2MultiplexCodecTest {
 
         parentChannel.pipeline().addFirst(readCompleteSupressHandler);
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("1"), 0, false);
-        assertEquals(dataFrame1, inboundHandler.readInbound());
+
+        Http2DataFrame frame = inboundHandler.readInbound();
+        assertEquals(dataFrame1, frame);
+        frame.release();
 
         // Deliver frames, and then a stream closed while read is inactive.
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("2"), 0, false);
@@ -838,9 +841,18 @@ public class Http2MultiplexCodecTest {
         frameInboundWriter.writeInboundRstStream(childChannel.stream().id(), Http2Error.NO_ERROR.code());
 
         // Detecting EOS should flush all pending data regardless of read calls.
-        assertEquals(dataFrame2, inboundHandler.readInbound());
-        assertEquals(dataFrame3, inboundHandler.readInbound());
-        assertEquals(dataFrame4, inboundHandler.readInbound());
+        frame = inboundHandler.readInbound();
+        assertEquals(dataFrame2, frame);
+        frame.release();
+
+        frame = inboundHandler.readInbound();
+        assertEquals(dataFrame3, frame);
+        frame.release();
+
+        frame = inboundHandler.readInbound();
+        assertEquals(dataFrame4, frame);
+        frame.release();
+
         Http2ResetFrame resetFrame = inboundHandler.readInbound();
         assertEquals(childChannel.stream(), resetFrame.stream());
         assertEquals(Http2Error.NO_ERROR.code(), resetFrame.errorCode());
@@ -959,7 +971,10 @@ public class Http2MultiplexCodecTest {
         parentChannel.pipeline().addFirst(readCompleteSupressHandler);
 
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("1"), 0, false);
-        assertEquals(dataFrame1, inboundHandler.readInbound());
+
+        Http2DataFrame frame = inboundHandler.readInbound();
+        assertEquals(dataFrame1, frame);
+        frame.release();
 
         // We want one item to be in the queue, and allow the numReads to be larger than 1. This will ensure that
         // when beginRead() is called the child channel is added to the readPending queue of the parent channel.
@@ -967,19 +982,30 @@ public class Http2MultiplexCodecTest {
 
         numReads.set(2);
         childChannel.read();
-        assertEquals(dataFrame2, inboundHandler.readInbound());
+
+        frame = inboundHandler.readInbound();
+        assertEquals(dataFrame2, frame);
+        frame.release();
+
         assertNull(inboundHandler.readInbound());
 
         // This is the second item that was read, this should be the last until we call read() again. This should also
         // notify of readComplete().
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("3"), 0, false);
-        assertEquals(dataFrame3, inboundHandler.readInbound());
+
+        frame = inboundHandler.readInbound();
+        assertEquals(dataFrame3, frame);
+        frame.release();
 
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("4"), 0, false);
         assertNull(inboundHandler.readInbound());
 
         childChannel.read();
-        assertEquals(dataFrame4, inboundHandler.readInbound());
+
+        frame = inboundHandler.readInbound();
+        assertEquals(dataFrame4, frame);
+        frame.release();
+
         assertNull(inboundHandler.readInbound());
 
         // Now we want to call channelReadComplete and simulate the end of the read loop.
