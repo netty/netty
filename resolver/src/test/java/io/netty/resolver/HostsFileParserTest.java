@@ -16,12 +16,11 @@
 package io.netty.resolver;
 
 import io.netty.util.CharsetUtil;
-import io.netty.util.ResourcesUtil;
+import io.netty.util.internal.ResourcesUtil;
 import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.Inet4Address;

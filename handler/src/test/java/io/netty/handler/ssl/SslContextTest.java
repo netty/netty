@@ -15,7 +15,7 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.ResourcesUtil;
+import io.netty.util.internal.ResourcesUtil;
 import org.junit.Assert;
 import org.junit.Test;
 

@@ -31,7 +31,7 @@
  */
 package io.netty.handler.codec.http2;
 
-import io.netty.util.ResourcesUtil;
+import io.netty.util.internal.ResourcesUtil;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -39,7 +39,6 @@ import org.junit.runners.Parameterized.Parameters;
 
 import java.io.File;
 import java.io.InputStream;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 

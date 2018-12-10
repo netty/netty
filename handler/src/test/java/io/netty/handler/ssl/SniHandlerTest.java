@@ -44,7 +44,7 @@ import io.netty.util.DomainNameMappingBuilder;
 import io.netty.util.Mapping;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
-import io.netty.util.ResourcesUtil;
+import io.netty.util.internal.ResourcesUtil;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
