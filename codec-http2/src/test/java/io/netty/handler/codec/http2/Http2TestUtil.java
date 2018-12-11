@@ -26,6 +26,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.AsciiString;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -41,7 +42,10 @@ import java.util.concurrent.CountDownLatch;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
+import static io.netty.util.ReferenceCountUtil.release;
 import static java.lang.Math.min;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyByte;
@@ -682,4 +686,17 @@ public final class Http2TestUtil {
     static ByteBuf bb(String s) {
         return ByteBufUtil.writeUtf8(UnpooledByteBufAllocator.DEFAULT, s);
     }
+
+    static void assertEqualsAndRelease(Http2Frame expected, Http2Frame actual) {
+        try {
+            assertEquals(expected, actual);
+        } finally {
+            release(expected);
+            release(actual);
+            // Will return -1 when not implements ReferenceCounted.
+            assertTrue(ReferenceCountUtil.refCnt(expected) <= 0);
+            assertTrue(ReferenceCountUtil.refCnt(actual) <= 0);
+        }
+    }
+
 }

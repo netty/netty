@@ -57,6 +57,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static io.netty.handler.codec.http2.Http2TestUtil.anyChannelPromise;
 import static io.netty.handler.codec.http2.Http2TestUtil.anyHttp2Settings;
+import static io.netty.handler.codec.http2.Http2TestUtil.assertEqualsAndRelease;
 import static io.netty.handler.codec.http2.Http2TestUtil.bb;
 
 import static org.hamcrest.Matchers.instanceOf;
@@ -244,11 +245,8 @@ public class Http2FrameCodecTest {
         frameInboundWriter.writeInboundData(1, hello, 31, true);
         Http2DataFrame inboundData = inboundHandler.readInbound();
         Http2DataFrame expected = new DefaultHttp2DataFrame(bb("hello"), true, 31).stream(stream2);
-        assertEquals(expected, inboundData);
+        assertEqualsAndRelease(expected, inboundData);
 
-        assertEquals(1, inboundData.refCnt());
-        expected.release();
-        inboundData.release();
         assertNull(inboundHandler.readInbound());
 
         channel.writeOutbound(new DefaultHttp2HeadersFrame(response, false).stream(stream2));
@@ -264,6 +262,8 @@ public class Http2FrameCodecTest {
         assertEquals(bb, outboundData.getValue());
         assertEquals(1, outboundData.getValue().refCnt());
         bb.release();
+        outboundData.getValue().release();
+
         verify(frameWriter, never()).writeRstStream(eqFrameCodecCtx(), anyInt(), anyLong(), anyChannelPromise());
         assertTrue(channel.isActive());
     }
@@ -331,6 +331,7 @@ public class Http2FrameCodecTest {
         assertEquals(State.OPEN, stream.state());
         assertTrue(channel.isActive());
         expected.release();
+        debugData.release();
     }
 
     @Test
@@ -340,11 +341,9 @@ public class Http2FrameCodecTest {
         Http2GoAwayFrame expectedFrame = new DefaultHttp2GoAwayFrame(2, Http2Error.NO_ERROR.code(), bb("foo"));
         Http2GoAwayFrame actualFrame = inboundHandler.readInbound();
 
-        assertEquals(expectedFrame, actualFrame);
-        assertNull(inboundHandler.readInbound());
+        assertEqualsAndRelease(expectedFrame, actualFrame);
 
-        expectedFrame.release();
-        actualFrame.release();
+        assertNull(inboundHandler.readInbound());
     }
 
     @Test

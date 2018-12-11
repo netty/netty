@@ -49,6 +49,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static io.netty.util.ReferenceCountUtil.release;
 import static io.netty.handler.codec.http2.Http2TestUtil.anyChannelPromise;
 import static io.netty.handler.codec.http2.Http2TestUtil.anyHttp2Settings;
+import static io.netty.handler.codec.http2.Http2TestUtil.assertEqualsAndRelease;
 import static io.netty.handler.codec.http2.Http2TestUtil.bb;
 
 import static org.junit.Assert.assertEquals;
@@ -197,16 +198,15 @@ public class Http2MultiplexCodecTest {
         Http2DataFrame dataFrame2 = new DefaultHttp2DataFrame(bb("world")).stream(channel.stream());
 
         assertTrue(inboundHandler.isChannelActive());
-        frameInboundWriter.writeInboundData(channel.stream().id(), dataFrame1.content().duplicate(), 0, false);
-        frameInboundWriter.writeInboundData(channel.stream().id(), dataFrame2.content().duplicate(), 0, false);
+        frameInboundWriter.writeInboundData(channel.stream().id(), bb("hello"), 0, false);
+        frameInboundWriter.writeInboundData(channel.stream().id(), bb("world"), 0, false);
 
         assertEquals(headersFrame, inboundHandler.readInbound());
-        assertEquals(dataFrame1, inboundHandler.readInbound());
-        assertEquals(dataFrame2, inboundHandler.readInbound());
-        assertNull(inboundHandler.readInbound());
 
-        assertTrue(dataFrame1.release());
-        assertTrue(dataFrame2.release());
+        assertEqualsAndRelease(dataFrame1, inboundHandler.<Http2Frame>readInbound());
+        assertEqualsAndRelease(dataFrame2, inboundHandler.<Http2Frame>readInbound());
+
+        assertNull(inboundHandler.readInbound());
     }
 
     @Test
@@ -267,8 +267,7 @@ public class Http2MultiplexCodecTest {
         frameInboundWriter.writeInboundGoAway(0, goAwayFrame.errorCode(), goAwayFrame.content().retainedDuplicate());
 
         Http2GoAwayFrame frame = parentChannel.readInbound();
-        assertEquals(frame, goAwayFrame);
-        assertTrue(frame.release());
+        assertEqualsAndRelease(frame, goAwayFrame);
     }
 
     @Test
@@ -289,8 +288,7 @@ public class Http2MultiplexCodecTest {
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("foo"), 0, false);
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("bar"), 0, false);
 
-        dataFrame0 = inboundHandler.readInbound();
-        assertNull(dataFrame0);
+        assertNull(inboundHandler.readInbound());
 
         childChannel.config().setAutoRead(true);
         verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 2);
@@ -825,9 +823,7 @@ public class Http2MultiplexCodecTest {
         parentChannel.pipeline().addFirst(readCompleteSupressHandler);
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("1"), 0, false);
 
-        Http2DataFrame frame = inboundHandler.readInbound();
-        assertEquals(dataFrame1, frame);
-        frame.release();
+        assertEqualsAndRelease(dataFrame1, inboundHandler.<Http2DataFrame>readInbound());
 
         // Deliver frames, and then a stream closed while read is inactive.
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("2"), 0, false);
@@ -841,17 +837,9 @@ public class Http2MultiplexCodecTest {
         frameInboundWriter.writeInboundRstStream(childChannel.stream().id(), Http2Error.NO_ERROR.code());
 
         // Detecting EOS should flush all pending data regardless of read calls.
-        frame = inboundHandler.readInbound();
-        assertEquals(dataFrame2, frame);
-        frame.release();
-
-        frame = inboundHandler.readInbound();
-        assertEquals(dataFrame3, frame);
-        frame.release();
-
-        frame = inboundHandler.readInbound();
-        assertEquals(dataFrame4, frame);
-        frame.release();
+        assertEqualsAndRelease(dataFrame2, inboundHandler.<Http2DataFrame>readInbound());
+        assertEqualsAndRelease(dataFrame3, inboundHandler.<Http2DataFrame>readInbound());
+        assertEqualsAndRelease(dataFrame4, inboundHandler.<Http2DataFrame>readInbound());
 
         Http2ResetFrame resetFrame = inboundHandler.readInbound();
         assertEquals(childChannel.stream(), resetFrame.stream());
@@ -864,11 +852,6 @@ public class Http2MultiplexCodecTest {
         parentChannel.flushInbound();
 
         childChannel.closeFuture().syncUninterruptibly();
-
-        dataFrame1.release();
-        dataFrame2.release();
-        dataFrame3.release();
-        dataFrame4.release();
     }
 
     @Test
@@ -898,14 +881,15 @@ public class Http2MultiplexCodecTest {
 
         ChannelHandler readCompleteSupressHandler = new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            public void channelReadComplete(ChannelHandlerContext ctx) {
                 // We want to simulate the parent channel calling channelRead and delay calling channelReadComplete.
             }
         };
         parentChannel.pipeline().addFirst(readCompleteSupressHandler);
 
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("1"), 0, false);
-        assertEquals(dataFrame1, inboundHandler.readInbound());
+
+        assertEqualsAndRelease(dataFrame1, inboundHandler.<Http2DataFrame>readInbound());
 
         // We want one item to be in the queue, and allow the numReads to be larger than 1. This will ensure that
         // when beginRead() is called the child channel is added to the readPending queue of the parent channel.
@@ -919,9 +903,10 @@ public class Http2MultiplexCodecTest {
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("4"), 0, false);
 
         // Detecting EOS should flush all pending data regardless of read calls.
-        assertEquals(dataFrame2, inboundHandler.readInbound());
-        assertEquals(dataFrame3, inboundHandler.readInbound());
-        assertEquals(dataFrame4, inboundHandler.readInbound());
+        assertEqualsAndRelease(dataFrame2, inboundHandler.<Http2DataFrame>readInbound());
+        assertEqualsAndRelease(dataFrame3, inboundHandler.<Http2DataFrame>readInbound());
+        assertEqualsAndRelease(dataFrame4, inboundHandler.<Http2DataFrame>readInbound());
+
         assertNull(inboundHandler.readInbound());
 
         // Now we want to call channelReadComplete and simulate the end of the read loop.
@@ -930,11 +915,6 @@ public class Http2MultiplexCodecTest {
 
         // 3 = 1 for initialization + 1 for read when auto read was off + 1 for when auto read was back on
         assertEquals(3, channelReadCompleteCount.get());
-
-        dataFrame1.release();
-        dataFrame2.release();
-        dataFrame3.release();
-        dataFrame4.release();
     }
 
     @Test
@@ -972,9 +952,7 @@ public class Http2MultiplexCodecTest {
 
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("1"), 0, false);
 
-        Http2DataFrame frame = inboundHandler.readInbound();
-        assertEquals(dataFrame1, frame);
-        frame.release();
+        assertEqualsAndRelease(dataFrame1, inboundHandler.<Http2Frame>readInbound());
 
         // We want one item to be in the queue, and allow the numReads to be larger than 1. This will ensure that
         // when beginRead() is called the child channel is added to the readPending queue of the parent channel.
@@ -983,9 +961,7 @@ public class Http2MultiplexCodecTest {
         numReads.set(2);
         childChannel.read();
 
-        frame = inboundHandler.readInbound();
-        assertEquals(dataFrame2, frame);
-        frame.release();
+        assertEqualsAndRelease(dataFrame2, inboundHandler.<Http2Frame>readInbound());
 
         assertNull(inboundHandler.readInbound());
 
@@ -993,18 +969,14 @@ public class Http2MultiplexCodecTest {
         // notify of readComplete().
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("3"), 0, false);
 
-        frame = inboundHandler.readInbound();
-        assertEquals(dataFrame3, frame);
-        frame.release();
+        assertEqualsAndRelease(dataFrame3, inboundHandler.<Http2Frame>readInbound());
 
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("4"), 0, false);
         assertNull(inboundHandler.readInbound());
 
         childChannel.read();
 
-        frame = inboundHandler.readInbound();
-        assertEquals(dataFrame4, frame);
-        frame.release();
+        assertEqualsAndRelease(dataFrame4, inboundHandler.<Http2Frame>readInbound());
 
         assertNull(inboundHandler.readInbound());
 
@@ -1015,11 +987,6 @@ public class Http2MultiplexCodecTest {
         // 3 = 1 for initialization + 1 for first read of 2 items + 1 for second read of 2 items +
         // 1 for parent channel readComplete
         assertEquals(4, channelReadCompleteCount.get());
-
-        dataFrame1.release();
-        dataFrame2.release();
-        dataFrame3.release();
-        dataFrame4.release();
     }
 
     private static void verifyFramesMultiplexedToCorrectChannel(Http2StreamChannel streamChannel,
