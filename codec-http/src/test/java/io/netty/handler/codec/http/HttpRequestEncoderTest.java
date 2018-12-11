@@ -41,8 +41,8 @@ public class HttpRequestEncoderTest {
         return new ByteBuf[]{
                 Unpooled.buffer(128).order(ByteOrder.BIG_ENDIAN),
                 Unpooled.buffer(128).order(ByteOrder.LITTLE_ENDIAN),
-                Unpooled.wrappedBuffer(ByteBuffer.allocate(128).order(ByteOrder.BIG_ENDIAN)).resetWriterIndex(),
-                Unpooled.wrappedBuffer(ByteBuffer.allocate(128).order(ByteOrder.LITTLE_ENDIAN)).resetWriterIndex()
+                Unpooled.wrappedBuffer(ByteBuffer.allocate(128).order(ByteOrder.BIG_ENDIAN)).writerIndex(0),
+                Unpooled.wrappedBuffer(ByteBuffer.allocate(128).order(ByteOrder.LITTLE_ENDIAN)).writerIndex(0)
         };
     }
 

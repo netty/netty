@@ -922,30 +922,6 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     }
 
     @Override
-    public final CompositeByteBuf markReaderIndex() {
-        wrapped.markReaderIndex();
-        return this;
-    }
-
-    @Override
-    public final CompositeByteBuf resetReaderIndex() {
-        wrapped.resetReaderIndex();
-        return this;
-    }
-
-    @Override
-    public final CompositeByteBuf markWriterIndex() {
-        wrapped.markWriterIndex();
-        return this;
-    }
-
-    @Override
-    public final CompositeByteBuf resetWriterIndex() {
-        wrapped.resetWriterIndex();
-        return this;
-    }
-
-    @Override
     public CompositeByteBuf ensureWritable(int minWritableBytes) {
         wrapped.ensureWritable(minWritableBytes);
         return this;

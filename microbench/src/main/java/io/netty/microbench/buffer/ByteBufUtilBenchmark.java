@@ -79,97 +79,97 @@ public class
 
     @Benchmark
     public void writeAsciiStringViaArray() {
-        buffer.resetWriterIndex();
+        buffer.writerIndex(0);
         buffer.writeBytes(ascii.getBytes(CharsetUtil.US_ASCII));
     }
 
     @Benchmark
     public void writeAsciiStringViaArrayWrapped() {
-        wrapped.resetWriterIndex();
+        wrapped.writerIndex(0);
         wrapped.writeBytes(ascii.getBytes(CharsetUtil.US_ASCII));
     }
 
     @Benchmark
     public void writeAsciiString() {
-        buffer.resetWriterIndex();
+        buffer.writerIndex(0);
         ByteBufUtil.writeAscii(buffer, ascii);
     }
 
     @Benchmark
     public void writeAsciiStringWrapped() {
-        wrapped.resetWriterIndex();
+        wrapped.writerIndex(0);
         ByteBufUtil.writeAscii(wrapped, ascii);
     }
 
     @Benchmark
     public void writeAsciiViaArray() {
-        buffer.resetWriterIndex();
+        buffer.writerIndex(0);
         buffer.writeBytes(asciiSequence.toString().getBytes(CharsetUtil.US_ASCII));
     }
 
     @Benchmark
     public void writeAsciiViaArrayWrapped() {
-        wrapped.resetWriterIndex();
+        wrapped.writerIndex(0);
         wrapped.writeBytes(asciiSequence.toString().getBytes(CharsetUtil.US_ASCII));
     }
 
     @Benchmark
     public void writeAscii() {
-        buffer.resetWriterIndex();
+        buffer.writerIndex(0);
         ByteBufUtil.writeAscii(buffer, asciiSequence);
     }
 
     @Benchmark
     public void writeAsciiWrapped() {
-        wrapped.resetWriterIndex();
+        wrapped.writerIndex(0);
         ByteBufUtil.writeAscii(wrapped, asciiSequence);
     }
 
     @Benchmark
     public void writeUtf8StringViaArray() {
-        buffer.resetWriterIndex();
+        buffer.writerIndex(0);
         buffer.writeBytes(utf8.getBytes(CharsetUtil.UTF_8));
     }
 
     @Benchmark
     public void writeUtf8StringViaArrayWrapped() {
-        wrapped.resetWriterIndex();
+        wrapped.writerIndex(0);
         wrapped.writeBytes(utf8.getBytes(CharsetUtil.UTF_8));
     }
 
     @Benchmark
     public void writeUtf8String() {
-        buffer.resetWriterIndex();
+        buffer.writerIndex(0);
         ByteBufUtil.writeUtf8(buffer, utf8);
     }
 
     @Benchmark
     public void writeUtf8StringWrapped() {
-        wrapped.resetWriterIndex();
+        wrapped.writerIndex(0);
         ByteBufUtil.writeUtf8(wrapped, utf8);
     }
 
     @Benchmark
     public void writeUtf8ViaArray() {
-        buffer.resetWriterIndex();
+        buffer.writerIndex(0);
         buffer.writeBytes(utf8Sequence.toString().getBytes(CharsetUtil.UTF_8));
     }
 
     @Benchmark
     public void writeUtf8ViaArrayWrapped() {
-        wrapped.resetWriterIndex();
+        wrapped.writerIndex(0);
         wrapped.writeBytes(utf8Sequence.toString().getBytes(CharsetUtil.UTF_8));
     }
 
     @Benchmark
     public void writeUtf8() {
-        buffer.resetWriterIndex();
+        buffer.writerIndex(0);
         ByteBufUtil.writeUtf8(buffer, utf8Sequence);
     }
 
     @Benchmark
     public void writeUtf8Wrapped() {
-        wrapped.resetWriterIndex();
+        wrapped.writerIndex(0);
         ByteBufUtil.writeUtf8(wrapped, utf8Sequence);
     }
 

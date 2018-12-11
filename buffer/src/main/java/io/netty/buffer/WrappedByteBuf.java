@@ -168,30 +168,6 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
-    public final ByteBuf markReaderIndex() {
-        buf.markReaderIndex();
-        return this;
-    }
-
-    @Override
-    public final ByteBuf resetReaderIndex() {
-        buf.resetReaderIndex();
-        return this;
-    }
-
-    @Override
-    public final ByteBuf markWriterIndex() {
-        buf.markWriterIndex();
-        return this;
-    }
-
-    @Override
-    public final ByteBuf resetWriterIndex() {
-        buf.resetWriterIndex();
-        return this;
-    }
-
-    @Override
     public ByteBuf discardReadBytes() {
         buf.discardReadBytes();
         return this;

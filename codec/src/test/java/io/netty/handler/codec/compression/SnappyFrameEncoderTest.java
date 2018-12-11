@@ -83,7 +83,7 @@ public class SnappyFrameEncoderTest {
         });
 
         channel.writeOutbound(in.retain());
-        in.resetReaderIndex(); // rewind the buffer to write the same data
+        in.readerIndex(0); // rewind the buffer to write the same data
         channel.writeOutbound(in);
         assertTrue(channel.finish());
 

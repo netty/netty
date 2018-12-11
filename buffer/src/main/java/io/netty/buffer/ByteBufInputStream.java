@@ -45,6 +45,8 @@ public class ByteBufInputStream extends InputStream implements DataInput {
     private final int startIndex;
     private final int endIndex;
     private boolean closed;
+    private int markReaderIndex;
+
     /**
      * To preserve backwards compatibility (which didn't transfer ownership) we support a conditional flag which
      * indicates if {@link #buffer} should be released when this {@link InputStream} is closed.
@@ -123,7 +125,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
         this.buffer = buffer;
         startIndex = buffer.readerIndex();
         endIndex = startIndex + length;
-        buffer.markReaderIndex();
+        markReaderIndex = startIndex;
     }
 
     /**
@@ -153,7 +155,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
 
     @Override
     public void mark(int readlimit) {
-        buffer.markReaderIndex();
+        markReaderIndex = buffer.readerIndex();
     }
 
     @Override
@@ -183,7 +185,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
 
     @Override
     public void reset() throws IOException {
-        buffer.resetReaderIndex();
+        buffer.readerIndex(markReaderIndex);
     }
 
     @Override

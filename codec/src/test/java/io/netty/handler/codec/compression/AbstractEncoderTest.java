@@ -88,7 +88,8 @@ public abstract class AbstractEncoderTest extends AbstractCompressionTest {
         assertTrue(channel.finish());
 
         ByteBuf decompressed = readDecompressed(dataLength);
-        assertEquals(data.resetReaderIndex(), decompressed);
+        data.readerIndex(0);
+        assertEquals(data, decompressed);
 
         decompressed.release();
         data.release();

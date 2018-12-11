@@ -74,7 +74,6 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         maxCapacity(maxCapacity);
         setRefCnt(1);
         setIndex0(0, 0);
-        discardMarks();
     }
 
     @Override

@@ -123,7 +123,7 @@ public class SocksCmdResponseTest {
         ByteBuf buffer = Unpooled.buffer(16);
         rs.encodeAsByteBuf(buffer);
 
-        buffer.resetReaderIndex();
+        buffer.readerIndex(0);
         assertEquals(SocksProtocolVersion.SOCKS5.byteValue(), buffer.readByte());
         assertEquals(SocksCmdStatus.SUCCESS.byteValue(), buffer.readByte());
         assertEquals((byte) 0x00, buffer.readByte());
@@ -145,7 +145,7 @@ public class SocksCmdResponseTest {
         ByteBuf buffer = Unpooled.buffer(24);
         rs.encodeAsByteBuf(buffer);
 
-        buffer.resetReaderIndex();
+        buffer.readerIndex(0);
         assertEquals(SocksProtocolVersion.SOCKS5.byteValue(), buffer.readByte());
         assertEquals(SocksCmdStatus.SUCCESS.byteValue(), buffer.readByte());
         assertEquals((byte) 0x00, buffer.readByte());

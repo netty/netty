@@ -390,7 +390,7 @@ public final class Snappy {
      * @return The number of bytes appended to the output buffer, or -1 to indicate "try again later"
      */
     static int decodeLiteral(byte tag, ByteBuf in, ByteBuf out) {
-        in.markReaderIndex();
+        int readerIndex = in.readerIndex();
         int length;
         switch(tag >> 2 & 0x3F) {
         case 60:
@@ -423,7 +423,7 @@ public final class Snappy {
         length += 1;
 
         if (in.readableBytes() < length) {
-            in.resetReaderIndex();
+            in.readerIndex(readerIndex);
             return NOT_ENOUGH_INPUT;
         }
 
@@ -455,7 +455,7 @@ public final class Snappy {
 
         validateOffset(offset, writtenSoFar);
 
-        out.markReaderIndex();
+        int readerIndex = out.readerIndex();
         if (offset < length) {
             int copies = length / offset;
             for (; copies > 0; copies--) {
@@ -470,7 +470,7 @@ public final class Snappy {
             out.readerIndex(initialIndex - offset);
             out.readBytes(out, length);
         }
-        out.resetReaderIndex();
+        out.readerIndex(readerIndex);
 
         return length;
     }
@@ -499,7 +499,7 @@ public final class Snappy {
 
         validateOffset(offset, writtenSoFar);
 
-        out.markReaderIndex();
+        int readerIndex = out.readerIndex();
         if (offset < length) {
             int copies = length / offset;
             for (; copies > 0; copies--) {
@@ -514,7 +514,7 @@ public final class Snappy {
             out.readerIndex(initialIndex - offset);
             out.readBytes(out, length);
         }
-        out.resetReaderIndex();
+        out.readerIndex(readerIndex);
 
         return length;
     }
@@ -543,7 +543,7 @@ public final class Snappy {
 
         validateOffset(offset, writtenSoFar);
 
-        out.markReaderIndex();
+        int readerIndex = out.readerIndex();
         if (offset < length) {
             int copies = length / offset;
             for (; copies > 0; copies--) {
@@ -558,7 +558,7 @@ public final class Snappy {
             out.readerIndex(initialIndex - offset);
             out.readBytes(out, length);
         }
-        out.resetReaderIndex();
+        out.readerIndex(readerIndex);
 
         return length;
     }
