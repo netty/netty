@@ -414,7 +414,6 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         }
     }
 
-    // Allow to override for testing
     final void flush0(ChannelHandlerContext ctx) {
         flush(ctx);
     }
