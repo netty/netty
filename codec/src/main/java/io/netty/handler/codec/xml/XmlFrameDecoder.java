@@ -59,6 +59,10 @@ import java.util.List;
  * +-----------------+-------------------------------------+
  * </pre>
  *
+ * <p/>
+ * The byte stream is expected to be in UTF-8 character encoding or ASCII, as current implementation 
+ * uses direct {@code byte} to {@code char} cast.
+ * <p/>
  * Please note that this decoder is not suitable for
  * xml streaming protocols such as
  * <a href="http://xmpp.org/rfcs/rfc6120.html">XMPP</a>,

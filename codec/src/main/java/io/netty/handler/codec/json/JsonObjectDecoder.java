@@ -30,7 +30,10 @@ import java.util.List;
 /**
  * Splits a byte stream of JSON objects and arrays into individual objects/arrays and passes them up the
  * {@link ChannelPipeline}.
- *
+ * <p>
+ * The byte stream is expected to be in UTF-8 character encoding or ASCII, as current implementation 
+ * uses direct {@code byte} to {@code char} cast.
+ * <p>
  * This class does not do any real parsing or validation. A sequence of bytes is considered a JSON object/array
  * if it contains a matching number of opening and closing braces/brackets. It's up to a subsequent
  * {@link ChannelHandler} to parse the JSON text into a more usable form i.e. a POJO.
