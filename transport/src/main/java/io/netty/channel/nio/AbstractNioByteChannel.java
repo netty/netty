@@ -125,6 +125,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             pipeline.fireExceptionCaught(cause);
             if (close || cause instanceof IOException) {
                 closeOnRead(pipeline);
+            } else {
+                readIfIsAutoRead();
             }
         }
 
@@ -169,6 +171,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
                 if (close) {
                     closeOnRead(pipeline);
+                } else {
+                    readIfIsAutoRead();
                 }
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, close, allocHandle);

@@ -188,6 +188,7 @@ public class LocalChannel extends AbstractChannel {
                     // connectPromise may be set to null if doClose() was called in the meantime.
                     if (promise != null && promise.trySuccess()) {
                         peer.pipeline().fireChannelActive();
+                        peer.readIfIsAutoRead();
                     }
                 }
             });
@@ -305,6 +306,7 @@ public class LocalChannel extends AbstractChannel {
         } while (handle.continueReading());
 
         pipeline.fireChannelReadComplete();
+        readIfIsAutoRead();
     }
 
     @Override

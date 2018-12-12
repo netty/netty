@@ -464,6 +464,8 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
 
                 if (exception != null) {
                     pipeline.fireExceptionCaught(exception);
+                } else {
+                    readIfIsAutoRead();
                 }
             } finally {
                 readReadyFinally(config);

@@ -107,6 +107,8 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                     if (isOpen()) {
                         close(voidPromise());
                     }
+                } else {
+                    readIfIsAutoRead();
                 }
             } finally {
                 // Check if there is a readPending which was not processed yet.

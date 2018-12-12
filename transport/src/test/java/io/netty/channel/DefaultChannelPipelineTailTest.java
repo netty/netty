@@ -357,6 +357,7 @@ public class DefaultChannelPipelineTailTest {
                 if (!active) {
                     active = true;
                     pipeline().fireChannelActive();
+                    readIfIsAutoRead();
                 }
 
                 promise.setSuccess();
