@@ -2016,12 +2016,16 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             if (value == null) {
                 throw new NullPointerException("value");
             }
-            Map<String, Object> values = this.values;
-            if (values == null) {
-                // Use size of 2 to keep the memory overhead small
-                values = this.values = new HashMap<String, Object>(2);
+            final Object old;
+            synchronized (this) {
+                Map<String, Object> values = this.values;
+                if (values == null) {
+                    // Use size of 2 to keep the memory overhead small
+                    values = this.values = new HashMap<String, Object>(2);
+                }
+                old = values.put(name, value);
             }
-            Object old = values.put(name, value);
+
             if (value instanceof SSLSessionBindingListener) {
                 // Use newSSLSessionBindingEvent so we alway use the wrapper if needed.
                 ((SSLSessionBindingListener) value).valueBound(newSSLSessionBindingEvent(name));
@@ -2034,10 +2038,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             if (name == null) {
                 throw new NullPointerException("name");
             }
-            if (values == null) {
-                return null;
+            synchronized (this) {
+                if (values == null) {
+                    return null;
+                }
+                return values.get(name);
             }
-            return values.get(name);
         }
 
         @Override
@@ -2045,21 +2051,28 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             if (name == null) {
                 throw new NullPointerException("name");
             }
-            Map<String, Object> values = this.values;
-            if (values == null) {
-                return;
+
+            final Object old;
+            synchronized (this) {
+                Map<String, Object> values = this.values;
+                if (values == null) {
+                    return;
+                }
+                old = values.remove(name);
             }
-            Object old = values.remove(name);
+
             notifyUnbound(old, name);
         }
 
         @Override
         public String[] getValueNames() {
-            Map<String, Object> values = this.values;
-            if (values == null || values.isEmpty()) {
-                return EmptyArrays.EMPTY_STRINGS;
+            synchronized (this) {
+                Map<String, Object> values = this.values;
+                if (values == null || values.isEmpty()) {
+                    return EmptyArrays.EMPTY_STRINGS;
+                }
+                return values.keySet().toArray(new String[0]);
             }
-            return values.keySet().toArray(new String[0]);
         }
 
         private void notifyUnbound(Object value, String name) {
