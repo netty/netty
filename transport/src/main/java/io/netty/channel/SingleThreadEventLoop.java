@@ -20,9 +20,7 @@ import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.UnstableApi;
 
-import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
@@ -34,8 +32,6 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
 
     protected static final int DEFAULT_MAX_PENDING_TASKS = Math.max(16,
             SystemPropertyUtil.getInt("io.netty.eventLoop.maxPendingTasks", Integer.MAX_VALUE));
-
-    private final Queue<Runnable> tailTasks;
 
     protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
         this(parent, threadFactory, addTaskWakesUp, DEFAULT_MAX_PENDING_TASKS, RejectedExecutionHandlers.reject());
@@ -49,14 +45,12 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
                                     boolean addTaskWakesUp, int maxPendingTasks,
                                     RejectedExecutionHandler rejectedExecutionHandler) {
         super(parent, threadFactory, addTaskWakesUp, maxPendingTasks, rejectedExecutionHandler);
-        tailTasks = newTaskQueue(maxPendingTasks);
     }
 
     protected SingleThreadEventLoop(EventLoopGroup parent, Executor executor,
                                     boolean addTaskWakesUp, int maxPendingTasks,
                                     RejectedExecutionHandler rejectedExecutionHandler) {
         super(parent, executor, addTaskWakesUp, maxPendingTasks, rejectedExecutionHandler);
-        tailTasks = newTaskQueue(maxPendingTasks);
     }
 
     @Override
@@ -95,57 +89,9 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
         return promise;
     }
 
-    /**
-     * Adds a task to be run once at the end of next (or current) {@code eventloop} iteration.
-     *
-     * @param task to be added.
-     */
-    @UnstableApi
-    public final void executeAfterEventLoopIteration(Runnable task) {
-        ObjectUtil.checkNotNull(task, "task");
-        if (isShutdown()) {
-            reject();
-        }
-
-        if (!tailTasks.offer(task)) {
-            reject(task);
-        }
-
-        if (wakesUpForTask(task)) {
-            wakeup(inEventLoop());
-        }
-    }
-
-    /**
-     * Removes a task that was added previously via {@link #executeAfterEventLoopIteration(Runnable)}.
-     *
-     * @param task to be removed.
-     *
-     * @return {@code true} if the task was removed as a result of this call.
-     */
-    @UnstableApi
-    final boolean removeAfterEventLoopIterationTask(Runnable task) {
-        return tailTasks.remove(ObjectUtil.checkNotNull(task, "task"));
-    }
-
     @Override
     protected boolean wakesUpForTask(Runnable task) {
         return !(task instanceof NonWakeupRunnable);
-    }
-
-    @Override
-    protected void afterRunningAllTasks() {
-        runAllTasksFrom(tailTasks);
-    }
-
-    @Override
-    protected boolean hasTasks() {
-        return super.hasTasks() || !tailTasks.isEmpty();
-    }
-
-    @Override
-    public int pendingTasks() {
-        return super.pendingTasks() + tailTasks.size();
     }
 
     /**
