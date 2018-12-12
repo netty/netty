@@ -77,4 +77,10 @@ public class ConscryptSslEngineTest extends SSLEngineTest {
     @Override
     public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() {
     }
+
+    @Ignore("Ignore due bug in Conscrypt")
+    @Override
+    public void testSessionBindingEvent() throws Exception {
+        // Ignore due bug in Conscrypt where the incorrect SSLSession object is used in the SSLSessionBindingEvent.
+    }
 }
