@@ -44,6 +44,7 @@ import io.netty.util.DomainNameMappingBuilder;
 import io.netty.util.Mapping;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.internal.ResourcesUtil;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
@@ -98,8 +99,8 @@ public class SniHandlerTest {
             assumeApnSupported(provider);
         }
 
-        File keyFile = new File(SniHandlerTest.class.getResource("test_encrypted.pem").getFile());
-        File crtFile = new File(SniHandlerTest.class.getResource("test.crt").getFile());
+        File keyFile = ResourcesUtil.getFile(SniHandlerTest.class, "test_encrypted.pem");
+        File crtFile = ResourcesUtil.getFile(SniHandlerTest.class, "test.crt");
 
         SslContextBuilder sslCtxBuilder = SslContextBuilder.forServer(crtFile, keyFile, "12345")
                 .sslProvider(provider);
@@ -114,7 +115,7 @@ public class SniHandlerTest {
             assumeApnSupported(provider);
         }
 
-        File crtFile = new File(SniHandlerTest.class.getResource("test.crt").getFile());
+        File crtFile = ResourcesUtil.getFile(SniHandlerTest.class, "test.crt");
 
         SslContextBuilder sslCtxBuilder = SslContextBuilder.forClient().trustManager(crtFile).sslProvider(provider);
         if (apn) {
