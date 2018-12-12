@@ -588,7 +588,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                 pipeline.fireExceptionCaught(cause);
                 if (close || cause instanceof IOException) {
                     shutdownInput(false);
-                }else {
+                } else {
                     readIfIsAutoRead();
                 }
             }
