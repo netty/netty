@@ -26,7 +26,7 @@ import java.util.List;
  * <p>
  * Both {@code "\n"} and {@code "\r\n"} are handled.
  * <p>
- * The byte stream is expected to be in UTF-8 character encoding or ASCII, as current implementation 
+ * The byte stream is expected to be in UTF-8 character encoding or ASCII, as current implementation
  * uses direct {@code byte} to {@code char} cast.
  * <p>
  * For a more general delimiter-based decoder, see {@link DelimiterBasedFrameDecoder}.
