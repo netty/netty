@@ -931,18 +931,14 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      */
     @Override
     public void destroy() {
-        checkDestroyed();
+        // Release all data items, including those not yet pulled
         cleanFiles();
+
         destroyed = true;
 
         if (undecodedChunk != null && undecodedChunk.refCnt() > 0) {
             undecodedChunk.release();
             undecodedChunk = null;
-        }
-
-        // release all data which was not yet pulled
-        for (int i = bodyListHttpDataRank; i < bodyListHttpData.size(); i++) {
-            bodyListHttpData.get(i).release();
         }
     }
 
