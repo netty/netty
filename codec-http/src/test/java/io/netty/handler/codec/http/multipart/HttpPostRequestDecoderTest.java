@@ -24,6 +24,7 @@ import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -688,5 +689,38 @@ public class HttpPostRequestDecoderTest {
         FileUpload fileUpload = (FileUpload) part1;
         assertEquals("tmp-0.txt", fileUpload.getFilename());
         decoder.destroy();
+    }
+
+    // https://github.com/netty/netty/issues/8575
+    @Test
+    public void testMultipartRequest() throws Exception {
+        String BOUNDARY = "01f136d9282f";
+
+        ByteBuf byteBuf = Unpooled.wrappedBuffer(("--" + BOUNDARY + "\n" +
+                "Content-Disposition: form-data; name=\"msg_id\"\n" +
+                "\n" +
+                "15200\n" +
+                "--" + BOUNDARY + "\n" +
+                "Content-Disposition: form-data; name=\"msg\"\n" +
+                "\n" +
+                "test message\n" +
+                "--" + BOUNDARY + "--").getBytes());
+
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.POST, "/up", byteBuf);
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + BOUNDARY);
+
+        HttpPostRequestDecoder decoder =
+                new HttpPostRequestDecoder(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE),
+                        req,
+                        CharsetUtil.UTF_8);
+
+        assertTrue(decoder.isMultipart());
+        assertFalse(decoder.getBodyHttpDatas().isEmpty());
+        assertEquals(2, decoder.getBodyHttpDatas().size());
+        assertEquals("test message", ((Attribute) decoder.getBodyHttpData("msg")).getValue());
+        assertEquals("15200", ((Attribute) decoder.getBodyHttpData("msg_id")).getValue());
+
+        decoder.destroy();
+        assertEquals(1, req.refCnt());
     }
 }
