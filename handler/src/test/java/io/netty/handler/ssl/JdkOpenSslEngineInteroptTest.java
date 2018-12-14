@@ -101,6 +101,20 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
     }
 
     @Override
+    @Test
+    public void testSessionAfterHandshakeKeyManagerFactoryMutualAuth() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testSessionAfterHandshakeKeyManagerFactoryMutualAuth();
+    }
+
+    @Override
+    @Test
+    public void testSessionAfterHandshakeKeyManagerFactory() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testSessionAfterHandshakeKeyManagerFactory();
+    }
+
+    @Override
     protected void mySetupMutualAuthServerInitSslHandler(SslHandler handler) {
         ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) handler.engine();
         engine.setVerify(SSL_CVERIFY_IGNORED, 1);
