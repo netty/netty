@@ -944,7 +944,10 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
 
         // release all data which was not yet pulled
         for (int i = bodyListHttpDataRank; i < bodyListHttpData.size(); i++) {
-            bodyListHttpData.get(i).release();
+            final InterfaceHttpData data = bodyListHttpData.get(i);
+            if (data.refCnt() > 0) {
+                data.release();
+            }
         }
     }
 
