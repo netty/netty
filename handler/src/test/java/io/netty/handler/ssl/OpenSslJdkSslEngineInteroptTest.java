@@ -113,6 +113,13 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
     }
 
     @Override
+    @Test
+    public void testSessionAfterHandshakeKeyManagerFactoryMutualAuth() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testSessionAfterHandshakeKeyManagerFactoryMutualAuth();
+    }
+
+    @Override
     protected boolean mySetupMutualAuthServerIsValidServerException(Throwable cause) {
         // TODO(scott): work around for a JDK issue. The exception should be SSLHandshakeException.
         return super.mySetupMutualAuthServerIsValidServerException(cause) || causedBySSLException(cause);
