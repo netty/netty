@@ -451,7 +451,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
         // Must have 2 byte integer within the valid range
         int statusCode = buffer.readShort();
         if (statusCode >= 0 && statusCode <= 999 || statusCode >= 1004 && statusCode <= 1006
-                || statusCode >= 1012 && statusCode <= 2999) {
+                || statusCode >= 1015 && statusCode <= 2999) {
             protocolViolation(ctx, "Invalid close frame getStatus code: " + statusCode);
         }
 
