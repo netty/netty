@@ -148,7 +148,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
     private final Integer initialFlowControlWindowSize;
 
-    private ChannelHandlerContext ctx;
+    ChannelHandlerContext ctx;
 
     /** Number of buffered streams if the {@link StreamBufferingEncoder} is used. **/
     private int numBufferedStreams;
