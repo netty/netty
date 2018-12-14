@@ -365,6 +365,7 @@ public class EmbeddedChannel extends AbstractChannel {
     private ChannelFuture flushInbound(boolean recordException, ChannelPromise promise) {
       if (checkOpen(recordException)) {
           pipeline().fireChannelReadComplete();
+          readIfIsAutoRead();
           runPendingTasks();
       }
 

@@ -499,6 +499,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 if (exception != null) {
                     pipeline.fireExceptionCaught(exception);
                 }
+                readIfIsAutoRead();
             } finally {
                 epollInFinally(config);
             }

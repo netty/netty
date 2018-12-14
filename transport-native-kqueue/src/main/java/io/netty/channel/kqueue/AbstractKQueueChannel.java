@@ -617,6 +617,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             // because what happened is what happened.
             if (!wasActive && active) {
                 pipeline().fireChannelActive();
+                readIfIsAutoRead();
             }
 
             // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().

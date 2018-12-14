@@ -1420,8 +1420,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             ctx.fireChannelActive();
-
-            readIfIsAutoRead();
         }
 
         @Override
@@ -1437,14 +1435,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
             ctx.fireChannelReadComplete();
-
-            readIfIsAutoRead();
-        }
-
-        private void readIfIsAutoRead() {
-            if (channel.config().isAutoRead()) {
-                channel.read();
-            }
         }
 
         @Override

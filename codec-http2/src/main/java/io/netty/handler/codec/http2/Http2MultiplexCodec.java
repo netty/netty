@@ -850,6 +850,9 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                 pipeline().fireChannelRegistered();
                 if (isActive()) {
                     pipeline().fireChannelActive();
+                    if (config().isAutoRead()) {
+                        read();
+                    }
                 }
             }
 
@@ -1047,6 +1050,10 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                 }
                 allocHandle.readComplete();
                 pipeline().fireChannelReadComplete();
+                if (config().isAutoRead()) {
+                    read();
+                }
+
                 // Reading data may result in frames being written (e.g. WINDOW_UPDATE, RST, etc..). If the parent
                 // channel is not currently reading we need to force a flush at the child channel, because we cannot
                 // rely upon flush occurring in channelReadComplete on the parent channel.

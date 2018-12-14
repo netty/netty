@@ -421,6 +421,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return pipeline.voidPromise();
     }
 
+    protected final void readIfIsAutoRead() {
+        if (config().isAutoRead()) {
+            read();
+        }
+    }
+
     /**
      * {@link Unsafe} implementation which sub-classes must extend and use.
      */
@@ -520,13 +526,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 if (isActive()) {
                     if (firstRegistration) {
                         pipeline.fireChannelActive();
-                    } else if (config().isAutoRead()) {
-                        // This channel was registered before and autoRead() is set. This means we need to begin read
-                        // again so that we process inbound data.
-                        //
-                        // See https://github.com/netty/netty/issues/4805
-                        beginRead();
                     }
+                    readIfIsAutoRead();
                 }
             } catch (Throwable t) {
                 // Close the channel directly to avoid FD leak.
@@ -571,6 +572,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     @Override
                     public void run() {
                         pipeline.fireChannelActive();
+                        readIfIsAutoRead();
                     }
                 });
             }

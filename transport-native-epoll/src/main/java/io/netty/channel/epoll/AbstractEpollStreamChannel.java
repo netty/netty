@@ -736,6 +736,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             pipeline.fireExceptionCaught(cause);
             if (close || cause instanceof IOException) {
                 shutdownInput(false);
+            } else {
+                readIfIsAutoRead();
             }
         }
 
@@ -820,6 +822,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
                 if (close) {
                     shutdownInput(false);
+                } else {
+                    readIfIsAutoRead();
                 }
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, close, allocHandle);

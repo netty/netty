@@ -121,6 +121,7 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
                 if (exception != null) {
                     pipeline.fireExceptionCaught(exception);
                 }
+                readIfIsAutoRead();
             } finally {
                 readReadyFinally(config);
             }
