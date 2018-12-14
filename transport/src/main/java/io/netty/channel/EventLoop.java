@@ -27,4 +27,25 @@ import io.netty.util.concurrent.OrderedEventExecutor;
 public interface EventLoop extends OrderedEventExecutor, EventLoopGroup {
     @Override
     EventLoopGroup parent();
+
+    /**
+     * Returns an <em>internal-use-only</em> object that provides unsafe operations.
+     */
+    Unsafe unsafe();
+
+    /**
+     * <em>Unsafe</em> operations that should <em>never</em> be called from user-code. These methods
+     * are only provided to implement the actual transport, and must be invoked from the {@link EventLoop} itself.
+     */
+    interface Unsafe {
+        /**
+         * Register the {@link Channel} to the {@link EventLoop}.
+         */
+        void register(Channel channel) throws Exception;
+
+        /**
+         * Deregister the {@link Channel} from the {@link EventLoop}.
+         */
+        void deregister(Channel channel) throws Exception;
+    }
 }

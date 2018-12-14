@@ -32,7 +32,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelId;
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -451,7 +451,7 @@ public class SslHandlerTest {
         final BlockingQueue<Object> events = new LinkedBlockingQueue<Object>();
         Channel serverChannel = null;
         Channel clientChannel = null;
-        EventLoopGroup group = new DefaultEventLoopGroup();
+        EventLoopGroup group = new LocalEventLoopGroup();
         try {
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group)
@@ -614,7 +614,7 @@ public class SslHandlerTest {
                 .trustManager(new SelfSignedCertificate().cert())
                 .build();
 
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new LocalEventLoopGroup(1);
         Channel sc = null;
         Channel cc = null;
         try {

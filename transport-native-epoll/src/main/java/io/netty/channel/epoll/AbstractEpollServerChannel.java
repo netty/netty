@@ -59,11 +59,6 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     }
 
     @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof EpollEventLoop;
-    }
-
-    @Override
     protected InetSocketAddress remoteAddress0() {
         return null;
     }

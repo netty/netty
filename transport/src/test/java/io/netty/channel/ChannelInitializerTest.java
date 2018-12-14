@@ -18,6 +18,8 @@ package io.netty.channel;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.local.LocalEventLoop;
+import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
@@ -54,7 +56,7 @@ public class ChannelInitializerTest {
 
     @Before
     public void setUp() {
-        group = new DefaultEventLoopGroup(1);
+        group = new LocalEventLoopGroup(1);
         server = new ServerBootstrap()
                 .group(group)
                 .channel(LocalServerChannel.class)
@@ -264,7 +266,7 @@ public class ChannelInitializerTest {
         final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
         LocalAddress addr = new LocalAddress("test");
 
-        final EventExecutor executor = new DefaultEventLoop() {
+        final EventExecutor executor = new LocalEventLoop() {
             private final ScheduledExecutorService execService = Executors.newSingleThreadScheduledExecutor();
 
             @Override

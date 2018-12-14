@@ -102,10 +102,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     private EventLoop validateEventLoop(EventLoop eventLoop) {
-        if (!isCompatible(ObjectUtil.checkNotNull(eventLoop, "eventLoop"))) {
-           throw new IllegalArgumentException("incompatible event loop type: " + eventLoop.getClass().getName());
-        }
-        return eventLoop;
+        return ObjectUtil.checkNotNull(eventLoop, "eventLoop");
     }
 
     @Override
@@ -1036,11 +1033,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     /**
-     * Return {@code true} if the given {@link EventLoop} is compatible with this instance.
-     */
-    protected abstract boolean isCompatible(EventLoop loop);
-
-    /**
      * Returns the {@link SocketAddress} which is bound locally.
      */
     protected abstract SocketAddress localAddress0();
@@ -1056,7 +1048,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * Sub-classes may override this method
      */
     protected void doRegister() throws Exception {
-        // NOOP
+        eventLoop().unsafe().register(this);
     }
 
     /**
@@ -1089,7 +1081,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * Sub-classes may override this method
      */
     protected void doDeregister() throws Exception {
-        // NOOP
+        eventLoop().unsafe().deregister(this);
     }
 
     /**

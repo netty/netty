@@ -24,7 +24,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.local.LocalAddress;
@@ -75,7 +75,7 @@ public class CipherSuiteCanaryTest {
 
     @BeforeClass
     public static void init() throws Exception {
-        GROUP = new DefaultEventLoopGroup();
+        GROUP = new LocalEventLoopGroup();
         CERT = new SelfSignedCertificate();
     }
 

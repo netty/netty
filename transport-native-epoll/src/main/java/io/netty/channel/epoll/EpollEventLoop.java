@@ -15,6 +15,7 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SelectStrategy;
@@ -28,6 +29,7 @@ import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -80,6 +82,49 @@ class EpollEventLoop extends SingleThreadEventLoop {
 
     // See http://man7.org/linux/man-pages/man2/timerfd_create.2.html.
     private static final long MAX_SCHEDULED_TIMERFD_NS = 999999999;
+
+    private static AbstractEpollChannel cast(Channel channel) {
+        if (channel instanceof AbstractEpollChannel) {
+            return (AbstractEpollChannel) channel;
+        }
+        throw new IllegalArgumentException("Channel of type " + StringUtil.simpleClassName(channel) + " not supported");
+    }
+
+    private final Unsafe unsafe = new Unsafe() {
+        @Override
+        public void register(Channel channel) throws Exception {
+            assert inEventLoop();
+            final AbstractEpollChannel epollChannel = cast(channel);
+            epollChannel.register0(new EpollRegistration() {
+                @Override
+                public void update() throws IOException {
+                    EpollEventLoop.this.modify(epollChannel);
+                }
+
+                @Override
+                public void remove() throws IOException {
+                    EpollEventLoop.this.remove(epollChannel);
+                }
+
+                @Override
+                public IovArray cleanIovArray() {
+                    return EpollEventLoop.this.cleanIovArray();
+                }
+
+                @Override
+                public NativeDatagramPacketArray cleanDatagramPacketArray() {
+                    return EpollEventLoop.this.cleanDatagramPacketArray();
+                }
+            });
+            add(epollChannel);
+        }
+
+        @Override
+        public void deregister(Channel channel) throws Exception {
+            assert inEventLoop();
+            cast(channel).deregister0();
+        }
+    };
 
     EpollEventLoop(EventLoopGroup parent, Executor executor, int maxEvents,
                    SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler) {
@@ -160,6 +205,11 @@ class EpollEventLoop extends SingleThreadEventLoop {
             datagramPacketArray.clear();
         }
         return datagramPacketArray;
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return unsafe;
     }
 
     @Override

@@ -68,6 +68,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     private ChannelPromise connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
+    private EpollRegistration registration;
 
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
@@ -124,6 +125,11 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             flags &= ~flag;
             modifyEvents();
         }
+    }
+
+    protected EpollRegistration registration() {
+        assert registration != null;
+        return registration;
     }
 
     boolean isFlagSet(int flag) {
@@ -200,18 +206,22 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof EpollEventLoop;
-    }
-
-    @Override
     public boolean isOpen() {
         return socket.isOpen();
     }
 
-    @Override
-    protected void doDeregister() throws Exception {
-        ((EpollEventLoop) eventLoop()).remove(this);
+    void register0(EpollRegistration registration) throws Exception {
+        // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
+        // make sure the epollInReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
+        // new EventLoop.
+        epollInReadyRunnablePending = false;
+        this.registration = registration;
+    }
+
+    void deregister0() throws Exception {
+        if (registration != null) {
+            registration.remove();
+        }
     }
 
     @Override
@@ -268,18 +278,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     private void modifyEvents() throws IOException {
-        if (isOpen() && isRegistered()) {
-            ((EpollEventLoop) eventLoop()).modify(this);
+        if (isOpen() && isRegistered() && registration != null) {
+            registration.update();
         }
-    }
-
-    @Override
-    protected void doRegister() throws Exception {
-        // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
-        // make sure the epollInReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
-        // new EventLoop.
-        epollInReadyRunnablePending = false;
-        ((EpollEventLoop) eventLoop()).add(this);
     }
 
     @Override

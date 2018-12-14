@@ -27,7 +27,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
@@ -418,7 +418,7 @@ public class SniHandlerTest {
             case OPENSSL_REFCNT:
                 final String sniHost = "sni.netty.io";
                 LocalAddress address = new LocalAddress("testReplaceHandler-" + Math.random());
-                EventLoopGroup group = new DefaultEventLoopGroup(1);
+                EventLoopGroup group = new LocalEventLoopGroup(1);
                 Channel sc = null;
                 Channel cc = null;
                 SslContext sslContext = null;

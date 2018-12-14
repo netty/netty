@@ -28,7 +28,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -71,9 +70,9 @@ public class LocalChannelTest {
 
     @BeforeClass
     public static void beforeClass() {
-        group1 = new DefaultEventLoopGroup(2);
-        group2 = new DefaultEventLoopGroup(2);
-        sharedGroup = new DefaultEventLoopGroup(1);
+        group1 = new LocalEventLoopGroup(2);
+        group2 = new LocalEventLoopGroup(2);
+        sharedGroup = new LocalEventLoopGroup(1);
     }
 
     @AfterClass
@@ -228,11 +227,11 @@ public class LocalChannelTest {
     @Test
     public void localChannelRaceCondition() throws Exception {
         final CountDownLatch closeLatch = new CountDownLatch(1);
-        final EventLoopGroup clientGroup = new DefaultEventLoopGroup(1) {
+        final EventLoopGroup clientGroup = new LocalEventLoopGroup(1) {
             @Override
             protected EventLoop newChild(Executor threadFactory, Object... args)
                     throws Exception {
-                return new SingleThreadEventLoop(this, threadFactory, true) {
+                return new LocalEventLoop(this, threadFactory) {
                     @Override
                     protected void run() {
                         for (;;) {

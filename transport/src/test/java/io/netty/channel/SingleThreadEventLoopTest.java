@@ -484,6 +484,11 @@ public class SingleThreadEventLoopTest {
         protected void cleanup() {
             cleanedUp.incrementAndGet();
         }
+
+        @Override
+        public Unsafe unsafe() {
+            return null;
+        }
     }
 
     private static class SingleThreadEventLoopB extends SingleThreadEventLoop {
@@ -512,6 +517,11 @@ public class SingleThreadEventLoopTest {
         @Override
         protected void wakeup(boolean inEventLoop) {
             interruptThread();
+        }
+
+        @Override
+        public Unsafe unsafe() {
+            return null;
         }
     }
 }

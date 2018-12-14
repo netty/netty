@@ -19,17 +19,15 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.netty.channel.local.LocalEventLoopGroup;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import io.netty.bootstrap.Bootstrap;
 
 public class DefaultChannelPipelineTailTest {
 
@@ -37,7 +35,7 @@ public class DefaultChannelPipelineTailTest {
 
     @BeforeClass
     public static void init() {
-        GROUP = new DefaultEventLoopGroup(1);
+        GROUP = new LocalEventLoopGroup(1);
     }
 
     @AfterClass
@@ -56,19 +54,12 @@ public class DefaultChannelPipelineTailTest {
             }
         };
 
-        Bootstrap bootstrap = new Bootstrap()
-                .channelFactory(new MyChannelFactory(myChannel))
-                .group(loop)
-                .handler(new ChannelInboundHandlerAdapter())
-                .remoteAddress(new InetSocketAddress(0));
-
-        Channel channel = bootstrap.connect()
-                .sync().channel();
+        myChannel.pipeline().fireChannelActive();
 
         try {
             assertTrue(latch.await(1L, TimeUnit.SECONDS));
         } finally {
-            channel.close();
+            myChannel.close();
         }
     }
 
@@ -83,16 +74,8 @@ public class DefaultChannelPipelineTailTest {
             }
         };
 
-        Bootstrap bootstrap = new Bootstrap()
-                .channelFactory(new MyChannelFactory(myChannel))
-                .group(loop)
-                .handler(new ChannelInboundHandlerAdapter())
-                .remoteAddress(new InetSocketAddress(0));
-
-        Channel channel = bootstrap.connect()
-                .sync().channel();
-
-        channel.close().syncUninterruptibly();
+        myChannel.pipeline().fireChannelInactive();
+        myChannel.close().syncUninterruptibly();
 
         assertTrue(latch.await(1L, TimeUnit.SECONDS));
     }
@@ -110,22 +93,13 @@ public class DefaultChannelPipelineTailTest {
             }
         };
 
-        Bootstrap bootstrap = new Bootstrap()
-                .channelFactory(new MyChannelFactory(myChannel))
-                .group(loop)
-                .handler(new ChannelInboundHandlerAdapter())
-                .remoteAddress(new InetSocketAddress(0));
-
-        Channel channel = bootstrap.connect()
-                .sync().channel();
-
         try {
             IOException ex = new IOException("testOnUnhandledInboundException");
-            channel.pipeline().fireExceptionCaught(ex);
+            myChannel.pipeline().fireExceptionCaught(ex);
             assertTrue(latch.await(1L, TimeUnit.SECONDS));
             assertSame(ex, causeRef.get());
         } finally {
-            channel.close();
+            myChannel.close();
         }
     }
 
@@ -140,20 +114,11 @@ public class DefaultChannelPipelineTailTest {
             }
         };
 
-        Bootstrap bootstrap = new Bootstrap()
-                .channelFactory(new MyChannelFactory(myChannel))
-                .group(loop)
-                .handler(new ChannelInboundHandlerAdapter())
-                .remoteAddress(new InetSocketAddress(0));
-
-        Channel channel = bootstrap.connect()
-                .sync().channel();
-
         try {
-            channel.pipeline().fireChannelRead("testOnUnhandledInboundMessage");
+            myChannel.pipeline().fireChannelRead("testOnUnhandledInboundMessage");
             assertTrue(latch.await(1L, TimeUnit.SECONDS));
         } finally {
-            channel.close();
+            myChannel.close();
         }
     }
 
@@ -168,20 +133,11 @@ public class DefaultChannelPipelineTailTest {
             }
         };
 
-        Bootstrap bootstrap = new Bootstrap()
-                .channelFactory(new MyChannelFactory(myChannel))
-                .group(loop)
-                .handler(new ChannelInboundHandlerAdapter())
-                .remoteAddress(new InetSocketAddress(0));
-
-        Channel channel = bootstrap.connect()
-                .sync().channel();
-
         try {
-            channel.pipeline().fireChannelReadComplete();
+            myChannel.pipeline().fireChannelReadComplete();
             assertTrue(latch.await(1L, TimeUnit.SECONDS));
         } finally {
-            channel.close();
+            myChannel.close();
         }
     }
 
@@ -196,20 +152,11 @@ public class DefaultChannelPipelineTailTest {
             }
         };
 
-        Bootstrap bootstrap = new Bootstrap()
-                .channelFactory(new MyChannelFactory(myChannel))
-                .group(loop)
-                .handler(new ChannelInboundHandlerAdapter())
-                .remoteAddress(new InetSocketAddress(0));
-
-        Channel channel = bootstrap.connect()
-                .sync().channel();
-
         try {
-            channel.pipeline().fireUserEventTriggered("testOnUnhandledInboundUserEventTriggered");
+            myChannel.pipeline().fireUserEventTriggered("testOnUnhandledInboundUserEventTriggered");
             assertTrue(latch.await(1L, TimeUnit.SECONDS));
         } finally {
-            channel.close();
+            myChannel.close();
         }
     }
 
@@ -224,33 +171,11 @@ public class DefaultChannelPipelineTailTest {
             }
         };
 
-        Bootstrap bootstrap = new Bootstrap()
-                .channelFactory(new MyChannelFactory(myChannel))
-                .group(loop)
-                .handler(new ChannelInboundHandlerAdapter())
-                .remoteAddress(new InetSocketAddress(0));
-
-        Channel channel = bootstrap.connect()
-                .sync().channel();
-
         try {
-            channel.pipeline().fireChannelWritabilityChanged();
+            myChannel.pipeline().fireChannelWritabilityChanged();
             assertTrue(latch.await(1L, TimeUnit.SECONDS));
         } finally {
-            channel.close();
-        }
-    }
-
-    private static class MyChannelFactory implements ChannelFactory<MyChannel> {
-        private final MyChannel channel;
-
-        public MyChannelFactory(MyChannel channel) {
-            this.channel = channel;
-        }
-
-        @Override
-        public MyChannel newChannel(EventLoop eventLoop) {
-            return channel;
+            myChannel.close();
         }
     }
 
@@ -294,11 +219,6 @@ public class DefaultChannelPipelineTailTest {
         @Override
         protected AbstractUnsafe newUnsafe() {
             return new MyUnsafe();
-        }
-
-        @Override
-        protected boolean isCompatible(EventLoop loop) {
-            return true;
         }
 
         @Override

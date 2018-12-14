@@ -27,7 +27,7 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.DefaultEventLoop;
+import io.netty.channel.local.LocalEventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
@@ -61,7 +61,7 @@ public class Http2MultiplexCodecBuilderTest {
 
     @BeforeClass
     public static void init() {
-        group = new DefaultEventLoop();
+        group = new LocalEventLoop();
     }
 
     @Before

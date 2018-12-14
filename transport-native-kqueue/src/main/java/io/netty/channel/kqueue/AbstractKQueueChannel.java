@@ -63,12 +63,14 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private ChannelPromise connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
+    private KQueueRegistration registration;
 
     final BsdSocket socket;
     private boolean readFilterEnabled;
     private boolean writeFilterEnabled;
     boolean readReadyRunnablePending;
     boolean inputClosedSeenErrorOnRead;
+
     protected volatile boolean active;
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
@@ -101,6 +103,11 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         } catch (IOException e) {
             throw new ChannelException(e);
         }
+    }
+
+    protected KQueueRegistration registration() {
+        assert registration != null;
+        return registration;
     }
 
     @Override
@@ -161,23 +168,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof KQueueEventLoop;
-    }
-
-    @Override
     public boolean isOpen() {
         return socket.isOpen();
-    }
-
-    @Override
-    protected void doDeregister() throws Exception {
-        // Make sure we unregister our filters from kqueue!
-        readFilter(false);
-        writeFilter(false);
-        evSet0(Native.EVFILT_SOCK, Native.EV_DELETE, 0);
-
-        ((KQueueEventLoop) eventLoop()).remove(this);
     }
 
     @Override
@@ -198,23 +190,31 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
     }
 
-    @Override
-    protected void doRegister() throws Exception {
+    void register0(KQueueRegistration registration)  {
+        this.registration = registration;
         // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
         // make sure the readReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
         // new EventLoop.
         readReadyRunnablePending = false;
 
-        ((KQueueEventLoop) eventLoop()).add(this);
-
         // Add the write event first so we get notified of connection refused on the client side!
         if (writeFilterEnabled) {
-            evSet0(Native.EVFILT_WRITE, Native.EV_ADD_CLEAR_ENABLE);
+            evSet0(registration, Native.EVFILT_WRITE, Native.EV_ADD_CLEAR_ENABLE);
         }
         if (readFilterEnabled) {
-            evSet0(Native.EVFILT_READ, Native.EV_ADD_CLEAR_ENABLE);
+            evSet0(registration, Native.EVFILT_READ, Native.EV_ADD_CLEAR_ENABLE);
         }
-        evSet0(Native.EVFILT_SOCK, Native.EV_ADD, Native.NOTE_RDHUP);
+        evSet0(registration, Native.EVFILT_SOCK, Native.EV_ADD, Native.NOTE_RDHUP);
+    }
+
+    void deregister0() throws IOException {
+        // Make sure we unregister our filters from kqueue!
+        readFilter(false);
+        writeFilter(false);
+        if (registration != null) {
+            evSet0(registration, Native.EVFILT_SOCK, Native.EV_DELETE, 0);
+            registration = null;
+        }
     }
 
     @Override
@@ -360,16 +360,16 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
     private void evSet(short filter, short flags) {
         if (isOpen() && isRegistered()) {
-            evSet0(filter, flags);
+            evSet0(registration, filter, flags);
         }
     }
 
-    private void evSet0(short filter, short flags) {
-        evSet0(filter, flags, 0);
+    private void evSet0(KQueueRegistration registration, short filter, short flags) {
+        evSet0(registration, filter, flags, 0);
     }
 
-    private void evSet0(short filter, short flags, int fflags) {
-        ((KQueueEventLoop) eventLoop()).evSet(this, filter, flags, fflags);
+    private void evSet0(KQueueRegistration registration, short filter, short flags, int fflags) {
+        registration.evSet(filter, flags, fflags);
     }
 
     abstract class AbstractKQueueUnsafe extends AbstractUnsafe {

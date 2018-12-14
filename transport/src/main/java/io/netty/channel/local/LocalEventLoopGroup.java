@@ -15,20 +15,23 @@
  */
 package io.netty.channel.local;
 
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.EventLoop;
+import io.netty.channel.MultithreadEventLoopGroup;
 
+import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * @deprecated Use {@link DefaultEventLoopGroup} instead.
+ * {@link MultithreadEventLoopGroup} which must be used for the local transport.
  */
-@Deprecated
-public class LocalEventLoopGroup extends DefaultEventLoopGroup {
+public class LocalEventLoopGroup extends MultithreadEventLoopGroup {
 
     /**
      * Create a new instance with the default number of threads.
      */
-    public LocalEventLoopGroup() { }
+    public LocalEventLoopGroup() {
+        this(0);
+    }
 
     /**
      * Create a new instance
@@ -36,7 +39,7 @@ public class LocalEventLoopGroup extends DefaultEventLoopGroup {
      * @param nThreads          the number of threads to use
      */
     public LocalEventLoopGroup(int nThreads) {
-        super(nThreads);
+        this(nThreads, (ThreadFactory) null);
     }
 
     /**
@@ -47,5 +50,20 @@ public class LocalEventLoopGroup extends DefaultEventLoopGroup {
      */
     public LocalEventLoopGroup(int nThreads, ThreadFactory threadFactory) {
         super(nThreads, threadFactory);
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param nThreads          the number of threads to use
+     * @param executor          the Executor to use, or {@code null} if the default should be used.
+     */
+    public LocalEventLoopGroup(int nThreads, Executor executor) {
+        super(nThreads, executor);
+    }
+
+    @Override
+    protected EventLoop newChild(Executor executor, Object... args) throws Exception {
+        return new LocalEventLoop(this, executor);
     }
 }

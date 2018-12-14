@@ -17,7 +17,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.handler.codec.http2.Http2Connection.Endpoint;
 import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.concurrent.Future;
@@ -61,7 +61,7 @@ public class DefaultHttp2ConnectionTest {
 
     private DefaultHttp2Connection server;
     private DefaultHttp2Connection client;
-    private static DefaultEventLoopGroup group;
+    private static LocalEventLoopGroup group;
 
     @Mock
     private Http2Connection.Listener clientListener;
@@ -71,7 +71,7 @@ public class DefaultHttp2ConnectionTest {
 
     @BeforeClass
     public static void beforeClass() {
-        group = new DefaultEventLoopGroup(2);
+        group = new LocalEventLoopGroup(2);
     }
 
     @AfterClass

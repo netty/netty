@@ -22,6 +22,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
@@ -69,7 +70,7 @@ import static org.junit.Assert.fail;
 
 public class DefaultChannelPipelineTest {
 
-    private static final EventLoopGroup group = new DefaultEventLoopGroup(1);
+    private static final EventLoopGroup group = new LocalEventLoopGroup(1);
 
     private Channel self;
     private Channel peer;
@@ -938,7 +939,7 @@ public class DefaultChannelPipelineTest {
 
     @Test(timeout = 3000)
     public void testAddBefore() throws Throwable {
-        EventLoopGroup defaultGroup = new DefaultEventLoopGroup(2);
+        EventLoopGroup defaultGroup = new LocalEventLoopGroup(2);
         try {
             EventLoop eventLoop1 = defaultGroup.next();
             EventLoop eventLoop2 = defaultGroup.next();
@@ -1034,7 +1035,7 @@ public class DefaultChannelPipelineTest {
     @Test(timeout = 3000)
     public void testUnorderedEventExecutor() throws Throwable {
         EventExecutorGroup eventExecutors = new UnorderedThreadPoolEventExecutor(2);
-        EventLoopGroup defaultGroup = new DefaultEventLoopGroup(1);
+        EventLoopGroup defaultGroup = new LocalEventLoopGroup(1);
         try {
             EventLoop eventLoop1 = defaultGroup.next();
             ChannelPipeline pipeline1 = new LocalChannel(eventLoop1).pipeline();
@@ -1103,7 +1104,7 @@ public class DefaultChannelPipelineTest {
 
     @Test(timeout = 3000)
     public void testVoidPromiseNotify() throws Throwable {
-        EventLoopGroup defaultGroup = new DefaultEventLoopGroup(1);
+        EventLoopGroup defaultGroup = new LocalEventLoopGroup(1);
         EventLoop eventLoop1 = defaultGroup.next();
         ChannelPipeline pipeline1 = new LocalChannel(eventLoop1).pipeline();
 
@@ -1133,7 +1134,7 @@ public class DefaultChannelPipelineTest {
     // Test for https://github.com/netty/netty/issues/8676.
     @Test
     public void testHandlerRemovedOnlyCalledWhenHandlerAddedCalled() throws Exception {
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new LocalEventLoopGroup(1);
         try {
             final AtomicReference<Error> errorRef = new AtomicReference<Error>();
 

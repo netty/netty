@@ -80,7 +80,7 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
                     // because we try to read or write until the actual close happens which may be later due
                     // SO_LINGER handling.
                     // See https://github.com/netty/netty/issues/4449
-                    ((KQueueEventLoop) eventLoop()).remove(KQueueSocketChannel.this);
+                    doDeregister();
                     return GlobalEventExecutor.INSTANCE;
                 }
             } catch (Throwable ignore) {

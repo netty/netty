@@ -53,11 +53,6 @@ public final class KQueueServerSocketChannel extends AbstractKQueueServerChannel
     }
 
     @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof KQueueEventLoop;
-    }
-
-    @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         super.doBind(localAddress);
 
