@@ -414,28 +414,11 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         }
     }
 
-    // Allow to override for testing
-    void flush0(ChannelHandlerContext ctx) {
+    final void flush0(ChannelHandlerContext ctx) {
         flush(ctx);
     }
 
-    /**
-     * Return bytes to flow control.
-     * <p>
-     * Package private to allow to override for testing
-     * @param ctx The {@link ChannelHandlerContext} associated with the parent channel.
-     * @param stream The object representing the HTTP/2 stream.
-     * @param bytes The number of bytes to return to flow control.
-     * @return {@code true} if a frame has been written as a result of this method call.
-     * @throws Http2Exception If this operation violates the flow control limits.
-     */
-    boolean onBytesConsumed(@SuppressWarnings("unused") ChannelHandlerContext ctx,
-                         Http2FrameStream stream, int bytes) throws Http2Exception {
-        return consumeBytes(stream.id(), bytes);
-    }
-
-    // Allow to extend for testing
-    static class Http2MultiplexCodecStream extends DefaultHttp2FrameStream {
+    static final class Http2MultiplexCodecStream extends DefaultHttp2FrameStream {
         DefaultHttp2StreamChannel channel;
     }
 
@@ -1084,7 +1067,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                     allocHandle.lastBytesRead(numBytesToBeConsumed);
                     if (numBytesToBeConsumed != 0) {
                         try {
-                            writeDoneAndNoFlush |= onBytesConsumed(ctx, stream, numBytesToBeConsumed);
+                            writeDoneAndNoFlush |= consumeBytes(stream.id(), numBytesToBeConsumed);
                         } catch (Http2Exception e) {
                             pipeline().fireExceptionCaught(e);
                         }
