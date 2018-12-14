@@ -531,7 +531,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         // Discard bytes of the cumulation buffer if needed.
         discardSomeReadBytes();
 
-        // Ensure we never stale the HTTP/2 Channel. Flow-control is enforced by HTTP/2.
+        // Ensure we never stall the HTTP/2 Channel. Flow-control is enforced by HTTP/2.
         //
         // See https://tools.ietf.org/html/rfc7540#section-5.2.2
         if (!ctx.channel().config().isAutoRead()) {
