@@ -56,7 +56,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     }
 
     private final class NioMessageUnsafe extends AbstractNioUnsafe {
-
+        // Tony: 暂存读取到的内容，用于后续处理
         private final List<Object> readBuf = new ArrayList<Object>();
 
         @Override
@@ -71,7 +71,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             Throwable exception = null;
             try {
                 try {
-                    do {
+                    do {// Tony: 读取消息，对于serversocketchannel是没有数据的，就是accpet获取新链接
                         int localRead = doReadMessages(readBuf);
                         if (localRead == 0) {
                             break;
@@ -88,9 +88,9 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 }
 
                 int size = readBuf.size();
-                for (int i = 0; i < size; i ++) {
+                for (int i = 0; i < size; i ++) {// Tony: 遍历读取到的新链接
                     readPending = false;
-                    pipeline.fireChannelRead(readBuf.get(i));
+                    pipeline.fireChannelRead(readBuf.get(i));// Tony: 开始责任链的调用
                 }
                 readBuf.clear();
                 allocHandle.readComplete();

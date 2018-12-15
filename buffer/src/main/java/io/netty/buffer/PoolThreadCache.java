@@ -42,7 +42,7 @@ final class PoolThreadCache {
 
     final PoolArena<byte[]> heapArena;
     final PoolArena<ByteBuffer> directArena;
-
+    // Tony:
     // Hold the caches for the different size classes, which are tiny, small and normal.
     private final MemoryRegionCache<byte[]>[] tinySubPageHeapCaches;
     private final MemoryRegionCache<byte[]>[] smallSubPageHeapCaches;
@@ -164,7 +164,7 @@ final class PoolThreadCache {
      * Try to allocate a tiny buffer out of the cache. Returns {@code true} if successful {@code false} otherwise
      */
     boolean allocateTiny(PoolArena<?> area, PooledByteBuf<?> buf, int reqCapacity, int normCapacity) {
-        return allocate(cacheForTiny(area, normCapacity), buf, reqCapacity);
+        return allocate(cacheForTiny(area, normCapacity), buf, reqCapacity);// Tony: 在tinySubPageDirectCaches缓存中找一个区块
     }
 
     /**

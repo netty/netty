@@ -42,7 +42,7 @@ import static io.netty.util.internal.MathUtil.isOutOfBounds;
 /**
  * A skeletal implementation of a buffer.
  */
-public abstract class AbstractByteBuf extends ByteBuf {
+public abstract class AbstractByteBuf extends ByteBuf {// Tony: 方法超级多，翻译一把代码注释，自己看看吧，很简单易懂的
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractByteBuf.class);
     private static final String LEGACY_PROP_CHECK_ACCESSIBLE = "io.netty.buffer.bytebuf.checkAccessible";
     private static final String PROP_CHECK_ACCESSIBLE = "io.netty.buffer.checkAccessible";
@@ -280,7 +280,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     final void ensureWritable0(int minWritableBytes) {
-        ensureAccessible();
+        ensureAccessible();// Tony: 检查ByteBuf对象的引用计数，如果为0，则不允许再进行操作
         if (minWritableBytes <= writableBytes()) {
             return;
         }
@@ -291,12 +291,12 @@ public abstract class AbstractByteBuf extends ByteBuf {
                         writerIndex, minWritableBytes, maxCapacity, this));
             }
         }
-
+        // Tony: 扩容计算，当前容量扩容至2的幂次方大小。
         // Normalize the current capacity to the power of 2.
         int newCapacity = alloc().calculateNewCapacity(writerIndex + minWritableBytes, maxCapacity);
 
         // Adjust to the new capacity.
-        capacity(newCapacity);
+        capacity(newCapacity);// Tony: 设置新的容量值
     }
 
     @Override
@@ -1070,7 +1070,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeBytes(byte[] src, int srcIndex, int length) {
-        ensureWritable(length);
+        ensureWritable(length);// Tony: 检查是否有足够的可写空间，是否要扩容
         setBytes(writerIndex, src, srcIndex, length);
         writerIndex += length;
         return this;

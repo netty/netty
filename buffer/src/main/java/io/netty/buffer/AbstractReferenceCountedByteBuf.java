@@ -22,11 +22,11 @@ import io.netty.util.internal.PlatformDependent;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
-
+// Tony: 这是netty自己的一种buffer释放机制。概念上和GC类似
 /**
  * Abstract base class for {@link ByteBuf} implementations that count references.
  */
-public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
+public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {// Tony: 这个要看，实现了引用计数
     private static final long REFCNT_FIELD_OFFSET;
     private static final AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> refCntUpdater =
             AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCountedByteBuf.class, "refCnt");
@@ -69,7 +69,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         // a best-effort guard.
         return realRefCnt(nonVolatileRawCnt());
     }
-
+    /** Tony: 返回该对象的引用计数。如果为0，则表示该对象已解除分配，是时候释放了。 */
     @Override
     public int refCnt() {
         return realRefCnt(refCntUpdater.get(this));
@@ -81,7 +81,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     protected final void setRefCnt(int newRefCnt) {
         refCntUpdater.set(this, newRefCnt << 1); // overflow OK here
     }
-
+    /** Tony: 引用计数+1 */
     @Override
     public ByteBuf retain() {
         return retain0(1);
@@ -118,7 +118,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     public ByteBuf touch(Object hint) {
         return this;
     }
-
+    /** Tony: 将引用计数减少1，并在引用计数达到0时释放该对象。 */
     @Override
     public boolean release() {
         return release0(1);
@@ -131,12 +131,12 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
 
     private boolean release0(int decrement) {
         int rawCnt = nonVolatileRawCnt(), realCnt = toLiveRealCnt(rawCnt, decrement);
-        if (decrement == realCnt) {
-            if (refCntUpdater.compareAndSet(this, rawCnt, 1)) {
-                deallocate();
+        if (decrement == realCnt) {// Tony: 如果要减的数量和目前的引用数量相等，代表要释放了
+            if (refCntUpdater.compareAndSet(this, rawCnt, 1)) {// Tony: cas无锁机制，保证线程安全
+                deallocate();// Tony: 执行释放
                 return true;
             }
-            return retryRelease0(decrement);
+            return retryRelease0(decrement);// Tony: 自旋锁重试
         }
         return releaseNonFinal0(decrement, rawCnt, realCnt);
     }
@@ -151,7 +151,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     }
 
     private boolean retryRelease0(int decrement) {
-        for (;;) {
+        for (;;) {// Tony: 自旋锁
             int rawCnt = refCntUpdater.get(this), realCnt = toLiveRealCnt(rawCnt, decrement);
             if (decrement == realCnt) {
                 if (refCntUpdater.compareAndSet(this, rawCnt, 1)) {
@@ -182,7 +182,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     }
 
     /**
-     * Called once {@link #refCnt()} is equals 0.
+     * Called once {@link #refCnt()} is equals 0.// Tony: 执行释放，不同的ByteBuf类型，回收的方式不同
      */
     protected abstract void deallocate();
 }

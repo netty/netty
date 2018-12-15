@@ -39,7 +39,7 @@ import static io.netty.util.internal.StringUtil.NEWLINE;
 @Sharable
 @SuppressWarnings({ "StringConcatenationInsideStringBufferAppend", "StringBufferReplaceableByString" })
 public class LoggingHandler extends ChannelDuplexHandler {
-    // Tony: LoggingHandler是很重要学习类，它具备inbound和outbound双重属性。
+
     private static final LogLevel DEFAULT_LEVEL = LogLevel.DEBUG;
 
     protected final InternalLogger logger;

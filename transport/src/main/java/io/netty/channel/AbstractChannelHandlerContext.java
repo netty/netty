@@ -441,13 +441,13 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     @Override
-    public ChannelFuture bind(SocketAddress localAddress) {
-        return bind(localAddress, newPromise());
+    public ChannelFuture connect(SocketAddress remoteAddress) {
+        return connect(remoteAddress, newPromise());
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress) {
-        return connect(remoteAddress, newPromise());
+    public ChannelFuture bind(SocketAddress localAddress) {
+        return bind(localAddress, newPromise());
     }
 
     @Override

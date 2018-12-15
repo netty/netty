@@ -1316,7 +1316,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            onUnhandledInboundMessage(msg);
+            onUnhandledInboundMessage(msg);// Tony: 对于read事件，tailContext，作的最后一个操作就是释放read占用的资源
         }
 
         @Override
@@ -1440,7 +1440,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             readIfIsAutoRead();
         }
-
+        /** Tony: 根据配置项，自动请求将socket数据读取出来（简单理解为注册OP_READ事件） */
         private void readIfIsAutoRead() {
             if (channel.config().isAutoRead()) {
                 channel.read();

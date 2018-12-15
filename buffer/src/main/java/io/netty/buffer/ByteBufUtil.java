@@ -67,7 +67,7 @@ public final class ByteBufUtil {
             (int) CharsetUtil.encoder(CharsetUtil.UTF_8).maxBytesPerChar();
 
     static final int WRITE_CHUNK_SIZE = 8192;
-    static final ByteBufAllocator DEFAULT_ALLOCATOR;
+    static final ByteBufAllocator DEFAULT_ALLOCATOR; // Tony: 如果没有显式的配置位unpooled，那么默认就是pool类型的
 
     static {
         String allocType = SystemPropertyUtil.get(

@@ -78,7 +78,7 @@ final class PlatformDependent0 {
             internalUnsafe = null;
         } else {
             direct = ByteBuffer.allocateDirect(1);
-
+            // 反射获取Unsafe
             // attempt to access field Unsafe#theUnsafe
             final Object maybeUnsafe = AccessController.doPrivileged(new PrivilegedAction<Object>() {
                 @Override
@@ -419,7 +419,7 @@ final class PlatformDependent0 {
     static boolean isUnaligned() {
         return UNALIGNED;
     }
-
+    /** Tony: 静态代码块里面，通过反射拿unsafe实例 */
     static boolean hasUnsafe() {
         return UNSAFE != null;
     }

@@ -17,16 +17,16 @@ package io.netty.util.internal;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.jctools.queues.MpscArrayQueue;
-import org.jctools.queues.MpscChunkedArrayQueue;
-import org.jctools.queues.MpscUnboundedArrayQueue;
-import org.jctools.queues.SpscLinkedQueue;
-import org.jctools.queues.atomic.MpscAtomicArrayQueue;
-import org.jctools.queues.atomic.MpscGrowableAtomicArrayQueue;
-import org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
-import org.jctools.queues.atomic.SpscLinkedAtomicQueue;
-import org.jctools.util.Pow2;
-import org.jctools.util.UnsafeAccess;
+import io.netty.util.internal.shaded.org.jctools.queues.MpscArrayQueue;
+import io.netty.util.internal.shaded.org.jctools.queues.MpscChunkedArrayQueue;
+import io.netty.util.internal.shaded.org.jctools.queues.MpscUnboundedArrayQueue;
+import io.netty.util.internal.shaded.org.jctools.queues.SpscLinkedQueue;
+import io.netty.util.internal.shaded.org.jctools.queues.atomic.MpscAtomicArrayQueue;
+import io.netty.util.internal.shaded.org.jctools.queues.atomic.MpscGrowableAtomicArrayQueue;
+import io.netty.util.internal.shaded.org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
+import io.netty.util.internal.shaded.org.jctools.queues.atomic.SpscLinkedAtomicQueue;
+import io.netty.util.internal.shaded.org.jctools.util.Pow2;
+import io.netty.util.internal.shaded.org.jctools.util.UnsafeAccess;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -176,7 +176,7 @@ public final class PlatformDependent {
         } else {
             CLEANER = NOOP;
         }
-
+        // Tony: 能用堆外内存就用堆外内存
         // We should always prefer direct buffers by default if we can use a Cleaner to release direct buffers.
         DIRECT_BUFFER_PREFERRED = CLEANER != NOOP
                                   && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);

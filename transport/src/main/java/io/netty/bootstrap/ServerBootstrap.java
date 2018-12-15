@@ -165,9 +165,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         synchronized (childAttrs) {
             currentChildAttrs = childAttrs.entrySet().toArray(newAttrArray(0));
         }
-
+        // Tony: ChannelInitializer是一个特殊的handler，一般就是在registered之后，执行一次，然后销毁。用于初始化channel
         p.addLast(new ChannelInitializer<Channel>() {
-            @Override
+            @Override// Tony: 触发ChannelInitializer时，收到注册成功的事件后，就会执行initChannel方法
             public void initChannel(final Channel ch) throws Exception {
                 final ChannelPipeline pipeline = ch.pipeline();
                 ChannelHandler handler = config.handler();
@@ -241,17 +241,17 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         @Override
         @SuppressWarnings("unchecked")
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
-            final Channel child = (Channel) msg;
-
+            final Channel child = (Channel) msg;// Tony: 这个msg，就是accept获取到的新连接SocketChannel
+            // Tony: 这个childHandler，就是我们代码里面定义的.childHandler(new ChannelInitializer(){//xxx})
             child.pipeline().addLast(childHandler);
-
+            // Tony: 和之前bind过程中一样，要对channel进行初始化和塞入配置
             setChannelOptions(child, childOptions, logger);
 
             for (Entry<AttributeKey<?>, Object> e: childAttrs) {
                 child.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
             }
-
-            try {
+            // Tony: 这里就是开始sub EventLoopGroup的使用了。accept之后，选取一个nioEventLoop来处理I/O操作
+            try {// Tony: 注册到Selector，注册完毕后，触发registered事件和active事件，然后自动再注册OP_READ
                 childGroup.register(child).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {

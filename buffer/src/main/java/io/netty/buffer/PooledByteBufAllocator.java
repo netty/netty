@@ -316,13 +316,13 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
-        PoolThreadCache cache = threadCache.get();
-        PoolArena<ByteBuffer> directArena = cache.directArena;
-
+        PoolThreadCache cache = threadCache.get();// Tony: 获取cache对象
+        PoolArena<ByteBuffer> directArena = cache.directArena; // Tony: 从cache对象中去除arena
+        // Tony: arena可以理解为一个netty提供的实际进行buf的分配和管理工具
         final ByteBuf buf;
         if (directArena != null) {
             buf = directArena.allocate(cache, initialCapacity, maxCapacity);
-        } else {
+        } else {// Tony: 如果没有arena，就用unpool了
             buf = PlatformDependent.hasUnsafe() ?
                     UnsafeByteBufUtil.newUnsafeDirectByteBuf(this, initialCapacity, maxCapacity) :
                     new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
