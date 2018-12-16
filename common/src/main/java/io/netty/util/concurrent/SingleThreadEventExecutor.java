@@ -948,6 +948,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                                 }
                             }
 
+                            // Lets remove all FastThreadLocals for the Thread as we are about to terminate and notify
+                            // the future. The user may block on the future and once it unblocks the JVM may terminate
+                            // and start unloading classes.
+                            // See https://github.com/netty/netty/issues/6596.
+                            FastThreadLocal.removeAll();
+
                             terminationFuture.setSuccess(null);
                         }
                     }
