@@ -23,6 +23,8 @@ import io.netty.channel.kqueue.AbstractKQueueChannel.AbstractKQueueUnsafe;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.util.IntSupplier;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -31,11 +33,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.util.Queue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import static io.netty.channel.kqueue.KQueueEventArray.deleteGlobalRefs;
 import static java.lang.Math.min;
 
 /**
@@ -53,7 +53,6 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
         KQueue.ensureAvailability();
     }
 
-    private final NativeLongArray jniChannelPointers;
     private final boolean allowGrowing;
     private final FileDescriptor kqueueFd;
     private final KQueueEventArray changeList;
@@ -66,6 +65,7 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
             return kqueueWaitNow();
         }
     };
+    private final IntObjectMap<AbstractKQueueChannel> channels = new IntObjectHashMap<AbstractKQueueChannel>(4096);
 
     private volatile int wakenUp;
     private volatile int ioRatio = 50;
@@ -83,7 +83,6 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
         }
         changeList = new KQueueEventArray(maxEvents);
         eventList = new KQueueEventArray(maxEvents);
-        jniChannelPointers = new NativeLongArray(4096);
         int result = Native.keventAddUserEvent(kqueueFd.intValue(), KQUEUE_WAKE_UP_IDENT);
         if (result < 0) {
             cleanup();
@@ -91,18 +90,18 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    void add(AbstractKQueueChannel ch) {
+        assert inEventLoop();
+        channels.put(ch.fd().intValue(), ch);
+    }
+
     void evSet(AbstractKQueueChannel ch, short filter, short flags, int fflags) {
         changeList.evSet(ch, filter, flags, fflags);
     }
 
-    void remove(AbstractKQueueChannel ch) throws IOException {
+    void remove(AbstractKQueueChannel ch) {
         assert inEventLoop();
-        if (ch.jniSelfPtr == 0) {
-            return;
-        }
-
-        jniChannelPointers.add(ch.jniSelfPtr);
-        ch.jniSelfPtr = 0;
+        channels.remove(ch.fd().intValue());
     }
 
     /**
@@ -145,32 +144,25 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
     }
 
     private int kqueueWait(int timeoutSec, int timeoutNs) throws IOException {
-        deleteJniChannelPointers();
         int numEvents = Native.keventWait(kqueueFd.intValue(), changeList, eventList, timeoutSec, timeoutNs);
         changeList.clear();
         return numEvents;
-    }
-
-    private void deleteJniChannelPointers() {
-        if (!jniChannelPointers.isEmpty()) {
-            deleteGlobalRefs(jniChannelPointers.memoryAddress(), jniChannelPointers.memoryAddressEnd());
-            jniChannelPointers.clear();
-        }
     }
 
     private void processReady(int ready) {
         for (int i = 0; i < ready; ++i) {
             final short filter = eventList.filter(i);
             final short flags = eventList.flags(i);
+            final int fd = eventList.fd(i);
             if (filter == Native.EVFILT_USER || (flags & Native.EV_ERROR) != 0) {
                 // EV_ERROR is returned if the FD is closed synchronously (which removes from kqueue) and then
                 // we later attempt to delete the filters from kqueue.
                 assert filter != Native.EVFILT_USER ||
-                        (filter == Native.EVFILT_USER && eventList.fd(i) == KQUEUE_WAKE_UP_IDENT);
+                        (filter == Native.EVFILT_USER && fd == KQUEUE_WAKE_UP_IDENT);
                 continue;
             }
 
-            AbstractKQueueChannel channel = eventList.channel(i);
+            AbstractKQueueChannel channel = channels.get(fd);
             if (channel == null) {
                 // This may happen if the channel has already been closed, and it will be removed from kqueue anyways.
                 // We also handle EV_ERROR above to skip this even early if it is a result of a referencing a closed and
@@ -327,12 +319,6 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
             }
         } finally {
             // Cleanup all native memory!
-
-            // The JNI channel pointers should already be deleted because we should wait on kevent before this method,
-            // but lets just be sure we cleanup native memory.
-            deleteJniChannelPointers();
-            jniChannelPointers.free();
-
             changeList.free();
             eventList.free();
         }
