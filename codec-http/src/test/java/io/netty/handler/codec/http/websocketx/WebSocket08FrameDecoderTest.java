@@ -12,18 +12,61 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-
+import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
-import org.mockito.Mockito;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 public class WebSocket08FrameDecoderTest {
 
     @Test
     public void channelInactive() throws Exception {
         final WebSocket08FrameDecoder decoder = new WebSocket08FrameDecoder(true, true, 65535, false);
-        final ChannelHandlerContext ctx = Mockito.mock(ChannelHandlerContext.class);
+        final ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
         decoder.channelInactive(ctx);
-        Mockito.verify(ctx).fireChannelInactive();
+        verify(ctx).fireChannelInactive();
+    }
+
+    @Test
+    public void supportIanaStatusCodes() throws Exception {
+        Set<Integer> forbiddenIanaCodes = new HashSet<Integer>();
+        forbiddenIanaCodes.add(1004);
+        forbiddenIanaCodes.add(1005);
+        forbiddenIanaCodes.add(1006);
+        Set<Integer> validIanaCodes = new HashSet<Integer>();
+        for (int i = 1000; i < 1015; i++) {
+            validIanaCodes.add(i);
+        }
+        validIanaCodes.removeAll(forbiddenIanaCodes);
+
+        for (int statusCode: validIanaCodes) {
+            EmbeddedChannel encoderChannel = new EmbeddedChannel(new WebSocket08FrameEncoder(true));
+            EmbeddedChannel decoderChannel = new EmbeddedChannel(new WebSocket08FrameDecoder(true, true, 65535, false));
+
+            assertTrue(encoderChannel.writeOutbound(new CloseWebSocketFrame(statusCode, "Bye")));
+            assertTrue(encoderChannel.finish());
+            ByteBuf serializedCloseFrame = encoderChannel.readOutbound();
+            assertNull(encoderChannel.readOutbound());
+
+            assertTrue(decoderChannel.writeInbound(serializedCloseFrame));
+            assertTrue(decoderChannel.finish());
+
+            CloseWebSocketFrame outputFrame = decoderChannel.readInbound();
+            assertNull(decoderChannel.readOutbound());
+            try {
+                assertEquals(statusCode, outputFrame.statusCode());
+            } finally {
+                outputFrame.release();
+            }
+        }
     }
 }
