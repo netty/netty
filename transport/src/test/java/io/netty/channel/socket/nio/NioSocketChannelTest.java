@@ -29,8 +29,9 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
@@ -64,7 +65,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
      */
     @Test
     public void testFlushCloseReentrance() throws Exception {
-        NioEventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         try {
             final Queue<ChannelFuture> futures = new LinkedBlockingQueue<>();
 
@@ -121,7 +122,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
      */
     @Test
     public void testFlushAfterGatheredFlush() throws Exception {
-        NioEventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         try {
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group).channel(NioServerSocketChannel.class);
@@ -161,7 +162,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
     // Test for https://github.com/netty/netty/issues/4805
     @Test(timeout = 3000)
     public void testChannelReRegisterReadSameEventLoop() throws Exception {
-        final EventLoopGroup group = new NioEventLoopGroup(2);
+        final EventLoopGroup group = new MultithreadEventLoopGroup(2, NioHandler.newFactory());
         final CountDownLatch latch = new CountDownLatch(1);
 
         // Just some random bytes
@@ -229,7 +230,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
 
     @Test(timeout = 3000)
     public void testShutdownOutputAndClose() throws IOException {
-        NioEventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         ServerSocket socket = new ServerSocket();
         socket.bind(new InetSocketAddress(0));
         Socket accepted = null;

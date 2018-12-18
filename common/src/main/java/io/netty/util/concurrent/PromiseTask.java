@@ -126,6 +126,26 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     @Override
+    public Promise<V> addListener(GenericFutureListener<? extends Future<? super V>> listener) {
+        return super.addListener(listener);
+    }
+
+    @Override
+    public Promise<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
+        return super.addListeners(listeners);
+    }
+
+    @Override
+    public Promise<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener) {
+        return super.removeListener(listener);
+    }
+
+    @Override
+    public Promise<V> removeListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
+        return super.removeListeners(listeners);
+    }
+
+    @Override
     protected StringBuilder toStringBuilder() {
         StringBuilder buf = super.toStringBuilder();
         buf.setCharAt(buf.length() - 1, ',');

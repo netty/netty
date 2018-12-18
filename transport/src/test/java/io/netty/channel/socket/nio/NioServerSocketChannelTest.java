@@ -16,7 +16,8 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,7 +33,7 @@ public class NioServerSocketChannelTest extends AbstractNioChannelTest<NioServer
     @Test
     public void testCloseOnError() throws Exception {
         ServerSocketChannel jdkChannel = ServerSocketChannel.open();
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
 
         NioServerSocketChannel serverSocketChannel = new NioServerSocketChannel(group.next(), group, jdkChannel);
         try {

@@ -83,11 +83,6 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
     }
 
     @Override
-    public EventExecutorGroup parent() {
-        return this;
-    }
-
-    @Override
     public boolean inEventLoop() {
         return false;
     }

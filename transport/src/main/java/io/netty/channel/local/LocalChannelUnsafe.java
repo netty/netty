@@ -18,6 +18,6 @@ package io.netty.channel.local;
 import io.netty.channel.Channel;
 
 interface LocalChannelUnsafe extends Channel.Unsafe {
-    void register0(LocalEventLoop eventLoop);
-    void deregister0(LocalEventLoop eventLoop);
+    void register0();
+    void deregister0();
 }

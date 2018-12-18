@@ -88,7 +88,7 @@ public class DefaultPromiseTest {
     public void testNoStackOverflowWithDefaultEventExecutorA() throws Exception {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         try {
-            EventExecutor executor = new DefaultEventExecutor(executorService);
+            EventExecutor executor = new SingleThreadEventExecutor(executorService);
             try {
                 testStackOverFlowChainedFuturesA(stackOverflowTestDepth(), executor, true);
                 testStackOverFlowChainedFuturesA(stackOverflowTestDepth(), executor, false);
@@ -110,7 +110,7 @@ public class DefaultPromiseTest {
     public void testNoStackOverflowWithDefaultEventExecutorB() throws Exception {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         try {
-            EventExecutor executor = new DefaultEventExecutor(executorService);
+            EventExecutor executor = new SingleThreadEventExecutor(executorService);
             try {
                 testStackOverFlowChainedFuturesB(stackOverflowTestDepth(), executor, true);
                 testStackOverFlowChainedFuturesB(stackOverflowTestDepth(), executor, false);
@@ -495,22 +495,7 @@ public class DefaultPromiseTest {
 
     private static final class TestEventExecutor extends SingleThreadEventExecutor {
         TestEventExecutor() {
-            super(null, Executors.defaultThreadFactory(), true);
-        }
-
-        @Override
-        protected void run() {
-            for (;;) {
-                Runnable task = takeTask();
-                if (task != null) {
-                    task.run();
-                    updateLastExecutionTime();
-                }
-
-                if (confirmShutdown()) {
-                    break;
-                }
-            }
+            super(Executors.defaultThreadFactory());
         }
     }
 

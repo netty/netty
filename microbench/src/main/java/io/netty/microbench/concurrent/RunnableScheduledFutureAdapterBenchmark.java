@@ -34,7 +34,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
-public class ScheduledFutureTaskBenchmark extends AbstractMicrobenchmark {
+public class RunnableScheduledFutureAdapterBenchmark extends AbstractMicrobenchmark {
 
     static final EventLoopGroup executor = new LocalEventLoopGroup(1);
 

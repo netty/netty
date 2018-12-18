@@ -20,6 +20,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.SingleThreadEventExecutor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -457,12 +459,17 @@ public class SingleThreadEventLoopTest {
         assertThat(loopA.isShutdown(), is(true));
     }
 
-    private static class SingleThreadEventLoopA extends SingleThreadEventLoop {
+    private static class SingleThreadEventLoopA extends SingleThreadEventExecutor implements EventLoop {
 
         final AtomicInteger cleanedUp = new AtomicInteger();
 
         SingleThreadEventLoopA() {
-            super(null, Executors.defaultThreadFactory(), true);
+            super(Executors.defaultThreadFactory());
+        }
+
+        @Override
+        public EventLoop next() {
+            return (EventLoop) super.next();
         }
 
         @Override
@@ -491,10 +498,20 @@ public class SingleThreadEventLoopTest {
         }
     }
 
-    private static class SingleThreadEventLoopB extends SingleThreadEventLoop {
+    private static class SingleThreadEventLoopB extends SingleThreadEventExecutor implements EventLoop {
 
         SingleThreadEventLoopB() {
-            super(null, Executors.defaultThreadFactory(), false);
+            super(Executors.defaultThreadFactory());
+        }
+
+        @Override
+        public EventLoop next() {
+            return (EventLoop) super.next();
+        }
+
+        @Override
+        protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
+            return new ConcurrentLinkedQueue<Runnable>();
         }
 
         @Override
@@ -506,7 +523,7 @@ public class SingleThreadEventLoopTest {
                     // Waken up by interruptThread()
                 }
 
-                runAllTasks();
+                runAllTasks(Integer.MAX_VALUE);
 
                 if (confirmShutdown()) {
                     break;

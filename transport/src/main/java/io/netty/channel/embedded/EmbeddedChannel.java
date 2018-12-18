@@ -532,7 +532,7 @@ public class EmbeddedChannel extends AbstractChannel {
         runPendingTasks();
         if (cancel) {
             // Cancel all scheduled tasks that are left.
-            ((EmbeddedEventLoop) eventLoop()).cancelScheduledTasks();
+            ((EmbeddedEventLoop) eventLoop()).cancelScheduled();
         }
     }
 

@@ -16,7 +16,10 @@
 
 package io.netty.channel;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
+
+import java.lang.reflect.Constructor;
 
 /**
  * A {@link ChannelFactory} that instantiates a new {@link ServerChannel} by invoking its default constructor
@@ -24,27 +27,32 @@ import io.netty.util.internal.StringUtil;
  */
 public final class ReflectiveServerChannelFactory<T extends ServerChannel> implements ServerChannelFactory<T> {
 
-    private final Class<? extends T> clazz;
+    private final Constructor<? extends T> constructor;
 
     public ReflectiveServerChannelFactory(Class<? extends T> clazz) {
-        if (clazz == null) {
-            throw new NullPointerException("clazz");
+        ObjectUtil.checkNotNull(clazz, "clazz");
+        try {
+            this.constructor = clazz.getConstructor(EventLoop.class, EventLoopGroup.class);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException("Class " + StringUtil.simpleClassName(clazz) +
+                    " does not have a public constructor that takes an EventLoop and EventLoopGroup instance", e);
         }
-        this.clazz = clazz;
     }
 
     @Override
     public T newChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
         try {
-            return clazz.getConstructor(EventLoop.class, EventLoopGroup.class)
-                        .newInstance(eventLoop, childEventLoopGroup);
+            return constructor
+                    .newInstance(eventLoop, childEventLoopGroup);
         } catch (Throwable t) {
-            throw new ChannelException("Unable to create ServerChannel from class " + clazz, t);
+            throw new ChannelException(
+                    "Unable to create ServerChannel from class " + constructor.getDeclaringClass(), t);
         }
     }
 
     @Override
     public String toString() {
-        return StringUtil.simpleClassName(clazz) + ".class";
+        return StringUtil.simpleClassName(ReflectiveServerChannelFactory.class) +
+                '(' + StringUtil.simpleClassName(constructor.getDeclaringClass()) + ".class)";
     }
 }

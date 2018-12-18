@@ -956,7 +956,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return true;
             }
 
-            safeSetFailure(promise, ENSURE_OPEN_CLOSED_CHANNEL_EXCEPTION);
+            safeSetFailure(promise, new ClosedChannelException());
             return false;
         }
 

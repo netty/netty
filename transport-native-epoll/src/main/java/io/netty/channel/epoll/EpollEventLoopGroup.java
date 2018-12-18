@@ -15,15 +15,11 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.channel.DefaultSelectStrategyFactory;
-import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.EventExecutorChooserFactory;
-import io.netty.util.concurrent.RejectedExecutionHandler;
-import io.netty.util.concurrent.RejectedExecutionHandlers;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
@@ -31,7 +27,10 @@ import java.util.concurrent.ThreadFactory;
 /**
  * {@link EventLoopGroup} which uses epoll under the covers. Because of this
  * it only works on linux.
+ *
+ * @deprecated use {@link MultithreadEventLoopGroup} together with {@link EpollHandler}.
  */
+@Deprecated
 public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
     {
         // Ensure JNI is initialized by the time this class is loaded.
@@ -101,37 +100,10 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
     @Deprecated
     public EpollEventLoopGroup(int nThreads, ThreadFactory threadFactory, int maxEventsAtOnce,
                                SelectStrategyFactory selectStrategyFactory) {
-        super(nThreads, threadFactory, maxEventsAtOnce, selectStrategyFactory, RejectedExecutionHandlers.reject());
+        super(nThreads, threadFactory, EpollHandler.newFactory(maxEventsAtOnce, selectStrategyFactory));
     }
 
     public EpollEventLoopGroup(int nThreads, Executor executor, SelectStrategyFactory selectStrategyFactory) {
-        super(nThreads, executor, 0, selectStrategyFactory, RejectedExecutionHandlers.reject());
-    }
-
-    public EpollEventLoopGroup(int nThreads, Executor executor, EventExecutorChooserFactory chooserFactory,
-                               SelectStrategyFactory selectStrategyFactory) {
-        super(nThreads, executor, chooserFactory, 0, selectStrategyFactory, RejectedExecutionHandlers.reject());
-    }
-
-    public EpollEventLoopGroup(int nThreads, Executor executor, EventExecutorChooserFactory chooserFactory,
-                               SelectStrategyFactory selectStrategyFactory,
-                               RejectedExecutionHandler rejectedExecutionHandler) {
-        super(nThreads, executor, chooserFactory, 0, selectStrategyFactory, rejectedExecutionHandler);
-    }
-
-    /**
-     * Sets the percentage of the desired amount of time spent for I/O in the child event loops.  The default value is
-     * {@code 50}, which means the event loop will try to spend the same amount of time for I/O as for non-I/O tasks.
-     */
-    public void setIoRatio(int ioRatio) {
-        for (EventExecutor e: this) {
-            ((EpollEventLoop) e).setIoRatio(ioRatio);
-        }
-    }
-
-    @Override
-    protected EventLoop newChild(Executor executor, Object... args) throws Exception {
-        return new EpollEventLoop(this, executor, (Integer) args[0],
-                ((SelectStrategyFactory) args[1]).newSelectStrategy(), (RejectedExecutionHandler) args[2]);
+        super(nThreads, executor, EpollHandler.newFactory(0, selectStrategyFactory));
     }
 }

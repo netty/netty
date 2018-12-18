@@ -20,6 +20,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -55,11 +56,6 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
             GlobalEventExecutor.INSTANCE, new UnsupportedOperationException());
 
     private ImmediateEventExecutor() { }
-
-    @Override
-    public boolean inEventLoop() {
-        return true;
-    }
 
     @Override
     public boolean inEventLoop(Thread thread) {
@@ -136,6 +132,27 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
     @Override
     public <V> ProgressivePromise<V> newProgressivePromise() {
         return new ImmediateProgressivePromise<>(this);
+    }
+
+    @Override
+    public ScheduledFuture<?> schedule(Runnable command, long delay,
+                                       TimeUnit unit) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+        throw new UnsupportedOperationException();
     }
 
     static class ImmediatePromise<V> extends DefaultPromise<V> {
