@@ -106,7 +106,7 @@ public class RtspDecoder extends HttpObjectDecoder {
     public RtspDecoder(final int maxInitialLineLength,
                        final int maxHeaderSize,
                        final int maxContentLength) {
-        super(maxInitialLineLength, maxHeaderSize, maxContentLength * 2, false);
+        super(maxInitialLineLength, maxHeaderSize, false);
     }
 
     /**
@@ -122,7 +122,6 @@ public class RtspDecoder extends HttpObjectDecoder {
                        final boolean validateHeaders) {
         super(maxInitialLineLength,
               maxHeaderSize,
-              maxContentLength * 2,
               false,
               validateHeaders);
     }

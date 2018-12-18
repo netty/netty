@@ -102,7 +102,6 @@ import java.util.List;
 public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private static final String EMPTY_VALUE = "";
 
-    private final int maxChunkSize;
     private final boolean chunkedSupported;
     protected final boolean validateHeaders;
     private final HeaderParser headerParser;
@@ -145,28 +144,28 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      * {@code maxChunkSize (8192)}.
      */
     protected HttpObjectDecoder() {
-        this(4096, 8192, 8192, true);
+        this(4096, 8192, true);
     }
 
     /**
      * Creates a new instance with the specified parameters.
      */
     protected HttpObjectDecoder(
-            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean chunkedSupported) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, true);
+            int maxInitialLineLength, int maxHeaderSize, boolean chunkedSupported) {
+        this(maxInitialLineLength, maxHeaderSize, chunkedSupported, true);
     }
 
     /**
      * Creates a new instance with the specified parameters.
      */
     protected HttpObjectDecoder(
-            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+            int maxInitialLineLength, int maxHeaderSize,
             boolean chunkedSupported, boolean validateHeaders) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders, 128);
+        this(maxInitialLineLength, maxHeaderSize, chunkedSupported, validateHeaders, 128);
     }
 
     protected HttpObjectDecoder(
-            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+            int maxInitialLineLength, int maxHeaderSize,
             boolean chunkedSupported, boolean validateHeaders, int initialBufferSize) {
         if (maxInitialLineLength <= 0) {
             throw new IllegalArgumentException(
@@ -178,15 +177,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     "maxHeaderSize must be a positive integer: " +
                     maxHeaderSize);
         }
-        if (maxChunkSize <= 0) {
-            throw new IllegalArgumentException(
-                    "maxChunkSize must be a positive integer: " +
-                    maxChunkSize);
-        }
         AppendableCharSequence seq = new AppendableCharSequence(initialBufferSize);
         lineParser = new LineParser(seq, maxInitialLineLength);
         headerParser = new HeaderParser(seq, maxHeaderSize);
-        this.maxChunkSize = maxChunkSize;
         this.chunkedSupported = chunkedSupported;
         this.validateHeaders = validateHeaders;
     }
@@ -278,7 +271,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
         case READ_VARIABLE_LENGTH_CONTENT: {
             // Keep reading data as a chunk until the end of connection is reached.
-            int toRead = Math.min(buffer.readableBytes(), maxChunkSize);
+            int toRead = buffer.readableBytes();
             if (toRead > 0) {
                 ByteBuf content = buffer.readRetainedSlice(toRead);
                 out.add(new DefaultHttpContent(content));
@@ -286,7 +279,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             return;
         }
         case READ_FIXED_LENGTH_CONTENT: {
-            int readLimit = buffer.readableBytes();
+            int toRead = buffer.readableBytes();
 
             // Check if the buffer is readable first as we use the readable byte count
             // to create the HttpChunk. This is needed as otherwise we may end up with
@@ -294,14 +287,14 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             // handled like it is the last HttpChunk.
             //
             // See https://github.com/netty/netty/issues/433
-            if (readLimit == 0) {
+            if (toRead == 0) {
                 return;
             }
 
-            int toRead = Math.min(readLimit, maxChunkSize);
             if (toRead > chunkSize) {
                 toRead = (int) chunkSize;
             }
+
             ByteBuf content = buffer.readRetainedSlice(toRead);
             chunkSize -= toRead;
 
@@ -337,7 +330,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
         case READ_CHUNKED_CONTENT: {
             assert chunkSize <= Integer.MAX_VALUE;
-            int toRead = Math.min((int) chunkSize, maxChunkSize);
+            int toRead = (int) chunkSize;
             toRead = Math.min(toRead, buffer.readableBytes());
             if (toRead == 0) {
                 return;

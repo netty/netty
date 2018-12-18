@@ -33,7 +33,7 @@ public class HttpServerCodecTest {
     public void testUnfinishedChunkedHttpRequestIsLastFlag() throws Exception {
 
         int maxChunkSize = 2000;
-        HttpServerCodec httpServerCodec = new HttpServerCodec(1000, 1000, maxChunkSize);
+        HttpServerCodec httpServerCodec = new HttpServerCodec(1000, 1000);
         EmbeddedChannel decoderEmbedder = new EmbeddedChannel(httpServerCodec);
 
         int totalContentLength = maxChunkSize * 5;

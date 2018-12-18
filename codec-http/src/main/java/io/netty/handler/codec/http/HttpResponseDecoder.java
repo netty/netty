@@ -97,19 +97,19 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
      * Creates a new instance with the specified parameters.
      */
     public HttpResponseDecoder(
-            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
-        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, true);
+            int maxInitialLineLength, int maxHeaderSize) {
+        super(maxInitialLineLength, maxHeaderSize, true);
     }
 
     public HttpResponseDecoder(
-            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders) {
-        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, true, validateHeaders);
+            int maxInitialLineLength, int maxHeaderSize, boolean validateHeaders) {
+        super(maxInitialLineLength, maxHeaderSize, true, validateHeaders);
     }
 
     public HttpResponseDecoder(
-            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
+            int maxInitialLineLength, int maxHeaderSize, boolean validateHeaders,
             int initialBufferSize) {
-        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, true, validateHeaders, initialBufferSize);
+        super(maxInitialLineLength, maxHeaderSize, true, validateHeaders, initialBufferSize);
     }
 
     @Override

@@ -61,40 +61,40 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
      * {@code maxChunkSize (8192)}).
      */
     public HttpClientCodec() {
-        this(4096, 8192, 8192, false);
+        this(4096, 8192, false);
     }
 
     /**
      * Creates a new instance with the specified decoder options.
      */
-    public HttpClientCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, false);
-    }
-
-    /**
-     * Creates a new instance with the specified decoder options.
-     */
-    public HttpClientCodec(
-            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, failOnMissingResponse, true);
+    public HttpClientCodec(int maxInitialLineLength, int maxHeaderSize) {
+        this(maxInitialLineLength, maxHeaderSize, false);
     }
 
     /**
      * Creates a new instance with the specified decoder options.
      */
     public HttpClientCodec(
-            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
+            int maxInitialLineLength, int maxHeaderSize, boolean failOnMissingResponse) {
+        this(maxInitialLineLength, maxHeaderSize, failOnMissingResponse, true);
+    }
+
+    /**
+     * Creates a new instance with the specified decoder options.
+     */
+    public HttpClientCodec(
+            int maxInitialLineLength, int maxHeaderSize, boolean failOnMissingResponse,
             boolean validateHeaders) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, failOnMissingResponse, validateHeaders, false);
+        this(maxInitialLineLength, maxHeaderSize, failOnMissingResponse, validateHeaders, false);
     }
 
     /**
      * Creates a new instance with the specified decoder options.
      */
     public HttpClientCodec(
-            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
+            int maxInitialLineLength, int maxHeaderSize, boolean failOnMissingResponse,
             boolean validateHeaders, boolean parseHttpAfterConnectRequest) {
-        init(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders), new Encoder());
+        init(new Decoder(maxInitialLineLength, maxHeaderSize, validateHeaders), new Encoder());
         this.failOnMissingResponse = failOnMissingResponse;
         this.parseHttpAfterConnectRequest = parseHttpAfterConnectRequest;
     }
@@ -115,7 +115,7 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
     public HttpClientCodec(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
             boolean validateHeaders, int initialBufferSize, boolean parseHttpAfterConnectRequest) {
-        init(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize),
+        init(new Decoder(maxInitialLineLength, maxHeaderSize, validateHeaders, initialBufferSize),
              new Encoder());
         this.parseHttpAfterConnectRequest = parseHttpAfterConnectRequest;
         this.failOnMissingResponse = failOnMissingResponse;
@@ -177,13 +177,13 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
     }
 
     private final class Decoder extends HttpResponseDecoder {
-        Decoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders) {
-            super(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders);
+        Decoder(int maxInitialLineLength, int maxHeaderSize, boolean validateHeaders) {
+            super(maxInitialLineLength, maxHeaderSize, validateHeaders);
         }
 
-        Decoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
+        Decoder(int maxInitialLineLength, int maxHeaderSize, boolean validateHeaders,
                 int initialBufferSize) {
-            super(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize);
+            super(maxInitialLineLength, maxHeaderSize, validateHeaders, initialBufferSize);
         }
 
         @Override
