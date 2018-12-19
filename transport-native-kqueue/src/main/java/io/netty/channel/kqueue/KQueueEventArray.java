@@ -79,7 +79,7 @@ final class KQueueEventArray {
 
     void evSet(AbstractKQueueChannel ch, short filter, short flags, int fflags) {
         reallocIfNeeded();
-        evSet(getKEventOffset(size++) + memoryAddress, ch, ch.socket.intValue(), filter, flags, fflags);
+        evSet(getKEventOffset(size++) + memoryAddress, ch.socket.intValue(), filter, flags, fflags);
     }
 
     private void reallocIfNeeded() {
@@ -165,16 +165,9 @@ final class KQueueEventArray {
         return memory.getLong(getKEventOffset(index) + KQUEUE_DATA_OFFSET);
     }
 
-    AbstractKQueueChannel channel(int index) {
-        return getChannel(getKEventOffsetAddress(index));
-    }
-
     private static int calculateBufferCapacity(int capacity) {
         return capacity * KQUEUE_EVENT_SIZE;
     }
 
-    private static native void evSet(long keventAddress, AbstractKQueueChannel ch,
-                                     int ident, short filter, short flags, int fflags);
-    private static native AbstractKQueueChannel getChannel(long keventAddress);
-    static native void deleteGlobalRefs(long channelAddressStart, long channelAddressEnd);
+    private static native void evSet(long keventAddress, int ident, short filter, short flags, int fflags);
 }
