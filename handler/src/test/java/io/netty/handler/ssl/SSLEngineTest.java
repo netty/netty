@@ -86,6 +86,8 @@ import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSessionBindingEvent;
+import javax.net.ssl.SSLSessionBindingListener;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
@@ -2728,6 +2730,86 @@ public abstract class SSLEngineTest {
             cleanupServerSslEngine(serverEngine);
             ssc.delete();
         }
+    }
+
+    @Test
+    public void testSessionBindingEvent() throws Exception {
+        clientSslCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
+                .build();
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
+                .build();
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            handshake(clientEngine, serverEngine);
+            SSLSession session = clientEngine.getSession();
+            assertEquals(0, session.getValueNames().length);
+
+            class SSLSessionBindingEventValue implements SSLSessionBindingListener {
+                SSLSessionBindingEvent boundEvent;
+                SSLSessionBindingEvent unboundEvent;
+
+                @Override
+                public void valueBound(SSLSessionBindingEvent sslSessionBindingEvent) {
+                    assertNull(boundEvent);
+                    boundEvent = sslSessionBindingEvent;
+                }
+
+                @Override
+                public void valueUnbound(SSLSessionBindingEvent sslSessionBindingEvent) {
+                    assertNull(unboundEvent);
+                    unboundEvent = sslSessionBindingEvent;
+                }
+            }
+
+            String name = "name";
+            String name2 = "name2";
+
+            SSLSessionBindingEventValue value1 = new SSLSessionBindingEventValue();
+            session.putValue(name, value1);
+            assertSSLSessionBindingEventValue(name, session, value1.boundEvent);
+            assertNull(value1.unboundEvent);
+            assertEquals(1, session.getValueNames().length);
+
+            session.putValue(name2, "value");
+
+            SSLSessionBindingEventValue value2 = new SSLSessionBindingEventValue();
+            session.putValue(name, value2);
+            assertEquals(2, session.getValueNames().length);
+
+            assertSSLSessionBindingEventValue(name, session, value1.unboundEvent);
+            assertSSLSessionBindingEventValue(name, session, value2.boundEvent);
+            assertNull(value2.unboundEvent);
+            assertEquals(2, session.getValueNames().length);
+
+            session.removeValue(name);
+            assertSSLSessionBindingEventValue(name, session, value2.unboundEvent);
+            assertEquals(1, session.getValueNames().length);
+            session.removeValue(name2);
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
+            ssc.delete();
+        }
+    }
+
+    private static void assertSSLSessionBindingEventValue(
+            String name, SSLSession session, SSLSessionBindingEvent event) {
+        assertEquals(name, event.getName());
+        assertEquals(session, event.getSession());
+        assertEquals(session, event.getSource());
     }
 
     @Test
