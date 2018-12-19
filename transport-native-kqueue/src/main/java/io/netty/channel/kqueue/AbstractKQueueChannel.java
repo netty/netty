@@ -69,15 +69,6 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private boolean writeFilterEnabled;
     boolean readReadyRunnablePending;
     boolean inputClosedSeenErrorOnRead;
-    /**
-     * This member variable means we don't have to have a map in {@link KQueueEventLoop} which associates the FDs
-     * from kqueue to instances of this class. This field will be initialized by JNI when modifying kqueue events.
-     * If there is no global reference when JNI gets a kqueue evSet call (aka this field is 0) then a global reference
-     * will be created and the address will be saved in this member variable. Then when we process a kevent in Java
-     * we can ask JNI to give us the {@link AbstractKQueueChannel} that corresponds to that event.
-     */
-    long jniSelfPtr;
-
     protected volatile boolean active;
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
@@ -213,6 +204,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         // make sure the readReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
         // new EventLoop.
         readReadyRunnablePending = false;
+
+        ((KQueueEventLoop) eventLoop()).add(this);
+
         // Add the write event first so we get notified of connection refused on the client side!
         if (writeFilterEnabled) {
             evSet0(Native.EVFILT_WRITE, Native.EV_ADD_CLEAR_ENABLE);
