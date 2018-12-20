@@ -284,7 +284,7 @@ public class HttpContentDecoderTest {
         // or removes it completely (handlers down the chain must rely on LastHttpContent object)
 
         // force content to be in more than one chunk (5 bytes/chunk)
-        HttpRequestDecoder decoder = new HttpRequestDecoder(4096, 4096, 5);
+        HttpRequestDecoder decoder = new HttpRequestDecoder(4096, 4096);
         HttpContentDecoder decompressor = new HttpContentDecompressor();
         EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor);
         String headers = "POST / HTTP/1.1\r\n" +
@@ -313,7 +313,7 @@ public class HttpContentDecoderTest {
         // case 2: if HttpObjectAggregator is down the chain, then correct Content-Length header must be set
 
         // force content to be in more than one chunk (5 bytes/chunk)
-        HttpRequestDecoder decoder = new HttpRequestDecoder(4096, 4096, 5);
+        HttpRequestDecoder decoder = new HttpRequestDecoder(4096, 4096);
         HttpContentDecoder decompressor = new HttpContentDecompressor();
         HttpObjectAggregator aggregator = new HttpObjectAggregator(1024);
         EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor, aggregator);
@@ -345,7 +345,7 @@ public class HttpContentDecoderTest {
         // or removes it completely (handlers down the chain must rely on LastHttpContent object)
 
         // force content to be in more than one chunk (5 bytes/chunk)
-        HttpResponseDecoder decoder = new HttpResponseDecoder(4096, 4096, 5);
+        HttpResponseDecoder decoder = new HttpResponseDecoder(4096, 4096);
         HttpContentDecoder decompressor = new HttpContentDecompressor();
         EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor);
         String headers = "HTTP/1.1 200 OK\r\n" +
@@ -377,7 +377,7 @@ public class HttpContentDecoderTest {
         // case 2: if HttpObjectAggregator is down the chain, then correct Content-Length header must be set
 
         // force content to be in more than one chunk (5 bytes/chunk)
-        HttpResponseDecoder decoder = new HttpResponseDecoder(4096, 4096, 5);
+        HttpResponseDecoder decoder = new HttpResponseDecoder(4096, 4096);
         HttpContentDecoder decompressor = new HttpContentDecompressor();
         HttpObjectAggregator aggregator = new HttpObjectAggregator(1024);
         EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor, aggregator);
@@ -405,7 +405,7 @@ public class HttpContentDecoderTest {
     @Test
     public void testFullHttpRequest() {
         // test that ContentDecoder can be used after the ObjectAggregator
-        HttpRequestDecoder decoder = new HttpRequestDecoder(4096, 4096, 5);
+        HttpRequestDecoder decoder = new HttpRequestDecoder(4096, 4096);
         HttpObjectAggregator aggregator = new HttpObjectAggregator(1024);
         HttpContentDecoder decompressor = new HttpContentDecompressor();
         EmbeddedChannel channel = new EmbeddedChannel(decoder, aggregator, decompressor);
@@ -432,7 +432,7 @@ public class HttpContentDecoderTest {
     @Test
     public void testFullHttpResponse() {
         // test that ContentDecoder can be used after the ObjectAggregator
-        HttpResponseDecoder decoder = new HttpResponseDecoder(4096, 4096, 5);
+        HttpResponseDecoder decoder = new HttpResponseDecoder(4096, 4096);
         HttpObjectAggregator aggregator = new HttpObjectAggregator(1024);
         HttpContentDecoder decompressor = new HttpContentDecompressor();
         EmbeddedChannel channel = new EmbeddedChannel(decoder, aggregator, decompressor);
@@ -460,7 +460,7 @@ public class HttpContentDecoderTest {
     @Test
     public void testFullHttpResponseEOF() {
         // test that ContentDecoder can be used after the ObjectAggregator
-        HttpResponseDecoder decoder = new HttpResponseDecoder(4096, 4096, 5);
+        HttpResponseDecoder decoder = new HttpResponseDecoder(4096, 4096);
         HttpContentDecoder decompressor = new HttpContentDecompressor();
         EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor);
         String headers = "HTTP/1.1 200 OK\r\n" +

@@ -55,23 +55,22 @@ public abstract class RtspObjectDecoder extends HttpObjectDecoder {
 
     /**
      * Creates a new instance with the default
-     * {@code maxInitialLineLength (4096)}, {@code maxHeaderSize (8192)}, and
-     * {@code maxContentLength (8192)}.
+     * {@code maxInitialLineLength (4096)}, {@code maxHeaderSize (8192)}.
      */
     protected RtspObjectDecoder() {
-        this(4096, 8192, 8192);
+        this(4096, 8192);
     }
 
     /**
      * Creates a new instance with the specified parameters.
      */
-    protected RtspObjectDecoder(int maxInitialLineLength, int maxHeaderSize, int maxContentLength) {
-        super(maxInitialLineLength, maxHeaderSize, maxContentLength * 2, false);
+    protected RtspObjectDecoder(int maxInitialLineLength, int maxHeaderSize) {
+        super(maxInitialLineLength, maxHeaderSize, false);
     }
 
     protected RtspObjectDecoder(
-            int maxInitialLineLength, int maxHeaderSize, int maxContentLength, boolean validateHeaders) {
-        super(maxInitialLineLength, maxHeaderSize, maxContentLength * 2, false, validateHeaders);
+            int maxInitialLineLength, int maxHeaderSize, boolean validateHeaders) {
+        super(maxInitialLineLength, maxHeaderSize, false, validateHeaders);
     }
 
     @Override
