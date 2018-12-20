@@ -59,6 +59,12 @@ import java.util.List;
  * +-----------------+-------------------------------------+
  * </pre>
  *
+ * <p/>
+ * The byte stream is expected to be in UTF-8 character encoding or ASCII. The current implementation
+ * uses direct {@code byte} to {@code char} cast and then compares that {@code char} to a few low range
+ * ASCII characters like {@code '<'}, {@code '>'} or {@code '/'}. UTF-8 is not using low range [0..0x7F]
+ * byte values for multibyte codepoint representations therefore fully supported by this implementation.
+ * <p/>
  * Please note that this decoder is not suitable for
  * xml streaming protocols such as
  * <a href="http://xmpp.org/rfcs/rfc6120.html">XMPP</a>,
