@@ -47,8 +47,8 @@ import java.util.concurrent.Future;
  *     high throughput, this gives the opportunity to process other flushes before the task gets executed, thus
  *     batching multiple flushes into one.</li>
  * </ul>
- * If {@code explicitFlushAfterFlushes} is reached the flush will also be forwarded as well (whether while in a read
- * loop, or while batching outside of a read loop).
+ * If {@code explicitFlushAfterFlushes} is reached the flush will be forwarded as well (whether while in a read loop, or
+ * while batching outside of a read loop).
  * <p>
  * If the {@link Channel} becomes non-writable it will also try to execute any pending flush operations.
  * <p>
@@ -65,10 +65,17 @@ public class FlushConsolidationHandler extends ChannelDuplexHandler {
     private Future<?> nextScheduledFlush;
 
     /**
-     * Create new instance which explicit flush after 256 pending flush operations latest.
+     * The default number of flushes after which a flush will be forwarded to downstream handlers (whether while in a
+     * read loop, or while batching outside of a read loop).
+     */
+    public static final int DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES = 256;
+
+    /**
+     * Create new instance which explicit flush after {@value DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES} pending flush
+     * operations at the latest.
      */
     public FlushConsolidationHandler() {
-        this(256, false);
+        this(DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES, false);
     }
 
     /**
