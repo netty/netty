@@ -44,7 +44,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     /**
      * Create a new instance
      *
-     * @param file      the {@link FileChannel} which should be transfered
+     * @param file      the {@link FileChannel} which should be transferred
      * @param position  the position from which the transfer should start
      * @param count     the number of bytes to transfer
      */
@@ -68,7 +68,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
      * Create a new instance using the given {@link File}. The {@link File} will be opened lazily or
      * explicitly via {@link #open()}.
      *
-     * @param f         the {@link File} which should be transfered
+     * @param f         the {@link File} which should be transferred
      * @param position  the position from which the transfer should start
      * @param count     the number of bytes to transfer
      */
