@@ -962,14 +962,17 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         handlerState = REMOVE_COMPLETE;
     }
 
-    final void setAddComplete() {
+    final boolean setAddComplete() {
         for (;;) {
             int oldState = handlerState;
+            if (oldState == REMOVE_COMPLETE) {
+                return false;
+            }
             // Ensure we never update when the handlerState is REMOVE_COMPLETE already.
             // oldState is usually ADD_PENDING but can also be REMOVE_COMPLETE when an EventExecutor is used that is not
             // exposing ordering guarantees.
-            if (oldState == REMOVE_COMPLETE || HANDLER_STATE_UPDATER.compareAndSet(this, oldState, ADD_COMPLETE)) {
-                return;
+            if (HANDLER_STATE_UPDATER.compareAndSet(this, oldState, ADD_COMPLETE)) {
+                return true;
             }
         }
     }
@@ -977,6 +980,26 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     final void setAddPending() {
         boolean updated = HANDLER_STATE_UPDATER.compareAndSet(this, INIT, ADD_PENDING);
         assert updated; // This should always be true as it MUST be called before setAddComplete() or setRemoved().
+    }
+
+    final void callHandlerAdded() throws Exception {
+        // We must call setAddComplete before calling handlerAdded. Otherwise if the handlerAdded method generates
+        // any pipeline events ctx.handler() will miss them because the state will not allow it.
+        if (setAddComplete()) {
+            handler().handlerAdded(this);
+        }
+    }
+
+    final void callHandlerRemoved() throws Exception {
+        try {
+            // Only call handlerRemoved(...) if we called handlerAdded(...) before.
+            if (handlerState == ADD_COMPLETE) {
+                handler().handlerRemoved(this);
+            }
+        } finally {
+            // Mark the handler as removed in any case.
+            setRemoved();
+        }
     }
 
     /**
