@@ -1695,7 +1695,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
     }
 
     /**
-     * Returns a deap copy of the passed in {@link HttpHeaders}.
+     * Returns a deep copy of the passed in {@link HttpHeaders}.
      */
     public HttpHeaders copy() {
         return new DefaultHttpHeaders().set(this);

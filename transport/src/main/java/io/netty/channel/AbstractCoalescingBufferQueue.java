@@ -40,7 +40,7 @@ public abstract class AbstractCoalescingBufferQueue {
      *
      * @param channel the {@link Channel} which will have the {@link Channel#isWritable()} reflect the amount of queued
      *                buffers or {@code null} if there is no writability state updated.
-     * @param initSize theinitial size of the underlying queue.
+     * @param initSize the initial size of the underlying queue.
      */
     protected AbstractCoalescingBufferQueue(Channel channel, int initSize) {
         bufAndListenerPairs = new ArrayDeque<Object>(initSize);

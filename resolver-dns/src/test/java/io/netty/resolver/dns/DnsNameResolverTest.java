@@ -404,19 +404,19 @@ public class DnsNameResolverTest {
         });
         dnsServer2.start();
         try {
-            final Set<String> overridenHostnames = new HashSet<String>();
+            final Set<String> overriddenHostnames = new HashSet<String>();
             for (String name : DOMAINS) {
                 if (EXCLUSIONS_RESOLVE_A.contains(name)) {
                     continue;
                 }
                 if (PlatformDependent.threadLocalRandom().nextBoolean()) {
-                    overridenHostnames.add(name);
+                    overriddenHostnames.add(name);
                 }
             }
             DnsNameResolver resolver = newResolver(false, new DnsServerAddressStreamProvider() {
                 @Override
                 public DnsServerAddressStream nameServerAddressStream(String hostname) {
-                    return overridenHostnames.contains(hostname) ? sequential(dnsServer2.localAddress()).stream() :
+                    return overriddenHostnames.contains(hostname) ? sequential(dnsServer2.localAddress()).stream() :
                             null;
                 }
             }).build();
@@ -426,7 +426,7 @@ public class DnsNameResolverTest {
                     if (resolvedEntry.getValue().isLoopbackAddress()) {
                         continue;
                     }
-                    if (overridenHostnames.contains(resolvedEntry.getKey())) {
+                    if (overriddenHostnames.contains(resolvedEntry.getKey())) {
                         assertEquals("failed to resolve " + resolvedEntry.getKey(),
                                 overriddenIP, resolvedEntry.getValue().getHostAddress());
                     } else {
