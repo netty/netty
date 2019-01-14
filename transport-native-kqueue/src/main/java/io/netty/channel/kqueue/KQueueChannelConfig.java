@@ -67,7 +67,7 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
     }
 
     /**
-     * If this is {@code true} then the {@link RecvByteBufAllocator.Handle#guess()} will be overriden to always attempt
+     * If this is {@code true} then the {@link RecvByteBufAllocator.Handle#guess()} will be overridden to always attempt
      * to read as many bytes as kqueue says are available.
      */
     public KQueueChannelConfig setRcvAllocTransportProvidesGuess(boolean transportProvidesGuess) {
@@ -76,7 +76,7 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
     }
 
     /**
-     * If this is {@code true} then the {@link RecvByteBufAllocator.Handle#guess()} will be overriden to always attempt
+     * If this is {@code true} then the {@link RecvByteBufAllocator.Handle#guess()} will be overridden to always attempt
      * to read as many bytes as kqueue says are available.
      */
     public boolean getRcvAllocTransportProvidesGuess() {

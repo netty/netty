@@ -44,7 +44,7 @@ import static io.netty.channel.kqueue.KQueueStaticallyReferencedJniMethods.noteR
 import static io.netty.channel.unix.Errors.newIOException;
 
 /**
- * Navite helper methods
+ * Native helper methods
  * <p><strong>Internal usage only!</strong>
  */
 final class Native {

@@ -158,8 +158,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
      * If you need to have it increased use {@link #addComponent(boolean, ByteBuf)}.
      * <p>
-     * {@link ByteBuf#release()} ownership of {@code buffer} is transfered to this {@link CompositeByteBuf}.
-     * @param buffer the {@link ByteBuf} to add. {@link ByteBuf#release()} ownership is transfered to this
+     * {@link ByteBuf#release()} ownership of {@code buffer} is transferred to this {@link CompositeByteBuf}.
+     * @param buffer the {@link ByteBuf} to add. {@link ByteBuf#release()} ownership is transferred to this
      * {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponent(ByteBuf buffer) {
@@ -172,10 +172,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
      * If you need to have it increased use {@link #addComponents(boolean, ByteBuf[])}.
      * <p>
-     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transfered to this
+     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transferred to this
      * {@link CompositeByteBuf}.
      * @param buffers the {@link ByteBuf}s to add. {@link ByteBuf#release()} ownership of all {@link ByteBuf#release()}
-     * ownership of all {@link ByteBuf} objects is transfered to this {@link CompositeByteBuf}.
+     * ownership of all {@link ByteBuf} objects is transferred to this {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponents(ByteBuf... buffers) {
         return addComponents(false, buffers);
@@ -187,10 +187,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
      * If you need to have it increased use {@link #addComponents(boolean, Iterable)}.
      * <p>
-     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transfered to this
+     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transferred to this
      * {@link CompositeByteBuf}.
      * @param buffers the {@link ByteBuf}s to add. {@link ByteBuf#release()} ownership of all {@link ByteBuf#release()}
-     * ownership of all {@link ByteBuf} objects is transfered to this {@link CompositeByteBuf}.
+     * ownership of all {@link ByteBuf} objects is transferred to this {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponents(Iterable<ByteBuf> buffers) {
         return addComponents(false, buffers);
@@ -202,9 +202,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
      * If you need to have it increased use {@link #addComponent(boolean, int, ByteBuf)}.
      * <p>
-     * {@link ByteBuf#release()} ownership of {@code buffer} is transfered to this {@link CompositeByteBuf}.
+     * {@link ByteBuf#release()} ownership of {@code buffer} is transferred to this {@link CompositeByteBuf}.
      * @param cIndex the index on which the {@link ByteBuf} will be added.
-     * @param buffer the {@link ByteBuf} to add. {@link ByteBuf#release()} ownership is transfered to this
+     * @param buffer the {@link ByteBuf} to add. {@link ByteBuf#release()} ownership is transferred to this
      * {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponent(int cIndex, ByteBuf buffer) {
@@ -215,8 +215,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Add the given {@link ByteBuf} and increase the {@code writerIndex} if {@code increaseWriterIndex} is
      * {@code true}.
      *
-     * {@link ByteBuf#release()} ownership of {@code buffer} is transfered to this {@link CompositeByteBuf}.
-     * @param buffer the {@link ByteBuf} to add. {@link ByteBuf#release()} ownership is transfered to this
+     * {@link ByteBuf#release()} ownership of {@code buffer} is transferred to this {@link CompositeByteBuf}.
+     * @param buffer the {@link ByteBuf} to add. {@link ByteBuf#release()} ownership is transferred to this
      * {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponent(boolean increaseWriterIndex, ByteBuf buffer) {
@@ -230,10 +230,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Add the given {@link ByteBuf}s and increase the {@code writerIndex} if {@code increaseWriterIndex} is
      * {@code true}.
      *
-     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transfered to this
+     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transferred to this
      * {@link CompositeByteBuf}.
      * @param buffers the {@link ByteBuf}s to add. {@link ByteBuf#release()} ownership of all {@link ByteBuf#release()}
-     * ownership of all {@link ByteBuf} objects is transfered to this {@link CompositeByteBuf}.
+     * ownership of all {@link ByteBuf} objects is transferred to this {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponents(boolean increaseWriterIndex, ByteBuf... buffers) {
         checkNotNull(buffers, "buffers");
@@ -246,10 +246,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Add the given {@link ByteBuf}s and increase the {@code writerIndex} if {@code increaseWriterIndex} is
      * {@code true}.
      *
-     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transfered to this
+     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transferred to this
      * {@link CompositeByteBuf}.
      * @param buffers the {@link ByteBuf}s to add. {@link ByteBuf#release()} ownership of all {@link ByteBuf#release()}
-     * ownership of all {@link ByteBuf} objects is transfered to this {@link CompositeByteBuf}.
+     * ownership of all {@link ByteBuf} objects is transferred to this {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponents(boolean increaseWriterIndex, Iterable<ByteBuf> buffers) {
         addComponents0(increaseWriterIndex, componentCount, buffers);
@@ -261,9 +261,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Add the given {@link ByteBuf} on the specific index and increase the {@code writerIndex}
      * if {@code increaseWriterIndex} is {@code true}.
      *
-     * {@link ByteBuf#release()} ownership of {@code buffer} is transfered to this {@link CompositeByteBuf}.
+     * {@link ByteBuf#release()} ownership of {@code buffer} is transferred to this {@link CompositeByteBuf}.
      * @param cIndex the index on which the {@link ByteBuf} will be added.
-     * @param buffer the {@link ByteBuf} to add. {@link ByteBuf#release()} ownership is transfered to this
+     * @param buffer the {@link ByteBuf} to add. {@link ByteBuf#release()} ownership is transferred to this
      * {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponent(boolean increaseWriterIndex, int cIndex, ByteBuf buffer) {
@@ -330,13 +330,13 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
      * If you need to have it increased you need to handle it by your own.
      * <p>
-     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transfered to this
+     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transferred to this
      * {@link CompositeByteBuf}.
      * @param cIndex the index on which the {@link ByteBuf} will be added. {@link ByteBuf#release()} ownership of all
-     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects is transfered to this
+     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects is transferred to this
      * {@link CompositeByteBuf}.
      * @param buffers the {@link ByteBuf}s to add. {@link ByteBuf#release()} ownership of all {@link ByteBuf#release()}
-     * ownership of all {@link ByteBuf} objects is transfered to this {@link CompositeByteBuf}.
+     * ownership of all {@link ByteBuf} objects is transferred to this {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponents(int cIndex, ByteBuf... buffers) {
         checkNotNull(buffers, "buffers");
@@ -405,11 +405,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
      * If you need to have it increased you need to handle it by your own.
      * <p>
-     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transfered to this
+     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transferred to this
      * {@link CompositeByteBuf}.
      * @param cIndex the index on which the {@link ByteBuf} will be added.
      * @param buffers the {@link ByteBuf}s to add.  {@link ByteBuf#release()} ownership of all
-     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects is transfered to this
+     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects is transferred to this
      * {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponents(int cIndex, Iterable<ByteBuf> buffers) {
