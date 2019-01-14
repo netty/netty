@@ -631,19 +631,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private void callHandlerAdded0(final AbstractChannelHandlerContext ctx) {
         try {
-            // We must call setAddComplete before calling handlerAdded. Otherwise if the handlerAdded method generates
-            // any pipeline events ctx.handler() will miss them because the state will not allow it.
-            ctx.setAddComplete();
-            ctx.handler().handlerAdded(ctx);
+            ctx.callHandlerAdded();
         } catch (Throwable t) {
             boolean removed = false;
             try {
                 remove0(ctx);
-                try {
-                    ctx.handler().handlerRemoved(ctx);
-                } finally {
-                    ctx.setRemoved();
-                }
+                ctx.callHandlerRemoved();
                 removed = true;
             } catch (Throwable t2) {
                 if (logger.isWarnEnabled()) {
@@ -666,11 +659,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private void callHandlerRemoved0(final AbstractChannelHandlerContext ctx) {
         // Notify the complete removal.
         try {
-            try {
-                ctx.handler().handlerRemoved(ctx);
-            } finally {
-                ctx.setRemoved();
-            }
+            ctx.callHandlerRemoved();
         } catch (Throwable t) {
             fireExceptionCaught(new ChannelPipelineException(
                     ctx.handler().getClass().getName() + ".handlerRemoved() has thrown an exception.", t));
