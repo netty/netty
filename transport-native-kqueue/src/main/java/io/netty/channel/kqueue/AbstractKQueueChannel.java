@@ -73,8 +73,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
 
-    AbstractKQueueChannel(Channel parent, BsdSocket fd, boolean active) {
-        super(parent);
+    AbstractKQueueChannel(Channel parent, EventLoop eventLoop, BsdSocket fd, boolean active) {
+        super(parent, eventLoop);
         socket = checkNotNull(fd, "fd");
         this.active = active;
         if (active) {
@@ -85,8 +85,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
     }
 
-    AbstractKQueueChannel(Channel parent, BsdSocket fd, SocketAddress remote) {
-        super(parent);
+    AbstractKQueueChannel(Channel parent, EventLoop eventLoop, BsdSocket fd, SocketAddress remote) {
+        super(parent, eventLoop);
         socket = checkNotNull(fd, "fd");
         active = true;
         // Directly cache the remote and local addresses

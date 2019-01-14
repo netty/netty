@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
@@ -128,8 +129,8 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                     public Bootstrap newInstance() {
                         return new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
                             @Override
-                            public Channel newChannel() {
-                                return new NioDatagramChannel(InternetProtocolFamily.IPv4);
+                            public Channel newChannel(EventLoop eventLoop) {
+                                return new NioDatagramChannel(eventLoop, InternetProtocolFamily.IPv4);
                             }
 
                             @Override

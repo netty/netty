@@ -140,7 +140,7 @@ public final class Http2StreamChannelBootstrap {
             return;
         }
 
-        ChannelFuture future = ctx.channel().eventLoop().register(streamChannel);
+        ChannelFuture future = streamChannel.register();
         future.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {

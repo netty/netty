@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.util.internal.ObjectUtil;
+
 import java.net.SocketAddress;
 
 /**
@@ -31,11 +33,19 @@ import java.net.SocketAddress;
 public abstract class AbstractServerChannel extends AbstractChannel implements ServerChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
+    private final EventLoopGroup childEventLoopGroup;
+
     /**
      * Creates a new instance.
      */
-    protected AbstractServerChannel() {
-        super(null);
+    protected AbstractServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+        super(null, eventLoop);
+        this.childEventLoopGroup = ObjectUtil.checkNotNull(childEventLoopGroup, "childEventLoopGroup");
+    }
+
+    @Override
+    public EventLoopGroup childEventLoopGroup() {
+        return childEventLoopGroup;
     }
 
     @Override

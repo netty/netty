@@ -16,6 +16,8 @@
 package io.netty.channel.kqueue;
 
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.ServerDomainSocketChannel;
 import io.netty.util.internal.UnstableApi;
@@ -36,21 +38,22 @@ public final class KQueueServerDomainSocketChannel extends AbstractKQueueServerC
     private final KQueueServerChannelConfig config = new KQueueServerChannelConfig(this);
     private volatile DomainSocketAddress local;
 
-    public KQueueServerDomainSocketChannel() {
-        super(newSocketDomain(), false);
+    public KQueueServerDomainSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+        super(eventLoop, childEventLoopGroup, newSocketDomain(), false);
     }
 
-    public KQueueServerDomainSocketChannel(int fd) {
-        this(new BsdSocket(fd), false);
+    public KQueueServerDomainSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
+        this(eventLoop, childEventLoopGroup, new BsdSocket(fd), false);
     }
 
-    KQueueServerDomainSocketChannel(BsdSocket socket, boolean active) {
-        super(socket, active);
+    KQueueServerDomainSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                                    BsdSocket socket, boolean active) {
+        super(eventLoop, childEventLoopGroup, socket, active);
     }
 
     @Override
     protected Channel newChildChannel(int fd, byte[] addr, int offset, int len) throws Exception {
-        return new KQueueDomainSocketChannel(this, new BsdSocket(fd));
+        return new KQueueDomainSocketChannel(this, childEventLoopGroup().next(), new BsdSocket(fd));
     }
 
     @Override

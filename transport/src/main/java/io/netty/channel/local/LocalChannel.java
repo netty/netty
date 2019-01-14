@@ -91,13 +91,13 @@ public class LocalChannel extends AbstractChannel {
     private volatile boolean writeInProgress;
     private volatile Future<?> finishReadFuture;
 
-    public LocalChannel() {
-        super(null);
+    public LocalChannel(EventLoop eventLoop) {
+        super(null, eventLoop);
         config().setAllocator(new PreferHeapByteBufAllocator(config.getAllocator()));
     }
 
-    protected LocalChannel(LocalServerChannel parent, LocalChannel peer) {
-        super(parent);
+    protected LocalChannel(LocalServerChannel parent, EventLoop eventLoop, LocalChannel peer) {
+        super(parent, eventLoop);
         config().setAllocator(new PreferHeapByteBufAllocator(config.getAllocator()));
         this.peer = peer;
         localAddress = parent.localAddress();
@@ -284,6 +284,13 @@ public class LocalChannel extends AbstractChannel {
             unsafe().close(unsafe().voidPromise());
         } else {
             releaseInboundBuffers();
+
+            ChannelPromise promise = connectPromise;
+            if (promise != null) {
+                // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+                promise.tryFailure(DO_CLOSE_CLOSED_CHANNEL_EXCEPTION);
+                connectPromise = null;
+            }
         }
     }
 

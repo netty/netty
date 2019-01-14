@@ -19,6 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoop;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
@@ -37,16 +38,16 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
     private volatile DomainSocketAddress local;
     private volatile DomainSocketAddress remote;
 
-    public KQueueDomainSocketChannel() {
-        super(null, newSocketDomain(), false);
+    public KQueueDomainSocketChannel(EventLoop eventLoop) {
+        super(null, eventLoop, newSocketDomain(), false);
     }
 
-    public KQueueDomainSocketChannel(int fd) {
-        this(null, new BsdSocket(fd));
+    public KQueueDomainSocketChannel(EventLoop eventLoop, int fd) {
+        this(null, eventLoop, new BsdSocket(fd));
     }
 
-    KQueueDomainSocketChannel(Channel parent, BsdSocket fd) {
-        super(parent, fd, true);
+    KQueueDomainSocketChannel(Channel parent, EventLoop eventLoop, BsdSocket fd) {
+        super(parent, eventLoop, fd, true);
     }
 
     @Override

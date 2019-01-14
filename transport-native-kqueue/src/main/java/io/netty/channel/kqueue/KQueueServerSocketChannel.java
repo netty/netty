@@ -17,6 +17,7 @@ package io.netty.channel.kqueue;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.util.internal.UnstableApi;
 
@@ -30,24 +31,24 @@ import static io.netty.channel.unix.NativeInetAddress.address;
 public final class KQueueServerSocketChannel extends AbstractKQueueServerChannel implements ServerSocketChannel {
     private final KQueueServerSocketChannelConfig config;
 
-    public KQueueServerSocketChannel() {
-        super(newSocketStream(), false);
+    public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+        super(eventLoop, childEventLoopGroup, newSocketStream(), false);
         config = new KQueueServerSocketChannelConfig(this);
     }
 
-    public KQueueServerSocketChannel(int fd) {
+    public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
         // Must call this constructor to ensure this object's local address is configured correctly.
         // The local address can only be obtained from a Socket object.
-        this(new BsdSocket(fd));
+        this(eventLoop, childEventLoopGroup, new BsdSocket(fd));
     }
 
-    KQueueServerSocketChannel(BsdSocket fd) {
-        super(fd);
+    KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket fd) {
+        super(eventLoop, childEventLoopGroup, fd);
         config = new KQueueServerSocketChannelConfig(this);
     }
 
-    KQueueServerSocketChannel(BsdSocket fd, boolean active) {
-        super(fd, active);
+    KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket fd, boolean active) {
+        super(eventLoop, childEventLoopGroup, fd, active);
         config = new KQueueServerSocketChannelConfig(this);
     }
 
@@ -82,6 +83,7 @@ public final class KQueueServerSocketChannel extends AbstractKQueueServerChannel
 
     @Override
     protected Channel newChildChannel(int fd, byte[] address, int offset, int len) throws Exception {
-        return new KQueueSocketChannel(this, new BsdSocket(fd), address(address, offset, len));
+        return new KQueueSocketChannel(this, childEventLoopGroup().next(),
+                                       new BsdSocket(fd), address(address, offset, len));
     }
 }

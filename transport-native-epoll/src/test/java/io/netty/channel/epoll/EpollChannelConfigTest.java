@@ -25,28 +25,38 @@ public class EpollChannelConfigTest {
     @Test
     public void testOptionGetThrowsChannelException() throws Exception {
         Epoll.ensureAvailability();
-        EpollSocketChannel channel = new EpollSocketChannel();
-        channel.config().getSoLinger();
-        channel.fd().close();
+        EpollEventLoopGroup group = new EpollEventLoopGroup(1);
         try {
+            EpollSocketChannel channel = new EpollSocketChannel(group.next());
             channel.config().getSoLinger();
-            fail();
-        } catch (ChannelException e) {
-            // expected
+            channel.fd().close();
+            try {
+                channel.config().getSoLinger();
+                fail();
+            } catch (ChannelException e) {
+                // expected
+            }
+        } finally {
+            group.shutdownGracefully();
         }
     }
 
     @Test
     public void testOptionSetThrowsChannelException() throws Exception {
         Epoll.ensureAvailability();
-        EpollSocketChannel channel = new EpollSocketChannel();
-        channel.config().setKeepAlive(true);
-        channel.fd().close();
+        EpollEventLoopGroup group = new EpollEventLoopGroup(1);
         try {
+            EpollSocketChannel channel = new EpollSocketChannel(group.next());
             channel.config().setKeepAlive(true);
-            fail();
-        } catch (ChannelException e) {
-            // expected
+            channel.fd().close();
+            try {
+                channel.config().setKeepAlive(true);
+                fail();
+            } catch (ChannelException e) {
+                // expected
+            }
+        } finally {
+            group.shutdownGracefully();
         }
     }
 }

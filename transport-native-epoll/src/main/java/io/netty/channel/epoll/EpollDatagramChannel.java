@@ -24,6 +24,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
@@ -58,17 +59,17 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     private final EpollDatagramChannelConfig config;
     private volatile boolean connected;
 
-    public EpollDatagramChannel() {
-        super(newSocketDgram());
+    public EpollDatagramChannel(EventLoop eventLoop) {
+        super(eventLoop, newSocketDgram());
         config = new EpollDatagramChannelConfig(this);
     }
 
-    public EpollDatagramChannel(int fd) {
-        this(new LinuxSocket(fd));
+    public EpollDatagramChannel(EventLoop eventLoop, int fd) {
+        this(eventLoop, new LinuxSocket(fd));
     }
 
-    EpollDatagramChannel(LinuxSocket fd) {
-        super(null, fd, true);
+    EpollDatagramChannel(EventLoop eventLoop, LinuxSocket fd) {
+        super(null, eventLoop, fd, true);
         config = new EpollDatagramChannelConfig(this);
     }
 

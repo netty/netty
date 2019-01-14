@@ -25,6 +25,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
@@ -33,7 +34,6 @@ import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -112,24 +112,24 @@ public final class NioDatagramChannel
     /**
      * Create a new instance which will use the Operation Systems default {@link InternetProtocolFamily}.
      */
-    public NioDatagramChannel() {
-        this(newSocket(DEFAULT_SELECTOR_PROVIDER));
+    public NioDatagramChannel(EventLoop eventLoop) {
+        this(eventLoop, newSocket(DEFAULT_SELECTOR_PROVIDER));
     }
 
     /**
      * Create a new instance using the given {@link SelectorProvider}
      * which will use the Operation Systems default {@link InternetProtocolFamily}.
      */
-    public NioDatagramChannel(SelectorProvider provider) {
-        this(newSocket(provider));
+    public NioDatagramChannel(EventLoop eventLoop, SelectorProvider provider) {
+        this(eventLoop, newSocket(provider));
     }
 
     /**
      * Create a new instance using the given {@link InternetProtocolFamily}. If {@code null} is used it will depend
      * on the Operation Systems default which will be chosen.
      */
-    public NioDatagramChannel(InternetProtocolFamily ipFamily) {
-        this(newSocket(DEFAULT_SELECTOR_PROVIDER, ipFamily));
+    public NioDatagramChannel(EventLoop eventLoop, InternetProtocolFamily ipFamily) {
+        this(eventLoop, newSocket(DEFAULT_SELECTOR_PROVIDER, ipFamily));
     }
 
     /**
@@ -137,15 +137,15 @@ public final class NioDatagramChannel
      * If {@link InternetProtocolFamily} is {@code null} it will depend on the Operation Systems default
      * which will be chosen.
      */
-    public NioDatagramChannel(SelectorProvider provider, InternetProtocolFamily ipFamily) {
-        this(newSocket(provider, ipFamily));
+    public NioDatagramChannel(EventLoop eventLoop, SelectorProvider provider, InternetProtocolFamily ipFamily) {
+        this(eventLoop, newSocket(provider, ipFamily));
     }
 
     /**
      * Create a new instance from the given {@link DatagramChannel}.
      */
-    public NioDatagramChannel(DatagramChannel socket) {
-        super(null, socket, SelectionKey.OP_READ);
+    public NioDatagramChannel(EventLoop eventLoop, DatagramChannel socket) {
+        super(null, eventLoop, socket, SelectionKey.OP_READ);
         config = new NioDatagramChannelConfig(this, socket);
     }
 

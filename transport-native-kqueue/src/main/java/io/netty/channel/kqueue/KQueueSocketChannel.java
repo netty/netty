@@ -16,6 +16,7 @@
 package io.netty.channel.kqueue;
 
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -28,18 +29,18 @@ import java.util.concurrent.Executor;
 public final class KQueueSocketChannel extends AbstractKQueueStreamChannel implements SocketChannel {
     private final KQueueSocketChannelConfig config;
 
-    public KQueueSocketChannel() {
-        super(null, BsdSocket.newSocketStream(), false);
+    public KQueueSocketChannel(EventLoop eventLoop) {
+        super(null, eventLoop, BsdSocket.newSocketStream(), false);
         config = new KQueueSocketChannelConfig(this);
     }
 
-    public KQueueSocketChannel(int fd) {
-        super(new BsdSocket(fd));
+    public KQueueSocketChannel(EventLoop eventLoop, int fd) {
+        super(eventLoop, new BsdSocket(fd));
         config = new KQueueSocketChannelConfig(this);
     }
 
-    KQueueSocketChannel(Channel parent, BsdSocket fd, InetSocketAddress remoteAddress) {
-        super(parent, fd, remoteAddress);
+    KQueueSocketChannel(Channel parent, EventLoop eventLoop, BsdSocket fd, InetSocketAddress remoteAddress) {
+        super(parent, eventLoop, fd, remoteAddress);
         config = new KQueueSocketChannelConfig(this);
     }
 

@@ -32,11 +32,11 @@ public class AbstractChannelTest {
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
 
-        TestChannel channel = new TestChannel();
+        TestChannel channel = new TestChannel(eventLoop);
         ChannelInboundHandler handler = mock(ChannelInboundHandler.class);
         channel.pipeline().addLast(handler);
 
-        registerChannel(eventLoop, channel);
+        registerChannel(channel);
 
         verify(handler).handlerAdded(any(ChannelHandlerContext.class));
         verify(handler).channelRegistered(any(ChannelHandlerContext.class));
@@ -57,15 +57,15 @@ public class AbstractChannelTest {
             }
         }).when(eventLoop).execute(any(Runnable.class));
 
-        final TestChannel channel = new TestChannel();
+        final TestChannel channel = new TestChannel(eventLoop);
         ChannelInboundHandler handler = mock(ChannelInboundHandler.class);
 
         channel.pipeline().addLast(handler);
 
-        registerChannel(eventLoop, channel);
+        registerChannel(channel);
         channel.unsafe().deregister(new DefaultChannelPromise(channel));
 
-        registerChannel(eventLoop, channel);
+        registerChannel(channel);
 
         verify(handler).handlerAdded(any(ChannelHandlerContext.class));
 
@@ -77,14 +77,15 @@ public class AbstractChannelTest {
 
     @Test
     public void ensureDefaultChannelId() {
-        TestChannel channel = new TestChannel();
+        final EventLoop eventLoop = mock(EventLoop.class);
+        TestChannel channel = new TestChannel(eventLoop);
         final ChannelId channelId = channel.id();
         assertTrue(channelId instanceof DefaultChannelId);
     }
 
-    private static void registerChannel(EventLoop eventLoop, Channel channel) throws Exception {
+    private static void registerChannel(Channel channel) throws Exception {
         DefaultChannelPromise future = new DefaultChannelPromise(channel);
-        channel.unsafe().register(eventLoop, future);
+        channel.register(future);
         future.sync(); // Cause any exceptions to be thrown
     }
 
@@ -96,8 +97,8 @@ public class AbstractChannelTest {
             public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) { }
         }
 
-        public TestChannel() {
-            super(null);
+        public TestChannel(EventLoop eventLoop) {
+            super(null, eventLoop);
         }
 
         @Override

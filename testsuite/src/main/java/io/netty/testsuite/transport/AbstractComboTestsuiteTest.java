@@ -28,8 +28,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 
-public abstract class AbstractComboTestsuiteTest<SB extends AbstractBootstrap<?, ?>,
-        CB extends AbstractBootstrap<?, ?>> {
+public abstract class AbstractComboTestsuiteTest<SB extends AbstractBootstrap<?, ?, ?>,
+        CB extends AbstractBootstrap<?, ?, ?>> {
     private final Class<SB> sbClazz;
     private final Class<CB> cbClazz;
     protected final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());

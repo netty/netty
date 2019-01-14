@@ -22,7 +22,9 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
+import io.netty.util.internal.ObjectUtil;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -30,16 +32,25 @@ import java.net.SocketAddress;
 public abstract class AbstractEpollServerChannel extends AbstractEpollChannel implements ServerChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
-    protected AbstractEpollServerChannel(int fd) {
-        this(new LinuxSocket(fd), false);
+    private final EventLoopGroup childEventLoopGroup;
+
+    protected AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
+        this(eventLoop, childEventLoopGroup, new LinuxSocket(fd), false);
     }
 
-    AbstractEpollServerChannel(LinuxSocket fd) {
-        this(fd, isSoErrorZero(fd));
+    AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, LinuxSocket fd) {
+        this(eventLoop, childEventLoopGroup, fd, isSoErrorZero(fd));
     }
 
-    AbstractEpollServerChannel(LinuxSocket fd, boolean active) {
-        super(null, fd, active);
+    AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                               LinuxSocket fd, boolean active) {
+        super(null, eventLoop, fd, active);
+        this.childEventLoopGroup = ObjectUtil.checkNotNull(childEventLoopGroup, "childEventLoopGroup");
+    }
+
+    @Override
+    public EventLoopGroup childEventLoopGroup() {
+        return childEventLoopGroup;
     }
 
     @Override

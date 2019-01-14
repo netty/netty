@@ -59,7 +59,6 @@ public class EmbeddedChannel extends AbstractChannel {
     private static final ChannelMetadata METADATA_NO_DISCONNECT = new ChannelMetadata(false);
     private static final ChannelMetadata METADATA_DISCONNECT = new ChannelMetadata(true);
 
-    private final EmbeddedEventLoop loop = new EmbeddedEventLoop();
     private final ChannelFutureListener recordExceptionListener = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
@@ -161,7 +160,7 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public EmbeddedChannel(ChannelId channelId, boolean register, boolean hasDisconnect,
                            final ChannelHandler... handlers) {
-        super(null, channelId);
+        super(null, new EmbeddedEventLoop(), channelId);
         metadata = metadata(hasDisconnect);
         config = new DefaultChannelConfig(this);
         setup(register, handlers);
@@ -179,7 +178,7 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public EmbeddedChannel(ChannelId channelId, boolean hasDisconnect, final ChannelConfig config,
                            final ChannelHandler... handlers) {
-        super(null, channelId);
+        super(null, new EmbeddedEventLoop(), channelId);
         metadata = metadata(hasDisconnect);
         this.config = ObjectUtil.checkNotNull(config, "config");
         setup(true, handlers);
@@ -205,21 +204,25 @@ public class EmbeddedChannel extends AbstractChannel {
             }
         });
         if (register) {
-            ChannelFuture future = loop.register(this);
+            ChannelFuture future = register();
             assert future.isDone();
         }
     }
 
-    /**
-     * Register this {@code Channel} on its {@link EventLoop}.
-     */
-    public void register() throws Exception {
-        ChannelFuture future = loop.register(this);
+    @Override
+    public ChannelFuture register() {
+        return register(newPromise());
+    }
+
+    @Override
+    public ChannelFuture register(ChannelPromise promise) {
+        ChannelFuture future = super.register(promise);
         assert future.isDone();
         Throwable cause = future.cause();
         if (cause != null) {
             PlatformDependent.throwException(cause);
         }
+        return future;
     }
 
     @Override
@@ -529,7 +532,7 @@ public class EmbeddedChannel extends AbstractChannel {
         runPendingTasks();
         if (cancel) {
             // Cancel all scheduled tasks that are left.
-            loop.cancelScheduledTasks();
+            ((EmbeddedEventLoop) eventLoop()).cancelScheduledTasks();
         }
     }
 
@@ -575,14 +578,15 @@ public class EmbeddedChannel extends AbstractChannel {
      * for this {@link Channel}
      */
     public void runPendingTasks() {
+        EmbeddedEventLoop embeddedEventLoop = (EmbeddedEventLoop) eventLoop();
         try {
-            loop.runTasks();
+            embeddedEventLoop.runTasks();
         } catch (Exception e) {
             recordException(e);
         }
 
         try {
-            loop.runScheduledTasks();
+            embeddedEventLoop.runScheduledTasks();
         } catch (Exception e) {
             recordException(e);
         }
@@ -594,11 +598,13 @@ public class EmbeddedChannel extends AbstractChannel {
      * {@code -1}.
      */
     public long runScheduledPendingTasks() {
+        EmbeddedEventLoop embeddedEventLoop = (EmbeddedEventLoop) eventLoop();
+
         try {
-            return loop.runScheduledTasks();
+            return embeddedEventLoop.runScheduledTasks();
         } catch (Exception e) {
             recordException(e);
-            return loop.nextScheduledTask();
+            return embeddedEventLoop.nextScheduledTask();
         }
     }
 
@@ -770,8 +776,8 @@ public class EmbeddedChannel extends AbstractChannel {
             }
 
             @Override
-            public void register(EventLoop eventLoop, ChannelPromise promise) {
-                EmbeddedUnsafe.this.register(eventLoop, promise);
+            public void register(ChannelPromise promise) {
+                EmbeddedUnsafe.this.register(promise);
                 runPendingTasks();
             }
 

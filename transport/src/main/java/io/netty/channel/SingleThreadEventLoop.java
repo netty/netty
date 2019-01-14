@@ -64,32 +64,6 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     }
 
     @Override
-    public ChannelFuture register(Channel channel) {
-        return register(new DefaultChannelPromise(channel, this));
-    }
-
-    @Override
-    public ChannelFuture register(final ChannelPromise promise) {
-        ObjectUtil.checkNotNull(promise, "promise");
-        promise.channel().unsafe().register(this, promise);
-        return promise;
-    }
-
-    @Deprecated
-    @Override
-    public ChannelFuture register(final Channel channel, final ChannelPromise promise) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
-        if (promise == null) {
-            throw new NullPointerException("promise");
-        }
-
-        channel.unsafe().register(this, promise);
-        return promise;
-    }
-
-    @Override
     protected boolean wakesUpForTask(Runnable task) {
         return !(task instanceof NonWakeupRunnable);
     }

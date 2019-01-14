@@ -137,7 +137,7 @@ public class ChannelOutboundBufferTest {
         private final ChannelConfig config = new DefaultChannelConfig(this);
 
         TestChannel() {
-            super(null);
+            super(null, new DefaultEventLoop());
         }
 
         @Override
@@ -147,7 +147,7 @@ public class ChannelOutboundBufferTest {
 
         @Override
         protected boolean isCompatible(EventLoop loop) {
-            return false;
+            return true;
         }
 
         @Override

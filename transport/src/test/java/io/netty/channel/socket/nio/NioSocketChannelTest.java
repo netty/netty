@@ -161,15 +161,6 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
     // Test for https://github.com/netty/netty/issues/4805
     @Test(timeout = 3000)
     public void testChannelReRegisterReadSameEventLoop() throws Exception {
-        testChannelReRegisterRead(true);
-    }
-
-    @Test(timeout = 3000)
-    public void testChannelReRegisterReadDifferentEventLoop() throws Exception {
-        testChannelReRegisterRead(false);
-    }
-
-    private static void testChannelReRegisterRead(final boolean sameEventLoop) throws Exception {
         final EventLoopGroup group = new NioEventLoopGroup(2);
         final CountDownLatch latch = new CountDownLatch(1);
 
@@ -186,7 +177,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
              .childOption(ChannelOption.SO_KEEPALIVE, true)
              .childHandler(new ChannelInitializer<Channel>() {
                  @Override
-                 protected void initChannel(Channel ch) throws Exception {
+                 protected void initChannel(final Channel ch) throws Exception {
                      ChannelPipeline pipeline = ch.pipeline();
                      pipeline.addLast(new SimpleChannelInboundHandler<ByteBuf>() {
                          @Override
@@ -198,16 +189,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                          @Override
                          public void channelActive(final ChannelHandlerContext ctx) throws Exception {
                              final EventLoop loop = group.next();
-                             if (sameEventLoop) {
-                                 deregister(ctx, loop);
-                             } else {
-                                 loop.execute(new Runnable() {
-                                     @Override
-                                     public void run() {
-                                         deregister(ctx, loop);
-                                     }
-                                 });
-                             }
+                             deregister(ctx, loop);
                          }
 
                          private void deregister(ChannelHandlerContext ctx, final EventLoop loop) {
@@ -218,8 +200,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                                  @Override
                                  public void operationComplete(ChannelFuture cf) {
                                      Channel channel = cf.channel();
-                                     assertNotSame(loop, channel.eventLoop());
-                                     group.next().register(channel);
+                                     channel.register();
                                  }
                              });
                          }
@@ -282,8 +263,8 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
     }
 
     @Override
-    protected NioSocketChannel newNioChannel() {
-        return new NioSocketChannel();
+    protected NioSocketChannel newNioChannel(EventLoopGroup group) {
+        return new NioSocketChannel(group.next());
     }
 
     @Override

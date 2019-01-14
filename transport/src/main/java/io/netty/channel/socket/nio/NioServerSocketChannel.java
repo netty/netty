@@ -19,6 +19,9 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SocketUtils;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
@@ -66,27 +69,35 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     private final ServerSocketChannelConfig config;
+    private final EventLoopGroup childEventLoopGroup;
 
     /**
      * Create a new instance
      */
-    public NioServerSocketChannel() {
-        this(newSocket(DEFAULT_SELECTOR_PROVIDER));
+    public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+        this(eventLoop, childEventLoopGroup, newSocket(DEFAULT_SELECTOR_PROVIDER));
     }
 
     /**
      * Create a new instance using the given {@link SelectorProvider}.
      */
-    public NioServerSocketChannel(SelectorProvider provider) {
-        this(newSocket(provider));
+    public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, SelectorProvider provider) {
+        this(eventLoop, childEventLoopGroup, newSocket(provider));
     }
 
     /**
      * Create a new instance using the given {@link ServerSocketChannel}.
      */
-    public NioServerSocketChannel(ServerSocketChannel channel) {
-        super(null, channel, SelectionKey.OP_ACCEPT);
+    public NioServerSocketChannel(
+            EventLoop eventLoop, EventLoopGroup childEventLoopGroup, ServerSocketChannel channel) {
+        super(null, eventLoop, channel, SelectionKey.OP_ACCEPT);
+        this.childEventLoopGroup = ObjectUtil.checkNotNull(childEventLoopGroup, "childEventLoopGroup");
         config = new NioServerSocketChannelConfig(this, javaChannel().socket());
+    }
+
+    @Override
+    public EventLoopGroup childEventLoopGroup() {
+        return childEventLoopGroup;
     }
 
     @Override
@@ -144,7 +155,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
         try {
             if (ch != null) {
-                buf.add(new NioSocketChannel(this, ch));
+                buf.add(new NioSocketChannel(this, childEventLoopGroup().next(), ch));
                 return 1;
             }
         } catch (Throwable t) {

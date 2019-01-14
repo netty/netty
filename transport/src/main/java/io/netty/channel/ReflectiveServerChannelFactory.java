@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2018 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,13 +19,14 @@ package io.netty.channel;
 import io.netty.util.internal.StringUtil;
 
 /**
- * A {@link ChannelFactory} that instantiates a new {@link Channel} by invoking its default constructor reflectively.
+ * A {@link ChannelFactory} that instantiates a new {@link ServerChannel} by invoking its default constructor
+ * reflectively.
  */
-public class ReflectiveChannelFactory<T extends Channel> implements ChannelFactory<T> {
+public final class ReflectiveServerChannelFactory<T extends ServerChannel> implements ServerChannelFactory<T> {
 
     private final Class<? extends T> clazz;
 
-    public ReflectiveChannelFactory(Class<? extends T> clazz) {
+    public ReflectiveServerChannelFactory(Class<? extends T> clazz) {
         if (clazz == null) {
             throw new NullPointerException("clazz");
         }
@@ -33,11 +34,12 @@ public class ReflectiveChannelFactory<T extends Channel> implements ChannelFacto
     }
 
     @Override
-    public T newChannel(EventLoop eventLoop) throws Exception {
+    public T newChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
         try {
-            return clazz.getConstructor(EventLoop.class).newInstance(eventLoop);
+            return clazz.getConstructor(EventLoop.class, EventLoopGroup.class)
+                        .newInstance(eventLoop, childEventLoopGroup);
         } catch (Throwable t) {
-            throw new ChannelException("Unable to create Channel from class " + clazz, t);
+            throw new ChannelException("Unable to create ServerChannel from class " + clazz, t);
         }
     }
 

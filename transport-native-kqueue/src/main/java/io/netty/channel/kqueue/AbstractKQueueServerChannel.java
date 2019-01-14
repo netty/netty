@@ -21,7 +21,9 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
@@ -30,13 +32,20 @@ import java.net.SocketAddress;
 @UnstableApi
 public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel implements ServerChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
+    private final EventLoopGroup childEventLoopGroup;
 
-    AbstractKQueueServerChannel(BsdSocket fd) {
-        this(fd, isSoErrorZero(fd));
+    AbstractKQueueServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket fd) {
+        this(eventLoop, childEventLoopGroup, fd, isSoErrorZero(fd));
     }
 
-    AbstractKQueueServerChannel(BsdSocket fd, boolean active) {
-        super(null, fd, active);
+    AbstractKQueueServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket fd, boolean active) {
+        super(null, eventLoop, fd, active);
+        this.childEventLoopGroup = ObjectUtil.checkNotNull(childEventLoopGroup, "childEventLoopGroup");
+    }
+
+    @Override
+    public EventLoopGroup childEventLoopGroup() {
+        return childEventLoopGroup;
     }
 
     @Override

@@ -16,9 +16,11 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannelFactory;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
@@ -29,11 +31,11 @@ import java.util.Map;
 /**
  * Exposes the configuration of an {@link AbstractBootstrap}.
  */
-public abstract class AbstractBootstrapConfig<B extends AbstractBootstrap<B, C>, C extends Channel> {
+public abstract class AbstractBootstrapConfig<B extends AbstractBootstrap<B, C, F>, C extends Channel, F> {
 
     protected final B bootstrap;
 
-    protected AbstractBootstrapConfig(B bootstrap) {
+    AbstractBootstrapConfig(B bootstrap) {
         this.bootstrap = ObjectUtil.checkNotNull(bootstrap, "bootstrap");
     }
 
@@ -45,12 +47,11 @@ public abstract class AbstractBootstrapConfig<B extends AbstractBootstrap<B, C>,
     }
 
     /**
-     * Returns the configured {@link ChannelFactory} or {@code null} if non is configured yet.
+     * Returns the configured {@link ChannelFactory} / {@link ServerChannelFactory} or {@code null}
+     * if non is configured yet.
      */
     @SuppressWarnings("deprecation")
-    public final ChannelFactory<? extends C> channelFactory() {
-        return bootstrap.channelFactory();
-    }
+    public abstract F channelFactory();
 
     /**
      * Returns the configured {@link ChannelHandler} or {@code null} if non is configured yet.
@@ -93,7 +94,7 @@ public abstract class AbstractBootstrapConfig<B extends AbstractBootstrap<B, C>,
                     .append(", ");
         }
         @SuppressWarnings("deprecation")
-        ChannelFactory<? extends C> factory = channelFactory();
+        F factory = channelFactory();
         if (factory != null) {
             buf.append("channelFactory: ")
                     .append(factory)

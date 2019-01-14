@@ -63,9 +63,18 @@ public interface ChannelOutboundHandler extends ChannelHandler {
     void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
 
     /**
+     * Called once a register operation is made to register for IO on the {@link EventLoop}.
+     *
+     * @param ctx               the {@link ChannelHandlerContext} for which the register operation is made
+     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @throws Exception        thrown if an error occurs
+     */
+    void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
+
+    /**
      * Called once a deregister operation is made from the current registered {@link EventLoop}.
      *
-     * @param ctx               the {@link ChannelHandlerContext} for which the close operation is made
+     * @param ctx               the {@link ChannelHandlerContext} for which the deregister operation is made
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error occurs
      */

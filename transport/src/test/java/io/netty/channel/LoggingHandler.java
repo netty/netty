@@ -21,7 +21,7 @@ import java.util.EnumSet;
 
 final class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
-    enum Event { WRITE, FLUSH, BIND, CONNECT, DISCONNECT, CLOSE, DEREGISTER, READ, WRITABILITY,
+    enum Event { WRITE, FLUSH, BIND, CONNECT, DISCONNECT, CLOSE, REGISTER, DEREGISTER, READ, WRITABILITY,
         HANDLER_ADDED, HANDLER_REMOVED, EXCEPTION, READ_COMPLETE, REGISTERED, UNREGISTERED, ACTIVE, INACTIVE,
         USER }
 
@@ -65,6 +65,12 @@ final class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHand
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         log(Event.CLOSE);
         ctx.close(promise);
+    }
+
+    @Override
+    public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        log(Event.REGISTER);
+        ctx.register(promise);
     }
 
     @Override
