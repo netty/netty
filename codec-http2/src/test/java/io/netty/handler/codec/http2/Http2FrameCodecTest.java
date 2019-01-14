@@ -620,6 +620,49 @@ public class Http2FrameCodecTest {
     }
 
     @Test
+    public void multipleNewOutboundStreamsShouldBeBuffered() throws Exception {
+        // We use a limit of 1 and then increase it step by step.
+        setUp(Http2FrameCodecBuilder.forServer().encoderEnforceMaxConcurrentStreams(true),
+                new Http2Settings().maxConcurrentStreams(1));
+
+        Http2FrameStream stream1 = frameCodec.newStream();
+        Http2FrameStream stream2 = frameCodec.newStream();
+        Http2FrameStream stream3 = frameCodec.newStream();
+
+        ChannelPromise promise1 = channel.newPromise();
+        ChannelPromise promise2 = channel.newPromise();
+        ChannelPromise promise3 = channel.newPromise();
+
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream1), promise1);
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2), promise2);
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream3), promise3);
+
+        assertTrue(isStreamIdValid(stream1.id()));
+        channel.runPendingTasks();
+        assertTrue(isStreamIdValid(stream2.id()));
+
+        assertTrue(promise1.syncUninterruptibly().isSuccess());
+        assertFalse(promise2.isDone());
+        assertFalse(promise3.isDone());
+
+        // Increase concurrent streams limit to 2
+        frameInboundWriter.writeInboundSettings(new Http2Settings().maxConcurrentStreams(2));
+        channel.flush();
+
+        // As we increased the limit to 2 we should have also succeed the second frame.
+        assertTrue(promise2.syncUninterruptibly().isSuccess());
+        assertFalse(promise3.isDone());
+
+        frameInboundWriter.writeInboundSettings(new Http2Settings().maxConcurrentStreams(3));
+        channel.flush();
+
+        // With the max streams of 3 all streams should be succeed now.
+        assertTrue(promise3.syncUninterruptibly().isSuccess());
+
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
     public void streamIdentifiersExhausted() throws Http2Exception {
         int maxServerStreamId = Integer.MAX_VALUE - 1;
 
