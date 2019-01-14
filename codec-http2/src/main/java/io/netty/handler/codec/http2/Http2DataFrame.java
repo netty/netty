@@ -37,7 +37,7 @@ public interface Http2DataFrame extends Http2StreamFrame, ByteBufHolder {
     ByteBuf content();
 
     /**
-     * Returns the number of bytes that are flow-controlled initialy, so even if the {@link #content()} is consumed
+     * Returns the number of bytes that are flow-controlled initially, so even if the {@link #content()} is consumed
      * this will not change.
      */
     int initialFlowControlledBytes();

@@ -1199,7 +1199,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // See https://github.com/netty/netty/issues/3900
         if (SSL.bioLengthNonApplication(networkBIO) > 0) {
             if (handshakeException == null && handshakeState != HandshakeState.FINISHED) {
-                // we seems to have data left that needs to be transfered and so the user needs
+                // we seems to have data left that needs to be transferred and so the user needs
                 // call wrap(...). Store the error so we can pick it up later.
                 handshakeException = new SSLHandshakeException(SSL.getErrorString(stackError));
             }
