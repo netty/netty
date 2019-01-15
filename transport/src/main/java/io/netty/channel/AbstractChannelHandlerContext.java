@@ -23,7 +23,9 @@ import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.OrderedEventExecutor;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.ObjectUtil;
@@ -33,6 +35,10 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
+import java.security.AccessController;
+import java.security.PrivilegedExceptionAction;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
@@ -63,8 +69,42 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
      */
     private static final int INIT = 0;
 
-    private final boolean inbound;
-    private final boolean outbound;
+    // Using to mask which methods must be called for a ChannelHandler.
+    private static final int MASK_EXCEPTION_CAUGHT = 1;
+    private static final int MASK_CHANNEL_REGISTERED = 1 << 1;
+    private static final int MASK_CHANNEL_UNREGISTERED = 1 << 2;
+    private static final int MASK_CHANNEL_ACTIVE = 1 << 3;
+    private static final int MASK_CHANNEL_INACTIVE = 1 << 4;
+    private static final int MASK_CHANNEL_READ = 1 << 5;
+    private static final int MASK_CHANNEL_READ_COMPLETE = 1 << 6;
+    private static final int MASK_USER_EVENT_TRIGGERED = 1 << 7;
+    private static final int MASK_CHANNEL_WRITABILITY_CHANGED = 1 << 8;
+    private static final int MASK_BIND = 1 << 9;
+    private static final int MASK_CONNECT = 1 << 10;
+    private static final int MASK_DISCONNECT = 1 << 11;
+    private static final int MASK_CLOSE = 1 << 12;
+    private static final int MASK_REGISTER = 1 << 13;
+    private static final int MASK_DEREGISTER = 1 << 14;
+    private static final int MASK_READ = 1 << 15;
+    private static final int MASK_WRITE = 1 << 16;
+    private static final int MASK_FLUSH = 1 << 17;
+
+    private static final int MASK_ALL_INBOUND = MASK_CHANNEL_REGISTERED |
+            MASK_CHANNEL_UNREGISTERED | MASK_CHANNEL_ACTIVE | MASK_CHANNEL_INACTIVE | MASK_CHANNEL_READ |
+            MASK_CHANNEL_READ_COMPLETE | MASK_USER_EVENT_TRIGGERED | MASK_CHANNEL_WRITABILITY_CHANGED;
+    private static final int MASK_ALL_OUTBOUND = MASK_BIND | MASK_CONNECT | MASK_DISCONNECT |
+            MASK_CLOSE | MASK_REGISTER | MASK_DEREGISTER | MASK_READ | MASK_WRITE | MASK_FLUSH;
+
+    private static final FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>> MASKS =
+            new FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>>() {
+                @Override
+                protected Map<Class<? extends ChannelHandler>, Integer> initialValue() {
+                    return new WeakHashMap<Class<? extends ChannelHandler>, Integer>(32);
+                }
+            };
+
+    private final int executionMask;
+
     private final DefaultChannelPipeline pipeline;
     private final String name;
     private final boolean ordered;
@@ -84,14 +124,120 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     private volatile int handlerState = INIT;
 
     AbstractChannelHandlerContext(DefaultChannelPipeline pipeline, EventExecutor executor, String name,
-                                  boolean inbound, boolean outbound) {
+                                  Class<? extends ChannelHandler> handlerClass) {
         this.name = ObjectUtil.checkNotNull(name, "name");
         this.pipeline = pipeline;
         this.executor = executor;
-        this.inbound = inbound;
-        this.outbound = outbound;
+        this.executionMask = mask(handlerClass);
         // Its ordered if its driven by the EventLoop or the given Executor is an instanceof OrderedEventExecutor.
         ordered = executor == null || executor instanceof OrderedEventExecutor;
+    }
+
+    /**
+     * Return the {@code executionMask}.
+     */
+    private static int mask(Class<? extends ChannelHandler> clazz) {
+        // Try to obtain the mask from the cache first. If this fails calculate it and put it in the cache for fast
+        // lookup in the future.
+        Map<Class<? extends ChannelHandler>, Integer> cache = MASKS.get();
+        Integer mask = cache.get(clazz);
+        if (mask == null) {
+            mask = mask0(clazz);
+            cache.put(clazz, mask);
+        }
+        return mask;
+    }
+
+    /**
+     * Calculate the {@code executionMask}.
+     */
+    private static int mask0(Class<? extends ChannelHandler> handlerType) {
+        int mask = MASK_EXCEPTION_CAUGHT;
+        try {
+            if (isSkippable(handlerType, "exceptionCaught", ChannelHandlerContext.class, Throwable.class)) {
+                mask &= ~MASK_EXCEPTION_CAUGHT;
+            }
+
+            if (ChannelInboundHandler.class.isAssignableFrom(handlerType)) {
+                mask |= MASK_ALL_INBOUND;
+
+                if (isSkippable(handlerType, "channelRegistered", ChannelHandlerContext.class)) {
+                    mask &= ~MASK_CHANNEL_REGISTERED;
+                }
+                if (isSkippable(handlerType, "channelUnregistered", ChannelHandlerContext.class)) {
+                    mask &= ~MASK_CHANNEL_UNREGISTERED;
+                }
+                if (isSkippable(handlerType, "channelActive", ChannelHandlerContext.class)) {
+                    mask &= ~MASK_CHANNEL_ACTIVE;
+                }
+                if (isSkippable(handlerType, "channelInactive", ChannelHandlerContext.class)) {
+                    mask &= ~MASK_CHANNEL_INACTIVE;
+                }
+                if (isSkippable(handlerType, "channelRead", ChannelHandlerContext.class, Object.class)) {
+                    mask &= ~MASK_CHANNEL_READ;
+                }
+                if (isSkippable(handlerType, "channelReadComplete", ChannelHandlerContext.class)) {
+                    mask &= ~MASK_CHANNEL_READ_COMPLETE;
+                }
+                if (isSkippable(handlerType, "channelWritabilityChanged", ChannelHandlerContext.class)) {
+                    mask &= ~MASK_CHANNEL_WRITABILITY_CHANGED;
+                }
+                if (isSkippable(handlerType, "userEventTriggered", ChannelHandlerContext.class, Object.class)) {
+                    mask &= ~MASK_USER_EVENT_TRIGGERED;
+                }
+            }
+            if (ChannelOutboundHandler.class.isAssignableFrom(handlerType)) {
+                mask |= MASK_ALL_OUTBOUND;
+
+                if (isSkippable(handlerType, "bind", ChannelHandlerContext.class,
+                        SocketAddress.class, ChannelPromise.class)) {
+                    mask &= ~MASK_BIND;
+                }
+                if (isSkippable(handlerType, "connect", ChannelHandlerContext.class, SocketAddress.class,
+                        SocketAddress.class, ChannelPromise.class)) {
+                    mask &= ~MASK_CONNECT;
+                }
+                if (isSkippable(handlerType, "disconnect", ChannelHandlerContext.class, ChannelPromise.class)) {
+                    mask &= ~MASK_DISCONNECT;
+                }
+                if (isSkippable(handlerType, "close", ChannelHandlerContext.class, ChannelPromise.class)) {
+                    mask &= ~MASK_CLOSE;
+                }
+                if (isSkippable(handlerType, "register", ChannelHandlerContext.class, ChannelPromise.class)) {
+                    mask &= ~MASK_REGISTER;
+                }
+                if (isSkippable(handlerType, "deregister", ChannelHandlerContext.class, ChannelPromise.class)) {
+                    mask &= ~MASK_DEREGISTER;
+                }
+                if (isSkippable(handlerType, "read", ChannelHandlerContext.class)) {
+                    mask &= ~MASK_READ;
+                }
+                if (isSkippable(handlerType, "write", ChannelHandlerContext.class,
+                        Object.class, ChannelPromise.class)) {
+                    mask &= ~MASK_WRITE;
+                }
+                if (isSkippable(handlerType, "flush", ChannelHandlerContext.class)) {
+                    mask &= ~MASK_FLUSH;
+                }
+            }
+        } catch (Exception e) {
+            // Should never reach here.
+            PlatformDependent.throwException(e);
+        }
+
+        return mask;
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static boolean isSkippable(
+            final Class<?> handlerType, final String methodName, final Class<?>... paramTypes) throws Exception {
+
+        return AccessController.doPrivileged(new PrivilegedExceptionAction<Boolean>() {
+            @Override
+            public Boolean run() throws Exception {
+                return handlerType.getMethod(methodName, paramTypes).isAnnotationPresent(ChannelHandler.Skip.class);
+            }
+        });
     }
 
     @Override
@@ -125,7 +271,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireChannelRegistered() {
-        invokeChannelRegistered(findContextInbound());
+        invokeChannelRegistered(findContextInbound(MASK_CHANNEL_REGISTERED));
         return this;
     }
 
@@ -157,7 +303,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireChannelUnregistered() {
-        invokeChannelUnregistered(findContextInbound());
+        invokeChannelUnregistered(findContextInbound(MASK_CHANNEL_UNREGISTERED));
         return this;
     }
 
@@ -189,7 +335,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireChannelActive() {
-        invokeChannelActive(findContextInbound());
+        invokeChannelActive(findContextInbound(MASK_CHANNEL_ACTIVE));
         return this;
     }
 
@@ -221,7 +367,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireChannelInactive() {
-        invokeChannelInactive(findContextInbound());
+        invokeChannelInactive(findContextInbound(MASK_CHANNEL_INACTIVE));
         return this;
     }
 
@@ -253,7 +399,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireExceptionCaught(final Throwable cause) {
-        invokeExceptionCaught(next, cause);
+        invokeExceptionCaught(findContextInbound(MASK_EXCEPTION_CAUGHT), cause);
         return this;
     }
 
@@ -304,7 +450,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireUserEventTriggered(final Object event) {
-        invokeUserEventTriggered(findContextInbound(), event);
+        invokeUserEventTriggered(findContextInbound(MASK_USER_EVENT_TRIGGERED), event);
         return this;
     }
 
@@ -337,7 +483,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireChannelRead(final Object msg) {
-        invokeChannelRead(findContextInbound(), msg);
+        invokeChannelRead(findContextInbound(MASK_CHANNEL_READ), msg);
         return this;
     }
 
@@ -370,7 +516,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireChannelReadComplete() {
-        invokeChannelReadComplete(findContextInbound());
+        invokeChannelReadComplete(findContextInbound(MASK_CHANNEL_READ_COMPLETE));
         return this;
     }
 
@@ -406,7 +552,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireChannelWritabilityChanged() {
-        invokeChannelWritabilityChanged(findContextInbound());
+        invokeChannelWritabilityChanged(findContextInbound(MASK_CHANNEL_WRITABILITY_CHANGED));
         return this;
     }
 
@@ -485,7 +631,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
             return promise;
         }
 
-        final AbstractChannelHandlerContext next = findContextOutbound();
+        final AbstractChannelHandlerContext next = findContextOutbound(MASK_BIND);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeBind(localAddress, promise);
@@ -529,7 +675,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
             return promise;
         }
 
-        final AbstractChannelHandlerContext next = findContextOutbound();
+        final AbstractChannelHandlerContext next = findContextOutbound(MASK_CONNECT);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeConnect(remoteAddress, localAddress, promise);
@@ -563,7 +709,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
             return promise;
         }
 
-        final AbstractChannelHandlerContext next = findContextOutbound();
+        final AbstractChannelHandlerContext next = findContextOutbound(MASK_DISCONNECT);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
@@ -607,7 +753,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
             return promise;
         }
 
-        final AbstractChannelHandlerContext next = findContextOutbound();
+        final AbstractChannelHandlerContext next = findContextOutbound(MASK_CLOSE);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeClose(promise);
@@ -642,7 +788,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
             return promise;
         }
 
-        final AbstractChannelHandlerContext next = findContextOutbound();
+        final AbstractChannelHandlerContext next = findContextOutbound(MASK_REGISTER);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeRegister(promise);
@@ -677,7 +823,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
             return promise;
         }
 
-        final AbstractChannelHandlerContext next = findContextOutbound();
+        final AbstractChannelHandlerContext next = findContextOutbound(MASK_DEREGISTER);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeDeregister(promise);
@@ -707,7 +853,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext read() {
-        final AbstractChannelHandlerContext next = findContextOutbound();
+        final AbstractChannelHandlerContext next = findContextOutbound(MASK_READ);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeRead();
@@ -783,7 +929,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext flush() {
-        final AbstractChannelHandlerContext next = findContextOutbound();
+        final AbstractChannelHandlerContext next = findContextOutbound(MASK_FLUSH);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeFlush();
@@ -846,7 +992,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void write(Object msg, boolean flush, ChannelPromise promise) {
-        AbstractChannelHandlerContext next = findContextOutbound();
+        final AbstractChannelHandlerContext next = findContextOutbound(flush ? (MASK_WRITE | MASK_FLUSH) : MASK_WRITE);
         final Object m = pipeline.touch(msg, next);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
@@ -977,19 +1123,19 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         return false;
     }
 
-    private AbstractChannelHandlerContext findContextInbound() {
+    private AbstractChannelHandlerContext findContextInbound(int mask) {
         AbstractChannelHandlerContext ctx = this;
         do {
             ctx = ctx.next;
-        } while (!ctx.inbound);
+        } while ((ctx.executionMask & mask) == 0);
         return ctx;
     }
 
-    private AbstractChannelHandlerContext findContextOutbound() {
+    private AbstractChannelHandlerContext findContextOutbound(int mask) {
         AbstractChannelHandlerContext ctx = this;
         do {
             ctx = ctx.prev;
-        } while (!ctx.outbound);
+        } while ((ctx.executionMask & mask) == 0);
         return ctx;
     }
 
