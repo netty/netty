@@ -1452,8 +1452,8 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         if (a.length() != b.length()) {
             return false;
         }
-        for (int i = 0, j = 0; i < a.length(); ++i, ++j) {
-            if (!equalsIgnoreCase(a.charAt(i),  b.charAt(j))) {
+        for (int i = 0; i < a.length(); ++i) {
+            if (!equalsIgnoreCase(a.charAt(i),  b.charAt(i))) {
                 return false;
             }
         }
