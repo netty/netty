@@ -31,17 +31,8 @@ public class AbstractChannelTest {
         EventLoop eventLoop = mock(EventLoop.class);
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
-        when(eventLoop.unsafe()).thenReturn(new EventLoop.Unsafe() {
-            @Override
-            public void register(Channel channel) {
-                // NOOP
-            }
+        when(eventLoop.unsafe()).thenReturn(mock(EventLoop.Unsafe.class));
 
-            @Override
-            public void deregister(Channel channel) {
-                // NOOP
-            }
-        });
         TestChannel channel = new TestChannel(eventLoop);
         ChannelInboundHandler handler = mock(ChannelInboundHandler.class);
         channel.pipeline().addLast(handler);
@@ -58,17 +49,7 @@ public class AbstractChannelTest {
         final EventLoop eventLoop = mock(EventLoop.class);
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
-        when(eventLoop.unsafe()).thenReturn(new EventLoop.Unsafe() {
-            @Override
-            public void register(Channel channel) {
-                // NOOP
-            }
-
-            @Override
-            public void deregister(Channel channel) {
-                // NOOP
-            }
-        });
+        when(eventLoop.unsafe()).thenReturn(mock(EventLoop.Unsafe.class));
 
         doAnswer(new Answer() {
             @Override

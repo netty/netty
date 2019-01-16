@@ -18,13 +18,11 @@ package io.netty.channel.local;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SingleThreadEventLoop;
-import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.internal.StringUtil;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.ThreadFactory;
 
-public class LocalEventLoop extends SingleThreadEventLoop {
+class LocalEventLoop extends SingleThreadEventLoop {
 
     private static LocalChannelUnsafe cast(Channel channel) {
         Channel.Unsafe unsafe = channel.unsafe();
@@ -48,27 +46,7 @@ public class LocalEventLoop extends SingleThreadEventLoop {
         }
     };
 
-    public LocalEventLoop() {
-        this((EventLoopGroup) null);
-    }
-
-    public LocalEventLoop(ThreadFactory threadFactory) {
-        this(null, threadFactory);
-    }
-
-    public LocalEventLoop(Executor executor) {
-        this(null, executor);
-    }
-
-    public LocalEventLoop(EventLoopGroup parent) {
-        this(parent, new DefaultThreadFactory(LocalEventLoop.class));
-    }
-
-    public LocalEventLoop(EventLoopGroup parent, ThreadFactory threadFactory) {
-        super(parent, threadFactory, true);
-    }
-
-    public LocalEventLoop(EventLoopGroup parent, Executor executor) {
+    LocalEventLoop(EventLoopGroup parent, Executor executor) {
         super(parent, executor, true);
     }
 

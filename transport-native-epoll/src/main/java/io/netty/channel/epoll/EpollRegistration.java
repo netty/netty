@@ -19,9 +19,28 @@ import io.netty.channel.unix.IovArray;
 
 import java.io.IOException;
 
+/**
+ * Registration with an {@link EpollEventLoop}.
+ */
 interface EpollRegistration {
+
+    /**
+     * Update the registration as some flags did change.
+     */
     void update() throws IOException;
+
+    /**
+     * Remove the registration. No more IO will be handled for it.
+     */
     void remove() throws IOException;
+
+    /**
+     * Returns an {@link IovArray} that can be used for {@code writev}.
+     */
     IovArray cleanIovArray();
+
+    /**
+     * Returns a {@link NativeDatagramPacketArray} that can used for {@code sendmmsg}.
+     */
     NativeDatagramPacketArray cleanDatagramPacketArray();
 }

@@ -17,7 +17,19 @@ package io.netty.channel.kqueue;
 
 import io.netty.channel.unix.IovArray;
 
+
+/**
+ * Registration with an {@link KQueueEventLoop}.
+ */
 interface KQueueRegistration {
+
+    /**
+     * Update the event-set for the registration.
+     */
     void evSet(short filter, short flags, int fflags);
+
+    /**
+     * Returns an {@link IovArray} that can be used for {@code writev}.
+     */
     IovArray cleanArray();
 }

@@ -64,6 +64,7 @@ public class LocalEventLoopGroup extends MultithreadEventLoopGroup {
 
     @Override
     protected EventLoop newChild(Executor executor, Object... args) throws Exception {
+        assert args == null || args.length == 0;
         return new LocalEventLoop(this, executor);
     }
 }

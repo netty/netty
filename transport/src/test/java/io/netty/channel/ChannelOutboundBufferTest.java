@@ -18,7 +18,7 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.local.LocalEventLoop;
+import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
@@ -138,7 +138,7 @@ public class ChannelOutboundBufferTest {
         private final ChannelConfig config = new DefaultChannelConfig(this);
 
         TestChannel() {
-            super(null, new LocalEventLoop());
+            super(null, new LocalEventLoopGroup(1).next());
         }
 
         @Override

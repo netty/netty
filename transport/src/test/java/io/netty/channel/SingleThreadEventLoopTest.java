@@ -521,7 +521,17 @@ public class SingleThreadEventLoopTest {
 
         @Override
         public Unsafe unsafe() {
-            return null;
+            return new Unsafe() {
+                @Override
+                public void register(Channel channel)  {
+                    // NOOP
+                }
+
+                @Override
+                public void deregister(Channel channel) {
+                    // NOOP
+                }
+            };
         }
     }
 }
