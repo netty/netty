@@ -595,19 +595,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         gracefulShutdownQuietPeriod = unit.toNanos(quietPeriod);
         gracefulShutdownTimeout = unit.toNanos(timeout);
 
-        if (oldState == ST_NOT_STARTED) {
-            try {
-                doStartThread();
-            } catch (Throwable cause) {
-                STATE_UPDATER.set(this, ST_TERMINATED);
-                terminationFuture.tryFailure(cause);
-
-                if (!(cause instanceof Exception)) {
-                    // Also rethrow as it may be an OOME for example
-                    PlatformDependent.throwException(cause);
-                }
-                return terminationFuture;
-            }
+        if (ensureThreadStarted(oldState)) {
+            return terminationFuture;
         }
 
         if (wakeup) {
@@ -658,19 +647,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             }
         }
 
-        if (oldState == ST_NOT_STARTED) {
-            try {
-                doStartThread();
-            } catch (Throwable cause) {
-                STATE_UPDATER.set(this, ST_TERMINATED);
-                terminationFuture.tryFailure(cause);
-
-                if (!(cause instanceof Exception)) {
-                    // Also rethrow as it may be an OOME for example
-                    PlatformDependent.throwException(cause);
-                }
-                return;
-            }
+        if (ensureThreadStarted(oldState)) {
+            return;
         }
 
         if (wakeup) {
@@ -891,6 +869,24 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 }
             }
         }
+    }
+
+    private boolean ensureThreadStarted(int oldState) {
+        if (oldState == ST_NOT_STARTED) {
+            try {
+                doStartThread();
+            } catch (Throwable cause) {
+                STATE_UPDATER.set(this, ST_TERMINATED);
+                terminationFuture.tryFailure(cause);
+
+                if (!(cause instanceof Exception)) {
+                    // Also rethrow as it may be an OOME for example
+                    PlatformDependent.throwException(cause);
+                }
+                return true;
+            }
+        }
+        return false;
     }
 
     private void doStartThread() {
