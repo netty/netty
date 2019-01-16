@@ -32,8 +32,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -379,13 +377,9 @@ class EpollEventLoop extends SingleThreadEventLoop {
         }
         // Using the intermediate collection to prevent ConcurrentModificationException.
         // In the `close()` method, the channel is deleted from `channels` map.
-        Collection<AbstractEpollChannel> array = new ArrayList<AbstractEpollChannel>(channels.size());
+        AbstractEpollChannel[] localChannels = channels.values().toArray(new AbstractEpollChannel[0]);
 
-        for (AbstractEpollChannel channel: channels.values()) {
-            array.add(channel);
-        }
-
-        for (AbstractEpollChannel ch: array) {
+        for (AbstractEpollChannel ch : localChannels) {
             ch.unsafe().close(ch.unsafe().voidPromise());
         }
     }
