@@ -416,13 +416,13 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
                         //
                         // See https://github.com/netty/netty/issues/8707.
                         padding = dataSize = 0;
-                        return;
+                    } else {
+                        // There's no need to write any data frames because there are only empty data frames in the
+                        // queue and it is not end of stream yet. Just complete their promises by getting the buffer
+                        // corresponding to 0 bytes and writing it to the channel (to preserve notification order).
+                        ChannelPromise writePromise = ctx.newPromise().addListener(this);
+                        ctx.write(queue.remove(0, writePromise), writePromise);
                     }
-                    // There's no need to write any data frames because there are only empty data frames in the queue
-                    // and it is not end of stream yet. Just complete their promises by getting the buffer corresponding
-                    // to 0 bytes and writing it to the channel (to preserve notification order).
-                    ChannelPromise writePromise = ctx.newPromise().addListener(this);
-                    ctx.write(queue.remove(0, writePromise), writePromise);
                     return;
                 }
 
