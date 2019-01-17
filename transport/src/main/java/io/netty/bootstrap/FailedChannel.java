@@ -39,11 +39,6 @@ final class FailedChannel extends AbstractChannel {
     }
 
     @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return true;
-    }
-
-    @Override
     protected SocketAddress localAddress0() {
         return null;
     }

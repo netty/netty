@@ -16,15 +16,19 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.AbstractNioChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.util.concurrent.AbstractEventExecutor;
+import io.netty.util.concurrent.Future;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.channels.NetworkChannel;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
@@ -83,5 +87,88 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
             channel.close().syncUninterruptibly();
             eventLoopGroup.shutdownGracefully();
         }
+    }
+
+    @Test
+    public void testWrapping() {
+        final NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(1);
+        final EventLoop eventLoop = eventLoopGroup.next();
+
+        class WrappedEventLoop extends AbstractEventExecutor implements EventLoop {
+            private final EventLoop eventLoop;
+
+            WrappedEventLoop(EventLoop eventLoop) {
+                super(eventLoop.parent());
+                this.eventLoop = eventLoop;
+            }
+
+            @Test
+            public EventLoopGroup parent() {
+                return eventLoop.parent();
+            }
+
+            @Test
+            public EventLoop next() {
+                return this;
+            }
+
+            @Override
+            public Unsafe unsafe() {
+                return eventLoop.unsafe();
+            }
+
+            @Override
+            public void shutdown() {
+                eventLoop.shutdown();
+            }
+
+            @Override
+            public boolean inEventLoop(Thread thread) {
+                return eventLoop.inEventLoop(thread);
+            }
+
+            @Override
+            public boolean isShuttingDown() {
+                return eventLoop.isShuttingDown();
+            }
+
+            @Override
+            public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+                return eventLoop.shutdownGracefully(quietPeriod, timeout, unit);
+            }
+
+            @Override
+            public Future<?> terminationFuture() {
+                return eventLoop.terminationFuture();
+            }
+
+            @Override
+            public boolean isShutdown() {
+                return eventLoop.isShutdown();
+            }
+
+            @Override
+            public boolean isTerminated() {
+                return eventLoop.isTerminated();
+            }
+
+            @Override
+            public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+                return eventLoop.awaitTermination(timeout, unit);
+            }
+
+            @Override
+            public void execute(Runnable command) {
+                eventLoop.execute(command);
+            }
+        }
+
+        EventLoop wrapped = new WrappedEventLoop(eventLoop);
+        T channel = newNioChannel(wrapped);
+        channel.register().syncUninterruptibly();
+
+        assertSame(wrapped, channel.eventLoop());
+        channel.close().syncUninterruptibly();
+        eventLoopGroup.shutdownGracefully();
     }
 }

@@ -15,7 +15,7 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import org.junit.Test;
@@ -29,7 +29,7 @@ public class DefaultDnsCnameCacheTest {
 
     @Test
     public void testExpire() throws Throwable {
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new LocalEventLoopGroup(1);
 
         try {
             EventLoop loop = group.next();
@@ -63,7 +63,7 @@ public class DefaultDnsCnameCacheTest {
     }
 
     private static void testExpireWithTTL0(int days) {
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new LocalEventLoopGroup(1);
 
         try {
             EventLoop loop = group.next();
@@ -77,7 +77,7 @@ public class DefaultDnsCnameCacheTest {
 
     @Test
     public void testMultipleCnamesForSameHostname() throws Exception {
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new LocalEventLoopGroup(1);
 
         try {
             EventLoop loop = group.next();
@@ -93,7 +93,7 @@ public class DefaultDnsCnameCacheTest {
 
     @Test
     public void testAddSameCnameForSameHostname() throws Exception {
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new LocalEventLoopGroup(1);
 
         try {
             EventLoop loop = group.next();
@@ -109,7 +109,7 @@ public class DefaultDnsCnameCacheTest {
 
     @Test
     public void testClear() throws Exception {
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new LocalEventLoopGroup(1);
 
         try {
             EventLoop loop = group.next();

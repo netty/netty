@@ -62,11 +62,6 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
     }
 
     @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof EpollEventLoop;
-    }
-
-    @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         super.doBind(localAddress);
         if (Native.IS_SUPPORTING_TCP_FASTOPEN && config.getTcpFastopen() > 0) {

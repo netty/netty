@@ -271,7 +271,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             try {
                 // Check if sendmmsg(...) is supported which is only the case for GLIBC 2.14+
                 if (Native.IS_SUPPORTING_SENDMMSG && in.size() > 1) {
-                    NativeDatagramPacketArray array = ((EpollEventLoop) eventLoop()).cleanDatagramPacketArray();
+                    NativeDatagramPacketArray array = registration().cleanDatagramPacketArray();
                     in.forEachFlushedMessage(array);
                     int cnt = array.count();
 
@@ -349,7 +349,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         remoteAddress.getAddress(), remoteAddress.getPort());
             }
         } else if (data.nioBufferCount() > 1) {
-            IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
+            IovArray array = registration().cleanIovArray();
             array.add(data);
             int cnt = array.count();
             assert cnt != 0;

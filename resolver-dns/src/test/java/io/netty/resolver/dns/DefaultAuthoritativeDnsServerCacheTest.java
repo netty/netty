@@ -15,7 +15,7 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -25,7 +25,6 @@ import org.junit.Test;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Comparator;
-import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -39,7 +38,7 @@ public class DefaultAuthoritativeDnsServerCacheTest {
                 InetAddress.getByAddress("ns1", new byte[] { 10, 0, 0, 1 }), 53);
         InetSocketAddress resolved2 = new InetSocketAddress(
                 InetAddress.getByAddress("ns2", new byte[] { 10, 0, 0, 2 }), 53);
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new LocalEventLoopGroup(1);
 
         try {
             EventLoop loop = group.next();
@@ -91,7 +90,7 @@ public class DefaultAuthoritativeDnsServerCacheTest {
                 InetAddress.getByAddress("ns1", new byte[] { 10, 0, 0, 1 }), 53);
         InetSocketAddress resolved2 = new InetSocketAddress(
                 InetAddress.getByAddress("ns2", new byte[] { 10, 0, 0, 2 }), 53);
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new LocalEventLoopGroup(1);
 
         try {
             EventLoop loop = group.next();
@@ -115,7 +114,7 @@ public class DefaultAuthoritativeDnsServerCacheTest {
                 InetAddress.getByAddress("ns2", new byte[] { 10, 0, 0, 2 }), 53);
         InetSocketAddress resolved2 = new InetSocketAddress(
                 InetAddress.getByAddress("ns1", new byte[] { 10, 0, 0, 1 }), 53);
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new LocalEventLoopGroup(1);
 
         try {
             EventLoop loop = group.next();
@@ -153,7 +152,7 @@ public class DefaultAuthoritativeDnsServerCacheTest {
         InetSocketAddress unresolved = InetSocketAddress.createUnresolved("ns1", 53);
         InetSocketAddress resolved = new InetSocketAddress(
                 InetAddress.getByAddress("ns2", new byte[] { 10, 0, 0, 2 }), 53);
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new LocalEventLoopGroup(1);
 
         try {
             EventLoop loop = group.next();

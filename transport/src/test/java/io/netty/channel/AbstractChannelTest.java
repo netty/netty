@@ -31,6 +31,7 @@ public class AbstractChannelTest {
         EventLoop eventLoop = mock(EventLoop.class);
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
+        when(eventLoop.unsafe()).thenReturn(mock(EventLoop.Unsafe.class));
 
         TestChannel channel = new TestChannel(eventLoop);
         ChannelInboundHandler handler = mock(ChannelInboundHandler.class);
@@ -48,6 +49,7 @@ public class AbstractChannelTest {
         final EventLoop eventLoop = mock(EventLoop.class);
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
+        when(eventLoop.unsafe()).thenReturn(mock(EventLoop.Unsafe.class));
 
         doAnswer(new Answer() {
             @Override
@@ -124,11 +126,6 @@ public class AbstractChannelTest {
         @Override
         protected AbstractUnsafe newUnsafe() {
             return new TestUnsafe();
-        }
-
-        @Override
-        protected boolean isCompatible(EventLoop loop) {
-            return true;
         }
 
         @Override

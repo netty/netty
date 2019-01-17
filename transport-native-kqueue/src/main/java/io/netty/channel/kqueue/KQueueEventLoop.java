@@ -15,6 +15,7 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SelectStrategy;
@@ -28,6 +29,7 @@ import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -70,6 +72,43 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
     private volatile int wakenUp;
     private volatile int ioRatio = 50;
 
+    private static AbstractKQueueChannel cast(Channel channel) {
+        if (channel instanceof AbstractKQueueChannel) {
+            return (AbstractKQueueChannel) channel;
+        }
+        throw new IllegalArgumentException("Channel of type " + StringUtil.simpleClassName(channel) + " not supported");
+    }
+
+    private final Unsafe unsafe = new Unsafe() {
+        @Override
+        public void register(Channel channel) {
+            assert inEventLoop();
+            final AbstractKQueueChannel kQueueChannel = cast(channel);
+            final int id = kQueueChannel.fd().intValue();
+            channels.put(id, kQueueChannel);
+
+            kQueueChannel.register0(new KQueueRegistration() {
+                @Override
+                public void evSet(short filter, short flags, int fflags) {
+                    KQueueEventLoop.this.evSet(kQueueChannel, filter, flags, fflags);
+                }
+
+                @Override
+                public IovArray cleanArray() {
+                    return KQueueEventLoop.this.cleanArray();
+                }
+            });
+        }
+
+        @Override
+        public void deregister(Channel channel) throws Exception {
+            assert inEventLoop();
+            AbstractKQueueChannel kQueueChannel = cast(channel);
+            channels.remove(kQueueChannel.fd().intValue());
+            kQueueChannel.deregister0();
+        }
+    };
+
     KQueueEventLoop(EventLoopGroup parent, Executor executor, int maxEvents,
                     SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler) {
         super(parent, executor, false, DEFAULT_MAX_PENDING_TASKS, rejectedExecutionHandler);
@@ -90,24 +129,19 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    void add(AbstractKQueueChannel ch) {
-        assert inEventLoop();
-        channels.put(ch.fd().intValue(), ch);
+    @Override
+    public Unsafe unsafe() {
+        return unsafe;
     }
 
-    void evSet(AbstractKQueueChannel ch, short filter, short flags, int fflags) {
+    private void evSet(AbstractKQueueChannel ch, short filter, short flags, int fflags) {
         changeList.evSet(ch, filter, flags, fflags);
-    }
-
-    void remove(AbstractKQueueChannel ch) {
-        assert inEventLoop();
-        channels.remove(ch.fd().intValue());
     }
 
     /**
      * Return a cleared {@link IovArray} that can be used for writes in this {@link EventLoop}.
      */
-    IovArray cleanArray() {
+    private IovArray cleanArray() {
         iovArray.clear();
         return iovArray;
     }
@@ -167,7 +201,7 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
                 // This may happen if the channel has already been closed, and it will be removed from kqueue anyways.
                 // We also handle EV_ERROR above to skip this even early if it is a result of a referencing a closed and
                 // thus removed from kqueue FD.
-                logger.warn("events[{}]=[{}, {}] had no channel!", i, eventList.fd(i), filter);
+                logger.warn("events[{}]=[{}, {}] had no channel!", i, fd, filter);
                 continue;
             }
 

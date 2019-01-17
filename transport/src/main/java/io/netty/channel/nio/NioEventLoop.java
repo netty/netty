@@ -17,7 +17,6 @@ package io.netty.channel.nio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
-import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopException;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SingleThreadEventLoop;
@@ -25,6 +24,7 @@ import io.netty.util.IntSupplier;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReflectionUtil;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -115,6 +115,46 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private SelectedSelectionKeySet selectedKeys;
 
     private final SelectorProvider provider;
+
+    private static AbstractNioChannel cast(Channel channel) {
+        if (channel instanceof AbstractNioChannel) {
+            return (AbstractNioChannel) channel;
+        }
+        throw new IllegalArgumentException("Channel of type " + StringUtil.simpleClassName(channel) + " not supported");
+    }
+
+    private final Unsafe unsafe = new Unsafe() {
+        @Override
+        public void register(Channel channel) throws Exception {
+            assert inEventLoop();
+            AbstractNioChannel nioChannel = cast(channel);
+            boolean selected = false;
+            for (;;) {
+                try {
+                    nioChannel.selectionKey = nioChannel.javaChannel().register(unwrappedSelector(), 0, nioChannel);
+                    return;
+                } catch (CancelledKeyException e) {
+                    if (!selected) {
+                        // Force the Selector to select now as the "canceled" SelectionKey may still be
+                        // cached and not removed because no Select.select(..) operation was called yet.
+                        selectNow();
+                        selected = true;
+                    } else {
+                        // We forced a select operation on the selector before but the SelectionKey is still cached
+                        // for whatever reason. JDK bug ?
+                        throw e;
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void deregister(Channel channel) {
+            assert inEventLoop();
+            AbstractNioChannel nioChannel = cast(channel);
+            cancel(nioChannel.selectionKey());
+        }
+    };
 
     /**
      * Boolean that controls determines if a blocked Selector.select should
@@ -261,6 +301,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
      */
     public SelectorProvider selectorProvider() {
         return provider;
+    }
+
+    @Override
+    public Unsafe unsafe() {
+        return unsafe;
     }
 
     @Override

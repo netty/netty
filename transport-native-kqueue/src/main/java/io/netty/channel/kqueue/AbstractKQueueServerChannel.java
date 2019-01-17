@@ -54,11 +54,6 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
     }
 
     @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof KQueueEventLoop;
-    }
-
-    @Override
     protected InetSocketAddress remoteAddress0() {
         return null;
     }

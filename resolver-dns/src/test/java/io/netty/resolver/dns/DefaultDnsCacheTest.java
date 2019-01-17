@@ -15,7 +15,7 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 
@@ -40,7 +40,7 @@ public class DefaultDnsCacheTest {
     public void testExpire() throws Throwable {
         InetAddress addr1 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 1 });
         InetAddress addr2 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 2 });
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new LocalEventLoopGroup(1);
 
         try {
             EventLoop loop = group.next();
@@ -103,7 +103,7 @@ public class DefaultDnsCacheTest {
     public void testAddMultipleAddressesForSameHostname() throws Exception {
         InetAddress addr1 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 1 });
         InetAddress addr2 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 2 });
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new LocalEventLoopGroup(1);
 
         try {
             EventLoop loop = group.next();
@@ -123,7 +123,7 @@ public class DefaultDnsCacheTest {
     @Test
     public void testAddSameAddressForSameHostname() throws Exception {
         InetAddress addr1 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 1 });
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new LocalEventLoopGroup(1);
 
         try {
             EventLoop loop = group.next();
@@ -148,7 +148,7 @@ public class DefaultDnsCacheTest {
     public void testCacheFailed() throws Exception {
         InetAddress addr1 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 1 });
         InetAddress addr2 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 2 });
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new LocalEventLoopGroup(1);
 
         try {
             EventLoop loop = group.next();
@@ -177,7 +177,7 @@ public class DefaultDnsCacheTest {
     public void testDotHandling() throws Exception {
         InetAddress addr1 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 1 });
         InetAddress addr2 = InetAddress.getByAddress(new byte[] { 10, 0, 0, 2 });
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new LocalEventLoopGroup(1);
 
         try {
             EventLoop loop = group.next();

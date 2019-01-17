@@ -20,6 +20,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 
@@ -34,7 +35,7 @@ class BaseChannelTest {
     }
 
     ServerBootstrap getLocalServerBootstrap() {
-        EventLoopGroup serverGroup = new DefaultEventLoopGroup();
+        EventLoopGroup serverGroup = new LocalEventLoopGroup();
         ServerBootstrap sb = new ServerBootstrap();
         sb.group(serverGroup);
         sb.channel(LocalServerChannel.class);
@@ -48,7 +49,7 @@ class BaseChannelTest {
     }
 
     Bootstrap getLocalClientBootstrap() {
-        EventLoopGroup clientGroup = new DefaultEventLoopGroup();
+        EventLoopGroup clientGroup = new LocalEventLoopGroup();
         Bootstrap cb = new Bootstrap();
         cb.channel(LocalChannel.class);
         cb.group(clientGroup);

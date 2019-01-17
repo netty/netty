@@ -321,7 +321,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
                         remoteAddress.getAddress(), remoteAddress.getPort());
             }
         } else if (data.nioBufferCount() > 1) {
-            IovArray array = ((KQueueEventLoop) eventLoop()).cleanArray();
+            IovArray array = registration().cleanArray();
             array.add(data);
             int cnt = array.count();
             assert cnt != 0;

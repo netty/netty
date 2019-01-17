@@ -15,10 +15,12 @@
  */
 package io.netty.channel.embedded;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.AbstractScheduledEventExecutor;
 import io.netty.util.concurrent.Future;
+import io.netty.util.internal.StringUtil;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -27,6 +29,31 @@ import java.util.concurrent.TimeUnit;
 final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements EventLoop {
 
     private final Queue<Runnable> tasks = new ArrayDeque<Runnable>(2);
+
+    private static EmbeddedChannel cast(Channel channel) {
+        if (channel instanceof EmbeddedChannel) {
+            return (EmbeddedChannel) channel;
+        }
+        throw new IllegalArgumentException("Channel of type " + StringUtil.simpleClassName(channel) + " not supported");
+    }
+
+    private final Unsafe unsafe = new Unsafe() {
+        @Override
+        public void register(Channel channel) {
+            assert inEventLoop();
+            cast(channel).setActive();
+        }
+
+        @Override
+        public void deregister(Channel channel) {
+            assert inEventLoop();
+        }
+    };
+
+    @Override
+    public Unsafe unsafe() {
+        return unsafe;
+    }
 
     @Override
     public EventLoopGroup parent() {

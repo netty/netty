@@ -18,14 +18,13 @@ package io.netty.channel.local;
 import io.netty.channel.AbstractServerChannel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
-import io.netty.channel.SingleThreadEventLoop;
-import io.netty.util.concurrent.SingleThreadEventExecutor;
 
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
@@ -80,18 +79,8 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof SingleThreadEventLoop;
-    }
-
-    @Override
     protected SocketAddress localAddress0() {
         return localAddress;
-    }
-
-    @Override
-    protected void doRegister() throws Exception {
-        ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
     }
 
     @Override
@@ -110,11 +99,6 @@ public class LocalServerChannel extends AbstractServerChannel {
             }
             state = 2;
         }
-    }
-
-    @Override
-    protected void doDeregister() throws Exception {
-        ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
     }
 
     @Override
@@ -177,6 +161,28 @@ public class LocalServerChannel extends AbstractServerChannel {
             acceptInProgress = false;
 
             readInbound();
+        }
+    }
+
+    @Override
+    protected AbstractUnsafe newUnsafe() {
+        return new DefaultServerUnsafe();
+    }
+
+    private final class DefaultServerUnsafe extends AbstractUnsafe implements LocalChannelUnsafe {
+        @Override
+        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+            safeSetFailure(promise, new UnsupportedOperationException());
+        }
+
+        @Override
+        public void register0(LocalEventLoop eventLoop) {
+            eventLoop.addShutdownHook(shutdownHook);
+        }
+
+        @Override
+        public void deregister0(LocalEventLoop eventLoop) {
+            eventLoop.removeShutdownHook(shutdownHook);
         }
     }
 }
