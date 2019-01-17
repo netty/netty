@@ -7,7 +7,7 @@ services:
     build:
       args:
         centos_version : "6"
-        java_version : "1.8.192"
+        java_version : "1.8.202"
 
   test:
     image: netty:centos-6-1.8
