@@ -126,6 +126,8 @@
         <enforcer.plugin.version>3.0.0-M1</enforcer.plugin.version>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
+        <!-- pax-exam does not work on latest Java11 build -->
+        <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
     </profile>
 
