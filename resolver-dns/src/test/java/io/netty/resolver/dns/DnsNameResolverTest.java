@@ -1143,7 +1143,7 @@ public class DnsNameResolverTest {
                     new TestRecursiveCacheDnsQueryLifecycleObserverFactory();
 
             DnsNameResolverBuilder builder = new DnsNameResolverBuilder(group.next())
-                    .resolvedAddressTypes(ResolvedAddressTypes.IPV6_PREFERRED)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                     .dnsQueryLifecycleObserverFactory(lifecycleObserverFactory)
                     .channelType(NioDatagramChannel.class)
                     .optResourceEnabled(false)
@@ -1156,17 +1156,11 @@ public class DnsNameResolverTest {
 
             TestDnsQueryLifecycleObserver observer = lifecycleObserverFactory.observers.poll();
             assertNotNull(observer);
-            assertEquals(2, lifecycleObserverFactory.observers.size());
+            assertEquals(1, lifecycleObserverFactory.observers.size());
             assertEquals(2, observer.events.size());
             QueryWrittenEvent writtenEvent = (QueryWrittenEvent) observer.events.poll();
             assertEquals(dnsServer1.localAddress(), writtenEvent.dnsServerAddress);
             QueryFailedEvent failedEvent = (QueryFailedEvent) observer.events.poll();
-
-            observer = lifecycleObserverFactory.observers.poll();
-            assertEquals(2, observer.events.size());
-            writtenEvent = (QueryWrittenEvent) observer.events.poll();
-            assertEquals(dnsServer1.localAddress(), writtenEvent.dnsServerAddress);
-            failedEvent = (QueryFailedEvent) observer.events.poll();
 
             observer = lifecycleObserverFactory.observers.poll();
             assertEquals(2, observer.events.size());
