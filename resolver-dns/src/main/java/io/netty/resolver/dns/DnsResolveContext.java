@@ -497,6 +497,29 @@ abstract class DnsResolveContext<T> {
                       queryLifecycleObserver.queryNoAnswer(code), true, promise, null);
             } else {
                 queryLifecycleObserver.queryFailed(NXDOMAIN_QUERY_FAILED_EXCEPTION);
+
+                // Try with the next server if is not authoritative for the domain.
+                //
+                // From https://tools.ietf.org/html/rfc1035 :
+                //
+                //   RCODE        Response code - this 4 bit field is set as part of
+                //                responses.  The values have the following
+                //                interpretation:
+                //
+                //                ....
+                //                ....
+                //
+                //                3               Name Error - Meaningful only for
+                //                                responses from an authoritative name
+                //                                server, this code signifies that the
+                //                                domain name referenced in the query does
+                //                                not exist.
+                //                ....
+                //                ....
+                if (!res.isAuthoritativeAnswer()) {
+                    query(nameServerAddrStream, nameServerAddrStreamIndex + 1, question,
+                            newDnsQueryLifecycleObserver(question), true, promise, null);
+                }
             }
         } finally {
             ReferenceCountUtil.safeRelease(envelope);
