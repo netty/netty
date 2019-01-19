@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 The Netty Project
+ * Copyright 2019 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -27,7 +27,6 @@ public class EpollDatagramChannelConfigTest {
         EpollDatagramChannel channel = new EpollDatagramChannel();
         assertTrue(channel.config().setOption(EpollChannelOption.IP_FREEBIND, true));
         assertTrue(channel.config().getOption(EpollChannelOption.IP_FREEBIND));
-
         channel.fd().close();
     }
 }
