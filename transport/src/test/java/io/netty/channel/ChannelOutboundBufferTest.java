@@ -383,16 +383,22 @@ public class ChannelOutboundBufferTest {
             }
         };
         final CountDownLatch handlerAddedLatch = new CountDownLatch(1);
+        final CountDownLatch handlerRemovedLatch = new CountDownLatch(1);
         EmbeddedChannel ch = new EmbeddedChannel();
-        ch.pipeline().addLast(executor, new ChannelOutboundHandlerAdapter() {
+        ch.pipeline().addLast(executor, "handler", new ChannelOutboundHandlerAdapter() {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
                 promise.setFailure(new AssertionError("Should not be called"));
             }
 
             @Override
-            public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            public void handlerAdded(ChannelHandlerContext ctx) {
                 handlerAddedLatch.countDown();
+            }
+
+            @Override
+            public void handlerRemoved(ChannelHandlerContext ctx) {
+                handlerRemovedLatch.countDown();
             }
         });
 
@@ -436,7 +442,19 @@ public class ChannelOutboundBufferTest {
         assertEquals(0, ch.unsafe().outboundBuffer().totalPendingWriteBytes());
         executeLatch.countDown();
 
+        while (executor.pendingTasks() != 0) {
+            // Wait until there is no more pending task left.
+            Thread.sleep(10);
+        }
+
+        ch.pipeline().remove("handler");
+
+        // Ensure we do not try to shutdown the executor before we handled everything for the Channel. Otherwise
+        // the Executor may reject when the Channel tries to add a task to it.
+        handlerRemovedLatch.await();
+
         safeClose(ch);
+
         executor.shutdownGracefully();
     }
 
