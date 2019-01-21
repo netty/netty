@@ -32,14 +32,11 @@ import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.AbstractEventExecutor;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
-import io.netty.util.concurrent.UnorderedThreadPoolEventExecutor;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -51,21 +48,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.LockSupport;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -672,37 +665,6 @@ public class DefaultChannelPipelineTest {
         assertSame(exception, error.get());
     }
 
-    @Test
-    public void testChannelUnregistrationWithCustomExecutor() throws Exception {
-        final CountDownLatch channelLatch = new CountDownLatch(1);
-        final CountDownLatch handlerLatch = new CountDownLatch(1);
-        ChannelPipeline pipeline = newLocalChannel().pipeline();
-        pipeline.addLast(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(new WrapperExecutor(),
-                        new ChannelInboundHandlerAdapter() {
-
-                            @Override
-                            public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
-                                channelLatch.countDown();
-                            }
-
-                            @Override
-                            public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-                                handlerLatch.countDown();
-                            }
-                        });
-            }
-        });
-        Channel channel = pipeline.channel();
-        channel.register().sync();
-        channel.close();
-        channel.deregister();
-        assertTrue(channelLatch.await(2, TimeUnit.SECONDS));
-        assertTrue(handlerLatch.await(2, TimeUnit.SECONDS));
-    }
-
     @Test(timeout = 3000)
     public void testAddHandlerBeforeRegisteredThenRemove() {
         final EventLoop loop = group.next();
@@ -738,129 +700,6 @@ public class DefaultChannelPipelineTest {
         latch.await();
 
         pipeline.channel().close().syncUninterruptibly();
-    }
-
-    @Test(timeout = 3000)
-    public void testHandlerAddedAndRemovedCalledInCorrectOrder() throws Throwable {
-        final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
-        final EventExecutorGroup group2 = new DefaultEventExecutorGroup(1);
-
-        try {
-            BlockingQueue<CheckOrderHandler> addedQueue = new LinkedBlockingQueue<>();
-            BlockingQueue<CheckOrderHandler> removedQueue = new LinkedBlockingQueue<>();
-
-            CheckOrderHandler handler1 = new CheckOrderHandler(addedQueue, removedQueue);
-            CheckOrderHandler handler2 = new CheckOrderHandler(addedQueue, removedQueue);
-            CheckOrderHandler handler3 = new CheckOrderHandler(addedQueue, removedQueue);
-            CheckOrderHandler handler4 = new CheckOrderHandler(addedQueue, removedQueue);
-
-            ChannelPipeline pipeline = newLocalChannel().pipeline();
-            pipeline.addLast(handler1);
-            pipeline.channel().register().syncUninterruptibly();
-            pipeline.addLast(group1.next(), handler2);
-            pipeline.addLast(group2.next(), handler3);
-            pipeline.addLast(handler4);
-
-            assertTrue(removedQueue.isEmpty());
-            pipeline.channel().close().syncUninterruptibly();
-            assertHandler(addedQueue.take(), handler1);
-
-            // Depending on timing this can be handler2 or handler3 as these use different EventExecutorGroups.
-            assertHandler(addedQueue.take(), handler2, handler3, handler4);
-            assertHandler(addedQueue.take(), handler2, handler3, handler4);
-            assertHandler(addedQueue.take(), handler2, handler3, handler4);
-
-            assertTrue(addedQueue.isEmpty());
-
-            assertHandler(removedQueue.take(), handler4);
-            assertHandler(removedQueue.take(), handler3);
-            assertHandler(removedQueue.take(), handler2);
-            assertHandler(removedQueue.take(), handler1);
-            assertTrue(removedQueue.isEmpty());
-        } finally {
-            group1.shutdownGracefully();
-            group2.shutdownGracefully();
-        }
-    }
-
-    @Test(timeout = 3000)
-    public void testHandlerAddedExceptionFromChildHandlerIsPropagated() {
-        final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
-        try {
-            final Promise<Void> promise = group1.next().newPromise();
-            final Exception exception = new RuntimeException();
-            ChannelPipeline pipeline = newLocalChannel().pipeline();
-            pipeline.addLast(group1.next(), new CheckExceptionHandler(exception, promise));
-            pipeline.addFirst(new ChannelHandlerAdapter() {
-                @Override
-                public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-                    throw exception;
-                }
-            });
-            pipeline.channel().register();
-            promise.syncUninterruptibly();
-            pipeline.channel().close().syncUninterruptibly();
-        } finally {
-            group1.shutdownGracefully();
-        }
-    }
-
-    @Test(timeout = 3000)
-    public void testHandlerRemovedExceptionFromChildHandlerIsPropagated() {
-        final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
-        try {
-            final Promise<Void> promise = group1.next().newPromise();
-            String handlerName = "foo";
-            final Exception exception = new RuntimeException();
-            ChannelPipeline pipeline = newLocalChannel().pipeline();
-            pipeline.addLast(handlerName, new ChannelHandlerAdapter() {
-                @Override
-                public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-                    throw exception;
-                }
-            });
-            pipeline.addLast(group1.next(), new CheckExceptionHandler(exception, promise));
-            pipeline.channel().register().syncUninterruptibly();
-            pipeline.remove(handlerName);
-            promise.syncUninterruptibly();
-            pipeline.channel().close().syncUninterruptibly();
-        } finally {
-            group1.shutdownGracefully();
-        }
-    }
-
-    @Test(timeout = 3000)
-    public void testHandlerAddedThrowsAndRemovedThrowsException() throws InterruptedException {
-        final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
-        try {
-            final CountDownLatch latch = new CountDownLatch(1);
-            final Promise<Void> promise = group1.next().newPromise();
-            final Exception exceptionAdded = new RuntimeException();
-            final Exception exceptionRemoved = new RuntimeException();
-            String handlerName = "foo";
-            ChannelPipeline pipeline = newLocalChannel().pipeline();
-            pipeline.addLast(group1.next(), new CheckExceptionHandler(exceptionAdded, promise));
-            pipeline.addFirst(handlerName, new ChannelHandlerAdapter() {
-                @Override
-                public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-                    throw exceptionAdded;
-                }
-
-                @Override
-                public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-                    // Execute this later so we are sure the exception is handled first.
-                    ctx.executor().execute(latch::countDown);
-                    throw exceptionRemoved;
-                }
-            });
-            pipeline.register().syncUninterruptibly();
-            latch.await();
-            assertNull(pipeline.context(handlerName));
-            promise.syncUninterruptibly();
-            pipeline.channel().close().syncUninterruptibly();
-        } finally {
-            group1.shutdownGracefully();
-        }
     }
 
     @Test(timeout = 2000)
@@ -1004,76 +843,6 @@ public class DefaultChannelPipelineTest {
         pipeline.addAfter("test", null, newHandler());
 
         pipeline.addBefore("test", null, newHandler());
-    }
-
-    @Test(timeout = 3000)
-    public void testUnorderedEventExecutor() throws Throwable {
-        EventExecutorGroup eventExecutors = new UnorderedThreadPoolEventExecutor(2);
-        EventLoopGroup defaultGroup = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
-        try {
-            EventLoop eventLoop1 = defaultGroup.next();
-            ChannelPipeline pipeline1 = new LocalChannel(eventLoop1).pipeline();
-
-            pipeline1.channel().register().syncUninterruptibly();
-            final CountDownLatch latch = new CountDownLatch(1);
-            pipeline1.addLast(eventExecutors.next(), new ChannelInboundHandlerAdapter() {
-                @Override
-                public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-                    // Just block one of the two threads.
-                    LockSupport.park();
-                }
-
-                @Override
-                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-                    latch.countDown();
-                }
-            });
-            // Trigger an event, as we use UnorderedEventExecutor userEventTriggered should be called even when
-            // handlerAdded(...) blocks.
-            pipeline1.fireUserEventTriggered("");
-            latch.await();
-        } finally {
-            defaultGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS).syncUninterruptibly();
-            eventExecutors.shutdownGracefully(0, 0, TimeUnit.SECONDS).syncUninterruptibly();
-        }
-    }
-
-    @Test
-    public void testPinExecutor() {
-        EventExecutorGroup group = new DefaultEventExecutorGroup(2);
-        ChannelPipeline pipeline = newLocalChannel().pipeline();
-        ChannelPipeline pipeline2 = newLocalChannel().pipeline();
-
-        EventExecutor executor = group.next();
-        pipeline.addLast(executor, "h1", new ChannelInboundHandlerAdapter());
-        pipeline.addLast(executor, "h2", new ChannelInboundHandlerAdapter());
-        pipeline2.addLast(group.next(), "h3", new ChannelInboundHandlerAdapter());
-
-        EventExecutor executor1 = pipeline.context("h1").executor();
-        EventExecutor executor2 = pipeline.context("h2").executor();
-        assertNotNull(executor1);
-        assertNotNull(executor2);
-        assertSame(executor1, executor2);
-        EventExecutor executor3 = pipeline2.context("h3").executor();
-        assertNotNull(executor3);
-        assertNotSame(executor3, executor2);
-        group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
-    }
-
-    @Test
-    public void testNotPinExecutor() {
-        EventExecutorGroup group = new DefaultEventExecutorGroup(2);
-        ChannelPipeline pipeline = newLocalChannel().pipeline();
-
-        pipeline.addLast(group.next(), "h1", new ChannelInboundHandlerAdapter());
-        pipeline.addLast(group.next(), "h2", new ChannelInboundHandlerAdapter());
-
-        EventExecutor executor1 = pipeline.context("h1").executor();
-        EventExecutor executor2 = pipeline.context("h2").executor();
-        assertNotNull(executor1);
-        assertNotNull(executor2);
-        assertNotSame(executor1, executor2);
-        group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
     }
 
     @Test(timeout = 3000)
@@ -1832,13 +1601,21 @@ public class DefaultChannelPipelineTest {
     }
 
     private static void verifyContextNumber(ChannelPipeline pipeline, int expectedNumber) {
-        AbstractChannelHandlerContext ctx = (AbstractChannelHandlerContext) pipeline.firstContext();
-        int handlerNumber = 0;
-        while (ctx != ((DefaultChannelPipeline) pipeline).tail) {
-            handlerNumber++;
-            ctx = ctx.next;
-        }
-        assertEquals(expectedNumber, handlerNumber);
+        assertEquals(expectedNumber, pipeline.names().size());
+        assertEquals(expectedNumber, pipeline.toMap().size());
+
+        pipeline.executor().submit(new Runnable() {
+            @Override
+            public void run() {
+                AbstractChannelHandlerContext ctx = (AbstractChannelHandlerContext) pipeline.firstContext();
+                int handlerNumber = 0;
+                while (ctx != ((DefaultChannelPipeline) pipeline).tail) {
+                    handlerNumber++;
+                    ctx = ctx.next;
+                }
+                assertEquals(expectedNumber, handlerNumber);
+            }
+        }).syncUninterruptibly();
     }
 
     private static ChannelHandler[] newHandlers(int num) {

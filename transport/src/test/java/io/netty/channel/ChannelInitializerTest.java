@@ -22,26 +22,14 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
-import io.netty.util.concurrent.AbstractEventExecutor;
-import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.ScheduledFuture;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.channels.ClosedChannelException;
-import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -49,7 +37,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 
 public class ChannelInitializerTest {
@@ -256,186 +243,6 @@ public class ChannelInitializerTest {
             closeChannel(clientChannel);
             closeChannel(serverChannel);
         }
-    }
-
-    @SuppressWarnings("deprecation")
-    @Test(timeout = 10000)
-    public void testChannelInitializerEventExecutor() throws Throwable {
-        final AtomicInteger invokeCount = new AtomicInteger();
-        final AtomicInteger completeCount = new AtomicInteger();
-        final AtomicReference<Throwable> errorRef = new AtomicReference<>();
-        LocalAddress addr = new LocalAddress("test");
-
-        final EventExecutor executor = new AbstractEventExecutor() {
-            private final ScheduledExecutorService execService = Executors.newSingleThreadScheduledExecutor();
-
-            @Override
-            public boolean inEventLoop(Thread thread) {
-                return false;
-            }
-
-            @Override
-            public boolean isShuttingDown() {
-                return execService.isShutdown();
-            }
-
-            @Override
-            public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
-                shutdown();
-                return newSucceededFuture(null);
-            }
-
-            @Override
-            public Future<?> terminationFuture() {
-                return newFailedFuture(new UnsupportedOperationException());
-            }
-
-            @Override
-            public void shutdown() {
-                execService.shutdown();
-            }
-
-            @Override
-            public List<Runnable> shutdownNow() {
-                return execService.shutdownNow();
-            }
-
-            @Override
-            public boolean isShutdown() {
-                return execService.isShutdown();
-            }
-
-            @Override
-            public boolean isTerminated() {
-                return execService.isTerminated();
-            }
-
-            @Override
-            public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-                return execService.awaitTermination(timeout, unit);
-            }
-
-            @Override
-            public <T> List<java.util.concurrent.Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
-                    throws InterruptedException {
-                return execService.invokeAll(tasks);
-            }
-
-            @Override
-            public <T> List<java.util.concurrent.Future<T>> invokeAll(
-                    Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit) throws InterruptedException {
-                return execService.invokeAll(tasks, timeout, unit);
-            }
-
-            @Override
-            public <T> T invokeAny(Collection<? extends Callable<T>> tasks)
-                    throws InterruptedException, ExecutionException {
-                return execService.invokeAny(tasks);
-            }
-
-            @Override
-            public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-                    throws InterruptedException, ExecutionException, TimeoutException {
-                return execService.invokeAny(tasks, timeout, unit);
-            }
-
-            @Override
-            public void execute(Runnable command) {
-                execService.execute(command);
-            }
-
-            @Override
-            public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public ScheduledFuture<?> scheduleAtFixedRate(
-                    Runnable command, long initialDelay, long period, TimeUnit unit) {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public ScheduledFuture<?> scheduleWithFixedDelay(
-                    Runnable command, long initialDelay, long delay, TimeUnit unit) {
-                throw new UnsupportedOperationException();
-            }
-        };
-
-        final CountDownLatch latch = new CountDownLatch(1);
-        ServerBootstrap serverBootstrap = new ServerBootstrap()
-                .channel(LocalServerChannel.class)
-                .group(group)
-                .localAddress(addr)
-                .childHandler(new ChannelInitializer<LocalChannel>() {
-                    @Override
-                    protected void initChannel(LocalChannel ch) {
-                        ch.pipeline().addLast(executor, new ChannelInitializer<Channel>() {
-                            @Override
-                            protected void initChannel(Channel ch) {
-                                invokeCount.incrementAndGet();
-                                ChannelHandlerContext ctx = ch.pipeline().context(this);
-                                assertNotNull(ctx);
-                                ch.pipeline().addAfter(ctx.executor(),
-                                        ctx.name(), null, new ChannelInboundHandlerAdapter() {
-                                            @Override
-                                            public void channelRead(ChannelHandlerContext ctx, Object msg)  {
-                                                // just drop on the floor.
-                                            }
-
-                                            @Override
-                                            public void handlerRemoved(ChannelHandlerContext ctx) {
-                                                latch.countDown();
-                                            }
-                                        });
-                                completeCount.incrementAndGet();
-                            }
-
-                            @Override
-                            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                                if (cause instanceof AssertionError) {
-                                    errorRef.set(cause);
-                                }
-                            }
-                        });
-                    }
-                });
-
-        Channel server = serverBootstrap.bind().sync().channel();
-
-        Bootstrap clientBootstrap = new Bootstrap()
-                .channel(LocalChannel.class)
-                .group(group)
-                .remoteAddress(addr)
-                .handler(new ChannelInboundHandlerAdapter());
-
-        Channel client = clientBootstrap.connect().sync().channel();
-        client.writeAndFlush("Hello World").sync();
-
-        client.close().sync();
-        server.close().sync();
-
-        client.closeFuture().sync();
-        server.closeFuture().sync();
-
-        // Wait until the handler is removed from the pipeline and so no more events are handled by it.
-        latch.await();
-
-        assertEquals(1, invokeCount.get());
-        assertEquals(invokeCount.get(), completeCount.get());
-
-        Throwable cause = errorRef.get();
-        if (cause != null) {
-            throw cause;
-        }
-
-        executor.shutdown();
-        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
     }
 
     private static void closeChannel(Channel c) {
