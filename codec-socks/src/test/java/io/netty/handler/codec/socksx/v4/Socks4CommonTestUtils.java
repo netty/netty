@@ -33,7 +33,7 @@ final class Socks4CommonTestUtils {
             out = new EmbeddedChannel(Socks4ServerEncoder.INSTANCE);
         }
         out.writeOutbound(msg);
-        embedder.writeInbound(out.readOutbound());
+        embedder.writeInbound((Object) out.readOutbound());
         out.finish();
     }
 }
