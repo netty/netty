@@ -338,7 +338,7 @@ public class ChannelInitializerTest {
                                             }
 
                                             @Override
-                                            public void channelUnregistered(ChannelHandlerContext ctx) {
+                                            public void handlerRemoved(ChannelHandlerContext ctx) {
                                                 latch.countDown();
                                             }
                                         });
@@ -372,6 +372,7 @@ public class ChannelInitializerTest {
         client.closeFuture().sync();
         server.closeFuture().sync();
 
+        // Wait until the handler is removed from the pipeline and so no more events are handled by it.
         latch.await();
 
         assertEquals(1, invokeCount.get());
