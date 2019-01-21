@@ -24,9 +24,15 @@ public class EpollDatagramChannelConfigTest {
     @Test
     public void testIpFreeBind() throws Exception {
         Epoll.ensureAvailability();
-        EpollDatagramChannel channel = new EpollDatagramChannel();
-        assertTrue(channel.config().setOption(EpollChannelOption.IP_FREEBIND, true));
-        assertTrue(channel.config().getOption(EpollChannelOption.IP_FREEBIND));
-        channel.fd().close();
+
+        EpollEventLoopGroup group = new EpollEventLoopGroup(1);
+        try {
+            EpollDatagramChannel channel = new EpollDatagramChannel(group.next());
+            assertTrue(channel.config().setOption(EpollChannelOption.IP_FREEBIND, true));
+            assertTrue(channel.config().getOption(EpollChannelOption.IP_FREEBIND));
+            channel.fd().close();
+        } finally {
+            group.shutdownGracefully();
+        }
     }
 }
