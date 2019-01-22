@@ -18,11 +18,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.internal.PlatformDependent;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.TearDown;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 public abstract class AbstractSslHandlerThroughputBenchmark extends AbstractSslHandlerBenchmark {
     @Param({ "64", "128", "512", "1024", "4096" })
@@ -61,7 +62,7 @@ public abstract class AbstractSslHandlerThroughputBenchmark extends AbstractSslH
         wrapSrcBuffer = allocateBuffer(messageSize);
 
         byte[] bytes = new byte[messageSize];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         wrapSrcBuffer.writeBytes(bytes);
 
         // Complete the initial TLS handshake.

@@ -99,7 +99,6 @@ public final class PlatformDependent {
     private static final boolean USE_DIRECT_BUFFER_NO_CLEANER;
     private static final AtomicLong DIRECT_MEMORY_COUNTER;
     private static final long DIRECT_MEMORY_LIMIT;
-    private static final ThreadLocalRandomProvider RANDOM_PROVIDER;
     private static final Cleaner CLEANER;
     private static final int UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD;
 
@@ -113,22 +112,6 @@ public final class PlatformDependent {
     };
 
     static {
-        if (javaVersion() >= 7) {
-            RANDOM_PROVIDER = new ThreadLocalRandomProvider() {
-                @Override
-                public Random current() {
-                    return java.util.concurrent.ThreadLocalRandom.current();
-                }
-            };
-        } else {
-            RANDOM_PROVIDER = new ThreadLocalRandomProvider() {
-                @Override
-                public Random current() {
-                    return ThreadLocalRandom.current();
-                }
-            };
-        }
-
         // Here is how the system property is used:
         //
         // * <  0  - Don't use cleaner, and inherit max direct memory from java. In this case the
@@ -931,13 +914,6 @@ public final class PlatformDependent {
         }
     }
 
-    /**
-     * Return a {@link Random} which is not-threadsafe and so can only be used from the same thread.
-     */
-    public static Random threadLocalRandom() {
-        return RANDOM_PROVIDER.current();
-    }
-
     private static boolean isWindows0() {
         boolean windows = SystemPropertyUtil.get("os.name", "").toLowerCase(Locale.US).contains("win");
         if (windows) {
@@ -1343,10 +1319,6 @@ public final class PlatformDependent {
         }
 
         return "unknown";
-    }
-
-    private interface ThreadLocalRandomProvider {
-        Random current();
     }
 
     private PlatformDependent() {
