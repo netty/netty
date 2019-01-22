@@ -276,9 +276,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     selectedKeysField.set(unwrappedSelector, selectedKeySet);
                     publicSelectedKeysField.set(unwrappedSelector, selectedKeySet);
                     return null;
-                } catch (NoSuchFieldException e) {
-                    return e;
-                } catch (IllegalAccessException e) {
+                } catch (NoSuchFieldException | IllegalAccessException e) {
                     return e;
                 }
             }
@@ -311,8 +309,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     @Override
     protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
         // This event loop never calls takeTask()
-        return maxPendingTasks == Integer.MAX_VALUE ? PlatformDependent.<Runnable>newMpscQueue()
-                                                    : PlatformDependent.<Runnable>newMpscQueue(maxPendingTasks);
+        return maxPendingTasks == Integer.MAX_VALUE ? PlatformDependent.newMpscQueue()
+                                                    : PlatformDependent.newMpscQueue(maxPendingTasks);
     }
 
     /**
@@ -738,7 +736,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private void closeAll() {
         selectAgain();
         Set<SelectionKey> keys = selector.keys();
-        Collection<AbstractNioChannel> channels = new ArrayList<AbstractNioChannel>(keys.size());
+        Collection<AbstractNioChannel> channels = new ArrayList<>(keys.size());
         for (SelectionKey k: keys) {
             Object a = k.attachment();
             if (a instanceof AbstractNioChannel) {

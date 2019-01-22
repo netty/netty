@@ -93,17 +93,11 @@ final class PlatformDependent0 {
                         }
                         // the unsafe instance
                         return unsafeField.get(null);
-                    } catch (NoSuchFieldException e) {
+                    } catch (NoSuchFieldException | SecurityException
+                            | IllegalAccessException | NoClassDefFoundError e) {
                         return e;
-                    } catch (SecurityException e) {
-                        return e;
-                    } catch (IllegalAccessException e) {
-                        return e;
-                    } catch (NoClassDefFoundError e) {
-                        // Also catch NoClassDefFoundError in case someone uses for example OSGI and it made
-                        // Unsafe unloadable.
-                        return e;
-                    }
+                    } // Also catch NoClassDefFoundError in case someone uses for example OSGI and it made
+                    // Unsafe unloadable.
                 }
             });
 
@@ -132,9 +126,7 @@ final class PlatformDependent0 {
                             finalUnsafe.getClass().getDeclaredMethod(
                                     "copyMemory", Object.class, long.class, Object.class, long.class, long.class);
                             return null;
-                        } catch (NoSuchMethodException e) {
-                            return e;
-                        } catch (SecurityException e) {
+                        } catch (NoSuchMethodException | SecurityException e) {
                             return e;
                         }
                     }
@@ -169,9 +161,7 @@ final class PlatformDependent0 {
                                 return null;
                             }
                             return field;
-                        } catch (NoSuchFieldException e) {
-                            return e;
-                        } catch (SecurityException e) {
+                        } catch (NoSuchFieldException | SecurityException e) {
                             return e;
                         }
                     }
@@ -226,9 +216,7 @@ final class PlatformDependent0 {
                                         return cause;
                                     }
                                     return constructor;
-                                } catch (NoSuchMethodException e) {
-                                    return e;
-                                } catch (SecurityException e) {
+                                } catch (NoSuchMethodException | SecurityException e) {
                                     return e;
                                 }
                             }
@@ -241,11 +229,7 @@ final class PlatformDependent0 {
                         ((Constructor<?>) maybeDirectBufferConstructor).newInstance(address, 1);
                         directBufferConstructor = (Constructor<?>) maybeDirectBufferConstructor;
                         logger.debug("direct buffer constructor: available");
-                    } catch (InstantiationException e) {
-                        directBufferConstructor = null;
-                    } catch (IllegalAccessException e) {
-                        directBufferConstructor = null;
-                    } catch (InvocationTargetException e) {
+                    } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
                         directBufferConstructor = null;
                     }
                 } else {
@@ -294,15 +278,8 @@ final class PlatformDependent0 {
                             return cause;
                         }
                         return unalignedMethod.invoke(null);
-                    } catch (NoSuchMethodException e) {
-                        return e;
-                    } catch (SecurityException e) {
-                        return e;
-                    } catch (IllegalAccessException e) {
-                        return e;
-                    } catch (ClassNotFoundException e) {
-                        return e;
-                    } catch (InvocationTargetException e) {
+                    } catch (NoSuchMethodException | SecurityException
+                            | IllegalAccessException | ClassNotFoundException | InvocationTargetException e) {
                         return e;
                     }
                 }
@@ -346,9 +323,7 @@ final class PlatformDependent0 {
                             try {
                                 return finalInternalUnsafe.getClass().getDeclaredMethod(
                                         "allocateUninitializedArray", Class.class, int.class);
-                            } catch (NoSuchMethodException e) {
-                                return e;
-                            } catch (SecurityException e) {
+                            } catch (NoSuchMethodException | SecurityException e) {
                                 return e;
                             }
                         }
@@ -360,9 +335,7 @@ final class PlatformDependent0 {
                             byte[] bytes = (byte[]) m.invoke(finalInternalUnsafe, byte.class, 8);
                             assert bytes.length == 8;
                             allocateArrayMethod = m;
-                        } catch (IllegalAccessException e) {
-                            maybeException = e;
-                        } catch (InvocationTargetException e) {
+                        } catch (IllegalAccessException | InvocationTargetException e) {
                             maybeException = e;
                         }
                     }
@@ -459,9 +432,7 @@ final class PlatformDependent0 {
     static byte[] allocateUninitializedArray(int size) {
         try {
             return (byte[]) ALLOCATE_ARRAY_METHOD.invoke(INTERNAL_UNSAFE, byte.class, size);
-        } catch (IllegalAccessException e) {
-            throw new Error(e);
-        } catch (InvocationTargetException e) {
+        } catch (IllegalAccessException | InvocationTargetException e) {
             throw new Error(e);
         }
     }
