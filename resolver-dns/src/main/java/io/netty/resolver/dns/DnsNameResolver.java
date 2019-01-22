@@ -383,7 +383,7 @@ public class DnsNameResolver extends InetNameResolver {
         b.group(executor());
         b.channelFactory(channelFactory);
         b.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
-        final DnsResponseHandler responseHandler = new DnsResponseHandler(executor().<Channel>newPromise());
+        final DnsResponseHandler responseHandler = new DnsResponseHandler(executor().newPromise());
         b.handler(new ChannelInitializer<DatagramChannel>() {
             @Override
             protected void initChannel(DatagramChannel ch) throws Exception {
@@ -455,7 +455,7 @@ public class DnsNameResolver extends InetNameResolver {
         if (cached == null || cached.size() == 0) {
             // If there is no cache hit (which may be the case for example when a NoopAuthoritativeDnsServerCache
             // is used), we will just directly use the provided nameservers.
-            Collections.sort(nameservers, nameServerComparator);
+            nameservers.sort(nameServerComparator);
             return new SequentialDnsServerAddressStream(nameservers, 0);
         }
         return cached;
@@ -610,7 +610,7 @@ public class DnsNameResolver extends InetNameResolver {
      * @return the address as the result of the resolution
      */
     public final Future<InetAddress> resolve(String inetHost, Iterable<DnsRecord> additionals) {
-        return resolve(inetHost, additionals, executor().<InetAddress>newPromise());
+        return resolve(inetHost, additionals, executor().newPromise());
     }
 
     /**
@@ -643,7 +643,7 @@ public class DnsNameResolver extends InetNameResolver {
      * @return the list of the address as the result of the resolution
      */
     public final Future<List<InetAddress>> resolveAll(String inetHost, Iterable<DnsRecord> additionals) {
-        return resolveAll(inetHost, additionals, executor().<List<InetAddress>>newPromise());
+        return resolveAll(inetHost, additionals, executor().newPromise());
     }
 
     /**
@@ -684,7 +684,7 @@ public class DnsNameResolver extends InetNameResolver {
      * @return the list of the {@link DnsRecord}s as the result of the resolution
      */
     public final Future<List<DnsRecord>> resolveAll(DnsQuestion question) {
-        return resolveAll(question, EMPTY_ADDITIONALS, executor().<List<DnsRecord>>newPromise());
+        return resolveAll(question, EMPTY_ADDITIONALS, executor().newPromise());
     }
 
     /**
@@ -700,7 +700,7 @@ public class DnsNameResolver extends InetNameResolver {
      * @return the list of the {@link DnsRecord}s as the result of the resolution
      */
     public final Future<List<DnsRecord>> resolveAll(DnsQuestion question, Iterable<DnsRecord> additionals) {
-        return resolveAll(question, additionals, executor().<List<DnsRecord>>newPromise());
+        return resolveAll(question, additionals, executor().newPromise());
     }
 
     /**
@@ -769,7 +769,7 @@ public class DnsNameResolver extends InetNameResolver {
             for (DnsRecord r: additionals) {
                 validateAdditional(r, validateType);
             }
-            return records.toArray(new DnsRecord[records.size()]);
+            return records.toArray(new DnsRecord[0]);
         }
 
         Iterator<DnsRecord> additionalsIt = additionals.iterator();
@@ -783,7 +783,7 @@ public class DnsNameResolver extends InetNameResolver {
             records.add(r);
         } while (additionalsIt.hasNext());
 
-        return records.toArray(new DnsRecord[records.size()]);
+        return records.toArray(new DnsRecord[0]);
     }
 
     private static void validateAdditional(DnsRecord record, boolean validateType) {
@@ -1024,7 +1024,7 @@ public class DnsNameResolver extends InetNameResolver {
      */
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
             DnsQuestion question, Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
-        return query(nextNameServerAddress(), question, Collections.<DnsRecord>emptyList(), promise);
+        return query(nextNameServerAddress(), question, Collections.emptyList(), promise);
     }
 
     private InetSocketAddress nextNameServerAddress() {
@@ -1038,7 +1038,7 @@ public class DnsNameResolver extends InetNameResolver {
             InetSocketAddress nameServerAddr, DnsQuestion question) {
 
         return query0(nameServerAddr, question, EMPTY_ADDITIONALS, true, ch.newPromise(),
-                      ch.eventLoop().<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
+                      ch.eventLoop().newPromise());
     }
 
     /**
@@ -1048,7 +1048,7 @@ public class DnsNameResolver extends InetNameResolver {
             InetSocketAddress nameServerAddr, DnsQuestion question, Iterable<DnsRecord> additionals) {
 
         return query0(nameServerAddr, question, toArray(additionals, false), true, ch.newPromise(),
-                     ch.eventLoop().<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
+                     ch.eventLoop().newPromise());
     }
 
     /**
