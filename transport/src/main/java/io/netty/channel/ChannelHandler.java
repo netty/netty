@@ -215,4 +215,30 @@ public interface ChannelHandler {
     @interface Sharable {
         // no value
     }
+
+    /**
+     * Indicates that the annotated event handler method in {@link ChannelHandler} will not be invoked by
+     * {@link ChannelPipeline}. This annotation is only useful when your handler method implementation
+     * only passes the event through to the next handler, like the following:
+     *
+     * <pre>
+     * {@code @Skip}
+     * {@code @Override}
+     * public void channelActive({@link ChannelHandlerContext} ctx) {
+     *     ctx.fireChannelActive(); // do nothing but passing through to the next handler
+     * }
+     * </pre>
+     *
+     * <p>
+     * Note that this annotation is not {@linkplain Inherited inherited}.  If you override a method annotated with
+     * {@link Skip}, it will not be skipped anymore.  Similarly, you can override a method not annotated with
+     * {@link Skip} and simply pass the event through to the next handler, which reverses the behavior of the
+     * supertype.
+     * </p>
+     */
+    @Target(ElementType.METHOD)
+    @Retention(RetentionPolicy.RUNTIME)
+    @interface Skip {
+        // no value
+    }
 }

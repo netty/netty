@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.WeakHashMap;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
@@ -1149,7 +1148,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     final class TailContext extends AbstractChannelHandlerContext implements ChannelInboundHandler {
 
         TailContext(DefaultChannelPipeline pipeline) {
-            super(pipeline, null, TAIL_NAME, true, false);
+            super(pipeline, null, TAIL_NAME, TailContext.class);
             setAddComplete();
         }
 
@@ -1212,7 +1211,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         private final Unsafe unsafe;
 
         HeadContext(DefaultChannelPipeline pipeline) {
-            super(pipeline, null, HEAD_NAME, true, true);
+            super(pipeline, null, HEAD_NAME, HeadContext.class);
             unsafe = pipeline.channel().unsafe();
             setAddComplete();
         }
@@ -1282,11 +1281,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             unsafe.flush();
         }
 
+        @Skip
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             ctx.fireExceptionCaught(cause);
         }
 
+        @Skip
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
             ctx.fireChannelRegistered();
@@ -1302,31 +1303,37 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
         }
 
+        @Skip
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             ctx.fireChannelActive();
         }
 
+        @Skip
         @Override
         public void channelInactive(ChannelHandlerContext ctx) throws Exception {
             ctx.fireChannelInactive();
         }
 
+        @Skip
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             ctx.fireChannelRead(msg);
         }
 
+        @Skip
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
             ctx.fireChannelReadComplete();
         }
 
+        @Skip
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
             ctx.fireUserEventTriggered(evt);
         }
 
+        @Skip
         @Override
         public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
             ctx.fireChannelWritabilityChanged();

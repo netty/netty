@@ -82,6 +82,7 @@ public abstract class ChannelHandlerAdapter implements ChannelHandler {
      *
      * Sub-classes may override this method to change behavior.
      */
+    @Skip
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         ctx.fireExceptionCaught(cause);

@@ -29,6 +29,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
      *
      * Sub-classes may override this method to change behavior.
      */
+    @Skip
     @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
             ChannelPromise promise) throws Exception {
@@ -41,6 +42,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
      *
      * Sub-classes may override this method to change behavior.
      */
+    @Skip
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
             SocketAddress localAddress, ChannelPromise promise) throws Exception {
@@ -53,6 +55,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
      *
      * Sub-classes may override this method to change behavior.
      */
+    @Skip
     @Override
     public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise)
             throws Exception {
@@ -65,6 +68,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
      *
      * Sub-classes may override this method to change behavior.
      */
+    @Skip
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise)
             throws Exception {
@@ -77,6 +81,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
      *
      * Sub-classes may override this method to change behavior.
      */
+    @Skip
     @Override
     public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ctx.register(promise);
@@ -88,6 +93,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
      *
      * Sub-classes may override this method to change behavior.
      */
+    @Skip
     @Override
     public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ctx.deregister(promise);
@@ -99,6 +105,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
      *
      * Sub-classes may override this method to change behavior.
      */
+    @Skip
     @Override
     public void read(ChannelHandlerContext ctx) throws Exception {
         ctx.read();
@@ -110,6 +117,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
      *
      * Sub-classes may override this method to change behavior.
      */
+    @Skip
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         ctx.write(msg, promise);
@@ -121,6 +129,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
      *
      * Sub-classes may override this method to change behavior.
      */
+    @Skip
     @Override
     public void flush(ChannelHandlerContext ctx) throws Exception {
         ctx.flush();
