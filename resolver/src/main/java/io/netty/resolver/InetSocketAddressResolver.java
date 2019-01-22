@@ -79,7 +79,7 @@ public class InetSocketAddressResolver extends AbstractAddressResolver<InetSocke
                         if (future.isSuccess()) {
                             List<InetAddress> inetAddresses = future.getNow();
                             List<InetSocketAddress> socketAddresses =
-                                    new ArrayList<InetSocketAddress>(inetAddresses.size());
+                                    new ArrayList<>(inetAddresses.size());
                             for (InetAddress inetAddress : inetAddresses) {
                                 socketAddresses.add(new InetSocketAddress(inetAddress, unresolvedAddress.getPort()));
                             }

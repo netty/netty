@@ -150,8 +150,8 @@ public final class HostsFileParser {
         checkNotNull(reader, "reader");
         BufferedReader buff = new BufferedReader(reader);
         try {
-            Map<String, Inet4Address> ipv4Entries = new HashMap<String, Inet4Address>();
-            Map<String, Inet6Address> ipv6Entries = new HashMap<String, Inet6Address>();
+            Map<String, Inet4Address> ipv4Entries = new HashMap<>();
+            Map<String, Inet6Address> ipv6Entries = new HashMap<>();
             String line;
             while ((line = buff.readLine()) != null) {
                 // remove comment
@@ -166,7 +166,7 @@ public final class HostsFileParser {
                 }
 
                 // split
-                List<String> lineParts = new ArrayList<String>();
+                List<String> lineParts = new ArrayList<>();
                 for (String s: WHITESPACES.split(line)) {
                     if (!s.isEmpty()) {
                         lineParts.add(s);
