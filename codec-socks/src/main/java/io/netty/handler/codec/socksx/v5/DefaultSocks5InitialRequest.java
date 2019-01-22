@@ -34,7 +34,7 @@ public class DefaultSocks5InitialRequest extends AbstractSocks5Message implement
             throw new NullPointerException("authMethods");
         }
 
-        List<Socks5AuthMethod> list = new ArrayList<Socks5AuthMethod>(authMethods.length);
+        List<Socks5AuthMethod> list = new ArrayList<>(authMethods.length);
         for (Socks5AuthMethod m: authMethods) {
             if (m == null) {
                 break;
@@ -54,7 +54,7 @@ public class DefaultSocks5InitialRequest extends AbstractSocks5Message implement
             throw new NullPointerException("authSchemes");
         }
 
-        List<Socks5AuthMethod> list = new ArrayList<Socks5AuthMethod>();
+        List<Socks5AuthMethod> list = new ArrayList<>();
         for (Socks5AuthMethod m: authMethods) {
             if (m == null) {
                 break;

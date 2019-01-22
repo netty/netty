@@ -52,7 +52,7 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
 
         Channel sc = sb.bind().sync().channel();
 
-        List<Socket> sockets = new ArrayList<Socket>();
+        List<Socket> sockets = new ArrayList<>();
 
         try {
             long startTime = System.nanoTime();

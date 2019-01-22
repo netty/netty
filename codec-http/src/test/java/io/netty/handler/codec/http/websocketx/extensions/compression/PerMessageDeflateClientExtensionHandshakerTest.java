@@ -84,7 +84,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         PerMessageDeflateClientExtensionHandshaker handshaker =
                 new PerMessageDeflateClientExtensionHandshaker(6, true, 10, true, true);
 
-        parameters = new HashMap<String, String>();
+        parameters = new HashMap<>();
         parameters.put(CLIENT_MAX_WINDOW, "12");
         parameters.put(SERVER_MAX_WINDOW, "10");
         parameters.put(CLIENT_NO_CONTEXT, null);
@@ -101,7 +101,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
 
         // initialize
-        parameters = new HashMap<String, String>();
+        parameters = new HashMap<>();
         parameters.put(SERVER_MAX_WINDOW, "10");
         parameters.put(SERVER_NO_CONTEXT, null);
 
@@ -116,7 +116,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
 
         // initialize
-        parameters = new HashMap<String, String>();
+        parameters = new HashMap<>();
 
         // execute
         extension = handshaker.handshakeExtension(

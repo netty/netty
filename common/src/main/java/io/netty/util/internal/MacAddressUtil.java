@@ -50,7 +50,7 @@ public final class MacAddressUtil {
         InetAddress bestInetAddr = NetUtil.LOCALHOST4;
 
         // Retrieve the list of available network interfaces.
-        Map<NetworkInterface, InetAddress> ifaces = new LinkedHashMap<NetworkInterface, InetAddress>();
+        Map<NetworkInterface, InetAddress> ifaces = new LinkedHashMap<>();
         try {
             Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
             if (interfaces != null) {

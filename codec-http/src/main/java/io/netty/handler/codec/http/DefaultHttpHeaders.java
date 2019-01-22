@@ -83,9 +83,9 @@ public class DefaultHttpHeaders extends HttpHeaders {
     }
 
     protected DefaultHttpHeaders(boolean validate, NameValidator<CharSequence> nameValidator) {
-        this(new DefaultHeadersImpl<CharSequence, CharSequence>(CASE_INSENSITIVE_HASHER,
-                                                                valueConverter(validate),
-                                                                nameValidator));
+        this(new DefaultHeadersImpl<>(CASE_INSENSITIVE_HASHER,
+                valueConverter(validate),
+                nameValidator));
     }
 
     protected DefaultHttpHeaders(DefaultHeaders<CharSequence, CharSequence, ?> headers) {
@@ -257,7 +257,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
         if (isEmpty()) {
             return Collections.emptyList();
         }
-        List<Entry<String, String>> entriesConverted = new ArrayList<Entry<String, String>>(
+        List<Entry<String, String>> entriesConverted = new ArrayList<>(
                 headers.size());
         for (Entry<String, String> entry : this) {
             entriesConverted.add(entry);

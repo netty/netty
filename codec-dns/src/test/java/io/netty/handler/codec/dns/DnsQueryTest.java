@@ -35,7 +35,7 @@ public class DnsQueryTest {
     public void writeQueryTest() throws Exception {
         InetSocketAddress addr = SocketUtils.socketAddress("8.8.8.8", 53);
         EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsQueryEncoder());
-        List<DnsQuery> queries = new ArrayList<DnsQuery>(5);
+        List<DnsQuery> queries = new ArrayList<>(5);
         queries.add(new DatagramDnsQuery(null, addr, 1).setRecord(
                 DnsSection.QUESTION,
                 new DefaultDnsQuestion("1.0.0.127.in-addr.arpa", DnsRecordType.PTR)));

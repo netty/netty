@@ -155,7 +155,7 @@ public class Http2MultiplexCodecTest {
 
     private Http2StreamChannel newInboundStream(int streamId, boolean endStream,
                                                 AtomicInteger maxReads, final ChannelHandler childHandler) {
-        final AtomicReference<Http2StreamChannel> streamChannelRef = new AtomicReference<Http2StreamChannel>();
+        final AtomicReference<Http2StreamChannel> streamChannelRef = new AtomicReference<>();
         childChannelInitializer.maxReads = maxReads;
         childChannelInitializer.handler = new ChannelInboundHandlerAdapter() {
             @Override
@@ -595,7 +595,7 @@ public class Http2MultiplexCodecTest {
 
     @Test
     public void channelClosedWhenWriteFutureFails() {
-        final Queue<ChannelPromise> writePromises = new ArrayDeque<ChannelPromise>();
+        final Queue<ChannelPromise> writePromises = new ArrayDeque<>();
 
         LastInboundHandler inboundHandler = new LastInboundHandler();
         Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);

@@ -60,7 +60,7 @@ public class UnpooledTest {
 
     @Test
     public void testHashCode() {
-        Map<byte[], Integer> map = new LinkedHashMap<byte[], Integer>();
+        Map<byte[], Integer> map = new LinkedHashMap<>();
         map.put(EMPTY_BYTES, 1);
         map.put(new byte[] { 1 }, 32);
         map.put(new byte[] { 2 }, 33);
@@ -149,7 +149,7 @@ public class UnpooledTest {
 
     @Test
     public void testCompare() {
-        List<ByteBuf> expected = new ArrayList<ByteBuf>();
+        List<ByteBuf> expected = new ArrayList<>();
         expected.add(wrappedBuffer(new byte[]{1}));
         expected.add(wrappedBuffer(new byte[]{1, 2}));
         expected.add(wrappedBuffer(new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}));

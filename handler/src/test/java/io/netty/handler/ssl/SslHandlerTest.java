@@ -420,7 +420,7 @@ public class SslHandlerTest {
     @Test(timeout = 5000)
     public void testEventsFired() throws Exception {
         SSLEngine engine = newServerModeSSLEngine();
-        final BlockingQueue<SslCompletionEvent> events = new LinkedBlockingQueue<SslCompletionEvent>();
+        final BlockingQueue<SslCompletionEvent> events = new LinkedBlockingQueue<>();
         EmbeddedChannel channel = new EmbeddedChannel(new SslHandler(engine), new ChannelInboundHandlerAdapter() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
@@ -448,7 +448,7 @@ public class SslHandlerTest {
         final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
         final CountDownLatch latch = new CountDownLatch(2);
         final CountDownLatch latch2 = new CountDownLatch(2);
-        final BlockingQueue<Object> events = new LinkedBlockingQueue<Object>();
+        final BlockingQueue<Object> events = new LinkedBlockingQueue<>();
         Channel serverChannel = null;
         Channel clientChannel = null;
         EventLoopGroup group = new LocalEventLoopGroup();
@@ -630,7 +630,7 @@ public class SslHandlerTest {
                     });
             sc = sb.bind(address).syncUninterruptibly().channel();
 
-            final AtomicReference<SslHandler> sslHandlerRef = new AtomicReference<SslHandler>();
+            final AtomicReference<SslHandler> sslHandlerRef = new AtomicReference<>();
             Bootstrap b = new Bootstrap()
                     .group(group)
                     .channel(LocalChannel.class)
@@ -691,7 +691,7 @@ public class SslHandlerTest {
         Channel sc = null;
         Channel cc = null;
         final CountDownLatch activeLatch = new CountDownLatch(1);
-        final AtomicReference<AssertionError> errorRef = new AtomicReference<AssertionError>();
+        final AtomicReference<AssertionError> errorRef = new AtomicReference<>();
         final SslHandler sslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
         try {
             sc = new ServerBootstrap()

@@ -2580,10 +2580,10 @@ public abstract class SSLEngineTest {
         SSLEngine server = wrapEngine(ctx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         try {
-            Set<String> supported = new HashSet<String>(Arrays.asList(server.getSupportedProtocols()));
+            Set<String> supported = new HashSet<>(Arrays.asList(server.getSupportedProtocols()));
             if (supported.contains(protocol)) {
                 server.setEnabledProtocols(server.getSupportedProtocols());
-                assertEquals(supported, new HashSet<String>(Arrays.asList(server.getSupportedProtocols())));
+                assertEquals(supported, new HashSet<>(Arrays.asList(server.getSupportedProtocols())));
 
                 for (String disabled : disabledProtocols) {
                     supported.remove(disabled);
@@ -2593,7 +2593,7 @@ public abstract class SSLEngineTest {
                     return;
                 }
                 server.setEnabledProtocols(supported.toArray(new String[0]));
-                assertEquals(supported, new HashSet<String>(Arrays.asList(server.getEnabledProtocols())));
+                assertEquals(supported, new HashSet<>(Arrays.asList(server.getEnabledProtocols())));
                 server.setEnabledProtocols(server.getSupportedProtocols());
             }
         } finally {
@@ -2678,7 +2678,7 @@ public abstract class SSLEngineTest {
     @Test
     public void testInvalidCipher() throws Exception {
         SelfSignedCertificate cert = new SelfSignedCertificate();
-        List<String> cipherList = new ArrayList<String>();
+        List<String> cipherList = new ArrayList<>();
         Collections.addAll(cipherList, ((SSLSocketFactory) SSLSocketFactory.getDefault()).getDefaultCipherSuites());
         cipherList.add("InvalidCipher");
         SSLEngine server = null;

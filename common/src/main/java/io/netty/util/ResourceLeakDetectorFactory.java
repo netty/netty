@@ -175,8 +175,8 @@ public abstract class ResourceLeakDetectorFactory {
                 }
             }
 
-            ResourceLeakDetector<T> resourceLeakDetector = new ResourceLeakDetector<T>(resource, samplingInterval,
-                                                                                       maxActive);
+            ResourceLeakDetector<T> resourceLeakDetector = new ResourceLeakDetector<>(resource, samplingInterval,
+                    maxActive);
             logger.debug("Loaded default ResourceLeakDetector: {}", resourceLeakDetector);
             return resourceLeakDetector;
         }
@@ -198,7 +198,7 @@ public abstract class ResourceLeakDetectorFactory {
                 }
             }
 
-            ResourceLeakDetector<T> resourceLeakDetector = new ResourceLeakDetector<T>(resource, samplingInterval);
+            ResourceLeakDetector<T> resourceLeakDetector = new ResourceLeakDetector<>(resource, samplingInterval);
             logger.debug("Loaded default ResourceLeakDetector: {}", resourceLeakDetector);
             return resourceLeakDetector;
         }

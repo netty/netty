@@ -200,7 +200,7 @@ public final class MqttMessageBuilders {
 
         public SubscribeBuilder addSubscription(MqttQoS qos, String topic) {
             if (subscriptions == null) {
-                subscriptions = new ArrayList<MqttTopicSubscription>(5);
+                subscriptions = new ArrayList<>(5);
             }
             subscriptions.add(new MqttTopicSubscription(topic, qos));
             return this;
@@ -230,7 +230,7 @@ public final class MqttMessageBuilders {
 
         public UnsubscribeBuilder addTopicFilter(String topic) {
             if (topicFilters == null) {
-                topicFilters = new ArrayList<String>(5);
+                topicFilters = new ArrayList<>(5);
             }
             topicFilters.add(topic);
             return this;

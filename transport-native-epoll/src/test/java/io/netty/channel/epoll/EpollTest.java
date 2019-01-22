@@ -42,7 +42,7 @@ public class EpollTest {
             Native.epollCtlAdd(epoll.intValue(), timerFd.intValue(), Native.EPOLLIN);
             Native.epollCtlAdd(epoll.intValue(), eventfd.intValue(), Native.EPOLLIN);
 
-            final AtomicReference<Throwable> ref = new AtomicReference<Throwable>();
+            final AtomicReference<Throwable> ref = new AtomicReference<>();
             Thread t = new Thread(new Runnable() {
                 @Override
                 public void run() {

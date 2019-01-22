@@ -53,7 +53,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
      * @see HttpResponseHandler#awaitResponses(long, java.util.concurrent.TimeUnit)
      */
     public Entry<ChannelFuture, ChannelPromise> put(int streamId, ChannelFuture writeFuture, ChannelPromise promise) {
-        return streamidPromiseMap.put(streamId, new SimpleEntry<ChannelFuture, ChannelPromise>(writeFuture, promise));
+        return streamidPromiseMap.put(streamId, new SimpleEntry<>(writeFuture, promise));
     }
 
     /**

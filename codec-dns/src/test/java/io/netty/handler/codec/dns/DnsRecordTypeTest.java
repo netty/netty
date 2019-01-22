@@ -28,7 +28,7 @@ import static org.junit.Assert.*;
 public class DnsRecordTypeTest {
 
     private static List<DnsRecordType> allTypes() throws Exception {
-        List<DnsRecordType> result = new ArrayList<DnsRecordType>();
+        List<DnsRecordType> result = new ArrayList<>();
         for (Field field : DnsRecordType.class.getFields()) {
             if ((field.getModifiers() & Modifier.STATIC) != 0 && field.getType() == DnsRecordType.class) {
                 result.add((DnsRecordType) field.get(null));
@@ -41,7 +41,7 @@ public class DnsRecordTypeTest {
     @Test
     public void testSanity() throws Exception {
         assertEquals("More than one type has the same int value",
-                allTypes().size(), new HashSet<DnsRecordType>(allTypes()).size());
+                allTypes().size(), new HashSet<>(allTypes()).size());
     }
 
     /**

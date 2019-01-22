@@ -63,7 +63,7 @@ import java.util.concurrent.TimeUnit;
  * </ul>
  */
 public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler {
-    private final ArrayDeque<ToSend> messagesQueue = new ArrayDeque<ToSend>();
+    private final ArrayDeque<ToSend> messagesQueue = new ArrayDeque<>();
     private long queueSize;
 
     /**

@@ -102,7 +102,7 @@ abstract class DnsResolveContext<T> {
 
     private final Set<Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> queriesInProgress =
             Collections.newSetFromMap(
-                    new IdentityHashMap<Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>, Boolean>());
+                    new IdentityHashMap<>());
 
     private List<T> finalResult;
     private int allowedQueries;
@@ -587,7 +587,7 @@ abstract class DnsResolveContext<T> {
         public InetSocketAddress get(int index) {
             if (addresses == null) {
                 DnsServerAddressStream stream = duplicate.duplicate();
-                addresses = new ArrayList<InetSocketAddress>(size());
+                addresses = new ArrayList<>(size());
                 for (int i = 0; i < stream.size(); i++) {
                     addresses.add(stream.next());
                 }
@@ -675,7 +675,7 @@ abstract class DnsResolveContext<T> {
 
             // Make sure the record is for the questioned domain.
             if (!recordName.equals(questionName)) {
-                Map<String, String> cnamesCopy = new HashMap<String, String>(cnames);
+                Map<String, String> cnamesCopy = new HashMap<>(cnames);
                 // Even if the record's name is not exactly same, it might be an alias defined in the CNAME records.
                 String resolved = questionName;
                 do {
@@ -696,7 +696,7 @@ abstract class DnsResolveContext<T> {
             }
 
             if (finalResult == null) {
-                finalResult = new ArrayList<T>(8);
+                finalResult = new ArrayList<>(8);
             }
             finalResult.add(converted);
 
@@ -767,7 +767,7 @@ abstract class DnsResolveContext<T> {
             }
 
             if (cnames == null) {
-                cnames = new HashMap<String, String>(min(8, answerCount));
+                cnames = new HashMap<>(min(8, answerCount));
             }
 
             String name = r.name().toLowerCase(Locale.US);
@@ -913,7 +913,7 @@ abstract class DnsResolveContext<T> {
             }
             if (cnames == null) {
                 // Detect loops.
-                cnames = new HashSet<String>(2);
+                cnames = new HashSet<>(2);
             }
             if (!cnames.add(cname)) {
                 // Follow CNAME from cache would loop. Lets break here.
@@ -1172,7 +1172,7 @@ abstract class DnsResolveContext<T> {
          * Creates a new {@link List} which holds the {@link InetSocketAddress}es.
          */
         List<InetSocketAddress> addressList() {
-            List<InetSocketAddress> addressList = new ArrayList<InetSocketAddress>(nameServerCount);
+            List<InetSocketAddress> addressList = new ArrayList<>(nameServerCount);
 
             AuthoritativeNameServer server = head;
             while (server != null) {

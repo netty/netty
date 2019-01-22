@@ -243,7 +243,7 @@ public final class HAProxyMessage {
             return Collections.emptyList();
         }
         // In most cases there are less than 4 TLVs available
-        List<HAProxyTLV> haProxyTLVs = new ArrayList<HAProxyTLV>(4);
+        List<HAProxyTLV> haProxyTLVs = new ArrayList<>(4);
 
         do {
             haProxyTLVs.add(haProxyTLV);
@@ -274,7 +274,7 @@ public final class HAProxyMessage {
 
             if (byteBuf.readableBytes() >= 4) {
 
-                final List<HAProxyTLV> encapsulatedTlvs = new ArrayList<HAProxyTLV>(4);
+                final List<HAProxyTLV> encapsulatedTlvs = new ArrayList<>(4);
                 do {
                     final HAProxyTLV haProxyTLV = readNextTLV(byteBuf);
                     if (haProxyTLV == null) {

@@ -61,7 +61,7 @@ public class HpackTest {
             throw new NullPointerException("files");
         }
 
-        ArrayList<Object[]> data = new ArrayList<Object[]>();
+        ArrayList<Object[]> data = new ArrayList<>();
         for (File file : files) {
             data.add(new Object[]{file.getName()});
         }

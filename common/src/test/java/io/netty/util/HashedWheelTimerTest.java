@@ -138,7 +138,7 @@ public class HashedWheelTimerTest {
         int timeout = 125;
         int maxTimeout = 2 * (tickDuration + timeout);
         final HashedWheelTimer timer = new HashedWheelTimer(tickDuration, TimeUnit.MILLISECONDS);
-        final BlockingQueue<Long> queue = new LinkedBlockingQueue<Long>();
+        final BlockingQueue<Long> queue = new LinkedBlockingQueue<>();
 
         int scheduledTasks = 100000;
         for (int i = 0; i < scheduledTasks; i++) {

@@ -244,7 +244,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
         Channel serverChannel = null;
         Channel clientChannel = null;
         final CountDownLatch latch = new CountDownLatch(1);
-        final AtomicReference<Throwable> writeFailCauseRef = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> writeFailCauseRef = new AtomicReference<>();
         try {
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group);

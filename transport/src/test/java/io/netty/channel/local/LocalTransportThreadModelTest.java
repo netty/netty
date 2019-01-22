@@ -174,7 +174,7 @@ public class LocalTransportThreadModelTest {
             }
 
             // Assert that the events for the same handler were handled by the same thread.
-            Set<String> names = new HashSet<String>();
+            Set<String> names = new HashSet<>();
             names.addAll(h1.inboundThreadNames);
             names.addAll(h1.outboundThreadNames);
             names.addAll(h1.removalThreadNames);
@@ -355,11 +355,11 @@ public class LocalTransportThreadModelTest {
 
     private static class ThreadNameAuditor extends ChannelDuplexHandler {
 
-        private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        private final AtomicReference<Throwable> exception = new AtomicReference<>();
 
-        private final Queue<String> inboundThreadNames = new ConcurrentLinkedQueue<String>();
-        private final Queue<String> outboundThreadNames = new ConcurrentLinkedQueue<String>();
-        private final Queue<String> removalThreadNames = new ConcurrentLinkedQueue<String>();
+        private final Queue<String> inboundThreadNames = new ConcurrentLinkedQueue<>();
+        private final Queue<String> outboundThreadNames = new ConcurrentLinkedQueue<>();
+        private final Queue<String> removalThreadNames = new ConcurrentLinkedQueue<>();
         private final boolean discard;
 
         ThreadNameAuditor() {
@@ -403,7 +403,7 @@ public class LocalTransportThreadModelTest {
      */
     private static class MessageForwarder1 extends ChannelDuplexHandler {
 
-        private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        private final AtomicReference<Throwable> exception = new AtomicReference<>();
         private volatile int inCnt;
         private volatile int outCnt;
         private volatile Thread t;
@@ -461,7 +461,7 @@ public class LocalTransportThreadModelTest {
      */
     private static class MessageForwarder2 extends ChannelDuplexHandler {
 
-        private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        private final AtomicReference<Throwable> exception = new AtomicReference<>();
         private volatile int inCnt;
         private volatile int outCnt;
         private volatile Thread t;
@@ -513,7 +513,7 @@ public class LocalTransportThreadModelTest {
      */
     private static class MessageForwarder3 extends ChannelDuplexHandler {
 
-        private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        private final AtomicReference<Throwable> exception = new AtomicReference<>();
         private volatile int inCnt;
         private volatile int outCnt;
         private volatile Thread t;
@@ -559,7 +559,7 @@ public class LocalTransportThreadModelTest {
      */
     private static class MessageDiscarder extends ChannelDuplexHandler {
 
-        private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        private final AtomicReference<Throwable> exception = new AtomicReference<>();
         private volatile int inCnt;
         private volatile int outCnt;
         private volatile Thread t;

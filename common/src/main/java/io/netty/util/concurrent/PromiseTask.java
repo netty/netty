@@ -21,7 +21,7 @@ import java.util.concurrent.RunnableFuture;
 class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
 
     static <T> Callable<T> toCallable(Runnable runnable, T result) {
-        return new RunnableAdapter<T>(runnable, result);
+        return new RunnableAdapter<>(runnable, result);
     }
 
     private static final class RunnableAdapter<T> implements Callable<T> {

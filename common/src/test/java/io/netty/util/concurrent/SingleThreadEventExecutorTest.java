@@ -74,7 +74,7 @@ public class SingleThreadEventExecutorTest {
 
     @Test
     public void testThreadProperties() {
-        final AtomicReference<Thread> threadRef = new AtomicReference<Thread>();
+        final AtomicReference<Thread> threadRef = new AtomicReference<>();
         SingleThreadEventExecutor executor = new SingleThreadEventExecutor(
                 null, new DefaultThreadFactory("test"), false) {
             @Override

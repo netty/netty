@@ -409,7 +409,7 @@ public class ProxyHandlerTest {
         );
 
         // Convert the test items to the list of constructor parameters.
-        List<Object[]> params = new ArrayList<Object[]>(items.size());
+        List<Object[]> params = new ArrayList<>(items.size());
         for (Object i: items) {
             params.add(new Object[] { i });
         }
@@ -454,8 +454,8 @@ public class ProxyHandlerTest {
 
     private static final class SuccessTestHandler extends SimpleChannelInboundHandler<Object> {
 
-        final Queue<String> received = new LinkedBlockingQueue<String>();
-        final Queue<Throwable> exceptions = new LinkedBlockingQueue<Throwable>();
+        final Queue<String> received = new LinkedBlockingQueue<>();
+        final Queue<Throwable> exceptions = new LinkedBlockingQueue<>();
         volatile int eventCount;
 
         private static void readIfNeeded(ChannelHandlerContext ctx) {
@@ -503,7 +503,7 @@ public class ProxyHandlerTest {
 
     private static final class FailureTestHandler extends SimpleChannelInboundHandler<Object> {
 
-        final Queue<Throwable> exceptions = new LinkedBlockingQueue<Throwable>();
+        final Queue<Throwable> exceptions = new LinkedBlockingQueue<>();
 
         /**
          * A latch that counts down when:

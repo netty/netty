@@ -86,7 +86,7 @@ public class AbstractReferenceCountedTest {
     @Test(timeout = 30000)
     public void testRetainFromMultipleThreadsThrowsReferenceCountException() throws Exception {
         int threads = 4;
-        Queue<Future<?>> futures = new ArrayDeque<Future<?>>(threads);
+        Queue<Future<?>> futures = new ArrayDeque<>(threads);
         ExecutorService service = Executors.newFixedThreadPool(threads);
         final AtomicInteger refCountExceptions = new AtomicInteger();
 
@@ -134,7 +134,7 @@ public class AbstractReferenceCountedTest {
     @Test(timeout = 30000)
     public void testReleaseFromMultipleThreadsThrowsReferenceCountException() throws Exception {
         int threads = 4;
-        Queue<Future<?>> futures = new ArrayDeque<Future<?>>(threads);
+        Queue<Future<?>> futures = new ArrayDeque<>(threads);
         ExecutorService service = Executors.newFixedThreadPool(threads);
         final AtomicInteger refCountExceptions = new AtomicInteger();
 

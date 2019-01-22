@@ -183,7 +183,7 @@ public class OcspServerExample {
         JcaX509CertificateConverter converter = new JcaX509CertificateConverter()
                 .setProvider(new BouncyCastleProvider());
 
-        List<X509Certificate> dst = new ArrayList<X509Certificate>();
+        List<X509Certificate> dst = new ArrayList<>();
 
         PEMParser parser = new PEMParser(reader);
         try {

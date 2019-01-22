@@ -30,14 +30,14 @@ public class PromiseNotifierTest {
     @Test
     public void testNullPromisesArray() {
         expectedException.expect(NullPointerException.class);
-        new PromiseNotifier<Void, Future<Void>>((Promise<Void>[]) null);
+        new PromiseNotifier<>((Promise<Void>[]) null);
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testNullPromiseInArray() {
         expectedException.expect(IllegalArgumentException.class);
-        new PromiseNotifier<Void, Future<Void>>((Promise<Void>) null);
+        new PromiseNotifier<>((Promise<Void>) null);
     }
 
     @Test
@@ -49,7 +49,7 @@ public class PromiseNotifierTest {
 
         @SuppressWarnings("unchecked")
         PromiseNotifier<Void, Future<Void>> notifier =
-                new PromiseNotifier<Void, Future<Void>>(p1, p2);
+                new PromiseNotifier<>(p1, p2);
 
         @SuppressWarnings("unchecked")
         Future<Void> future = mock(Future.class);
@@ -72,7 +72,7 @@ public class PromiseNotifierTest {
 
         @SuppressWarnings("unchecked")
         PromiseNotifier<Void, Future<Void>> notifier =
-                new PromiseNotifier<Void, Future<Void>>(p1, p2);
+                new PromiseNotifier<>(p1, p2);
 
         @SuppressWarnings("unchecked")
         Future<Void> future = mock(Future.class);

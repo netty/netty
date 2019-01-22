@@ -95,7 +95,7 @@ public final class RtspMethods {
      */
     public static final HttpMethod RECORD = new HttpMethod("RECORD");
 
-    private static final Map<String, HttpMethod> methodMap = new HashMap<String, HttpMethod>();
+    private static final Map<String, HttpMethod> methodMap = new HashMap<>();
 
     static {
         methodMap.put(DESCRIBE.toString(), DESCRIBE);

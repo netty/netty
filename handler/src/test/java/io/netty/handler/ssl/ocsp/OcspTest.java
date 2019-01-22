@@ -208,7 +208,7 @@ public class OcspTest {
      * The Server provides an OCSP staple and the Client rejects it.
      */
     private static void testClientRejectingOcspStaple(SslProvider sslProvider) throws Exception {
-        final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> causeRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
 
         ChannelInboundHandlerAdapter clientHandler = new ChannelInboundHandlerAdapter() {
@@ -298,7 +298,7 @@ public class OcspTest {
      * The exception should bubble up on the client side and the connection should get closed.
      */
     private static void testClientException(SslProvider sslProvider) throws Exception {
-        final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> causeRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
 
         ChannelInboundHandlerAdapter clientHandler = new ChannelInboundHandlerAdapter() {

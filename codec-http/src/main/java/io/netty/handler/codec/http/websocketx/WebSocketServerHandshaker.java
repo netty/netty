@@ -106,7 +106,7 @@ public abstract class WebSocketServerHandshaker {
      * Returns the CSV of supported sub protocols
      */
     public Set<String> subprotocols() {
-        Set<String> ret = new LinkedHashSet<String>();
+        Set<String> ret = new LinkedHashSet<>();
         Collections.addAll(ret, subprotocols);
         return ret;
     }

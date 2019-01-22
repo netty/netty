@@ -150,8 +150,8 @@ public class DefaultHttp2ConnectionEncoderTest {
                 return ((ChannelPromise) in.getArguments()[4]).setSuccess();
             }
         }).when(writer).writeGoAway(eq(ctx), anyInt(), anyInt(), any(ByteBuf.class), any(ChannelPromise.class));
-        writtenData = new ArrayList<String>();
-        writtenPadding = new ArrayList<Integer>();
+        writtenData = new ArrayList<>();
+        writtenPadding = new ArrayList<>();
         when(writer.writeData(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean(),
                 any(ChannelPromise.class))).then(new Answer<ChannelFuture>() {
                     @Override

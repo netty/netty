@@ -248,7 +248,7 @@ public class EpollSpliceTest {
 
     private static class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile Channel channel;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
         volatile int counter;
 
         @Override
@@ -294,7 +294,7 @@ public class EpollSpliceTest {
 
         volatile Channel channel;
         volatile ChannelFuture future;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
 
         public SpliceHandler(File file) {
             this.file = file;

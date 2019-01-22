@@ -52,13 +52,13 @@ public class SniClientTest {
 
     @Parameters(name = "{index}: serverSslProvider = {0}, clientSslProvider = {1}")
     public static Collection<Object[]> parameters() {
-        List<SslProvider> providers = new ArrayList<SslProvider>(Arrays.asList(SslProvider.values()));
+        List<SslProvider> providers = new ArrayList<>(Arrays.asList(SslProvider.values()));
         if (!OpenSsl.isAvailable()) {
             providers.remove(SslProvider.OPENSSL);
             providers.remove(SslProvider.OPENSSL_REFCNT);
         }
 
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         for (SslProvider sp: providers) {
             for (SslProvider cp: providers) {
                 params.add(new Object[] { sp, cp });

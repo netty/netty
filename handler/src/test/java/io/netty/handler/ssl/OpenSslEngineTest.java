@@ -69,7 +69,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Parameterized.Parameters(name = "{index}: bufferType = {0}, combo = {1}")
     public static Collection<Object[]> data() {
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         for (BufferType type: BufferType.values()) {
             params.add(new Object[] { type, ProtocolCipherCombo.tlsv12()});
 
@@ -376,7 +376,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
             handshake(clientEngine, serverEngine);
 
             ByteBuffer src = allocateBuffer(1024);
-            List<ByteBuffer> srcList = new ArrayList<ByteBuffer>();
+            List<ByteBuffer> srcList = new ArrayList<>();
             long srcsLen = 0;
             long maxLen = ((long) MAX_VALUE) * 2;
 

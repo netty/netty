@@ -48,7 +48,7 @@ final class OpenSslKeyMaterialManager {
     static final String KEY_TYPE_EC_RSA = "EC_RSA";
 
     // key type mappings for types.
-    private static final Map<String, String> KEY_TYPES = new HashMap<String, String>();
+    private static final Map<String, String> KEY_TYPES = new HashMap<>();
     static {
         KEY_TYPES.put("RSA", KEY_TYPE_RSA);
         KEY_TYPES.put("DHE_RSA", KEY_TYPE_RSA);
@@ -68,7 +68,7 @@ final class OpenSslKeyMaterialManager {
     void setKeyMaterialServerSide(ReferenceCountedOpenSslEngine engine) throws SSLException {
         long ssl = engine.sslPointer();
         String[] authMethods = SSL.authenticationMethods(ssl);
-        Set<String> aliases = new HashSet<String>(authMethods.length);
+        Set<String> aliases = new HashSet<>(authMethods.length);
         for (String authMethod : authMethods) {
             String type = KEY_TYPES.get(authMethod);
             if (type != null) {

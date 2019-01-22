@@ -55,7 +55,7 @@ import java.util.Map;
 import java.util.Set;
 
 class TestDnsServer extends DnsServer {
-    private static final Map<String, byte[]> BYTES = new HashMap<String, byte[]>();
+    private static final Map<String, byte[]> BYTES = new HashMap<>();
     private static final String[] IPV6_ADDRESSES;
 
     static {
@@ -197,9 +197,9 @@ class TestDnsServer extends DnsServer {
         private final Map<String, List<String>> domainMap;
 
         MapRecordStoreA(Set<String> domains, int length) {
-            domainMap = new HashMap<String, List<String>>(domains.size());
+            domainMap = new HashMap<>(domains.size());
             for (String domain : domains) {
-                List<String> addresses = new ArrayList<String>(length);
+                List<String> addresses = new ArrayList<>(length);
                 for (int i = 0; i < length; i++) {
                     addresses.add(TestRecordStore.nextIp());
                 }
@@ -224,9 +224,9 @@ class TestDnsServer extends DnsServer {
             String name = questionRecord.getDomainName();
             List<String> addresses = domainMap.get(name);
             if (addresses != null && questionRecord.getRecordType() == RecordType.A) {
-                Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>();
+                Set<ResourceRecord> records = new LinkedHashSet<>();
                 for (String address : addresses) {
-                    Map<String, Object> attributes = new HashMap<String, Object>();
+                    Map<String, Object> attributes = new HashMap<>();
                     attributes.put(DnsAttribute.IP_ADDRESS.toLowerCase(), address);
                     records.add(new TestResourceRecord(name, questionRecord.getRecordType(), attributes));
                 }
@@ -280,7 +280,7 @@ class TestDnsServer extends DnsServer {
         public Set<ResourceRecord> getRecords(QuestionRecord questionRecord) {
             String name = questionRecord.getDomainName();
             if (domains.contains(name)) {
-                Map<String, Object> attr = new HashMap<String, Object>();
+                Map<String, Object> attr = new HashMap<>();
                 switch (questionRecord.getRecordType()) {
                     case A:
                         do {

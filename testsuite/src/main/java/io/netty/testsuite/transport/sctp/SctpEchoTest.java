@@ -150,7 +150,7 @@ public class SctpEchoTest extends AbstractSctpTest {
 
     private static class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile Channel channel;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
         volatile int counter;
 
         @Override

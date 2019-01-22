@@ -98,9 +98,9 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
 
     static {
         percentEncodings = new Map.Entry[] {
-                new SimpleImmutableEntry<Pattern, String>(Pattern.compile("\\*"), "%2A"),
-                new SimpleImmutableEntry<Pattern, String>(Pattern.compile("\\+"), "%20"),
-                new SimpleImmutableEntry<Pattern, String>(Pattern.compile("~"), "%7E")
+                new SimpleImmutableEntry<>(Pattern.compile("\\*"), "%2A"),
+                new SimpleImmutableEntry<>(Pattern.compile("\\+"), "%20"),
+                new SimpleImmutableEntry<>(Pattern.compile("~"), "%7E")
         };
     }
 
@@ -216,12 +216,12 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             throw new ErrorDataEncoderException("Cannot create a Encoder if request is a TRACE");
         }
         // Fill default values
-        bodyListDatas = new ArrayList<InterfaceHttpData>();
+        bodyListDatas = new ArrayList<>();
         // default mode
         isLastChunk = false;
         isLastChunkSent = false;
         isMultipart = multipart;
-        multipartHttpDatas = new ArrayList<InterfaceHttpData>();
+        multipartHttpDatas = new ArrayList<>();
         this.encoderMode = encoderMode;
         if (isMultipart) {
             initDataMultipart();

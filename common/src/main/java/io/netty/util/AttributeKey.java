@@ -27,7 +27,7 @@ public final class AttributeKey<T> extends AbstractConstant<AttributeKey<T>> {
     private static final ConstantPool<AttributeKey<Object>> pool = new ConstantPool<AttributeKey<Object>>() {
         @Override
         protected AttributeKey<Object> newConstant(int id, String name) {
-            return new AttributeKey<Object>(id, name);
+            return new AttributeKey<>(id, name);
         }
     };
 

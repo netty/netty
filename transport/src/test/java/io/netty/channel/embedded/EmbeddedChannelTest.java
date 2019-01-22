@@ -156,7 +156,7 @@ public class EmbeddedChannelTest {
     @Test(timeout = 3000)
     public void testHandlerAddedExecutedInEventLoop() throws Throwable {
         final CountDownLatch latch = new CountDownLatch(1);
-        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> error = new AtomicReference<>();
         final ChannelHandler handler = new ChannelHandlerAdapter() {
             @Override
             public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
@@ -595,7 +595,7 @@ public class EmbeddedChannelTest {
         static final Integer DISCONNECT = 0;
         static final Integer CLOSE = 1;
 
-        private final Queue<Integer> queue = new ArrayDeque<Integer>();
+        private final Queue<Integer> queue = new ArrayDeque<>();
 
         @Override
         public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {

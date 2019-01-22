@@ -194,7 +194,7 @@ public class HttpUtilTest {
     }
 
     private static List<String> allPossibleCasesOfContinue() {
-        final List<String> cases = new ArrayList<String>();
+        final List<String> cases = new ArrayList<>();
         final String c = "continue";
         for (int i = 0; i < Math.pow(2, c.length()); i++) {
             final StringBuilder sb = new StringBuilder(c.length());

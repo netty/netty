@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit;
 
 final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements EventLoop {
 
-    private final Queue<Runnable> tasks = new ArrayDeque<Runnable>(2);
+    private final Queue<Runnable> tasks = new ArrayDeque<>(2);
 
     private static EmbeddedChannel cast(Channel channel) {
         if (channel instanceof EmbeddedChannel) {

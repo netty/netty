@@ -161,7 +161,7 @@ public class SingleThreadEventLoopTest {
     }
 
     private static void testScheduleTaskAtFixedRate(EventLoop loopA) throws InterruptedException {
-        final Queue<Long> timestamps = new LinkedBlockingQueue<Long>();
+        final Queue<Long> timestamps = new LinkedBlockingQueue<>();
         final int expectedTimeStamps = 5;
         final CountDownLatch allTimeStampsLatch = new CountDownLatch(expectedTimeStamps);
         ScheduledFuture<?> f = loopA.scheduleAtFixedRate(new Runnable() {
@@ -209,7 +209,7 @@ public class SingleThreadEventLoopTest {
     }
 
     private static void testScheduleLaggyTaskAtFixedRate(EventLoop loopA) throws InterruptedException {
-        final Queue<Long> timestamps = new LinkedBlockingQueue<Long>();
+        final Queue<Long> timestamps = new LinkedBlockingQueue<>();
         final int expectedTimeStamps = 5;
         final CountDownLatch allTimeStampsLatch = new CountDownLatch(expectedTimeStamps);
         ScheduledFuture<?> f = loopA.scheduleAtFixedRate(new Runnable() {
@@ -263,7 +263,7 @@ public class SingleThreadEventLoopTest {
     }
 
     private static void testScheduleTaskWithFixedDelay(EventLoop loopA) throws InterruptedException {
-        final Queue<Long> timestamps = new LinkedBlockingQueue<Long>();
+        final Queue<Long> timestamps = new LinkedBlockingQueue<>();
         final int expectedTimeStamps = 3;
         final CountDownLatch allTimeStampsLatch = new CountDownLatch(expectedTimeStamps);
         ScheduledFuture<?> f = loopA.scheduleWithFixedDelay(new Runnable() {
@@ -349,7 +349,7 @@ public class SingleThreadEventLoopTest {
 
         // Disable logging temporarily.
         Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
-        List<Appender<ILoggingEvent>> appenders = new ArrayList<Appender<ILoggingEvent>>();
+        List<Appender<ILoggingEvent>> appenders = new ArrayList<>();
         for (Iterator<Appender<ILoggingEvent>> i = root.iteratorForAppenders(); i.hasNext();) {
             Appender<ILoggingEvent> a = i.next();
             appenders.add(a);
@@ -387,7 +387,7 @@ public class SingleThreadEventLoopTest {
 
         // Disable logging temporarily.
         Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
-        List<Appender<ILoggingEvent>> appenders = new ArrayList<Appender<ILoggingEvent>>();
+        List<Appender<ILoggingEvent>> appenders = new ArrayList<>();
         for (Iterator<Appender<ILoggingEvent>> i = root.iteratorForAppenders(); i.hasNext();) {
             Appender<ILoggingEvent> a = i.next();
             appenders.add(a);

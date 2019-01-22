@@ -572,7 +572,7 @@ public final class Http2TestUtil {
             }
         };
 
-        final ConcurrentLinkedQueue<ByteBuf> buffers = new ConcurrentLinkedQueue<ByteBuf>();
+        final ConcurrentLinkedQueue<ByteBuf> buffers = new ConcurrentLinkedQueue<>();
 
         Http2FrameWriter frameWriter = Mockito.mock(Http2FrameWriter.class);
         doAnswer(new Answer() {

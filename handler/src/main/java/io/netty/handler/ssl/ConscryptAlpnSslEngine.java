@@ -139,7 +139,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
 
             protocolSelector = checkNotNull(applicationNegotiator.protocolSelectorFactory()
                             .newSelector(this,
-                                    new LinkedHashSet<String>(applicationNegotiator.protocols())),
+                                    new LinkedHashSet<>(applicationNegotiator.protocols())),
                     "protocolSelector");
         }
 

@@ -41,7 +41,7 @@ public final class ClassResolvers {
     public static ClassResolver weakCachingResolver(ClassLoader classLoader) {
         return new CachingClassResolver(
                 new ClassLoaderClassResolver(defaultClassLoader(classLoader)),
-                new WeakReferenceMap<String, Class<?>>(new HashMap<String, Reference<Class<?>>>()));
+                new WeakReferenceMap<>(new HashMap<>()));
     }
 
     /**
@@ -54,7 +54,7 @@ public final class ClassResolvers {
     public static ClassResolver softCachingResolver(ClassLoader classLoader) {
         return new CachingClassResolver(
                 new ClassLoaderClassResolver(defaultClassLoader(classLoader)),
-                new SoftReferenceMap<String, Class<?>>(new HashMap<String, Reference<Class<?>>>()));
+                new SoftReferenceMap<>(new HashMap<>()));
     }
 
     /**
@@ -67,7 +67,7 @@ public final class ClassResolvers {
     public static ClassResolver weakCachingConcurrentResolver(ClassLoader classLoader) {
         return new CachingClassResolver(
                 new ClassLoaderClassResolver(defaultClassLoader(classLoader)),
-                new WeakReferenceMap<String, Class<?>>(
+                new WeakReferenceMap<>(
                         PlatformDependent.<String, Reference<Class<?>>>newConcurrentHashMap()));
     }
 
@@ -81,7 +81,7 @@ public final class ClassResolvers {
     public static ClassResolver softCachingConcurrentResolver(ClassLoader classLoader) {
         return new CachingClassResolver(
                 new ClassLoaderClassResolver(defaultClassLoader(classLoader)),
-                new SoftReferenceMap<String, Class<?>>(
+                new SoftReferenceMap<>(
                         PlatformDependent.<String, Reference<Class<?>>>newConcurrentHashMap()));
     }
 

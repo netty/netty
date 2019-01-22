@@ -383,7 +383,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
 
     private static class ClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile Channel channel;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
         volatile int step;
         // first message will always be validated
         private long currentLastTime = TrafficCounter.milliSecondFromNano();
@@ -456,7 +456,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         private final int[] multipleMessage;
         volatile Channel channel;
         volatile int step;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
 
         ServerHandler(int[] autoRead, int[] multipleMessage) {
             this.autoRead = autoRead;

@@ -89,7 +89,7 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
             EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
             DnsServerAddressStreamProvider nameServerProvider) throws Exception {
 
-        final NameResolver<InetAddress> resolver = new InflightNameResolver<InetAddress>(
+        final NameResolver<InetAddress> resolver = new InflightNameResolver<>(
                 eventLoop,
                 newNameResolver(eventLoop, channelFactory, nameServerProvider),
                 resolvesInProgress,

@@ -335,7 +335,7 @@ public class HttpToHttp2ConnectionHandlerTest {
     @Test
     public void testRequestWithBody() throws Exception {
         final String text = "foooooogoooo";
-        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
+        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<>());
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
@@ -378,7 +378,7 @@ public class HttpToHttp2ConnectionHandlerTest {
     @Test
     public void testRequestWithBodyAndTrailingHeaders() throws Exception {
         final String text = "foooooogoooo";
-        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
+        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<>());
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
@@ -430,7 +430,7 @@ public class HttpToHttp2ConnectionHandlerTest {
     public void testChunkedRequestWithBodyAndTrailingHeaders() throws Exception {
         final String text = "foooooo";
         final String text2 = "goooo";
-        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
+        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<>());
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {

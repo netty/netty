@@ -29,7 +29,7 @@ public class IdentityCipherSuiteFilterTest {
     @Test
     public void regularInstanceDefaultsToDefaultCiphers() {
         List<String> defaultCiphers = Arrays.asList("FOO", "BAR");
-        Set<String> supportedCiphers = new HashSet<String>(Arrays.asList("BAZ", "QIX"));
+        Set<String> supportedCiphers = new HashSet<>(Arrays.asList("BAZ", "QIX"));
         String[] filtered = IdentityCipherSuiteFilter.INSTANCE
                 .filterCipherSuites(null, defaultCiphers, supportedCiphers);
         assertArrayEquals(defaultCiphers.toArray(), filtered);
@@ -38,7 +38,7 @@ public class IdentityCipherSuiteFilterTest {
     @Test
     public void alternativeInstanceDefaultsToSupportedCiphers() {
         List<String> defaultCiphers = Arrays.asList("FOO", "BAR");
-        Set<String> supportedCiphers = new HashSet<String>(Arrays.asList("BAZ", "QIX"));
+        Set<String> supportedCiphers = new HashSet<>(Arrays.asList("BAZ", "QIX"));
         String[] filtered = IdentityCipherSuiteFilter.INSTANCE_DEFAULTING_TO_SUPPORTED_CIPHERS
                 .filterCipherSuites(null, defaultCiphers, supportedCiphers);
         assertArrayEquals(supportedCiphers.toArray(), filtered);

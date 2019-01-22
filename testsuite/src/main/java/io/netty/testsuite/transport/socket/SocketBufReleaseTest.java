@@ -74,7 +74,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
         private final Random random = new Random();
         private final CountDownLatch latch = new CountDownLatch(1);
         private ByteBuf buf;
-        private final Promise<Channel> channelFuture = new DefaultPromise<Channel>(executor);
+        private final Promise<Channel> channelFuture = new DefaultPromise<>(executor);
 
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) throws Exception {

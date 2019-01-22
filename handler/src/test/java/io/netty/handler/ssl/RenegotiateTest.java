@@ -40,7 +40,7 @@ public abstract class RenegotiateTest {
 
     @Test(timeout = 30000)
     public void testRenegotiateServer() throws Throwable {
-        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> error = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(2);
         SelfSignedCertificate cert = new SelfSignedCertificate();
         EventLoopGroup group = new LocalEventLoopGroup();

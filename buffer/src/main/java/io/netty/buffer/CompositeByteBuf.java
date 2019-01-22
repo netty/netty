@@ -637,7 +637,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             return Collections.singletonList(slice);
         }
 
-        List<ByteBuf> sliceList = new ArrayList<ByteBuf>(componentCount - componentId);
+        List<ByteBuf> sliceList = new ArrayList<>(componentCount - componentId);
         sliceList.add(slice);
 
         // Add all the slices until there is nothing more left and then return the List.

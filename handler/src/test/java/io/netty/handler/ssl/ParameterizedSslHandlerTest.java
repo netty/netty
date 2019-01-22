@@ -65,14 +65,14 @@ public class ParameterizedSslHandlerTest {
 
     @Parameterized.Parameters(name = "{index}: clientProvider={0}, {index}: serverProvider={1}")
     public static Collection<Object[]> data() {
-        List<SslProvider> providers = new ArrayList<SslProvider>(3);
+        List<SslProvider> providers = new ArrayList<>(3);
         if (OpenSsl.isAvailable()) {
             providers.add(SslProvider.OPENSSL);
             providers.add(SslProvider.OPENSSL_REFCNT);
         }
         providers.add(SslProvider.JDK);
 
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
 
         for (SslProvider cp: providers) {
             for (SslProvider sp: providers) {
@@ -413,7 +413,7 @@ public class ParameterizedSslHandlerTest {
                             SslHandler handler = sslServerCtx.newHandler(ch.alloc());
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
                             handler.sslCloseFuture().addListener(
-                                    new PromiseNotifier<Channel, Future<Channel>>(serverPromise));
+                                    new PromiseNotifier<>(serverPromise));
                             handler.handshakeFuture().addListener(new FutureListener<Channel>() {
                                 @Override
                                 public void operationComplete(Future<Channel> future) {
@@ -452,7 +452,7 @@ public class ParameterizedSslHandlerTest {
                             SslHandler handler = sslClientCtx.newHandler(ch.alloc());
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
                             handler.sslCloseFuture().addListener(
-                                    new PromiseNotifier<Channel, Future<Channel>>(clientPromise));
+                                    new PromiseNotifier<>(clientPromise));
                             handler.handshakeFuture().addListener(new FutureListener<Channel>() {
                                 @Override
                                 public void operationComplete(Future<Channel> future) {

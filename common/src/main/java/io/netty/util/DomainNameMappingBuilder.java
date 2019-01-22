@@ -52,7 +52,7 @@ public final class DomainNameMappingBuilder<V> {
      */
     public DomainNameMappingBuilder(int initialCapacity, V defaultValue) {
         this.defaultValue = checkNotNull(defaultValue, "defaultValue");
-        map = new LinkedHashMap<String, V>(initialCapacity);
+        map = new LinkedHashMap<>(initialCapacity);
     }
 
     /**
@@ -79,7 +79,7 @@ public final class DomainNameMappingBuilder<V> {
      * @return new {@link DomainNameMapping} instance
      */
     public DomainNameMapping<V> build() {
-        return new ImmutableDomainNameMapping<V>(defaultValue, map);
+        return new ImmutableDomainNameMapping<>(defaultValue, map);
     }
 
     /**
@@ -108,7 +108,7 @@ public final class DomainNameMappingBuilder<V> {
             domainNamePatterns = new String[numberOfMappings];
             values = (V[]) new Object[numberOfMappings];
 
-            final Map<String, V> mapCopy = new LinkedHashMap<String, V>(map.size());
+            final Map<String, V> mapCopy = new LinkedHashMap<>(map.size());
             int index = 0;
             for (Map.Entry<String, V> mapping : mappings) {
                 final String hostname = normalizeHostname(mapping.getKey());

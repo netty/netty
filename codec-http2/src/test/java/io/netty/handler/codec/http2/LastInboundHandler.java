@@ -34,7 +34,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * Channel handler that allows to easily access inbound messages.
  */
 public class LastInboundHandler extends ChannelDuplexHandler {
-    private final List<Object> queue = new ArrayList<Object>();
+    private final List<Object> queue = new ArrayList<>();
     private final Consumer<ChannelHandlerContext> channelReadCompleteConsumer;
     private Throwable lastException;
     private ChannelHandlerContext ctx;

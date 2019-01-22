@@ -250,7 +250,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         final int expectedBytes = 100;
         final CountDownLatch serverReadExpectedLatch = new CountDownLatch(1);
         final CountDownLatch doneLatch = new CountDownLatch(1);
-        final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> causeRef = new AtomicReference<>();
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {

@@ -51,7 +51,7 @@ public class ScheduledFutureTaskBenchmark extends AbstractMicrobenchmark {
         @Param({ "100", "1000", "10000", "100000" })
         int num;
 
-        final List<ScheduledFuture<Void>> futures = new ArrayList<ScheduledFuture<Void>>();
+        final List<ScheduledFuture<Void>> futures = new ArrayList<>();
 
         @Setup(Level.Invocation)
         public void reset() {

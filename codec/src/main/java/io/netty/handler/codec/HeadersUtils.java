@@ -232,7 +232,7 @@ public final class HeadersUtils {
 
         @Override
         public Iterator<String> iterator() {
-            return new StringIterator<T>(allNames.iterator());
+            return new StringIterator<>(allNames.iterator());
         }
 
         @Override

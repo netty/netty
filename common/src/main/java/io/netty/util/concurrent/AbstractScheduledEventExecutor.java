@@ -53,7 +53,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     PriorityQueue<ScheduledFutureTask<?>> scheduledTaskQueue() {
         if (scheduledTaskQueue == null) {
-            scheduledTaskQueue = new DefaultPriorityQueue<ScheduledFutureTask<?>>(
+            scheduledTaskQueue = new DefaultPriorityQueue<>(
                     SCHEDULED_FUTURE_TASK_COMPARATOR,
                     // Use same initial capacity as java.util.PriorityQueue
                     11);
@@ -165,7 +165,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
         validateScheduled0(delay, unit);
 
-        return schedule(new ScheduledFutureTask<V>(
+        return schedule(new ScheduledFutureTask<>(
                 this, callable, ScheduledFutureTask.deadlineNanos(unit.toNanos(delay))));
     }
 
@@ -184,7 +184,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         validateScheduled0(initialDelay, unit);
         validateScheduled0(period, unit);
 
-        return schedule(new ScheduledFutureTask<Void>(
+        return schedule(new ScheduledFutureTask<>(
                 this, Executors.<Void>callable(command, null),
                 ScheduledFutureTask.deadlineNanos(unit.toNanos(initialDelay)), unit.toNanos(period)));
     }
@@ -205,7 +205,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         validateScheduled0(initialDelay, unit);
         validateScheduled0(delay, unit);
 
-        return schedule(new ScheduledFutureTask<Void>(
+        return schedule(new ScheduledFutureTask<>(
                 this, Executors.<Void>callable(command, null),
                 ScheduledFutureTask.deadlineNanos(unit.toNanos(initialDelay)), -unit.toNanos(delay)));
     }

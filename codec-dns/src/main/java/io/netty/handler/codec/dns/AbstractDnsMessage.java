@@ -469,6 +469,6 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
     }
 
     private static ArrayList<DnsRecord> newRecordList() {
-        return new ArrayList<DnsRecord>(2);
+        return new ArrayList<>(2);
     }
 }

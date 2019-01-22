@@ -126,7 +126,7 @@ final class PoolThreadCache {
             MemoryRegionCache<T>[] cache = new MemoryRegionCache[numCaches];
             for (int i = 0; i < cache.length; i++) {
                 // TODO: maybe use cacheSize / cache.length
-                cache[i] = new SubPageMemoryRegionCache<T>(cacheSize, sizeClass);
+                cache[i] = new SubPageMemoryRegionCache<>(cacheSize, sizeClass);
             }
             return cache;
         } else {
@@ -143,7 +143,7 @@ final class PoolThreadCache {
             @SuppressWarnings("unchecked")
             MemoryRegionCache<T>[] cache = new MemoryRegionCache[arraySize];
             for (int i = 0; i < cache.length; i++) {
-                cache[i] = new NormalMemoryRegionCache<T>(cacheSize);
+                cache[i] = new NormalMemoryRegionCache<>(cacheSize);
             }
             return cache;
         } else {

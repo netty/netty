@@ -345,7 +345,7 @@ public final class DnsNameResolverBuilder {
     public DnsNameResolverBuilder searchDomains(Iterable<String> searchDomains) {
         checkNotNull(searchDomains, "searchDomains");
 
-        final List<String> list = new ArrayList<String>(4);
+        final List<String> list = new ArrayList<>(4);
 
         for (String f : searchDomains) {
             if (f == null) {

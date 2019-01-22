@@ -50,7 +50,7 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
             final CountDownLatch acceptorReadLatch = new CountDownLatch(1);
             final CountDownLatch serverReadLatch = new CountDownLatch(1);
             final CountDownLatch clientReadLatch = new CountDownLatch(1);
-            final AtomicReference<Channel> serverConnectedChannelRef = new AtomicReference<Channel>();
+            final AtomicReference<Channel> serverConnectedChannelRef = new AtomicReference<>();
 
             sb.handler(new ChannelInitializer<Channel>() {
                 @Override

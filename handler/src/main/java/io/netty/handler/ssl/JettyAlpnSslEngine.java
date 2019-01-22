@@ -117,7 +117,7 @@ abstract class JettyAlpnSslEngine extends JdkSslEngine {
             super(engine);
             checkNotNull(applicationNegotiator, "applicationNegotiator");
             final ProtocolSelector protocolSelector = checkNotNull(applicationNegotiator.protocolSelectorFactory()
-                            .newSelector(this, new LinkedHashSet<String>(applicationNegotiator.protocols())),
+                            .newSelector(this, new LinkedHashSet<>(applicationNegotiator.protocols())),
                     "protocolSelector");
             ALPN.put(engine, new ALPN.ServerProvider() {
                 @Override

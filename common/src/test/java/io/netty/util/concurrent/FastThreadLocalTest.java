@@ -58,7 +58,7 @@ public class FastThreadLocalTest {
 
     @Test(timeout = 10000)
     public void testRemoveAllFromFTLThread() throws Throwable {
-        final AtomicReference<Throwable> throwable = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> throwable = new AtomicReference<>();
         final Thread thread = new FastThreadLocalThread() {
             @Override
             public void run() {
@@ -81,7 +81,7 @@ public class FastThreadLocalTest {
 
     @Test
     public void testMultipleSetRemove() throws Exception {
-        final FastThreadLocal<String> threadLocal = new FastThreadLocal<String>();
+        final FastThreadLocal<String> threadLocal = new FastThreadLocal<>();
         final Runnable runnable = new Runnable() {
             @Override
             public void run() {
@@ -108,8 +108,8 @@ public class FastThreadLocalTest {
 
     @Test
     public void testMultipleSetRemove_multipleThreadLocal() throws Exception {
-        final FastThreadLocal<String> threadLocal = new FastThreadLocal<String>();
-        final FastThreadLocal<String> threadLocal2 = new FastThreadLocal<String>();
+        final FastThreadLocal<String> threadLocal = new FastThreadLocal<>();
+        final FastThreadLocal<String> threadLocal2 = new FastThreadLocal<>();
         final Runnable runnable = new Runnable() {
             @Override
             public void run() {
@@ -199,7 +199,7 @@ public class FastThreadLocalTest {
 
     private static final class TestFastThreadLocal extends FastThreadLocal<String> {
 
-        final AtomicReference<String> onRemovalCalled = new AtomicReference<String>();
+        final AtomicReference<String> onRemovalCalled = new AtomicReference<>();
 
         @Override
         protected String initialValue() throws Exception {

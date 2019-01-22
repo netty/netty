@@ -189,7 +189,7 @@ abstract class Cache<E> {
                         }
 
                         // Create a new List for COW semantics
-                        List<E> newEntries = new ArrayList<E>(entries.size() + 1);
+                        List<E> newEntries = new ArrayList<>(entries.size() + 1);
                         int i = 0;
                         E replacedEntry = null;
                         do {

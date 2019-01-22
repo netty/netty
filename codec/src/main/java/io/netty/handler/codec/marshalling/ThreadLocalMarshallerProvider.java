@@ -28,7 +28,7 @@ import org.jboss.marshalling.MarshallingConfiguration;
  * many small {@link Object}'s and your actual Thread count is not to big
  */
 public class ThreadLocalMarshallerProvider implements MarshallerProvider {
-    private final FastThreadLocal<Marshaller> marshallers = new FastThreadLocal<Marshaller>();
+    private final FastThreadLocal<Marshaller> marshallers = new FastThreadLocal<>();
 
     private final MarshallerFactory factory;
     private final MarshallingConfiguration config;

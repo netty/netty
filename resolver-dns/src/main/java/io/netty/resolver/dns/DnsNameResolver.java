@@ -776,7 +776,7 @@ public class DnsNameResolver extends InetNameResolver {
         if (!additionalsIt.hasNext()) {
             return EMPTY_ADDITIONALS;
         }
-        List<DnsRecord> records = new ArrayList<DnsRecord>();
+        List<DnsRecord> records = new ArrayList<>();
         do {
             DnsRecord r = additionalsIt.next();
             validateAdditional(r, validateType);
@@ -946,7 +946,7 @@ public class DnsNameResolver extends InetNameResolver {
                     final DnsCacheEntry e = cachedEntries.get(i);
                     if (f.addressType().isInstance(e.address())) {
                         if (result == null) {
-                            result = new ArrayList<InetAddress>(numEntries);
+                            result = new ArrayList<>(numEntries);
                         }
                         result.add(e.address());
                     }

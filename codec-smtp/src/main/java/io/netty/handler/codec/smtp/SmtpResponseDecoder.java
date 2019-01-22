@@ -82,7 +82,7 @@ public final class SmtpResponseDecoder extends LineBasedFrameDecoder {
                     if (details == null) {
                         // Using initial capacity as it is very unlikely that we will receive a multi-line response
                         // with more then 3 lines.
-                        this.details = details = new ArrayList<CharSequence>(4);
+                        this.details = details = new ArrayList<>(4);
                     }
                     details.add(detail);
                 }

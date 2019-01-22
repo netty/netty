@@ -192,7 +192,7 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
             if (head == null) {
                 return EMPTY_METRICS;
             }
-            List<PoolChunkMetric> metrics = new ArrayList<PoolChunkMetric>();
+            List<PoolChunkMetric> metrics = new ArrayList<>();
             for (PoolChunk<T> cur = head;;) {
                 metrics.add(cur);
                 cur = cur.next;

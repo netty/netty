@@ -82,7 +82,7 @@ public class DefaultChannelPipelineTailTest {
 
     @Test
     public void testOnUnhandledInboundException() throws Exception {
-        final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> causeRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
         EventLoop loop = GROUP.next();
         MyChannel myChannel = new MyChannel(loop) {

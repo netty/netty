@@ -128,7 +128,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     private PoolSubpage<T> newSubpagePoolHead(int pageSize) {
-        PoolSubpage<T> head = new PoolSubpage<T>(pageSize);
+        PoolSubpage<T> head = new PoolSubpage<>(pageSize);
         head.prev = head;
         head.next = head;
         return head;

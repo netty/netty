@@ -47,7 +47,7 @@ public class LzmaFrameEncoderTest extends AbstractEncoderTest {
 
     @Override
     protected void testCompressionOfBatchedFlow(final ByteBuf data) throws Exception {
-        List<Integer> originalLengths = new ArrayList<Integer>();
+        List<Integer> originalLengths = new ArrayList<>();
         final int dataLength = data.readableBytes();
         int written = 0, length = rand.nextInt(50);
         while (written + length < dataLength) {

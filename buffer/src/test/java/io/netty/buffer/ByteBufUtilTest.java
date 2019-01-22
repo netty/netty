@@ -677,8 +677,8 @@ public class ByteBufUtilTest {
 
         try {
             final AtomicInteger counter = new AtomicInteger(60000);
-            final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
-            List<Thread> threads = new ArrayList<Thread>();
+            final AtomicReference<Throwable> errorRef = new AtomicReference<>();
+            List<Thread> threads = new ArrayList<>();
             for (int i = 0; i < 10; i++) {
                 Thread thread = new Thread(new Runnable() {
                     @Override

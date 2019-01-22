@@ -75,12 +75,12 @@ public class NettyRuntimeTests {
         final NettyRuntime.AvailableProcessorsHolder holder = new NettyRuntime.AvailableProcessorsHolder();
         final CyclicBarrier barrier = new CyclicBarrier(3);
 
-        final AtomicReference<IllegalStateException> firstReference = new AtomicReference<IllegalStateException>();
+        final AtomicReference<IllegalStateException> firstReference = new AtomicReference<>();
         final Runnable firstTarget = getRunnable(holder, barrier, firstReference);
         final Thread firstGet = new Thread(firstTarget);
         firstGet.start();
 
-        final AtomicReference<IllegalStateException> secondRefernce = new AtomicReference<IllegalStateException>();
+        final AtomicReference<IllegalStateException> secondRefernce = new AtomicReference<>();
         final Runnable secondTarget = getRunnable(holder, barrier, secondRefernce);
         final Thread secondGet = new Thread(secondTarget);
         secondGet.start();
@@ -130,7 +130,7 @@ public class NettyRuntimeTests {
         });
         get.start();
 
-        final AtomicReference<IllegalStateException> setException = new AtomicReference<IllegalStateException>();
+        final AtomicReference<IllegalStateException> setException = new AtomicReference<>();
         final Thread set = new Thread(new Runnable() {
             @Override
             public void run() {

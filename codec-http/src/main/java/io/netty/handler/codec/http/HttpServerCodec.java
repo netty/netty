@@ -33,7 +33,7 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
         implements HttpServerUpgradeHandler.SourceCodec {
 
     /** A queue that is used for correlating a request and a response. */
-    private final Queue<HttpMethod> queue = new ArrayDeque<HttpMethod>();
+    private final Queue<HttpMethod> queue = new ArrayDeque<>();
 
     /**
      * Creates a new instance with the default decoder options

@@ -144,7 +144,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
 
     @Parameterized.Parameters(name = "{index}: providerType = {0}, bufferType = {1}, combo = {2}")
     public static Collection<Object[]> data() {
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         for (ProviderType providerType : ProviderType.values()) {
             for (BufferType bufferType : BufferType.values()) {
                 params.add(new Object[]{ providerType, bufferType, ProtocolCipherCombo.tlsv12()});

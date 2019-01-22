@@ -88,7 +88,7 @@ public class Http2FrameRoundtripTest {
 
     private Http2FrameWriter writer;
     private Http2FrameReader reader;
-    private final List<ByteBuf> needReleasing = new LinkedList<ByteBuf>();
+    private final List<ByteBuf> needReleasing = new LinkedList<>();
 
     @Before
     public void setup() throws Exception {

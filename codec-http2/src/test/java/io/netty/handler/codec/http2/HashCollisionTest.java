@@ -43,7 +43,7 @@ public final class HashCollisionTest {
 
     public static void main(String[] args) throws IllegalAccessException, IOException, URISyntaxException {
         // Big initial size for when all name sources are pulled in.
-        List<CharSequence> strings = new ArrayList<CharSequence>(350000);
+        List<CharSequence> strings = new ArrayList<>(350000);
         addHttpHeaderNames(strings);
         addHttpHeaderValues(strings);
         addHttp2HeaderNames(strings);
@@ -118,14 +118,14 @@ public final class HashCollisionTest {
 
     private static Map<Integer, List<CharSequence>> calculateDuplicates(List<CharSequence> strings,
                                                                         Function<CharSequence, Integer> hasher) {
-        Map<Integer, List<CharSequence>> hashResults = new HashMap<Integer, List<CharSequence>>();
-        Set<Integer> duplicateHashCodes = new HashSet<Integer>();
+        Map<Integer, List<CharSequence>> hashResults = new HashMap<>();
+        Set<Integer> duplicateHashCodes = new HashSet<>();
 
         for (CharSequence str : strings) {
             Integer hash = hasher.apply(str);
             List<CharSequence> results = hashResults.get(hash);
             if (results == null) {
-                results = new ArrayList<CharSequence>(1);
+                results = new ArrayList<>(1);
                 hashResults.put(hash, results);
             } else {
                 duplicateHashCodes.add(hash);
@@ -137,9 +137,9 @@ public final class HashCollisionTest {
             return Collections.emptyMap();
         }
         Map<Integer, List<CharSequence>> duplicates =
-                new HashMap<Integer, List<CharSequence>>(duplicateHashCodes.size());
+                new HashMap<>(duplicateHashCodes.size());
         for (Integer duplicateHashCode : duplicateHashCodes) {
-            List<CharSequence> realDups = new ArrayList<CharSequence>(2);
+            List<CharSequence> realDups = new ArrayList<>(2);
             Iterator<CharSequence> itr = hashResults.get(duplicateHashCode).iterator();
             // there should be at least 2 elements in the list ... bcz there may be duplicates
             realDups.add(itr.next());

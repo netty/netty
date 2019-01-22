@@ -95,7 +95,7 @@ final class HpackTestCase {
                                 "\nACTUAL:\n" + StringUtil.toHexString(actual));
             }
 
-            List<HpackHeaderField> actualDynamicTable = new ArrayList<HpackHeaderField>();
+            List<HpackHeaderField> actualDynamicTable = new ArrayList<>();
             for (int index = 0; index < hpackEncoder.length(); index++) {
                 actualDynamicTable.add(hpackEncoder.getHeaderField(index));
             }
@@ -123,7 +123,7 @@ final class HpackTestCase {
 
             List<HpackHeaderField> actualHeaders = decode(hpackDecoder, headerBlock.encodedBytes);
 
-            List<HpackHeaderField> expectedHeaders = new ArrayList<HpackHeaderField>();
+            List<HpackHeaderField> expectedHeaders = new ArrayList<>();
             for (HpackHeaderField h : headerBlock.getHeaders()) {
                 expectedHeaders.add(new HpackHeaderField(h.name, h.value));
             }
@@ -134,7 +134,7 @@ final class HpackTestCase {
                                 "\nACTUAL:\n" + actualHeaders);
             }
 
-            List<HpackHeaderField> actualDynamicTable = new ArrayList<HpackHeaderField>();
+            List<HpackHeaderField> actualDynamicTable = new ArrayList<>();
             for (int index = 0; index < hpackDecoder.length(); index++) {
                 actualDynamicTable.add(hpackDecoder.getHeaderField(index));
             }
@@ -212,7 +212,7 @@ final class HpackTestCase {
     private static List<HpackHeaderField> decode(HpackDecoder hpackDecoder, byte[] expected) throws Exception {
         ByteBuf in = Unpooled.wrappedBuffer(expected);
         try {
-            List<HpackHeaderField> headers = new ArrayList<HpackHeaderField>();
+            List<HpackHeaderField> headers = new ArrayList<>();
             TestHeaderListener listener = new TestHeaderListener(headers);
             hpackDecoder.decode(0, in, listener, true);
             return headers;

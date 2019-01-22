@@ -77,7 +77,7 @@ public class PromiseAggregator<V, F extends Future<V>> implements GenericFutureL
                 } else {
                     size = 2;
                 }
-                pendingPromises = new LinkedHashSet<Promise<V>>(size);
+                pendingPromises = new LinkedHashSet<>(size);
             }
             for (Promise<V> p : promises) {
                 if (p == null) {

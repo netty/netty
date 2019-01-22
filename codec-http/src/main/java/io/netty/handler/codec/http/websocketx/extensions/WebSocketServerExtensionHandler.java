@@ -89,7 +89,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
 
                         if (validExtension != null && ((validExtension.rsv() & rsv) == 0)) {
                             if (validExtensions == null) {
-                                validExtensions = new ArrayList<WebSocketServerExtension>(1);
+                                validExtensions = new ArrayList<>(1);
                             }
                             rsv = rsv | validExtension.rsv();
                             validExtensions.add(validExtension);

@@ -287,7 +287,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
         FlowState(Http2Stream stream) {
             this.stream = stream;
-            pendingWriteQueue = new ArrayDeque<FlowControlled>(2);
+            pendingWriteQueue = new ArrayDeque<>(2);
         }
 
         /**

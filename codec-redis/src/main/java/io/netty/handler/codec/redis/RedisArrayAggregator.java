@@ -33,7 +33,7 @@ import java.util.List;
 @UnstableApi
 public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMessage> {
 
-    private final Deque<AggregateState> depths = new ArrayDeque<AggregateState>(4);
+    private final Deque<AggregateState> depths = new ArrayDeque<>(4);
 
     @Override
     protected void decode(ChannelHandlerContext ctx, RedisMessage msg, List<Object> out) throws Exception {
@@ -87,7 +87,7 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
         private final List<RedisMessage> children;
         AggregateState(int length) {
             this.length = length;
-            this.children = new ArrayList<RedisMessage>(length);
+            this.children = new ArrayList<>(length);
         }
     }
 }
