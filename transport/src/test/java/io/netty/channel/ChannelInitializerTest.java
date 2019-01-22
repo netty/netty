@@ -18,13 +18,12 @@ package io.netty.channel;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ScheduledFuture;
 import org.junit.After;
@@ -33,7 +32,6 @@ import org.junit.Test;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -64,7 +62,7 @@ public class ChannelInitializerTest {
 
     @Before
     public void setUp() {
-        group = new LocalEventLoopGroup(1);
+        group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         server = new ServerBootstrap()
                 .group(group)
                 .channel(LocalServerChannel.class)

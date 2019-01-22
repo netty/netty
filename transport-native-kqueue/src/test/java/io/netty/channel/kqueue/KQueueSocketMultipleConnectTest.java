@@ -17,8 +17,6 @@ package io.netty.channel.kqueue;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketMultipleConnectTest;
 
@@ -32,10 +30,7 @@ public class KQueueSocketMultipleConnectTest extends SocketMultipleConnectTest {
                 = new ArrayList<>();
         for (TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap> comboFactory
                 : KQueueSocketTestPermutation.INSTANCE.socket()) {
-            EventLoopGroup group = comboFactory.newClientInstance().config().group();
-            if (group instanceof NioEventLoopGroup || group instanceof KQueueEventLoopGroup) {
-                factories.add(comboFactory);
-            }
+            factories.add(comboFactory);
         }
         return factories;
     }

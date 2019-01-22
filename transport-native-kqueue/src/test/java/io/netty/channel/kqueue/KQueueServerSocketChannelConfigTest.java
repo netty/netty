@@ -18,6 +18,7 @@ package io.netty.channel.kqueue;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -37,7 +38,7 @@ public class KQueueServerSocketChannelConfigTest {
 
     @BeforeClass
     public static void before() {
-        group = new KQueueEventLoopGroup(1);
+        group = new MultithreadEventLoopGroup(1, KQueueHandler.newFactory());
         ServerBootstrap bootstrap = new ServerBootstrap();
         ch = (KQueueServerSocketChannel) bootstrap.group(group)
                 .channel(KQueueServerSocketChannel.class)

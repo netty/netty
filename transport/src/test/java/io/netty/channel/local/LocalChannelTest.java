@@ -31,6 +31,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.IoHandler;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
@@ -72,9 +73,9 @@ public class LocalChannelTest {
 
     @BeforeClass
     public static void beforeClass() {
-        group1 = new LocalEventLoopGroup(2);
-        group2 = new LocalEventLoopGroup(2);
-        sharedGroup = new LocalEventLoopGroup(1);
+        group1 = new MultithreadEventLoopGroup(2, LocalHandler.newFactory());
+        group2 = new MultithreadEventLoopGroup(2, LocalHandler.newFactory());
+        sharedGroup = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
     }
 
     @AfterClass

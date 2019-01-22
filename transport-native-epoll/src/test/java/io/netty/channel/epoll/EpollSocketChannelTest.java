@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -28,7 +29,7 @@ public class EpollSocketChannelTest {
 
     @Test
     public void testTcpInfo() throws Exception {
-        EventLoopGroup group = new EpollEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
 
         try {
             Bootstrap bootstrap = new Bootstrap();
@@ -46,7 +47,7 @@ public class EpollSocketChannelTest {
 
     @Test
     public void testTcpInfoReuse() throws Exception {
-        EventLoopGroup group = new EpollEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
 
         try {
             Bootstrap bootstrap = new Bootstrap();
@@ -103,7 +104,7 @@ public class EpollSocketChannelTest {
     // See https://github.com/netty/netty/issues/7159
     @Test
     public void testSoLingerNoAssertError() throws Exception {
-        EventLoopGroup group = new EpollEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
 
         try {
             Bootstrap bootstrap = new Bootstrap();

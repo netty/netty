@@ -24,7 +24,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import io.netty.channel.local.LocalEventLoopGroup;
+import io.netty.channel.local.LocalHandler;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -35,7 +35,7 @@ public class DefaultChannelPipelineTailTest {
 
     @BeforeClass
     public static void init() {
-        GROUP = new LocalEventLoopGroup(1);
+        GROUP = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
     }
 
     @AfterClass
