@@ -328,7 +328,7 @@ public final class PlatformDependent {
         if (hasUnsafe()) {
             PlatformDependent0.throwException(t);
         } else {
-            PlatformDependent.<RuntimeException>throwException0(t);
+            PlatformDependent.throwException0(t);
         }
     }
 
@@ -342,17 +342,6 @@ public final class PlatformDependent {
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap() {
         return new ConcurrentHashMap<>();
-    }
-
-    /**
-     * Creates a new fastest {@link LongCounter} implementation for the current platform.
-     */
-    public static LongCounter newLongCounter() {
-        if (javaVersion() >= 8) {
-            return new LongAdderCounter();
-        } else {
-            return new AtomicLongCounter();
-        }
     }
 
     /**
@@ -1354,30 +1343,6 @@ public final class PlatformDependent {
         }
 
         return "unknown";
-    }
-
-    private static final class AtomicLongCounter extends AtomicLong implements LongCounter {
-        private static final long serialVersionUID = 4074772784610639305L;
-
-        @Override
-        public void add(long delta) {
-            addAndGet(delta);
-        }
-
-        @Override
-        public void increment() {
-            incrementAndGet();
-        }
-
-        @Override
-        public void decrement() {
-            decrementAndGet();
-        }
-
-        @Override
-        public long value() {
-            return get();
-        }
     }
 
     private interface ThreadLocalRandomProvider {

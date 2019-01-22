@@ -16,7 +16,6 @@
 
 package io.netty.buffer;
 
-import io.netty.util.internal.LongCounter;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
@@ -25,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
 
 import static java.lang.Math.max;
 
@@ -63,18 +63,18 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     // Metrics for allocations and deallocations
     private long allocationsNormal;
-    // We need to use the LongCounter here as this is not guarded via synchronized block.
-    private final LongCounter allocationsTiny = PlatformDependent.newLongCounter();
-    private final LongCounter allocationsSmall = PlatformDependent.newLongCounter();
-    private final LongCounter allocationsHuge = PlatformDependent.newLongCounter();
-    private final LongCounter activeBytesHuge = PlatformDependent.newLongCounter();
+    // We need to use the LongAdder here as this is not guarded via synchronized block.
+    private final LongAdder allocationsTiny = new LongAdder();
+    private final LongAdder allocationsSmall = new LongAdder();
+    private final LongAdder allocationsHuge = new LongAdder();
+    private final LongAdder activeBytesHuge = new LongAdder();
 
     private long deallocationsTiny;
     private long deallocationsSmall;
     private long deallocationsNormal;
 
-    // We need to use the LongCounter here as this is not guarded via synchronized block.
-    private final LongCounter deallocationsHuge = PlatformDependent.newLongCounter();
+    // We need to use the LongAdder here as this is not guarded via synchronized block.
+    private final LongAdder deallocationsHuge = new LongAdder();
 
     // Number of thread caches backed by this arena.
     final AtomicInteger numThreadCaches = new AtomicInteger();
@@ -478,17 +478,17 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         synchronized (this) {
             allocsNormal = allocationsNormal;
         }
-        return allocationsTiny.value() + allocationsSmall.value() + allocsNormal + allocationsHuge.value();
+        return allocationsTiny.longValue() + allocationsSmall.longValue() + allocsNormal + allocationsHuge.longValue();
     }
 
     @Override
     public long numTinyAllocations() {
-        return allocationsTiny.value();
+        return allocationsTiny.longValue();
     }
 
     @Override
     public long numSmallAllocations() {
-        return allocationsSmall.value();
+        return allocationsSmall.longValue();
     }
 
     @Override
@@ -502,7 +502,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         synchronized (this) {
             deallocs = deallocationsTiny + deallocationsSmall + deallocationsNormal;
         }
-        return deallocs + deallocationsHuge.value();
+        return deallocs + deallocationsHuge.longValue();
     }
 
     @Override
@@ -522,18 +522,18 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     @Override
     public long numHugeAllocations() {
-        return allocationsHuge.value();
+        return allocationsHuge.longValue();
     }
 
     @Override
     public long numHugeDeallocations() {
-        return deallocationsHuge.value();
+        return deallocationsHuge.longValue();
     }
 
     @Override
     public  long numActiveAllocations() {
-        long val = allocationsTiny.value() + allocationsSmall.value() + allocationsHuge.value()
-                - deallocationsHuge.value();
+        long val = allocationsTiny.longValue() + allocationsSmall.longValue() + allocationsHuge.longValue()
+                - deallocationsHuge.longValue();
         synchronized (this) {
             val += allocationsNormal - (deallocationsTiny + deallocationsSmall + deallocationsNormal);
         }
@@ -566,7 +566,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     @Override
     public long numActiveBytes() {
-        long val = activeBytesHuge.value();
+        long val = activeBytesHuge.longValue();
         synchronized (this) {
             for (int i = 0; i < chunkListMetrics.size(); i++) {
                 for (PoolChunkMetric m: chunkListMetrics.get(i)) {
