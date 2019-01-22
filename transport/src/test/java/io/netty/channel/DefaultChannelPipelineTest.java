@@ -776,8 +776,8 @@ public class DefaultChannelPipelineTest {
             ChannelPipeline pipeline = newLocalChannel().pipeline();
             pipeline.addLast(handler1);
             pipeline.channel().register().syncUninterruptibly();
-            pipeline.addLast(group1, handler2);
-            pipeline.addLast(group2, handler3);
+            pipeline.addLast(group1.next(), handler2);
+            pipeline.addLast(group2.next(), handler3);
             pipeline.addLast(handler4);
 
             assertTrue(removedQueue.isEmpty());
@@ -809,7 +809,7 @@ public class DefaultChannelPipelineTest {
             final Promise<Void> promise = group1.next().newPromise();
             final Exception exception = new RuntimeException();
             ChannelPipeline pipeline = newLocalChannel().pipeline();
-            pipeline.addLast(group1, new CheckExceptionHandler(exception, promise));
+            pipeline.addLast(group1.next(), new CheckExceptionHandler(exception, promise));
             pipeline.addFirst(new ChannelHandlerAdapter() {
                 @Override
                 public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
@@ -838,7 +838,7 @@ public class DefaultChannelPipelineTest {
                     throw exception;
                 }
             });
-            pipeline.addLast(group1, new CheckExceptionHandler(exception, promise));
+            pipeline.addLast(group1.next(), new CheckExceptionHandler(exception, promise));
             pipeline.channel().register().syncUninterruptibly();
             pipeline.remove(handlerName);
             promise.syncUninterruptibly();
@@ -858,7 +858,7 @@ public class DefaultChannelPipelineTest {
             final Exception exceptionRemoved = new RuntimeException();
             String handlerName = "foo";
             ChannelPipeline pipeline = newLocalChannel().pipeline();
-            pipeline.addLast(group1, new CheckExceptionHandler(exceptionAdded, promise));
+            pipeline.addLast(group1.next(), new CheckExceptionHandler(exceptionAdded, promise));
             pipeline.addFirst(handlerName, new ChannelHandlerAdapter() {
                 @Override
                 public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
@@ -1043,7 +1043,7 @@ public class DefaultChannelPipelineTest {
 
             pipeline1.channel().register().syncUninterruptibly();
             final CountDownLatch latch = new CountDownLatch(1);
-            pipeline1.addLast(eventExecutors, new ChannelInboundHandlerAdapter() {
+            pipeline1.addLast(eventExecutors.next(), new ChannelInboundHandlerAdapter() {
                 @Override
                 public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                     // Just block one of the two threads.
@@ -1071,9 +1071,10 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         ChannelPipeline pipeline2 = newLocalChannel().pipeline();
 
-        pipeline.addLast(group, "h1", new ChannelInboundHandlerAdapter());
-        pipeline.addLast(group, "h2", new ChannelInboundHandlerAdapter());
-        pipeline2.addLast(group, "h3", new ChannelInboundHandlerAdapter());
+        EventExecutor executor = group.next();
+        pipeline.addLast(executor, "h1", new ChannelInboundHandlerAdapter());
+        pipeline.addLast(executor, "h2", new ChannelInboundHandlerAdapter());
+        pipeline2.addLast(group.next(), "h3", new ChannelInboundHandlerAdapter());
 
         EventExecutor executor1 = pipeline.context("h1").executor();
         EventExecutor executor2 = pipeline.context("h2").executor();
@@ -1090,10 +1091,9 @@ public class DefaultChannelPipelineTest {
     public void testNotPinExecutor() {
         EventExecutorGroup group = new DefaultEventExecutorGroup(2);
         ChannelPipeline pipeline = newLocalChannel().pipeline();
-        pipeline.channel().config().setOption(ChannelOption.SINGLE_EVENTEXECUTOR_PER_GROUP, false);
 
-        pipeline.addLast(group, "h1", new ChannelInboundHandlerAdapter());
-        pipeline.addLast(group, "h2", new ChannelInboundHandlerAdapter());
+        pipeline.addLast(group.next(), "h1", new ChannelInboundHandlerAdapter());
+        pipeline.addLast(group.next(), "h2", new ChannelInboundHandlerAdapter());
 
         EventExecutor executor1 = pipeline.context("h1").executor();
         EventExecutor executor2 = pipeline.context("h2").executor();

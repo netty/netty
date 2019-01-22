@@ -30,7 +30,6 @@ import static io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
 import static io.netty.channel.ChannelOption.MAX_MESSAGES_PER_READ;
 import static io.netty.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
 import static io.netty.channel.ChannelOption.RCVBUF_ALLOCATOR;
-import static io.netty.channel.ChannelOption.SINGLE_EVENTEXECUTOR_PER_GROUP;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_LOW_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
@@ -81,8 +80,7 @@ public class DefaultChannelConfig implements ChannelConfig {
                 null,
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
                 ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
-                WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK, MESSAGE_SIZE_ESTIMATOR,
-                SINGLE_EVENTEXECUTOR_PER_GROUP);
+                WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK, MESSAGE_SIZE_ESTIMATOR);
     }
 
     protected Map<ChannelOption<?>, Object> getOptions(
@@ -153,9 +151,6 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == MESSAGE_SIZE_ESTIMATOR) {
             return (T) getMessageSizeEstimator();
         }
-        if (option == SINGLE_EVENTEXECUTOR_PER_GROUP) {
-            return (T) Boolean.valueOf(getPinEventExecutorPerGroup());
-        }
         return null;
     }
 
@@ -186,8 +181,6 @@ public class DefaultChannelConfig implements ChannelConfig {
             setWriteBufferWaterMark((WriteBufferWaterMark) value);
         } else if (option == MESSAGE_SIZE_ESTIMATOR) {
             setMessageSizeEstimator((MessageSizeEstimator) value);
-        } else if (option == SINGLE_EVENTEXECUTOR_PER_GROUP) {
-            setPinEventExecutorPerGroup((Boolean) value);
         } else {
             return false;
         }
@@ -426,14 +419,4 @@ public class DefaultChannelConfig implements ChannelConfig {
         msgSizeEstimator = estimator;
         return this;
     }
-
-    private ChannelConfig setPinEventExecutorPerGroup(boolean pinEventExecutor) {
-        this.pinEventExecutor = pinEventExecutor;
-        return this;
-    }
-
-    private boolean getPinEventExecutorPerGroup() {
-        return pinEventExecutor;
-    }
-
 }

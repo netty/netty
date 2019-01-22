@@ -159,7 +159,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
                 p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
-                p.addLast(executor, sh);
+                p.addLast(executor.next(), sh);
             }
         });
 
@@ -169,7 +169,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
                 p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
-                p.addLast(executor, ch);
+                p.addLast(executor.next(), ch);
             }
         });
 

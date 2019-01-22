@@ -19,7 +19,6 @@ import io.netty.channel.Channel.Unsafe;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
@@ -29,7 +28,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.ArrayList;
-import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -68,7 +66,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final VoidChannelPromise voidPromise;
     private final boolean touch = ResourceLeakDetector.isEnabled();
 
-    private Map<EventExecutorGroup, EventExecutor> childExecutors;
     private volatile MessageSizeEstimator.Handle estimatorHandle;
 
     protected DefaultChannelPipeline(Channel channel) {
@@ -98,32 +95,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return touch ? ReferenceCountUtil.touch(msg, next) : msg;
     }
 
-    private AbstractChannelHandlerContext newContext(EventExecutorGroup group, String name, ChannelHandler handler) {
-        return new DefaultChannelHandlerContext(this, childExecutor(group), name, handler);
+    private AbstractChannelHandlerContext newContext(EventExecutor executor, String name, ChannelHandler handler) {
+        return new DefaultChannelHandlerContext(this, executor, name, handler);
     }
 
-    private EventExecutor childExecutor(EventExecutorGroup group) {
-        if (group == null) {
-            return null;
-        }
-        Boolean pinEventExecutor = channel.config().getOption(ChannelOption.SINGLE_EVENTEXECUTOR_PER_GROUP);
-        if (pinEventExecutor != null && !pinEventExecutor) {
-            return group.next();
-        }
-        Map<EventExecutorGroup, EventExecutor> childExecutors = this.childExecutors;
-        if (childExecutors == null) {
-            // Use size of 4 as most people only use one extra EventExecutor.
-            childExecutors = this.childExecutors = new IdentityHashMap<EventExecutorGroup, EventExecutor>(4);
-        }
-        // Pin one of the child executors once and remember it so that the same child executor
-        // is used to fire events for the same channel.
-        EventExecutor childExecutor = childExecutors.get(group);
-        if (childExecutor == null) {
-            childExecutor = group.next();
-            childExecutors.put(group, childExecutor);
-        }
-        return childExecutor;
-    }
     @Override
     public final Channel channel() {
         return channel;
@@ -135,20 +110,20 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final ChannelPipeline addFirst(EventExecutorGroup group, String name, ChannelHandler handler) {
+    public final ChannelPipeline addFirst(EventExecutor executor, String name, ChannelHandler handler) {
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
             checkMultiplicity(handler);
             name = filterName(name, handler);
 
-            newCtx = newContext(group, name, handler);
+            newCtx = newContext(executor, name, handler);
 
             addFirst0(newCtx);
 
-            EventExecutor executor = newCtx.executor();
-            if (!executor.inEventLoop()) {
+            EventExecutor ctxExecutor = newCtx.executor();
+            if (!ctxExecutor.inEventLoop()) {
                 newCtx.setAddPending();
-                executor.execute(new Runnable() {
+                ctxExecutor.execute(new Runnable() {
                     @Override
                     public void run() {
                         callHandlerAdded0(newCtx);
@@ -175,19 +150,19 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
+    public final ChannelPipeline addLast(EventExecutor executor, String name, ChannelHandler handler) {
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
             checkMultiplicity(handler);
 
-            newCtx = newContext(group, filterName(name, handler), handler);
+            newCtx = newContext(executor, filterName(name, handler), handler);
 
             addLast0(newCtx);
 
-            EventExecutor executor = newCtx.executor();
-            if (!executor.inEventLoop()) {
+            EventExecutor ctxExecutor = newCtx.executor();
+            if (!ctxExecutor.inEventLoop()) {
                 newCtx.setAddPending();
-                executor.execute(new Runnable() {
+                ctxExecutor.execute(new Runnable() {
                     @Override
                     public void run() {
                         callHandlerAdded0(newCtx);
@@ -215,7 +190,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addBefore(
-            EventExecutorGroup group, String baseName, String name, ChannelHandler handler) {
+            EventExecutor executor, String baseName, String name, ChannelHandler handler) {
         final AbstractChannelHandlerContext newCtx;
         final AbstractChannelHandlerContext ctx;
         synchronized (this) {
@@ -223,14 +198,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             name = filterName(name, handler);
             ctx = getContextOrDie(baseName);
 
-            newCtx = newContext(group, name, handler);
+            newCtx = newContext(executor, name, handler);
 
             addBefore0(ctx, newCtx);
 
-            EventExecutor executor = newCtx.executor();
-            if (!executor.inEventLoop()) {
+            EventExecutor ctxExecutor = newCtx.executor();
+            if (!ctxExecutor.inEventLoop()) {
                 newCtx.setAddPending();
-                executor.execute(new Runnable() {
+                ctxExecutor.execute(new Runnable() {
                     @Override
                     public void run() {
                         callHandlerAdded0(newCtx);
@@ -265,7 +240,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addAfter(
-            EventExecutorGroup group, String baseName, String name, ChannelHandler handler) {
+            EventExecutor executor, String baseName, String name, ChannelHandler handler) {
         final AbstractChannelHandlerContext newCtx;
         final AbstractChannelHandlerContext ctx;
 
@@ -274,14 +249,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             name = filterName(name, handler);
             ctx = getContextOrDie(baseName);
 
-            newCtx = newContext(group, name, handler);
+            newCtx = newContext(executor, name, handler);
 
             addAfter0(ctx, newCtx);
 
-            EventExecutor executor = newCtx.executor();
-            if (!executor.inEventLoop()) {
+            EventExecutor ctxExecutor = newCtx.executor();
+            if (!ctxExecutor.inEventLoop()) {
                 newCtx.setAddPending();
-                executor.execute(new Runnable() {
+                ctxExecutor.execute(new Runnable() {
                     @Override
                     public void run() {
                         callHandlerAdded0(newCtx);
@@ -311,7 +286,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final ChannelPipeline addFirst(EventExecutorGroup executor, ChannelHandler... handlers) {
+    public final ChannelPipeline addFirst(EventExecutor executor, ChannelHandler... handlers) {
         if (handlers == null) {
             throw new NullPointerException("handlers");
         }
@@ -344,7 +319,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final ChannelPipeline addLast(EventExecutorGroup executor, ChannelHandler... handlers) {
+    public final ChannelPipeline addLast(EventExecutor executor, ChannelHandler... handlers) {
         if (handlers == null) {
             throw new NullPointerException("handlers");
         }

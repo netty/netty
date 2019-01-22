@@ -49,7 +49,7 @@ public abstract class AbstractEventLoopTest {
                         @Override
                         public void initChannel(ServerSocketChannel ch) throws Exception {
                             ch.pipeline().addLast(new TestChannelHandler());
-                            ch.pipeline().addLast(eventExecutorGroup, new TestChannelHandler2());
+                            ch.pipeline().addLast(eventExecutorGroup.next(), new TestChannelHandler2());
                         }
                     })
                                             .bind(0).awaitUninterruptibly();

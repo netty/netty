@@ -137,12 +137,12 @@ public class LocalTransportThreadModelTest3 {
             if (!inbound) {
                 ch.config().setAutoRead(false);
             }
-            ch.pipeline().addLast(e1, h1)
-                    .addLast(e1, h2)
-                    .addLast(e1, h3)
-                    .addLast(e1, h4)
-                    .addLast(e1, h5)
-                    .addLast(e1, "recorder", h6);
+            ch.pipeline().addLast(e1.next(), h1)
+                    .addLast(e1.next(), h2)
+                    .addLast(e1.next(), h3)
+                    .addLast(e1.next(), h4)
+                    .addLast(e1.next(), h5)
+                    .addLast(e1.next(), "recorder", h6);
 
             ch.register().sync().channel().connect(localAddr).sync();
 
@@ -166,7 +166,7 @@ public class LocalTransportThreadModelTest3 {
                         }
                         //EventForwardHandler forwardHandler = forwarders[random.nextInt(forwarders.length)];
                         ChannelHandler handler = ch.pipeline().removeFirst();
-                        ch.pipeline().addBefore(groups[random.nextInt(groups.length)], "recorder",
+                        ch.pipeline().addBefore(groups[random.nextInt(groups.length)].next(), "recorder",
                                 UUID.randomUUID().toString(), handler);
                     }
                 }
