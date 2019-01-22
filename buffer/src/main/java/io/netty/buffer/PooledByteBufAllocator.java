@@ -307,6 +307,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 
     @Override
     protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+        if (initialCapacity > 1024 * 1024) {
+            logger.info("Try to allocate heap buffer with initialCapacity: " +
+                initialCapacity + " maxCapacity: " + maxCapacity + ", current usedHeapMemory: " +
+                metric.usedHeapMemory());
+        }
         PoolThreadCache cache = threadCache.get();
         PoolArena<byte[]> heapArena = cache.heapArena;
 
@@ -324,6 +329,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+        if (initialCapacity > 1024 * 1024) {
+            logger.info("Try to allocate direct buffer with initialCapacity: " +
+                initialCapacity + " maxCapacity: " + maxCapacity + ", current usedDirectMemory: " +
+                metric.usedDirectMemory());
+        }
         PoolThreadCache cache = threadCache.get();
         PoolArena<ByteBuffer> directArena = cache.directArena;
 
