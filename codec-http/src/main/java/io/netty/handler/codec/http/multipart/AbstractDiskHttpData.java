@@ -125,8 +125,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 }
                 return;
             }
-            FileOutputStream outputStream = new FileOutputStream(file);
-            try {
+            try (FileOutputStream outputStream = new FileOutputStream(file)) {
                 FileChannel localfileChannel = outputStream.getChannel();
                 ByteBuffer byteBuffer = buffer.nioBuffer();
                 int written = 0;
@@ -135,8 +134,6 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 }
                 buffer.readerIndex(buffer.readerIndex() + written);
                 localfileChannel.force(false);
-            } finally {
-                outputStream.close();
             }
             setCompleted();
         } finally {
@@ -217,9 +214,8 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             delete();
         }
         file = tempFile();
-        FileOutputStream outputStream = new FileOutputStream(file);
         int written = 0;
-        try {
+        try (FileOutputStream outputStream = new FileOutputStream(file)) {
             FileChannel localfileChannel = outputStream.getChannel();
             byte[] bytes = new byte[4096 * 4];
             ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
@@ -231,8 +227,6 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 read = inputStream.read(bytes);
             }
             localfileChannel.force(false);
-        } finally {
-            outputStream.close();
         }
         size = written;
         if (definedSize > 0 && definedSize < size) {
@@ -422,17 +416,14 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             throw new IllegalArgumentException(
                     "File too big to be loaded in memory");
         }
-        FileInputStream inputStream = new FileInputStream(src);
         byte[] array = new byte[(int) srcsize];
-        try {
+        try (FileInputStream inputStream = new FileInputStream(src)) {
             FileChannel fileChannel = inputStream.getChannel();
             ByteBuffer byteBuffer = ByteBuffer.wrap(array);
             int read = 0;
             while (read < srcsize) {
                 read += fileChannel.read(byteBuffer);
             }
-        } finally {
-            inputStream.close();
         }
         return array;
     }

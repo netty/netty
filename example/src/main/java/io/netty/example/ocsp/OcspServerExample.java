@@ -170,11 +170,8 @@ public class OcspServerExample {
         }
 
         try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(in, CharsetUtil.US_ASCII));
-            try {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, CharsetUtil.US_ASCII))) {
                 return parseCertificates(reader);
-            } finally {
-                reader.close();
             }
         } finally {
             in.close();

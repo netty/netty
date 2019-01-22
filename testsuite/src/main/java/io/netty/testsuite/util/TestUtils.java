@@ -156,11 +156,8 @@ public final class TestUtils {
             long lastLogTime = System.nanoTime();
             long counter = 0;
 
-            InputStream in = null;
-            OutputStream out = null;
-            try {
-                in = new FileInputStream(filename);
-                out = new XZOutputStream(new FileOutputStream(xzFilename), options);
+            try (InputStream in = new FileInputStream(filename);
+                 OutputStream out = new XZOutputStream(new FileOutputStream(xzFilename), options)) {
                 for (;;) {
                     int readBytes = in.read(buf);
                     if (readBytes < 0) {
@@ -180,25 +177,8 @@ public final class TestUtils {
                         lastLogTime = currentTime;
                     }
                 }
-                out.close();
-                in.close();
             } catch (Throwable t) {
                 logger.warn("Failed to compress the heap dump: {}", xzFilename, t);
-            } finally {
-                if (in != null) {
-                    try {
-                        in.close();
-                    } catch (IOException ignored) {
-                        // Ignore.
-                    }
-                }
-                if (out != null) {
-                    try {
-                        out.close();
-                    } catch (IOException ignored) {
-                        // Ignore.
-                    }
-                }
             }
 
             // Delete the uncompressed dump in favor of the compressed one.

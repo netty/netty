@@ -317,8 +317,7 @@ public final class NetUtil {
         try {
             InputStream is = process.getInputStream();
             InputStreamReader isr = new InputStreamReader(is);
-            BufferedReader br = new BufferedReader(isr);
-            try {
+            try (BufferedReader br = new BufferedReader(isr)) {
                 String line = br.readLine();
                 if (line.startsWith(sysctlKey)) {
                     for (int i = line.length() - 1; i > sysctlKey.length(); --i) {
@@ -328,13 +327,9 @@ public final class NetUtil {
                     }
                 }
                 return null;
-            } finally {
-                br.close();
             }
         } finally {
-            if (process != null) {
-                process.destroy();
-            }
+            process.destroy();
         }
     }
 
