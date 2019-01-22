@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class SingleThreadEventExecutorTest {
 
     @Test
-    public void testWrappedExecutureIsShutdown() {
+    public void testWrappedExecutorIsShutdown() {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
 
         SingleThreadEventExecutor executor = new SingleThreadEventExecutor(null, executorService, false) {
