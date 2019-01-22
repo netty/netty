@@ -15,11 +15,11 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.internal.LongCounter;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * Simplistic {@link ByteBufAllocator} implementation that does not pool anything.
@@ -247,17 +247,17 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
     }
 
     private static final class UnpooledByteBufAllocatorMetric implements ByteBufAllocatorMetric {
-        final LongCounter directCounter = PlatformDependent.newLongCounter();
-        final LongCounter heapCounter = PlatformDependent.newLongCounter();
+        final LongAdder directCounter = new LongAdder();
+        final LongAdder heapCounter = new LongAdder();
 
         @Override
         public long usedHeapMemory() {
-            return heapCounter.value();
+            return heapCounter.longValue();
         }
 
         @Override
         public long usedDirectMemory() {
-            return directCounter.value();
+            return directCounter.longValue();
         }
 
         @Override
