@@ -130,13 +130,11 @@ public final class OcspUtils {
             connection.setRequestProperty("accept", OCSP_RESPONSE_TYPE);
             connection.setRequestProperty("content-length", String.valueOf(encoded.length));
 
-            OutputStream out = connection.getOutputStream();
-            try {
+            try (OutputStream out = connection.getOutputStream()) {
                 out.write(encoded);
                 out.flush();
 
-                InputStream in = connection.getInputStream();
-                try {
+                try (InputStream in = connection.getInputStream()) {
                     int code = connection.getResponseCode();
                     if (code != HttpsURLConnection.HTTP_OK) {
                         throw new IOException("Unexpected status-code=" + code);
@@ -169,11 +167,7 @@ public final class OcspUtils {
                         baos.close();
                     }
                     return new OCSPResp(baos.toByteArray());
-                } finally {
-                    in.close();
                 }
-            } finally {
-                out.close();
             }
         } finally {
             connection.disconnect();

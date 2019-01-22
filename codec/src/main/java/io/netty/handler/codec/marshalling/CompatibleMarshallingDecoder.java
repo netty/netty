@@ -62,12 +62,13 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Void> {
             return;
         }
 
-        Unmarshaller unmarshaller = provider.getUnmarshaller(ctx);
-        ByteInput input = new ChannelBufferByteInput(buffer);
-        if (maxObjectSize != Integer.MAX_VALUE) {
-            input = new LimitingByteInput(input, maxObjectSize);
-        }
-        try {
+        // Call close in a finally block as the ReplayingDecoder will throw an Error if not enough bytes are
+        // readable. This helps to be sure that we do not leak resource
+        try (Unmarshaller unmarshaller = provider.getUnmarshaller(ctx)) {
+            ByteInput input = new ChannelBufferByteInput(buffer);
+            if (maxObjectSize != Integer.MAX_VALUE) {
+                input = new LimitingByteInput(input, maxObjectSize);
+            }
             unmarshaller.start(input);
             Object obj = unmarshaller.readObject();
             unmarshaller.finish();
@@ -75,10 +76,6 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Void> {
         } catch (LimitingByteInput.TooBigObjectException ignored) {
             discardingTooLongFrame = true;
             throw new TooLongFrameException();
-        } finally {
-            // Call close in a finally block as the ReplayingDecoder will throw an Error if not enough bytes are
-            // readable. This helps to be sure that we do not leak resource
-            unmarshaller.close();
         }
     }
 
