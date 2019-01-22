@@ -68,8 +68,8 @@ public class Http2OrHttpHandler extends ApplicationProtocolNegotiationHandler {
     }
 
     private static void configureHttp1(ChannelHandlerContext ctx) throws Exception {
-        ctx.pipeline().addLast(new HttpServerCodec(),
-                               new HttpObjectAggregator(MAX_CONTENT_LENGTH),
-                               new FallbackRequestHandler());
+        ctx.pipeline().addLast(new HttpServerCodec());
+        ctx.pipeline().addLast(new HttpObjectAggregator(MAX_CONTENT_LENGTH));
+        ctx.pipeline().addLast(new FallbackRequestHandler());
     }
 }

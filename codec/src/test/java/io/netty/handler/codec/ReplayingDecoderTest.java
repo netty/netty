@@ -99,7 +99,7 @@ public class ReplayingDecoderTest {
     private static final class BloatedLineDecoder extends ChannelInboundHandlerAdapter {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            ctx.pipeline().replace(this, "less-bloated", new LineDecoder());
+            ctx.pipeline().replace(this, new LineDecoder());
             ctx.pipeline().fireChannelRead(msg);
         }
     }

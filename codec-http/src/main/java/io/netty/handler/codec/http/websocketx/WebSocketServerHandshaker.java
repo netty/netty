@@ -173,7 +173,7 @@ public abstract class WebSocketServerHandshaker {
             p.remove(HttpContentCompressor.class);
         }
         ChannelHandlerContext ctx = p.context(HttpRequestDecoder.class);
-        final String encoderName;
+        final ChannelHandlerContext encoderCtx;
         if (ctx == null) {
             // this means the user use a HttpServerCodec
             ctx = p.context(HttpServerCodec.class);
@@ -182,21 +182,21 @@ public abstract class WebSocketServerHandshaker {
                         new IllegalStateException("No HttpDecoder and no HttpServerCodec in the pipeline"));
                 return promise;
             }
-            p.addBefore(ctx.name(), "wsdecoder", newWebsocketDecoder());
-            p.addBefore(ctx.name(), "wsencoder", newWebSocketEncoder());
-            encoderName = ctx.name();
+            p.addBefore(ctx, newWebsocketDecoder());
+            p.addBefore(ctx, newWebSocketEncoder());
+            encoderCtx = ctx;
         } else {
-            p.replace(ctx.name(), "wsdecoder", newWebsocketDecoder());
+            p.replace(ctx, newWebsocketDecoder());
 
-            encoderName = p.context(HttpResponseEncoder.class).name();
-            p.addBefore(encoderName, "wsencoder", newWebSocketEncoder());
+            encoderCtx = p.context(HttpResponseEncoder.class);
+            p.addBefore(encoderCtx, newWebSocketEncoder());
         }
         channel.writeAndFlush(response).addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
                     ChannelPipeline p = future.channel().pipeline();
-                    p.remove(encoderName);
+                    p.remove(encoderCtx);
                     promise.setSuccess();
                 } else {
                     promise.setFailure(future.cause());
@@ -261,9 +261,8 @@ public abstract class WebSocketServerHandshaker {
         // enough for the websockets handshake payload.
         //
         // TODO: Make handshake work without HttpObjectAggregator at all.
-        String aggregatorName = "httpAggregator";
-        p.addAfter(ctx.name(), aggregatorName, new HttpObjectAggregator(8192));
-        p.addAfter(aggregatorName, "handshaker", new SimpleChannelInboundHandler<FullHttpRequest>() {
+        ChannelHandlerContext aggregatorCtx = p.addAfter(ctx, new HttpObjectAggregator(8192));
+        p.addAfter(aggregatorCtx, new SimpleChannelInboundHandler<FullHttpRequest>() {
             @Override
             protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
                 // Remove ourself and do the actual handshake

@@ -97,7 +97,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
                     }
                 });
                 WebSocketServerProtocolHandler.setHandshaker(ctx.channel(), handshaker);
-                ctx.pipeline().replace(this, "WS403Responder",
+                ctx.pipeline().replace(this,
                         WebSocketServerProtocolHandler.forbiddenHttpRequestResponder());
             }
         } finally {

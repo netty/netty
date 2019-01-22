@@ -44,42 +44,24 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
 
     private static final List<CharSequence> UPGRADE_HEADERS = Collections.singletonList(HTTP_UPGRADE_SETTINGS_HEADER);
 
-    private final String handlerName;
     private final Http2ConnectionHandler connectionHandler;
     private final ChannelHandler upgradeToHandler;
 
     public Http2ClientUpgradeCodec(Http2FrameCodec frameCodec, ChannelHandler upgradeToHandler) {
-        this(null, frameCodec, upgradeToHandler);
-    }
-
-    public Http2ClientUpgradeCodec(String handlerName, Http2FrameCodec frameCodec, ChannelHandler upgradeToHandler) {
-        this(handlerName, (Http2ConnectionHandler) frameCodec, upgradeToHandler);
-    }
-
-    /**
-     * Creates the codec using a default name for the connection handler when adding to the
-     * pipeline.
-     *
-     * @param connectionHandler the HTTP/2 connection handler
-     */
-    public Http2ClientUpgradeCodec(Http2ConnectionHandler connectionHandler) {
-        this((String) null, connectionHandler);
+        this((Http2ConnectionHandler) frameCodec, upgradeToHandler);
     }
 
     /**
      * Creates the codec providing an upgrade to the given handler for HTTP/2.
      *
-     * @param handlerName the name of the HTTP/2 connection handler to be used in the pipeline,
-     *                    or {@code null} to auto-generate the name
      * @param connectionHandler the HTTP/2 connection handler
      */
-    public Http2ClientUpgradeCodec(String handlerName, Http2ConnectionHandler connectionHandler) {
-        this(handlerName, connectionHandler, connectionHandler);
+    public Http2ClientUpgradeCodec(Http2ConnectionHandler connectionHandler) {
+        this(connectionHandler, connectionHandler);
     }
 
-    private Http2ClientUpgradeCodec(String handlerName, Http2ConnectionHandler connectionHandler, ChannelHandler
+    private Http2ClientUpgradeCodec(Http2ConnectionHandler connectionHandler, ChannelHandler
                                     upgradeToHandler) {
-        this.handlerName = handlerName;
         this.connectionHandler = checkNotNull(connectionHandler, "connectionHandler");
         this.upgradeToHandler = checkNotNull(upgradeToHandler, "upgradeToHandler");
     }
@@ -101,7 +83,7 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
     public void upgradeTo(ChannelHandlerContext ctx, FullHttpResponse upgradeResponse)
             throws Exception {
         // Add the handler to the pipeline.
-        ctx.pipeline().addAfter(ctx.name(), handlerName, upgradeToHandler);
+        ctx.pipeline().addAfter(ctx, upgradeToHandler);
 
         // Reserve local stream 1 for the response.
         connectionHandler.onHttpClientUpgrade();

@@ -59,7 +59,6 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
     private static final Random random = new Random();
     static final byte[] data = new byte[messageSize];
 
-    private static final String TRAFFIC = "traffic";
     private static String currentTestName;
     private static int currentTestRun;
 
@@ -308,7 +307,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
             @Override
             protected void initChannel(SocketChannel c) throws Exception {
                 if (limitRead) {
-                    c.pipeline().addLast(TRAFFIC, handler);
+                    c.pipeline().addLast(handler);
                 }
                 c.pipeline().addLast(sh);
             }
@@ -317,7 +316,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
             @Override
             protected void initChannel(SocketChannel c) throws Exception {
                 if (limitWrite) {
-                    c.pipeline().addLast(TRAFFIC, handler);
+                    c.pipeline().addLast(handler);
                 }
                 c.pipeline().addLast(ch);
             }

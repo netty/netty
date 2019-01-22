@@ -73,21 +73,20 @@ public class SctpEchoTest extends AbstractSctpTest {
         sb.childHandler(new ChannelInitializer<SctpChannel>() {
             @Override
             public void initChannel(SctpChannel c) throws Exception {
-                c.pipeline().addLast(
-                        new SctpMessageCompletionHandler(),
-                        new SctpInboundByteStreamHandler(0, 0),
-                        new SctpOutboundByteStreamHandler(0, 0, unordered),
-                        sh);
+                c.pipeline().addLast(new SctpMessageCompletionHandler());
+                c.pipeline().addLast(new SctpInboundByteStreamHandler(0, 0));
+                c.pipeline().addLast(new SctpOutboundByteStreamHandler(0, 0, unordered));
+                c.pipeline().addLast(sh);
             }
         });
         cb.handler(new ChannelInitializer<SctpChannel>() {
             @Override
             public void initChannel(SctpChannel c) throws Exception {
                 c.pipeline().addLast(
-                        new SctpMessageCompletionHandler(),
-                        new SctpInboundByteStreamHandler(0, 0),
-                        new SctpOutboundByteStreamHandler(0, 0, unordered),
-                        ch);
+                        new SctpMessageCompletionHandler());
+                c.pipeline().addLast(new SctpInboundByteStreamHandler(0, 0));
+                c.pipeline().addLast(new SctpOutboundByteStreamHandler(0, 0, unordered));
+                c.pipeline().addLast(ch);
             }
         });
 

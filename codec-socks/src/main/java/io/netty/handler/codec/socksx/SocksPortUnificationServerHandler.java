@@ -74,13 +74,13 @@ public class SocksPortUnificationServerHandler extends ByteToMessageDecoder {
         switch (version) {
         case SOCKS4a:
             logKnownVersion(ctx, version);
-            p.addAfter(ctx.name(), null, Socks4ServerEncoder.INSTANCE);
-            p.addAfter(ctx.name(), null, new Socks4ServerDecoder());
+            p.addAfter(ctx, Socks4ServerEncoder.INSTANCE);
+            p.addAfter(ctx, new Socks4ServerDecoder());
             break;
         case SOCKS5:
             logKnownVersion(ctx, version);
-            p.addAfter(ctx.name(), null, socks5encoder);
-            p.addAfter(ctx.name(), null, new Socks5InitialRequestDecoder());
+            p.addAfter(ctx, socks5encoder);
+            p.addAfter(ctx, new Socks5InitialRequestDecoder());
             break;
         default:
             logUnknownVersion(ctx, versionVal);

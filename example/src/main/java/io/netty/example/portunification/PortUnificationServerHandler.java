@@ -112,33 +112,33 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
 
     private void enableSsl(ChannelHandlerContext ctx) {
         ChannelPipeline p = ctx.pipeline();
-        p.addLast("ssl", sslCtx.newHandler(ctx.alloc()));
-        p.addLast("unificationA", new PortUnificationServerHandler(sslCtx, false, detectGzip));
+        p.addLast(sslCtx.newHandler(ctx.alloc()));
+        p.addLast(new PortUnificationServerHandler(sslCtx, false, detectGzip));
         p.remove(this);
     }
 
     private void enableGzip(ChannelHandlerContext ctx) {
         ChannelPipeline p = ctx.pipeline();
-        p.addLast("gzipdeflater", ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP));
-        p.addLast("gzipinflater", ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
-        p.addLast("unificationB", new PortUnificationServerHandler(sslCtx, detectSsl, false));
+        p.addLast(ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP));
+        p.addLast(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
+        p.addLast(new PortUnificationServerHandler(sslCtx, detectSsl, false));
         p.remove(this);
     }
 
     private void switchToHttp(ChannelHandlerContext ctx) {
         ChannelPipeline p = ctx.pipeline();
-        p.addLast("decoder", new HttpRequestDecoder());
-        p.addLast("encoder", new HttpResponseEncoder());
-        p.addLast("deflater", new HttpContentCompressor());
-        p.addLast("handler", new HttpSnoopServerHandler());
+        p.addLast(new HttpRequestDecoder());
+        p.addLast(new HttpResponseEncoder());
+        p.addLast(new HttpContentCompressor());
+        p.addLast(new HttpSnoopServerHandler());
         p.remove(this);
     }
 
     private void switchToFactorial(ChannelHandlerContext ctx) {
         ChannelPipeline p = ctx.pipeline();
-        p.addLast("decoder", new BigIntegerDecoder());
-        p.addLast("encoder", new NumberEncoder());
-        p.addLast("handler", new FactorialServerHandler());
+        p.addLast(new BigIntegerDecoder());
+        p.addLast(new NumberEncoder());
+        p.addLast(new FactorialServerHandler());
         p.remove(this);
     }
 }

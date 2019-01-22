@@ -68,8 +68,8 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(Channel sch) throws Exception {
-                sch.pipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
-                sch.pipeline().addAfter("decoder", "handler", sh);
+                sch.pipeline().addLast(new FixedLengthFrameDecoder(1024));
+                sch.pipeline().addLast(sh);
             }
         });
 
@@ -77,8 +77,8 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(Channel sch) throws Exception {
-                sch.pipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
-                sch.pipeline().addAfter("decoder", "handler", ch);
+                sch.pipeline().addLast(new FixedLengthFrameDecoder(1024));
+                sch.pipeline().addLast(ch);
             }
         });
 

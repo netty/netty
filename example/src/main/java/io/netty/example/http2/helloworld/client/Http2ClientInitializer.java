@@ -86,7 +86,8 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
     }
 
     protected void configureEndOfPipeline(ChannelPipeline pipeline) {
-        pipeline.addLast(settingsHandler, responseHandler);
+        pipeline.addLast(settingsHandler);
+        pipeline.addLast(responseHandler);
     }
 
     /**
@@ -120,10 +121,10 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
         Http2ClientUpgradeCodec upgradeCodec = new Http2ClientUpgradeCodec(connectionHandler);
         HttpClientUpgradeHandler upgradeHandler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 65536);
 
-        ch.pipeline().addLast(sourceCodec,
-                              upgradeHandler,
-                              new UpgradeRequestHandler(),
-                              new UserEventLogger());
+        ch.pipeline().addLast(sourceCodec);
+        ch.pipeline().addLast(upgradeHandler);
+        ch.pipeline().addLast(new UpgradeRequestHandler());
+        ch.pipeline().addLast(new UserEventLogger());
     }
 
     /**

@@ -32,9 +32,6 @@ import static org.mockito.Mockito.*;
 @RunWith(MockitoJUnitRunner.class)
 public class OptionalSslHandlerTest {
 
-    private static final String SSL_HANDLER_NAME = "sslhandler";
-    private static final String HANDLER_NAME = "handler";
-
     @Mock
     private ChannelHandlerContext context;
 
@@ -69,16 +66,11 @@ public class OptionalSslHandlerTest {
             protected ChannelHandler newNonSslHandler(ChannelHandlerContext context) {
                 return nonSslHandler;
             }
-
-            @Override
-            protected String newNonSslHandlerName() {
-                return HANDLER_NAME;
-            }
         };
         final ByteBuf payload = Unpooled.copiedBuffer("plaintext".getBytes());
         try {
             handler.decode(context, payload, null);
-            verify(pipeline).replace(handler, HANDLER_NAME, nonSslHandler);
+            verify(pipeline).replace(handler, nonSslHandler);
         } finally {
             payload.release();
         }
@@ -92,16 +84,11 @@ public class OptionalSslHandlerTest {
             protected SslHandler newSslHandler(ChannelHandlerContext context, SslContext sslContext) {
                 return sslHandler;
             }
-
-            @Override
-            protected String newSslHandlerName() {
-                return SSL_HANDLER_NAME;
-            }
         };
         final ByteBuf payload = Unpooled.wrappedBuffer(new byte[] { 22, 3, 1, 0, 5 });
         try {
             handler.decode(context, payload, null);
-            verify(pipeline).replace(handler, SSL_HANDLER_NAME, sslHandler);
+            verify(pipeline).replace(handler, sslHandler);
         } finally {
             payload.release();
         }

@@ -38,6 +38,8 @@ import static org.junit.Assert.*;
 
 public class HttpServerUpgradeHandlerTest {
 
+    private static final class Marker extends ChannelInboundHandlerAdapter { }
+
     private class TestUpgradeCodec implements UpgradeCodec {
         @Override
         public Collection<CharSequence> requiredUpgradeHeaders() {
@@ -57,7 +59,7 @@ public class HttpServerUpgradeHandlerTest {
             assertNotNull(ctx.pipeline().get(HttpServerUpgradeHandler.class));
 
             // Add a marker handler to signal that the upgrade has happened
-            ctx.pipeline().addAfter(ctx.name(), "marker", new ChannelInboundHandlerAdapter());
+            ctx.pipeline().addAfter(ctx, new Marker());
           }
     }
 
@@ -90,7 +92,7 @@ public class HttpServerUpgradeHandlerTest {
                     assertTrue(writeUpgradeMessage);
                     assertFalse(writeFlushed);
                     assertNull(ctx.pipeline().get(HttpServerCodec.class));
-                    assertNotNull(ctx.pipeline().get("marker"));
+                    assertNotNull(ctx.pipeline().get(Marker.class));
                 } finally {
                     inReadCall = false;
                 }
@@ -130,7 +132,7 @@ public class HttpServerUpgradeHandlerTest {
 
         assertFalse(channel.writeInbound(upgrade));
         assertNull(channel.pipeline().get(HttpServerCodec.class));
-        assertNotNull(channel.pipeline().get("marker"));
+        assertNotNull(channel.pipeline().get(Marker.class));
 
         channel.flushOutbound();
         ByteBuf upgradeMessage = channel.readOutbound();

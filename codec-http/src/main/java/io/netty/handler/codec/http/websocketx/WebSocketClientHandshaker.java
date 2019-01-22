@@ -188,7 +188,7 @@ public abstract class WebSocketClientHandshaker {
                                 "a HttpRequestEncoder or HttpClientCodec"));
                         return;
                     }
-                    p.addAfter(ctx.name(), "ws-encoder", newWebSocketEncoder());
+                    p.addAfter(ctx, newWebSocketEncoder());
 
                     promise.setSuccess();
                 } else {
@@ -269,7 +269,7 @@ public abstract class WebSocketClientHandshaker {
             // Remove the encoder part of the codec as the user may start writing frames after this method returns.
             codec.removeOutboundHandler();
 
-            p.addAfter(ctx.name(), "ws-decoder", newWebsocketDecoder());
+            p.addAfter(ctx, newWebsocketDecoder());
 
             // Delay the removal of the decoder so the user can setup the pipeline if needed to handle
             // WebSocketFrame messages.
@@ -286,7 +286,7 @@ public abstract class WebSocketClientHandshaker {
                 p.remove(HttpRequestEncoder.class);
             }
             final ChannelHandlerContext context = ctx;
-            p.addAfter(context.name(), "ws-decoder", newWebsocketDecoder());
+            p.addAfter(context, newWebsocketDecoder());
 
             // Delay the removal of the decoder so the user can setup the pipeline if needed to handle
             // WebSocketFrame messages.
@@ -349,9 +349,8 @@ public abstract class WebSocketClientHandshaker {
             // then enough for the websockets handshake payload.
             //
             // TODO: Make handshake work without HttpObjectAggregator at all.
-            String aggregatorName = "httpAggregator";
-            p.addAfter(ctx.name(), aggregatorName, new HttpObjectAggregator(8192));
-            p.addAfter(aggregatorName, "handshaker", new SimpleChannelInboundHandler<FullHttpResponse>() {
+            ChannelHandlerContext aggregatorCtx = p.addAfter(ctx, new HttpObjectAggregator(8192));
+            p.addAfter(aggregatorCtx, new SimpleChannelInboundHandler<FullHttpResponse>() {
                 @Override
                 protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
                     // Remove ourself and do the actual handshake

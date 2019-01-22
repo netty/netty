@@ -78,20 +78,18 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(Channel sch) throws Exception {
-                sch.pipeline().addLast(
-                        new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())),
-                        new ObjectEncoder(),
-                        sh);
+                sch.pipeline().addLast(new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())));
+                sch.pipeline().addLast(new ObjectEncoder());
+                sch.pipeline().addLast(sh);
             }
         });
 
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(Channel sch) throws Exception {
-                sch.pipeline().addLast(
-                        new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())),
-                        new ObjectEncoder(),
-                        ch);
+                sch.pipeline().addLast(new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())));
+                sch.pipeline().addLast(new ObjectEncoder());
+                sch.pipeline().addLast(ch);
             }
         });
 

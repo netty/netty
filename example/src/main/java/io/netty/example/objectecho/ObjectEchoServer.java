@@ -35,7 +35,8 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 /**
  * Modification of {@link EchoServer} which utilizes Java object serialization.
  */
-public final class ObjectEchoServer {
+public final class
+ObjectEchoServer {
 
     static final boolean SSL = System.getProperty("ssl") != null;
     static final int PORT = Integer.parseInt(System.getProperty("port", "8007"));
@@ -64,10 +65,9 @@ public final class ObjectEchoServer {
                     if (sslCtx != null) {
                         p.addLast(sslCtx.newHandler(ch.alloc()));
                     }
-                    p.addLast(
-                            new ObjectEncoder(),
-                            new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
-                            new ObjectEchoServerHandler());
+                    p.addLast(new ObjectEncoder());
+                    p.addLast(new ObjectDecoder(ClassResolvers.cacheDisabled(null)));
+                    p.addLast(new ObjectEchoServerHandler());
                 }
              });
 

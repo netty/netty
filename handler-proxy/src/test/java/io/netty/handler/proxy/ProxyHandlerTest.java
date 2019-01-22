@@ -642,7 +642,9 @@ public class ProxyHandlerTest {
                 @Override
                 protected void initChannel(SocketChannel ch) throws Exception {
                     ChannelPipeline p = ch.pipeline();
-                    p.addLast(clientHandlers);
+                    for (ChannelHandler h : clientHandlers) {
+                        p.addLast(h);
+                    }
                     p.addLast(new LineBasedFrameDecoder(64));
                     p.addLast(testHandler);
                 }
@@ -690,7 +692,9 @@ public class ProxyHandlerTest {
                 @Override
                 protected void initChannel(SocketChannel ch) throws Exception {
                     ChannelPipeline p = ch.pipeline();
-                    p.addLast(clientHandlers);
+                    for (ChannelHandler h : clientHandlers) {
+                        p.addLast(h);
+                    }
                     p.addLast(new LineBasedFrameDecoder(64));
                     p.addLast(testHandler);
                 }
@@ -735,7 +739,9 @@ public class ProxyHandlerTest {
                 @Override
                 protected void initChannel(SocketChannel ch) throws Exception {
                     ChannelPipeline p = ch.pipeline();
-                    p.addLast(clientHandlers);
+                    for (ChannelHandler h : clientHandlers) {
+                        p.addLast(h);
+                    }
                     p.addLast(new LineBasedFrameDecoder(64));
                     p.addLast(testHandler);
                 }

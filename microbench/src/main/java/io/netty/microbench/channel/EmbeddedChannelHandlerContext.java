@@ -34,7 +34,6 @@ import java.net.SocketAddress;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerContext {
-    private static final String HANDLER_NAME = "microbench-delegator-ctx";
     private final EventLoop eventLoop;
     private final Channel channel;
     private final ByteBufAllocator alloc;
@@ -68,11 +67,6 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     @Override
     public final EventExecutor executor() {
         return eventLoop;
-    }
-
-    @Override
-    public final String name() {
-        return HANDLER_NAME;
     }
 
     @Override

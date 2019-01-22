@@ -184,9 +184,8 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
         sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
             public void initChannel(SocketChannel channel) throws Exception {
-                channel.pipeline().addLast(
-                        new SpdyFrameCodec(version),
-                        sh);
+                channel.pipeline().addLast(new SpdyFrameCodec(version));
+                channel.pipeline().addLast(sh);
             }
         });
 

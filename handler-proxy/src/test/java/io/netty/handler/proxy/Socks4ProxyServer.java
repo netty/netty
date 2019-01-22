@@ -71,7 +71,7 @@ final class Socks4ProxyServer extends ProxyServer {
         assertThat(req.type(), is(Socks4CommandType.CONNECT));
 
         if (testMode != TestMode.INTERMEDIARY) {
-            ctx.pipeline().addBefore(ctx.name(), "lineDecoder", new LineBasedFrameDecoder(64, false, true));
+            ctx.pipeline().addBefore(ctx, new LineBasedFrameDecoder(64, false, true));
         }
 
         boolean authzSuccess;

@@ -122,12 +122,12 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
                         for (WebSocketServerExtension extension : validExtensions) {
                             WebSocketExtensionDecoder decoder = extension.newExtensionDecoder();
                             WebSocketExtensionEncoder encoder = extension.newExtensionEncoder();
-                            ctx.pipeline().addAfter(ctx.name(), decoder.getClass().getName(), decoder);
-                            ctx.pipeline().addAfter(ctx.name(), encoder.getClass().getName(), encoder);
+                            ctx.pipeline().addAfter(ctx, decoder);
+                            ctx.pipeline().addAfter(ctx, encoder);
                         }
                     }
 
-                    ctx.pipeline().remove(ctx.name());
+                    ctx.pipeline().remove(ctx);
                 }
             });
 

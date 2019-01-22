@@ -78,7 +78,7 @@ public class HttpClientUpgradeHandlerTest {
         HttpClientUpgradeHandler handler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 1024);
         UserEventCatcher catcher = new UserEventCatcher();
         EmbeddedChannel channel = new EmbeddedChannel(catcher);
-        channel.pipeline().addFirst("upgrade", handler);
+        channel.pipeline().addFirst(handler);
 
         assertTrue(
             channel.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io")));
@@ -98,7 +98,7 @@ public class HttpClientUpgradeHandlerTest {
         assertFalse(channel.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
 
         assertEquals(HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_SUCCESSFUL, catcher.getUserEvent());
-        assertNull(channel.pipeline().get("upgrade"));
+        assertNull(channel.pipeline().context(handler));
 
         assertTrue(channel.writeInbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)));
         FullHttpResponse response = channel.readInbound();
@@ -114,7 +114,7 @@ public class HttpClientUpgradeHandlerTest {
         HttpClientUpgradeHandler handler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 1024);
         UserEventCatcher catcher = new UserEventCatcher();
         EmbeddedChannel channel = new EmbeddedChannel(catcher);
-        channel.pipeline().addFirst("upgrade", handler);
+        channel.pipeline().addFirst(handler);
 
         assertTrue(
             channel.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io")));
@@ -133,7 +133,7 @@ public class HttpClientUpgradeHandlerTest {
         assertTrue(channel.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
 
         assertEquals(HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_REJECTED, catcher.getUserEvent());
-        assertNull(channel.pipeline().get("upgrade"));
+        assertNull(channel.pipeline().context(handler));
 
         HttpResponse response = channel.readInbound();
         assertEquals(HttpResponseStatus.OK, response.status());
@@ -151,7 +151,7 @@ public class HttpClientUpgradeHandlerTest {
         HttpClientUpgradeHandler handler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 1024);
         UserEventCatcher catcher = new UserEventCatcher();
         EmbeddedChannel channel = new EmbeddedChannel(catcher);
-        channel.pipeline().addFirst("upgrade", handler);
+        channel.pipeline().addFirst(handler);
 
         assertTrue(
             channel.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io")));
@@ -169,7 +169,7 @@ public class HttpClientUpgradeHandlerTest {
         assertTrue(channel.writeInbound(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)));
 
         assertEquals(HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_REJECTED, catcher.getUserEvent());
-        assertNull(channel.pipeline().get("upgrade"));
+        assertNull(channel.pipeline().context(handler));
 
         HttpResponse response = channel.readInbound();
         assertEquals(HttpResponseStatus.OK, response.status());
@@ -183,7 +183,7 @@ public class HttpClientUpgradeHandlerTest {
         HttpClientUpgradeHandler handler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 1024);
         UserEventCatcher catcher = new UserEventCatcher();
         EmbeddedChannel channel = new EmbeddedChannel(catcher);
-        channel.pipeline().addFirst("upgrade", handler);
+        channel.pipeline().addFirst(handler);
 
         DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io");
         request.headers().add("connection", "extra");

@@ -152,14 +152,13 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         ChannelPipeline cp = ctx.pipeline();
         if (cp.get(WebSocketServerProtocolHandshakeHandler.class) == null) {
             // Add the WebSocketHandshakeHandler before this one.
-            ctx.pipeline().addBefore(ctx.name(), WebSocketServerProtocolHandshakeHandler.class.getName(),
+            ctx.pipeline().addBefore(ctx,
                     new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols,
                             allowExtensions, maxFramePayloadLength, allowMaskMismatch, checkStartsWith));
         }
         if (cp.get(Utf8FrameValidator.class) == null) {
             // Add the UFT8 checking before this one.
-            ctx.pipeline().addBefore(ctx.name(), Utf8FrameValidator.class.getName(),
-                    new Utf8FrameValidator());
+            ctx.pipeline().addBefore(ctx, new Utf8FrameValidator());
         }
     }
 

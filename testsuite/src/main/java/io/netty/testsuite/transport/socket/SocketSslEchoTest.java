@@ -266,11 +266,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                     serverSslHandler = serverCtx.newHandler(sch.alloc());
                 }
 
-                sch.pipeline().addLast("ssl", serverSslHandler);
+                sch.pipeline().addLast(serverSslHandler);
                 if (useChunkedWriteHandler) {
                     sch.pipeline().addLast(new ChunkedWriteHandler());
                 }
-                sch.pipeline().addLast("handler", serverHandler);
+                sch.pipeline().addLast(serverHandler);
             }
         });
 
@@ -287,11 +287,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                     clientSslHandler = clientCtx.newHandler(sch.alloc());
                 }
 
-                sch.pipeline().addLast("ssl", clientSslHandler);
+                sch.pipeline().addLast(clientSslHandler);
                 if (useChunkedWriteHandler) {
                     sch.pipeline().addLast(new ChunkedWriteHandler());
                 }
-                sch.pipeline().addLast("handler", clientHandler);
+                sch.pipeline().addLast(clientHandler);
             }
         });
 

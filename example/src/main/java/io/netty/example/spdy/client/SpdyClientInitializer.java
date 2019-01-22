@@ -42,13 +42,13 @@ public class SpdyClientInitializer extends ChannelInitializer<SocketChannel> {
     @Override
     public void initChannel(SocketChannel ch) {
         ChannelPipeline pipeline = ch.pipeline();
-        pipeline.addLast("ssl", sslCtx.newHandler(ch.alloc()));
-        pipeline.addLast("spdyFrameCodec", new SpdyFrameCodec(SPDY_3_1));
-        pipeline.addLast("spdyFrameLogger", new SpdyFrameLogger(INFO));
-        pipeline.addLast("spdySessionHandler", new SpdySessionHandler(SPDY_3_1, false));
-        pipeline.addLast("spdyHttpEncoder", new SpdyHttpEncoder(SPDY_3_1));
-        pipeline.addLast("spdyHttpDecoder", new SpdyHttpDecoder(SPDY_3_1, MAX_SPDY_CONTENT_LENGTH));
-        pipeline.addLast("spdyStreamIdHandler", new SpdyClientStreamIdHandler());
-        pipeline.addLast("httpHandler", httpResponseHandler);
+        pipeline.addLast(sslCtx.newHandler(ch.alloc()));
+        pipeline.addLast(new SpdyFrameCodec(SPDY_3_1));
+        pipeline.addLast(new SpdyFrameLogger(INFO));
+        pipeline.addLast(new SpdySessionHandler(SPDY_3_1, false));
+        pipeline.addLast(new SpdyHttpEncoder(SPDY_3_1));
+        pipeline.addLast(new SpdyHttpDecoder(SPDY_3_1, MAX_SPDY_CONTENT_LENGTH));
+        pipeline.addLast(new SpdyClientStreamIdHandler());
+        pipeline.addLast(httpResponseHandler);
     }
 }

@@ -381,7 +381,7 @@ public class ChannelOutboundBufferTest {
         final CountDownLatch handlerAddedLatch = new CountDownLatch(1);
         final CountDownLatch handlerRemovedLatch = new CountDownLatch(1);
         EmbeddedChannel ch = new EmbeddedChannel();
-        ch.pipeline().addLast(executor, "handler", new ChannelOutboundHandlerAdapter() {
+        ChannelHandlerContext handlerContext = ch.pipeline().addLast(executor, new ChannelOutboundHandlerAdapter() {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
                 promise.setFailure(new AssertionError("Should not be called"));
@@ -443,7 +443,7 @@ public class ChannelOutboundBufferTest {
             Thread.sleep(10);
         }
 
-        ch.pipeline().remove("handler");
+        ch.pipeline().remove(handlerContext);
 
         // Ensure we do not try to shutdown the executor before we handled everything for the Channel. Otherwise
         // the Executor may reject when the Channel tries to add a task to it.

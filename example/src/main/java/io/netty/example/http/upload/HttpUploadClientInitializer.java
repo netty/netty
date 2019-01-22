@@ -36,17 +36,17 @@ public class HttpUploadClientInitializer extends ChannelInitializer<SocketChanne
         ChannelPipeline pipeline = ch.pipeline();
 
         if (sslCtx != null) {
-            pipeline.addLast("ssl", sslCtx.newHandler(ch.alloc()));
+            pipeline.addLast(sslCtx.newHandler(ch.alloc()));
         }
 
-        pipeline.addLast("codec", new HttpClientCodec());
+        pipeline.addLast(new HttpClientCodec());
 
         // Remove the following line if you don't want automatic content decompression.
-        pipeline.addLast("inflater", new HttpContentDecompressor());
+        pipeline.addLast(new HttpContentDecompressor());
 
         // to be used since huge file transfer
-        pipeline.addLast("chunkedWriter", new ChunkedWriteHandler());
+        pipeline.addLast(new ChunkedWriteHandler());
 
-        pipeline.addLast("handler", new HttpUploadClientHandler());
+        pipeline.addLast(new HttpUploadClientHandler());
     }
 }

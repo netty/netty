@@ -77,7 +77,7 @@ final class HttpProxyServer extends ProxyServer {
         assertThat(req.method(), is(HttpMethod.CONNECT));
 
         if (testMode != TestMode.INTERMEDIARY) {
-            ctx.pipeline().addBefore(ctx.name(), "lineDecoder", new LineBasedFrameDecoder(64, false, true));
+            ctx.pipeline().addBefore(ctx, new LineBasedFrameDecoder(64, false, true));
         }
 
         ctx.pipeline().remove(HttpObjectAggregator.class);

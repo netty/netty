@@ -106,7 +106,6 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     private final int executionMask;
 
     private final DefaultChannelPipeline pipeline;
-    private final String name;
     private final boolean ordered;
 
     // Will be set to null if no child executor should be used, otherwise it will be set to the
@@ -123,9 +122,8 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     private volatile int handlerState = INIT;
 
-    AbstractChannelHandlerContext(DefaultChannelPipeline pipeline, EventExecutor executor, String name,
+    AbstractChannelHandlerContext(DefaultChannelPipeline pipeline, EventExecutor executor,
                                   Class<? extends ChannelHandler> handlerClass) {
-        this.name = ObjectUtil.checkNotNull(name, "name");
         this.pipeline = pipeline;
         this.executor = executor;
         this.executionMask = mask(handlerClass);
@@ -262,11 +260,6 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         } else {
             return executor;
         }
-    }
-
-    @Override
-    public String name() {
-        return name;
     }
 
     @Override
@@ -1235,12 +1228,13 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public String toHintString() {
-        return '\'' + name + "' will handle the message from this point.";
+        return '\'' + StringUtil.simpleClassName(handler()) + "' will handle the message from this point.";
     }
 
     @Override
     public String toString() {
-        return StringUtil.simpleClassName(ChannelHandlerContext.class) + '(' + name + ", " + channel() + ')';
+        return StringUtil.simpleClassName(ChannelHandlerContext.class)
+                + '(' + StringUtil.simpleClassName(handler()) + ", " + channel() + ')';
     }
 
     abstract static class AbstractWriteTask implements Runnable {

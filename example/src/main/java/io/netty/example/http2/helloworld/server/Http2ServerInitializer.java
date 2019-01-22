@@ -80,7 +80,8 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
      * Configure the pipeline for TLS NPN negotiation to HTTP/2.
      */
     private void configureSsl(SocketChannel ch) {
-        ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()), new Http2OrHttpHandler());
+        ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()));
+        ch.pipeline().addLast(new Http2OrHttpHandler());
     }
 
     /**
@@ -102,8 +103,8 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
                 System.err.println("Directly talking: " + msg.protocolVersion() + " (no upgrade was attempted)");
                 ChannelPipeline pipeline = ctx.pipeline();
                 ChannelHandlerContext thisCtx = pipeline.context(this);
-                pipeline.addAfter(thisCtx.name(), null, new HelloWorldHttp1Handler("Direct. No Upgrade Attempted."));
-                pipeline.replace(this, null, new HttpObjectAggregator(maxHttpContentLength));
+                pipeline.addAfter(thisCtx, new HelloWorldHttp1Handler("Direct. No Upgrade Attempted."));
+                pipeline.replace(this, new HttpObjectAggregator(maxHttpContentLength));
                 ctx.fireChannelRead(ReferenceCountUtil.retain(msg));
             }
         });

@@ -79,7 +79,9 @@ public class FlowControlHandlerTest {
                 protected void initChannel(Channel ch) throws Exception {
                     ChannelPipeline pipeline = ch.pipeline();
                     pipeline.addLast(new OneByteToThreeStringsDecoder());
-                    pipeline.addLast(handlers);
+                    for (ChannelHandler h: handlers) {
+                        pipeline.addLast(h);
+                    }
                 }
             });
 

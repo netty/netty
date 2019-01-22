@@ -157,8 +157,10 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             @Override
             public void initChannel(Channel sch) throws Exception {
                 ChannelPipeline p = sch.pipeline();
-                p.addLast("logger", new LoggingHandler(LOG_LEVEL));
-                p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
+                p.addLast(new LoggingHandler(LOG_LEVEL));
+                p.addLast(new LineBasedFrameDecoder(64));
+                p.addLast(new StringDecoder());
+                p.addLast(new StringEncoder());
                 p.addLast(executor, sh);
             }
         });
@@ -167,8 +169,10 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             @Override
             public void initChannel(Channel sch) throws Exception {
                 ChannelPipeline p = sch.pipeline();
-                p.addLast("logger", new LoggingHandler(LOG_LEVEL));
-                p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
+                p.addLast(new LoggingHandler(LOG_LEVEL));
+                p.addLast(new LineBasedFrameDecoder(64));
+                p.addLast(new StringDecoder());
+                p.addLast(new StringEncoder());
                 p.addLast(executor, ch);
             }
         });
@@ -248,7 +252,8 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         @Override
         public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
             if ("StartTlsResponse".equals(msg)) {
-                ctx.pipeline().addAfter("logger", "ssl", sslHandler);
+
+                ctx.pipeline().addAfter(ctx.pipeline().context(LoggingHandler.class), sslHandler);
                 handshakeFuture = sslHandler.handshakeFuture();
                 ctx.writeAndFlush("EncryptedRequest\n");
                 return;
@@ -302,7 +307,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         @Override
         public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
             if ("StartTlsRequest".equals(msg)) {
-                ctx.pipeline().addAfter("logger", "ssl", sslHandler);
+                ctx.pipeline().addAfter(ctx.pipeline().context(LoggingHandler.class), sslHandler);
                 ctx.writeAndFlush("StartTlsResponse\n");
                 return;
             }

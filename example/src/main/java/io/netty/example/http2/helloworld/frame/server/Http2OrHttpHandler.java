@@ -38,14 +38,15 @@ public class Http2OrHttpHandler extends ApplicationProtocolNegotiationHandler {
     @Override
     protected void configurePipeline(ChannelHandlerContext ctx, String protocol) throws Exception {
         if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
-            ctx.pipeline().addLast(Http2FrameCodecBuilder.forServer().build(), new HelloWorldHttp2Handler());
+            ctx.pipeline().addLast(Http2FrameCodecBuilder.forServer().build());
+            ctx.pipeline().addLast(new HelloWorldHttp2Handler());
             return;
         }
 
         if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
-            ctx.pipeline().addLast(new HttpServerCodec(),
-                                   new HttpObjectAggregator(MAX_CONTENT_LENGTH),
-                                   new HelloWorldHttp1Handler("ALPN Negotiation"));
+            ctx.pipeline().addLast(new HttpServerCodec());
+            ctx.pipeline().addLast(new HttpObjectAggregator(MAX_CONTENT_LENGTH));
+            ctx.pipeline().addLast(new HelloWorldHttp1Handler("ALPN Negotiation"));
             return;
         }
 

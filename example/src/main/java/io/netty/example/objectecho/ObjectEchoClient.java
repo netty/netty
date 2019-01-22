@@ -62,10 +62,9 @@ public final class ObjectEchoClient {
                     if (sslCtx != null) {
                         p.addLast(sslCtx.newHandler(ch.alloc(), HOST, PORT));
                     }
-                    p.addLast(
-                            new ObjectEncoder(),
-                            new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
-                            new ObjectEchoClientHandler());
+                    p.addLast(new ObjectEncoder());
+                    p.addLast(new ObjectDecoder(ClassResolvers.cacheDisabled(null)));
+                    p.addLast(new ObjectEchoClientHandler());
                 }
              });
 

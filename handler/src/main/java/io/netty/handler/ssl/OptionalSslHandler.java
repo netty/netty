@@ -55,7 +55,7 @@ public class OptionalSslHandler extends ByteToMessageDecoder {
         SslHandler sslHandler = null;
         try {
             sslHandler = newSslHandler(context, sslContext);
-            context.pipeline().replace(this, newSslHandlerName(), sslHandler);
+            context.pipeline().replace(this, sslHandler);
             sslHandler = null;
         } finally {
             // Since the SslHandler was not inserted into the pipeline the ownership of the SSLEngine was not
@@ -69,18 +69,10 @@ public class OptionalSslHandler extends ByteToMessageDecoder {
     private void handleNonSsl(ChannelHandlerContext context) {
         ChannelHandler handler = newNonSslHandler(context);
         if (handler != null) {
-            context.pipeline().replace(this, newNonSslHandlerName(), handler);
+            context.pipeline().replace(this, handler);
         } else {
             context.pipeline().remove(this);
         }
-    }
-
-    /**
-     * Optionally specify the SSL handler name, this method may return {@code null}.
-     * @return the name of the SSL handler.
-     */
-    protected String newSslHandlerName() {
-        return null;
     }
 
     /**
@@ -95,14 +87,6 @@ public class OptionalSslHandler extends ByteToMessageDecoder {
      */
     protected SslHandler newSslHandler(ChannelHandlerContext context, SslContext sslContext) {
         return sslContext.newHandler(context.alloc());
-    }
-
-    /**
-     * Optionally specify the non-SSL handler name, this method may return {@code null}.
-     * @return the name of the non-SSL handler.
-     */
-    protected String newNonSslHandlerName() {
-        return null;
     }
 
     /**

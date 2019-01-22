@@ -58,9 +58,8 @@ public final class LocalEcho {
               .childHandler(new ChannelInitializer<LocalChannel>() {
                   @Override
                   public void initChannel(LocalChannel ch) throws Exception {
-                      ch.pipeline().addLast(
-                              new LoggingHandler(LogLevel.INFO),
-                              new LocalEchoServerHandler());
+                      ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO));
+                      ch.pipeline().addLast(new LocalEchoServerHandler());
                   }
               });
 
@@ -70,9 +69,8 @@ public final class LocalEcho {
               .handler(new ChannelInitializer<LocalChannel>() {
                   @Override
                   public void initChannel(LocalChannel ch) throws Exception {
-                      ch.pipeline().addLast(
-                              new LoggingHandler(LogLevel.INFO),
-                              new LocalEchoClientHandler());
+                      ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO));
+                      ch.pipeline().addLast(new LocalEchoClientHandler());
                   }
               });
 

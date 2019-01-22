@@ -110,11 +110,10 @@ public final class WebSocketClient {
                      if (sslCtx != null) {
                          p.addLast(sslCtx.newHandler(ch.alloc(), host, port));
                      }
-                     p.addLast(
-                             new HttpClientCodec(),
-                             new HttpObjectAggregator(8192),
-                             WebSocketClientCompressionHandler.INSTANCE,
-                             handler);
+                     p.addLast(new HttpClientCodec());
+                     p.addLast(new HttpObjectAggregator(8192));
+                     p.addLast(WebSocketClientCompressionHandler.INSTANCE);
+                     p.addLast(handler);
                  }
              });
 

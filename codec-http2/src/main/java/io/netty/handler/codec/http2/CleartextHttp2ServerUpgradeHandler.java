@@ -65,10 +65,9 @@ public final class CleartextHttp2ServerUpgradeHandler extends ChannelHandlerAdap
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        ctx.pipeline()
-           .addBefore(ctx.name(), null, new PriorKnowledgeHandler())
-           .addBefore(ctx.name(), null, httpServerCodec)
-           .replace(this, null, httpServerUpgradeHandler);
+        ctx.pipeline().addBefore(ctx, new PriorKnowledgeHandler());
+        ctx.pipeline().addBefore(ctx, httpServerCodec);
+        ctx.pipeline().replace(this, httpServerUpgradeHandler);
     }
 
     /**
@@ -88,10 +87,11 @@ public final class CleartextHttp2ServerUpgradeHandler extends ChannelHandlerAdap
                 // Full h2 preface match, removed source codec, using http2 codec to handle
                 // following network traffic
                 ctx.pipeline()
-                   .remove(httpServerCodec)
+                   .remove(httpServerCodec);
+                ctx.pipeline()
                    .remove(httpServerUpgradeHandler);
 
-                ctx.pipeline().addAfter(ctx.name(), null, http2ServerHandler);
+                ctx.pipeline().addAfter(ctx, http2ServerHandler);
                 ctx.pipeline().remove(this);
 
                 ctx.fireUserEventTriggered(PriorKnowledgeUpgradeEvent.INSTANCE);

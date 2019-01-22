@@ -146,11 +146,11 @@ public class ChannelInitializerTest {
                     // NOOP
                 }
             }).syncUninterruptibly();
-            Iterator<Map.Entry<String, ChannelHandler>> handlers = channel.pipeline().iterator();
-            assertSame(handler1, handlers.next().getValue());
-            assertSame(handler2, handlers.next().getValue());
-            assertSame(handler3, handlers.next().getValue());
-            assertSame(handler4, handlers.next().getValue());
+            Iterator<ChannelHandler> handlers = channel.pipeline().iterator();
+            assertSame(handler1, handlers.next());
+            assertSame(handler2, handlers.next());
+            assertSame(handler3, handlers.next());
+            assertSame(handler4, handlers.next());
             assertFalse(handlers.hasNext());
         } finally {
             channel.close().syncUninterruptibly();
@@ -331,7 +331,7 @@ public class ChannelInitializerTest {
                                 ChannelHandlerContext ctx = ch.pipeline().context(this);
                                 assertNotNull(ctx);
                                 ch.pipeline().addAfter(ctx.executor(),
-                                        ctx.name(), null, new ChannelInboundHandlerAdapter() {
+                                        ctx, new ChannelInboundHandlerAdapter() {
                                             @Override
                                             public void channelRead(ChannelHandlerContext ctx, Object msg)  {
                                                 // just drop on the floor.

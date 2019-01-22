@@ -465,7 +465,7 @@ public class SniHandlerTest {
                                             }
                                         }
                                     };
-                                    ctx.pipeline().replace(this, CustomSslHandler.class.getName(), customSslHandler);
+                                    ctx.pipeline().replace(this, customSslHandler);
                                     success = true;
                                 } finally {
                                     if (!success) {

@@ -82,20 +82,20 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(Channel sch) throws Exception {
-                sch.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
-                sch.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
-                sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
-                sch.pipeline().addAfter("decoder", "handler", sh);
+                sch.pipeline().addLast(new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
+                sch.pipeline().addLast(new StringEncoder(CharsetUtil.ISO_8859_1));
+                sch.pipeline().addLast(new StringDecoder(CharsetUtil.ISO_8859_1));
+                sch.pipeline().addLast(sh);
             }
         });
 
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(Channel sch) throws Exception {
-                sch.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
-                sch.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
-                sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
-                sch.pipeline().addAfter("decoder", "handler", ch);
+                sch.pipeline().addLast(new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
+                sch.pipeline().addLast(new StringEncoder(CharsetUtil.ISO_8859_1));
+                sch.pipeline().addLast(new StringDecoder(CharsetUtil.ISO_8859_1));
+                sch.pipeline().addLast(ch);
             }
         });
 

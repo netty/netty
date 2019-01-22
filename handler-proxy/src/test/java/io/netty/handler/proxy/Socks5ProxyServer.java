@@ -48,8 +48,8 @@ import static org.junit.Assert.*;
 
 final class Socks5ProxyServer extends ProxyServer {
 
-    private static final String ENCODER = "encoder";
-    private static final String DECODER = "decoder";
+    private ChannelHandlerContext encoderCtx;
+    private ChannelHandlerContext decoderCtx;
 
     Socks5ProxyServer(boolean useSsl, TestMode testMode, InetSocketAddress destination) {
         super(useSsl, testMode, destination);
@@ -65,13 +65,13 @@ final class Socks5ProxyServer extends ProxyServer {
         ChannelPipeline p = ch.pipeline();
         switch (testMode) {
         case INTERMEDIARY:
-            p.addLast(DECODER, new Socks5InitialRequestDecoder());
-            p.addLast(ENCODER, Socks5ServerEncoder.DEFAULT);
+            decoderCtx = p.addLast(new Socks5InitialRequestDecoder());
+            encoderCtx = p.addLast(Socks5ServerEncoder.DEFAULT);
             p.addLast(new Socks5IntermediaryHandler());
             break;
         case TERMINAL:
-            p.addLast(DECODER, new Socks5InitialRequestDecoder());
-            p.addLast(ENCODER, Socks5ServerEncoder.DEFAULT);
+            decoderCtx = p.addLast(new Socks5InitialRequestDecoder());
+            encoderCtx = p.addLast(Socks5ServerEncoder.DEFAULT);
             p.addLast(new Socks5TerminalHandler());
             break;
         case UNRESPONSIVE:
@@ -82,25 +82,25 @@ final class Socks5ProxyServer extends ProxyServer {
 
     boolean authenticate(ChannelHandlerContext ctx, Object msg) {
         if (username == null) {
-            ctx.pipeline().replace(DECODER, DECODER, new Socks5CommandRequestDecoder());
+            decoderCtx = ctx.pipeline().replace(decoderCtx, new Socks5CommandRequestDecoder());
             ctx.write(new DefaultSocks5InitialResponse(Socks5AuthMethod.NO_AUTH));
             return true;
         }
 
         if (msg instanceof Socks5InitialRequest) {
-            ctx.pipeline().replace(DECODER, DECODER, new Socks5PasswordAuthRequestDecoder());
+            decoderCtx = ctx.pipeline().replace(decoderCtx, new Socks5PasswordAuthRequestDecoder());
             ctx.write(new DefaultSocks5InitialResponse(Socks5AuthMethod.PASSWORD));
             return false;
         }
 
         Socks5PasswordAuthRequest req = (Socks5PasswordAuthRequest) msg;
         if (req.username().equals(username) && req.password().equals(password)) {
-            ctx.pipeline().replace(DECODER, DECODER, new Socks5CommandRequestDecoder());
+            decoderCtx = ctx.pipeline().replace(decoderCtx, new Socks5CommandRequestDecoder());
             ctx.write(new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.SUCCESS));
             return true;
         }
 
-        ctx.pipeline().replace(DECODER, DECODER, new Socks5PasswordAuthRequestDecoder());
+        decoderCtx = ctx.pipeline().replace(decoderCtx, new Socks5PasswordAuthRequestDecoder());
         ctx.write(new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.FAILURE));
         return false;
     }
@@ -126,8 +126,8 @@ final class Socks5ProxyServer extends ProxyServer {
 
             ctx.write(res);
 
-            ctx.pipeline().remove(ENCODER);
-            ctx.pipeline().remove(DECODER);
+            ctx.pipeline().remove(encoderCtx);
+            ctx.pipeline().remove(decoderCtx);
 
             return true;
         }
@@ -152,7 +152,7 @@ final class Socks5ProxyServer extends ProxyServer {
             Socks5CommandRequest req = (Socks5CommandRequest) msg;
             assertThat(req.type(), is(Socks5CommandType.CONNECT));
 
-            ctx.pipeline().addBefore(ctx.name(), "lineDecoder", new LineBasedFrameDecoder(64, false, true));
+            ctx.pipeline().addBefore(ctx, new LineBasedFrameDecoder(64, false, true));
 
             Socks5CommandResponse res;
             boolean sendGreeting = false;
@@ -166,8 +166,8 @@ final class Socks5ProxyServer extends ProxyServer {
 
             ctx.write(res);
 
-            ctx.pipeline().remove(ENCODER);
-            ctx.pipeline().remove(DECODER);
+            ctx.pipeline().remove(encoderCtx);
+            ctx.pipeline().remove(decoderCtx);
 
             if (sendGreeting) {
                 ctx.write(Unpooled.copiedBuffer("0\n", CharsetUtil.US_ASCII));

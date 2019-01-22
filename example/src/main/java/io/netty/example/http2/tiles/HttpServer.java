@@ -53,10 +53,10 @@ public final class HttpServer {
         .childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
-                ch.pipeline().addLast(new HttpRequestDecoder(),
-                                      new HttpResponseEncoder(),
-                                      new HttpObjectAggregator(MAX_CONTENT_LENGTH),
-                                      new Http1RequestHandler());
+                ch.pipeline().addLast(new HttpRequestDecoder());
+                ch.pipeline().addLast(new HttpResponseEncoder());
+                ch.pipeline().addLast(new HttpObjectAggregator(MAX_CONTENT_LENGTH));
+                ch.pipeline().addLast(new Http1RequestHandler());
             }
         });
 

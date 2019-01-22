@@ -246,12 +246,12 @@ public class LocalTransportThreadModelTest {
 
             // inbound:  int -> byte[4] -> int -> int -> byte[4] -> int -> /dev/null
             // outbound: int -> int -> byte[4] -> int -> int -> byte[4] -> /dev/null
-            ch.pipeline().addLast(h1)
-                         .addLast(e1, h2)
-                         .addLast(e2, h3)
-                         .addLast(e3, h4)
-                         .addLast(e4, h5)
-                         .addLast(e5, h6);
+            ch.pipeline().addLast(h1);
+            ch.pipeline().addLast(e1, h2);
+            ch.pipeline().addLast(e2, h3);
+            ch.pipeline().addLast(e3, h4);
+            ch.pipeline().addLast(e4, h5);
+            ch.pipeline().addLast(e5, h6);
 
             ch.register().sync().channel().connect(localAddr).sync();
 

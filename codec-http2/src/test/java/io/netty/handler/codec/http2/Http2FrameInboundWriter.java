@@ -125,11 +125,6 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public String name() {
-            return "WriteInbound";
-        }
-
-        @Override
         public ChannelHandler handler() {
             return this;
         }

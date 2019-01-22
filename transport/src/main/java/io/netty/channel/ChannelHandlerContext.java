@@ -135,13 +135,6 @@ public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvok
     EventExecutor executor();
 
     /**
-     * The unique name of the {@link ChannelHandlerContext}.The name was used when then {@link ChannelHandler}
-     * was added to the {@link ChannelPipeline}. This name can also be used to access the registered
-     * {@link ChannelHandler} from the {@link ChannelPipeline}.
-     */
-    String name();
-
-    /**
      * The {@link ChannelHandler} that is bound this {@link ChannelHandlerContext}.
      */
     ChannelHandler handler();

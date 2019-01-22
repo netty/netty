@@ -261,7 +261,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
     }
 
     private static void removeThisHandler(ChannelHandlerContext ctx) {
-        ctx.pipeline().remove(ctx.name());
+        ctx.pipeline().remove(ctx);
     }
 
     /**

@@ -56,8 +56,8 @@ public final class Socks5ProxyHandler extends ProxyHandler {
     private final String username;
     private final String password;
 
-    private String decoderName;
-    private String encoderName;
+    private ChannelHandlerContext decoderCtx;
+    private ChannelHandlerContext encoderCtx;
 
     public Socks5ProxyHandler(SocketAddress proxyAddress) {
         this(proxyAddress, null, null);
@@ -96,27 +96,22 @@ public final class Socks5ProxyHandler extends ProxyHandler {
     @Override
     protected void addCodec(ChannelHandlerContext ctx) throws Exception {
         ChannelPipeline p = ctx.pipeline();
-        String name = ctx.name();
 
         Socks5InitialResponseDecoder decoder = new Socks5InitialResponseDecoder();
-        p.addBefore(name, null, decoder);
-
-        decoderName = p.context(decoder).name();
-        encoderName = decoderName + ".encoder";
-
-        p.addBefore(name, encoderName, Socks5ClientEncoder.DEFAULT);
+        decoderCtx = p.addBefore(ctx, decoder);
+        encoderCtx = p.addBefore(decoderCtx, Socks5ClientEncoder.DEFAULT);
     }
 
     @Override
     protected void removeEncoder(ChannelHandlerContext ctx) throws Exception {
-        ctx.pipeline().remove(encoderName);
+        ctx.pipeline().remove(encoderCtx);
     }
 
     @Override
     protected void removeDecoder(ChannelHandlerContext ctx) throws Exception {
         ChannelPipeline p = ctx.pipeline();
-        if (p.context(decoderName) != null) {
-            p.remove(decoderName);
+        if (p.context(decoderCtx.handler()) != null) {
+            p.remove(decoderCtx);
         }
     }
 
@@ -140,7 +135,7 @@ public final class Socks5ProxyHandler extends ProxyHandler {
                 sendConnectCommand(ctx);
             } else if (authMethod == Socks5AuthMethod.PASSWORD) {
                 // In case of password authentication, send an authentication request.
-                ctx.pipeline().replace(decoderName, decoderName, new Socks5PasswordAuthResponseDecoder());
+                decoderCtx = ctx.pipeline().replace(decoderCtx, new Socks5PasswordAuthResponseDecoder());
                 sendToProxyServer(new DefaultSocks5PasswordAuthRequest(
                         username != null? username : "", password != null? password : ""));
             } else {
@@ -200,7 +195,7 @@ public final class Socks5ProxyHandler extends ProxyHandler {
             }
         }
 
-        ctx.pipeline().replace(decoderName, decoderName, new Socks5CommandResponseDecoder());
+        decoderCtx = ctx.pipeline().replace(decoderCtx, new Socks5CommandResponseDecoder());
         sendToProxyServer(new DefaultSocks5CommandRequest(Socks5CommandType.CONNECT, addrType, rhost, raddr.getPort()));
     }
 }

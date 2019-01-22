@@ -274,7 +274,8 @@ public abstract class WebSocketClientHandshakerTest {
         if (codec) {
             ch.pipeline().addFirst(new HttpClientCodec());
         } else {
-            ch.pipeline().addFirst(new HttpRequestEncoder(), new HttpResponseDecoder());
+            ch.pipeline().addFirst(new HttpResponseDecoder());
+            ch.pipeline().addFirst(new HttpRequestEncoder());
         }
         // We need to first write the request as HttpClientCodec will fail if we receive a response before a request
         // was written.

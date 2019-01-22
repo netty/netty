@@ -24,9 +24,8 @@ import io.netty.handler.logging.LoggingHandler;
 public final class SocksServerInitializer extends ChannelInitializer<SocketChannel> {
     @Override
     public void initChannel(SocketChannel ch) throws Exception {
-        ch.pipeline().addLast(
-                new LoggingHandler(LogLevel.DEBUG),
-                new SocksPortUnificationServerHandler(),
-                SocksServerHandler.INSTANCE);
+        ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG));
+        ch.pipeline().addLast(new SocksPortUnificationServerHandler());
+        ch.pipeline().addLast(SocksServerHandler.INSTANCE);
     }
 }

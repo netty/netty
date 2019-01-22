@@ -14,11 +14,9 @@
  */
 package io.netty.handler.codec.http2;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInitializer;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -54,13 +52,13 @@ public class Http2ClientUpgradeCodecTest {
 
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
         ChannelHandlerContext ctx = channel.pipeline().firstContext();
-        Http2ClientUpgradeCodec codec = new Http2ClientUpgradeCodec("connectionHandler", handler);
+        Http2ClientUpgradeCodec codec = new Http2ClientUpgradeCodec(handler);
         codec.setUpgradeHeaders(ctx, request);
         // Flush the channel to ensure we write out all buffered data
         channel.flush();
 
         codec.upgradeTo(ctx, null);
-        assertNotNull(channel.pipeline().get("connectionHandler"));
+        assertNotNull(channel.pipeline().context(handler));
 
         assertTrue(channel.finishAndReleaseAll());
     }

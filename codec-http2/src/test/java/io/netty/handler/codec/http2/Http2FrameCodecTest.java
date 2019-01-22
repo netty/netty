@@ -788,7 +788,7 @@ public class Http2FrameCodecTest {
 
     @Test
     public void upgradeWithoutFlowControlling() throws Exception {
-        channel.pipeline().addAfter(frameCodec.ctx.name(), null, new ChannelInboundHandlerAdapter() {
+        channel.pipeline().addAfter(frameCodec.ctx, new ChannelInboundHandlerAdapter() {
             @Override
             public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
                 if (msg instanceof Http2DataFrame) {

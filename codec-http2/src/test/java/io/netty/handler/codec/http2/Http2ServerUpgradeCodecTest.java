@@ -59,13 +59,13 @@ public class Http2ServerUpgradeCodecTest {
 
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
         ChannelHandlerContext ctx = channel.pipeline().firstContext();
-        Http2ServerUpgradeCodec codec = new Http2ServerUpgradeCodec("connectionHandler", handler);
+        Http2ServerUpgradeCodec codec = new Http2ServerUpgradeCodec(handler);
         assertTrue(codec.prepareUpgradeResponse(ctx, request, new DefaultHttpHeaders()));
         codec.upgradeTo(ctx, request);
         // Flush the channel to ensure we write out all buffered data
         channel.flush();
 
-        assertSame(handler, channel.pipeline().remove("connectionHandler"));
+        assertSame(handler, channel.pipeline().remove(handler).handler());
         assertNull(channel.pipeline().get(handler.getClass()));
         assertTrue(channel.finish());
 

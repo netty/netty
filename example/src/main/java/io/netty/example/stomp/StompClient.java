@@ -49,10 +49,10 @@ public final class StompClient {
                 @Override
                 protected void initChannel(SocketChannel ch) throws Exception {
                     ChannelPipeline pipeline = ch.pipeline();
-                    pipeline.addLast("decoder", new StompSubframeDecoder());
-                    pipeline.addLast("encoder", new StompSubframeEncoder());
-                    pipeline.addLast("aggregator", new StompSubframeAggregator(1048576));
-                    pipeline.addLast("handler", new StompClientHandler());
+                    pipeline.addLast(new StompSubframeDecoder());
+                    pipeline.addLast(new StompSubframeEncoder());
+                    pipeline.addLast(new StompSubframeAggregator(1048576));
+                    pipeline.addLast(new StompClientHandler());
                 }
             });
 
