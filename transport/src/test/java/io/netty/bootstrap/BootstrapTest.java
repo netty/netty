@@ -83,7 +83,7 @@ public class BootstrapTest {
         bootstrapB.channel(LocalChannel.class);
         bootstrapB.handler(dummyHandler);
 
-        List<Future<?>> bindFutures = new ArrayList<Future<?>>();
+        List<Future<?>> bindFutures = new ArrayList<>();
 
         // Try to bind from each other.
         for (int i = 0; i < 1024; i ++) {
@@ -119,7 +119,7 @@ public class BootstrapTest {
         bootstrapB.channel(LocalChannel.class);
         bootstrapB.handler(dummyHandler);
 
-        List<Future<?>> bindFutures = new ArrayList<Future<?>>();
+        List<Future<?>> bindFutures = new ArrayList<>();
 
         // Try to connect from each other.
         for (int i = 0; i < 1024; i ++) {
@@ -157,7 +157,7 @@ public class BootstrapTest {
             ChannelFuture future = bootstrap.bind();
             assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess();
-            final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<Boolean>();
+            final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<>();
             future.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
@@ -208,7 +208,7 @@ public class BootstrapTest {
             ChannelFuture future = bootstrap.bind();
             assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess();
-            final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<Boolean>();
+            final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<>();
             future.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {

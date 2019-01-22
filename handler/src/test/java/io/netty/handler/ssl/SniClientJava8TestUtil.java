@@ -281,7 +281,7 @@ final class SniClientJava8TestUtil {
 
                 @Override
                 protected KeyManager[] engineGetKeyManagers() {
-                    List<KeyManager> managers = new ArrayList<KeyManager>();
+                    List<KeyManager> managers = new ArrayList<>();
                     for (final KeyManager km: factory.getKeyManagers()) {
                         if (km instanceof X509ExtendedKeyManager) {
                             managers.add(new X509ExtendedKeyManager() {

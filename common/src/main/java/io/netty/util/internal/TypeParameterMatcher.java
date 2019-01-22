@@ -59,7 +59,7 @@ public abstract class TypeParameterMatcher {
 
         Map<String, TypeParameterMatcher> map = findCache.get(thisClass);
         if (map == null) {
-            map = new HashMap<String, TypeParameterMatcher>();
+            map = new HashMap<>();
             findCache.put(thisClass, map);
         }
 

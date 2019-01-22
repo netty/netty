@@ -62,7 +62,7 @@ public class DomainNameMapping<V> implements Mapping<String, V> {
      */
     @Deprecated
     public DomainNameMapping(int initialCapacity, V defaultValue) {
-        this(new LinkedHashMap<String, V>(initialCapacity), defaultValue);
+        this(new LinkedHashMap<>(initialCapacity), defaultValue);
     }
 
     DomainNameMapping(Map<String, V> map, V defaultValue) {

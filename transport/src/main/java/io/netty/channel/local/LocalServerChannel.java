@@ -36,7 +36,7 @@ import java.util.Queue;
 public class LocalServerChannel extends AbstractServerChannel {
 
     private final ChannelConfig config = new DefaultChannelConfig(this);
-    private final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
+    private final Queue<Object> inboundBuffer = new ArrayDeque<>();
     private final Runnable shutdownHook = new Runnable() {
         @Override
         public void run() {

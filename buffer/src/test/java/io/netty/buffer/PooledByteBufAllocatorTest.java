@@ -416,7 +416,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         // We use no caches and only one arena to maximize the chance of hitting the race-condition we
         // had before.
         ByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 11, 0, 0, 0);
-        List<AllocationThread> threads = new ArrayList<AllocationThread>();
+        List<AllocationThread> threads = new ArrayList<>();
         try {
             for (int i = 0; i < 512; i++) {
                 AllocationThread thread = new AllocationThread(allocator);
@@ -457,9 +457,9 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
             }
         }
 
-        private final Queue<ByteBuf> buffers = new ConcurrentLinkedQueue<ByteBuf>();
+        private final Queue<ByteBuf> buffers = new ConcurrentLinkedQueue<>();
         private final ByteBufAllocator allocator;
-        private final AtomicReference<Object> finish = new AtomicReference<Object>();
+        private final AtomicReference<Object> finish = new AtomicReference<>();
 
         public AllocationThread(ByteBufAllocator allocator) {
             this.allocator = allocator;

@@ -26,7 +26,7 @@ import java.util.List;
 public final class TestsuitePermutation {
 
     public static List<ByteBufAllocator> allocator() {
-        List<ByteBufAllocator> allocators = new ArrayList<ByteBufAllocator>();
+        List<ByteBufAllocator> allocators = new ArrayList<>();
         allocators.add(UnpooledByteBufAllocator.DEFAULT);
         allocators.add(PooledByteBufAllocator.DEFAULT);
         return allocators;

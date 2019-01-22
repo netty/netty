@@ -65,7 +65,7 @@ public class DefaultPromiseTest {
 
     @Test(expected = CancellationException.class)
     public void testCancellationExceptionIsThrownWhenBlockingGet() throws InterruptedException, ExecutionException {
-        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
+        final Promise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         promise.cancel(false);
         promise.get();
     }
@@ -73,7 +73,7 @@ public class DefaultPromiseTest {
     @Test(expected = CancellationException.class)
     public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() throws InterruptedException,
             ExecutionException, TimeoutException {
-        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
+        final Promise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         promise.cancel(false);
         promise.get(1, TimeUnit.SECONDS);
     }
@@ -126,11 +126,11 @@ public class DefaultPromiseTest {
     public void testListenerNotifyOrder() throws Exception {
         EventExecutor executor = new TestEventExecutor();
         try {
-            final BlockingQueue<FutureListener<Void>> listeners = new LinkedBlockingQueue<FutureListener<Void>>();
+            final BlockingQueue<FutureListener<Void>> listeners = new LinkedBlockingQueue<>();
             int runs = 100000;
 
             for (int i = 0; i < runs; i++) {
-                final Promise<Void> promise = new DefaultPromise<Void>(executor);
+                final Promise<Void> promise = new DefaultPromise<>(executor);
                 final FutureListener<Void> listener1 = new FutureListener<Void>() {
                     @Override
                     public void operationComplete(Future<Void> future) throws Exception {
@@ -214,9 +214,9 @@ public class DefaultPromiseTest {
             executor = new TestEventExecutor();
 
             final int numberOfAttempts = 4096;
-            final Map<Thread, DefaultPromise<Void>> promises = new HashMap<Thread, DefaultPromise<Void>>();
+            final Map<Thread, DefaultPromise<Void>> promises = new HashMap<>();
             for (int i = 0; i < numberOfAttempts; i++) {
-                final DefaultPromise<Void> promise = new DefaultPromise<Void>(executor);
+                final DefaultPromise<Void> promise = new DefaultPromise<>(executor);
                 final Thread thread = new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -241,7 +241,7 @@ public class DefaultPromiseTest {
 
     @Test
     public void signalUncancellableCompletionValue() {
-        final Promise<Signal> promise = new DefaultPromise<Signal>(ImmediateEventExecutor.INSTANCE);
+        final Promise<Signal> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         promise.setSuccess(Signal.valueOf(DefaultPromise.class, "UNCANCELLABLE"));
         assertTrue(promise.isDone());
         assertTrue(promise.isSuccess());
@@ -249,7 +249,7 @@ public class DefaultPromiseTest {
 
     @Test
     public void signalSuccessCompletionValue() {
-        final Promise<Signal> promise = new DefaultPromise<Signal>(ImmediateEventExecutor.INSTANCE);
+        final Promise<Signal> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         promise.setSuccess(Signal.valueOf(DefaultPromise.class, "SUCCESS"));
         assertTrue(promise.isDone());
         assertTrue(promise.isSuccess());
@@ -257,7 +257,7 @@ public class DefaultPromiseTest {
 
     @Test
     public void setUncancellableGetNow() {
-        final Promise<String> promise = new DefaultPromise<String>(ImmediateEventExecutor.INSTANCE);
+        final Promise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         assertNull(promise.getNow());
         assertTrue(promise.setUncancellable());
         assertNull(promise.getNow());
@@ -298,7 +298,7 @@ public class DefaultPromiseTest {
                                                          final CountDownLatch latch) {
         for (int i = 0; i < p.length; i ++) {
             final int finalI = i;
-            p[i] = new DefaultPromise<Void>(executor);
+            p[i] = new DefaultPromise<>(executor);
             p[i].addListener(new FutureListener<Void>() {
                 @Override
                 public void operationComplete(Future<Void> future) throws Exception {
@@ -340,7 +340,7 @@ public class DefaultPromiseTest {
                                                          final CountDownLatch latch) {
         for (int i = 0; i < p.length; i ++) {
             final int finalI = i;
-            p[i] = new DefaultPromise<Void>(executor);
+            p[i] = new DefaultPromise<>(executor);
             p[i].addListener(new FutureListener<Void>() {
                 @Override
                 public void operationComplete(Future<Void> future) throws Exception {
@@ -376,7 +376,7 @@ public class DefaultPromiseTest {
             final AtomicInteger state = new AtomicInteger();
             final CountDownLatch latch1 = new CountDownLatch(1);
             final CountDownLatch latch2 = new CountDownLatch(2);
-            final Promise<Void> promise = new DefaultPromise<Void>(executor);
+            final Promise<Void> promise = new DefaultPromise<>(executor);
 
             // Add a listener before completion so "lateListener" is used next time we add a listener.
             promise.addListener(new FutureListener<Void>() {
@@ -439,7 +439,7 @@ public class DefaultPromiseTest {
 
     private static void testPromiseListenerAddWhenComplete(Throwable cause) throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
-        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
+        final Promise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
         promise.addListener(new FutureListener<Void>() {
             @Override
             public void operationComplete(Future<Void> future) throws Exception {
@@ -469,7 +469,7 @@ public class DefaultPromiseTest {
                 latch.countDown();
             }
         };
-        final Promise<Void> promise = new DefaultPromise<Void>(executor);
+        final Promise<Void> promise = new DefaultPromise<>(executor);
         executor.execute(new Runnable() {
             @Override
             public void run() {

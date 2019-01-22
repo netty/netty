@@ -163,7 +163,7 @@ public final class NetUtil {
         LOCALHOST6 = localhost6;
 
         // Retrieve the list of available network interfaces.
-        List<NetworkInterface> ifaces = new ArrayList<NetworkInterface>();
+        List<NetworkInterface> ifaces = new ArrayList<>();
         try {
             Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
             if (interfaces != null) {

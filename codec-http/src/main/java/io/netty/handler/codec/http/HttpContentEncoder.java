@@ -61,7 +61,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     private static final CharSequence ZERO_LENGTH_CONNECT = "CONNECT";
     private static final int CONTINUE_CODE = HttpResponseStatus.CONTINUE.code();
 
-    private final Queue<CharSequence> acceptEncodingQueue = new ArrayDeque<CharSequence>();
+    private final Queue<CharSequence> acceptEncodingQueue = new ArrayDeque<>();
     private EmbeddedChannel encoder;
     private State state = State.AWAIT_HEADERS;
 

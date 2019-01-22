@@ -173,7 +173,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         }
 
         subpages = newSubpageArray(maxSubpageAllocs);
-        cachedNioBuffers = new ArrayDeque<ByteBuffer>(8);
+        cachedNioBuffers = new ArrayDeque<>(8);
     }
 
     /** Creates a special chunk that is not pooled. */
@@ -355,7 +355,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
             int subpageIdx = subpageIdx(id);
             PoolSubpage<T> subpage = subpages[subpageIdx];
             if (subpage == null) {
-                subpage = new PoolSubpage<T>(head, this, id, runOffset(id), pageSize, normCapacity);
+                subpage = new PoolSubpage<>(head, this, id, runOffset(id), pageSize, normCapacity);
                 subpages[subpageIdx] = subpage;
             } else {
                 subpage.init(head, normCapacity);

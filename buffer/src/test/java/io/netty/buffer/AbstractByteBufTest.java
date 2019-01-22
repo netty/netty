@@ -2086,8 +2086,8 @@ public abstract class AbstractByteBufTest {
         buffer.writeBytes("Hello, World!".getBytes(CharsetUtil.ISO_8859_1));
 
         final AtomicInteger counter = new AtomicInteger(30000);
-        final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
-        List<Thread> threads = new ArrayList<Thread>();
+        final AtomicReference<Throwable> errorRef = new AtomicReference<>();
+        List<Thread> threads = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
             Thread thread = new Thread(new Runnable() {
                 @Override
@@ -2202,7 +2202,7 @@ public abstract class AbstractByteBufTest {
         elemA.writeBytes(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5 });
         elemB.writeBytes(new byte[] { 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9 });
 
-        Set<ByteBuf> set = new HashSet<ByteBuf>();
+        Set<ByteBuf> set = new HashSet<>();
         set.add(elemA);
         set.add(elemB);
 
@@ -2465,7 +2465,7 @@ public abstract class AbstractByteBufTest {
 
         final ByteBuf buffer = newBuffer(8);
         buffer.writeBytes(bytes);
-        final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> cause = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(60000);
         final CyclicBarrier barrier = new CyclicBarrier(11);
         for (int i = 0; i < 10; i++) {

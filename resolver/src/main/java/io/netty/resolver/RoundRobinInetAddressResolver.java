@@ -83,7 +83,7 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
                     List<InetAddress> inetAddresses = future.getNow();
                     if (!inetAddresses.isEmpty()) {
                         // create a copy to make sure that it's modifiable random access collection
-                        List<InetAddress> result = new ArrayList<InetAddress>(inetAddresses);
+                        List<InetAddress> result = new ArrayList<>(inetAddresses);
                         // rotate by different distance each time to force round robin distribution
                         Collections.rotate(result, randomIndex(inetAddresses.size()));
                         promise.setSuccess(result);

@@ -88,7 +88,7 @@ public final class Version {
         }
 
         // Collect all artifactIds.
-        Set<String> artifactIds = new HashSet<String>();
+        Set<String> artifactIds = new HashSet<>();
         for (Object o: props.keySet()) {
             String k = (String) o;
 
@@ -112,7 +112,7 @@ public final class Version {
             artifactIds.add(artifactId);
         }
 
-        Map<String, Version> versions = new TreeMap<String, Version>();
+        Map<String, Version> versions = new TreeMap<>();
         for (String artifactId: artifactIds) {
             versions.put(
                     artifactId,

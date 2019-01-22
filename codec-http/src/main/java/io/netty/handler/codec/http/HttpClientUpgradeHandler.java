@@ -272,7 +272,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
         request.headers().set(HttpHeaderNames.UPGRADE, upgradeCodec.protocol());
 
         // Add all protocol-specific headers to the request.
-        Set<CharSequence> connectionParts = new LinkedHashSet<CharSequence>(2);
+        Set<CharSequence> connectionParts = new LinkedHashSet<>(2);
         connectionParts.addAll(upgradeCodec.setUpgradeHeaders(ctx, request));
 
         // Set the CONNECTION header from the set of all protocol-specific headers that were added.

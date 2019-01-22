@@ -58,7 +58,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
     private final class NioMessageUnsafe extends AbstractNioUnsafe {
 
-        private final List<Object> readBuf = new ArrayList<Object>();
+        private final List<Object> readBuf = new ArrayList<>();
 
         @Override
         public void read() {

@@ -29,11 +29,11 @@ import static org.junit.Assert.assertTrue;
 public class SimpleLeakAwareCompositeByteBufTest extends WrappedCompositeByteBufTest {
 
     private final Class<? extends ByteBuf> clazz = leakClass();
-    private final Queue<NoopResourceLeakTracker<ByteBuf>> trackers = new ArrayDeque<NoopResourceLeakTracker<ByteBuf>>();
+    private final Queue<NoopResourceLeakTracker<ByteBuf>> trackers = new ArrayDeque<>();
 
     @Override
     protected final WrappedCompositeByteBuf wrap(CompositeByteBuf buffer) {
-        NoopResourceLeakTracker<ByteBuf> tracker = new NoopResourceLeakTracker<ByteBuf>();
+        NoopResourceLeakTracker<ByteBuf> tracker = new NoopResourceLeakTracker<>();
         WrappedCompositeByteBuf leakAwareBuf = wrap(buffer, tracker);
         trackers.add(tracker);
         return leakAwareBuf;

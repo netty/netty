@@ -36,7 +36,7 @@ final class ApplicationProtocolUtil {
             return null;
         }
 
-        List<String> result = new ArrayList<String>(initialListSize);
+        List<String> result = new ArrayList<>(initialListSize);
         for (String p : protocols) {
             if (p == null || p.isEmpty()) {
                 throw new IllegalArgumentException("protocol cannot be null or empty");
@@ -60,7 +60,7 @@ final class ApplicationProtocolUtil {
             return null;
         }
 
-        List<String> result = new ArrayList<String>(initialListSize);
+        List<String> result = new ArrayList<>(initialListSize);
         for (String p : protocols) {
             if (p == null || p.isEmpty()) {
                 throw new IllegalArgumentException("protocol cannot be null or empty");

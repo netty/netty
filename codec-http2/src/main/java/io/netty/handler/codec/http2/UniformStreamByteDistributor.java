@@ -36,7 +36,7 @@ import static java.lang.Math.min;
 @UnstableApi
 public final class UniformStreamByteDistributor implements StreamByteDistributor {
     private final Http2Connection.PropertyKey stateKey;
-    private final Deque<State> queue = new ArrayDeque<State>(4);
+    private final Deque<State> queue = new ArrayDeque<>(4);
 
     /**
      * The minimum number of bytes that we will attempt to allocate to a stream. This is to

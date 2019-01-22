@@ -48,7 +48,7 @@ public class SpdyFrameDecoderTest {
     }
 
     private final class TestSpdyFrameDecoderDelegate implements SpdyFrameDecoderDelegate {
-        private final Queue<ByteBuf> buffers = new ArrayDeque<ByteBuf>();
+        private final Queue<ByteBuf> buffers = new ArrayDeque<>();
 
         @Override
         public void readDataFrame(int streamId, boolean last, ByteBuf data) {

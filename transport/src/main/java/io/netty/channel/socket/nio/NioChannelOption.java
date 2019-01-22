@@ -43,7 +43,7 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
      * Returns a {@link ChannelOption} for the given {@link java.net.SocketOption}.
      */
     public static <T> ChannelOption<T> of(java.net.SocketOption<T> option) {
-        return new NioChannelOption<T>(option);
+        return new NioChannelOption<>(option);
     }
 
     // It's important to not use java.nio.channels.NetworkChannel as otherwise the classes that sometimes call this
@@ -95,7 +95,7 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
         Set<java.net.SocketOption<?>> supportedOpts = channel.supportedOptions();
 
         if (channel instanceof ServerSocketChannel) {
-            List<ChannelOption<?>> extraOpts = new ArrayList<ChannelOption<?>>(supportedOpts.size());
+            List<ChannelOption<?>> extraOpts = new ArrayList<>(supportedOpts.size());
             for (java.net.SocketOption<?> opt : supportedOpts) {
                 if (opt == java.net.StandardSocketOptions.IP_TOS) {
                     // Skip IP_TOS as a workaround for a JDK bug:

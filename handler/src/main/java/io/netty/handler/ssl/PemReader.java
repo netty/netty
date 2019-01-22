@@ -78,7 +78,7 @@ final class PemReader {
             throw new CertificateException("failed to read certificate input stream", e);
         }
 
-        List<ByteBuf> certs = new ArrayList<ByteBuf>();
+        List<ByteBuf> certs = new ArrayList<>();
         Matcher m = CERT_PATTERN.matcher(content);
         int start = 0;
         for (;;) {

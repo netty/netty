@@ -201,7 +201,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
     private static class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
         private final boolean autoRead;
         volatile Channel channel;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
         volatile int counter;
 
         TestHandler(boolean autoRead) {

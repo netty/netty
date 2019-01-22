@@ -738,7 +738,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private void closeAll() {
         selectAgain();
         Set<SelectionKey> keys = selector.keys();
-        Collection<AbstractNioChannel> channels = new ArrayList<AbstractNioChannel>(keys.size());
+        Collection<AbstractNioChannel> channels = new ArrayList<>(keys.size());
         for (SelectionKey k: keys) {
             Object a = k.attachment();
             if (a instanceof AbstractNioChannel) {

@@ -165,9 +165,9 @@ public class ResourceLeakDetector<T> {
 
     /** the collection of active resources */
     private final Set<DefaultResourceLeak<?>> allLeaks =
-            Collections.newSetFromMap(new ConcurrentHashMap<DefaultResourceLeak<?>, Boolean>());
+            Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-    private final ReferenceQueue<Object> refQueue = new ReferenceQueue<Object>();
+    private final ReferenceQueue<Object> refQueue = new ReferenceQueue<>();
     private final ConcurrentMap<String, Boolean> reportedLeaks = PlatformDependent.newConcurrentHashMap();
 
     private final String resourceType;
@@ -520,7 +520,7 @@ public class ResourceLeakDetector<T> {
             buf.append("Recent access records: ").append(NEWLINE);
 
             int i = 1;
-            Set<String> seen = new HashSet<String>(present);
+            Set<String> seen = new HashSet<>(present);
             for (; oldHead != Record.BOTTOM; oldHead = oldHead.next) {
                 String s = oldHead.toString();
                 if (seen.add(s)) {
@@ -558,10 +558,10 @@ public class ResourceLeakDetector<T> {
     }
 
     private static final AtomicReference<String[]> excludedMethods =
-            new AtomicReference<String[]>(EmptyArrays.EMPTY_STRINGS);
+            new AtomicReference<>(EmptyArrays.EMPTY_STRINGS);
 
     public static void addExclusions(Class clz, String ... methodNames) {
-        Set<String> nameSet = new HashSet<String>(Arrays.asList(methodNames));
+        Set<String> nameSet = new HashSet<>(Arrays.asList(methodNames));
         // Use loop rather than lookup. This avoids knowing the parameters, and doesn't have to handle
         // NoSuchMethodException.
         for (Method method : clz.getDeclaredMethods()) {

@@ -160,7 +160,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
             throw new NullPointerException("fingerprints");
         }
 
-        List<byte[]> list = new ArrayList<byte[]>(fingerprints.length);
+        List<byte[]> list = new ArrayList<>(fingerprints.length);
         for (byte[] f: fingerprints) {
             if (f == null) {
                 break;
@@ -180,7 +180,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
             throw new NullPointerException("fingerprints");
         }
 
-        List<byte[]> list = new ArrayList<byte[]>();
+        List<byte[]> list = new ArrayList<>();
         for (String f: fingerprints) {
             if (f == null) {
                 break;

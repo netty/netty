@@ -121,7 +121,7 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
 
     private static class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile SocketChannel ch;
-        final BlockingQueue<Byte> queue = new LinkedBlockingQueue<Byte>();
+        final BlockingQueue<Byte> queue = new LinkedBlockingQueue<>();
         final CountDownLatch halfClosure = new CountDownLatch(1);
         final CountDownLatch closure = new CountDownLatch(1);
         final AtomicInteger halfClosureCount = new AtomicInteger();

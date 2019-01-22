@@ -63,7 +63,7 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> list =
-                new ArrayList<BootstrapComboFactory<ServerBootstrap, Bootstrap>>();
+                new ArrayList<>();
         final BootstrapFactory<ServerBootstrap> sbf = serverSocket();
         final BootstrapFactory<Bootstrap> cbf = clientSocket();
         list.add(new BootstrapComboFactory<ServerBootstrap, Bootstrap>() {

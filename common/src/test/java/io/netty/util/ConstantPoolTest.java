@@ -68,7 +68,7 @@ public class ConstantPoolTest {
         TestConstant d = pool.valueOf("d_delta");
         TestConstant e = pool.valueOf("e_epsilon");
 
-        Set<TestConstant> set = new TreeSet<TestConstant>();
+        Set<TestConstant> set = new TreeSet<>();
         set.add(b);
         set.add(c);
         set.add(e);

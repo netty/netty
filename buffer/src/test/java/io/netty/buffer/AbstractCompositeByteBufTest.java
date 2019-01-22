@@ -67,7 +67,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     protected ByteBuf newBuffer(int length, int maxCapacity) {
         Assume.assumeTrue(maxCapacity == Integer.MAX_VALUE);
 
-        List<ByteBuf> buffers = new ArrayList<ByteBuf>();
+        List<ByteBuf> buffers = new ArrayList<>();
         for (int i = 0; i < length + 45; i += 45) {
             buffers.add(EMPTY_BUFFER);
             buffers.add(wrappedBuffer(new byte[1]));
@@ -659,7 +659,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         CompositeByteBuf buf = compositeBuffer();
         assertThat(buf.refCnt(), is(1));
 
-        List<ByteBuf> components = new ArrayList<ByteBuf>();
+        List<ByteBuf> components = new ArrayList<>();
         Collections.addAll(components, c1, c2, c3);
         buf.addComponents(components);
 

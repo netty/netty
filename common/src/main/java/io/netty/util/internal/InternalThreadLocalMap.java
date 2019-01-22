@@ -196,7 +196,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     public Map<Charset, CharsetEncoder> charsetEncoderCache() {
         Map<Charset, CharsetEncoder> cache = charsetEncoderCache;
         if (cache == null) {
-            charsetEncoderCache = cache = new IdentityHashMap<Charset, CharsetEncoder>();
+            charsetEncoderCache = cache = new IdentityHashMap<>();
         }
         return cache;
     }
@@ -204,7 +204,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     public Map<Charset, CharsetDecoder> charsetDecoderCache() {
         Map<Charset, CharsetDecoder> cache = charsetDecoderCache;
         if (cache == null) {
-            charsetDecoderCache = cache = new IdentityHashMap<Charset, CharsetDecoder>();
+            charsetDecoderCache = cache = new IdentityHashMap<>();
         }
         return cache;
     }
@@ -217,7 +217,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     public <E> ArrayList<E> arrayList(int minCapacity) {
         ArrayList<E> list = (ArrayList<E>) arrayList;
         if (list == null) {
-            arrayList = new ArrayList<Object>(minCapacity);
+            arrayList = new ArrayList<>(minCapacity);
             return (ArrayList<E>) arrayList;
         }
         list.clear();
@@ -244,7 +244,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     public Map<Class<?>, TypeParameterMatcher> typeParameterMatcherGetCache() {
         Map<Class<?>, TypeParameterMatcher> cache = typeParameterMatcherGetCache;
         if (cache == null) {
-            typeParameterMatcherGetCache = cache = new IdentityHashMap<Class<?>, TypeParameterMatcher>();
+            typeParameterMatcherGetCache = cache = new IdentityHashMap<>();
         }
         return cache;
     }
@@ -252,7 +252,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     public Map<Class<?>, Map<String, TypeParameterMatcher>> typeParameterMatcherFindCache() {
         Map<Class<?>, Map<String, TypeParameterMatcher>> cache = typeParameterMatcherFindCache;
         if (cache == null) {
-            typeParameterMatcherFindCache = cache = new IdentityHashMap<Class<?>, Map<String, TypeParameterMatcher>>();
+            typeParameterMatcherFindCache = cache = new IdentityHashMap<>();
         }
         return cache;
     }
@@ -271,7 +271,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
         Map<Class<?>, Boolean> cache = handlerSharableCache;
         if (cache == null) {
             // Start with small capacity to keep memory overhead as low as possible.
-            handlerSharableCache = cache = new WeakHashMap<Class<?>, Boolean>(4);
+            handlerSharableCache = cache = new WeakHashMap<>(4);
         }
         return cache;
     }

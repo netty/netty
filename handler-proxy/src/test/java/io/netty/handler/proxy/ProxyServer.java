@@ -52,7 +52,7 @@ abstract class ProxyServer {
     protected final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
 
     private final ServerSocketChannel ch;
-    private final Queue<Throwable> recordedExceptions = new LinkedBlockingQueue<Throwable>();
+    private final Queue<Throwable> recordedExceptions = new LinkedBlockingQueue<>();
     protected final TestMode testMode;
     protected final String username;
     protected final String password;
@@ -152,7 +152,7 @@ abstract class ProxyServer {
 
     protected abstract class IntermediaryHandler extends SimpleChannelInboundHandler<Object> {
 
-        private final Queue<Object> received = new ArrayDeque<Object>();
+        private final Queue<Object> received = new ArrayDeque<>();
 
         private boolean finished;
         private Channel backend;

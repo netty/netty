@@ -68,7 +68,7 @@ public final class ServerCookieDecoder extends CookieDecoder {
             return Collections.emptySet();
         }
 
-        Set<Cookie> cookies = new TreeSet<Cookie>();
+        Set<Cookie> cookies = new TreeSet<>();
 
         int i = 0;
 

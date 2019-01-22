@@ -166,9 +166,9 @@ public abstract class DnsServerAddresses {
 
         final List<InetSocketAddress> list;
         if (addresses instanceof Collection) {
-            list = new ArrayList<InetSocketAddress>(((Collection<?>) addresses).size());
+            list = new ArrayList<>(((Collection<?>) addresses).size());
         } else {
-            list = new ArrayList<InetSocketAddress>(4);
+            list = new ArrayList<>(4);
         }
 
         for (InetSocketAddress a : addresses) {
@@ -193,7 +193,7 @@ public abstract class DnsServerAddresses {
             throw new NullPointerException("addresses");
         }
 
-        List<InetSocketAddress> list = new ArrayList<InetSocketAddress>(addresses.length);
+        List<InetSocketAddress> list = new ArrayList<>(addresses.length);
         for (InetSocketAddress a: addresses) {
             if (a == null) {
                 break;

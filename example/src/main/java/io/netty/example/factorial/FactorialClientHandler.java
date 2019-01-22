@@ -36,7 +36,7 @@ public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteg
     private ChannelHandlerContext ctx;
     private int receivedMessages;
     private int next = 1;
-    final BlockingQueue<BigInteger> answer = new LinkedBlockingQueue<BigInteger>();
+    final BlockingQueue<BigInteger> answer = new LinkedBlockingQueue<>();
 
     public BigInteger getFactorial() {
         boolean interrupted = false;

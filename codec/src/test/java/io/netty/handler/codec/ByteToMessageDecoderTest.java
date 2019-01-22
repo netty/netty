@@ -159,7 +159,7 @@ public class ByteToMessageDecoderTest {
 
     @Test
     public void testFireChannelReadCompleteOnInactive() throws InterruptedException {
-        final BlockingQueue<Integer> queue = new LinkedBlockingDeque<Integer>();
+        final BlockingQueue<Integer> queue = new LinkedBlockingDeque<>();
         final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[] {'a', 'b'});
         EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
             @Override

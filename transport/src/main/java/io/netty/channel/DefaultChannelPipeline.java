@@ -53,7 +53,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             new FastThreadLocal<Map<Class<?>, String>>() {
         @Override
         protected Map<Class<?>, String> initialValue() throws Exception {
-            return new WeakHashMap<Class<?>, String>();
+            return new WeakHashMap<>();
         }
     };
 
@@ -113,7 +113,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         Map<EventExecutorGroup, EventExecutor> childExecutors = this.childExecutors;
         if (childExecutors == null) {
             // Use size of 4 as most people only use one extra EventExecutor.
-            childExecutors = this.childExecutors = new IdentityHashMap<EventExecutorGroup, EventExecutor>(4);
+            childExecutors = this.childExecutors = new IdentityHashMap<>(4);
         }
         // Pin one of the child executors once and remember it so that the same child executor
         // is used to fire events for the same channel.
@@ -703,7 +703,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final List<String> names() {
-        List<String> list = new ArrayList<String>();
+        List<String> list = new ArrayList<>();
         AbstractChannelHandlerContext ctx = head.next;
         for (;;) {
             if (ctx == null) {
@@ -716,7 +716,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final Map<String, ChannelHandler> toMap() {
-        Map<String, ChannelHandler> map = new LinkedHashMap<String, ChannelHandler>();
+        Map<String, ChannelHandler> map = new LinkedHashMap<>();
         AbstractChannelHandlerContext ctx = head.next;
         for (;;) {
             if (ctx == tail) {

@@ -289,7 +289,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                 if (algs == null) {
                                     peerSupportedSignatureAlgorithms = EmptyArrays.EMPTY_STRINGS;
                                 } else {
-                                    Set<String> algorithmList = new LinkedHashSet<String>(algs.length);
+                                    Set<String> algorithmList = new LinkedHashSet<>(algs.length);
                                     for (String alg: algs) {
                                         String converted = SignatureAlgorithmConverter.toJavaName(alg);
 
@@ -1397,7 +1397,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         if (enabled == null) {
             return EmptyArrays.EMPTY_STRINGS;
         } else {
-            List<String> enabledList = new ArrayList<String>();
+            List<String> enabledList = new ArrayList<>();
             synchronized (this) {
                 for (int i = 0; i < enabled.length; i++) {
                     String mapped = toJavaCipherSuite(enabled[i]);
@@ -1455,7 +1455,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     @Override
     public final String[] getEnabledProtocols() {
-        List<String> enabled = new ArrayList<String>(6);
+        List<String> enabled = new ArrayList<>(6);
         // Seems like there is no way to explicit disable SSLv2Hello in openssl so it is always enabled
         enabled.add(PROTOCOL_SSL_V2_HELLO);
 
@@ -2021,7 +2021,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 Map<String, Object> values = this.values;
                 if (values == null) {
                     // Use size of 2 to keep the memory overhead small
-                    values = this.values = new HashMap<String, Object>(2);
+                    values = this.values = new HashMap<>(2);
                 }
                 old = values.put(name, value);
             }

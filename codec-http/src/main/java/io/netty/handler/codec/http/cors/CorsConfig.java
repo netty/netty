@@ -47,7 +47,7 @@ public final class CorsConfig {
     private final boolean shortCircuit;
 
     CorsConfig(final CorsConfigBuilder builder) {
-        origins = new LinkedHashSet<String>(builder.origins);
+        origins = new LinkedHashSet<>(builder.origins);
         anyOrigin = builder.anyOrigin;
         enabled = builder.enabled;
         exposeHeaders = builder.exposeHeaders;

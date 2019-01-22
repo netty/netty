@@ -26,7 +26,7 @@ public class ResourceLeakDetectorBenchmark extends AbstractMicrobenchmark {
 
     @Setup
     public void setup() {
-        detector = new ResourceLeakDetector<Object>(getClass(), 128, Long.MAX_VALUE);
+        detector = new ResourceLeakDetector<>(getClass(), 128, Long.MAX_VALUE);
     }
 
     @Benchmark

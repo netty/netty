@@ -42,8 +42,8 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
 
     public static final GlobalEventExecutor INSTANCE = new GlobalEventExecutor();
 
-    final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<Runnable>();
-    final ScheduledFutureTask<Void> quietPeriodTask = new ScheduledFutureTask<Void>(
+    final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<>();
+    final ScheduledFutureTask<Void> quietPeriodTask = new ScheduledFutureTask<>(
             this, Executors.<Void>callable(new Runnable() {
         @Override
         public void run() {
@@ -61,7 +61,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
     private final AtomicBoolean started = new AtomicBoolean();
     volatile Thread thread;
 
-    private final Future<?> terminationFuture = new FailedFuture<Object>(this, new UnsupportedOperationException());
+    private final Future<?> terminationFuture = new FailedFuture<>(this, new UnsupportedOperationException());
 
     private GlobalEventExecutor() {
         scheduledTaskQueue().add(quietPeriodTask);

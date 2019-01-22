@@ -66,7 +66,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
     public void testFlushCloseReentrance() throws Exception {
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         try {
-            final Queue<ChannelFuture> futures = new LinkedBlockingQueue<ChannelFuture>();
+            final Queue<ChannelFuture> futures = new LinkedBlockingQueue<>();
 
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group).channel(NioServerSocketChannel.class);

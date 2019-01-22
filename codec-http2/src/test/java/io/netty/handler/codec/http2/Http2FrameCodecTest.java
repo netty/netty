@@ -570,7 +570,7 @@ public class Http2FrameCodecTest {
         assertNotNull(stream);
         assertFalse(isStreamIdValid(stream.id()));
 
-        final Promise<Void> listenerExecuted = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
+        final Promise<Void> listenerExecuted = new DefaultPromise<>(GlobalEventExecutor.INSTANCE);
 
         channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), false).stream(stream))
                .addListener(new ChannelFutureListener() {
@@ -734,7 +734,7 @@ public class Http2FrameCodecTest {
         @SuppressWarnings("unused")
         Http2FrameStream idleStream = frameCodec.newStream();
 
-        final Set<Http2FrameStream> activeStreams = new HashSet<Http2FrameStream>();
+        final Set<Http2FrameStream> activeStreams = new HashSet<>();
         frameCodec.forEachActiveStream(new Http2FrameStreamVisitor() {
             @Override
             public boolean visit(Http2FrameStream stream) {
@@ -745,7 +745,7 @@ public class Http2FrameCodecTest {
 
         assertEquals(2, activeStreams.size());
 
-        Set<Http2FrameStream> expectedStreams = new HashSet<Http2FrameStream>();
+        Set<Http2FrameStream> expectedStreams = new HashSet<>();
         expectedStreams.add(activeInbond);
         expectedStreams.add(activeOutbound);
         assertEquals(expectedStreams, activeStreams);

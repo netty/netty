@@ -40,7 +40,7 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
 
         public HarnessExecutor(int maxThreads, String prefix) {
             super(maxThreads, maxThreads, 0, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<Runnable>(), new DefaultThreadFactory(prefix));
+                    new LinkedBlockingQueue<>(), new DefaultThreadFactory(prefix));
             logger.debug("Using harness executor");
         }
     }

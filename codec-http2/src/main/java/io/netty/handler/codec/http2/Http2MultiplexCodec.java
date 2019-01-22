@@ -790,7 +790,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                 }
             } else {
                 if (inboundBuffer == null) {
-                    inboundBuffer = new ArrayDeque<Object>(4);
+                    inboundBuffer = new ArrayDeque<>(4);
                 }
                 inboundBuffer.add(frame);
             }

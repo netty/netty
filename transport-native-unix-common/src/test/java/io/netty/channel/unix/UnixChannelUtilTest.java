@@ -66,7 +66,7 @@ public class UnixChannelUtilTest {
     private static void assertCompositeByteBufIsBufferCopyNeededForWrite(ByteBufAllocator alloc, int numDirect,
                                                                          int numHeap, boolean expected) {
         CompositeByteBuf comp = alloc.compositeBuffer(numDirect + numHeap);
-        List<ByteBuf> byteBufs = new LinkedList<ByteBuf>();
+        List<ByteBuf> byteBufs = new LinkedList<>();
 
         while (numDirect > 0) {
             byteBufs.add(alloc.directBuffer(1));

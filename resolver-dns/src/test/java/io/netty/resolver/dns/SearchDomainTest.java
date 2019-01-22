@@ -75,7 +75,7 @@ public class SearchDomainTest {
 
     @Test
     public void testResolve() throws Exception {
-        Set<String> domains = new HashSet<String>();
+        Set<String> domains = new HashSet<>();
         domains.add("host1.foo.com");
         domains.add("host1");
         domains.add("host3");
@@ -125,7 +125,7 @@ public class SearchDomainTest {
 
     @Test
     public void testResolveAll() throws Exception {
-        Set<String> domains = new HashSet<String>();
+        Set<String> domains = new HashSet<>();
         domains.add("host1.foo.com");
         domains.add("host1");
         domains.add("host3");
@@ -175,7 +175,7 @@ public class SearchDomainTest {
 
     @Test
     public void testMultipleSearchDomain() throws Exception {
-        Set<String> domains = new HashSet<String>();
+        Set<String> domains = new HashSet<>();
         domains.add("host1.foo.com");
         domains.add("host2.bar.com");
         domains.add("host3.bar.com");
@@ -205,7 +205,7 @@ public class SearchDomainTest {
 
     @Test
     public void testSearchDomainWithNdots2() throws Exception {
-        Set<String> domains = new HashSet<String>();
+        Set<String> domains = new HashSet<>();
         domains.add("host1.sub.foo.com");
         domains.add("host2.sub.foo.com");
         domains.add("host2.sub");
@@ -226,7 +226,7 @@ public class SearchDomainTest {
 
     @Test
     public void testSearchDomainWithNdots0() throws Exception {
-        Set<String> domains = new HashSet<String>();
+        Set<String> domains = new HashSet<>();
         domains.add("host1");
         domains.add("host1.foo.com");
         domains.add("host2.foo.com");
@@ -272,7 +272,7 @@ public class SearchDomainTest {
                                                  String inetHost) throws InterruptedException {
         Future<List<InetAddress>> fut = resolver.resolveAll(inetHost);
         assertTrue(fut.await(10, TimeUnit.SECONDS));
-        List<String> list = new ArrayList<String>();
+        List<String> list = new ArrayList<>();
         for (InetAddress addr : fut.getNow()) {
             list.add(addr.getHostAddress());
         }

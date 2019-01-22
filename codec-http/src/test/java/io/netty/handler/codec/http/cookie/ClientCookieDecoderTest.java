@@ -118,11 +118,11 @@ public class ClientCookieDecoderTest {
 
     @Test
     public void testDecodingQuotedCookie() {
-        Collection<String> sources = new ArrayList<String>();
+        Collection<String> sources = new ArrayList<>();
         sources.add("a=\"\",");
         sources.add("b=\"1\",");
 
-        Collection<Cookie> cookies = new ArrayList<Cookie>();
+        Collection<Cookie> cookies = new ArrayList<>();
         for (String source : sources) {
             cookies.add(ClientCookieDecoder.STRICT.decode(source));
         }

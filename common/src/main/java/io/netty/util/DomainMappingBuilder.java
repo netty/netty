@@ -34,7 +34,7 @@ public final class DomainMappingBuilder<V> {
      *                     when nothing matches the input
      */
     public DomainMappingBuilder(V defaultValue) {
-        builder = new DomainNameMappingBuilder<V>(defaultValue);
+        builder = new DomainNameMappingBuilder<>(defaultValue);
     }
 
     /**
@@ -45,7 +45,7 @@ public final class DomainMappingBuilder<V> {
      *                        when nothing matches the input
      */
     public DomainMappingBuilder(int initialCapacity, V defaultValue) {
-        builder = new DomainNameMappingBuilder<V>(initialCapacity, defaultValue);
+        builder = new DomainNameMappingBuilder<>(initialCapacity, defaultValue);
     }
 
     /**

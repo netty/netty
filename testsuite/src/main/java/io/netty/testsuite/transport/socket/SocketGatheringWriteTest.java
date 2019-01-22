@@ -207,7 +207,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
     private static class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
         private final boolean autoRead;
         volatile Channel channel;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
 
         TestHandler(boolean autoRead) {
             this.autoRead = autoRead;

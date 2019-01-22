@@ -139,7 +139,7 @@ public final class ServerCookieEncoder extends CookieEncoder {
         for (int idx : nameToLastIndex.values()) {
             isLastInstance[idx] = true;
         }
-        List<String> dedupd = new ArrayList<String>(nameToLastIndex.size());
+        List<String> dedupd = new ArrayList<>(nameToLastIndex.size());
         for (int i = 0, n = encoded.size(); i < n; i++) {
             if (isLastInstance[i]) {
                 dedupd.add(encoded.get(i));
@@ -159,8 +159,8 @@ public final class ServerCookieEncoder extends CookieEncoder {
             return Collections.emptyList();
         }
 
-        List<String> encoded = new ArrayList<String>(cookies.length);
-        Map<String, Integer> nameToIndex = strict && cookies.length > 1 ? new HashMap<String, Integer>() : null;
+        List<String> encoded = new ArrayList<>(cookies.length);
+        Map<String, Integer> nameToIndex = strict && cookies.length > 1 ? new HashMap<>() : null;
         boolean hasDupdName = false;
         for (int i = 0; i < cookies.length; i++) {
             Cookie c = cookies[i];
@@ -183,8 +183,8 @@ public final class ServerCookieEncoder extends CookieEncoder {
             return Collections.emptyList();
         }
 
-        List<String> encoded = new ArrayList<String>(cookies.size());
-        Map<String, Integer> nameToIndex = strict && cookies.size() > 1 ? new HashMap<String, Integer>() : null;
+        List<String> encoded = new ArrayList<>(cookies.size());
+        Map<String, Integer> nameToIndex = strict && cookies.size() > 1 ? new HashMap<>() : null;
         int i = 0;
         boolean hasDupdName = false;
         for (Cookie c : cookies) {
@@ -208,9 +208,9 @@ public final class ServerCookieEncoder extends CookieEncoder {
             return Collections.emptyList();
         }
 
-        List<String> encoded = new ArrayList<String>();
+        List<String> encoded = new ArrayList<>();
         Cookie firstCookie = cookiesIt.next();
-        Map<String, Integer> nameToIndex = strict && cookiesIt.hasNext() ? new HashMap<String, Integer>() : null;
+        Map<String, Integer> nameToIndex = strict && cookiesIt.hasNext() ? new HashMap<>() : null;
         int i = 0;
         encoded.add(encode(firstCookie));
         boolean hasDupdName = nameToIndex != null && nameToIndex.put(firstCookie.name(), i++) != null;

@@ -50,12 +50,12 @@ import javax.security.auth.x500.X500Principal;
 public final class ReferenceCountedOpenSslClientContext extends ReferenceCountedOpenSslContext {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(ReferenceCountedOpenSslClientContext.class);
-    private static final Set<String> SUPPORTED_KEY_TYPES = Collections.unmodifiableSet(new LinkedHashSet<String>(
+    private static final Set<String> SUPPORTED_KEY_TYPES = Collections.unmodifiableSet(new LinkedHashSet<>(
             Arrays.asList(OpenSslKeyMaterialManager.KEY_TYPE_RSA,
-                          OpenSslKeyMaterialManager.KEY_TYPE_DH_RSA,
-                          OpenSslKeyMaterialManager.KEY_TYPE_EC,
-                          OpenSslKeyMaterialManager.KEY_TYPE_EC_RSA,
-                          OpenSslKeyMaterialManager.KEY_TYPE_EC_EC)));
+                    OpenSslKeyMaterialManager.KEY_TYPE_DH_RSA,
+                    OpenSslKeyMaterialManager.KEY_TYPE_EC,
+                    OpenSslKeyMaterialManager.KEY_TYPE_EC_RSA,
+                    OpenSslKeyMaterialManager.KEY_TYPE_EC_EC)));
     private final OpenSslSessionContext sessionContext;
 
     ReferenceCountedOpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
@@ -289,7 +289,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 // Try all of the supported key types.
                 return SUPPORTED_KEY_TYPES;
             }
-            Set<String> result = new HashSet<String>(clientCertificateTypes.length);
+            Set<String> result = new HashSet<>(clientCertificateTypes.length);
             for (byte keyTypeCode : clientCertificateTypes) {
                 String keyType = clientKeyType(keyTypeCode);
                 if (keyType == null) {

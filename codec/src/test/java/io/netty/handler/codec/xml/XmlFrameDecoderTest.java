@@ -164,7 +164,7 @@ public class XmlFrameDecoderTest {
         } catch (Exception e) {
             cause = e;
         }
-        List<Object> actual = new ArrayList<Object>();
+        List<Object> actual = new ArrayList<>();
         for (;;) {
             ByteBuf buf = ch.readInbound();
             if (buf == null) {
@@ -179,7 +179,7 @@ public class XmlFrameDecoderTest {
         }
 
         try {
-            List<Object> expectedList = new ArrayList<Object>();
+            List<Object> expectedList = new ArrayList<>();
             Collections.addAll(expectedList, expected);
             assertThat(actual, is(expectedList));
         } finally {

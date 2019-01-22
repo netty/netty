@@ -85,7 +85,7 @@ public class ChannelInitializerTest {
 
     private void testInitChannelThrows(boolean registerFirst) {
         final Exception exception = new Exception();
-        final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> causeRef = new AtomicReference<>();
 
         ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
 
@@ -263,7 +263,7 @@ public class ChannelInitializerTest {
     public void testChannelInitializerEventExecutor() throws Throwable {
         final AtomicInteger invokeCount = new AtomicInteger();
         final AtomicInteger completeCount = new AtomicInteger();
-        final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> errorRef = new AtomicReference<>();
         LocalAddress addr = new LocalAddress("test");
 
         final EventExecutor executor = new AbstractEventExecutor() {

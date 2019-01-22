@@ -239,7 +239,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 
         if (nHeapArena > 0) {
             heapArenas = newArenaArray(nHeapArena);
-            List<PoolArenaMetric> metrics = new ArrayList<PoolArenaMetric>(heapArenas.length);
+            List<PoolArenaMetric> metrics = new ArrayList<>(heapArenas.length);
             for (int i = 0; i < heapArenas.length; i ++) {
                 PoolArena.HeapArena arena = new PoolArena.HeapArena(this,
                         pageSize, maxOrder, pageShifts, chunkSize,
@@ -255,7 +255,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 
         if (nDirectArena > 0) {
             directArenas = newArenaArray(nDirectArena);
-            List<PoolArenaMetric> metrics = new ArrayList<PoolArenaMetric>(directArenas.length);
+            List<PoolArenaMetric> metrics = new ArrayList<>(directArenas.length);
             for (int i = 0; i < directArenas.length; i ++) {
                 PoolArena.DirectArena arena = new PoolArena.DirectArena(
                         this, pageSize, maxOrder, pageShifts, chunkSize, directMemoryCacheAlignment);

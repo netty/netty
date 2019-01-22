@@ -101,7 +101,7 @@ public class IntObjectHashMapBenchmark extends AbstractMicrobenchmark {
                 case RANDOM: {
                     // Create a 'size' # of random integers.
                     Random r = new Random();
-                    Set<Integer> keySet = new HashSet<Integer>();
+                    Set<Integer> keySet = new HashSet<>();
                     while (keySet.size() < size) {
                         keySet.add(r.nextInt());
                     }
@@ -123,7 +123,7 @@ public class IntObjectHashMapBenchmark extends AbstractMicrobenchmark {
     }
 
     private class AgronaEnvironment extends Environment {
-        private final Int2ObjectHashMap<Long> map = new Int2ObjectHashMap<Long>();
+        private final Int2ObjectHashMap<Long> map = new Int2ObjectHashMap<>();
 
         AgronaEnvironment() {
             for (int key : keys) {
@@ -133,7 +133,7 @@ public class IntObjectHashMapBenchmark extends AbstractMicrobenchmark {
 
         @Override
         void put(Blackhole bh) {
-            Int2ObjectHashMap<Long> map = new Int2ObjectHashMap<Long>();
+            Int2ObjectHashMap<Long> map = new Int2ObjectHashMap<>();
             for (int key : keys) {
                 bh.consume(map.put(key, VALUE));
             }
@@ -148,7 +148,7 @@ public class IntObjectHashMapBenchmark extends AbstractMicrobenchmark {
 
         @Override
         void remove(Blackhole bh) {
-            Int2ObjectHashMap<Long> copy = new Int2ObjectHashMap<Long>();
+            Int2ObjectHashMap<Long> copy = new Int2ObjectHashMap<>();
             copy.putAll(map);
             for (int key : keys) {
                 bh.consume(copy.remove(key));

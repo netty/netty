@@ -151,7 +151,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     public Set<InetSocketAddress> allLocalAddresses() {
         try {
             final Set<SocketAddress> allLocalAddresses = javaChannel().getAllLocalAddresses();
-            final Set<InetSocketAddress> addresses = new LinkedHashSet<InetSocketAddress>(allLocalAddresses.size());
+            final Set<InetSocketAddress> addresses = new LinkedHashSet<>(allLocalAddresses.size());
             for (SocketAddress socketAddress : allLocalAddresses) {
                 addresses.add((InetSocketAddress) socketAddress);
             }
@@ -170,7 +170,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     public Set<InetSocketAddress> allRemoteAddresses() {
         try {
             final Set<SocketAddress> allLocalAddresses = javaChannel().getRemoteAddresses();
-            final Set<InetSocketAddress> addresses = new HashSet<InetSocketAddress>(allLocalAddresses.size());
+            final Set<InetSocketAddress> addresses = new HashSet<>(allLocalAddresses.size());
             for (SocketAddress socketAddress : allLocalAddresses) {
                 addresses.add((InetSocketAddress) socketAddress);
             }

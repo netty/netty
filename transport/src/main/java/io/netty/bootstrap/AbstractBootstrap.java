@@ -48,8 +48,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
 
     volatile EventLoopGroup group;
     private volatile SocketAddress localAddress;
-    private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
-    private final Map<AttributeKey<?>, Object> attrs = new LinkedHashMap<AttributeKey<?>, Object>();
+    private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<>();
+    private final Map<AttributeKey<?>, Object> attrs = new LinkedHashMap<>();
     private volatile ChannelHandler handler;
 
     AbstractBootstrap() {
@@ -346,7 +346,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
             if (map.isEmpty()) {
                 return Collections.emptyMap();
             }
-            copied = new LinkedHashMap<K, V>(map);
+            copied = new LinkedHashMap<>(map);
         }
         return Collections.unmodifiableMap(copied);
     }

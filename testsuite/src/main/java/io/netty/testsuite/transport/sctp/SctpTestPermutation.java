@@ -70,7 +70,7 @@ public final class SctpTestPermutation {
 
     static List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> sctpChannel() {
         List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> list =
-                new ArrayList<BootstrapComboFactory<ServerBootstrap, Bootstrap>>();
+                new ArrayList<>();
 
         // Make the list of SCTP ServerBootstrap factories.
         List<BootstrapFactory<ServerBootstrap>> sbfs = sctpServerChannel();

@@ -40,10 +40,10 @@ public final class SupportedCipherSuiteFilter implements CipherSuiteFilter {
 
         final List<String> newCiphers;
         if (ciphers == null) {
-            newCiphers = new ArrayList<String>(defaultCiphers.size());
+            newCiphers = new ArrayList<>(defaultCiphers.size());
             ciphers = defaultCiphers;
         } else {
-            newCiphers = new ArrayList<String>(supportedCiphers.size());
+            newCiphers = new ArrayList<>(supportedCiphers.size());
         }
         for (String c : ciphers) {
             if (c == null) {

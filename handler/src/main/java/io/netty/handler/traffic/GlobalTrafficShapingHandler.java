@@ -243,7 +243,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
         PerChannel perChannel = channelQueues.get(key);
         if (perChannel == null) {
             perChannel = new PerChannel();
-            perChannel.messagesQueue = new ArrayDeque<ToSend>();
+            perChannel.messagesQueue = new ArrayDeque<>();
             perChannel.queueSize = 0L;
             perChannel.lastReadTimestamp = TrafficCounter.milliSecondFromNano();
             perChannel.lastWriteTimestamp = perChannel.lastReadTimestamp;

@@ -152,7 +152,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
 
     private static Map<String, DnsServerAddresses> parse(File... etcResolverFiles) throws IOException {
         Map<String, DnsServerAddresses> domainToNameServerStreamMap =
-                new HashMap<String, DnsServerAddresses>(etcResolverFiles.length << 1);
+                new HashMap<>(etcResolverFiles.length << 1);
         for (File etcResolverFile : etcResolverFiles) {
             if (!etcResolverFile.isFile()) {
                 continue;
@@ -161,7 +161,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
             BufferedReader br = null;
             try {
                 br = new BufferedReader(fr);
-                List<InetSocketAddress> addresses = new ArrayList<InetSocketAddress>(2);
+                List<InetSocketAddress> addresses = new ArrayList<>(2);
                 String domainName = etcResolverFile.getName();
                 int port = DNS_PORT;
                 String line;
@@ -199,7 +199,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                         if (!addresses.isEmpty()) {
                             putIfAbsent(domainToNameServerStreamMap, domainName, addresses);
                         }
-                        addresses = new ArrayList<InetSocketAddress>(2);
+                        addresses = new ArrayList<>(2);
                     } else if (line.startsWith(PORT_ROW_LABEL)) {
                         int i = indexOfNonWhiteSpace(line, PORT_ROW_LABEL.length());
                         if (i < 0) {
@@ -308,7 +308,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
      */
     static List<String> parseEtcResolverSearchDomains(File etcResolvConf) throws IOException {
         String localDomain = null;
-        List<String> searchDomains = new ArrayList<String>();
+        List<String> searchDomains = new ArrayList<>();
 
         FileReader fr = new FileReader(etcResolvConf);
         BufferedReader br = null;

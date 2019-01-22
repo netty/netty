@@ -82,7 +82,7 @@ public class DefaultChannelPipelineTest {
     }
 
     private void setUp(final ChannelHandler... handlers) throws Exception {
-        final AtomicReference<Channel> peerRef = new AtomicReference<Channel>();
+        final AtomicReference<Channel> peerRef = new AtomicReference<>();
         ServerBootstrap sb = new ServerBootstrap();
         sb.group(group).channel(LocalServerChannel.class);
         sb.childHandler(new ChannelInboundHandlerAdapter() {
@@ -358,7 +358,7 @@ public class DefaultChannelPipelineTest {
 
         ChannelPipeline p = self.pipeline();
 
-        final List<LifeCycleAwareTestHandler> handlers = new ArrayList<LifeCycleAwareTestHandler>();
+        final List<LifeCycleAwareTestHandler> handlers = new ArrayList<>();
         final int COUNT = 20;
         final CountDownLatch addLatch = new CountDownLatch(COUNT);
         for (int i = 0; i < COUNT; i++) {
@@ -671,7 +671,7 @@ public class DefaultChannelPipelineTest {
     @Test(timeout = 5000)
     public void testChannelInitializerException() throws Exception {
         final IllegalStateException exception = new IllegalStateException();
-        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> error = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
         EmbeddedChannel channel = new EmbeddedChannel(false, false, new ChannelInitializer<Channel>() {
             @Override
@@ -765,8 +765,8 @@ public class DefaultChannelPipelineTest {
         final EventExecutorGroup group2 = new DefaultEventExecutorGroup(1);
 
         try {
-            BlockingQueue<CheckOrderHandler> addedQueue = new LinkedBlockingQueue<CheckOrderHandler>();
-            BlockingQueue<CheckOrderHandler> removedQueue = new LinkedBlockingQueue<CheckOrderHandler>();
+            BlockingQueue<CheckOrderHandler> addedQueue = new LinkedBlockingQueue<>();
+            BlockingQueue<CheckOrderHandler> removedQueue = new LinkedBlockingQueue<>();
 
             CheckOrderHandler handler1 = new CheckOrderHandler(addedQueue, removedQueue);
             CheckOrderHandler handler2 = new CheckOrderHandler(addedQueue, removedQueue);
@@ -1137,7 +1137,7 @@ public class DefaultChannelPipelineTest {
     public void testHandlerRemovedOnlyCalledWhenHandlerAddedCalled() throws Exception {
         EventLoopGroup group = new LocalEventLoopGroup(1);
         try {
-            final AtomicReference<Error> errorRef = new AtomicReference<Error>();
+            final AtomicReference<Error> errorRef = new AtomicReference<>();
 
             // As this only happens via a race we will verify 500 times. This was good enough to have it failed most of
             // the time.
@@ -1655,7 +1655,7 @@ public class DefaultChannelPipelineTest {
     private static final class CallbackCheckHandler extends ChannelHandlerAdapter {
         final Promise<Boolean> addedHandler = ImmediateEventExecutor.INSTANCE.newPromise();
         final Promise<Boolean> removedHandler = ImmediateEventExecutor.INSTANCE.newPromise();
-        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> error = new AtomicReference<>();
 
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
@@ -1708,7 +1708,7 @@ public class DefaultChannelPipelineTest {
     private static final class CheckOrderHandler extends ChannelHandlerAdapter {
         private final Queue<CheckOrderHandler> addedQueue;
         private final Queue<CheckOrderHandler> removedQueue;
-        private final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        private final AtomicReference<Throwable> error = new AtomicReference<>();
 
         CheckOrderHandler(Queue<CheckOrderHandler> addedQueue, Queue<CheckOrderHandler> removedQueue) {
             this.addedQueue = addedQueue;
@@ -1846,8 +1846,8 @@ public class DefaultChannelPipelineTest {
     private static class TestHandler extends ChannelDuplexHandler { }
 
     private static class BufferedTestHandler extends ChannelDuplexHandler {
-        final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
-        final Queue<Object> outboundBuffer = new ArrayDeque<Object>();
+        final Queue<Object> inboundBuffer = new ArrayDeque<>();
+        final Queue<Object> outboundBuffer = new ArrayDeque<>();
 
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {

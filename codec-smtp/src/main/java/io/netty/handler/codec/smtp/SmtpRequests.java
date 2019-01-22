@@ -92,7 +92,7 @@ public final class SmtpRequests {
             return new DefaultSmtpRequest(SmtpCommand.MAIL,
                                           sender != null ? "FROM:<" + sender + '>' : FROM_NULL_SENDER);
         } else {
-            List<CharSequence> params = new ArrayList<CharSequence>(mailParameters.length + 1);
+            List<CharSequence> params = new ArrayList<>(mailParameters.length + 1);
             params.add(sender != null? "FROM:<" + sender + '>' : FROM_NULL_SENDER);
             for (CharSequence param : mailParameters) {
                 params.add(param);
@@ -109,7 +109,7 @@ public final class SmtpRequests {
         if (rcptParameters == null || rcptParameters.length == 0) {
             return new DefaultSmtpRequest(SmtpCommand.RCPT, "TO:<" + recipient + '>');
         } else {
-            List<CharSequence> params = new ArrayList<CharSequence>(rcptParameters.length + 1);
+            List<CharSequence> params = new ArrayList<>(rcptParameters.length + 1);
             params.add("TO:<" + recipient + '>');
             for (CharSequence param : rcptParameters) {
                 params.add(param);

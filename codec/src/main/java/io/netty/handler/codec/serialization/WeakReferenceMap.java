@@ -27,7 +27,7 @@ final class WeakReferenceMap<K, V> extends ReferenceMap<K, V> {
 
     @Override
     Reference<V> fold(V value) {
-        return new WeakReference<V>(value);
+        return new WeakReference<>(value);
     }
 
 }

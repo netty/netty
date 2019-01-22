@@ -238,9 +238,9 @@ public class Http2ConnectionRoundtripTest {
         final CountDownLatch serverRevHeadersLatch = new CountDownLatch(1);
         final CountDownLatch clientHeadersLatch = new CountDownLatch(1);
         final CountDownLatch clientDataWrite = new CountDownLatch(1);
-        final AtomicReference<Throwable> clientHeadersWriteException = new AtomicReference<Throwable>();
-        final AtomicReference<Throwable> clientHeadersWriteException2 = new AtomicReference<Throwable>();
-        final AtomicReference<Throwable> clientDataWriteException = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> clientHeadersWriteException = new AtomicReference<>();
+        final AtomicReference<Throwable> clientHeadersWriteException2 = new AtomicReference<>();
+        final AtomicReference<Throwable> clientDataWriteException = new AtomicReference<>();
 
         final Http2Headers headers = dummyHeaders();
 
@@ -520,7 +520,7 @@ public class Http2ConnectionRoundtripTest {
 
         final CountDownLatch serverGotRstLatch = new CountDownLatch(1);
         final CountDownLatch serverWriteHeadersLatch = new CountDownLatch(1);
-        final AtomicReference<Throwable> serverWriteHeadersCauseRef = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> serverWriteHeadersCauseRef = new AtomicReference<>();
 
         final Http2Headers headers = dummyHeaders();
         final int streamId = 3;
@@ -907,7 +907,7 @@ public class Http2ConnectionRoundtripTest {
         verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(3), eq(NO_ERROR.code()),
                 any(ByteBuf.class));
 
-        final AtomicReference<ChannelFuture> clientWriteAfterGoAwayFutureRef = new AtomicReference<ChannelFuture>();
+        final AtomicReference<ChannelFuture> clientWriteAfterGoAwayFutureRef = new AtomicReference<>();
         final CountDownLatch clientWriteAfterGoAwayLatch = new CountDownLatch(1);
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
@@ -962,7 +962,7 @@ public class Http2ConnectionRoundtripTest {
         setServerGracefulShutdownTime(10000);
 
         final Http2Headers headers = dummyHeaders();
-        final AtomicReference<ChannelFuture> clientWriteAfterGoAwayFutureRef = new AtomicReference<ChannelFuture>();
+        final AtomicReference<ChannelFuture> clientWriteAfterGoAwayFutureRef = new AtomicReference<>();
         final CountDownLatch clientWriteAfterGoAwayLatch = new CountDownLatch(1);
         doAnswer(new Answer<Void>() {
             @Override
@@ -1189,7 +1189,7 @@ public class Http2ConnectionRoundtripTest {
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
-        final AtomicReference<Http2ConnectionHandler> serverHandlerRef = new AtomicReference<Http2ConnectionHandler>();
+        final AtomicReference<Http2ConnectionHandler> serverHandlerRef = new AtomicReference<>();
         final CountDownLatch serverInitLatch = new CountDownLatch(1);
         sb.group(new LocalEventLoopGroup());
         sb.channel(LocalServerChannel.class);

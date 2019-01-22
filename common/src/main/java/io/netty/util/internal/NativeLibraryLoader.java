@@ -90,7 +90,7 @@ public final class NativeLibraryLoader {
      *         if none of the given libraries load successfully.
      */
     public static void loadFirstAvailable(ClassLoader loader, String... names) {
-        List<Throwable> suppressed = new ArrayList<Throwable>();
+        List<Throwable> suppressed = new ArrayList<>();
         for (String name : names) {
             try {
                 load(name, loader);
@@ -130,7 +130,7 @@ public final class NativeLibraryLoader {
         // Adjust expected name to support shading of native libraries.
         String packagePrefix = calculatePackagePrefix().replace('.', '_');
         String name = packagePrefix + originalName;
-        List<Throwable> suppressed = new ArrayList<Throwable>();
+        List<Throwable> suppressed = new ArrayList<>();
         try {
             // first try to load from java.library.path
             loadLibrary(loader, name, false);

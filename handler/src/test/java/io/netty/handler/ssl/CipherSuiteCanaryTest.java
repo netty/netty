@@ -68,7 +68,7 @@ public class CipherSuiteCanaryTest {
 
     @Parameters(name = "{index}: serverSslProvider = {0}, clientSslProvider = {1}, rfcCipherName = {2}")
     public static Collection<Object[]> parameters() {
-       List<Object[]> dst = new ArrayList<Object[]>();
+       List<Object[]> dst = new ArrayList<>();
        dst.addAll(expand("TLS_DHE_RSA_WITH_AES_128_GCM_SHA256")); // DHE-RSA-AES128-GCM-SHA256
        return dst;
     }
@@ -253,7 +253,7 @@ public class CipherSuiteCanaryTest {
     }
 
     private static List<Object[]> expand(String rfcCipherName) {
-        List<Object[]> dst = new ArrayList<Object[]>();
+        List<Object[]> dst = new ArrayList<>();
         SslProvider[] sslProviders = SslProvider.values();
 
         for (int i = 0; i < sslProviders.length; i++) {

@@ -35,7 +35,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class HttpResponseClientHandler extends SimpleChannelInboundHandler<HttpObject> {
 
-    private final BlockingQueue<ChannelFuture> queue = new LinkedBlockingQueue<ChannelFuture>();
+    private final BlockingQueue<ChannelFuture> queue = new LinkedBlockingQueue<>();
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {

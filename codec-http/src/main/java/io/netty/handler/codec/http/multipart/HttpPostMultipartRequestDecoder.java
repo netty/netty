@@ -75,12 +75,12 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     /**
      * HttpDatas from Body
      */
-    private final List<InterfaceHttpData> bodyListHttpData = new ArrayList<InterfaceHttpData>();
+    private final List<InterfaceHttpData> bodyListHttpData = new ArrayList<>();
 
     /**
      * HttpDatas as Map from Body
      */
-    private final Map<String, List<InterfaceHttpData>> bodyMapHttpData = new TreeMap<String, List<InterfaceHttpData>>(
+    private final Map<String, List<InterfaceHttpData>> bodyMapHttpData = new TreeMap<>(
             CaseIgnoringComparator.INSTANCE);
 
     /**
@@ -420,7 +420,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         }
         List<InterfaceHttpData> datas = bodyMapHttpData.get(data.getName());
         if (datas == null) {
-            datas = new ArrayList<InterfaceHttpData>(1);
+            datas = new ArrayList<>(1);
             bodyMapHttpData.put(data.getName(), datas);
         }
         datas.add(data);
@@ -665,7 +665,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     private InterfaceHttpData findMultipartDisposition() {
         int readerIndex = undecodedChunk.readerIndex();
         if (currentStatus == MultiPartStatus.DISPOSITION) {
-            currentFieldAttributes = new TreeMap<CharSequence, Attribute>(CaseIgnoringComparator.INSTANCE);
+            currentFieldAttributes = new TreeMap<>(CaseIgnoringComparator.INSTANCE);
         }
         // read many lines until empty line with newline found! Store all data
         while (!skipOneLine()) {
@@ -1445,7 +1445,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *         follows by several values that were separated by ';' or ','
      */
     private static String[] splitMultipartHeader(String sb) {
-        ArrayList<String> headers = new ArrayList<String>(1);
+        ArrayList<String> headers = new ArrayList<>(1);
         int nameStart;
         int nameEnd;
         int colonEnd;

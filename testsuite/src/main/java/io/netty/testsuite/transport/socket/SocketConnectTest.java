@@ -78,7 +78,7 @@ public class SocketConnectTest extends AbstractSocketTest {
     }
 
     public void testChannelEventsFiredWhenClosedDirectly(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        final BlockingQueue<Integer> events = new LinkedBlockingQueue<Integer>();
+        final BlockingQueue<Integer> events = new LinkedBlockingQueue<>();
 
         Channel sc = null;
         Channel cc = null;

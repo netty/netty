@@ -246,8 +246,8 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
 
     private static final class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile SocketChannel ch;
-        final BlockingQueue<Byte> queue = new LinkedBlockingQueue<Byte>();
-        final BlockingDeque<Boolean> writabilityQueue = new LinkedBlockingDeque<Boolean>();
+        final BlockingQueue<Byte> queue = new LinkedBlockingQueue<>();
+        final BlockingDeque<Boolean> writabilityQueue = new LinkedBlockingDeque<>();
 
         @Override
         public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {

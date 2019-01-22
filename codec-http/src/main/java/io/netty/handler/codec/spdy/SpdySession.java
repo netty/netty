@@ -59,7 +59,7 @@ final class SpdySession {
 
     // Stream-IDs should be iterated in priority order
     Map<Integer, StreamState> activeStreams() {
-        Map<Integer, StreamState> streams = new TreeMap<Integer, StreamState>(streamComparator);
+        Map<Integer, StreamState> streams = new TreeMap<>(streamComparator);
         streams.putAll(activeStreams);
         return streams;
     }
@@ -239,7 +239,7 @@ final class SpdySession {
         private final AtomicInteger sendWindowSize;
         private final AtomicInteger receiveWindowSize;
         private int receiveWindowSizeLowerBound;
-        private final Queue<PendingWrite> pendingWriteQueue = new ConcurrentLinkedQueue<PendingWrite>();
+        private final Queue<PendingWrite> pendingWriteQueue = new ConcurrentLinkedQueue<>();
 
         StreamState(
                 byte priority, boolean remoteSideClosed, boolean localSideClosed,

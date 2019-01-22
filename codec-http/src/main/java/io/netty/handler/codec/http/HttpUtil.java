@@ -325,7 +325,7 @@ public final class HttpUtil {
             if (encodings.isEmpty()) {
                 return;
             }
-            List<CharSequence> values = new ArrayList<CharSequence>(encodings);
+            List<CharSequence> values = new ArrayList<>(encodings);
             Iterator<CharSequence> valuesIt = values.iterator();
             while (valuesIt.hasNext()) {
                 CharSequence value = valuesIt.next();

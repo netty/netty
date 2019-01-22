@@ -240,7 +240,7 @@ public class StreamBufferingEncoderTest {
         setMaxConcurrentStreams(5);
 
         int streamId = 3;
-        List<ChannelFuture> futures = new ArrayList<ChannelFuture>();
+        List<ChannelFuture> futures = new ArrayList<>();
         for (int i = 0; i < 9; i++) {
             futures.add(encoderWriteHeaders(streamId, newPromise()));
             streamId += 2;

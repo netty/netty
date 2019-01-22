@@ -34,7 +34,7 @@ final class Java8SslUtils {
         if (names == null || names.isEmpty()) {
             return Collections.emptyList();
         }
-        List<String> strings = new ArrayList<String>(names.size());
+        List<String> strings = new ArrayList<>(names.size());
 
         for (SNIServerName serverName : names) {
             if (serverName instanceof SNIHostName) {
@@ -55,7 +55,7 @@ final class Java8SslUtils {
         if (names == null || names.isEmpty()) {
             return Collections.emptyList();
         }
-        List<SNIServerName> sniServerNames = new ArrayList<SNIServerName>(names.size());
+        List<SNIServerName> sniServerNames = new ArrayList<>(names.size());
         for (String name: names) {
             sniServerNames.add(new SNIHostName(name));
         }

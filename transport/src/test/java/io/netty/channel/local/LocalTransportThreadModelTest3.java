@@ -125,7 +125,7 @@ public class LocalTransportThreadModelTest3 {
 
         final EventExecutorGroup[] groups = {e1, e2, e3, e4, e5};
         try {
-            Deque<EventType> events = new ConcurrentLinkedDeque<EventType>();
+            Deque<EventType> events = new ConcurrentLinkedDeque<>();
             final EventForwarder h1 = new EventForwarder();
             final EventForwarder h2 = new EventForwarder();
             final EventForwarder h3 = new EventForwarder();
@@ -244,7 +244,7 @@ public class LocalTransportThreadModelTest3 {
         }
 
         Random random = new Random();
-        LinkedList<EventType> expectedEvents = new LinkedList<EventType>();
+        LinkedList<EventType> expectedEvents = new LinkedList<>();
         for (int i = 0; i < size; i++) {
             expectedEvents.add(events[random.nextInt(events.length)]);
         }

@@ -88,7 +88,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     protected Map<ChannelOption<?>, Object> getOptions(
             Map<ChannelOption<?>, Object> result, ChannelOption<?>... options) {
         if (result == null) {
-            result = new IdentityHashMap<ChannelOption<?>, Object>();
+            result = new IdentityHashMap<>();
         }
         for (ChannelOption<?> o: options) {
             result.put(o, getOption(o));

@@ -228,7 +228,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
 
     private static class SpdyEchoTestServerHandler extends ChannelInboundHandlerAdapter {
         private final boolean autoRead;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
 
         SpdyEchoTestServerHandler(boolean autoRead) {
             this.autoRead = autoRead;
@@ -267,7 +267,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
 
     private static class SpdyEchoTestClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
         private final boolean autoRead;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
         final ByteBuf frames;
         volatile int counter;
 

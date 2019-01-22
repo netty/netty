@@ -55,7 +55,7 @@ public final class ProtocolDetectionResult<T> {
      */
     @SuppressWarnings("unchecked")
     public static <T> ProtocolDetectionResult<T> detected(T protocol) {
-        return new ProtocolDetectionResult<T>(ProtocolDetectionState.DETECTED, checkNotNull(protocol, "protocol"));
+        return new ProtocolDetectionResult<>(ProtocolDetectionState.DETECTED, checkNotNull(protocol, "protocol"));
     }
 
     private ProtocolDetectionResult(ProtocolDetectionState state, T result) {

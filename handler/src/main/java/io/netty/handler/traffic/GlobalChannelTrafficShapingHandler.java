@@ -461,7 +461,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
         PerChannel perChannel = channelQueues.get(key);
         if (perChannel == null) {
             perChannel = new PerChannel();
-            perChannel.messagesQueue = new ArrayDeque<ToSend>();
+            perChannel.messagesQueue = new ArrayDeque<>();
             // Don't start it since managed through the Global one
             perChannel.channelTrafficCounter = new TrafficCounter(this, null, "ChannelTC" +
                     ctx.channel().hashCode(), checkInterval);
