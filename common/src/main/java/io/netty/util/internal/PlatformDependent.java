@@ -328,7 +328,7 @@ public final class PlatformDependent {
         if (hasUnsafe()) {
             PlatformDependent0.throwException(t);
         } else {
-            PlatformDependent.<RuntimeException>throwException0(t);
+            PlatformDependent.throwException0(t);
         }
     }
 
@@ -341,32 +341,21 @@ public final class PlatformDependent {
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap() {
-        return new ConcurrentHashMap<K, V>();
-    }
-
-    /**
-     * Creates a new fastest {@link LongCounter} implementation for the current platform.
-     */
-    public static LongCounter newLongCounter() {
-        if (javaVersion() >= 8) {
-            return new LongAdderCounter();
-        } else {
-            return new AtomicLongCounter();
-        }
+        return new ConcurrentHashMap<>();
     }
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity) {
-        return new ConcurrentHashMap<K, V>(initialCapacity);
+        return new ConcurrentHashMap<>(initialCapacity);
     }
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity, float loadFactor) {
-        return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor);
+        return new ConcurrentHashMap<>(initialCapacity, loadFactor);
     }
 
     /**
@@ -374,14 +363,14 @@ public final class PlatformDependent {
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(
             int initialCapacity, float loadFactor, int concurrencyLevel) {
-        return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor, concurrencyLevel);
+        return new ConcurrentHashMap<>(initialCapacity, loadFactor, concurrencyLevel);
     }
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
      */
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(Map<? extends K, ? extends V> map) {
-        return new ConcurrentHashMap<K, V>(map);
+        return new ConcurrentHashMap<>(map);
     }
 
     /**
@@ -867,13 +856,13 @@ public final class PlatformDependent {
             // This is forced by the MpscChunkedArrayQueue implementation as will try to round it
             // up to the next power of two and so will overflow otherwise.
             final int capacity = max(min(maxCapacity, MAX_ALLOWED_MPSC_CAPACITY), MIN_MAX_MPSC_CAPACITY);
-            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscChunkedArrayQueue<T>(MPSC_CHUNK_SIZE, capacity)
-                                                : new MpscGrowableAtomicArrayQueue<T>(MPSC_CHUNK_SIZE, capacity);
+            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscChunkedArrayQueue<>(MPSC_CHUNK_SIZE, capacity)
+                                                : new MpscGrowableAtomicArrayQueue<>(MPSC_CHUNK_SIZE, capacity);
         }
 
         static <T> Queue<T> newMpscQueue() {
-            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscUnboundedArrayQueue<T>(MPSC_CHUNK_SIZE)
-                                                : new MpscUnboundedAtomicArrayQueue<T>(MPSC_CHUNK_SIZE);
+            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscUnboundedArrayQueue<>(MPSC_CHUNK_SIZE)
+                                                : new MpscUnboundedAtomicArrayQueue<>(MPSC_CHUNK_SIZE);
         }
     }
 
@@ -899,7 +888,7 @@ public final class PlatformDependent {
      * consumer (one thread!).
      */
     public static <T> Queue<T> newSpscQueue() {
-        return hasUnsafe() ? new SpscLinkedQueue<T>() : new SpscLinkedAtomicQueue<T>();
+        return hasUnsafe() ? new SpscLinkedQueue<>() : new SpscLinkedAtomicQueue<>();
     }
 
     /**
@@ -907,7 +896,7 @@ public final class PlatformDependent {
      * consumer (one thread!) with the given fixes {@code capacity}.
      */
     public static <T> Queue<T> newFixedMpscQueue(int capacity) {
-        return hasUnsafe() ? new MpscArrayQueue<T>(capacity) : new MpscAtomicArrayQueue<T>(capacity);
+        return hasUnsafe() ? new MpscArrayQueue<>(capacity) : new MpscAtomicArrayQueue<>(capacity);
     }
 
     /**
@@ -936,9 +925,9 @@ public final class PlatformDependent {
      */
     public static <C> Deque<C> newConcurrentDeque() {
         if (javaVersion() < 7) {
-            return new LinkedBlockingDeque<C>();
+            return new LinkedBlockingDeque<>();
         } else {
-            return new ConcurrentLinkedDeque<C>();
+            return new ConcurrentLinkedDeque<>();
         }
     }
 
@@ -1354,30 +1343,6 @@ public final class PlatformDependent {
         }
 
         return "unknown";
-    }
-
-    private static final class AtomicLongCounter extends AtomicLong implements LongCounter {
-        private static final long serialVersionUID = 4074772784610639305L;
-
-        @Override
-        public void add(long delta) {
-            addAndGet(delta);
-        }
-
-        @Override
-        public void increment() {
-            incrementAndGet();
-        }
-
-        @Override
-        public void decrement() {
-            decrementAndGet();
-        }
-
-        @Override
-        public long value() {
-            return get();
-        }
     }
 
     private interface ThreadLocalRandomProvider {
