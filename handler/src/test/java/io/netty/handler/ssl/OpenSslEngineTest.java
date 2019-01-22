@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
@@ -244,7 +245,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
             ByteBuffer src = allocateBuffer(1024 * 10);
             byte[] data = new byte[src.capacity()];
-            PlatformDependent.threadLocalRandom().nextBytes(data);
+            ThreadLocalRandom.current().nextBytes(data);
             src.put(data).flip();
             ByteBuffer dst = allocateBuffer(1);
             // Try to wrap multiple times so we are more likely to hit the issue.

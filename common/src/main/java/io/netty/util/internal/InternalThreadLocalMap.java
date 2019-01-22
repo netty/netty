@@ -30,6 +30,7 @@ import java.util.BitSet;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * The internal data structure that stores the thread-local variables for Netty and all {@link FastThreadLocal}s.
@@ -233,7 +234,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     public ThreadLocalRandom random() {
         ThreadLocalRandom r = random;
         if (r == null) {
-            random = r = new ThreadLocalRandom();
+            random = r = ThreadLocalRandom.current();
         }
         return r;
     }

@@ -18,7 +18,6 @@ package io.netty.buffer;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,6 +45,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -2299,7 +2299,7 @@ public abstract class AbstractByteBufTest {
             int i = CAPACITY * 3 / 4 - 1;
 
             @Override
-            public boolean process(byte value) throws Exception {
+            public boolean process(byte value) {
                 assertThat(value, is((byte) (i + 1)));
                 lastIndex.set(i);
                 i --;
@@ -2326,7 +2326,7 @@ public abstract class AbstractByteBufTest {
         assertEquals(1, buf.remaining());
 
         byte[] data = new byte[a];
-        PlatformDependent.threadLocalRandom().nextBytes(data);
+        ThreadLocalRandom.current().nextBytes(data);
         buffer.writeBytes(data);
 
         buf = buffer.internalNioBuffer(buffer.readerIndex(), a);

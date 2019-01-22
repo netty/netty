@@ -16,13 +16,12 @@
 
 package io.netty.handler.ssl.util;
 
-import io.netty.util.internal.PlatformDependent;
-
 import java.security.SecureRandom;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Insecure {@link SecureRandom} which relies on {@link PlatformDependent#threadLocalRandom()} for random number
+ * Insecure {@link SecureRandom} which relies on {@link ThreadLocalRandom#current()} for random number
  * generation.
  */
 final class ThreadLocalInsecureRandom extends SecureRandom {
@@ -96,6 +95,6 @@ final class ThreadLocalInsecureRandom extends SecureRandom {
     }
 
     private static Random random() {
-        return PlatformDependent.threadLocalRandom();
+        return ThreadLocalRandom.current();
     }
 }
