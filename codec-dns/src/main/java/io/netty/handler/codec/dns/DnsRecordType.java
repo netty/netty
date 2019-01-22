@@ -303,7 +303,7 @@ public class DnsRecordType implements Comparable<DnsRecordType> {
      */
     public static final DnsRecordType DLV = new DnsRecordType(0x8001, "DLV");
 
-    private static final Map<String, DnsRecordType> BY_NAME = new HashMap<String, DnsRecordType>();
+    private static final Map<String, DnsRecordType> BY_NAME = new HashMap<>();
     private static final IntObjectHashMap<DnsRecordType> BY_TYPE = new IntObjectHashMap<DnsRecordType>();
     private static final String EXPECTED;
 

@@ -88,7 +88,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private volatile boolean interrupted;
 
     private final Semaphore threadLock = new Semaphore(0);
-    private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
+    private final Set<Runnable> shutdownHooks = new LinkedHashSet<>();
     private final boolean addTaskWakesUp;
     private final int maxPendingTasks;
     private final RejectedExecutionHandler rejectedExecutionHandler;
@@ -181,7 +181,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * implementation that does not support blocking operations at all.
      */
     protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
-        return new LinkedBlockingQueue<Runnable>(maxPendingTasks);
+        return new LinkedBlockingQueue<>(maxPendingTasks);
     }
 
     /**
@@ -509,7 +509,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         boolean ran = false;
         // Note shutdown hooks can add / remove shutdown hooks.
         while (!shutdownHooks.isEmpty()) {
-            List<Runnable> copy = new ArrayList<Runnable>(shutdownHooks);
+            List<Runnable> copy = new ArrayList<>(shutdownHooks);
             shutdownHooks.clear();
             for (Runnable task: copy) {
                 try {

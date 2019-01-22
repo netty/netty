@@ -15,7 +15,6 @@
  */
 package io.netty.util;
 
-import io.netty.util.internal.ThreadLocalRandom;
 import org.junit.Test;
 
 import java.util.ArrayDeque;
@@ -24,6 +23,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
@@ -86,7 +86,7 @@ public class AbstractReferenceCountedTest {
     @Test(timeout = 30000)
     public void testRetainFromMultipleThreadsThrowsReferenceCountException() throws Exception {
         int threads = 4;
-        Queue<Future<?>> futures = new ArrayDeque<Future<?>>(threads);
+        Queue<Future<?>> futures = new ArrayDeque<>(threads);
         ExecutorService service = Executors.newFixedThreadPool(threads);
         final AtomicInteger refCountExceptions = new AtomicInteger();
 
@@ -134,7 +134,7 @@ public class AbstractReferenceCountedTest {
     @Test(timeout = 30000)
     public void testReleaseFromMultipleThreadsThrowsReferenceCountException() throws Exception {
         int threads = 4;
-        Queue<Future<?>> futures = new ArrayDeque<Future<?>>(threads);
+        Queue<Future<?>> futures = new ArrayDeque<>(threads);
         ExecutorService service = Executors.newFixedThreadPool(threads);
         final AtomicInteger refCountExceptions = new AtomicInteger();
 

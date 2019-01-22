@@ -49,7 +49,7 @@ public class OsgiBundleTest {
     private static final Collection<String> BUNDLES;
 
     static {
-        final Set<String> artifacts = new HashSet<String>();
+        final Set<String> artifacts = new HashSet<>();
         final File f = new File("target/classes/META-INF/maven/dependencies.properties");
         try {
             final BufferedReader r = new BufferedReader(new FileReader(f));
@@ -86,7 +86,7 @@ public class OsgiBundleTest {
 
     @Configuration
     public final Option[] config() {
-        final Collection<Option> options = new ArrayList<Option>();
+        final Collection<Option> options = new ArrayList<>();
 
         // Avoid boot delegating sun.misc which would fail testCanLoadPlatformDependent()
         options.add(frameworkProperty(FRAMEWORK_BOOTDELEGATION).value("com.sun.*"));

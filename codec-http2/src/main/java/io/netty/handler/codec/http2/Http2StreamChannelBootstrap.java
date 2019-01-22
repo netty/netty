@@ -40,8 +40,8 @@ import java.util.Map;
 public final class Http2StreamChannelBootstrap {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2StreamChannelBootstrap.class);
 
-    private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
-    private final Map<AttributeKey<?>, Object> attrs = new LinkedHashMap<AttributeKey<?>, Object>();
+    private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<>();
+    private final Map<AttributeKey<?>, Object> attrs = new LinkedHashMap<>();
     private final Channel channel;
     private volatile ChannelHandler handler;
 

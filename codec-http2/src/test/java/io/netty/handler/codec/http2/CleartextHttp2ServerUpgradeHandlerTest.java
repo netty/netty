@@ -70,7 +70,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
             }
         };
 
-        userEvents = new ArrayList<Object>();
+        userEvents = new ArrayList<>();
 
         HttpServerCodec httpServerCodec = new HttpServerCodec();
         HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, upgradeCodecFactory);
@@ -213,7 +213,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         };
         http2ConnectionHandler = http2Codec;
 
-        userEvents = new ArrayList<Object>();
+        userEvents = new ArrayList<>();
 
         HttpServerCodec httpServerCodec = new HttpServerCodec();
         HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, upgradeCodecFactory);

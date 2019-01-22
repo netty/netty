@@ -51,7 +51,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             new FastThreadLocal<Map<Class<?>, String>>() {
         @Override
         protected Map<Class<?>, String> initialValue() throws Exception {
-            return new WeakHashMap<Class<?>, String>();
+            return new WeakHashMap<>();
         }
     };
 
@@ -678,7 +678,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final List<String> names() {
-        List<String> list = new ArrayList<String>();
+        List<String> list = new ArrayList<>();
         AbstractChannelHandlerContext ctx = head.next;
         for (;;) {
             if (ctx == null) {
@@ -691,7 +691,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final Map<String, ChannelHandler> toMap() {
-        Map<String, ChannelHandler> map = new LinkedHashMap<String, ChannelHandler>();
+        Map<String, ChannelHandler> map = new LinkedHashMap<>();
         AbstractChannelHandlerContext ctx = head.next;
         for (;;) {
             if (ctx == tail) {

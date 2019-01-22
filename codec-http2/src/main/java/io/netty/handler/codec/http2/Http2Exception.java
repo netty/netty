@@ -275,7 +275,7 @@ public class Http2Exception extends Exception {
 
         public CompositeStreamException(Http2Error error, int initialCapacity) {
             super(error, ShutdownHint.NO_SHUTDOWN);
-            exceptions = new ArrayList<StreamException>(initialCapacity);
+            exceptions = new ArrayList<>(initialCapacity);
         }
 
         public void add(StreamException e) {

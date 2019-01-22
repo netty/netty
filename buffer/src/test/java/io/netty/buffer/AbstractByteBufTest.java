@@ -18,7 +18,6 @@ package io.netty.buffer;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,6 +45,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -2086,8 +2086,8 @@ public abstract class AbstractByteBufTest {
         buffer.writeBytes("Hello, World!".getBytes(CharsetUtil.ISO_8859_1));
 
         final AtomicInteger counter = new AtomicInteger(30000);
-        final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
-        List<Thread> threads = new ArrayList<Thread>();
+        final AtomicReference<Throwable> errorRef = new AtomicReference<>();
+        List<Thread> threads = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
             Thread thread = new Thread(new Runnable() {
                 @Override
@@ -2202,7 +2202,7 @@ public abstract class AbstractByteBufTest {
         elemA.writeBytes(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5 });
         elemB.writeBytes(new byte[] { 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9 });
 
-        Set<ByteBuf> set = new HashSet<ByteBuf>();
+        Set<ByteBuf> set = new HashSet<>();
         set.add(elemA);
         set.add(elemB);
 
@@ -2299,7 +2299,7 @@ public abstract class AbstractByteBufTest {
             int i = CAPACITY * 3 / 4 - 1;
 
             @Override
-            public boolean process(byte value) throws Exception {
+            public boolean process(byte value) {
                 assertThat(value, is((byte) (i + 1)));
                 lastIndex.set(i);
                 i --;
@@ -2326,7 +2326,7 @@ public abstract class AbstractByteBufTest {
         assertEquals(1, buf.remaining());
 
         byte[] data = new byte[a];
-        PlatformDependent.threadLocalRandom().nextBytes(data);
+        ThreadLocalRandom.current().nextBytes(data);
         buffer.writeBytes(data);
 
         buf = buffer.internalNioBuffer(buffer.readerIndex(), a);
@@ -2465,7 +2465,7 @@ public abstract class AbstractByteBufTest {
 
         final ByteBuf buffer = newBuffer(8);
         buffer.writeBytes(bytes);
-        final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> cause = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(60000);
         final CyclicBarrier barrier = new CyclicBarrier(11);
         for (int i = 0; i < 10; i++) {

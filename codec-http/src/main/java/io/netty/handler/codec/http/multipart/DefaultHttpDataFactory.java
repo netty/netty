@@ -67,7 +67,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
      * different data items may be equal.
      */
     private final Map<HttpRequest, List<HttpData>> requestFileDeleteMap =
-            Collections.synchronizedMap(new IdentityHashMap<HttpRequest, List<HttpData>>());
+            Collections.synchronizedMap(new IdentityHashMap<>());
 
     /**
      * HttpData will be in memory if less than default size (16KB).
@@ -122,7 +122,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     private List<HttpData> getList(HttpRequest request) {
         List<HttpData> list = requestFileDeleteMap.get(request);
         if (list == null) {
-            list = new ArrayList<HttpData>();
+            list = new ArrayList<>();
             requestFileDeleteMap.put(request, list);
         }
         return list;

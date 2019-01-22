@@ -35,7 +35,7 @@ public class EpollEventLoopTest {
 
     @Test
     public void testScheduleBigDelayNotOverflow() {
-        final AtomicReference<Throwable> capture = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> capture = new AtomicReference<>();
 
         final EventLoopGroup group = new EpollEventLoop(null,
                 new ThreadPerTaskExecutor(new DefaultThreadFactory(getClass())), 0,

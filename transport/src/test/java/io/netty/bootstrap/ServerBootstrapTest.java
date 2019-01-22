@@ -40,7 +40,7 @@ public class ServerBootstrapTest {
     @Test(timeout = 5000)
     public void testHandlerRegister() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> error = new AtomicReference<>();
         LocalEventLoopGroup group = new LocalEventLoopGroup(1);
         try {
             ServerBootstrap sb = new ServerBootstrap();

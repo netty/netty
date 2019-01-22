@@ -16,12 +16,12 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.channel.ChannelPromise;
-import io.netty.util.internal.PlatformDependent;
 
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Queue;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -31,7 +31,7 @@ final class SpdySession {
 
     private final AtomicInteger activeLocalStreams  = new AtomicInteger();
     private final AtomicInteger activeRemoteStreams = new AtomicInteger();
-    private final Map<Integer, StreamState> activeStreams = PlatformDependent.newConcurrentHashMap();
+    private final Map<Integer, StreamState> activeStreams = new ConcurrentHashMap<>();
     private final StreamComparator streamComparator = new StreamComparator();
     private final AtomicInteger sendWindowSize;
     private final AtomicInteger receiveWindowSize;
@@ -59,7 +59,7 @@ final class SpdySession {
 
     // Stream-IDs should be iterated in priority order
     Map<Integer, StreamState> activeStreams() {
-        Map<Integer, StreamState> streams = new TreeMap<Integer, StreamState>(streamComparator);
+        Map<Integer, StreamState> streams = new TreeMap<>(streamComparator);
         streams.putAll(activeStreams);
         return streams;
     }
@@ -239,7 +239,7 @@ final class SpdySession {
         private final AtomicInteger sendWindowSize;
         private final AtomicInteger receiveWindowSize;
         private int receiveWindowSizeLowerBound;
-        private final Queue<PendingWrite> pendingWriteQueue = new ConcurrentLinkedQueue<PendingWrite>();
+        private final Queue<PendingWrite> pendingWriteQueue = new ConcurrentLinkedQueue<>();
 
         StreamState(
                 byte priority, boolean remoteSideClosed, boolean localSideClosed,

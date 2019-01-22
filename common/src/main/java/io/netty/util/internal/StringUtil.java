@@ -435,7 +435,7 @@ public final class StringUtil {
      * @return {@link List} the list of unescaped fields
      */
     public static List<CharSequence> unescapeCsvFields(CharSequence value) {
-        List<CharSequence> unescaped = new ArrayList<CharSequence>(2);
+        List<CharSequence> unescaped = new ArrayList<>(2);
         StringBuilder current = InternalThreadLocalMap.get().stringBuilder();
         boolean quoted = false;
         int last = value.length() - 1;

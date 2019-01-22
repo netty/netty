@@ -158,7 +158,7 @@ public class FlowControlHandlerTest {
      */
     @Test
     public void testAutoReadingOff() throws Exception {
-        final Exchanger<Channel> peerRef = new Exchanger<Channel>();
+        final Exchanger<Channel> peerRef = new Exchanger<>();
         final CountDownLatch latch = new CountDownLatch(3);
 
         ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
@@ -237,7 +237,7 @@ public class FlowControlHandlerTest {
      */
     @Test
     public void testFlowToggleAutoRead() throws Exception {
-        final Exchanger<Channel> peerRef = new Exchanger<Channel>();
+        final Exchanger<Channel> peerRef = new Exchanger<>();
         final CountDownLatch msgRcvLatch1 = new CountDownLatch(1);
         final CountDownLatch msgRcvLatch2 = new CountDownLatch(1);
         final CountDownLatch msgRcvLatch3 = new CountDownLatch(1);
@@ -319,7 +319,7 @@ public class FlowControlHandlerTest {
      */
     @Test
     public void testFlowAutoReadOff() throws Exception {
-        final Exchanger<Channel> peerRef = new Exchanger<Channel>();
+        final Exchanger<Channel> peerRef = new Exchanger<>();
         final CountDownLatch msgRcvLatch1 = new CountDownLatch(1);
         final CountDownLatch msgRcvLatch2 = new CountDownLatch(2);
         final CountDownLatch msgRcvLatch3 = new CountDownLatch(3);

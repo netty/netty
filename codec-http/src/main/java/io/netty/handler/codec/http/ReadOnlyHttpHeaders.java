@@ -132,7 +132,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
             return Collections.emptyList();
         }
         final int nameHash = AsciiString.hashCode(name);
-        List<String> values = new ArrayList<String>(4);
+        List<String> values = new ArrayList<>(4);
         for (int i = 0; i < nameValuePairs.length; i += 2) {
             CharSequence roName = nameValuePairs[i];
             if (AsciiString.hashCode(roName) == nameHash && contentEqualsIgnoreCase(roName, name)) {
@@ -147,9 +147,9 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         if (isEmpty()) {
             return Collections.emptyList();
         }
-        List<Map.Entry<String, String>> entries = new ArrayList<Map.Entry<String, String>>(size());
+        List<Map.Entry<String, String>> entries = new ArrayList<>(size());
         for (int i = 0; i < nameValuePairs.length; i += 2) {
-            entries.add(new SimpleImmutableEntry<String, String>(nameValuePairs[i].toString(),
+            entries.add(new SimpleImmutableEntry<>(nameValuePairs[i].toString(),
                     nameValuePairs[i + 1].toString()));
         }
         return entries;
@@ -220,7 +220,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         if (isEmpty()) {
             return Collections.emptySet();
         }
-        Set<String> names = new LinkedHashSet<String>(size());
+        Set<String> names = new LinkedHashSet<>(size());
         for (int i = 0; i < nameValuePairs.length; i += 2) {
             names.add(nameValuePairs[i].toString());
         }

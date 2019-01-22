@@ -51,7 +51,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
         Channel clientChannel = null;
         try {
             final CountDownLatch latch = new CountDownLatch(1);
-            final AtomicReference<Object> clientReceived = new AtomicReference<Object>();
+            final AtomicReference<Object> clientReceived = new AtomicReference<>();
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
@@ -160,7 +160,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             final ByteBuf expectedContent = alloc.buffer(soSndBuf * 2);
             expectedContent.writeBytes(newRandomBytes(expectedContent.writableBytes(), r));
             final CountDownLatch latch = new CountDownLatch(1);
-            final AtomicReference<Object> clientReceived = new AtomicReference<Object>();
+            final AtomicReference<Object> clientReceived = new AtomicReference<>();
             sb.childOption(ChannelOption.SO_SNDBUF, soSndBuf)
               .childHandler(new ChannelInitializer<Channel>() {
                 @Override

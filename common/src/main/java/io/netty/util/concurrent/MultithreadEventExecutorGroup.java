@@ -123,7 +123,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             e.terminationFuture().addListener(terminationListener);
         }
 
-        Set<EventExecutor> childrenSet = new LinkedHashSet<EventExecutor>(children.length);
+        Set<EventExecutor> childrenSet = new LinkedHashSet<>(children.length);
         Collections.addAll(childrenSet, children);
         readonlyChildren = Collections.unmodifiableSet(childrenSet);
     }

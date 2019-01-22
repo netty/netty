@@ -199,7 +199,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
     @Override
     public List<CharSequence> getAll(CharSequence name) {
         final int nameHash = AsciiString.hashCode(name);
-        List<CharSequence> values = new ArrayList<CharSequence>();
+        List<CharSequence> values = new ArrayList<>();
 
         final int pseudoHeadersEnd = pseudoHeaders.length - 1;
         for (int i = 0; i < pseudoHeadersEnd; i += 2) {
@@ -501,7 +501,7 @@ public final class ReadOnlyHttp2Headers implements Http2Headers {
         if (isEmpty()) {
             return Collections.emptySet();
         }
-        Set<CharSequence> names = new LinkedHashSet<CharSequence>(size());
+        Set<CharSequence> names = new LinkedHashSet<>(size());
         final int pseudoHeadersEnd = pseudoHeaders.length - 1;
         for (int i = 0; i < pseudoHeadersEnd; i += 2) {
             names.add(pseudoHeaders[i]);

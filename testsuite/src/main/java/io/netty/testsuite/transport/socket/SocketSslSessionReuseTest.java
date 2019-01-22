@@ -162,7 +162,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
     }
 
     private static Set<String> sessionIdSet(Enumeration<byte[]> sessionIds) {
-        Set<String> idSet = new HashSet<String>();
+        Set<String> idSet = new HashSet<>();
         byte[] id;
         while (sessionIds.hasMoreElements()) {
             id = sessionIds.nextElement();
@@ -173,7 +173,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
 
     @Sharable
     private static class ReadAndDiscardHandler extends SimpleChannelInboundHandler<ByteBuf> {
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
         private final boolean server;
         private final boolean autoRead;
 

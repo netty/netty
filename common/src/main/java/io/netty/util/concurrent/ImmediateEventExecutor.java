@@ -38,7 +38,7 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
     private static final FastThreadLocal<Queue<Runnable>> DELAYED_RUNNABLES = new FastThreadLocal<Queue<Runnable>>() {
         @Override
         protected Queue<Runnable> initialValue() throws Exception {
-            return new ArrayDeque<Runnable>();
+            return new ArrayDeque<>();
         }
     };
     /**
@@ -51,7 +51,7 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
         }
     };
 
-    private final Future<?> terminationFuture = new FailedFuture<Object>(
+    private final Future<?> terminationFuture = new FailedFuture<>(
             GlobalEventExecutor.INSTANCE, new UnsupportedOperationException());
 
     private ImmediateEventExecutor() { }
@@ -130,12 +130,12 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
 
     @Override
     public <V> Promise<V> newPromise() {
-        return new ImmediatePromise<V>(this);
+        return new ImmediatePromise<>(this);
     }
 
     @Override
     public <V> ProgressivePromise<V> newProgressivePromise() {
-        return new ImmediateProgressivePromise<V>(this);
+        return new ImmediateProgressivePromise<>(this);
     }
 
     static class ImmediatePromise<V> extends DefaultPromise<V> {

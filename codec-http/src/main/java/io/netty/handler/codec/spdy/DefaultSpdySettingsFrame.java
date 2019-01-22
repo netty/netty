@@ -27,7 +27,7 @@ import java.util.TreeMap;
 public class DefaultSpdySettingsFrame implements SpdySettingsFrame {
 
     private boolean clear;
-    private final Map<Integer, Setting> settingsMap = new TreeMap<Integer, Setting>();
+    private final Map<Integer, Setting> settingsMap = new TreeMap<>();
 
     @Override
     public Set<Integer> ids() {

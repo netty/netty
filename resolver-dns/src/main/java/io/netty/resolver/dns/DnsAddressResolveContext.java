@@ -69,7 +69,7 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
             // If all the results are the preferred type, or none of them are, then we don't need to do any filtering.
             return unfiltered;
         }
-        List<InetAddress> filtered = new ArrayList<InetAddress>(numExpected);
+        List<InetAddress> filtered = new ArrayList<>(numExpected);
         for (int i = 0; i < size; i++) {
             InetAddress address = unfiltered.get(i);
             if (inetAddressType.isInstance(address)) {

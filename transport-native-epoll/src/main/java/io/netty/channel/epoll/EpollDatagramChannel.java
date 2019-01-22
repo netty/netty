@@ -395,8 +395,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
                 ByteBuf content = (ByteBuf) e.content();
                 return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
-                        new DefaultAddressedEnvelope<ByteBuf, InetSocketAddress>(
-                            newDirectBuffer(e, content), (InetSocketAddress) e.recipient()) : e;
+                        new DefaultAddressedEnvelope<>(
+                                newDirectBuffer(e, content), (InetSocketAddress) e.recipient()) : e;
             }
         }
 

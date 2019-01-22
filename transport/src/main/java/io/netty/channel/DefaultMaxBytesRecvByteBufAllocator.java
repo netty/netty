@@ -170,7 +170,7 @@ public class DefaultMaxBytesRecvByteBufAllocator implements MaxBytesRecvByteBufA
 
     @Override
     public synchronized Entry<Integer, Integer> maxBytesPerReadPair() {
-        return new AbstractMap.SimpleEntry<Integer, Integer>(maxBytesPerRead, maxBytesPerIndividualRead);
+        return new AbstractMap.SimpleEntry<>(maxBytesPerRead, maxBytesPerIndividualRead);
     }
 
     private static void checkMaxBytesPerReadPair(int maxBytesPerRead, int maxBytesPerIndividualRead) {

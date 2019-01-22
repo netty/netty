@@ -181,7 +181,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
                 OpenSslPopulatedKeyMaterialProvider(
                         X509KeyManager keyManager, String password, Iterable<String> aliases) {
                     super(keyManager, password);
-                    materialMap = new HashMap<String, Object>();
+                    materialMap = new HashMap<>();
                     boolean initComplete = false;
                     try {
                         for (String alias: aliases) {

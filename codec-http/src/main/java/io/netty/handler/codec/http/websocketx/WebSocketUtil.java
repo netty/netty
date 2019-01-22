@@ -20,10 +20,10 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.FastThreadLocal;
-import io.netty.util.internal.PlatformDependent;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * A utility class mainly for use by web sockets
@@ -106,7 +106,7 @@ final class WebSocketUtil {
      */
     static byte[] randomBytes(int size) {
         byte[] bytes = new byte[size];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         return bytes;
     }
 
@@ -119,7 +119,7 @@ final class WebSocketUtil {
      */
     static int randomNumber(int minimum, int maximum) {
         assert minimum < maximum;
-        double fraction = PlatformDependent.threadLocalRandom().nextDouble();
+        double fraction = ThreadLocalRandom.current().nextDouble();
 
         // the idea here is that nextDouble gives us a random value
         //

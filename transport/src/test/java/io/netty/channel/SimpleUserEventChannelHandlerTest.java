@@ -76,7 +76,7 @@ public class SimpleUserEventChannelHandlerTest {
         public List<FooEvent> caughtEvents;
 
         FooEventCatcher() {
-            caughtEvents = new ArrayList<FooEvent>();
+            caughtEvents = new ArrayList<>();
         }
 
         @Override
@@ -90,7 +90,7 @@ public class SimpleUserEventChannelHandlerTest {
         public List<Object> caughtEvents;
 
         AllEventCatcher() {
-            caughtEvents = new ArrayList<Object>();
+            caughtEvents = new ArrayList<>();
         }
 
         @Override

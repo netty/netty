@@ -35,7 +35,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Helper class to load JNI resources.
@@ -90,7 +92,7 @@ public final class NativeLibraryLoader {
      *         if none of the given libraries load successfully.
      */
     public static void loadFirstAvailable(ClassLoader loader, String... names) {
-        List<Throwable> suppressed = new ArrayList<Throwable>();
+        List<Throwable> suppressed = new ArrayList<>();
         for (String name : names) {
             try {
                 load(name, loader);
@@ -130,7 +132,7 @@ public final class NativeLibraryLoader {
         // Adjust expected name to support shading of native libraries.
         String packagePrefix = calculatePackagePrefix().replace('.', '_');
         String name = packagePrefix + originalName;
-        List<Throwable> suppressed = new ArrayList<Throwable>();
+        List<Throwable> suppressed = new ArrayList<>();
         try {
             // first try to load from java.library.path
             loadLibrary(loader, name, false);
@@ -279,8 +281,7 @@ public final class NativeLibraryLoader {
             // We found our ID... now monkey-patch it!
             for (int i = 0; i < nameBytes.length; i++) {
                 // We should only use bytes as replacement that are in our UNIQUE_ID_BYTES array.
-                bytes[idIdx + i] = UNIQUE_ID_BYTES[PlatformDependent.threadLocalRandom()
-                                                                    .nextInt(UNIQUE_ID_BYTES.length)];
+                bytes[idIdx + i] = UNIQUE_ID_BYTES[ThreadLocalRandom.current().nextInt(UNIQUE_ID_BYTES.length)];
             }
 
             if (logger.isDebugEnabled()) {

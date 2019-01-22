@@ -15,12 +15,12 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.internal.PlatformDependent;
 import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -35,7 +35,7 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
     @Override
     protected final ByteBuf newBuffer(int length, int maxCapacity) {
         Assume.assumeTrue(maxCapacity == Integer.MAX_VALUE);
-        int offset = length == 0 ? 0 : PlatformDependent.threadLocalRandom().nextInt(length);
+        int offset = length == 0 ? 0 : ThreadLocalRandom.current().nextInt(length);
         ByteBuf buffer = Unpooled.buffer(length * 2);
         ByteBuf slice = newSlice(buffer, offset, length);
         assertEquals(0, slice.readerIndex());

@@ -131,7 +131,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         private final Promise<Void> donePromise;
         private int dataIndex;
         volatile Channel channel;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
 
         StringEchoHandler(boolean autoRead, Promise<Void> donePromise) {
             this.autoRead = autoRead;

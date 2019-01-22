@@ -64,7 +64,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     @SuppressWarnings("unchecked")
     @Override
     public List<BootstrapFactory<ServerBootstrap>> serverSocket() {
-        List<BootstrapFactory<ServerBootstrap>> toReturn = new ArrayList<BootstrapFactory<ServerBootstrap>>();
+        List<BootstrapFactory<ServerBootstrap>> toReturn = new ArrayList<>();
         toReturn.add(new BootstrapFactory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {

@@ -67,7 +67,7 @@ public final class Http2SecurityUtil {
             ));
 
     static {
-        CIPHERS = Collections.unmodifiableList(new ArrayList<String>(CIPHERS_JAVA_MOZILLA_MODERN_SECURITY));
+        CIPHERS = Collections.unmodifiableList(new ArrayList<>(CIPHERS_JAVA_MOZILLA_MODERN_SECURITY));
     }
 
     private Http2SecurityUtil() { }

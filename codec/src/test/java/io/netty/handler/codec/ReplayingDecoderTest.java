@@ -21,12 +21,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.Test;
 
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
@@ -209,7 +209,7 @@ public class ReplayingDecoderTest {
 
     @Test
     public void testFireChannelReadCompleteOnInactive() throws InterruptedException {
-        final BlockingQueue<Integer> queue = new LinkedBlockingDeque<Integer>();
+        final BlockingQueue<Integer> queue = new LinkedBlockingDeque<>();
         final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[]{'a', 'b'});
         EmbeddedChannel channel = new EmbeddedChannel(new ReplayingDecoder<Integer>() {
 
@@ -255,7 +255,7 @@ public class ReplayingDecoderTest {
 
     @Test
     public void testChannelInputShutdownEvent() {
-        final AtomicReference<Error> error = new AtomicReference<Error>();
+        final AtomicReference<Error> error = new AtomicReference<>();
 
         EmbeddedChannel channel = new EmbeddedChannel(new ReplayingDecoder<Integer>(0) {
             private boolean decoded;
@@ -303,7 +303,7 @@ public class ReplayingDecoderTest {
             }
         });
         byte[] bytes = new byte[1024];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
 
         assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(bytes)));
         assertTrue(channel.finishAndReleaseAll());

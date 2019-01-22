@@ -45,7 +45,7 @@ public class DefaultAttributeMap implements AttributeMap {
         AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
             // Not using ConcurrentHashMap due to high memory consumption.
-            attributes = new AtomicReferenceArray<DefaultAttribute<?>>(BUCKET_SIZE);
+            attributes = new AtomicReferenceArray<>(BUCKET_SIZE);
 
             if (!updater.compareAndSet(this, null, attributes)) {
                 attributes = this.attributes;
@@ -58,7 +58,7 @@ public class DefaultAttributeMap implements AttributeMap {
             // No head exists yet which means we may be able to add the attribute without synchronization and just
             // use compare and set. At worst we need to fallback to synchronization and waste two allocations.
             head = new DefaultAttribute();
-            DefaultAttribute<T> attr = new DefaultAttribute<T>(head, key);
+            DefaultAttribute<T> attr = new DefaultAttribute<>(head, key);
             head.next = attr;
             attr.prev = head;
             if (attributes.compareAndSet(i, null, head)) {
@@ -74,7 +74,7 @@ public class DefaultAttributeMap implements AttributeMap {
             for (;;) {
                 DefaultAttribute<?> next = curr.next;
                 if (next == null) {
-                    DefaultAttribute<T> attr = new DefaultAttribute<T>(head, key);
+                    DefaultAttribute<T> attr = new DefaultAttribute<>(head, key);
                     curr.next = attr;
                     attr.prev = curr;
                     return attr;

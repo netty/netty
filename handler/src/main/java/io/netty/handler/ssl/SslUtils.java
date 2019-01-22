@@ -42,10 +42,10 @@ import static java.util.Arrays.asList;
  */
 final class SslUtils {
     // See https://tools.ietf.org/html/rfc8446#appendix-B.4
-    static final Set<String> TLSV13_CIPHERS = Collections.unmodifiableSet(new LinkedHashSet<String>(
+    static final Set<String> TLSV13_CIPHERS = Collections.unmodifiableSet(new LinkedHashSet<>(
             asList("TLS_AES_256_GCM_SHA384", "TLS_CHACHA20_POLY1305_SHA256",
-                          "TLS_AES_128_GCM_SHA256", "TLS_AES_128_CCM_8_SHA256",
-                          "TLS_AES_128_CCM_SHA256")));
+                    "TLS_AES_128_GCM_SHA256", "TLS_AES_128_CCM_8_SHA256",
+                    "TLS_AES_128_CCM_SHA256")));
     // Protocols
     static final String PROTOCOL_SSL_V2_HELLO = "SSLv2Hello";
     static final String PROTOCOL_SSL_V2 = "SSLv2";
@@ -108,7 +108,7 @@ final class SslUtils {
             DEFAULT_TLSV13_CIPHER_SUITES = EmptyArrays.EMPTY_STRINGS;
         }
 
-        List<String> defaultCiphers = new ArrayList<String>();
+        List<String> defaultCiphers = new ArrayList<>();
         // GCM (Galois/Counter Mode) requires JDK 8.
         defaultCiphers.add("TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384");
         defaultCiphers.add("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");

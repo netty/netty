@@ -56,7 +56,7 @@ public class CombinedChannelDuplexHandlerTest {
     @Test(expected = IllegalStateException.class)
     public void testInboundRemoveBeforeAdded() {
         CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler> handler =
-                new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
+                new CombinedChannelDuplexHandler<>(
                         new ChannelInboundHandlerAdapter(), new ChannelOutboundHandlerAdapter());
         handler.removeInboundHandler();
     }
@@ -64,7 +64,7 @@ public class CombinedChannelDuplexHandlerTest {
     @Test(expected = IllegalStateException.class)
     public void testOutboundRemoveBeforeAdded() {
         CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler> handler =
-                new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
+                new CombinedChannelDuplexHandler<>(
                         new ChannelInboundHandlerAdapter(), new ChannelOutboundHandlerAdapter());
         handler.removeOutboundHandler();
     }
@@ -91,7 +91,7 @@ public class CombinedChannelDuplexHandlerTest {
     @Test
     public void testExceptionCaughtBothCombinedHandlers() {
         final Exception exception = new Exception();
-        final Queue<ChannelHandler> queue = new ArrayDeque<ChannelHandler>();
+        final Queue<ChannelHandler> queue = new ArrayDeque<>();
 
         ChannelInboundHandler inboundHandler = new ChannelInboundHandlerAdapter() {
             @Override
@@ -117,7 +117,7 @@ public class CombinedChannelDuplexHandlerTest {
             }
         };
         EmbeddedChannel channel = new EmbeddedChannel(
-                new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
+                new CombinedChannelDuplexHandler<>(
                         inboundHandler, outboundHandler), lastHandler);
         channel.pipeline().fireExceptionCaught(exception);
         assertFalse(channel.finish());
@@ -129,7 +129,7 @@ public class CombinedChannelDuplexHandlerTest {
 
     @Test
     public void testInboundEvents() {
-        final Queue<Event> queue = new ArrayDeque<Event>();
+        final Queue<Event> queue = new ArrayDeque<>();
 
         ChannelInboundHandler inboundHandler = new ChannelInboundHandlerAdapter() {
             @Override
@@ -189,8 +189,8 @@ public class CombinedChannelDuplexHandlerTest {
         };
 
         CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler> handler =
-                new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
-                inboundHandler, new ChannelOutboundHandlerAdapter());
+                new CombinedChannelDuplexHandler<>(
+                        inboundHandler, new ChannelOutboundHandlerAdapter());
 
         EmbeddedChannel channel = new EmbeddedChannel(handler);
         channel.pipeline().fireChannelWritabilityChanged();
@@ -223,7 +223,7 @@ public class CombinedChannelDuplexHandlerTest {
 
     @Test
     public void testOutboundEvents() {
-        final Queue<Event> queue = new ArrayDeque<Event>();
+        final Queue<Event> queue = new ArrayDeque<>();
 
         ChannelInboundHandler inboundHandler = new ChannelInboundHandlerAdapter();
         ChannelOutboundHandler outboundHandler = new ChannelOutboundHandlerAdapter() {
@@ -281,7 +281,7 @@ public class CombinedChannelDuplexHandlerTest {
         };
 
         CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler> handler =
-                new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
+                new CombinedChannelDuplexHandler<>(
                         inboundHandler, outboundHandler);
 
         EmbeddedChannel channel = new EmbeddedChannel();

@@ -531,7 +531,7 @@ public class LocalChannelTest {
         final ByteBuf data = Unpooled.wrappedBuffer(new byte[1024]);
         final ByteBuf data2 = Unpooled.wrappedBuffer(new byte[512]);
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
-        final AtomicReference<Channel> serverChannelRef = new AtomicReference<Channel>();
+        final AtomicReference<Channel> serverChannelRef = new AtomicReference<>();
 
         cb.group(group1)
                 .channel(LocalChannel.class)
@@ -612,7 +612,7 @@ public class LocalChannelTest {
         final ByteBuf data = Unpooled.wrappedBuffer(new byte[1024]);
         final ByteBuf data2 = Unpooled.wrappedBuffer(new byte[512]);
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
-        final AtomicReference<Channel> serverChannelRef = new AtomicReference<Channel>();
+        final AtomicReference<Channel> serverChannelRef = new AtomicReference<>();
 
         try {
             cb.group(sharedGroup)
@@ -700,7 +700,7 @@ public class LocalChannelTest {
         final ByteBuf data = Unpooled.wrappedBuffer(new byte[1024]);
         final ByteBuf data2 = Unpooled.wrappedBuffer(new byte[512]);
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
-        final AtomicReference<Channel> serverChannelRef = new AtomicReference<Channel>();
+        final AtomicReference<Channel> serverChannelRef = new AtomicReference<>();
 
         try {
             cb.group(group1)

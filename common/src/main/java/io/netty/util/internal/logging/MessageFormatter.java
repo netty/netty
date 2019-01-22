@@ -289,7 +289,7 @@ final class MessageFormatter {
             return;
         }
         if (seenSet == null) {
-            seenSet = new HashSet<Object[]>(a.length);
+            seenSet = new HashSet<>(a.length);
         }
         if (seenSet.add(a)) {
             deeplyAppendParameter(sbuf, a[0], seenSet);

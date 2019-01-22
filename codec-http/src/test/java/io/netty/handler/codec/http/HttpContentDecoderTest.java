@@ -273,7 +273,7 @@ public class HttpContentDecoderTest {
         HttpRequestDecoder decoder = new HttpRequestDecoder();
         final int maxBytes = 10;
         HttpObjectAggregator aggregator = new HttpObjectAggregator(maxBytes);
-        final AtomicReference<FullHttpRequest> secondRequestRef = new AtomicReference<FullHttpRequest>();
+        final AtomicReference<FullHttpRequest> secondRequestRef = new AtomicReference<>();
         EmbeddedChannel channel = new EmbeddedChannel(decoder, aggregator, new ChannelInboundHandlerAdapter() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -571,7 +571,7 @@ public class HttpContentDecoderTest {
 
         int outputSize = 0;
         ByteBuf o;
-        List<ByteBuf> inbound = new ArrayList<ByteBuf>();
+        List<ByteBuf> inbound = new ArrayList<>();
         while ((o = channel.readInbound()) != null) {
             inbound.add(o);
             outputSize += o.readableBytes();
@@ -626,7 +626,7 @@ public class HttpContentDecoderTest {
 
         int outputSize = 0;
         ByteBuf o;
-        List<ByteBuf> outbound = new ArrayList<ByteBuf>();
+        List<ByteBuf> outbound = new ArrayList<>();
         while ((o = channel.readOutbound()) != null) {
             outbound.add(o);
             outputSize += o.readableBytes();

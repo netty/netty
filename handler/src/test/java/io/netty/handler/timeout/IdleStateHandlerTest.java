@@ -71,7 +71,7 @@ public class IdleStateHandlerTest {
 
         assertTrue("The number of expected events must be >= 1", expected.length >= 1);
 
-        final List<Object> events = new ArrayList<Object>();
+        final List<Object> events = new ArrayList<>();
         ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
@@ -162,7 +162,7 @@ public class IdleStateHandlerTest {
     private static void anyNotIdle(TestableIdleStateHandler idleStateHandler,
                                    Action action, Object expected) throws Exception {
 
-        final List<Object> events = new ArrayList<Object>();
+        final List<Object> events = new ArrayList<>();
         ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
@@ -222,7 +222,7 @@ public class IdleStateHandlerTest {
         TestableIdleStateHandler idleStateHandler = new TestableIdleStateHandler(
                 true, 0L, writerIdleTime, allIdleTime, TimeUnit.SECONDS);
 
-        final List<Object> events = new ArrayList<Object>();
+        final List<Object> events = new ArrayList<>();
         ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {

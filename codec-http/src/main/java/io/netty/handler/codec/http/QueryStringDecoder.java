@@ -212,7 +212,7 @@ public class QueryStringDecoder {
         if (s.charAt(from) == '?') {
             from++;
         }
-        Map<String, List<String>> params = new LinkedHashMap<String, List<String>>();
+        Map<String, List<String>> params = new LinkedHashMap<>();
         int nameStart = from;
         int valueStart = -1;
         int i;
@@ -258,7 +258,7 @@ public class QueryStringDecoder {
         String value = decodeComponent(s, valueStart, valueEnd, charset, false);
         List<String> values = params.get(name);
         if (values == null) {
-            values = new ArrayList<String>(1);  // Often there's only 1 value.
+            values = new ArrayList<>(1);  // Often there's only 1 value.
             params.put(name, values);
         }
         values.add(value);

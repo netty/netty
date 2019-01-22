@@ -72,7 +72,7 @@ public final class HttpConversionUtil {
      * The set of headers that should not be directly copied when converting headers from HTTP to HTTP/2.
      */
     private static final CharSequenceMap<AsciiString> HTTP_TO_HTTP2_HEADER_BLACKLIST =
-            new CharSequenceMap<AsciiString>();
+            new CharSequenceMap<>();
     static {
         HTTP_TO_HTTP2_HEADER_BLACKLIST.add(CONNECTION, EMPTY_STRING);
         @SuppressWarnings("deprecation")
@@ -424,7 +424,7 @@ public final class HttpConversionUtil {
     private static CharSequenceMap<AsciiString> toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
                                                                int arraySizeHint) {
         UnsupportedValueConverter<AsciiString> valueConverter = UnsupportedValueConverter.<AsciiString>instance();
-        CharSequenceMap<AsciiString> result = new CharSequenceMap<AsciiString>(true, valueConverter, arraySizeHint);
+        CharSequenceMap<AsciiString> result = new CharSequenceMap<>(true, valueConverter, arraySizeHint);
 
         while (valuesIter.hasNext()) {
             AsciiString lowerCased = AsciiString.of(valuesIter.next()).toLowerCase();
@@ -590,9 +590,9 @@ public final class HttpConversionUtil {
          * Translations from HTTP/2 header name to the HTTP/1.x equivalent.
          */
         private static final CharSequenceMap<AsciiString>
-            REQUEST_HEADER_TRANSLATIONS = new CharSequenceMap<AsciiString>();
+            REQUEST_HEADER_TRANSLATIONS = new CharSequenceMap<>();
         private static final CharSequenceMap<AsciiString>
-            RESPONSE_HEADER_TRANSLATIONS = new CharSequenceMap<AsciiString>();
+            RESPONSE_HEADER_TRANSLATIONS = new CharSequenceMap<>();
         static {
             RESPONSE_HEADER_TRANSLATIONS.add(Http2Headers.PseudoHeaderName.AUTHORITY.value(),
                             HttpHeaderNames.HOST);

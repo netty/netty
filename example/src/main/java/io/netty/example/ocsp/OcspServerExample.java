@@ -170,11 +170,8 @@ public class OcspServerExample {
         }
 
         try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(in, CharsetUtil.US_ASCII));
-            try {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, CharsetUtil.US_ASCII))) {
                 return parseCertificates(reader);
-            } finally {
-                reader.close();
             }
         } finally {
             in.close();
@@ -186,7 +183,7 @@ public class OcspServerExample {
         JcaX509CertificateConverter converter = new JcaX509CertificateConverter()
                 .setProvider(new BouncyCastleProvider());
 
-        List<X509Certificate> dst = new ArrayList<X509Certificate>();
+        List<X509Certificate> dst = new ArrayList<>();
 
         PEMParser parser = new PEMParser(reader);
         try {

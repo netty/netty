@@ -28,7 +28,7 @@ import org.jboss.marshalling.Unmarshaller;
  * many small {@link Object}'s.
  */
 public class ThreadLocalUnmarshallerProvider implements UnmarshallerProvider {
-    private final FastThreadLocal<Unmarshaller> unmarshallers = new FastThreadLocal<Unmarshaller>();
+    private final FastThreadLocal<Unmarshaller> unmarshallers = new FastThreadLocal<>();
 
     private final MarshallerFactory factory;
     private final MarshallingConfiguration config;

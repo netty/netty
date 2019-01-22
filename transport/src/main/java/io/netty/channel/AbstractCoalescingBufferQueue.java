@@ -43,7 +43,7 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param initSize the initial size of the underlying queue.
      */
     protected AbstractCoalescingBufferQueue(Channel channel, int initSize) {
-        bufAndListenerPairs = new ArrayDeque<Object>(initSize);
+        bufAndListenerPairs = new ArrayDeque<>(initSize);
         tracker = channel == null ? null : PendingBytesTracker.newTracker(channel);
     }
 

@@ -91,22 +91,22 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
 
     @Override
     public <V> Promise<V> newPromise() {
-        return new DefaultPromise<V>(this);
+        return new DefaultPromise<>(this);
     }
 
     @Override
     public <V> ProgressivePromise<V> newProgressivePromise() {
-        return new DefaultProgressivePromise<V>(this);
+        return new DefaultProgressivePromise<>(this);
     }
 
     @Override
     public <V> Future<V> newSucceededFuture(V result) {
-        return new SucceededFuture<V>(this, result);
+        return new SucceededFuture<>(this, result);
     }
 
     @Override
     public <V> Future<V> newFailedFuture(Throwable cause) {
-        return new FailedFuture<V>(this, cause);
+        return new FailedFuture<>(this, cause);
     }
 
     @Override
@@ -126,12 +126,12 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
 
     @Override
     protected final <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
-        return new PromiseTask<T>(this, runnable, value);
+        return new PromiseTask<>(this, runnable, value);
     }
 
     @Override
     protected final <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
-        return new PromiseTask<T>(this, callable);
+        return new PromiseTask<>(this, callable);
     }
 
     @Override

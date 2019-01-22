@@ -51,7 +51,7 @@ public final class ThreadDeathWatcher {
 
     // Use a MPMC queue as we may end up checking isEmpty() from multiple threads which may not be allowed to do
     // concurrently depending on the implementation of it in a MPSC queue.
-    private static final Queue<Entry> pendingEntries = new ConcurrentLinkedQueue<Entry>();
+    private static final Queue<Entry> pendingEntries = new ConcurrentLinkedQueue<>();
     private static final Watcher watcher = new Watcher();
     private static final AtomicBoolean started = new AtomicBoolean();
     private static volatile Thread watcherThread;
@@ -154,7 +154,7 @@ public final class ThreadDeathWatcher {
 
     private static final class Watcher implements Runnable {
 
-        private final List<Entry> watchees = new ArrayList<Entry>();
+        private final List<Entry> watchees = new ArrayList<>();
 
         @Override
         public void run() {

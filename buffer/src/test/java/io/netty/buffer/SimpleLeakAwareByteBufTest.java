@@ -28,7 +28,7 @@ import static org.junit.Assert.assertTrue;
 
 public class SimpleLeakAwareByteBufTest extends BigEndianHeapByteBufTest {
     private final Class<? extends ByteBuf> clazz = leakClass();
-    private final Queue<NoopResourceLeakTracker<ByteBuf>> trackers = new ArrayDeque<NoopResourceLeakTracker<ByteBuf>>();
+    private final Queue<NoopResourceLeakTracker<ByteBuf>> trackers = new ArrayDeque<>();
 
     @Override
     protected final ByteBuf newBuffer(int capacity, int maxCapacity) {
@@ -36,7 +36,7 @@ public class SimpleLeakAwareByteBufTest extends BigEndianHeapByteBufTest {
     }
 
     private ByteBuf wrap(ByteBuf buffer) {
-        NoopResourceLeakTracker<ByteBuf> tracker = new NoopResourceLeakTracker<ByteBuf>();
+        NoopResourceLeakTracker<ByteBuf> tracker = new NoopResourceLeakTracker<>();
         ByteBuf leakAwareBuf = wrap(buffer, tracker);
         trackers.add(tracker);
         return leakAwareBuf;

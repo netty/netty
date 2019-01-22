@@ -31,7 +31,7 @@ public final class ImageCache {
 
     public static ImageCache INSTANCE = new ImageCache();
 
-    private final Map<String, ByteBuf> imageBank = new HashMap<String, ByteBuf>(200);
+    private final Map<String, ByteBuf> imageBank = new HashMap<>(200);
 
     private ImageCache() {
         init();

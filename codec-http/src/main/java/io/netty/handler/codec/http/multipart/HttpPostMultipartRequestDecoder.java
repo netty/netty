@@ -41,8 +41,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import static io.netty.buffer.Unpooled.*;
-import static io.netty.util.internal.ObjectUtil.*;
+import static io.netty.buffer.Unpooled.buffer;
+import static io.netty.handler.codec.http.multipart.HttpPostBodyUtil.BINARY_STRING;
+import static io.netty.handler.codec.http.multipart.HttpPostBodyUtil.BIT_7_STRING;
+import static io.netty.handler.codec.http.multipart.HttpPostBodyUtil.BIT_8_STRING;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * This decoder will decode Body and can handle POST BODY.
@@ -75,12 +79,12 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     /**
      * HttpDatas from Body
      */
-    private final List<InterfaceHttpData> bodyListHttpData = new ArrayList<InterfaceHttpData>();
+    private final List<InterfaceHttpData> bodyListHttpData = new ArrayList<>();
 
     /**
      * HttpDatas as Map from Body
      */
-    private final Map<String, List<InterfaceHttpData>> bodyMapHttpData = new TreeMap<String, List<InterfaceHttpData>>(
+    private final Map<String, List<InterfaceHttpData>> bodyMapHttpData = new TreeMap<>(
             CaseIgnoringComparator.INSTANCE);
 
     /**
@@ -420,7 +424,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         }
         List<InterfaceHttpData> datas = bodyMapHttpData.get(data.getName());
         if (datas == null) {
-            datas = new ArrayList<InterfaceHttpData>(1);
+            datas = new ArrayList<>(1);
             bodyMapHttpData.put(data.getName(), datas);
         }
         datas.add(data);
@@ -665,7 +669,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     private InterfaceHttpData findMultipartDisposition() {
         int readerIndex = undecodedChunk.readerIndex();
         if (currentStatus == MultiPartStatus.DISPOSITION) {
-            currentFieldAttributes = new TreeMap<CharSequence, Attribute>(CaseIgnoringComparator.INSTANCE);
+            currentFieldAttributes = new TreeMap<>(CaseIgnoringComparator.INSTANCE);
         }
         // read many lines until empty line with newline found! Store all data
         while (!skipOneLine()) {
@@ -849,16 +853,20 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             } catch (IOException e) {
                 throw new ErrorDataDecoderException(e);
             }
-            if (code.equals(HttpPostBodyUtil.TransferEncodingMechanism.BIT7.value())) {
-                localCharset = CharsetUtil.US_ASCII;
-            } else if (code.equals(HttpPostBodyUtil.TransferEncodingMechanism.BIT8.value())) {
-                localCharset = CharsetUtil.ISO_8859_1;
-                mechanism = TransferEncodingMechanism.BIT8;
-            } else if (code.equals(HttpPostBodyUtil.TransferEncodingMechanism.BINARY.value())) {
-                // no real charset, so let the default
-                mechanism = TransferEncodingMechanism.BINARY;
-            } else {
-                throw new ErrorDataDecoderException("TransferEncoding Unknown: " + code);
+            switch (code) {
+                case BIT_7_STRING:
+                    localCharset = CharsetUtil.US_ASCII;
+                    break;
+                case BIT_8_STRING:
+                    localCharset = CharsetUtil.ISO_8859_1;
+                    mechanism = TransferEncodingMechanism.BIT8;
+                    break;
+                case BINARY_STRING:
+                    // no real charset, so let the default
+                    mechanism = TransferEncodingMechanism.BINARY;
+                    break;
+                default:
+                    throw new ErrorDataDecoderException("TransferEncoding Unknown: " + code);
             }
         }
         Attribute charsetAttribute = currentFieldAttributes.get(HttpHeaderValues.CHARSET);
@@ -1445,7 +1453,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *         follows by several values that were separated by ';' or ','
      */
     private static String[] splitMultipartHeader(String sb) {
-        ArrayList<String> headers = new ArrayList<String>(1);
+        ArrayList<String> headers = new ArrayList<>(1);
         int nameStart;
         int nameEnd;
         int colonEnd;

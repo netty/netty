@@ -46,8 +46,8 @@ public class SocketRstTest extends AbstractSocketTest {
     }
 
     public void testSoLingerZeroCausesOnlyRstOnClose(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        final AtomicReference<Channel> serverChannelRef = new AtomicReference<Channel>();
-        final AtomicReference<Throwable> throwableRef = new AtomicReference<Throwable>();
+        final AtomicReference<Channel> serverChannelRef = new AtomicReference<>();
+        final AtomicReference<Throwable> throwableRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
         final CountDownLatch latch2 = new CountDownLatch(1);
         // SO_LINGER=0 means that we must send ONLY a RST when closing (not a FIN + RST).
@@ -101,8 +101,8 @@ public class SocketRstTest extends AbstractSocketTest {
     }
 
     public void testNoRstIfSoLingerOnClose(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        final AtomicReference<Channel> serverChannelRef = new AtomicReference<Channel>();
-        final AtomicReference<Throwable> throwableRef = new AtomicReference<Throwable>();
+        final AtomicReference<Channel> serverChannelRef = new AtomicReference<>();
+        final AtomicReference<Throwable> throwableRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
         final CountDownLatch latch2 = new CountDownLatch(1);
         sb.childHandler(new ChannelInitializer<Channel>() {

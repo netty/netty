@@ -23,6 +23,7 @@ import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -32,7 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 class UnpaddedInternalThreadLocalMap {
 
-    static final ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap = new ThreadLocal<InternalThreadLocalMap>();
+    static final ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap = new ThreadLocal<>();
     static final AtomicInteger nextIndex = new AtomicInteger();
 
     /** Used by {@link FastThreadLocal} */
@@ -42,7 +43,6 @@ class UnpaddedInternalThreadLocalMap {
     int futureListenerStackDepth;
     int localChannelReaderStackDepth;
     Map<Class<?>, Boolean> handlerSharableCache;
-    IntegerHolder counterHashCode;
     ThreadLocalRandom random;
     Map<Class<?>, TypeParameterMatcher> typeParameterMatcherGetCache;
     Map<Class<?>, Map<String, TypeParameterMatcher>> typeParameterMatcherFindCache;

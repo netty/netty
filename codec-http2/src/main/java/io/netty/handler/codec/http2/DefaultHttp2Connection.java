@@ -78,7 +78,7 @@ public class DefaultHttp2Connection implements Http2Connection {
      * (local/remote flow controller and {@link StreamByteDistributor}) and we leave room for 1 extra.
      * We could be more aggressive but the ArrayList resize will double the size if we are too small.
      */
-    final List<Listener> listeners = new ArrayList<Listener>(4);
+    final List<Listener> listeners = new ArrayList<>(4);
     final ActiveStreams activeStreams;
     Promise<Void> closePromise;
 
@@ -102,8 +102,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         // in response to any locally enforced limits being exceeded [2].
         // [1] https://tools.ietf.org/html/rfc7540#section-5.1.2
         // [2] https://tools.ietf.org/html/rfc7540#section-8.2.2
-        localEndpoint = new DefaultEndpoint<Http2LocalFlowController>(server, server ? MAX_VALUE : maxReservedStreams);
-        remoteEndpoint = new DefaultEndpoint<Http2RemoteFlowController>(!server, maxReservedStreams);
+        localEndpoint = new DefaultEndpoint<>(server, server ? MAX_VALUE : maxReservedStreams);
+        remoteEndpoint = new DefaultEndpoint<>(!server, maxReservedStreams);
 
         // Add the connection stream to the map.
         streamMap.put(connectionStream.id(), connectionStream);
@@ -127,7 +127,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             } else if ((promise instanceof ChannelPromise) && ((ChannelPromise) closePromise).isVoid()) {
                 closePromise = promise;
             } else {
-                closePromise.addListener(new UnaryPromiseNotifier<Void>(promise));
+                closePromise.addListener(new UnaryPromiseNotifier<>(promise));
             }
         } else {
             closePromise = promise;
@@ -926,8 +926,8 @@ public class DefaultHttp2Connection implements Http2Connection {
      */
     private final class ActiveStreams {
         private final List<Listener> listeners;
-        private final Queue<Event> pendingEvents = new ArrayDeque<Event>(4);
-        private final Set<Http2Stream> streams = new LinkedHashSet<Http2Stream>();
+        private final Queue<Event> pendingEvents = new ArrayDeque<>(4);
+        private final Set<Http2Stream> streams = new LinkedHashSet<>();
         private int pendingIterations;
 
         public ActiveStreams(List<Listener> listeners) {
@@ -1055,7 +1055,7 @@ public class DefaultHttp2Connection implements Http2Connection {
          * (local/remote flow controller and {@link StreamByteDistributor}) and we leave room for 1 extra.
          * We could be more aggressive but the ArrayList resize will double the size if we are too small.
          */
-        final List<DefaultPropertyKey> keys = new ArrayList<DefaultPropertyKey>(4);
+        final List<DefaultPropertyKey> keys = new ArrayList<>(4);
 
         /**
          * Registers a new property key.

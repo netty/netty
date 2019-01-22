@@ -29,7 +29,7 @@ public class KQueueSocketMultipleConnectTest extends SocketMultipleConnectTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> factories
-                = new ArrayList<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>>();
+                = new ArrayList<>();
         for (TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap> comboFactory
                 : KQueueSocketTestPermutation.INSTANCE.socket()) {
             EventLoopGroup group = comboFactory.newClientInstance().config().group();

@@ -18,7 +18,6 @@ package io.netty.resolver.dns;
 
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.EventLoop;
-import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
@@ -32,9 +31,8 @@ import io.netty.util.internal.UnstableApi;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
-import static io.netty.util.internal.PlatformDependent.newConcurrentHashMap;
 
 /**
  * A {@link AddressResolverGroup} of {@link DnsNameResolver}s.
@@ -44,8 +42,8 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
 
     private final DnsNameResolverBuilder dnsResolverBuilder;
 
-    private final ConcurrentMap<String, Promise<InetAddress>> resolvesInProgress = newConcurrentHashMap();
-    private final ConcurrentMap<String, Promise<List<InetAddress>>> resolveAllsInProgress = newConcurrentHashMap();
+    private final ConcurrentMap<String, Promise<InetAddress>> resolvesInProgress = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Promise<List<InetAddress>>> resolveAllsInProgress = new ConcurrentHashMap<>();
 
     public DnsAddressResolverGroup(DnsNameResolverBuilder dnsResolverBuilder) {
         this.dnsResolverBuilder = dnsResolverBuilder.copy();
@@ -89,7 +87,7 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
             EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
             DnsServerAddressStreamProvider nameServerProvider) throws Exception {
 
-        final NameResolver<InetAddress> resolver = new InflightNameResolver<InetAddress>(
+        final NameResolver<InetAddress> resolver = new InflightNameResolver<>(
                 eventLoop,
                 newNameResolver(eventLoop, channelFactory, nameServerProvider),
                 resolvesInProgress,

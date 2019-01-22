@@ -46,7 +46,7 @@ public class NonStickyEventExecutorGroupTest {
 
     @Parameterized.Parameters(name = "{index}: maxTaskExecutePerRun = {0}")
     public static Collection<Object[]> data() throws Exception {
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         params.add(new Object[] {64});
         params.add(new Object[] {256});
         params.add(new Object[] {1024});
@@ -65,8 +65,8 @@ public class NonStickyEventExecutorGroupTest {
         final NonStickyEventExecutorGroup nonStickyGroup = new NonStickyEventExecutorGroup(group, maxTaskExecutePerRun);
         try {
             final CountDownLatch startLatch = new CountDownLatch(1);
-            final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
-            List<Thread> threadList = new ArrayList<Thread>(threads);
+            final AtomicReference<Throwable> error = new AtomicReference<>();
+            List<Thread> threadList = new ArrayList<>(threads);
             for (int i = 0 ; i < threads; i++) {
                 Thread thread = new Thread(new Runnable() {
                     @Override
@@ -126,10 +126,10 @@ public class NonStickyEventExecutorGroupTest {
     private static void execute(EventExecutorGroup group, CountDownLatch startLatch) throws Throwable {
         EventExecutor executor = group.next();
         Assert.assertTrue(executor instanceof OrderedEventExecutor);
-        final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> cause = new AtomicReference<>();
         final AtomicInteger last = new AtomicInteger();
         int tasks = 10000;
-        List<Future<?>> futures = new ArrayList<Future<?>>(tasks);
+        List<Future<?>> futures = new ArrayList<>(tasks);
         final CountDownLatch latch = new CountDownLatch(tasks);
         startLatch.await();
 

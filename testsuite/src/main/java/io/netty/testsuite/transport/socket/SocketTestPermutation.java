@@ -62,7 +62,7 @@ public class SocketTestPermutation {
     protected <A extends AbstractBootstrap<?, ?, ?>, B extends AbstractBootstrap<?, ?, ?>>
     List<BootstrapComboFactory<A, B>> combo(List<BootstrapFactory<A>> sbfs, List<BootstrapFactory<B>> cbfs) {
 
-        List<BootstrapComboFactory<A, B>> list = new ArrayList<BootstrapComboFactory<A, B>>();
+        List<BootstrapComboFactory<A, B>> list = new ArrayList<>();
 
         // Populate the combinations
         for (BootstrapFactory<A> sbf: sbfs) {

@@ -79,8 +79,8 @@ public class AsciiStringMemoryTest {
 
     @Test
     public void forEachTest() throws Exception {
-        final AtomicReference<Integer> aCount = new AtomicReference<Integer>(0);
-        final AtomicReference<Integer> bCount = new AtomicReference<Integer>(0);
+        final AtomicReference<Integer> aCount = new AtomicReference<>(0);
+        final AtomicReference<Integer> bCount = new AtomicReference<>(0);
         aAsciiString.forEachByte(new ByteProcessor() {
             int i;
             @Override
@@ -117,8 +117,8 @@ public class AsciiStringMemoryTest {
 
     @Test
     public void forEachDescTest() throws Exception {
-        final AtomicReference<Integer> aCount = new AtomicReference<Integer>(0);
-        final AtomicReference<Integer> bCount = new AtomicReference<Integer>(0);
+        final AtomicReference<Integer> aCount = new AtomicReference<>(0);
+        final AtomicReference<Integer> bCount = new AtomicReference<>(0);
         aAsciiString.forEachByteDesc(new ByteProcessor() {
             int i = 1;
             @Override
