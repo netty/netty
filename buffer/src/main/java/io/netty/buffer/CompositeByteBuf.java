@@ -801,7 +801,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      */
     public int toComponentIndex(int offset) {
         checkIndex(offset);
-        return toComponentIndex(offset);
+        return toComponentIndex0(offset);
     }
 
     private int toComponentIndex0(int offset) {
