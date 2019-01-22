@@ -39,11 +39,11 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ResourcesUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ResourcesUtil;
 import io.netty.util.internal.StringUtil;
 import org.junit.After;
 import org.junit.Assume;
@@ -52,28 +52,6 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.security.KeyStore;
-import java.security.Principal;
-import java.security.Provider;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.ManagerFactoryParameters;
@@ -94,8 +72,38 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.TrustManagerFactorySpi;
 import javax.net.ssl.X509TrustManager;
 import javax.security.cert.X509Certificate;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.security.KeyStore;
+import java.security.Principal;
+import java.security.Provider;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
-import static io.netty.handler.ssl.SslUtils.*;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V2;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V2_HELLO;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_SSL_V3;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_1;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_2;
+import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_3;
+import static io.netty.handler.ssl.SslUtils.SSL_RECORD_HEADER_LENGTH;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -265,7 +273,7 @@ public abstract class SSLEngineTest {
             case Heap:
                 return ByteBuffer.allocate(len);
             case Mixed:
-                return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                return ThreadLocalRandom.current().nextBoolean() ?
                         ByteBuffer.allocateDirect(len) : ByteBuffer.allocate(len);
             default:
                 throw new Error();
@@ -290,7 +298,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.heapBuffer();
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.directBuffer() : allocator.heapBuffer();
                 default:
                     throw new Error();
@@ -305,7 +313,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.heapBuffer(initialCapacity);
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.directBuffer(initialCapacity) : allocator.heapBuffer(initialCapacity);
                 default:
                     throw new Error();
@@ -320,7 +328,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.heapBuffer(initialCapacity, maxCapacity);
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.directBuffer(initialCapacity, maxCapacity) :
                             allocator.heapBuffer(initialCapacity, maxCapacity);
                 default:
@@ -381,7 +389,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.compositeHeapBuffer();
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ((Random) ThreadLocalRandom.current()).nextBoolean() ?
                             allocator.compositeDirectBuffer() :
                             allocator.compositeHeapBuffer();
                 default:
@@ -397,7 +405,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.compositeHeapBuffer(maxNumComponents);
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ((Random) ThreadLocalRandom.current()).nextBoolean() ?
                             allocator.compositeDirectBuffer(maxNumComponents) :
                             allocator.compositeHeapBuffer(maxNumComponents);
                 default:

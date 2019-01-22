@@ -34,7 +34,6 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.Test;
 
 import java.io.DataInput;
@@ -52,6 +51,7 @@ import java.nio.channels.NetworkChannel;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
@@ -166,7 +166,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
 
         // Just some random bytes
         byte[] bytes = new byte[1024];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
 
         Channel sc = null;
         Channel cc = null;

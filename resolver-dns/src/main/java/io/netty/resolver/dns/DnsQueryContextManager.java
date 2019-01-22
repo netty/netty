@@ -19,7 +19,6 @@ package io.netty.resolver.dns;
 import io.netty.util.NetUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.internal.PlatformDependent;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -28,6 +27,7 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 final class DnsQueryContextManager {
 
@@ -35,13 +35,12 @@ final class DnsQueryContextManager {
      * A map whose key is the DNS server address and value is the map of the DNS query ID and its corresponding
      * {@link DnsQueryContext}.
      */
-    final Map<InetSocketAddress, IntObjectMap<DnsQueryContext>> map =
-            new HashMap<InetSocketAddress, IntObjectMap<DnsQueryContext>>();
+    final Map<InetSocketAddress, IntObjectMap<DnsQueryContext>> map = new HashMap<>();
 
     int add(DnsQueryContext qCtx) {
         final IntObjectMap<DnsQueryContext> contexts = getOrCreateContextMap(qCtx.nameServerAddr());
 
-        int id = PlatformDependent.threadLocalRandom().nextInt(65536 - 1) + 1;
+        int id = ThreadLocalRandom.current().nextInt(65536 - 1) + 1;
         final int maxTries = 65535 << 1;
         int tries = 0;
 
