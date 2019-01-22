@@ -17,8 +17,8 @@ package io.netty.handler.codec.serialization;
 
 import io.netty.util.internal.PlatformDependent;
 
-import java.lang.ref.Reference;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class ClassResolvers {
 
@@ -67,8 +67,7 @@ public final class ClassResolvers {
     public static ClassResolver weakCachingConcurrentResolver(ClassLoader classLoader) {
         return new CachingClassResolver(
                 new ClassLoaderClassResolver(defaultClassLoader(classLoader)),
-                new WeakReferenceMap<>(
-                        PlatformDependent.<String, Reference<Class<?>>>newConcurrentHashMap()));
+                new WeakReferenceMap<>(new ConcurrentHashMap<>()));
     }
 
     /**
@@ -81,8 +80,7 @@ public final class ClassResolvers {
     public static ClassResolver softCachingConcurrentResolver(ClassLoader classLoader) {
         return new CachingClassResolver(
                 new ClassLoaderClassResolver(defaultClassLoader(classLoader)),
-                new SoftReferenceMap<>(
-                        PlatformDependent.<String, Reference<Class<?>>>newConcurrentHashMap()));
+                new SoftReferenceMap<>(new ConcurrentHashMap<>()));
     }
 
     static ClassLoader defaultClassLoader(ClassLoader classLoader) {

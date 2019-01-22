@@ -17,8 +17,8 @@
 package io.netty.util;
 
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class ConstantPool<T extends Constant<T>> {
 
-    private final ConcurrentMap<String, T> constants = PlatformDependent.newConcurrentHashMap();
+    private final ConcurrentMap<String, T> constants = new ConcurrentHashMap<>();
 
     private final AtomicInteger nextId = new AtomicInteger(1);
 

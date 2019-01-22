@@ -44,6 +44,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -709,7 +710,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     private static final class DefaultOpenSslEngineMap implements OpenSslEngineMap {
-        private final Map<Long, ReferenceCountedOpenSslEngine> engines = PlatformDependent.newConcurrentHashMap();
+        private final Map<Long, ReferenceCountedOpenSslEngine> engines = new ConcurrentHashMap<>();
 
         @Override
         public ReferenceCountedOpenSslEngine remove(long ssl) {
