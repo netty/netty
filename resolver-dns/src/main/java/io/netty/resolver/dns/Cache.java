@@ -16,7 +16,6 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
-import io.netty.util.internal.PlatformDependent;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,6 +23,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.ScheduledFuture;
@@ -86,7 +86,7 @@ abstract class Cache<E> {
     // See also: https://github.com/netty/netty/commit/b47fb817991b42ec8808c7d26538f3f2464e1fa6
     static final int MAX_SUPPORTED_TTL_SECS = (int) TimeUnit.DAYS.toSeconds(365 * 2);
 
-    private final ConcurrentMap<String, Entries> resolveCache = PlatformDependent.newConcurrentHashMap();
+    private final ConcurrentMap<String, Entries> resolveCache = new ConcurrentHashMap<>();
 
     /**
      * Remove everything from the cache.

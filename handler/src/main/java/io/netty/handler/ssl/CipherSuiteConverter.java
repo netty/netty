@@ -16,13 +16,13 @@
 
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -89,14 +89,14 @@ final class CipherSuiteConverter {
      * Java-to-OpenSSL cipher suite conversion map
      * Note that the Java cipher suite has the protocol prefix (TLS_, SSL_)
      */
-    private static final ConcurrentMap<String, String> j2o = PlatformDependent.newConcurrentHashMap();
+    private static final ConcurrentMap<String, String> j2o = new ConcurrentHashMap<>();
 
     /**
      * OpenSSL-to-Java cipher suite conversion map.
      * Note that one OpenSSL cipher suite can be converted to more than one Java cipher suites because
      * a Java cipher suite has the protocol name prefix (TLS_, SSL_)
      */
-    private static final ConcurrentMap<String, Map<String, String>> o2j = PlatformDependent.newConcurrentHashMap();
+    private static final ConcurrentMap<String, Map<String, String>> o2j = new ConcurrentHashMap<>();
 
     private static final Map<String, String> j2oTls13;
     private static final Map<String, Map<String, String>> o2jTls13;

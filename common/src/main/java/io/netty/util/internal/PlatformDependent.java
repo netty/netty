@@ -321,42 +321,6 @@ public final class PlatformDependent {
     }
 
     /**
-     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
-     */
-    public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap() {
-        return new ConcurrentHashMap<>();
-    }
-
-    /**
-     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
-     */
-    public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity) {
-        return new ConcurrentHashMap<>(initialCapacity);
-    }
-
-    /**
-     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
-     */
-    public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity, float loadFactor) {
-        return new ConcurrentHashMap<>(initialCapacity, loadFactor);
-    }
-
-    /**
-     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
-     */
-    public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(
-            int initialCapacity, float loadFactor, int concurrencyLevel) {
-        return new ConcurrentHashMap<>(initialCapacity, loadFactor, concurrencyLevel);
-    }
-
-    /**
-     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
-     */
-    public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(Map<? extends K, ? extends V> map) {
-        return new ConcurrentHashMap<>(map);
-    }
-
-    /**
      * Try to deallocate the specified direct {@link ByteBuffer}. Please note this method does nothing if
      * the current platform does not support this operation or the specified buffer is not a direct buffer.
      */

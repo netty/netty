@@ -167,7 +167,7 @@ public class ResourceLeakDetector<T> {
     private final Set<DefaultResourceLeak<?>> allLeaks = ConcurrentHashMap.newKeySet();
 
     private final ReferenceQueue<Object> refQueue = new ReferenceQueue<>();
-    private final ConcurrentMap<String, Boolean> reportedLeaks = PlatformDependent.newConcurrentHashMap();
+    private final ConcurrentMap<String, Boolean> reportedLeaks = new ConcurrentHashMap<>();
 
     private final String resourceType;
     private final int samplingInterval;
