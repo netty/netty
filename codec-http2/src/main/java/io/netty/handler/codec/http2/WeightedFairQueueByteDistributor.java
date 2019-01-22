@@ -432,7 +432,7 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
 
         @Override
         public int compare(State o1, State o2) {
-            return MathUtil.compare(o1.pseudoTimeToWrite, o2.pseudoTimeToWrite);
+            return Long.compare(o1.pseudoTimeToWrite, o2.pseudoTimeToWrite);
         }
     }
 
