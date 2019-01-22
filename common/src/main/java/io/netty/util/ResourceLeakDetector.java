@@ -26,7 +26,6 @@ import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -165,8 +164,7 @@ public class ResourceLeakDetector<T> {
     }
 
     /** the collection of active resources */
-    private final Set<DefaultResourceLeak<?>> allLeaks =
-            Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Set<DefaultResourceLeak<?>> allLeaks = ConcurrentHashMap.newKeySet();
 
     private final ReferenceQueue<Object> refQueue = new ReferenceQueue<>();
     private final ConcurrentMap<String, Boolean> reportedLeaks = PlatformDependent.newConcurrentHashMap();
