@@ -16,37 +16,38 @@
 package io.netty.channel.kqueue;
 
 import io.netty.channel.Channel;
-import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.DefaultSelectStrategyFactory;
+import io.netty.channel.IoExecutionContext;
+import io.netty.channel.IoHandler;
+import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.SelectStrategy;
-import io.netty.channel.SingleThreadEventLoop;
+import io.netty.channel.SelectStrategyFactory;
+
 import io.netty.channel.kqueue.AbstractKQueueChannel.AbstractKQueueUnsafe;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.util.IntSupplier;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.util.Queue;
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static java.lang.Math.min;
 
 /**
- * {@link EventLoop} which uses kqueue under the covers. Only works on BSD!
+ * {@link IoHandler} which uses kqueue under the covers. Only works on BSD!
  */
-final class KQueueEventLoop extends SingleThreadEventLoop {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueEventLoop.class);
-    private static final AtomicIntegerFieldUpdater<KQueueEventLoop> WAKEN_UP_UPDATER =
-            AtomicIntegerFieldUpdater.newUpdater(KQueueEventLoop.class, "wakenUp");
+@UnstableApi
+public final class KQueueHandler implements IoHandler {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueHandler.class);
+    private static final AtomicIntegerFieldUpdater<KQueueHandler> WAKEN_UP_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(KQueueHandler.class, "wakenUp");
     private static final int KQUEUE_WAKE_UP_IDENT = 0;
 
     static {
@@ -70,7 +71,6 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
     private final IntObjectMap<AbstractKQueueChannel> channels = new IntObjectHashMap<AbstractKQueueChannel>(4096);
 
     private volatile int wakenUp;
-    private volatile int ioRatio = 50;
 
     private static AbstractKQueueChannel cast(Channel channel) {
         if (channel instanceof AbstractKQueueChannel) {
@@ -79,39 +79,11 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
         throw new IllegalArgumentException("Channel of type " + StringUtil.simpleClassName(channel) + " not supported");
     }
 
-    private final Unsafe unsafe = new Unsafe() {
-        @Override
-        public void register(Channel channel) {
-            assert inEventLoop();
-            final AbstractKQueueChannel kQueueChannel = cast(channel);
-            final int id = kQueueChannel.fd().intValue();
-            channels.put(id, kQueueChannel);
+    private KQueueHandler() {
+        this(0, DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy());
+    }
 
-            kQueueChannel.register0(new KQueueRegistration() {
-                @Override
-                public void evSet(short filter, short flags, int fflags) {
-                    KQueueEventLoop.this.evSet(kQueueChannel, filter, flags, fflags);
-                }
-
-                @Override
-                public IovArray cleanArray() {
-                    return KQueueEventLoop.this.cleanArray();
-                }
-            });
-        }
-
-        @Override
-        public void deregister(Channel channel) throws Exception {
-            assert inEventLoop();
-            AbstractKQueueChannel kQueueChannel = cast(channel);
-            channels.remove(kQueueChannel.fd().intValue());
-            kQueueChannel.deregister0();
-        }
-    };
-
-    KQueueEventLoop(EventLoopGroup parent, Executor executor, int maxEvents,
-                    SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler) {
-        super(parent, executor, false, DEFAULT_MAX_PENDING_TASKS, rejectedExecutionHandler);
+    private KQueueHandler(int maxEvents, SelectStrategy strategy) {
         selectStrategy = ObjectUtil.checkNotNull(strategy, "strategy");
         this.kqueueFd = Native.newKQueue();
         if (maxEvents == 0) {
@@ -124,30 +96,75 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
         eventList = new KQueueEventArray(maxEvents);
         int result = Native.keventAddUserEvent(kqueueFd.intValue(), KQUEUE_WAKE_UP_IDENT);
         if (result < 0) {
-            cleanup();
+            destroy();
             throw new IllegalStateException("kevent failed to add user event with errno: " + (-result));
         }
     }
 
+    /**
+     * Returns a new {@link IoHandlerFactory} that creates {@link KQueueHandler} instances.
+     */
+    public static IoHandlerFactory newFactory() {
+        return new IoHandlerFactory() {
+            @Override
+            public IoHandler newHandler() {
+                return new KQueueHandler();
+            }
+        };
+    }
+
+    /**
+     * Returns a new {@link IoHandlerFactory} that creates {@link KQueueHandler} instances.
+     */
+    public static IoHandlerFactory newFactory(final int maxEvents,
+                                              final SelectStrategyFactory selectStrategyFactory) {
+        ObjectUtil.checkPositiveOrZero(maxEvents, "maxEvents");
+        ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
+        return new IoHandlerFactory() {
+            @Override
+            public IoHandler newHandler() {
+                return new KQueueHandler(maxEvents, selectStrategyFactory.newSelectStrategy());
+            }
+        };
+    }
+
     @Override
-    public Unsafe unsafe() {
-        return unsafe;
+    public void register(Channel channel) {
+        final AbstractKQueueChannel kQueueChannel = cast(channel);
+        final int id = kQueueChannel.fd().intValue();
+        channels.put(id, kQueueChannel);
+
+        kQueueChannel.register0(new KQueueRegistration() {
+            @Override
+            public void evSet(short filter, short flags, int fflags) {
+                KQueueHandler.this.evSet(kQueueChannel, filter, flags, fflags);
+            }
+
+            @Override
+            public IovArray cleanArray() {
+                return KQueueHandler.this.cleanArray();
+            }
+        });
+    }
+
+    @Override
+    public void deregister(Channel channel) throws Exception {
+        AbstractKQueueChannel kQueueChannel = cast(channel);
+        channels.remove(kQueueChannel.fd().intValue());
+        kQueueChannel.deregister0();
     }
 
     private void evSet(AbstractKQueueChannel ch, short filter, short flags, int fflags) {
         changeList.evSet(ch, filter, flags, fflags);
     }
 
-    /**
-     * Return a cleared {@link IovArray} that can be used for writes in this {@link EventLoop}.
-     */
     private IovArray cleanArray() {
         iovArray.clear();
         return iovArray;
     }
 
     @Override
-    protected void wakeup(boolean inEventLoop) {
+    public void wakeup(boolean inEventLoop) {
         if (!inEventLoop && WAKEN_UP_UPDATER.compareAndSet(this, 0, 1)) {
             wakeup();
         }
@@ -159,16 +176,16 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
         // So it is not very practical to assert the return value is always >= 0.
     }
 
-    private int kqueueWait(boolean oldWakeup) throws IOException {
+    private int kqueueWait(IoExecutionContext context, boolean oldWakeup) throws IOException {
         // If a task was submitted when wakenUp value was 1, the task didn't get a chance to produce wakeup event.
         // So we need to check task queue again before calling kqueueWait. If we don't, the task might be pended
         // until kqueueWait was timed out. It might be pended until idle timeout if IdleStateHandler existed
         // in pipeline.
-        if (oldWakeup && hasTasks()) {
+        if (oldWakeup && !context.canBlock()) {
             return kqueueWaitNow();
         }
 
-        long totalDelay = delayNanos(System.nanoTime());
+        long totalDelay = context.delayNanos(System.nanoTime());
         int delaySeconds = (int) min(totalDelay / 1000000000L, Integer.MAX_VALUE);
         return kqueueWait(delaySeconds, (int) min(totalDelay - delaySeconds * 1000000000L, Integer.MAX_VALUE));
     }
@@ -227,124 +244,71 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
     }
 
     @Override
-    protected void run() {
-        for (;;) {
-            try {
-                int strategy = selectStrategy.calculateStrategy(selectNowSupplier, hasTasks());
-                switch (strategy) {
-                    case SelectStrategy.CONTINUE:
-                        continue;
+    public int run(IoExecutionContext context) {
+        int handled = 0;
+        try {
+            int strategy = selectStrategy.calculateStrategy(selectNowSupplier, !context.canBlock());
+            switch (strategy) {
+                case SelectStrategy.CONTINUE:
+                    return 0;
 
-                    case SelectStrategy.BUSY_WAIT:
-                        // fall-through to SELECT since the busy-wait is not supported with kqueue
+                case SelectStrategy.BUSY_WAIT:
+                    // fall-through to SELECT since the busy-wait is not supported with kqueue
 
-                    case SelectStrategy.SELECT:
-                        strategy = kqueueWait(WAKEN_UP_UPDATER.getAndSet(this, 0) == 1);
+                case SelectStrategy.SELECT:
+                    strategy = kqueueWait(context, WAKEN_UP_UPDATER.getAndSet(this, 0) == 1);
 
-                        // 'wakenUp.compareAndSet(false, true)' is always evaluated
-                        // before calling 'selector.wakeup()' to reduce the wake-up
-                        // overhead. (Selector.wakeup() is an expensive operation.)
-                        //
-                        // However, there is a race condition in this approach.
-                        // The race condition is triggered when 'wakenUp' is set to
-                        // true too early.
-                        //
-                        // 'wakenUp' is set to true too early if:
-                        // 1) Selector is waken up between 'wakenUp.set(false)' and
-                        //    'selector.select(...)'. (BAD)
-                        // 2) Selector is waken up between 'selector.select(...)' and
-                        //    'if (wakenUp.get()) { ... }'. (OK)
-                        //
-                        // In the first case, 'wakenUp' is set to true and the
-                        // following 'selector.select(...)' will wake up immediately.
-                        // Until 'wakenUp' is set to false again in the next round,
-                        // 'wakenUp.compareAndSet(false, true)' will fail, and therefore
-                        // any attempt to wake up the Selector will fail, too, causing
-                        // the following 'selector.select(...)' call to block
-                        // unnecessarily.
-                        //
-                        // To fix this problem, we wake up the selector again if wakenUp
-                        // is true immediately after selector.select(...).
-                        // It is inefficient in that it wakes up the selector for both
-                        // the first case (BAD - wake-up required) and the second case
-                        // (OK - no wake-up required).
+                    // 'wakenUp.compareAndSet(false, true)' is always evaluated
+                    // before calling 'selector.wakeup()' to reduce the wake-up
+                    // overhead. (Selector.wakeup() is an expensive operation.)
+                    //
+                    // However, there is a race condition in this approach.
+                    // The race condition is triggered when 'wakenUp' is set to
+                    // true too early.
+                    //
+                    // 'wakenUp' is set to true too early if:
+                    // 1) Selector is waken up between 'wakenUp.set(false)' and
+                    //    'selector.select(...)'. (BAD)
+                    // 2) Selector is waken up between 'selector.select(...)' and
+                    //    'if (wakenUp.get()) { ... }'. (OK)
+                    //
+                    // In the first case, 'wakenUp' is set to true and the
+                    // following 'selector.select(...)' will wake up immediately.
+                    // Until 'wakenUp' is set to false again in the next round,
+                    // 'wakenUp.compareAndSet(false, true)' will fail, and therefore
+                    // any attempt to wake up the Selector will fail, too, causing
+                    // the following 'selector.select(...)' call to block
+                    // unnecessarily.
+                    //
+                    // To fix this problem, we wake up the selector again if wakenUp
+                    // is true immediately after selector.select(...).
+                    // It is inefficient in that it wakes up the selector for both
+                    // the first case (BAD - wake-up required) and the second case
+                    // (OK - no wake-up required).
 
-                        if (wakenUp == 1) {
-                            wakeup();
-                        }
-                        // fallthrough
-                    default:
-                }
-
-                final int ioRatio = this.ioRatio;
-                if (ioRatio == 100) {
-                    try {
-                        if (strategy > 0) {
-                            processReady(strategy);
-                        }
-                    } finally {
-                        runAllTasks();
+                    if (wakenUp == 1) {
+                        wakeup();
                     }
-                } else {
-                    final long ioStartTime = System.nanoTime();
-
-                    try {
-                        if (strategy > 0) {
-                            processReady(strategy);
-                        }
-                    } finally {
-                        final long ioTime = System.nanoTime() - ioStartTime;
-                        runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
-                    }
-                }
-                if (allowGrowing && strategy == eventList.capacity()) {
-                    //increase the size of the array as we needed the whole space for the events
-                    eventList.realloc(false);
-                }
-            } catch (Throwable t) {
-                handleLoopException(t);
+                    // fallthrough
+                default:
             }
-            // Always handle shutdown even if the loop processing threw an exception.
-            try {
-                if (isShuttingDown()) {
-                    closeAll();
-                    if (confirmShutdown()) {
-                        break;
-                    }
-                }
-            } catch (Throwable t) {
-                handleLoopException(t);
+
+            if (strategy > 0) {
+                handled = strategy;
+                processReady(strategy);
             }
+            if (allowGrowing && strategy == eventList.capacity()) {
+                //increase the size of the array as we needed the whole space for the events
+                eventList.realloc(false);
+            }
+        } catch (Throwable t) {
+            handleLoopException(t);
         }
+        return handled;
     }
 
     @Override
-    protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
-        // This event loop never calls takeTask()
-        return maxPendingTasks == Integer.MAX_VALUE ? PlatformDependent.<Runnable>newMpscQueue()
-                                                    : PlatformDependent.<Runnable>newMpscQueue(maxPendingTasks);
-    }
-
-    /**
-     * Returns the percentage of the desired amount of time spent for I/O in the event loop.
-     */
-    public int getIoRatio() {
-        return ioRatio;
-    }
-
-    /**
-     * Sets the percentage of the desired amount of time spent for I/O in the event loop.  The default value is
-     * {@code 50}, which means the event loop will try to spend the same amount of time for I/O as for non-I/O tasks.
-     */
-    public void setIoRatio(int ioRatio) {
-        if (ioRatio <= 0 || ioRatio > 100) {
-            throw new IllegalArgumentException("ioRatio: " + ioRatio + " (expected: 0 < ioRatio <= 100)");
-        }
-        this.ioRatio = ioRatio;
-    }
-
-    @Override
-    protected void cleanup() {
+    public void destroy() {
         try {
             try {
                 kqueueFd.close();
@@ -358,7 +322,8 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    private void closeAll() {
+    @Override
+    public void prepareToDestroy() {
         try {
             kqueueWaitNow();
         } catch (IOException e) {

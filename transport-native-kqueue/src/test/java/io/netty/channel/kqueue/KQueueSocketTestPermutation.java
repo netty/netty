@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -44,9 +45,11 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     static final KQueueSocketTestPermutation INSTANCE = new KQueueSocketTestPermutation();
 
     static final EventLoopGroup KQUEUE_BOSS_GROUP =
-            new KQueueEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-KQueue-boss", true));
+            new MultithreadEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-KQueue-boss", true),
+                    KQueueHandler.newFactory());
     static final EventLoopGroup KQUEUE_WORKER_GROUP =
-            new KQueueEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-KQueue-worker", true));
+            new MultithreadEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-KQueue-worker", true),
+                    KQueueHandler.newFactory());
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueSocketTestPermutation.class);
 

@@ -15,12 +15,11 @@
  */
 package io.netty.util.concurrent;
 
-import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * Default implementation of {@link MultithreadEventExecutorGroup} which will use {@link DefaultEventExecutor} instances
- * to handle the tasks.
+ * Default implementation of {@link MultithreadEventExecutorGroup} which will use {@link SingleThreadEventExecutor}
+ * instances to handle the tasks.
  */
 public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
     /**
@@ -52,10 +51,5 @@ public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
     public DefaultEventExecutorGroup(int nThreads, ThreadFactory threadFactory, int maxPendingTasks,
                                      RejectedExecutionHandler rejectedHandler) {
         super(nThreads, threadFactory, maxPendingTasks, rejectedHandler);
-    }
-
-    @Override
-    protected EventExecutor newChild(Executor executor, Object... args) throws Exception {
-        return new DefaultEventExecutor(this, executor, (Integer) args[0], (RejectedExecutionHandler) args[1]);
     }
 }

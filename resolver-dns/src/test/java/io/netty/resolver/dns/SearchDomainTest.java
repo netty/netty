@@ -16,7 +16,8 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.util.concurrent.Future;
 import org.junit.After;
@@ -58,7 +59,7 @@ public class SearchDomainTest {
 
     @Before
     public void before() {
-        group = new NioEventLoopGroup(1);
+        group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
     }
 
     @After

@@ -100,7 +100,7 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
     @SuppressWarnings("unused")
     static final class NativeDatagramPacket {
         // Each NativeDatagramPackets holds a IovArray which is used for gathering writes.
-        // This is ok as NativeDatagramPacketArray is always obtained from an EpollEventLoop
+        // This is ok as NativeDatagramPacketArray is always obtained from an EpollHandler
         // field so the memory needed is quite small anyway.
         private final IovArray array = new IovArray();
 

@@ -31,11 +31,6 @@ public interface EventExecutor extends EventExecutorGroup {
     EventExecutor next();
 
     /**
-     * Return the {@link EventExecutorGroup} which is the parent of this {@link EventExecutor},
-     */
-    EventExecutorGroup parent();
-
-    /**
      * Calls {@link #inEventLoop(Thread)} with {@link Thread#currentThread()} as argument
      */
     boolean inEventLoop();

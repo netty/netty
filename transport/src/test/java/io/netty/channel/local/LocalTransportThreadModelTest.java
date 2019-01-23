@@ -25,6 +25,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
@@ -49,7 +50,7 @@ public class LocalTransportThreadModelTest {
     @BeforeClass
     public static void init() {
         // Configure a test server
-        group = new LocalEventLoopGroup();
+        group = new MultithreadEventLoopGroup(LocalHandler.newFactory());
         ServerBootstrap sb = new ServerBootstrap();
         sb.group(group)
           .channel(LocalServerChannel.class)
@@ -84,7 +85,8 @@ public class LocalTransportThreadModelTest {
 
     @Test(timeout = 5000)
     public void testStagedExecution() throws Throwable {
-        EventLoopGroup l = new LocalEventLoopGroup(4, new DefaultThreadFactory("l"));
+        EventLoopGroup l = new MultithreadEventLoopGroup(4, new DefaultThreadFactory("l"),
+                LocalHandler.newFactory());
         EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e1"));
         EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e2"));
         ThreadNameAuditor h1 = new ThreadNameAuditor();
@@ -227,7 +229,8 @@ public class LocalTransportThreadModelTest {
     @Test(timeout = 30000)
     @Ignore
     public void testConcurrentMessageBufferAccess() throws Throwable {
-        EventLoopGroup l = new LocalEventLoopGroup(4, new DefaultThreadFactory("l"));
+        EventLoopGroup l = new MultithreadEventLoopGroup(4, new DefaultThreadFactory("l"),
+                LocalHandler.newFactory());
         EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e1"));
         EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e2"));
         EventExecutorGroup e3 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e3"));

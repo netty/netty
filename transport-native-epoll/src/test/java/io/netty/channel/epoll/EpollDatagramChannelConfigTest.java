@@ -15,6 +15,8 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
@@ -25,7 +27,7 @@ public class EpollDatagramChannelConfigTest {
     public void testIpFreeBind() throws Exception {
         Epoll.ensureAvailability();
 
-        EpollEventLoopGroup group = new EpollEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
         try {
             EpollDatagramChannel channel = new EpollDatagramChannel(group.next());
             assertTrue(channel.config().setOption(EpollChannelOption.IP_FREEBIND, true));

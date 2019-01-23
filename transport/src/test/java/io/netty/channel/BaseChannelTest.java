@@ -20,8 +20,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 
 import static org.junit.Assert.*;
@@ -35,7 +35,7 @@ class BaseChannelTest {
     }
 
     ServerBootstrap getLocalServerBootstrap() {
-        EventLoopGroup serverGroup = new LocalEventLoopGroup();
+        EventLoopGroup serverGroup = new MultithreadEventLoopGroup(LocalHandler.newFactory());
         ServerBootstrap sb = new ServerBootstrap();
         sb.group(serverGroup);
         sb.channel(LocalServerChannel.class);
@@ -49,7 +49,7 @@ class BaseChannelTest {
     }
 
     Bootstrap getLocalClientBootstrap() {
-        EventLoopGroup clientGroup = new LocalEventLoopGroup();
+        EventLoopGroup clientGroup = new MultithreadEventLoopGroup(LocalHandler.newFactory());
         Bootstrap cb = new Bootstrap();
         cb.channel(LocalChannel.class);
         cb.group(clientGroup);

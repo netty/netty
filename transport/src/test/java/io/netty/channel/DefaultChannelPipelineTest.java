@@ -22,11 +22,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
@@ -38,6 +38,7 @@ import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.concurrent.UnorderedThreadPoolEventExecutor;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -51,6 +52,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -71,7 +73,7 @@ import static org.junit.Assert.fail;
 
 public class DefaultChannelPipelineTest {
 
-    private static final EventLoopGroup group = new LocalEventLoopGroup(1);
+    private static final EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
 
     private Channel self;
     private Channel peer;
@@ -940,7 +942,7 @@ public class DefaultChannelPipelineTest {
 
     @Test(timeout = 3000)
     public void testAddBefore() throws Throwable {
-        EventLoopGroup defaultGroup = new LocalEventLoopGroup(2);
+        EventLoopGroup defaultGroup = new MultithreadEventLoopGroup(2, LocalHandler.newFactory());
         try {
             EventLoop eventLoop1 = defaultGroup.next();
             EventLoop eventLoop2 = defaultGroup.next();
@@ -966,7 +968,7 @@ public class DefaultChannelPipelineTest {
 
     @Test(timeout = 3000)
     public void testAddInListenerNio() throws Throwable {
-        NioEventLoopGroup nioEventLoopGroup = new NioEventLoopGroup(1);
+        EventLoopGroup nioEventLoopGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         try {
             testAddInListener(new NioSocketChannel(nioEventLoopGroup.next()));
         } finally {
@@ -1036,7 +1038,7 @@ public class DefaultChannelPipelineTest {
     @Test(timeout = 3000)
     public void testUnorderedEventExecutor() throws Throwable {
         EventExecutorGroup eventExecutors = new UnorderedThreadPoolEventExecutor(2);
-        EventLoopGroup defaultGroup = new LocalEventLoopGroup(1);
+        EventLoopGroup defaultGroup = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         try {
             EventLoop eventLoop1 = defaultGroup.next();
             ChannelPipeline pipeline1 = new LocalChannel(eventLoop1).pipeline();
@@ -1105,7 +1107,7 @@ public class DefaultChannelPipelineTest {
 
     @Test(timeout = 3000)
     public void testVoidPromiseNotify() throws Throwable {
-        EventLoopGroup defaultGroup = new LocalEventLoopGroup(1);
+        EventLoopGroup defaultGroup = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         EventLoop eventLoop1 = defaultGroup.next();
         ChannelPipeline pipeline1 = new LocalChannel(eventLoop1).pipeline();
 
@@ -1135,7 +1137,7 @@ public class DefaultChannelPipelineTest {
     // Test for https://github.com/netty/netty/issues/8676.
     @Test
     public void testHandlerRemovedOnlyCalledWhenHandlerAddedCalled() throws Exception {
-        EventLoopGroup group = new LocalEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         try {
             final AtomicReference<Error> errorRef = new AtomicReference<>();
 
@@ -1957,11 +1959,6 @@ public class DefaultChannelPipelineTest {
         }
 
         @Override
-        public EventExecutorGroup parent() {
-            return null;
-        }
-
-        @Override
         public boolean inEventLoop(Thread thread) {
             return false;
         }
@@ -1969,6 +1966,27 @@ public class DefaultChannelPipelineTest {
         @Override
         public void execute(Runnable command) {
             wrapped.execute(command);
+        }
+
+        @Override
+        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleWithFixedDelay(
+                Runnable command, long initialDelay, long delay, TimeUnit unit) {
+            throw new UnsupportedOperationException();
         }
     }
 }

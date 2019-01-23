@@ -16,7 +16,8 @@
 package io.netty.channel.sctp.nio;
 
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.sctp.SctpChannel;
 import io.netty.channel.sctp.SctpLimitStreamsTest;
 import io.netty.channel.sctp.SctpServerChannel;
@@ -24,7 +25,7 @@ import io.netty.channel.sctp.SctpServerChannel;
 public class NioSctpLimitStreamsTest extends SctpLimitStreamsTest {
     @Override
     protected EventLoopGroup newEventLoopGroup() {
-        return new NioEventLoopGroup();
+        return new MultithreadEventLoopGroup(NioHandler.newFactory());
     }
 
     @Override

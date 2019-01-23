@@ -73,13 +73,6 @@ public class LocalChannel extends AbstractChannel {
         }
     };
 
-    private final Runnable shutdownHook = new Runnable() {
-        @Override
-        public void run() {
-            unsafe().close(unsafe().voidPromise());
-        }
-    };
-
     private volatile State state;
     private volatile LocalChannel peer;
     private volatile LocalAddress localAddress;
@@ -458,7 +451,7 @@ public class LocalChannel extends AbstractChannel {
         }
 
         @Override
-        public void register0(LocalEventLoop eventLoop) {
+        public void register0() {
             // Check if both peer and parent are non-null because this channel was created by a LocalServerChannel.
             // This is needed as a peer may not be null also if a LocalChannel was connected before and
             // deregistered / registered later again.
@@ -491,13 +484,10 @@ public class LocalChannel extends AbstractChannel {
                     }
                 });
             }
-            eventLoop.addShutdownHook(shutdownHook);
         }
 
         @Override
-        public void deregister0(LocalEventLoop eventLoop) {
-            // Just remove the shutdownHook as this Channel may be closed later or registered to another EventLoop
-            eventLoop.removeShutdownHook(shutdownHook);
+        public void deregister0() {
         }
     }
 }

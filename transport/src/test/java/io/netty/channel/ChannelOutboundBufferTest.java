@@ -18,7 +18,6 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
@@ -29,6 +28,7 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
 import static io.netty.buffer.Unpooled.*;
@@ -138,7 +138,38 @@ public class ChannelOutboundBufferTest {
         private final ChannelConfig config = new DefaultChannelConfig(this);
 
         TestChannel() {
-            super(null, new LocalEventLoopGroup(1).next());
+            super(null, new SingleThreadEventLoop(Executors.defaultThreadFactory(),
+                    new IoHandler() {
+                @Override
+                public int run(IoExecutionContext runner) {
+                    return 0;
+                }
+
+                @Override
+                public void wakeup(boolean inEventLoop) {
+                    // NOOP
+                }
+
+                @Override
+                public void destroy() {
+                    // NOOP
+                }
+
+                @Override
+                public void register(Channel channel) {
+                    // NOOP
+                }
+
+                @Override
+                public void prepareToDestroy() {
+                    // NOOP
+                }
+
+                @Override
+                public void deregister(Channel channel) {
+                    // NOOP
+                }
+            }));
         }
 
         @Override
@@ -360,18 +391,8 @@ public class ChannelOutboundBufferTest {
     @Test(timeout = 5000)
     public void testWriteTaskRejected() throws Exception {
         final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(
-                null, new DefaultThreadFactory("executorPool"),
-                true, 1, RejectedExecutionHandlers.reject()) {
-            @Override
-            protected void run() {
-                do {
-                    Runnable task = takeTask();
-                    if (task != null) {
-                        task.run();
-                        updateLastExecutionTime();
-                    }
-                } while (!confirmShutdown());
-            }
+                new DefaultThreadFactory("executorPool"),
+                1, RejectedExecutionHandlers.reject()) {
 
             @Override
             protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {

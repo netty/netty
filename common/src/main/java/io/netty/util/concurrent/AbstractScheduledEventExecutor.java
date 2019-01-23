@@ -18,40 +18,54 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.DefaultPriorityQueue;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PriorityQueue;
+import io.netty.util.internal.PriorityQueueNode;
 
 import java.util.Comparator;
 import java.util.Queue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Abstract base class for {@link EventExecutor}s that want to support scheduling.
  */
 public abstract class AbstractScheduledEventExecutor extends AbstractEventExecutor {
+    static final long START_TIME = System.nanoTime();
 
-    private static final Comparator<ScheduledFutureTask<?>> SCHEDULED_FUTURE_TASK_COMPARATOR =
-            new Comparator<ScheduledFutureTask<?>>() {
+    private static final Comparator<RunnableScheduledFutureNode<?>> SCHEDULED_FUTURE_TASK_COMPARATOR =
+            new Comparator<RunnableScheduledFutureNode<?>>() {
                 @Override
-                public int compare(ScheduledFutureTask<?> o1, ScheduledFutureTask<?> o2) {
+                public int compare(RunnableScheduledFutureNode<?> o1, RunnableScheduledFutureNode<?> o2) {
                     return o1.compareTo(o2);
                 }
             };
 
-    PriorityQueue<ScheduledFutureTask<?>> scheduledTaskQueue;
+    private PriorityQueue<RunnableScheduledFutureNode<?>> scheduledTaskQueue;
 
     protected AbstractScheduledEventExecutor() {
     }
 
-    protected AbstractScheduledEventExecutor(EventExecutorGroup parent) {
-        super(parent);
+    /**
+     * The time elapsed since initialization of this class in nanoseconds. This may return a negative number just like
+     * {@link System#nanoTime()}.
+     */
+    public static long nanoTime() {
+        return System.nanoTime() - START_TIME;
     }
 
-    protected static long nanoTime() {
-        return ScheduledFutureTask.nanoTime();
+    /**
+     * The deadline (in nanoseconds) for a given delay (in nanoseconds).
+     */
+    static long deadlineNanos(long delay) {
+        long deadlineNanos = nanoTime() + delay;
+        // Guard against overflow
+        return deadlineNanos < 0 ? Long.MAX_VALUE : deadlineNanos;
     }
 
-    PriorityQueue<ScheduledFutureTask<?>> scheduledTaskQueue() {
+    PriorityQueue<RunnableScheduledFutureNode<?>> scheduledTaskQueue() {
         if (scheduledTaskQueue == null) {
             scheduledTaskQueue = new DefaultPriorityQueue<>(
                     SCHEDULED_FUTURE_TASK_COMPARATOR,
@@ -61,7 +75,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         return scheduledTaskQueue;
     }
 
-    private static boolean isNullOrEmpty(Queue<ScheduledFutureTask<?>> queue) {
+    private static boolean isNullOrEmpty(Queue<RunnableScheduledFutureNode<?>> queue) {
         return queue == null || queue.isEmpty();
     }
 
@@ -70,18 +84,18 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
      *
      * This method MUST be called only when {@link #inEventLoop()} is {@code true}.
      */
-    protected void cancelScheduledTasks() {
+    protected final void cancelScheduledTasks() {
         assert inEventLoop();
-        PriorityQueue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
+        PriorityQueue<RunnableScheduledFutureNode<?>> scheduledTaskQueue = this.scheduledTaskQueue;
         if (isNullOrEmpty(scheduledTaskQueue)) {
             return;
         }
 
-        final ScheduledFutureTask<?>[] scheduledTasks =
-                scheduledTaskQueue.toArray(new ScheduledFutureTask<?>[0]);
+        final RunnableScheduledFutureNode<?>[] scheduledTasks =
+                scheduledTaskQueue.toArray(new RunnableScheduledFutureNode<?>[0]);
 
-        for (ScheduledFutureTask<?> task: scheduledTasks) {
-            task.cancelWithoutRemove(false);
+        for (RunnableScheduledFutureNode<?> task: scheduledTasks) {
+            task.cancel(false);
         }
 
         scheduledTaskQueue.clearIgnoringIndexes();
@@ -90,19 +104,21 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     /**
      * @see #pollScheduledTask(long)
      */
-    protected final Runnable pollScheduledTask() {
+    protected final RunnableScheduledFuture<?> pollScheduledTask() {
         return pollScheduledTask(nanoTime());
     }
 
     /**
      * Return the {@link Runnable} which is ready to be executed with the given {@code nanoTime}.
      * You should use {@link #nanoTime()} to retrieve the correct {@code nanoTime}.
+     *
+     * This method MUST be called only when {@link #inEventLoop()} is {@code true}.
      */
-    protected final Runnable pollScheduledTask(long nanoTime) {
+    protected final RunnableScheduledFuture<?> pollScheduledTask(long nanoTime) {
         assert inEventLoop();
 
-        Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
-        ScheduledFutureTask<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
+        Queue<RunnableScheduledFutureNode<?>> scheduledTaskQueue = this.scheduledTaskQueue;
+        RunnableScheduledFutureNode<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
         if (scheduledTask == null) {
             return null;
         }
@@ -116,30 +132,39 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     /**
      * Return the nanoseconds when the next scheduled task is ready to be run or {@code -1} if no task is scheduled.
+     *
+     * This method MUST be called only when {@link #inEventLoop()} is {@code true}.
      */
     protected final long nextScheduledTaskNano() {
-        Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
-        ScheduledFutureTask<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
+        Queue<RunnableScheduledFutureNode<?>> scheduledTaskQueue = this.scheduledTaskQueue;
+        RunnableScheduledFutureNode<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
         if (scheduledTask == null) {
             return -1;
         }
         return Math.max(0, scheduledTask.deadlineNanos() - nanoTime());
     }
 
-    final ScheduledFutureTask<?> peekScheduledTask() {
-        Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
+    final RunnableScheduledFuture<?> peekScheduledTask() {
+        Queue<RunnableScheduledFutureNode<?>> scheduledTaskQueue = this.scheduledTaskQueue;
         if (scheduledTaskQueue == null) {
             return null;
         }
-        return scheduledTaskQueue.peek();
+        RunnableScheduledFutureNode<?> node = scheduledTaskQueue.peek();
+        if (node == null) {
+            return null;
+        }
+        return node;
     }
 
     /**
      * Returns {@code true} if a scheduled task is ready for processing.
+     *
+     * This method MUST be called only when {@link #inEventLoop()} is {@code true}.
      */
     protected final boolean hasScheduledTasks() {
-        Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
-        ScheduledFutureTask<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
+        assert inEventLoop();
+        Queue<RunnableScheduledFutureNode<?>> scheduledTaskQueue = this.scheduledTaskQueue;
+        RunnableScheduledFutureNode<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
         return scheduledTask != null && scheduledTask.deadlineNanos() <= nanoTime();
     }
 
@@ -150,10 +175,9 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         if (delay < 0) {
             delay = 0;
         }
-        validateScheduled0(delay, unit);
-
-        return schedule(new ScheduledFutureTask<Void>(
-                this, command, null, ScheduledFutureTask.deadlineNanos(unit.toNanos(delay))));
+        RunnableScheduledFuture<?> task = newScheduledTaskFor(Executors.callable(command),
+                deadlineNanos(unit.toNanos(delay)), 0);
+        return schedule(task);
     }
 
     @Override
@@ -163,10 +187,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         if (delay < 0) {
             delay = 0;
         }
-        validateScheduled0(delay, unit);
-
-        return schedule(new ScheduledFutureTask<>(
-                this, callable, ScheduledFutureTask.deadlineNanos(unit.toNanos(delay))));
+        RunnableScheduledFuture<V> task = newScheduledTaskFor(callable, deadlineNanos(unit.toNanos(delay)), 0);
+        return schedule(task);
     }
 
     @Override
@@ -181,12 +203,10 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
             throw new IllegalArgumentException(
                     String.format("period: %d (expected: > 0)", period));
         }
-        validateScheduled0(initialDelay, unit);
-        validateScheduled0(period, unit);
 
-        return schedule(new ScheduledFutureTask<>(
-                this, Executors.<Void>callable(command, null),
-                ScheduledFutureTask.deadlineNanos(unit.toNanos(initialDelay)), unit.toNanos(period)));
+        RunnableScheduledFuture<?> task = newScheduledTaskFor(Executors.<Void>callable(command, null),
+                deadlineNanos(unit.toNanos(initialDelay)), unit.toNanos(period));
+        return schedule(task);
     }
 
     @Override
@@ -202,45 +222,39 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
                     String.format("delay: %d (expected: > 0)", delay));
         }
 
-        validateScheduled0(initialDelay, unit);
-        validateScheduled0(delay, unit);
-
-        return schedule(new ScheduledFutureTask<>(
-                this, Executors.<Void>callable(command, null),
-                ScheduledFutureTask.deadlineNanos(unit.toNanos(initialDelay)), -unit.toNanos(delay)));
-    }
-
-    @SuppressWarnings("deprecation")
-    private void validateScheduled0(long amount, TimeUnit unit) {
-        validateScheduled(amount, unit);
+        RunnableScheduledFuture<?> task = newScheduledTaskFor(Executors.<Void>callable(command, null),
+                deadlineNanos(unit.toNanos(initialDelay)), -unit.toNanos(delay));
+        return schedule(task);
     }
 
     /**
-     * Sub-classes may override this to restrict the maximal amount of time someone can use to schedule a task.
-     *
-     * @deprecated will be removed in the future.
+     * Add the {@link RunnableScheduledFuture} for execution.
      */
-    @Deprecated
-    protected void validateScheduled(long amount, TimeUnit unit) {
-        // NOOP
-    }
-
-    <V> ScheduledFuture<V> schedule(final ScheduledFutureTask<V> task) {
+    protected final <V> ScheduledFuture<V> schedule(final RunnableScheduledFuture<V> task) {
         if (inEventLoop()) {
-            scheduledTaskQueue().add(task);
+            add0(task);
         } else {
             execute(new Runnable() {
                 @Override
                 public void run() {
-                    scheduledTaskQueue().add(task);
+                    add0(task);
                 }
             });
         }
-
         return task;
     }
 
-    final void removeScheduled(final ScheduledFutureTask<?> task) {
+    private <V> void add0(RunnableScheduledFuture<V> task) {
+        final RunnableScheduledFutureNode node;
+        if (task instanceof RunnableScheduledFutureNode) {
+            node = (RunnableScheduledFutureNode) task;
+        } else {
+            node = new DefaultRunnableScheduledFutureNode<V>(task);
+        }
+        scheduledTaskQueue().add(node);
+    }
+
+    final void removeScheduled(final RunnableScheduledFutureNode<?> task) {
         if (inEventLoop()) {
             scheduledTaskQueue().removeTyped(task);
         } else {
@@ -250,6 +264,199 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
                     removeScheduled(task);
                 }
             });
+        }
+    }
+
+    /**
+     * Returns a new {@link RunnableFuture} build on top of the given {@link Promise} and {@link Callable}.
+     *
+     * This can be used if you want to override {@link #newTaskFor(Callable)} and return a different
+     * {@link RunnableFuture}.
+     */
+    protected static <V> RunnableScheduledFuture<V> newRunnableScheduledFuture(
+            AbstractScheduledEventExecutor executor, Promise<V> promise, Callable<V> task,
+            long deadlineNanos, long periodNanos) {
+        return new RunnableScheduledFutureAdapter<V>(executor, promise, task, deadlineNanos, periodNanos);
+    }
+
+    /**
+     * Returns a {@code RunnableScheduledFuture} for the given values.
+     */
+    protected <V> RunnableScheduledFuture<V> newScheduledTaskFor(
+            Callable<V> callable, long deadlineNanos, long period) {
+        return newRunnableScheduledFuture(this, this.newPromise(), callable, deadlineNanos, period);
+    }
+
+    interface RunnableScheduledFutureNode<V> extends PriorityQueueNode, RunnableScheduledFuture<V> { }
+
+    private static final class DefaultRunnableScheduledFutureNode<V> implements RunnableScheduledFutureNode<V> {
+        private final RunnableScheduledFuture<V> future;
+        private int queueIndex = INDEX_NOT_IN_QUEUE;
+
+        DefaultRunnableScheduledFutureNode(RunnableScheduledFuture<V> future) {
+            this.future = future;
+        }
+
+        @Override
+        public long deadlineNanos() {
+            return future.deadlineNanos();
+        }
+
+        @Override
+        public long delayNanos() {
+            return future.delayNanos();
+        }
+
+        @Override
+        public long delayNanos(long currentTimeNanos) {
+            return future.delayNanos(currentTimeNanos);
+        }
+
+        @Override
+        public RunnableScheduledFuture<V> addListener(
+                GenericFutureListener<? extends Future<? super V>> listener) {
+            future.addListener(listener);
+            return this;
+        }
+
+        @Override
+        public RunnableScheduledFuture<V> addListeners(
+                GenericFutureListener<? extends Future<? super V>>... listeners) {
+            future.addListeners(listeners);
+            return this;
+        }
+
+        @Override
+        public RunnableScheduledFuture<V> removeListener(
+                GenericFutureListener<? extends Future<? super V>> listener) {
+            future.removeListener(listener);
+            return this;
+        }
+
+        @Override
+        public RunnableScheduledFuture<V> removeListeners(
+                GenericFutureListener<? extends Future<? super V>>... listeners) {
+            future.removeListeners(listeners);
+            return this;
+        }
+
+        @Override
+        public boolean isPeriodic() {
+            return future.isPeriodic();
+        }
+
+        @Override
+        public int priorityQueueIndex(DefaultPriorityQueue<?> queue) {
+            return queueIndex;
+        }
+
+        @Override
+        public void priorityQueueIndex(DefaultPriorityQueue<?> queue, int i) {
+            queueIndex = i;
+        }
+
+        @Override
+        public void run() {
+            future.run();
+        }
+
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            return future.cancel(mayInterruptIfRunning);
+        }
+
+        @Override
+        public boolean isCancelled() {
+            return future.isCancelled();
+        }
+
+        @Override
+        public boolean isDone() {
+            return future.isDone();
+        }
+
+        @Override
+        public V get() throws InterruptedException, ExecutionException {
+            return future.get();
+        }
+
+        @Override
+        public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+            return future.get(timeout, unit);
+        }
+
+        @Override
+        public long getDelay(TimeUnit unit) {
+            return future.getDelay(unit);
+        }
+
+        @Override
+        public int compareTo(Delayed o) {
+            return future.compareTo(o);
+        }
+
+        @Override
+        public RunnableFuture<V> sync() throws InterruptedException {
+            future.sync();
+            return this;
+        }
+
+        @Override
+        public RunnableFuture<V> syncUninterruptibly() {
+            future.syncUninterruptibly();
+            return this;
+        }
+
+        @Override
+        public RunnableFuture<V> await() throws InterruptedException {
+            future.await();
+            return this;
+        }
+
+        @Override
+        public RunnableFuture<V> awaitUninterruptibly() {
+            future.awaitUninterruptibly();
+            return this;
+        }
+
+        @Override
+        public boolean isSuccess() {
+            return future.isSuccess();
+        }
+
+        @Override
+        public boolean isCancellable() {
+            return future.isCancellable();
+        }
+
+        @Override
+        public Throwable cause() {
+            return future.cause();
+        }
+
+        @Override
+        public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
+            return future.await(timeout, unit);
+        }
+
+        @Override
+        public boolean await(long timeoutMillis) throws InterruptedException {
+            return future.await(timeoutMillis);
+        }
+
+        @Override
+        public boolean awaitUninterruptibly(long timeout, TimeUnit unit) {
+            return future.awaitUninterruptibly(timeout, unit);
+        }
+
+        @Override
+        public boolean awaitUninterruptibly(long timeoutMillis) {
+            return future.awaitUninterruptibly(timeoutMillis);
+        }
+
+        @Override
+        public V getNow() {
+            return future.getNow();
         }
     }
 }

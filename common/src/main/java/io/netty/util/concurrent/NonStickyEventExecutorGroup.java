@@ -224,7 +224,6 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
         private final int maxTaskExecutePerRun;
 
         NonStickyOrderedEventExecutor(EventExecutor executor, int maxTaskExecutePerRun) {
-            super(executor);
             this.executor = executor;
             this.maxTaskExecutePerRun = maxTaskExecutePerRun;
         }
@@ -288,11 +287,6 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
         }
 
         @Override
-        public boolean inEventLoop() {
-            return false;
-        }
-
-        @Override
         public boolean isShuttingDown() {
             return executor.isShutdown();
         }
@@ -343,6 +337,29 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
                     PlatformDependent.throwException(e);
                 }
             }
+        }
+
+        @Override
+        public ScheduledFuture<?> schedule(Runnable command, long delay,
+                                           TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleAtFixedRate(
+                Runnable command, long initialDelay, long period, TimeUnit unit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleWithFixedDelay(
+                Runnable command, long initialDelay, long delay, TimeUnit unit) {
+            throw new UnsupportedOperationException();
         }
     }
 }
