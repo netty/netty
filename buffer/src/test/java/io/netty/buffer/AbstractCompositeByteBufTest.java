@@ -136,6 +136,41 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     }
 
     @Test
+    public void testToComponentIndex() {
+        CompositeByteBuf buf = (CompositeByteBuf) wrappedBuffer(new byte[]{1, 2, 3, 4, 5},
+                new byte[]{4, 5, 6, 7, 8, 9, 26}, new byte[]{10, 9, 8, 7, 6, 5, 33});
+
+        // spot checks
+        assertEquals(0, buf.toComponentIndex(4));
+        assertEquals(1, buf.toComponentIndex(5));
+        assertEquals(2, buf.toComponentIndex(15));
+
+        //Loop through each byte
+
+        byte index = 0;
+
+        while (index < buf.capacity()) {
+            int cindex = buf.toComponentIndex(index++);
+            assertTrue(cindex >= 0 && cindex < buf.numComponents());
+        }
+
+        buf.release();
+    }
+
+    @Test
+    public void testToByteIndex() {
+        CompositeByteBuf buf = (CompositeByteBuf) wrappedBuffer(new byte[]{1, 2, 3, 4, 5},
+                new byte[]{4, 5, 6, 7, 8, 9, 26}, new byte[]{10, 9, 8, 7, 6, 5, 33});
+
+        // spot checks
+        assertEquals(0, buf.toByteIndex(0));
+        assertEquals(5, buf.toByteIndex(1));
+        assertEquals(12, buf.toByteIndex(2));
+
+        buf.release();
+    }
+
+    @Test
     public void testDiscardReadBytes3() {
         ByteBuf a, b;
         a = wrappedBuffer(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).order(order);
@@ -744,6 +779,20 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertEquals(2, buf.numComponents());
         buf.removeComponent(1);
         assertEquals(1, buf.numComponents());
+        buf.release();
+    }
+
+    @Test
+    public void testRemoveComponents() {
+        CompositeByteBuf buf = compositeBuffer();
+        for (int i = 0; i < 10; i++) {
+            buf.addComponent(wrappedBuffer(new byte[]{1, 2}));
+        }
+        assertEquals(10, buf.numComponents());
+        assertEquals(20, buf.capacity());
+        buf.removeComponents(4, 3);
+        assertEquals(7, buf.numComponents());
+        assertEquals(14, buf.capacity());
         buf.release();
     }
 
