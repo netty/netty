@@ -614,12 +614,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
             if (executor.inEventLoop()) {
                 remove0();
             } else {
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        remove0();
-                    }
-                });
+                executor.execute(this::remove0);
             }
         }
 

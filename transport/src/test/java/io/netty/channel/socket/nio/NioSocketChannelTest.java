@@ -132,12 +132,9 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                     // Trigger a gathering write by writing two buffers.
                     ctx.write(Unpooled.wrappedBuffer(new byte[] { 'a' }));
                     ChannelFuture f = ctx.write(Unpooled.wrappedBuffer(new byte[] { 'b' }));
-                    f.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            // This message must be flushed
-                            ctx.writeAndFlush(Unpooled.wrappedBuffer(new byte[]{'c'}));
-                        }
+                    f.addListener((ChannelFutureListener) future -> {
+                        // This message must be flushed
+                        ctx.writeAndFlush(Unpooled.wrappedBuffer(new byte[]{'c'}));
                     });
                     ctx.flush();
                 }
@@ -197,12 +194,9 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                              // As soon as the channel becomes active re-register it to another
                              // EventLoop. After this is done we should still receive the data that
                              // was written to the channel.
-                             ctx.deregister().addListener(new ChannelFutureListener() {
-                                 @Override
-                                 public void operationComplete(ChannelFuture cf) {
-                                     Channel channel = cf.channel();
-                                     channel.register();
-                                 }
+                             ctx.deregister().addListener((ChannelFutureListener) cf -> {
+                                 Channel channel = cf.channel();
+                                 channel.register();
                              });
                          }
                      });

@@ -146,11 +146,8 @@ public class ChannelInitializerTest {
         try {
             // Execute some task on the EventLoop and wait until its done to be sure all handlers are added to the
             // pipeline.
-            channel.eventLoop().submit(new Runnable() {
-                @Override
-                public void run() {
-                    // NOOP
-                }
+            channel.eventLoop().submit(() -> {
+                // NOOP
             }).syncUninterruptibly();
             Iterator<Map.Entry<String, ChannelHandler>> handlers = channel.pipeline().iterator();
             assertSame(handler1, handlers.next().getValue());
@@ -186,11 +183,8 @@ public class ChannelInitializerTest {
         try {
             // Execute some task on the EventLoop and wait until its done to be sure all handlers are added to the
             // pipeline.
-            channel.eventLoop().submit(new Runnable() {
-                @Override
-                public void run() {
-                    // NOOP
-                }
+            channel.eventLoop().submit(() -> {
+                // NOOP
             }).syncUninterruptibly();
             assertEquals(1, initChannelCalled.get());
             assertEquals(2, registeredCalled.get());

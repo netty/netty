@@ -214,13 +214,10 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                     pipeline.addLast(handler);
                 }
 
-                ch.eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        pipeline.addLast(new ServerBootstrapAcceptor(
-                                ch, currentChildHandler, currentChildOptions, currentChildAttrs));
-                        promise.setSuccess();
-                    }
+                ch.eventLoop().execute(() -> {
+                    pipeline.addLast(new ServerBootstrapAcceptor(
+                            ch, currentChildHandler, currentChildOptions, currentChildAttrs));
+                    promise.setSuccess();
                 });
             }
         });
@@ -277,12 +274,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             // not be able to load the class because of the file limit it already reached.
             //
             // See https://github.com/netty/netty/issues/1328
-            enableAutoReadTask = new Runnable() {
-                @Override
-                public void run() {
-                    channel.config().setAutoRead(true);
-                }
-            };
+            enableAutoReadTask = () -> channel.config().setAutoRead(true);
         }
 
         @Override
@@ -295,12 +287,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 initChild(child);
             } else {
                 try {
-                    childEventLoop.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            initChild(child);
-                        }
-                    });
+                    childEventLoop.execute(() -> initChild(child));
                 } catch (Throwable cause) {
                     forceClose(child, cause);
                 }
@@ -319,12 +306,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                     child.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
                 }
 
-                child.register().addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            forceClose(child, future.cause());
-                        }
+                child.register().addListener((ChannelFutureListener) future -> {
+                    if (!future.isSuccess()) {
+                        forceClose(child, future.cause());
                     }
                 });
             } catch (Throwable t) {

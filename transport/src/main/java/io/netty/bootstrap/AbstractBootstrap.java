@@ -244,17 +244,14 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
             final ChannelPromise promise = channel.newPromise();
-            regFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    Throwable cause = future.cause();
-                    if (cause != null) {
-                        // Registration on the EventLoop failed so fail the ChannelPromise directly to not cause an
-                        // IllegalStateException once we try to access the EventLoop of the Channel.
-                        promise.setFailure(cause);
-                    } else {
-                        doBind0(regFuture, channel, localAddress, promise);
-                    }
+            regFuture.addListener((ChannelFutureListener) future -> {
+                Throwable cause = future.cause();
+                if (cause != null) {
+                    // Registration on the EventLoop failed so fail the ChannelPromise directly to not cause an
+                    // IllegalStateException once we try to access the EventLoop of the Channel.
+                    promise.setFailure(cause);
+                } else {
+                    doBind0(regFuture, channel, localAddress, promise);
                 }
             });
             return promise;
@@ -271,22 +268,14 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         }
 
         final ChannelPromise promise = channel.newPromise();
-        loop.execute(new Runnable() {
-            @Override
-            public void run() {
-                init(channel).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (future.isSuccess()) {
-                            channel.register(promise);
-                        } else {
-                            channel.unsafe().closeForcibly();
-                            promise.setFailure(future.cause());
-                        }
-                    }
-                });
+        loop.execute(() -> init(channel).addListener((ChannelFutureListener) future -> {
+            if (future.isSuccess()) {
+                channel.register(promise);
+            } else {
+                channel.unsafe().closeForcibly();
+                promise.setFailure(future.cause());
             }
-        });
+        }));
 
         return promise;
     }
@@ -301,14 +290,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
 
         // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                if (regFuture.isSuccess()) {
-                    channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-                } else {
-                    promise.setFailure(regFuture.cause());
-                }
+        channel.eventLoop().execute(() -> {
+            if (regFuture.isSuccess()) {
+                channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+            } else {
+                promise.setFailure(regFuture.cause());
             }
         });
     }

@@ -368,17 +368,14 @@ public class DefaultChannelPipelineTest {
 
             // Add handler.
             p.addFirst(handler.name, handler);
-            self.eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    // Validate handler life-cycle methods called.
-                    handler.validate(true, false);
+            self.eventLoop().execute(() -> {
+                // Validate handler life-cycle methods called.
+                handler.validate(true, false);
 
-                    // Store handler into the list.
-                    handlers.add(handler);
+                // Store handler into the list.
+                handlers.add(handler);
 
-                    addLatch.countDown();
-                }
+                addLatch.countDown();
             });
         }
         addLatch.await();
@@ -391,13 +388,10 @@ public class DefaultChannelPipelineTest {
         for (final LifeCycleAwareTestHandler handler : handlers) {
             assertSame(handler, p.remove(handler.name));
 
-            self.eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    // Validate handler life-cycle methods called.
-                    handler.validate(true, true);
-                    removeLatch.countDown();
-                }
+            self.eventLoop().execute(() -> {
+                // Validate handler life-cycle methods called.
+                handler.validate(true, true);
+                removeLatch.countDown();
             });
         }
         removeLatch.await();
@@ -410,17 +404,14 @@ public class DefaultChannelPipelineTest {
 
         setUp(handler1, handler2);
 
-        self.eventLoop().submit(new Runnable() {
-            @Override
-            public void run() {
-                ChannelPipeline p = self.pipeline();
-                handler1.inboundBuffer.add(8);
-                assertEquals(8, handler1.inboundBuffer.peek());
-                assertTrue(handler2.inboundBuffer.isEmpty());
-                p.remove(handler1);
-                assertEquals(1, handler2.inboundBuffer.size());
-                assertEquals(8, handler2.inboundBuffer.peek());
-            }
+        self.eventLoop().submit(() -> {
+            ChannelPipeline p = self.pipeline();
+            handler1.inboundBuffer.add(8);
+            assertEquals(8, handler1.inboundBuffer.peek());
+            assertTrue(handler2.inboundBuffer.isEmpty());
+            p.remove(handler1);
+            assertEquals(1, handler2.inboundBuffer.size());
+            assertEquals(8, handler2.inboundBuffer.peek());
         }).sync();
     }
 
@@ -431,17 +422,14 @@ public class DefaultChannelPipelineTest {
 
         setUp(handler1, handler2);
 
-        self.eventLoop().submit(new Runnable() {
-            @Override
-            public void run() {
-                ChannelPipeline p = self.pipeline();
-                handler2.outboundBuffer.add(8);
-                assertEquals(8, handler2.outboundBuffer.peek());
-                assertTrue(handler1.outboundBuffer.isEmpty());
-                p.remove(handler2);
-                assertEquals(1, handler1.outboundBuffer.size());
-                assertEquals(8, handler1.outboundBuffer.peek());
-            }
+        self.eventLoop().submit(() -> {
+            ChannelPipeline p = self.pipeline();
+            handler2.outboundBuffer.add(8);
+            assertEquals(8, handler2.outboundBuffer.peek());
+            assertTrue(handler1.outboundBuffer.isEmpty());
+            p.remove(handler2);
+            assertEquals(1, handler1.outboundBuffer.size());
+            assertEquals(8, handler1.outboundBuffer.peek());
         }).sync();
     }
 
@@ -452,16 +440,13 @@ public class DefaultChannelPipelineTest {
 
         setUp(handler1);
 
-        self.eventLoop().submit(new Runnable() {
-            @Override
-            public void run() {
-                ChannelPipeline p = self.pipeline();
-                handler1.outboundBuffer.add(8);
-                assertEquals(8, handler1.outboundBuffer.peek());
-                assertTrue(handler2.outboundBuffer.isEmpty());
-                p.replace(handler1, "handler2", handler2);
-                assertEquals(8, handler2.outboundBuffer.peek());
-            }
+        self.eventLoop().submit(() -> {
+            ChannelPipeline p = self.pipeline();
+            handler1.outboundBuffer.add(8);
+            assertEquals(8, handler1.outboundBuffer.peek());
+            assertTrue(handler2.outboundBuffer.isEmpty());
+            p.replace(handler1, "handler2", handler2);
+            assertEquals(8, handler2.outboundBuffer.peek());
         }).sync();
     }
 
@@ -472,22 +457,19 @@ public class DefaultChannelPipelineTest {
 
         setUp(handler1);
 
-        self.eventLoop().submit(new Runnable() {
-            @Override
-            public void run() {
-                ChannelPipeline p = self.pipeline();
-                handler1.inboundBuffer.add(8);
-                handler1.outboundBuffer.add(8);
+        self.eventLoop().submit(() -> {
+            ChannelPipeline p = self.pipeline();
+            handler1.inboundBuffer.add(8);
+            handler1.outboundBuffer.add(8);
 
-                assertEquals(8, handler1.inboundBuffer.peek());
-                assertEquals(8, handler1.outboundBuffer.peek());
-                assertTrue(handler2.inboundBuffer.isEmpty());
-                assertTrue(handler2.outboundBuffer.isEmpty());
+            assertEquals(8, handler1.inboundBuffer.peek());
+            assertEquals(8, handler1.outboundBuffer.peek());
+            assertTrue(handler2.inboundBuffer.isEmpty());
+            assertTrue(handler2.outboundBuffer.isEmpty());
 
-                p.replace(handler1, "handler2", handler2);
-                assertEquals(8, handler2.outboundBuffer.peek());
-                assertEquals(8, handler2.inboundBuffer.peek());
-            }
+            p.replace(handler1, "handler2", handler2);
+            assertEquals(8, handler2.outboundBuffer.peek());
+            assertEquals(8, handler2.inboundBuffer.peek());
         }).sync();
     }
 
@@ -499,23 +481,20 @@ public class DefaultChannelPipelineTest {
 
         setUp(handler1, handler2, handler3);
 
-        self.eventLoop().submit(new Runnable() {
-            @Override
-            public void run() {
-                ChannelPipeline p = self.pipeline();
-                handler2.inboundBuffer.add(8);
-                handler2.outboundBuffer.add(8);
+        self.eventLoop().submit(() -> {
+            ChannelPipeline p = self.pipeline();
+            handler2.inboundBuffer.add(8);
+            handler2.outboundBuffer.add(8);
 
-                assertEquals(8, handler2.inboundBuffer.peek());
-                assertEquals(8, handler2.outboundBuffer.peek());
+            assertEquals(8, handler2.inboundBuffer.peek());
+            assertEquals(8, handler2.outboundBuffer.peek());
 
-                assertEquals(0, handler1.outboundBuffer.size());
-                assertEquals(0, handler3.inboundBuffer.size());
+            assertEquals(0, handler1.outboundBuffer.size());
+            assertEquals(0, handler3.inboundBuffer.size());
 
-                p.remove(handler2);
-                assertEquals(8, handler3.inboundBuffer.peek());
-                assertEquals(8, handler1.outboundBuffer.peek());
-            }
+            p.remove(handler2);
+            assertEquals(8, handler3.inboundBuffer.peek());
+            assertEquals(8, handler1.outboundBuffer.peek());
         }).sync();
     }
 
@@ -870,12 +849,7 @@ public class DefaultChannelPipelineTest {
                 @Override
                 public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
                     // Execute this later so we are sure the exception is handled first.
-                    ctx.executor().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            latch.countDown();
-                        }
-                    });
+                    ctx.executor().execute(latch::countDown);
                     throw exceptionRemoved;
                 }
             });
@@ -986,34 +960,31 @@ public class DefaultChannelPipelineTest {
         try {
             final Object event = new Object();
             final Promise<Object> promise = ImmediateEventExecutor.INSTANCE.newPromise();
-            pipeline1.channel().register().addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    ChannelPipeline pipeline = future.channel().pipeline();
-                    final AtomicBoolean handlerAddedCalled = new AtomicBoolean();
-                    pipeline.addLast(new ChannelInboundHandlerAdapter() {
-                        @Override
-                        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-                            handlerAddedCalled.set(true);
-                        }
-
-                        @Override
-                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-                            promise.setSuccess(event);
-                        }
-
-                        @Override
-                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                            promise.setFailure(cause);
-                        }
-                    });
-                    if (!handlerAddedCalled.get()) {
-                        promise.setFailure(new AssertionError("handlerAdded(...) should have been called"));
-                        return;
+            pipeline1.channel().register().addListener((ChannelFutureListener) future -> {
+                ChannelPipeline pipeline = future.channel().pipeline();
+                final AtomicBoolean handlerAddedCalled = new AtomicBoolean();
+                pipeline.addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                        handlerAddedCalled.set(true);
                     }
-                    // This event must be captured by the added handler.
-                    pipeline.fireUserEventTriggered(event);
+
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        promise.setSuccess(event);
+                    }
+
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        promise.setFailure(cause);
+                    }
+                });
+                if (!handlerAddedCalled.get()) {
+                    promise.setFailure(new AssertionError("handlerAdded(...) should have been called"));
+                    return;
                 }
+                // This event must be captured by the added handler.
+                pipeline.fireUserEventTriggered(event);
             });
             assertSame(event, promise.syncUninterruptibly().getNow());
         } finally {
@@ -1184,11 +1155,8 @@ public class DefaultChannelPipelineTest {
                 pipeline.channel().closeFuture().syncUninterruptibly();
 
                 // Schedule something on the EventLoop to ensure all other scheduled tasks had a chance to complete.
-                pipeline.channel().eventLoop().submit(new Runnable() {
-                    @Override
-                    public void run() {
-                        // NOOP
-                    }
+                pipeline.channel().eventLoop().submit(() -> {
+                    // NOOP
                 }).syncUninterruptibly();
                 Error error = errorRef.get();
                 if (error != null) {
@@ -1646,33 +1614,30 @@ public class DefaultChannelPipelineTest {
         final Object writeObject = new Object();
         final CountDownLatch doneLatch = new CountDownLatch(1);
 
-        Runnable r = new Runnable() {
-            @Override
-            public void run() {
-                pipeline.addLast(new ChannelInboundHandlerAdapter() {
-                    @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                        if (evt == userEvent) {
-                            ctx.write(writeObject);
-                        }
-                        ctx.fireUserEventTriggered(evt);
+        Runnable r = () -> {
+            pipeline.addLast(new ChannelInboundHandlerAdapter() {
+                @Override
+                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                    if (evt == userEvent) {
+                        ctx.write(writeObject);
                     }
-                });
-                pipeline.addFirst(new ChannelDuplexHandler() {
-                    @Override
-                    public void handlerAdded(ChannelHandlerContext ctx) {
-                        ctx.fireUserEventTriggered(userEvent);
-                    }
+                    ctx.fireUserEventTriggered(evt);
+                }
+            });
+            pipeline.addFirst(new ChannelDuplexHandler() {
+                @Override
+                public void handlerAdded(ChannelHandlerContext ctx) {
+                    ctx.fireUserEventTriggered(userEvent);
+                }
 
-                    @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-                        if (msg == writeObject) {
-                            doneLatch.countDown();
-                        }
-                        ctx.write(msg, promise);
+                @Override
+                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                    if (msg == writeObject) {
+                        doneLatch.countDown();
                     }
-                });
-            }
+                    ctx.write(msg, promise);
+                }
+            });
         };
 
         if (executeInEventLoop) {

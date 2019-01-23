@@ -67,12 +67,7 @@ public final class NioHandler implements IoHandler {
     private static final int MIN_PREMATURE_SELECTOR_RETURNS = 3;
     private static final int SELECTOR_AUTO_REBUILD_THRESHOLD;
 
-    private final IntSupplier selectNowSupplier = new IntSupplier() {
-        @Override
-        public int get() throws Exception {
-            return selectNow();
-        }
-    };
+    private final IntSupplier selectNowSupplier = this::selectNow;
 
     // Workaround for JDK NIO bug.
     //
@@ -84,12 +79,9 @@ public final class NioHandler implements IoHandler {
         final String bugLevel = SystemPropertyUtil.get(key);
         if (bugLevel == null) {
             try {
-                AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                    @Override
-                    public Void run() {
-                        System.setProperty(key, "");
-                        return null;
-                    }
+                AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                    System.setProperty(key, "");
+                    return null;
                 });
             } catch (final SecurityException e) {
                 logger.debug("Unable to get/set System Property: " + key, e);
@@ -147,12 +139,7 @@ public final class NioHandler implements IoHandler {
      * Returns a new {@link IoHandlerFactory} that creates {@link NioHandler} instances.
      */
     public static IoHandlerFactory newFactory() {
-        return new IoHandlerFactory() {
-            @Override
-            public IoHandler newHandler() {
-                return new NioHandler();
-            }
-        };
+        return NioHandler::new;
     }
 
     /**
@@ -162,12 +149,7 @@ public final class NioHandler implements IoHandler {
                                               final SelectStrategyFactory selectStrategyFactory) {
         ObjectUtil.checkNotNull(selectorProvider, "selectorProvider");
         ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
-        return new IoHandlerFactory() {
-            @Override
-            public IoHandler newHandler() {
-                return new NioHandler(selectorProvider, selectStrategyFactory.newSelectStrategy());
-            }
-        };
+        return () -> new NioHandler(selectorProvider, selectStrategyFactory.newSelectStrategy());
     }
 
     private static final class SelectorTuple {
@@ -197,17 +179,14 @@ public final class NioHandler implements IoHandler {
             return new SelectorTuple(unwrappedSelector);
         }
 
-        Object maybeSelectorImplClass = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-            @Override
-            public Object run() {
-                try {
-                    return Class.forName(
-                            "sun.nio.ch.SelectorImpl",
-                            false,
-                            PlatformDependent.getSystemClassLoader());
-                } catch (Throwable cause) {
-                    return cause;
-                }
+        Object maybeSelectorImplClass = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+            try {
+                return Class.forName(
+                        "sun.nio.ch.SelectorImpl",
+                        false,
+                        PlatformDependent.getSystemClassLoader());
+            } catch (Throwable cause) {
+                return cause;
             }
         });
 
@@ -224,45 +203,42 @@ public final class NioHandler implements IoHandler {
         final Class<?> selectorImplClass = (Class<?>) maybeSelectorImplClass;
         final SelectedSelectionKeySet selectedKeySet = new SelectedSelectionKeySet();
 
-        Object maybeException = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-            @Override
-            public Object run() {
-                try {
-                    Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
-                    Field publicSelectedKeysField = selectorImplClass.getDeclaredField("publicSelectedKeys");
+        Object maybeException = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+            try {
+                Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
+                Field publicSelectedKeysField = selectorImplClass.getDeclaredField("publicSelectedKeys");
 
-                    if (PlatformDependent.javaVersion() >= 9 && PlatformDependent.hasUnsafe()) {
-                        // Let us try to use sun.misc.Unsafe to replace the SelectionKeySet.
-                        // This allows us to also do this in Java9+ without any extra flags.
-                        long selectedKeysFieldOffset = PlatformDependent.objectFieldOffset(selectedKeysField);
-                        long publicSelectedKeysFieldOffset =
-                                PlatformDependent.objectFieldOffset(publicSelectedKeysField);
+                if (PlatformDependent.javaVersion() >= 9 && PlatformDependent.hasUnsafe()) {
+                    // Let us try to use sun.misc.Unsafe to replace the SelectionKeySet.
+                    // This allows us to also do this in Java9+ without any extra flags.
+                    long selectedKeysFieldOffset = PlatformDependent.objectFieldOffset(selectedKeysField);
+                    long publicSelectedKeysFieldOffset =
+                            PlatformDependent.objectFieldOffset(publicSelectedKeysField);
 
-                        if (selectedKeysFieldOffset != -1 && publicSelectedKeysFieldOffset != -1) {
-                            PlatformDependent.putObject(
-                                    unwrappedSelector, selectedKeysFieldOffset, selectedKeySet);
-                            PlatformDependent.putObject(
-                                    unwrappedSelector, publicSelectedKeysFieldOffset, selectedKeySet);
-                            return null;
-                        }
-                        // We could not retrieve the offset, lets try reflection as last-resort.
+                    if (selectedKeysFieldOffset != -1 && publicSelectedKeysFieldOffset != -1) {
+                        PlatformDependent.putObject(
+                                unwrappedSelector, selectedKeysFieldOffset, selectedKeySet);
+                        PlatformDependent.putObject(
+                                unwrappedSelector, publicSelectedKeysFieldOffset, selectedKeySet);
+                        return null;
                     }
-
-                    Throwable cause = ReflectionUtil.trySetAccessible(selectedKeysField, true);
-                    if (cause != null) {
-                        return cause;
-                    }
-                    cause = ReflectionUtil.trySetAccessible(publicSelectedKeysField, true);
-                    if (cause != null) {
-                        return cause;
-                    }
-
-                    selectedKeysField.set(unwrappedSelector, selectedKeySet);
-                    publicSelectedKeysField.set(unwrappedSelector, selectedKeySet);
-                    return null;
-                } catch (NoSuchFieldException | IllegalAccessException e) {
-                    return e;
+                    // We could not retrieve the offset, lets try reflection as last-resort.
                 }
+
+                Throwable cause = ReflectionUtil.trySetAccessible(selectedKeysField, true);
+                if (cause != null) {
+                    return cause;
+                }
+                cause = ReflectionUtil.trySetAccessible(publicSelectedKeysField, true);
+                if (cause != null) {
+                    return cause;
+                }
+
+                selectedKeysField.set(unwrappedSelector, selectedKeySet);
+                publicSelectedKeysField.set(unwrappedSelector, selectedKeySet);
+                return null;
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+                return e;
             }
         });
 

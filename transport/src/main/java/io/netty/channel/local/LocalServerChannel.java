@@ -115,12 +115,7 @@ public class LocalServerChannel extends AbstractServerChannel {
         if (eventLoop().inEventLoop()) {
             serve0(child);
         } else {
-            eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    serve0(child);
-                }
-            });
+            eventLoop().execute(() -> serve0(child));
         }
         return child;
     }

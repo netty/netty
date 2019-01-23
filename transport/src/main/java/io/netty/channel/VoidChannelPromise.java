@@ -40,13 +40,10 @@ public final class VoidChannelPromise extends AbstractFuture<Void> implements Ch
         }
         this.channel = channel;
         if (fireException) {
-            fireExceptionListener = new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    Throwable cause = future.cause();
-                    if (cause != null) {
-                        fireException0(cause);
-                    }
+            fireExceptionListener = future -> {
+                Throwable cause = future.cause();
+                if (cause != null) {
+                    fireException0(cause);
                 }
             };
         } else {

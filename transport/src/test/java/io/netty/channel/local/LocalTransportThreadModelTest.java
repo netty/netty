@@ -266,12 +266,9 @@ public class LocalTransportThreadModelTest {
                 final int end = i + ELEMS_PER_ROUNDS;
                 i = end;
 
-                ch.eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        for (int j = start; j < end; j ++) {
-                            ch.pipeline().fireChannelRead(Integer.valueOf(j));
-                        }
+                ch.eventLoop().execute(() -> {
+                    for (int j = start; j < end; j ++) {
+                        ch.pipeline().fireChannelRead(Integer.valueOf(j));
                     }
                 });
             }
@@ -304,14 +301,11 @@ public class LocalTransportThreadModelTest {
                 final int end = i + ELEMS_PER_ROUNDS;
                 i = end;
 
-                ch.pipeline().context(h6).executor().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        for (int j = start; j < end; j ++) {
-                            ch.write(Integer.valueOf(j));
-                        }
-                        ch.flush();
+                ch.pipeline().context(h6).executor().execute(() -> {
+                    for (int j = start; j < end; j ++) {
+                        ch.write(Integer.valueOf(j));
                     }
+                    ch.flush();
                 });
             }
 

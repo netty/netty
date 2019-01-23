@@ -47,13 +47,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
             StringUtil.simpleClassName(FileRegion.class) + ')';
 
-    private final Runnable flushTask = new Runnable() {
-        @Override
-        public void run() {
-            // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
-            // meantime.
-            ((AbstractNioUnsafe) unsafe()).flush0();
-        }
+    private final Runnable flushTask = () -> {
+        // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
+        // meantime.
+        ((AbstractNioUnsafe) unsafe()).flush0();
     };
     private boolean inputClosedSeenErrorOnRead;
 

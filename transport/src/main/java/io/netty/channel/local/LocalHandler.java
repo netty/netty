@@ -38,12 +38,7 @@ public final class LocalHandler implements IoHandler {
      * Returns a new {@link IoHandlerFactory} that creates {@link LocalHandler} instances.
      */
     public static IoHandlerFactory newFactory() {
-        return new IoHandlerFactory() {
-            @Override
-            public IoHandler newHandler() {
-                return new LocalHandler();
-            }
-        };
+        return LocalHandler::new;
     }
 
     private static LocalChannelUnsafe cast(Channel channel) {

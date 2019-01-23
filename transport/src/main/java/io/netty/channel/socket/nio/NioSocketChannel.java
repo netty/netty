@@ -174,12 +174,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         if (loop.inEventLoop()) {
             ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
         } else {
-            loop.execute(new Runnable() {
-                @Override
-                public void run() {
-                    ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
-                }
-            });
+            loop.execute(() -> ((AbstractUnsafe) unsafe()).shutdownOutput(promise));
         }
         return promise;
     }
@@ -200,12 +195,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         if (loop.inEventLoop()) {
             shutdownInput0(promise);
         } else {
-            loop.execute(new Runnable() {
-                @Override
-                public void run() {
-                    shutdownInput0(promise);
-                }
-            });
+            loop.execute(() -> shutdownInput0(promise));
         }
         return promise;
     }
@@ -221,12 +211,8 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         if (shutdownOutputFuture.isDone()) {
             shutdownOutputDone(shutdownOutputFuture, promise);
         } else {
-            shutdownOutputFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(final ChannelFuture shutdownOutputFuture) throws Exception {
-                    shutdownOutputDone(shutdownOutputFuture, promise);
-                }
-            });
+            shutdownOutputFuture.addListener((ChannelFutureListener) shutdownOutputFuture1 ->
+                    shutdownOutputDone(shutdownOutputFuture1, promise));
         }
         return promise;
     }
@@ -236,12 +222,8 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         if (shutdownInputFuture.isDone()) {
             shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
         } else {
-            shutdownInputFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture shutdownInputFuture) throws Exception {
-                    shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
-                }
-            });
+            shutdownInputFuture.addListener((ChannelFutureListener) shutdownInputFuture1 ->
+                    shutdownDone(shutdownOutputFuture, shutdownInputFuture1, promise));
         }
     }
 

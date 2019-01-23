@@ -424,25 +424,19 @@ public class ChannelOutboundBufferTest {
 
         final CountDownLatch executeLatch = new CountDownLatch(1);
         final CountDownLatch runLatch = new CountDownLatch(1);
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    runLatch.countDown();
-                    executeLatch.await();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
+        executor.execute(() -> {
+            try {
+                runLatch.countDown();
+                executeLatch.await();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
         });
 
         runLatch.await();
 
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                // Will not be executed but ensure the pending count is 1.
-            }
+        executor.execute(() -> {
+            // Will not be executed but ensure the pending count is 1.
         });
 
         assertEquals(1, executor.pendingTasks());

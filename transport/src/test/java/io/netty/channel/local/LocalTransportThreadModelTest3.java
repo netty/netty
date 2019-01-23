@@ -152,25 +152,22 @@ public class LocalTransportThreadModelTest3 {
 
             Throwable cause = new Throwable();
 
-            Thread pipelineModifier = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    Random random = new Random();
+            Thread pipelineModifier = new Thread(() -> {
+                Random random = new Random();
 
-                    while (true) {
-                        try {
-                            Thread.sleep(100);
-                        } catch (InterruptedException e) {
-                            return;
-                        }
-                        if (!ch.isRegistered()) {
-                            continue;
-                        }
-                        //EventForwardHandler forwardHandler = forwarders[random.nextInt(forwarders.length)];
-                        ChannelHandler handler = ch.pipeline().removeFirst();
-                        ch.pipeline().addBefore(groups[random.nextInt(groups.length)].next(), "recorder",
-                                UUID.randomUUID().toString(), handler);
+                while (true) {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        return;
                     }
+                    if (!ch.isRegistered()) {
+                        continue;
+                    }
+                    //EventForwardHandler forwardHandler = forwarders[random.nextInt(forwarders.length)];
+                    ChannelHandler handler = ch.pipeline().removeFirst();
+                    ch.pipeline().addBefore(groups[random.nextInt(groups.length)].next(), "recorder",
+                            UUID.randomUUID().toString(), handler);
                 }
             });
             pipelineModifier.setDaemon(true);
