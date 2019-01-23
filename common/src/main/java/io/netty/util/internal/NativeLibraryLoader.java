@@ -450,12 +450,6 @@ public final class NativeLibraryLoader {
     private static final class NoexecVolumeDetector {
 
         private static boolean canExecuteExecutable(File file) throws IOException {
-            if (PlatformDependent.javaVersion() < 7) {
-                // Pre-JDK7, the Java API did not directly support POSIX permissions; instead of implementing a custom
-                // work-around, assume true, which disables the check.
-                return true;
-            }
-
             // If we can already execute, there is nothing to do.
             if (file.canExecute()) {
                 return true;

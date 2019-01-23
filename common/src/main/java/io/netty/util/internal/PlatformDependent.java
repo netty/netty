@@ -348,11 +348,7 @@ public final class PlatformDependent {
      * Creates a new fastest {@link LongCounter} implementation for the current platform.
      */
     public static LongCounter newLongCounter() {
-        if (javaVersion() >= 8) {
-            return new LongAdderCounter();
-        } else {
-            return new AtomicLongCounter();
-        }
+        return new LongAdderCounter();
     }
 
     /**
@@ -935,11 +931,7 @@ public final class PlatformDependent {
      * Returns a new concurrent {@link Deque}.
      */
     public static <C> Deque<C> newConcurrentDeque() {
-        if (javaVersion() < 7) {
-            return new LinkedBlockingDeque<C>();
-        } else {
-            return new ConcurrentLinkedDeque<C>();
-        }
+        return new ConcurrentLinkedDeque<C>();
     }
 
     /**

@@ -82,13 +82,11 @@ public class SniClientTest {
 
     @Test(timeout = 30000)
     public void testSniSNIMatcherMatchesClient() throws Exception {
-        Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
         SniClientJava8TestUtil.testSniClient(serverProvider, clientProvider, true);
     }
 
     @Test(timeout = 30000, expected = SSLException.class)
     public void testSniSNIMatcherDoesNotMatchClient() throws Exception {
-        Assume.assumeTrue(PlatformDependent.javaVersion() >= 8);
         SniClientJava8TestUtil.testSniClient(serverProvider, clientProvider, false);
     }
 
@@ -110,10 +108,7 @@ public class SniClientTest {
                                                     .build();
             } else {
                 // The used OpenSSL version does support a KeyManagerFactory, so use it.
-                KeyManagerFactory kmf = PlatformDependent.javaVersion() >= 8 ?
-                        SniClientJava8TestUtil.newSniX509KeyManagerFactory(cert, sniHostName) :
-                        SslContext.buildKeyManagerFactory(
-                                new X509Certificate[] { cert.cert() }, cert.key(), null, null);
+                KeyManagerFactory kmf = SniClientJava8TestUtil.newSniX509KeyManagerFactory(cert, sniHostName);
 
                sslServerContext = SslContextBuilder.forServer(kmf)
                                                    .sslProvider(sslServerProvider)
@@ -136,9 +131,7 @@ public class SniClientTest {
                 }
             }).bind(address).syncUninterruptibly().channel();
 
-            TrustManagerFactory tmf = PlatformDependent.javaVersion() >= 8 ?
-                    SniClientJava8TestUtil.newSniX509TrustmanagerFactory(sniHostName) :
-                    InsecureTrustManagerFactory.INSTANCE;
+            TrustManagerFactory tmf = SniClientJava8TestUtil.newSniX509TrustmanagerFactory(sniHostName);
             sslClientContext = SslContextBuilder.forClient().trustManager(tmf)
                                                      .sslProvider(sslClientProvider).build();
             Bootstrap cb = new Bootstrap();
@@ -153,10 +146,8 @@ public class SniClientTest {
             handler.handshakeFuture().syncUninterruptibly();
             Assert.assertNull(handler.engine().getHandshakeSession());
 
-            if (PlatformDependent.javaVersion() >= 8) {
-                SniClientJava8TestUtil.assertSSLSession(
-                        handler.engine().getUseClientMode(), handler.engine().getSession(), sniHostName);
-            }
+            SniClientJava8TestUtil.assertSSLSession(
+                    handler.engine().getUseClientMode(), handler.engine().getSession(), sniHostName);
         } finally {
             if (cc != null) {
                 cc.close().syncUninterruptibly();

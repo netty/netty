@@ -52,16 +52,13 @@ abstract class ByteBufChecksum implements Checksum {
     };
 
     private static Method updateByteBuffer(Checksum checksum) {
-        if (PlatformDependent.javaVersion() >= 8) {
-            try {
-                Method method = checksum.getClass().getDeclaredMethod("update", ByteBuffer.class);
-                method.invoke(method, ByteBuffer.allocate(1));
-                return method;
-            } catch (Throwable ignore) {
-                return null;
-            }
+        try {
+            Method method = checksum.getClass().getDeclaredMethod("update", ByteBuffer.class);
+            method.invoke(method, ByteBuffer.allocate(1));
+            return method;
+        } catch (Throwable ignore) {
+            return null;
         }
-        return null;
     }
 
     static ByteBufChecksum wrapChecksum(Checksum checksum) {

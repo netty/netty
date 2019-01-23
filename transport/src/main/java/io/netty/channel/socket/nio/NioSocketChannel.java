@@ -156,11 +156,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     @UnstableApi
     @Override
     protected final void doShutdownOutput() throws Exception {
-        if (PlatformDependent.javaVersion() >= 7) {
-            javaChannel().shutdownOutput();
-        } else {
-            javaChannel().socket().shutdownOutput();
-        }
+        javaChannel().shutdownOutput();
     }
 
     @Override
@@ -272,11 +268,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     private void shutdownInput0() throws Exception {
-        if (PlatformDependent.javaVersion() >= 7) {
-            javaChannel().shutdownInput();
-        } else {
-            javaChannel().socket().shutdownInput();
-        }
+        javaChannel().shutdownInput();
     }
 
     @Override
@@ -295,11 +287,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     private void doBind0(SocketAddress localAddress) throws Exception {
-        if (PlatformDependent.javaVersion() >= 7) {
-            SocketUtils.bind(javaChannel(), localAddress);
-        } else {
-            SocketUtils.bind(javaChannel().socket(), localAddress);
-        }
+        SocketUtils.bind(javaChannel(), localAddress);
     }
 
     @Override
@@ -483,7 +471,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
         @Override
         public <T> boolean setOption(ChannelOption<T> option, T value) {
-            if (PlatformDependent.javaVersion() >= 7 && option instanceof NioChannelOption) {
+            if (option instanceof NioChannelOption) {
                 return NioChannelOption.setOption(jdkChannel(), (NioChannelOption<T>) option, value);
             }
             return super.setOption(option, value);
@@ -491,7 +479,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
         @Override
         public <T> T getOption(ChannelOption<T> option) {
-            if (PlatformDependent.javaVersion() >= 7 && option instanceof NioChannelOption) {
+            if (option instanceof NioChannelOption) {
                 return NioChannelOption.getOption(jdkChannel(), (NioChannelOption<T>) option);
             }
             return super.getOption(option);
@@ -500,10 +488,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         @SuppressWarnings("unchecked")
         @Override
         public Map<ChannelOption<?>, Object> getOptions() {
-            if (PlatformDependent.javaVersion() >= 7) {
-                return getOptions(super.getOptions(), NioChannelOption.getOptions(jdkChannel()));
-            }
-            return super.getOptions();
+            return getOptions(super.getOptions(), NioChannelOption.getOptions(jdkChannel()));
         }
 
         void setMaxBytesPerGatheringWrite(int maxBytesPerGatheringWrite) {

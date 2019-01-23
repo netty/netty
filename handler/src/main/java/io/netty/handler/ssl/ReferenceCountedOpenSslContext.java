@@ -598,7 +598,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     static boolean useExtendedTrustManager(X509TrustManager trustManager) {
-        return PlatformDependent.javaVersion() >= 7 && trustManager instanceof X509ExtendedTrustManager;
+        return trustManager instanceof X509ExtendedTrustManager;
     }
 
     @Override
@@ -672,31 +672,29 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 if (cause instanceof CertificateNotYetValidException) {
                     return CertificateVerifier.X509_V_ERR_CERT_NOT_YET_VALID;
                 }
-                if (PlatformDependent.javaVersion() >= 7) {
-                    if (cause instanceof CertificateRevokedException) {
-                        return CertificateVerifier.X509_V_ERR_CERT_REVOKED;
-                    }
+                if (cause instanceof CertificateRevokedException) {
+                    return CertificateVerifier.X509_V_ERR_CERT_REVOKED;
+                }
 
-                    // The X509TrustManagerImpl uses a Validator which wraps a CertPathValidatorException into
-                    // an CertificateException. So we need to handle the wrapped CertPathValidatorException to be
-                    // able to send the correct alert.
-                    Throwable wrapped = cause.getCause();
-                    while (wrapped != null) {
-                        if (wrapped instanceof CertPathValidatorException) {
-                            CertPathValidatorException ex = (CertPathValidatorException) wrapped;
-                            CertPathValidatorException.Reason reason = ex.getReason();
-                            if (reason == CertPathValidatorException.BasicReason.EXPIRED) {
-                                return CertificateVerifier.X509_V_ERR_CERT_HAS_EXPIRED;
-                            }
-                            if (reason == CertPathValidatorException.BasicReason.NOT_YET_VALID) {
-                                return CertificateVerifier.X509_V_ERR_CERT_NOT_YET_VALID;
-                            }
-                            if (reason == CertPathValidatorException.BasicReason.REVOKED) {
-                                return CertificateVerifier.X509_V_ERR_CERT_REVOKED;
-                            }
+                // The X509TrustManagerImpl uses a Validator which wraps a CertPathValidatorException into
+                // an CertificateException. So we need to handle the wrapped CertPathValidatorException to be
+                // able to send the correct alert.
+                Throwable wrapped = cause.getCause();
+                while (wrapped != null) {
+                    if (wrapped instanceof CertPathValidatorException) {
+                        CertPathValidatorException ex = (CertPathValidatorException) wrapped;
+                        CertPathValidatorException.Reason reason = ex.getReason();
+                        if (reason == CertPathValidatorException.BasicReason.EXPIRED) {
+                            return CertificateVerifier.X509_V_ERR_CERT_HAS_EXPIRED;
                         }
-                        wrapped = wrapped.getCause();
+                        if (reason == CertPathValidatorException.BasicReason.NOT_YET_VALID) {
+                            return CertificateVerifier.X509_V_ERR_CERT_NOT_YET_VALID;
+                        }
+                        if (reason == CertPathValidatorException.BasicReason.REVOKED) {
+                            return CertificateVerifier.X509_V_ERR_CERT_REVOKED;
+                        }
                     }
+                    wrapped = wrapped.getCause();
                 }
 
                 // Could not detect a specific error code to use, so fallback to a default code.

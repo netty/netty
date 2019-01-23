@@ -1119,7 +1119,7 @@ public final class NetUtil {
      * @return the host string
      */
     public static String getHostname(InetSocketAddress addr) {
-        return PlatformDependent.javaVersion() >= 7 ? addr.getHostString() : addr.getHostName();
+        return addr.getHostString();
     }
 
     /**

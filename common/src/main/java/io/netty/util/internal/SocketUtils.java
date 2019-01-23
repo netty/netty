@@ -186,14 +186,7 @@ public final class SocketUtils {
         return AccessController.doPrivileged(new PrivilegedAction<InetAddress>() {
             @Override
             public InetAddress run() {
-                if (PlatformDependent.javaVersion() >= 7) {
-                    return InetAddress.getLoopbackAddress();
-                }
-                try {
-                    return InetAddress.getByName(null);
-                } catch (UnknownHostException e) {
-                    throw new IllegalStateException(e);
-                }
+                return InetAddress.getLoopbackAddress();
             }
         });
     }
