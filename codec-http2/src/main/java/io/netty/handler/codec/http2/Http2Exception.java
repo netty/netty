@@ -194,7 +194,7 @@ public class Http2Exception extends Exception {
     /**
      * Provides a hint as to if shutdown is justified, what type of shutdown should be executed.
      */
-    public static enum ShutdownHint {
+    public enum ShutdownHint {
         /**
          * Do not shutdown the underlying channel.
          */
@@ -207,7 +207,7 @@ public class Http2Exception extends Exception {
         /**
          * Close the channel immediately after a {@code GOAWAY} is sent.
          */
-        HARD_SHUTDOWN;
+        HARD_SHUTDOWN
     }
 
     /**
