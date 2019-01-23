@@ -90,7 +90,7 @@ public class WebSocketClientExtensionHandler extends ChannelDuplexHandler {
                     List<WebSocketExtensionData> extensions =
                             WebSocketExtensionUtil.extractExtensions(extensionsHeader);
                     List<WebSocketClientExtension> validExtensions =
-                            new ArrayList<WebSocketClientExtension>(extensions.size());
+                            new ArrayList<>(extensions.size());
                     int rsv = 0;
 
                     for (WebSocketExtensionData extensionData : extensions) {

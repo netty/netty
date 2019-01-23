@@ -81,10 +81,10 @@ public class SocketStartTlsTest extends AbstractSocketTest {
 
     @Parameters(name = "{index}: serverEngine = {0}, clientEngine = {1}")
     public static Collection<Object[]> data() throws Exception {
-        List<SslContext> serverContexts = new ArrayList<SslContext>();
+        List<SslContext> serverContexts = new ArrayList<>();
         serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.JDK).build());
 
-        List<SslContext> clientContexts = new ArrayList<SslContext>();
+        List<SslContext> clientContexts = new ArrayList<>();
         clientContexts.add(SslContextBuilder.forClient().sslProvider(SslProvider.JDK).trustManager(CERT_FILE).build());
 
         boolean hasOpenSsl = OpenSsl.isAvailable();
@@ -97,7 +97,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
             logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
         }
 
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         for (SslContext sc: serverContexts) {
             for (SslContext cc: clientContexts) {
                 params.add(new Object[] { sc, cc });
@@ -159,7 +159,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
                 p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
-                p.addLast(executor, sh);
+                p.addLast(executor.next(), sh);
             }
         });
 
@@ -169,7 +169,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
                 p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
-                p.addLast(executor, ch);
+                p.addLast(executor.next(), ch);
             }
         });
 
@@ -228,7 +228,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         private final SslHandler sslHandler;
         private final boolean autoRead;
         private Future<Channel> handshakeFuture;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
 
         StartTlsClientHandler(SSLEngine engine, boolean autoRead) {
             engine.setUseClientMode(true);
@@ -283,7 +283,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         private final SslHandler sslHandler;
         private final boolean autoRead;
         volatile Channel channel;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
 
         StartTlsServerHandler(SSLEngine engine, boolean autoRead) {
             engine.setUseClientMode(false);

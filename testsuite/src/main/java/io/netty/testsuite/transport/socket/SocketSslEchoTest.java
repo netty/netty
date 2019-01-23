@@ -122,14 +122,14 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             "serverUsesDelegatedTaskExecutor = {3}, clientUsesDelegatedTaskExecutor = {4}, " +
             "autoRead = {5}, useChunkedWriteHandler = {6}, useCompositeByteBuf = {7}")
     public static Collection<Object[]> data() throws Exception {
-        List<SslContext> serverContexts = new ArrayList<SslContext>();
+        List<SslContext> serverContexts = new ArrayList<>();
         serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE)
                                             .sslProvider(SslProvider.JDK)
                                             // As we test renegotiation we should use a protocol that support it.
                                             .protocols("TLSv1.2")
                                             .build());
 
-        List<SslContext> clientContexts = new ArrayList<SslContext>();
+        List<SslContext> clientContexts = new ArrayList<>();
         clientContexts.add(SslContextBuilder.forClient()
                                             .sslProvider(SslProvider.JDK)
                                             .trustManager(CERT_FILE)
@@ -154,7 +154,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
         }
 
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         for (SslContext sc: serverContexts) {
             for (SslContext cc: clientContexts) {
                 for (RenegotiationType rt: RenegotiationType.values()) {
@@ -200,8 +200,8 @@ public class SocketSslEchoTest extends AbstractSocketTest {
     private final boolean useChunkedWriteHandler;
     private final boolean useCompositeByteBuf;
 
-    private final AtomicReference<Throwable> clientException = new AtomicReference<Throwable>();
-    private final AtomicReference<Throwable> serverException = new AtomicReference<Throwable>();
+    private final AtomicReference<Throwable> clientException = new AtomicReference<>();
+    private final AtomicReference<Throwable> serverException = new AtomicReference<>();
 
     private final AtomicInteger clientSendCounter = new AtomicInteger();
     private final AtomicInteger clientRecvCounter = new AtomicInteger();

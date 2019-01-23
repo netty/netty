@@ -446,7 +446,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
     @Test
     public void testEncodeHttpsSchemeWhenSslHandlerExists() throws Exception {
-        final Queue<Http2StreamFrame> frames = new ConcurrentLinkedQueue<Http2StreamFrame>();
+        final Queue<Http2StreamFrame> frames = new ConcurrentLinkedQueue<>();
 
         final SslContext ctx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
         EmbeddedChannel ch = new EmbeddedChannel(ctx.newHandler(ByteBufAllocator.DEFAULT),
@@ -875,7 +875,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
     @Test
     public void testIsSharableBetweenChannels() throws Exception {
-        final Queue<Http2StreamFrame> frames = new ConcurrentLinkedQueue<Http2StreamFrame>();
+        final Queue<Http2StreamFrame> frames = new ConcurrentLinkedQueue<>();
         final ChannelHandler sharedHandler = new Http2StreamFrameToHttpObjectCodec(false);
 
         final SslContext ctx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();

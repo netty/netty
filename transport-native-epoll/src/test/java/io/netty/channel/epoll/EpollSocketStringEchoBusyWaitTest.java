@@ -18,6 +18,7 @@ package io.netty.channel.epoll;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.netty.channel.MultithreadEventLoopGroup;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -39,8 +40,8 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
 
     @BeforeClass
     public static void setup() throws Exception {
-        EPOLL_LOOP = new EpollEventLoopGroup(2, new DefaultThreadFactory("testsuite-epoll-busy-wait", true),
-                new SelectStrategyFactory() {
+        EPOLL_LOOP = new MultithreadEventLoopGroup(2, new DefaultThreadFactory("testsuite-epoll-busy-wait", true),
+                EpollHandler.newFactory(0, new SelectStrategyFactory() {
                     @Override
                     public SelectStrategy newSelectStrategy() {
                         return new SelectStrategy() {
@@ -50,7 +51,7 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
                             }
                         };
                     }
-                });
+                }));
     }
 
     @AfterClass
@@ -63,7 +64,7 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> list =
-                new ArrayList<BootstrapComboFactory<ServerBootstrap, Bootstrap>>();
+                new ArrayList<>();
         final BootstrapFactory<ServerBootstrap> sbf = serverSocket();
         final BootstrapFactory<Bootstrap> cbf = clientSocket();
         list.add(new BootstrapComboFactory<ServerBootstrap, Bootstrap>() {

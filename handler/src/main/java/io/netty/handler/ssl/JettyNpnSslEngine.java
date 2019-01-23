@@ -82,7 +82,7 @@ final class JettyNpnSslEngine extends JdkSslEngine {
             });
         } else {
             final ProtocolSelector protocolSelector = checkNotNull(applicationNegotiator.protocolSelectorFactory()
-                    .newSelector(this, new LinkedHashSet<String>(applicationNegotiator.protocols())),
+                    .newSelector(this, new LinkedHashSet<>(applicationNegotiator.protocols())),
                     "protocolSelector");
             NextProtoNego.put(engine, new ClientProvider() {
                 @Override

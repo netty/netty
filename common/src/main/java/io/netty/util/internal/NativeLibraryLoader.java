@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Helper class to load JNI resources.
@@ -90,7 +91,7 @@ public final class NativeLibraryLoader {
      *         if none of the given libraries load successfully.
      */
     public static void loadFirstAvailable(ClassLoader loader, String... names) {
-        List<Throwable> suppressed = new ArrayList<Throwable>();
+        List<Throwable> suppressed = new ArrayList<>();
         for (String name : names) {
             try {
                 load(name, loader);
@@ -130,7 +131,7 @@ public final class NativeLibraryLoader {
         // Adjust expected name to support shading of native libraries.
         String packagePrefix = calculatePackagePrefix().replace('.', '_');
         String name = packagePrefix + originalName;
-        List<Throwable> suppressed = new ArrayList<Throwable>();
+        List<Throwable> suppressed = new ArrayList<>();
         try {
             // first try to load from java.library.path
             loadLibrary(loader, name, false);
@@ -178,7 +179,7 @@ public final class NativeLibraryLoader {
 
             int index = libname.lastIndexOf('.');
             String prefix = libname.substring(0, index);
-            String suffix = libname.substring(index, libname.length());
+            String suffix = libname.substring(index);
 
             tmpFile = File.createTempFile(prefix, suffix, WORKDIR);
             in = url.openStream();
@@ -279,8 +280,7 @@ public final class NativeLibraryLoader {
             // We found our ID... now monkey-patch it!
             for (int i = 0; i < nameBytes.length; i++) {
                 // We should only use bytes as replacement that are in our UNIQUE_ID_BYTES array.
-                bytes[idIdx + i] = UNIQUE_ID_BYTES[PlatformDependent.threadLocalRandom()
-                                                                    .nextInt(UNIQUE_ID_BYTES.length)];
+                bytes[idIdx + i] = UNIQUE_ID_BYTES[ThreadLocalRandom.current().nextInt(UNIQUE_ID_BYTES.length)];
             }
 
             if (logger.isDebugEnabled()) {
@@ -306,10 +306,7 @@ public final class NativeLibraryLoader {
                 loadLibraryByHelper(newHelper, name, absolute);
                 logger.debug("Successfully loaded the library {}", name);
                 return;
-            } catch (UnsatisfiedLinkError e) { // Should by pass the UnsatisfiedLinkError here!
-                suppressed = e;
-                logger.debug("Unable to load the library '{}', trying other loading mechanism.", name, e);
-            } catch (Exception e) {
+            } catch (UnsatisfiedLinkError | Exception e) { // Should by pass the UnsatisfiedLinkError here!
                 suppressed = e;
                 logger.debug("Unable to load the library '{}', trying other loading mechanism.", name, e);
             }
@@ -387,13 +384,7 @@ public final class NativeLibraryLoader {
                         }
                     }
                 });
-            } catch (ClassNotFoundException e2) {
-                ThrowableUtil.addSuppressed(e2, e1);
-                throw e2;
-            } catch (RuntimeException e2) {
-                ThrowableUtil.addSuppressed(e2, e1);
-                throw e2;
-            } catch (Error e2) {
+            } catch (ClassNotFoundException | Error | RuntimeException e2) {
                 ThrowableUtil.addSuppressed(e2, e1);
                 throw e2;
             }

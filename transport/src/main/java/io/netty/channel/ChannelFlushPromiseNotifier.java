@@ -25,7 +25,7 @@ import java.util.Queue;
 public final class ChannelFlushPromiseNotifier {
 
     private long writeCounter;
-    private final Queue<FlushCheckpoint> flushCheckpoints = new ArrayDeque<FlushCheckpoint>();
+    private final Queue<FlushCheckpoint> flushCheckpoints = new ArrayDeque<>();
     private final boolean tryNotify;
 
     /**

@@ -27,7 +27,7 @@ final class SoftReferenceMap<K, V> extends ReferenceMap<K, V> {
 
     @Override
     Reference<V> fold(V value) {
-        return new SoftReference<V>(value);
+        return new SoftReference<>(value);
     }
 
 }

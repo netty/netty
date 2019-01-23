@@ -48,7 +48,7 @@ public class SocksInitRequestDecoder extends ReplayingDecoder<State> {
                 final byte authSchemeNum = byteBuf.readByte();
                 final List<SocksAuthScheme> authSchemes;
                 if (authSchemeNum > 0) {
-                    authSchemes = new ArrayList<SocksAuthScheme>(authSchemeNum);
+                    authSchemes = new ArrayList<>(authSchemeNum);
                     for (int i = 0; i < authSchemeNum; i++) {
                         authSchemes.add(SocksAuthScheme.valueOf(byteBuf.readByte()));
                     }

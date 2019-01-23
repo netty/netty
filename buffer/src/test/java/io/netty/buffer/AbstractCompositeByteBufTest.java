@@ -16,7 +16,6 @@
 package io.netty.buffer;
 
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -28,6 +27,7 @@ import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.buffer;
@@ -67,7 +67,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     protected ByteBuf newBuffer(int length, int maxCapacity) {
         Assume.assumeTrue(maxCapacity == Integer.MAX_VALUE);
 
-        List<ByteBuf> buffers = new ArrayList<ByteBuf>();
+        List<ByteBuf> buffers = new ArrayList<>();
         for (int i = 0; i < length + 45; i += 45) {
             buffers.add(EMPTY_BUFFER);
             buffers.add(wrappedBuffer(new byte[1]));
@@ -659,7 +659,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         CompositeByteBuf buf = compositeBuffer();
         assertThat(buf.refCnt(), is(1));
 
-        List<ByteBuf> components = new ArrayList<ByteBuf>();
+        List<ByteBuf> components = new ArrayList<>();
         Collections.addAll(components, c1, c2, c3);
         buf.addComponents(components);
 
@@ -1231,7 +1231,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
     private static void testDecompose(int offset, int length, int expectedListSize) {
         byte[] bytes = new byte[1024];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         ByteBuf buf = wrappedBuffer(bytes);
 
         CompositeByteBuf composite = compositeBuffer();

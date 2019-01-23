@@ -14,13 +14,17 @@
  */
 package io.netty.microbench.concurrent;
 
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.epoll.Epoll;
-import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollHandler;
 import io.netty.channel.kqueue.KQueue;
-import io.netty.channel.kqueue.KQueueEventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.kqueue.KQueueHandler;
+import io.netty.channel.nio.NioHandler;
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import io.netty.util.concurrent.DefaultEventExecutor;
+import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.RejectedExecutionHandlers;
+import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.PlatformDependent;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -197,7 +201,7 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
             executorToShutdown = executor;
             break;
         case defaultEventExecutor:
-            executor = new DefaultEventExecutor();
+            executor = new SingleThreadEventExecutor();
             executorToShutdown = executor;
             break;
         case juc:
@@ -205,24 +209,27 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
             executorToShutdown = executor;
             break;
         case nioEventLoop:
-            NioEventLoopGroup nioEventLoopGroup = new NioEventLoopGroup(1);
-            nioEventLoopGroup.setIoRatio(1);
+            EventLoopGroup nioEventLoopGroup = new MultithreadEventLoopGroup(1,
+                    new DefaultThreadFactory(MultithreadEventLoopGroup.class), NioHandler.newFactory(),
+                    Integer.MAX_VALUE, RejectedExecutionHandlers.reject(), Integer.MAX_VALUE);
             executor = nioEventLoopGroup.next();
             executorToShutdown = nioEventLoopGroup;
             break;
         case epollEventLoop:
             Epoll.ensureAvailability();
-            EpollEventLoopGroup epollEventLoopGroup = new EpollEventLoopGroup(1);
-            epollEventLoopGroup.setIoRatio(1);
+            EventLoopGroup epollEventLoopGroup = new MultithreadEventLoopGroup(1,
+                    new DefaultThreadFactory(MultithreadEventLoopGroup.class), EpollHandler.newFactory(),
+                    Integer.MAX_VALUE, RejectedExecutionHandlers.reject(), Integer.MAX_VALUE);
             executor = epollEventLoopGroup.next();
             executorToShutdown = epollEventLoopGroup;
             break;
         case kqueueEventLoop:
             KQueue.ensureAvailability();
-            KQueueEventLoopGroup kQueueEventLoopGroup = new KQueueEventLoopGroup(1);
-            kQueueEventLoopGroup.setIoRatio(1);
-            executor = kQueueEventLoopGroup.next();
-            executorToShutdown = kQueueEventLoopGroup;
+            EventLoopGroup kqueueEventLoopGroup = new MultithreadEventLoopGroup(1,
+                    new DefaultThreadFactory(MultithreadEventLoopGroup.class), KQueueHandler.newFactory(),
+                    Integer.MAX_VALUE, RejectedExecutionHandlers.reject(), Integer.MAX_VALUE);
+            executor = kqueueEventLoopGroup.next();
+            executorToShutdown = kqueueEventLoopGroup;
             break;
         }
     }

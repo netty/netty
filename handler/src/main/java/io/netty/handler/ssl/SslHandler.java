@@ -1468,7 +1468,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 task.run();
             }
         } else {
-            final List<Runnable> tasks = new ArrayList<Runnable>(2);
+            final List<Runnable> tasks = new ArrayList<>(2);
             for (;;) {
                 final Runnable task = engine.getDelegatedTask();
                 if (task == null) {
@@ -1727,7 +1727,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         if (!oldHandshakePromise.isDone()) {
             // There's no need to handshake because handshake is in progress already.
             // Merge the new promise into the old one.
-            oldHandshakePromise.addListener(new PromiseNotifier<Channel, Future<Channel>>(newHandshakePromise));
+            oldHandshakePromise.addListener(new PromiseNotifier<>(newHandshakePromise));
         } else {
             handshakePromise = newHandshakePromise;
             handshake();

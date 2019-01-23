@@ -46,11 +46,7 @@ final class CleanerJava9 implements Cleaner {
                                 "invokeCleaner", ByteBuffer.class);
                         m.invoke(PlatformDependent0.UNSAFE, buffer);
                         return m;
-                    } catch (NoSuchMethodException e) {
-                        return e;
-                    } catch (InvocationTargetException e) {
-                        return e;
-                    } catch (IllegalAccessException e) {
+                    } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
                         return e;
                     }
                 }
@@ -100,9 +96,7 @@ final class CleanerJava9 implements Cleaner {
             public Exception run() {
                 try {
                     INVOKE_CLEANER.invoke(PlatformDependent0.UNSAFE, buffer);
-                } catch (InvocationTargetException e) {
-                    return e;
-                } catch (IllegalAccessException e) {
+                } catch (InvocationTargetException | IllegalAccessException e) {
                     return e;
                 }
                 return null;

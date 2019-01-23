@@ -68,12 +68,12 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
     /**
      * HttpDatas from Body
      */
-    private final List<InterfaceHttpData> bodyListHttpData = new ArrayList<InterfaceHttpData>();
+    private final List<InterfaceHttpData> bodyListHttpData = new ArrayList<>();
 
     /**
      * HttpDatas as Map from Body
      */
-    private final Map<String, List<InterfaceHttpData>> bodyMapHttpData = new TreeMap<String, List<InterfaceHttpData>>(
+    private final Map<String, List<InterfaceHttpData>> bodyMapHttpData = new TreeMap<>(
             CaseIgnoringComparator.INSTANCE);
 
     /**
@@ -369,7 +369,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
         }
         List<InterfaceHttpData> datas = bodyMapHttpData.get(data.getName());
         if (datas == null) {
-            datas = new ArrayList<InterfaceHttpData>(1);
+            datas = new ArrayList<>(1);
             bodyMapHttpData.put(data.getName(), datas);
         }
         datas.add(data);
@@ -599,11 +599,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
             // error while decoding
             undecodedChunk.readerIndex(firstpos);
             throw e;
-        } catch (IOException e) {
-            // error while decoding
-            undecodedChunk.readerIndex(firstpos);
-            throw new ErrorDataDecoderException(e);
-        } catch (IllegalArgumentException e) {
+        } catch (IOException | IllegalArgumentException e) {
             // error while decoding
             undecodedChunk.readerIndex(firstpos);
             throw new ErrorDataDecoderException(e);

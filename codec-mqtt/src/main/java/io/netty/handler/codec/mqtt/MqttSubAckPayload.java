@@ -34,7 +34,7 @@ public class MqttSubAckPayload {
             throw new NullPointerException("grantedQoSLevels");
         }
 
-        List<Integer> list = new ArrayList<Integer>(grantedQoSLevels.length);
+        List<Integer> list = new ArrayList<>(grantedQoSLevels.length);
         for (int v: grantedQoSLevels) {
             list.add(v);
         }
@@ -45,7 +45,7 @@ public class MqttSubAckPayload {
         if (grantedQoSLevels == null) {
             throw new NullPointerException("grantedQoSLevels");
         }
-        List<Integer> list = new ArrayList<Integer>();
+        List<Integer> list = new ArrayList<>();
         for (Integer v: grantedQoSLevels) {
             if (v == null) {
                 break;

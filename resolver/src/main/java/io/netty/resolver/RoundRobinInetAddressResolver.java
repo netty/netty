@@ -19,7 +19,6 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
@@ -28,6 +27,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * A {@link NameResolver} that resolves {@link InetAddress} and force Round Robin by choosing a single address
@@ -83,7 +83,7 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
                     List<InetAddress> inetAddresses = future.getNow();
                     if (!inetAddresses.isEmpty()) {
                         // create a copy to make sure that it's modifiable random access collection
-                        List<InetAddress> result = new ArrayList<InetAddress>(inetAddresses);
+                        List<InetAddress> result = new ArrayList<>(inetAddresses);
                         // rotate by different distance each time to force round robin distribution
                         Collections.rotate(result, randomIndex(inetAddresses.size()));
                         promise.setSuccess(result);
@@ -98,6 +98,6 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
     }
 
     private static int randomIndex(int numAddresses) {
-        return numAddresses == 1 ? 0 : PlatformDependent.threadLocalRandom().nextInt(numAddresses);
+        return numAddresses == 1 ? 0 : ThreadLocalRandom.current().nextInt(numAddresses);
     }
 }

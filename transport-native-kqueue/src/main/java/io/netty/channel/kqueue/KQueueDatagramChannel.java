@@ -367,7 +367,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
 
                 ByteBuf content = (ByteBuf) e.content();
                 return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
-                        new DefaultAddressedEnvelope<ByteBuf, InetSocketAddress>(
+                        new DefaultAddressedEnvelope<>(
                                 newDirectBuffer(e, content), (InetSocketAddress) e.recipient()) : e;
             }
         }

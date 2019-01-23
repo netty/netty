@@ -68,11 +68,11 @@ public final class CorsConfigBuilder {
     boolean allowNullOrigin;
     boolean enabled = true;
     boolean allowCredentials;
-    final Set<String> exposeHeaders = new HashSet<String>();
+    final Set<String> exposeHeaders = new HashSet<>();
     long maxAge;
-    final Set<HttpMethod> requestMethods = new HashSet<HttpMethod>();
-    final Set<String> requestHeaders = new HashSet<String>();
-    final Map<CharSequence, Callable<?>> preflightHeaders = new HashMap<CharSequence, Callable<?>>();
+    final Set<HttpMethod> requestMethods = new HashSet<>();
+    final Set<String> requestHeaders = new HashSet<>();
+    final Map<CharSequence, Callable<?>> preflightHeaders = new HashMap<>();
     private boolean noPreflightHeaders;
     boolean shortCircuit;
 
@@ -82,7 +82,7 @@ public final class CorsConfigBuilder {
      * @param origins the origin to be used for this builder.
      */
     CorsConfigBuilder(final String... origins) {
-        this.origins = new LinkedHashSet<String>(Arrays.asList(origins));
+        this.origins = new LinkedHashSet<>(Arrays.asList(origins));
         anyOrigin = false;
     }
 

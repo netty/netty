@@ -82,12 +82,9 @@ public class ObjectEncoderOutputStream extends OutputStream implements
     public void writeObject(Object obj) throws IOException {
         ByteBuf buf = Unpooled.buffer(estimatedLength);
         try {
-            ObjectOutputStream oout = new CompactObjectOutputStream(new ByteBufOutputStream(buf));
-            try {
+            try (ObjectOutputStream oout = new CompactObjectOutputStream(new ByteBufOutputStream(buf))) {
                 oout.writeObject(obj);
                 oout.flush();
-            } finally {
-                oout.close();
             }
 
             int objectSize = buf.readableBytes();

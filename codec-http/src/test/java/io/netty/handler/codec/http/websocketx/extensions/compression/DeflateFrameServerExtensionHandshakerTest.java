@@ -70,7 +70,7 @@ public class DeflateFrameServerExtensionHandshakerTest {
                 new DeflateFrameServerExtensionHandshaker();
 
         Map<String, String> parameters;
-        parameters = new HashMap<String, String>();
+        parameters = new HashMap<>();
         parameters.put("unknown", "11");
 
         // execute

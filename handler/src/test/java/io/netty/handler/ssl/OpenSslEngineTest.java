@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
@@ -69,7 +70,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Parameterized.Parameters(name = "{index}: bufferType = {0}, combo = {1}")
     public static Collection<Object[]> data() {
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         for (BufferType type: BufferType.values()) {
             params.add(new Object[] { type, ProtocolCipherCombo.tlsv12()});
 
@@ -244,7 +245,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
             ByteBuffer src = allocateBuffer(1024 * 10);
             byte[] data = new byte[src.capacity()];
-            PlatformDependent.threadLocalRandom().nextBytes(data);
+            ThreadLocalRandom.current().nextBytes(data);
             src.put(data).flip();
             ByteBuffer dst = allocateBuffer(1);
             // Try to wrap multiple times so we are more likely to hit the issue.
@@ -376,7 +377,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
             handshake(clientEngine, serverEngine);
 
             ByteBuffer src = allocateBuffer(1024);
-            List<ByteBuffer> srcList = new ArrayList<ByteBuffer>();
+            List<ByteBuffer> srcList = new ArrayList<>();
             long srcsLen = 0;
             long maxLen = ((long) MAX_VALUE) * 2;
 

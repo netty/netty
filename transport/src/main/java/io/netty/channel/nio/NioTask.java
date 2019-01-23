@@ -20,9 +20,9 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 
 /**
- * An arbitrary task that can be executed by {@link NioEventLoop} when a {@link SelectableChannel} becomes ready.
+ * An arbitrary task that can be executed by {@link NioHandler} when a {@link SelectableChannel} becomes ready.
  *
- * @see NioEventLoop#register(SelectableChannel, int, NioTask)
+ * @see NioHandler#register(SelectableChannel, int, NioTask)
  */
 public interface NioTask<C extends SelectableChannel> {
     /**

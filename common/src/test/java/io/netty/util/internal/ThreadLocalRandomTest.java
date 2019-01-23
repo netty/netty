@@ -17,7 +17,7 @@ package io.netty.util.internal;
 
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 public class ThreadLocalRandomTest {
 
@@ -27,7 +27,6 @@ public class ThreadLocalRandomTest {
             Thread.currentThread().interrupt();
             assertTrue("Assert that thread is interrupted before invocation of getInitialSeedUniquifier()",
                     Thread.currentThread().isInterrupted());
-            ThreadLocalRandom.getInitialSeedUniquifier();
             assertTrue("Assert that thread is interrupted after invocation of getInitialSeedUniquifier()",
                     Thread.currentThread().isInterrupted());
         } finally {

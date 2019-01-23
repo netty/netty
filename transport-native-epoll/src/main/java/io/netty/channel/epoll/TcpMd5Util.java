@@ -64,7 +64,7 @@ final class TcpMd5Util {
         }
 
         // Set new mappings and store addresses which we set.
-        final Collection<InetAddress> addresses = new ArrayList<InetAddress>(newKeys.size());
+        final Collection<InetAddress> addresses = new ArrayList<>(newKeys.size());
         for (Entry<InetAddress, byte[]> e : newKeys.entrySet()) {
             channel.socket.setTcpMd5Sig(e.getKey(), e.getValue());
             addresses.add(e.getKey());

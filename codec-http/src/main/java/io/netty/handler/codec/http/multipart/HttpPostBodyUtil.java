@@ -34,6 +34,12 @@ final class HttpPostBodyUtil {
      */
     public static final String DEFAULT_TEXT_CONTENT_TYPE = "text/plain";
 
+    static final String BIT_7_STRING = "7bit";
+
+    static final String BIT_8_STRING = "8bit";
+
+    static final String BINARY_STRING = "binary";
+
     /**
      * Allowed mechanism for multipart
      * mechanism := "7bit"
@@ -46,15 +52,15 @@ final class HttpPostBodyUtil {
         /**
          * Default encoding
          */
-        BIT7("7bit"),
+        BIT7(BIT_7_STRING),
         /**
          * Short lines but not in ASCII - no encoding
          */
-        BIT8("8bit"),
+        BIT8(BIT_8_STRING),
         /**
          * Could be long text not in ASCII - no encoding
          */
-        BINARY("binary");
+        BINARY(BINARY_STRING);
 
         private final String value;
 

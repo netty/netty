@@ -26,13 +26,14 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.local.LocalEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.ServerChannelFactory;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
@@ -59,8 +60,8 @@ import static org.junit.Assert.*;
 
 public class BootstrapTest {
 
-    private static final EventLoopGroup groupA = new LocalEventLoopGroup(1);
-    private static final EventLoopGroup groupB = new LocalEventLoopGroup(1);
+    private static final EventLoopGroup groupA = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+    private static final EventLoopGroup groupB = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
     private static final ChannelInboundHandler dummyHandler = new DummyHandler();
 
     @AfterClass
@@ -83,7 +84,7 @@ public class BootstrapTest {
         bootstrapB.channel(LocalChannel.class);
         bootstrapB.handler(dummyHandler);
 
-        List<Future<?>> bindFutures = new ArrayList<Future<?>>();
+        List<Future<?>> bindFutures = new ArrayList<>();
 
         // Try to bind from each other.
         for (int i = 0; i < 1024; i ++) {
@@ -119,7 +120,7 @@ public class BootstrapTest {
         bootstrapB.channel(LocalChannel.class);
         bootstrapB.handler(dummyHandler);
 
-        List<Future<?>> bindFutures = new ArrayList<Future<?>>();
+        List<Future<?>> bindFutures = new ArrayList<>();
 
         // Try to connect from each other.
         for (int i = 0; i < 1024; i ++) {
@@ -145,7 +146,7 @@ public class BootstrapTest {
 
     @Test
     public void testLateRegisterSuccess() throws Exception {
-        LocalEventLoopGroup group = new LocalEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         try {
             LateRegisterHandler registerHandler = new LateRegisterHandler();
             ServerBootstrap bootstrap = new ServerBootstrap();
@@ -157,7 +158,7 @@ public class BootstrapTest {
             ChannelFuture future = bootstrap.bind();
             assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess();
-            final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<Boolean>();
+            final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<>();
             future.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
@@ -175,7 +176,7 @@ public class BootstrapTest {
 
     @Test
     public void testLateRegisterSuccessBindFailed() throws Exception {
-        EventLoopGroup group = new LocalEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         LateRegisterHandler registerHandler = new LateRegisterHandler();
         try {
             ServerBootstrap bootstrap = new ServerBootstrap();
@@ -208,7 +209,7 @@ public class BootstrapTest {
             ChannelFuture future = bootstrap.bind();
             assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess();
-            final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<Boolean>();
+            final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<>();
             future.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
@@ -226,7 +227,7 @@ public class BootstrapTest {
 
     @Test(expected = ConnectException.class, timeout = 10000)
     public void testLateRegistrationConnect() throws Exception {
-        EventLoopGroup group = new LocalEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         LateRegisterHandler registerHandler = new LateRegisterHandler();
         try {
             final Bootstrap bootstrapA = new Bootstrap();

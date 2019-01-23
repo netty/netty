@@ -18,24 +18,30 @@ package io.netty.channel;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ScheduledFuture;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -56,7 +62,7 @@ public class ChannelInitializerTest {
 
     @Before
     public void setUp() {
-        group = new LocalEventLoopGroup(1);
+        group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         server = new ServerBootstrap()
                 .group(group)
                 .channel(LocalServerChannel.class)
@@ -85,7 +91,7 @@ public class ChannelInitializerTest {
 
     private void testInitChannelThrows(boolean registerFirst) {
         final Exception exception = new Exception();
-        final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> causeRef = new AtomicReference<>();
 
         ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
 
@@ -263,11 +269,32 @@ public class ChannelInitializerTest {
     public void testChannelInitializerEventExecutor() throws Throwable {
         final AtomicInteger invokeCount = new AtomicInteger();
         final AtomicInteger completeCount = new AtomicInteger();
-        final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> errorRef = new AtomicReference<>();
         LocalAddress addr = new LocalAddress("test");
 
         final EventExecutor executor = new AbstractEventExecutor() {
             private final ScheduledExecutorService execService = Executors.newSingleThreadScheduledExecutor();
+
+            @Override
+            public boolean inEventLoop(Thread thread) {
+                return false;
+            }
+
+            @Override
+            public boolean isShuttingDown() {
+                return execService.isShutdown();
+            }
+
+            @Override
+            public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+                shutdown();
+                return newSucceededFuture(null);
+            }
+
+            @Override
+            public Future<?> terminationFuture() {
+                return newFailedFuture(new UnsupportedOperationException());
+            }
 
             @Override
             public void shutdown() {
@@ -275,24 +302,8 @@ public class ChannelInitializerTest {
             }
 
             @Override
-            public boolean inEventLoop(Thread thread) {
-                // Always return false which will ensure we always call execute(...)
-                return false;
-            }
-
-            @Override
-            public boolean isShuttingDown() {
-                return false;
-            }
-
-            @Override
-            public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
-                throw new IllegalStateException();
-            }
-
-            @Override
-            public Future<?> terminationFuture() {
-                throw new IllegalStateException();
+            public List<Runnable> shutdownNow() {
+                return execService.shutdownNow();
             }
 
             @Override
@@ -311,8 +322,54 @@ public class ChannelInitializerTest {
             }
 
             @Override
+            public <T> List<java.util.concurrent.Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
+                    throws InterruptedException {
+                return execService.invokeAll(tasks);
+            }
+
+            @Override
+            public <T> List<java.util.concurrent.Future<T>> invokeAll(
+                    Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit) throws InterruptedException {
+                return execService.invokeAll(tasks, timeout, unit);
+            }
+
+            @Override
+            public <T> T invokeAny(Collection<? extends Callable<T>> tasks)
+                    throws InterruptedException, ExecutionException {
+                return execService.invokeAny(tasks);
+            }
+
+            @Override
+            public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
+                    throws InterruptedException, ExecutionException, TimeoutException {
+                return execService.invokeAny(tasks, timeout, unit);
+            }
+
+            @Override
             public void execute(Runnable command) {
                 execService.execute(command);
+            }
+
+            @Override
+            public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public ScheduledFuture<?> scheduleAtFixedRate(
+                    Runnable command, long initialDelay, long period, TimeUnit unit) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public ScheduledFuture<?> scheduleWithFixedDelay(
+                    Runnable command, long initialDelay, long delay, TimeUnit unit) {
+                throw new UnsupportedOperationException();
             }
         };
 
@@ -338,7 +395,7 @@ public class ChannelInitializerTest {
                                             }
 
                                             @Override
-                                            public void channelUnregistered(ChannelHandlerContext ctx) {
+                                            public void handlerRemoved(ChannelHandlerContext ctx) {
                                                 latch.countDown();
                                             }
                                         });
@@ -372,6 +429,7 @@ public class ChannelInitializerTest {
         client.closeFuture().sync();
         server.closeFuture().sync();
 
+        // Wait until the handler is removed from the pipeline and so no more events are handled by it.
         latch.await();
 
         assertEquals(1, invokeCount.get());

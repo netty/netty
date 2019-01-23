@@ -68,7 +68,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     private ChannelPromise connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
-    private EpollRegistration registration;
+    protected EpollRegistration registration;
 
     private volatile SocketAddress local;
     private volatile SocketAddress remote;

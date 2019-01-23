@@ -57,7 +57,7 @@ public class CodecOutputListBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void arrayList() {
-        arrayList = new ArrayList<Object>(16);
+        arrayList = new ArrayList<>(16);
         benchmarkAddAndClear(arrayList, elements);
     }
 

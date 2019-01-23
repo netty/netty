@@ -31,10 +31,10 @@ import java.util.concurrent.atomic.AtomicReference;
 public class SingleThreadEventExecutorTest {
 
     @Test
-    public void testWrappedExecutureIsShutdown() {
+    public void testWrappedExecutorIsShutdown() {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
 
-        SingleThreadEventExecutor executor = new SingleThreadEventExecutor(null, executorService, false) {
+        SingleThreadEventExecutor executor = new SingleThreadEventExecutor(executorService) {
             @Override
             protected void run() {
                 while (!confirmShutdown()) {
@@ -75,8 +75,7 @@ public class SingleThreadEventExecutorTest {
     @Test
     public void testThreadProperties() {
         final AtomicReference<Thread> threadRef = new AtomicReference<Thread>();
-        SingleThreadEventExecutor executor = new SingleThreadEventExecutor(
-                null, new DefaultThreadFactory("test"), false) {
+        SingleThreadEventExecutor executor = new SingleThreadEventExecutor(new DefaultThreadFactory("test")) {
             @Override
             protected void run() {
                 threadRef.set(Thread.currentThread());
@@ -121,8 +120,7 @@ public class SingleThreadEventExecutorTest {
     }
 
     private static void testInvokeInEventLoop(final boolean any, final boolean timeout) {
-        final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(null,
-                Executors.defaultThreadFactory(), false) {
+        final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(Executors.defaultThreadFactory()) {
             @Override
             protected void run() {
                 while (!confirmShutdown()) {

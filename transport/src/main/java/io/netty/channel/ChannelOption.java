@@ -35,7 +35,7 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
     private static final ConstantPool<ChannelOption<Object>> pool = new ConstantPool<ChannelOption<Object>>() {
         @Override
         protected ChannelOption<Object> newConstant(int id, String name) {
-            return new ChannelOption<Object>(id, name);
+            return new ChannelOption<>(id, name);
         }
     };
 
@@ -125,9 +125,6 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
     @Deprecated
     public static final ChannelOption<Boolean> DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION =
             valueOf("DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION");
-
-    public static final ChannelOption<Boolean> SINGLE_EVENTEXECUTOR_PER_GROUP =
-            valueOf("SINGLE_EVENTEXECUTOR_PER_GROUP");
 
     /**
      * Creates a new {@link ChannelOption} with the specified unique {@code name}.

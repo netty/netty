@@ -18,16 +18,19 @@ package io.netty.channel.socket.nio;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.nio.AbstractNioChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.ScheduledFuture;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.channels.NetworkChannel;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
@@ -42,7 +45,7 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
 
     @Test
     public void testNioChannelOption() throws IOException {
-        NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(1);
+        EventLoopGroup eventLoopGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         T channel = newNioChannel(eventLoopGroup);
         try {
             NetworkChannel jdkChannel = jdkChannel(channel);
@@ -65,7 +68,7 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
 
     @Test
     public void testInvalidNioChannelOption() {
-        NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(1);
+        EventLoopGroup eventLoopGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         T channel = newNioChannel(eventLoopGroup);
         try {
             ChannelOption<?> option = NioChannelOption.of(newInvalidOption());
@@ -79,7 +82,7 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
 
     @Test
     public void testGetOptions()  {
-        NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(1);
+        EventLoopGroup eventLoopGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         T channel = newNioChannel(eventLoopGroup);
         try {
             channel.config().getOptions();
@@ -91,20 +94,14 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
 
     @Test
     public void testWrapping() {
-        final NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(1);
+        EventLoopGroup eventLoopGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
         final EventLoop eventLoop = eventLoopGroup.next();
 
         class WrappedEventLoop extends AbstractEventExecutor implements EventLoop {
             private final EventLoop eventLoop;
 
             WrappedEventLoop(EventLoop eventLoop) {
-                super(eventLoop.parent());
                 this.eventLoop = eventLoop;
-            }
-
-            @Test
-            public EventLoopGroup parent() {
-                return eventLoop.parent();
             }
 
             @Test
@@ -160,6 +157,28 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
             @Override
             public void execute(Runnable command) {
                 eventLoop.execute(command);
+            }
+
+            @Override
+            public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+                return eventLoop.schedule(command, delay, unit);
+            }
+
+            @Override
+            public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+                return eventLoop.schedule(callable, delay, unit);
+            }
+
+            @Override
+            public ScheduledFuture<?> scheduleAtFixedRate(
+                    Runnable command, long initialDelay, long period, TimeUnit unit) {
+                return eventLoop.scheduleAtFixedRate(command, initialDelay, period, unit);
+            }
+
+            @Override
+            public ScheduledFuture<?> scheduleWithFixedDelay(
+                    Runnable command, long initialDelay, long delay, TimeUnit unit) {
+                return eventLoop.scheduleWithFixedDelay(command, initialDelay, delay, unit);
             }
         }
 

@@ -53,7 +53,7 @@ public class DefaultThreadFactoryTest {
             });
 
             // holder for the thread factory, plays the role of a global singleton
-            final AtomicReference<DefaultThreadFactory> factory = new AtomicReference<DefaultThreadFactory>();
+            final AtomicReference<DefaultThreadFactory> factory = new AtomicReference<>();
             final AtomicInteger counter = new AtomicInteger();
             final Runnable task = new Runnable() {
                 @Override
@@ -62,7 +62,7 @@ public class DefaultThreadFactoryTest {
                 }
             };
 
-            final AtomicReference<Throwable> interrupted = new AtomicReference<Throwable>();
+            final AtomicReference<Throwable> interrupted = new AtomicReference<>();
 
             // create the thread factory, since we are running the thread group brother, the thread
             // factory will now forever be tied to that group
@@ -139,7 +139,7 @@ public class DefaultThreadFactoryTest {
                     @Override
                     public DefaultThreadFactory call() throws Exception {
                         final AtomicReference<DefaultThreadFactory> factory =
-                                new AtomicReference<DefaultThreadFactory>();
+                                new AtomicReference<>();
                         final Thread thread = new Thread(sticky, new Runnable() {
                             @Override
                             public void run() {
@@ -189,8 +189,8 @@ public class DefaultThreadFactoryTest {
     private static void runStickyThreadGroupTest(
             final Callable<DefaultThreadFactory> callable,
             final ThreadGroup expected) throws InterruptedException {
-        final AtomicReference<ThreadGroup> captured = new AtomicReference<ThreadGroup>();
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<ThreadGroup> captured = new AtomicReference<>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
 
         final Thread first = new Thread(new ThreadGroup("wrong"), new Runnable() {
             @Override
@@ -223,8 +223,8 @@ public class DefaultThreadFactoryTest {
     @Test(timeout = 2000)
     public void testDefaultThreadFactoryNonStickyThreadGroupConstructor() throws InterruptedException {
 
-        final AtomicReference<DefaultThreadFactory> factory = new AtomicReference<DefaultThreadFactory>();
-        final AtomicReference<ThreadGroup> firstCaptured = new AtomicReference<ThreadGroup>();
+        final AtomicReference<DefaultThreadFactory> factory = new AtomicReference<>();
+        final AtomicReference<ThreadGroup> firstCaptured = new AtomicReference<>();
 
         final ThreadGroup firstGroup = new ThreadGroup("first");
         final Thread first = new Thread(firstGroup, new Runnable() {
@@ -244,7 +244,7 @@ public class DefaultThreadFactoryTest {
 
         assertEquals(firstGroup, firstCaptured.get());
 
-        final AtomicReference<ThreadGroup> secondCaptured = new AtomicReference<ThreadGroup>();
+        final AtomicReference<ThreadGroup> secondCaptured = new AtomicReference<>();
 
         final ThreadGroup secondGroup = new ThreadGroup("second");
         final Thread second = new Thread(secondGroup, new Runnable() {

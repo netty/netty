@@ -69,7 +69,7 @@ public class RedisEncoderBenchmark extends AbstractMicrobenchmark {
         content.writeBytes(bytes);
         ByteBuf testContent = Unpooled.unreleasableBuffer(content.asReadOnly());
 
-        List<RedisMessage> rList = new ArrayList<RedisMessage>(arraySize);
+        List<RedisMessage> rList = new ArrayList<>(arraySize);
         for (int i = 0; i < arraySize; ++i) {
             rList.add(new FullBulkStringRedisMessage(testContent));
         }

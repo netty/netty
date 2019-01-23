@@ -132,13 +132,13 @@ public class SocketEchoTest extends AbstractSocketTest {
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel c) throws Exception {
-                    c.pipeline().addLast(group, sh);
+                    c.pipeline().addLast(group.next(), sh);
                 }
             });
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel c) throws Exception {
-                    c.pipeline().addLast(group, ch);
+                    c.pipeline().addLast(group.next(), ch);
                 }
             });
         } else {
@@ -219,7 +219,7 @@ public class SocketEchoTest extends AbstractSocketTest {
     private static class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
         private final boolean autoRead;
         volatile Channel channel;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
         volatile int counter;
 
         EchoHandler(boolean autoRead) {

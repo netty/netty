@@ -50,7 +50,7 @@ final class AuthoritativeDnsServerCacheAdapter implements AuthoritativeDnsServer
             return null;
         }
 
-        List<InetSocketAddress> addresses = new ArrayList<InetSocketAddress>(entries.size());
+        List<InetSocketAddress> addresses = new ArrayList<>(entries.size());
 
         int i = 0;
         do {

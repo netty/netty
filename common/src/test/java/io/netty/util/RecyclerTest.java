@@ -40,7 +40,7 @@ public class RecyclerTest {
     public void testThreadCanBeCollectedEvenIfHandledObjectIsReferenced() throws Exception {
         final Recycler<HandledObject> recycler = newRecycler(1024);
         final AtomicBoolean collected = new AtomicBoolean();
-        final AtomicReference<HandledObject> reference = new AtomicReference<HandledObject>();
+        final AtomicReference<HandledObject> reference = new AtomicReference<>();
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -85,7 +85,7 @@ public class RecyclerTest {
     public void testMultipleRecycleAtDifferentThread() throws InterruptedException {
         Recycler<HandledObject> recycler = newRecycler(1024);
         final HandledObject object = recycler.get();
-        final AtomicReference<IllegalStateException> exceptionStore = new AtomicReference<IllegalStateException>();
+        final AtomicReference<IllegalStateException> exceptionStore = new AtomicReference<>();
         final Thread thread1 = new Thread(new Runnable() {
             @Override
             public void run() {

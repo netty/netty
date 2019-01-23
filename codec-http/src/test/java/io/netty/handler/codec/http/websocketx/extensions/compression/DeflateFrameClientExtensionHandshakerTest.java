@@ -71,7 +71,7 @@ public class DeflateFrameClientExtensionHandshakerTest {
         DeflateFrameClientExtensionHandshaker handshaker =
                 new DeflateFrameClientExtensionHandshaker(false);
 
-        Map<String, String> parameters = new HashMap<String, String>();
+        Map<String, String> parameters = new HashMap<>();
         parameters.put("invalid", "12");
 
         // execute

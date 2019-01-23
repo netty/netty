@@ -139,7 +139,7 @@ public class DefaultCookie extends io.netty.handler.codec.http.cookie.DefaultCoo
         if (portsCopy.length == 0) {
             unmodifiablePorts = this.ports = Collections.emptySet();
         } else {
-            Set<Integer> newPorts = new TreeSet<Integer>();
+            Set<Integer> newPorts = new TreeSet<>();
             for (int p: portsCopy) {
                 if (p <= 0 || p > 65535) {
                     throw new IllegalArgumentException("port out of range: " + p);
@@ -154,7 +154,7 @@ public class DefaultCookie extends io.netty.handler.codec.http.cookie.DefaultCoo
     @Override
     @Deprecated
     public void setPorts(Iterable<Integer> ports) {
-        Set<Integer> newPorts = new TreeSet<Integer>();
+        Set<Integer> newPorts = new TreeSet<>();
         for (int p: ports) {
             if (p <= 0 || p > 65535) {
                 throw new IllegalArgumentException("port out of range: " + p);

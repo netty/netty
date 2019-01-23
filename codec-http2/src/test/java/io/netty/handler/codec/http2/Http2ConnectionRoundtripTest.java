@@ -27,16 +27,19 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.local.LocalEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.codec.http2.Http2TestUtil.FrameCountDown;
 import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
 import io.netty.util.AsciiString;
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import org.junit.After;
 import org.junit.Before;
@@ -236,9 +239,9 @@ public class Http2ConnectionRoundtripTest {
         final CountDownLatch serverRevHeadersLatch = new CountDownLatch(1);
         final CountDownLatch clientHeadersLatch = new CountDownLatch(1);
         final CountDownLatch clientDataWrite = new CountDownLatch(1);
-        final AtomicReference<Throwable> clientHeadersWriteException = new AtomicReference<Throwable>();
-        final AtomicReference<Throwable> clientHeadersWriteException2 = new AtomicReference<Throwable>();
-        final AtomicReference<Throwable> clientDataWriteException = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> clientHeadersWriteException = new AtomicReference<>();
+        final AtomicReference<Throwable> clientHeadersWriteException2 = new AtomicReference<>();
+        final AtomicReference<Throwable> clientDataWriteException = new AtomicReference<>();
 
         final Http2Headers headers = dummyHeaders();
 
@@ -518,7 +521,7 @@ public class Http2ConnectionRoundtripTest {
 
         final CountDownLatch serverGotRstLatch = new CountDownLatch(1);
         final CountDownLatch serverWriteHeadersLatch = new CountDownLatch(1);
-        final AtomicReference<Throwable> serverWriteHeadersCauseRef = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> serverWriteHeadersCauseRef = new AtomicReference<>();
 
         final Http2Headers headers = dummyHeaders();
         final int streamId = 3;
@@ -682,7 +685,7 @@ public class Http2ConnectionRoundtripTest {
         writeOfEmptyReleasedBufferQueuedInFlowControllerShouldFail(WriteEmptyBufferMode.SECOND_WITH_TRAILERS);
     }
 
-    public void writeOfEmptyReleasedBufferQueuedInFlowControllerShouldFail(final WriteEmptyBufferMode mode)
+    private void writeOfEmptyReleasedBufferQueuedInFlowControllerShouldFail(final WriteEmptyBufferMode mode)
             throws Exception {
         bootstrapEnv(1, 1, 2, 1);
 
@@ -726,6 +729,59 @@ public class Http2ConnectionRoundtripTest {
         } catch (ExecutionException e) {
             assertThat(e.getCause(), is(instanceOf(IllegalReferenceCountException.class)));
         }
+    }
+
+    @Test
+    public void writeFailureFlowControllerRemoveFrame()
+            throws Exception {
+        bootstrapEnv(1, 1, 2, 1);
+
+        final ChannelPromise dataPromise = newPromise();
+        final ChannelPromise assertPromise = newPromise();
+
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0, (short) 16, false, 0, false,
+                        newPromise());
+                clientChannel.pipeline().addFirst(new ChannelOutboundHandlerAdapter() {
+                    @Override
+                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                        ReferenceCountUtil.release(msg);
+
+                        // Ensure we update the window size so we will try to write the rest of the frame while
+                        // processing the flush.
+                        http2Client.encoder().flowController().initialWindowSize(8);
+                        promise.setFailure(new IllegalStateException());
+                    }
+                });
+
+                http2Client.encoder().flowController().initialWindowSize(4);
+                http2Client.encoder().writeData(ctx(), 3, randomBytes(8), 0, false, dataPromise);
+                assertTrue(http2Client.encoder().flowController()
+                        .hasFlowControlled(http2Client.connection().stream(3)));
+
+                http2Client.flush(ctx());
+
+                try {
+                    // The Frame should have been removed after the write failed.
+                    assertFalse(http2Client.encoder().flowController()
+                            .hasFlowControlled(http2Client.connection().stream(3)));
+                    assertPromise.setSuccess();
+                } catch (Throwable error) {
+                    assertPromise.setFailure(error);
+                }
+            }
+        });
+
+        try {
+            dataPromise.get();
+            fail();
+        } catch (ExecutionException e) {
+            assertThat(e.getCause(), is(instanceOf(IllegalStateException.class)));
+        }
+
+        assertPromise.sync();
     }
 
     @Test
@@ -852,7 +908,7 @@ public class Http2ConnectionRoundtripTest {
         verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(3), eq(NO_ERROR.code()),
                 any(ByteBuf.class));
 
-        final AtomicReference<ChannelFuture> clientWriteAfterGoAwayFutureRef = new AtomicReference<ChannelFuture>();
+        final AtomicReference<ChannelFuture> clientWriteAfterGoAwayFutureRef = new AtomicReference<>();
         final CountDownLatch clientWriteAfterGoAwayLatch = new CountDownLatch(1);
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
@@ -907,7 +963,7 @@ public class Http2ConnectionRoundtripTest {
         setServerGracefulShutdownTime(10000);
 
         final Http2Headers headers = dummyHeaders();
-        final AtomicReference<ChannelFuture> clientWriteAfterGoAwayFutureRef = new AtomicReference<ChannelFuture>();
+        final AtomicReference<ChannelFuture> clientWriteAfterGoAwayFutureRef = new AtomicReference<>();
         final CountDownLatch clientWriteAfterGoAwayLatch = new CountDownLatch(1);
         doAnswer(new Answer<Void>() {
             @Override
@@ -1134,9 +1190,9 @@ public class Http2ConnectionRoundtripTest {
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
-        final AtomicReference<Http2ConnectionHandler> serverHandlerRef = new AtomicReference<Http2ConnectionHandler>();
+        final AtomicReference<Http2ConnectionHandler> serverHandlerRef = new AtomicReference<>();
         final CountDownLatch serverInitLatch = new CountDownLatch(1);
-        sb.group(new LocalEventLoopGroup());
+        sb.group(new MultithreadEventLoopGroup(LocalHandler.newFactory()));
         sb.channel(LocalServerChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -1156,7 +1212,7 @@ public class Http2ConnectionRoundtripTest {
             }
         });
 
-        cb.group(new LocalEventLoopGroup());
+        cb.group(new MultithreadEventLoopGroup(LocalHandler.newFactory()));
         cb.channel(LocalChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override

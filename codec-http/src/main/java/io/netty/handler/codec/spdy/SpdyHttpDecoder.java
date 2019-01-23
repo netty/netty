@@ -59,7 +59,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
      *        a {@link TooLongFrameException} will be raised.
      */
     public SpdyHttpDecoder(SpdyVersion version, int maxContentLength) {
-        this(version, maxContentLength, new HashMap<Integer, FullHttpMessage>(), true);
+        this(version, maxContentLength, new HashMap<>(), true);
     }
 
     /**
@@ -72,7 +72,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
      * @param validateHeaders {@code true} if http headers should be validated
      */
     public SpdyHttpDecoder(SpdyVersion version, int maxContentLength, boolean validateHeaders) {
-        this(version, maxContentLength, new HashMap<Integer, FullHttpMessage>(), validateHeaders);
+        this(version, maxContentLength, new HashMap<>(), validateHeaders);
     }
 
     /**

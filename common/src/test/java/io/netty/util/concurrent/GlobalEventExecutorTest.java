@@ -98,7 +98,7 @@ public class GlobalEventExecutorTest {
     @Test(timeout = 2000)
     public void testThreadGroup() throws InterruptedException {
         final ThreadGroup group = new ThreadGroup("group");
-        final AtomicReference<ThreadGroup> capturedGroup = new AtomicReference<ThreadGroup>();
+        final AtomicReference<ThreadGroup> capturedGroup = new AtomicReference<>();
         final Thread thread = new Thread(group, new Runnable() {
             @Override
             public void run() {

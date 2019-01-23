@@ -20,10 +20,11 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.local.LocalEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -52,13 +53,13 @@ public class SniClientTest {
 
     @Parameters(name = "{index}: serverSslProvider = {0}, clientSslProvider = {1}")
     public static Collection<Object[]> parameters() {
-        List<SslProvider> providers = new ArrayList<SslProvider>(Arrays.asList(SslProvider.values()));
+        List<SslProvider> providers = new ArrayList<>(Arrays.asList(SslProvider.values()));
         if (!OpenSsl.isAvailable()) {
             providers.remove(SslProvider.OPENSSL);
             providers.remove(SslProvider.OPENSSL_REFCNT);
         }
 
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         for (SslProvider sp: providers) {
             for (SslProvider cp: providers) {
                 params.add(new Object[] { sp, cp });
@@ -93,7 +94,7 @@ public class SniClientTest {
     private static void testSniClient(SslProvider sslServerProvider, SslProvider sslClientProvider) throws Exception {
         String sniHostName = "sni.netty.io";
         LocalAddress address = new LocalAddress("test");
-        EventLoopGroup group = new LocalEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         SelfSignedCertificate cert = new SelfSignedCertificate();
         SslContext sslServerContext = null;
         SslContext sslClientContext = null;

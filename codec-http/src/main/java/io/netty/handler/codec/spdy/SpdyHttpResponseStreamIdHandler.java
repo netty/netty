@@ -33,7 +33,7 @@ import java.util.Queue;
 public class SpdyHttpResponseStreamIdHandler extends
         MessageToMessageCodec<Object, HttpMessage> {
     private static final Integer NO_ID = -1;
-    private final Queue<Integer> ids = new LinkedList<Integer>();
+    private final Queue<Integer> ids = new LinkedList<>();
 
     @Override
     public boolean acceptInboundMessage(Object msg) throws Exception {

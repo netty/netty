@@ -51,7 +51,7 @@ public class KQueueDomainSocketFdTest extends AbstractSocketTest {
     }
 
     public void testSendRecvFd(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        final BlockingQueue<Object> queue = new LinkedBlockingQueue<Object>(1);
+        final BlockingQueue<Object> queue = new LinkedBlockingQueue<>(1);
         sb.childHandler(new ChannelInboundHandlerAdapter() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {

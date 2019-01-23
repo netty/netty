@@ -103,7 +103,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
      * Buffer for any streams and corresponding frames that could not be created due to the maximum
      * concurrent stream limit being hit.
      */
-    private final TreeMap<Integer, PendingStream> pendingStreams = new TreeMap<Integer, PendingStream>();
+    private final TreeMap<Integer, PendingStream> pendingStreams = new TreeMap<>();
     private int maxConcurrentStreams;
     private boolean closed;
 
@@ -274,7 +274,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     private static final class PendingStream {
         final ChannelHandlerContext ctx;
         final int streamId;
-        final Queue<Frame> frames = new ArrayDeque<Frame>(2);
+        final Queue<Frame> frames = new ArrayDeque<>(2);
 
         PendingStream(ChannelHandlerContext ctx, int streamId) {
             this.ctx = ctx;

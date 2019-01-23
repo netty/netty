@@ -13,15 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.util.concurrent;
+package io.netty.channel;
 
-import org.junit.Assert;
-import org.junit.Test;
+/**
+ * Factory for {@link IoHandler} instances.
+ */
+public interface IoHandlerFactory {
 
-public class ScheduledFutureTaskTest {
-
-    @Test
-    public void testDeadlineNanosNotOverflow() {
-        Assert.assertEquals(Long.MAX_VALUE, ScheduledFutureTask.deadlineNanos(Long.MAX_VALUE));
-    }
+    /**
+     * Creates a new {@link IoHandler} instance.
+     */
+    IoHandler newHandler();
 }

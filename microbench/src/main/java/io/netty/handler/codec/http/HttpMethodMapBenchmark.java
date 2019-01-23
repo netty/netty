@@ -43,7 +43,7 @@ import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
 @Measurement(iterations = 8)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
-    private static final Map<String, HttpMethod> OLD_MAP = new HashMap<String, HttpMethod>();
+    private static final Map<String, HttpMethod> OLD_MAP = new HashMap<>();
     private static final SimpleStringMap<HttpMethod> NEW_MAP;
     private static final String[] KNOWN_METHODS;
     private static final String[] MIXED_METHODS;
@@ -98,16 +98,16 @@ public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
         OLD_MAP.put(TRACE.toString(), TRACE);
         OLD_MAP.put(CONNECT.toString(), CONNECT);
 
-        NEW_MAP = new SimpleStringMap<HttpMethod>(
-                new SimpleStringMap.Node<HttpMethod>(OPTIONS.toString(), OPTIONS),
-                new SimpleStringMap.Node<HttpMethod>(GET.toString(), GET),
-                new SimpleStringMap.Node<HttpMethod>(HEAD.toString(), HEAD),
-                new SimpleStringMap.Node<HttpMethod>(POST.toString(), POST),
-                new SimpleStringMap.Node<HttpMethod>(PUT.toString(), PUT),
-                new SimpleStringMap.Node<HttpMethod>(PATCH.toString(), PATCH),
-                new SimpleStringMap.Node<HttpMethod>(DELETE.toString(), DELETE),
-                new SimpleStringMap.Node<HttpMethod>(TRACE.toString(), TRACE),
-                new SimpleStringMap.Node<HttpMethod>(CONNECT.toString(), CONNECT));
+        NEW_MAP = new SimpleStringMap<>(
+                new SimpleStringMap.Node<>(OPTIONS.toString(), OPTIONS),
+                new SimpleStringMap.Node<>(GET.toString(), GET),
+                new SimpleStringMap.Node<>(HEAD.toString(), HEAD),
+                new SimpleStringMap.Node<>(POST.toString(), POST),
+                new SimpleStringMap.Node<>(PUT.toString(), PUT),
+                new SimpleStringMap.Node<>(PATCH.toString(), PATCH),
+                new SimpleStringMap.Node<>(DELETE.toString(), DELETE),
+                new SimpleStringMap.Node<>(TRACE.toString(), TRACE),
+                new SimpleStringMap.Node<>(CONNECT.toString(), CONNECT));
     }
 
     private static final class SimpleStringMap<T> {

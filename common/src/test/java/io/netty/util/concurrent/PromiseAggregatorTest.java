@@ -40,7 +40,7 @@ public class PromiseAggregatorTest {
         @SuppressWarnings("unchecked")
         Promise<Void> p = mock(Promise.class);
         PromiseAggregator<Void, Future<Void>> a =
-                new PromiseAggregator<Void, Future<Void>>(p);
+                new PromiseAggregator<>(p);
         expectedException.expect(NullPointerException.class);
         a.add((Promise<Void>[]) null);
     }
@@ -50,7 +50,7 @@ public class PromiseAggregatorTest {
     public void testSuccessfulNoPending() throws Exception {
         Promise<Void> p = mock(Promise.class);
         PromiseAggregator<Void, Future<Void>> a =
-                new PromiseAggregator<Void, Future<Void>>(p);
+                new PromiseAggregator<>(p);
 
         Future<Void> future = mock(Future.class);
         when(p.setSuccess(null)).thenReturn(p);
@@ -66,7 +66,7 @@ public class PromiseAggregatorTest {
     public void testSuccessfulPending() throws Exception {
         Promise<Void> p = mock(Promise.class);
         PromiseAggregator<Void, Future<Void>> a =
-                new PromiseAggregator<Void, Future<Void>>(p);
+                new PromiseAggregator<>(p);
         Promise<Void> p1 = mock(Promise.class);
         Promise<Void> p2 = mock(Promise.class);
 
@@ -92,7 +92,7 @@ public class PromiseAggregatorTest {
     public void testFailedFutureFailPending() throws Exception {
         Promise<Void> p = mock(Promise.class);
         PromiseAggregator<Void, Future<Void>> a =
-                new PromiseAggregator<Void, Future<Void>>(p);
+                new PromiseAggregator<>(p);
         Promise<Void> p1 = mock(Promise.class);
         Promise<Void> p2 = mock(Promise.class);
         Throwable t = mock(Throwable.class);
@@ -119,7 +119,7 @@ public class PromiseAggregatorTest {
     public void testFailedFutureNoFailPending() throws Exception {
         Promise<Void> p = mock(Promise.class);
         PromiseAggregator<Void, Future<Void>> a =
-                new PromiseAggregator<Void, Future<Void>>(p, false);
+                new PromiseAggregator<>(p, false);
         Promise<Void> p1 = mock(Promise.class);
         Promise<Void> p2 = mock(Promise.class);
         Throwable t = mock(Throwable.class);

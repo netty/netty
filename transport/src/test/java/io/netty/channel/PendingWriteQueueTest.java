@@ -95,8 +95,8 @@ public class PendingWriteQueueTest {
 
     @Test
     public void shouldFireChannelWritabilityChangedAfterRemoval() {
-        final AtomicReference<ChannelHandlerContext> ctxRef = new AtomicReference<ChannelHandlerContext>();
-        final AtomicReference<PendingWriteQueue> queueRef = new AtomicReference<PendingWriteQueue>();
+        final AtomicReference<ChannelHandlerContext> ctxRef = new AtomicReference<>();
+        final AtomicReference<PendingWriteQueue> queueRef = new AtomicReference<>();
         final ByteBuf msg = Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII);
 
         final EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
@@ -259,9 +259,9 @@ public class PendingWriteQueueTest {
         assertTrue(promise3.isDone());
         assertTrue(promise3.isSuccess());
         assertTrue(channel.finish());
-        assertEquals(1L, channel.readOutbound());
-        assertEquals(2L, channel.readOutbound());
-        assertEquals(3L, channel.readOutbound());
+        assertEquals(1L, (long) channel.readOutbound());
+        assertEquals(2L, (long) channel.readOutbound());
+        assertEquals(3L, (long) channel.readOutbound());
     }
 
     @Test
@@ -284,13 +284,13 @@ public class PendingWriteQueueTest {
         assertTrue(channel.finish());
         assertTrue(promise.isDone());
         assertTrue(promise.isSuccess());
-        assertEquals(1L, channel.readOutbound());
-        assertEquals(2L, channel.readOutbound());
+        assertEquals(1L, (long) channel.readOutbound());
+        assertEquals(2L, (long) channel.readOutbound());
     }
 
     @Test
     public void testRemoveAndFailAllReentrantWrite() {
-        final List<Integer> failOrder = Collections.synchronizedList(new ArrayList<Integer>());
+        final List<Integer> failOrder = Collections.synchronizedList(new ArrayList<>());
         EmbeddedChannel channel = newChannel();
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().firstContext());
 
@@ -354,8 +354,8 @@ public class PendingWriteQueueTest {
         assertTrue(promise2.isSuccess());
         assertTrue(channel.finish());
 
-        assertEquals(1L, channel.readOutbound());
-        assertEquals(2L, channel.readOutbound());
+        assertEquals(1L, (long) channel.readOutbound());
+        assertEquals(2L, (long) channel.readOutbound());
         assertNull(channel.readOutbound());
         assertNull(channel.readInbound());
     }

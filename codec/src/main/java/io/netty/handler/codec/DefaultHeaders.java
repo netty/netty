@@ -110,7 +110,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         // than the length of this array, and we want the mask to be > 0.
         entries = new DefaultHeaders.HeaderEntry[findNextPositivePowerOfTwo(max(2, min(arraySizeHint, 128)))];
         hashMask = (byte) (entries.length - 1);
-        head = new HeaderEntry<K, V>();
+        head = new HeaderEntry<>();
     }
 
     @Override
@@ -160,7 +160,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public List<V> getAll(K name) {
         checkNotNull(name, "name");
 
-        LinkedList<V> values = new LinkedList<V>();
+        LinkedList<V> values = new LinkedList<>();
 
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
@@ -281,7 +281,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         if (isEmpty()) {
             return Collections.emptySet();
         }
-        Set<K> names = new LinkedHashSet<K>(size());
+        Set<K> names = new LinkedHashSet<>(size());
         HeaderEntry<K, V> e = head.after;
         while (e != head) {
             names.add(e.getKey());
@@ -958,7 +958,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     }
 
     protected HeaderEntry<K, V> newHeaderEntry(int h, K name, V value, HeaderEntry<K, V> next) {
-        return new HeaderEntry<K, V>(h, name, value, next, head);
+        return new HeaderEntry<>(h, name, value, next, head);
     }
 
     protected ValueConverter<V> valueConverter() {
@@ -1021,7 +1021,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
      * Returns a deep copy of this instance.
      */
     public DefaultHeaders<K, V, T> copy() {
-        DefaultHeaders<K, V, T> copy = new DefaultHeaders<K, V, T>(
+        DefaultHeaders<K, V, T> copy = new DefaultHeaders<>(
                 hashingStrategy, valueConverter, nameValidator, entries.length);
         copy.addImpl(this);
         return copy;

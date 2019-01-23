@@ -34,7 +34,6 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.stream.ChunkedInput;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.io.File;
@@ -46,6 +45,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
@@ -98,9 +98,9 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
 
     static {
         percentEncodings = new Map.Entry[] {
-                new SimpleImmutableEntry<Pattern, String>(Pattern.compile("\\*"), "%2A"),
-                new SimpleImmutableEntry<Pattern, String>(Pattern.compile("\\+"), "%20"),
-                new SimpleImmutableEntry<Pattern, String>(Pattern.compile("~"), "%7E")
+                new SimpleImmutableEntry<>(Pattern.compile("\\*"), "%2A"),
+                new SimpleImmutableEntry<>(Pattern.compile("\\+"), "%20"),
+                new SimpleImmutableEntry<>(Pattern.compile("~"), "%7E")
         };
     }
 
@@ -216,12 +216,12 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             throw new ErrorDataEncoderException("Cannot create a Encoder if request is a TRACE");
         }
         // Fill default values
-        bodyListDatas = new ArrayList<InterfaceHttpData>();
+        bodyListDatas = new ArrayList<>();
         // default mode
         isLastChunk = false;
         isLastChunkSent = false;
         isMultipart = multipart;
-        multipartHttpDatas = new ArrayList<InterfaceHttpData>();
+        multipartHttpDatas = new ArrayList<>();
         this.encoderMode = encoderMode;
         if (isMultipart) {
             initDataMultipart();
@@ -289,7 +289,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      */
     private static String getNewMultipartDelimiter() {
         // construct a generated delimiter
-        return Long.toHexString(PlatformDependent.threadLocalRandom().nextLong());
+        return Long.toHexString(ThreadLocalRandom.current().nextLong());
     }
 
     /**

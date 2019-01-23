@@ -255,7 +255,7 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public Queue<Object> inboundMessages() {
         if (inboundMessages == null) {
-            inboundMessages = new ArrayDeque<Object>();
+            inboundMessages = new ArrayDeque<>();
         }
         return inboundMessages;
     }
@@ -273,7 +273,7 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public Queue<Object> outboundMessages() {
         if (outboundMessages == null) {
-            outboundMessages = new ArrayDeque<Object>();
+            outboundMessages = new ArrayDeque<>();
         }
         return outboundMessages;
     }
@@ -532,7 +532,7 @@ public class EmbeddedChannel extends AbstractChannel {
         runPendingTasks();
         if (cancel) {
             // Cancel all scheduled tasks that are left.
-            ((EmbeddedEventLoop) eventLoop()).cancelScheduledTasks();
+            ((EmbeddedEventLoop) eventLoop()).cancelScheduled();
         }
     }
 

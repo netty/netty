@@ -25,9 +25,10 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.local.LocalEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -335,7 +336,7 @@ public class HttpToHttp2ConnectionHandlerTest {
     @Test
     public void testRequestWithBody() throws Exception {
         final String text = "foooooogoooo";
-        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
+        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<>());
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
@@ -378,7 +379,7 @@ public class HttpToHttp2ConnectionHandlerTest {
     @Test
     public void testRequestWithBodyAndTrailingHeaders() throws Exception {
         final String text = "foooooogoooo";
-        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
+        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<>());
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
@@ -430,7 +431,7 @@ public class HttpToHttp2ConnectionHandlerTest {
     public void testChunkedRequestWithBodyAndTrailingHeaders() throws Exception {
         final String text = "foooooo";
         final String text2 = "goooo";
-        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<String>());
+        final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<>());
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock in) throws Throwable {
@@ -508,7 +509,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
-        sb.group(new LocalEventLoopGroup());
+        sb.group(new MultithreadEventLoopGroup(LocalHandler.newFactory()));
         sb.channel(LocalServerChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -525,7 +526,7 @@ public class HttpToHttp2ConnectionHandlerTest {
             }
         });
 
-        cb.group(new LocalEventLoopGroup());
+        cb.group(new MultithreadEventLoopGroup(LocalHandler.newFactory()));
         cb.channel(LocalChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override

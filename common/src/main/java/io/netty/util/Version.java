@@ -72,23 +72,17 @@ public final class Version {
             Enumeration<URL> resources = classLoader.getResources("META-INF/io.netty.versions.properties");
             while (resources.hasMoreElements()) {
                 URL url = resources.nextElement();
-                InputStream in = url.openStream();
-                try {
+                try (InputStream in = url.openStream()) {
                     props.load(in);
-                } finally {
-                    try {
-                        in.close();
-                    } catch (Exception ignore) {
-                        // Ignore.
-                    }
                 }
+                // Ignore.
             }
         } catch (Exception ignore) {
             // Not critical. Just ignore.
         }
 
         // Collect all artifactIds.
-        Set<String> artifactIds = new HashSet<String>();
+        Set<String> artifactIds = new HashSet<>();
         for (Object o: props.keySet()) {
             String k = (String) o;
 
@@ -112,7 +106,7 @@ public final class Version {
             artifactIds.add(artifactId);
         }
 
-        Map<String, Version> versions = new TreeMap<String, Version>();
+        Map<String, Version> versions = new TreeMap<>();
         for (String artifactId: artifactIds) {
             versions.put(
                     artifactId,

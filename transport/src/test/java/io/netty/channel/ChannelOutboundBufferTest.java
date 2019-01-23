@@ -18,7 +18,6 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
@@ -29,6 +28,7 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
 import static io.netty.buffer.Unpooled.*;
@@ -138,7 +138,38 @@ public class ChannelOutboundBufferTest {
         private final ChannelConfig config = new DefaultChannelConfig(this);
 
         TestChannel() {
-            super(null, new LocalEventLoopGroup(1).next());
+            super(null, new SingleThreadEventLoop(Executors.defaultThreadFactory(),
+                    new IoHandler() {
+                @Override
+                public int run(IoExecutionContext runner) {
+                    return 0;
+                }
+
+                @Override
+                public void wakeup(boolean inEventLoop) {
+                    // NOOP
+                }
+
+                @Override
+                public void destroy() {
+                    // NOOP
+                }
+
+                @Override
+                public void register(Channel channel) {
+                    // NOOP
+                }
+
+                @Override
+                public void prepareToDestroy() {
+                    // NOOP
+                }
+
+                @Override
+                public void deregister(Channel channel) {
+                    // NOOP
+                }
+            }));
         }
 
         @Override
@@ -360,18 +391,8 @@ public class ChannelOutboundBufferTest {
     @Test(timeout = 5000)
     public void testWriteTaskRejected() throws Exception {
         final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(
-                null, new DefaultThreadFactory("executorPool"),
-                true, 1, RejectedExecutionHandlers.reject()) {
-            @Override
-            protected void run() {
-                do {
-                    Runnable task = takeTask();
-                    if (task != null) {
-                        task.run();
-                        updateLastExecutionTime();
-                    }
-                } while (!confirmShutdown());
-            }
+                new DefaultThreadFactory("executorPool"),
+                1, RejectedExecutionHandlers.reject()) {
 
             @Override
             protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
@@ -379,16 +400,22 @@ public class ChannelOutboundBufferTest {
             }
         };
         final CountDownLatch handlerAddedLatch = new CountDownLatch(1);
+        final CountDownLatch handlerRemovedLatch = new CountDownLatch(1);
         EmbeddedChannel ch = new EmbeddedChannel();
-        ch.pipeline().addLast(executor, new ChannelOutboundHandlerAdapter() {
+        ch.pipeline().addLast(executor, "handler", new ChannelOutboundHandlerAdapter() {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
                 promise.setFailure(new AssertionError("Should not be called"));
             }
 
             @Override
-            public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            public void handlerAdded(ChannelHandlerContext ctx) {
                 handlerAddedLatch.countDown();
+            }
+
+            @Override
+            public void handlerRemoved(ChannelHandlerContext ctx) {
+                handlerRemovedLatch.countDown();
             }
         });
 
@@ -432,7 +459,19 @@ public class ChannelOutboundBufferTest {
         assertEquals(0, ch.unsafe().outboundBuffer().totalPendingWriteBytes());
         executeLatch.countDown();
 
+        while (executor.pendingTasks() != 0) {
+            // Wait until there is no more pending task left.
+            Thread.sleep(10);
+        }
+
+        ch.pipeline().remove("handler");
+
+        // Ensure we do not try to shutdown the executor before we handled everything for the Channel. Otherwise
+        // the Executor may reject when the Channel tries to add a task to it.
+        handlerRemovedLatch.await();
+
         safeClose(ch);
+
         executor.shutdownGracefully();
     }
 

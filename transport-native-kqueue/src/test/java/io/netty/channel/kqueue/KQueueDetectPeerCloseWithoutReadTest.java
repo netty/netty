@@ -17,13 +17,14 @@ package io.netty.channel.kqueue;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.unix.tests.DetectPeerCloseWithoutReadTest;
 
 public class KQueueDetectPeerCloseWithoutReadTest extends DetectPeerCloseWithoutReadTest {
     @Override
     protected EventLoopGroup newGroup() {
-        return new KQueueEventLoopGroup(2);
+        return new MultithreadEventLoopGroup(2, KQueueHandler.newFactory());
     }
 
     @Override

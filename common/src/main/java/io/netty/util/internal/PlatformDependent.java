@@ -38,12 +38,8 @@ import java.security.PrivilegedAction;
 import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Queue;
-import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
@@ -99,7 +95,6 @@ public final class PlatformDependent {
     private static final boolean USE_DIRECT_BUFFER_NO_CLEANER;
     private static final AtomicLong DIRECT_MEMORY_COUNTER;
     private static final long DIRECT_MEMORY_LIMIT;
-    private static final ThreadLocalRandomProvider RANDOM_PROVIDER;
     private static final Cleaner CLEANER;
     private static final int UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD;
 
@@ -113,22 +108,6 @@ public final class PlatformDependent {
     };
 
     static {
-        if (javaVersion() >= 7) {
-            RANDOM_PROVIDER = new ThreadLocalRandomProvider() {
-                @Override
-                public Random current() {
-                    return java.util.concurrent.ThreadLocalRandom.current();
-                }
-            };
-        } else {
-            RANDOM_PROVIDER = new ThreadLocalRandomProvider() {
-                @Override
-                public Random current() {
-                    return ThreadLocalRandom.current();
-                }
-            };
-        }
-
         // Here is how the system property is used:
         //
         // * <  0  - Don't use cleaner, and inherit max direct memory from java. In this case the
@@ -179,7 +158,7 @@ public final class PlatformDependent {
 
         // We should always prefer direct buffers by default if we can use a Cleaner to release direct buffers.
         DIRECT_BUFFER_PREFERRED = CLEANER != NOOP
-                                  && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
+                && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
         if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty.noPreferDirect: {}", !DIRECT_BUFFER_PREFERRED);
         }
@@ -191,8 +170,8 @@ public final class PlatformDependent {
         if (CLEANER == NOOP && !PlatformDependent0.isExplicitNoUnsafe()) {
             logger.info(
                     "Your platform does not provide complete low-level API for accessing direct buffers reliably. " +
-                    "Unless explicitly requested, heap buffer will always be preferred to avoid potential system " +
-                    "instability.");
+                            "Unless explicitly requested, heap buffer will always be preferred to avoid potential system " +
+                            "instability.");
         }
     }
 
@@ -328,56 +307,13 @@ public final class PlatformDependent {
         if (hasUnsafe()) {
             PlatformDependent0.throwException(t);
         } else {
-            PlatformDependent.<RuntimeException>throwException0(t);
+            PlatformDependent.throwException0(t);
         }
     }
 
     @SuppressWarnings("unchecked")
     private static <E extends Throwable> void throwException0(Throwable t) throws E {
         throw (E) t;
-    }
-
-    /**
-     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
-     */
-    public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap() {
-        return new ConcurrentHashMap<K, V>();
-    }
-
-    /**
-     * Creates a new fastest {@link LongCounter} implementation for the current platform.
-     */
-    public static LongCounter newLongCounter() {
-        return new LongAdderCounter();
-    }
-
-    /**
-     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
-     */
-    public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity) {
-        return new ConcurrentHashMap<K, V>(initialCapacity);
-    }
-
-    /**
-     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
-     */
-    public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity, float loadFactor) {
-        return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor);
-    }
-
-    /**
-     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
-     */
-    public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(
-            int initialCapacity, float loadFactor, int concurrencyLevel) {
-        return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor, concurrencyLevel);
-    }
-
-    /**
-     * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
-     */
-    public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(Map<? extends K, ? extends V> map) {
-        return new ConcurrentHashMap<K, V>(map);
     }
 
     /**
@@ -506,14 +442,14 @@ public final class PlatformDependent {
         if (BIG_ENDIAN_NATIVE_ORDER) {
             // mimic a unsafe.getInt call on a big endian machine
             return (value.charAt(offset + 3) & 0x1f) |
-                   (value.charAt(offset + 2) & 0x1f) << 8 |
-                   (value.charAt(offset + 1) & 0x1f) << 16 |
-                   (value.charAt(offset) & 0x1f) << 24;
+                    (value.charAt(offset + 2) & 0x1f) << 8 |
+                    (value.charAt(offset + 1) & 0x1f) << 16 |
+                    (value.charAt(offset) & 0x1f) << 24;
         }
         return (value.charAt(offset + 3) & 0x1f) << 24 |
-               (value.charAt(offset + 2) & 0x1f) << 16 |
-               (value.charAt(offset + 1) & 0x1f) << 8 |
-               (value.charAt(offset) & 0x1f);
+                (value.charAt(offset + 2) & 0x1f) << 16 |
+                (value.charAt(offset + 1) & 0x1f) << 8 |
+                (value.charAt(offset) & 0x1f);
     }
 
     /**
@@ -679,8 +615,8 @@ public final class PlatformDependent {
      */
     public static boolean equals(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length) {
         return !hasUnsafe() || !unalignedAccess() ?
-                  equalsSafe(bytes1, startPos1, bytes2, startPos2, length) :
-                  PlatformDependent0.equals(bytes1, startPos1, bytes2, startPos2, length);
+                equalsSafe(bytes1, startPos1, bytes2, startPos2, length) :
+                PlatformDependent0.equals(bytes1, startPos1, bytes2, startPos2, length);
     }
 
     /**
@@ -719,8 +655,8 @@ public final class PlatformDependent {
      */
     public static int equalsConstantTime(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length) {
         return !hasUnsafe() || !unalignedAccess() ?
-                  ConstantTimeUtils.equalsConstantTime(bytes1, startPos1, bytes2, startPos2, length) :
-                  PlatformDependent0.equalsConstantTime(bytes1, startPos1, bytes2, startPos2, length);
+                ConstantTimeUtils.equalsConstantTime(bytes1, startPos1, bytes2, startPos2, length) :
+                PlatformDependent0.equalsConstantTime(bytes1, startPos1, bytes2, startPos2, length);
     }
 
     /**
@@ -765,7 +701,7 @@ public final class PlatformDependent {
             case 24:
                 hash = hashCodeAsciiCompute(bytes, bytes.length() - 24,
                         hashCodeAsciiCompute(bytes, bytes.length() - 16,
-                          hashCodeAsciiCompute(bytes, bytes.length() - 8, hash)));
+                                hashCodeAsciiCompute(bytes, bytes.length() - 8, hash)));
                 break;
             case 23:
             case 22:
@@ -776,7 +712,7 @@ public final class PlatformDependent {
             case 17:
             case 16:
                 hash = hashCodeAsciiCompute(bytes, bytes.length() - 16,
-                         hashCodeAsciiCompute(bytes, bytes.length() - 8, hash));
+                        hashCodeAsciiCompute(bytes, bytes.length() - 8, hash));
                 break;
             case 15:
             case 14:
@@ -806,19 +742,19 @@ public final class PlatformDependent {
         switch(remainingBytes) {
             case 7:
                 return ((hash * HASH_CODE_C1 + hashCodeAsciiSanitizeByte(bytes.charAt(0)))
-                              * HASH_CODE_C2 + hashCodeAsciiSanitizeShort(bytes, 1))
-                              * HASH_CODE_C1 + hashCodeAsciiSanitizeInt(bytes, 3);
+                        * HASH_CODE_C2 + hashCodeAsciiSanitizeShort(bytes, 1))
+                        * HASH_CODE_C1 + hashCodeAsciiSanitizeInt(bytes, 3);
             case 6:
                 return (hash * HASH_CODE_C1 + hashCodeAsciiSanitizeShort(bytes, 0))
-                             * HASH_CODE_C2 + hashCodeAsciiSanitizeInt(bytes, 2);
+                        * HASH_CODE_C2 + hashCodeAsciiSanitizeInt(bytes, 2);
             case 5:
                 return (hash * HASH_CODE_C1 + hashCodeAsciiSanitizeByte(bytes.charAt(0)))
-                             * HASH_CODE_C2 + hashCodeAsciiSanitizeInt(bytes, 1);
+                        * HASH_CODE_C2 + hashCodeAsciiSanitizeInt(bytes, 1);
             case 4:
                 return hash * HASH_CODE_C1 + hashCodeAsciiSanitizeInt(bytes, 0);
             case 3:
                 return (hash * HASH_CODE_C1 + hashCodeAsciiSanitizeByte(bytes.charAt(0)))
-                             * HASH_CODE_C2 + hashCodeAsciiSanitizeShort(bytes, 1);
+                        * HASH_CODE_C2 + hashCodeAsciiSanitizeShort(bytes, 1);
             case 2:
                 return hash * HASH_CODE_C1 + hashCodeAsciiSanitizeShort(bytes, 0);
             case 1:
@@ -863,13 +799,13 @@ public final class PlatformDependent {
             // This is forced by the MpscChunkedArrayQueue implementation as will try to round it
             // up to the next power of two and so will overflow otherwise.
             final int capacity = max(min(maxCapacity, MAX_ALLOWED_MPSC_CAPACITY), MIN_MAX_MPSC_CAPACITY);
-            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscChunkedArrayQueue<T>(MPSC_CHUNK_SIZE, capacity)
-                                                : new MpscGrowableAtomicArrayQueue<T>(MPSC_CHUNK_SIZE, capacity);
+            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscChunkedArrayQueue<>(MPSC_CHUNK_SIZE, capacity)
+                    : new MpscGrowableAtomicArrayQueue<>(MPSC_CHUNK_SIZE, capacity);
         }
 
         static <T> Queue<T> newMpscQueue() {
-            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscUnboundedArrayQueue<T>(MPSC_CHUNK_SIZE)
-                                                : new MpscUnboundedAtomicArrayQueue<T>(MPSC_CHUNK_SIZE);
+            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscUnboundedArrayQueue<>(MPSC_CHUNK_SIZE)
+                    : new MpscUnboundedAtomicArrayQueue<>(MPSC_CHUNK_SIZE);
         }
     }
 
@@ -895,7 +831,7 @@ public final class PlatformDependent {
      * consumer (one thread!).
      */
     public static <T> Queue<T> newSpscQueue() {
-        return hasUnsafe() ? new SpscLinkedQueue<T>() : new SpscLinkedAtomicQueue<T>();
+        return hasUnsafe() ? new SpscLinkedQueue<>() : new SpscLinkedAtomicQueue<>();
     }
 
     /**
@@ -903,7 +839,7 @@ public final class PlatformDependent {
      * consumer (one thread!) with the given fixes {@code capacity}.
      */
     public static <T> Queue<T> newFixedMpscQueue(int capacity) {
-        return hasUnsafe() ? new MpscArrayQueue<T>(capacity) : new MpscAtomicArrayQueue<T>(capacity);
+        return hasUnsafe() ? new MpscArrayQueue<>(capacity) : new MpscAtomicArrayQueue<>(capacity);
     }
 
     /**
@@ -931,14 +867,7 @@ public final class PlatformDependent {
      * Returns a new concurrent {@link Deque}.
      */
     public static <C> Deque<C> newConcurrentDeque() {
-        return new ConcurrentLinkedDeque<C>();
-    }
-
-    /**
-     * Return a {@link Random} which is not-threadsafe and so can only be used from the same thread.
-     */
-    public static Random threadLocalRandom() {
-        return RANDOM_PROVIDER.current();
+        return new ConcurrentLinkedDeque<>();
     }
 
     private static boolean isWindows0() {
@@ -1231,27 +1160,27 @@ public final class PlatformDependent {
             hash = PlatformDependent0.hashCodeAsciiCompute(getLongSafe(bytes, i), hash);
         }
         switch(remainingBytes) {
-        case 7:
-            return ((hash * HASH_CODE_C1 + hashCodeAsciiSanitize(bytes[startPos]))
-                          * HASH_CODE_C2 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos + 1)))
-                          * HASH_CODE_C1 + hashCodeAsciiSanitize(getIntSafe(bytes, startPos + 3));
-        case 6:
-            return (hash * HASH_CODE_C1 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos)))
-                         * HASH_CODE_C2 + hashCodeAsciiSanitize(getIntSafe(bytes, startPos + 2));
-        case 5:
-            return (hash * HASH_CODE_C1 + hashCodeAsciiSanitize(bytes[startPos]))
-                         * HASH_CODE_C2 + hashCodeAsciiSanitize(getIntSafe(bytes, startPos + 1));
-        case 4:
-            return hash * HASH_CODE_C1 + hashCodeAsciiSanitize(getIntSafe(bytes, startPos));
-        case 3:
-            return (hash * HASH_CODE_C1 + hashCodeAsciiSanitize(bytes[startPos]))
-                         * HASH_CODE_C2 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos + 1));
-        case 2:
-            return hash * HASH_CODE_C1 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos));
-        case 1:
-            return hash * HASH_CODE_C1 + hashCodeAsciiSanitize(bytes[startPos]);
-        default:
-            return hash;
+            case 7:
+                return ((hash * HASH_CODE_C1 + hashCodeAsciiSanitize(bytes[startPos]))
+                        * HASH_CODE_C2 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos + 1)))
+                        * HASH_CODE_C1 + hashCodeAsciiSanitize(getIntSafe(bytes, startPos + 3));
+            case 6:
+                return (hash * HASH_CODE_C1 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos)))
+                        * HASH_CODE_C2 + hashCodeAsciiSanitize(getIntSafe(bytes, startPos + 2));
+            case 5:
+                return (hash * HASH_CODE_C1 + hashCodeAsciiSanitize(bytes[startPos]))
+                        * HASH_CODE_C2 + hashCodeAsciiSanitize(getIntSafe(bytes, startPos + 1));
+            case 4:
+                return hash * HASH_CODE_C1 + hashCodeAsciiSanitize(getIntSafe(bytes, startPos));
+            case 3:
+                return (hash * HASH_CODE_C1 + hashCodeAsciiSanitize(bytes[startPos]))
+                        * HASH_CODE_C2 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos + 1));
+            case 2:
+                return hash * HASH_CODE_C1 + hashCodeAsciiSanitize(getShortSafe(bytes, startPos));
+            case 1:
+                return hash * HASH_CODE_C1 + hashCodeAsciiSanitize(bytes[startPos]);
+            default:
+                return hash;
         }
     }
 
@@ -1346,34 +1275,6 @@ public final class PlatformDependent {
         }
 
         return "unknown";
-    }
-
-    private static final class AtomicLongCounter extends AtomicLong implements LongCounter {
-        private static final long serialVersionUID = 4074772784610639305L;
-
-        @Override
-        public void add(long delta) {
-            addAndGet(delta);
-        }
-
-        @Override
-        public void increment() {
-            incrementAndGet();
-        }
-
-        @Override
-        public void decrement() {
-            decrementAndGet();
-        }
-
-        @Override
-        public long value() {
-            return get();
-        }
-    }
-
-    private interface ThreadLocalRandomProvider {
-        Random current();
     }
 
     private PlatformDependent() {

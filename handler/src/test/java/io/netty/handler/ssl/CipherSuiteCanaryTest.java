@@ -24,11 +24,12 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.local.LocalEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -68,14 +69,14 @@ public class CipherSuiteCanaryTest {
 
     @Parameters(name = "{index}: serverSslProvider = {0}, clientSslProvider = {1}, rfcCipherName = {2}")
     public static Collection<Object[]> parameters() {
-       List<Object[]> dst = new ArrayList<Object[]>();
+       List<Object[]> dst = new ArrayList<>();
        dst.addAll(expand("TLS_DHE_RSA_WITH_AES_128_GCM_SHA256")); // DHE-RSA-AES128-GCM-SHA256
        return dst;
     }
 
     @BeforeClass
     public static void init() throws Exception {
-        GROUP = new LocalEventLoopGroup();
+        GROUP = new MultithreadEventLoopGroup(LocalHandler.newFactory());
         CERT = new SelfSignedCertificate();
     }
 
@@ -253,7 +254,7 @@ public class CipherSuiteCanaryTest {
     }
 
     private static List<Object[]> expand(String rfcCipherName) {
-        List<Object[]> dst = new ArrayList<Object[]>();
+        List<Object[]> dst = new ArrayList<>();
         SslProvider[] sslProviders = SslProvider.values();
 
         for (int i = 0; i < sslProviders.length; i++) {

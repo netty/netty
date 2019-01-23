@@ -85,7 +85,7 @@ public abstract class AbstractMicrobenchmarkBase {
     protected abstract String[] jvmArgs();
 
     protected static String[] removeAssertions(String[] jvmArgs) {
-        List<String> customArgs = new ArrayList<String>(jvmArgs.length);
+        List<String> customArgs = new ArrayList<>(jvmArgs.length);
         for (String arg : jvmArgs) {
             if (!arg.startsWith("-ea")) {
                 customArgs.add(arg);

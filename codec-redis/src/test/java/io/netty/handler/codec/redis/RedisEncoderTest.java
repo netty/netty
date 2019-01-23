@@ -127,7 +127,7 @@ public class RedisEncoderTest {
 
     @Test
     public void shouldEncodeSimpleArray() {
-        List<RedisMessage> children = new ArrayList<RedisMessage>();
+        List<RedisMessage> children = new ArrayList<>();
         children.add(new FullBulkStringRedisMessage(byteBufOf("foo").retain()));
         children.add(new FullBulkStringRedisMessage(byteBufOf("bar").retain()));
         RedisMessage msg = new ArrayRedisMessage(children);
@@ -166,10 +166,10 @@ public class RedisEncoderTest {
 
     @Test
     public void shouldEncodeNestedArray() {
-        List<RedisMessage> grandChildren = new ArrayList<RedisMessage>();
+        List<RedisMessage> grandChildren = new ArrayList<>();
         grandChildren.add(new FullBulkStringRedisMessage(byteBufOf("bar")));
         grandChildren.add(new IntegerRedisMessage(-1234L));
-        List<RedisMessage> children = new ArrayList<RedisMessage>();
+        List<RedisMessage> children = new ArrayList<>();
         children.add(new SimpleStringRedisMessage("foo"));
         children.add(new ArrayRedisMessage(grandChildren));
         RedisMessage msg = new ArrayRedisMessage(children);

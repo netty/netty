@@ -21,7 +21,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 public final class EmptyPriorityQueue<T> implements PriorityQueue<T> {
-    private static final PriorityQueue<Object> INSTANCE = new EmptyPriorityQueue<Object>();
+    private static final PriorityQueue<Object> INSTANCE = new EmptyPriorityQueue<>();
 
     private EmptyPriorityQueue() {
     }

@@ -34,7 +34,7 @@ public class ObjectEchoClientHandler extends ChannelInboundHandlerAdapter {
      * Creates a client-side handler.
      */
     public ObjectEchoClientHandler() {
-        firstMessage = new ArrayList<Integer>(ObjectEchoClient.SIZE);
+        firstMessage = new ArrayList<>(ObjectEchoClient.SIZE);
         for (int i = 0; i < ObjectEchoClient.SIZE; i ++) {
             firstMessage.add(Integer.valueOf(i));
         }

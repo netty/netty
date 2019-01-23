@@ -36,13 +36,7 @@ import java.util.Queue;
 public class LocalServerChannel extends AbstractServerChannel {
 
     private final ChannelConfig config = new DefaultChannelConfig(this);
-    private final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
-    private final Runnable shutdownHook = new Runnable() {
-        @Override
-        public void run() {
-            unsafe().close(unsafe().voidPromise());
-        }
-    };
+    private final Queue<Object> inboundBuffer = new ArrayDeque<>();
 
     private volatile int state; // 0 - open, 1 - active, 2 - closed
     private volatile LocalAddress localAddress;
@@ -176,13 +170,11 @@ public class LocalServerChannel extends AbstractServerChannel {
         }
 
         @Override
-        public void register0(LocalEventLoop eventLoop) {
-            eventLoop.addShutdownHook(shutdownHook);
+        public void register0() {
         }
 
         @Override
-        public void deregister0(LocalEventLoop eventLoop) {
-            eventLoop.removeShutdownHook(shutdownHook);
+        public void deregister0() {
         }
     }
 }

@@ -317,7 +317,7 @@ public final class NioDatagramChannel
                 if (isSingleDirectBuffer(content)) {
                     return e;
                 }
-                return new DefaultAddressedEnvelope<ByteBuf, SocketAddress>(newDirectBuffer(e, content), e.recipient());
+                return new DefaultAddressedEnvelope<>(newDirectBuffer(e, content), e.recipient());
             }
         }
 
@@ -414,12 +414,12 @@ public final class NioDatagramChannel
             synchronized (this) {
                 List<MembershipKey> keys = null;
                 if (memberships == null) {
-                    memberships = new HashMap<InetAddress, List<MembershipKey>>();
+                    memberships = new HashMap<>();
                 } else {
                     keys = memberships.get(multicastAddress);
                 }
                 if (keys == null) {
-                    keys = new ArrayList<MembershipKey>();
+                    keys = new ArrayList<>();
                     memberships.put(multicastAddress, keys);
                 }
                 keys.add(key);

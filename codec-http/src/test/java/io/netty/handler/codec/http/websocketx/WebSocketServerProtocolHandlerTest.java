@@ -42,7 +42,7 @@ import static org.junit.Assert.*;
 
 public class WebSocketServerProtocolHandlerTest {
 
-    private final Queue<FullHttpResponse> responses = new ArrayDeque<FullHttpResponse>();
+    private final Queue<FullHttpResponse> responses = new ArrayDeque<>();
 
     @Before
     public void setUp() {

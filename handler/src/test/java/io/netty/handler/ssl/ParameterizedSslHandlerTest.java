@@ -26,7 +26,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -65,14 +66,14 @@ public class ParameterizedSslHandlerTest {
 
     @Parameterized.Parameters(name = "{index}: clientProvider={0}, {index}: serverProvider={1}")
     public static Collection<Object[]> data() {
-        List<SslProvider> providers = new ArrayList<SslProvider>(3);
+        List<SslProvider> providers = new ArrayList<>(3);
         if (OpenSsl.isAvailable()) {
             providers.add(SslProvider.OPENSSL);
             providers.add(SslProvider.OPENSSL_REFCNT);
         }
         providers.add(SslProvider.JDK);
 
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
 
         for (SslProvider cp: providers) {
             for (SslProvider sp: providers) {
@@ -126,7 +127,7 @@ public class ParameterizedSslHandlerTest {
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(clientProvider).build();
 
-        EventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         try {
@@ -306,7 +307,7 @@ public class ParameterizedSslHandlerTest {
                         ResourcesUtil.getFile(getClass(), "test_unencrypted.pem"))
                 .sslProvider(clientProvider).build();
 
-        NioEventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         try {
@@ -397,7 +398,7 @@ public class ParameterizedSslHandlerTest {
                                                          .protocols(SslUtils.PROTOCOL_TLS_V1_2)
                                                          .build();
 
-        EventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         try {
@@ -413,7 +414,7 @@ public class ParameterizedSslHandlerTest {
                             SslHandler handler = sslServerCtx.newHandler(ch.alloc());
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
                             handler.sslCloseFuture().addListener(
-                                    new PromiseNotifier<Channel, Future<Channel>>(serverPromise));
+                                    new PromiseNotifier<>(serverPromise));
                             handler.handshakeFuture().addListener(new FutureListener<Channel>() {
                                 @Override
                                 public void operationComplete(Future<Channel> future) {
@@ -452,7 +453,7 @@ public class ParameterizedSslHandlerTest {
                             SslHandler handler = sslClientCtx.newHandler(ch.alloc());
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
                             handler.sslCloseFuture().addListener(
-                                    new PromiseNotifier<Channel, Future<Channel>>(clientPromise));
+                                    new PromiseNotifier<>(clientPromise));
                             handler.handshakeFuture().addListener(new FutureListener<Channel>() {
                                 @Override
                                 public void operationComplete(Future<Channel> future) {

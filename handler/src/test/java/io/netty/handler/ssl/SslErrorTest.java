@@ -22,7 +22,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
@@ -66,8 +67,8 @@ public class SslErrorTest {
 
     @Parameterized.Parameters(name = "{index}: serverProvider = {0}, clientProvider = {1}, exception = {2}")
     public static Collection<Object[]> data() {
-        List<SslProvider> serverProviders = new ArrayList<SslProvider>(2);
-        List<SslProvider> clientProviders = new ArrayList<SslProvider>(3);
+        List<SslProvider> serverProviders = new ArrayList<>(2);
+        List<SslProvider> clientProviders = new ArrayList<>(3);
 
         if (OpenSsl.isAvailable()) {
             serverProviders.add(SslProvider.OPENSSL);
@@ -79,7 +80,7 @@ public class SslErrorTest {
         // alert all the time, sigh.....
         clientProviders.add(SslProvider.JDK);
 
-        List<CertificateException> exceptions = new ArrayList<CertificateException>(6);
+        List<CertificateException> exceptions = new ArrayList<>(6);
         exceptions.add(new CertificateExpiredException());
         exceptions.add(new CertificateNotYetValidException());
         exceptions.add(new CertificateRevokedException(
@@ -91,7 +92,7 @@ public class SslErrorTest {
         exceptions.add(newCertificateException(CertPathValidatorException.BasicReason.NOT_YET_VALID));
         exceptions.add(newCertificateException(CertPathValidatorException.BasicReason.REVOKED));
 
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         for (SslProvider serverProvider: serverProviders) {
             for (SslProvider clientProvider: clientProviders) {
                 for (CertificateException exception: exceptions) {
@@ -165,7 +166,7 @@ public class SslErrorTest {
 
         Channel serverChannel = null;
         Channel clientChannel = null;
-        EventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
         try {
             serverChannel = new ServerBootstrap().group(group)
                     .channel(NioServerSocketChannel.class)

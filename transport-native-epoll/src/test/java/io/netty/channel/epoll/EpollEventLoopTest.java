@@ -18,9 +18,9 @@ package io.netty.channel.epoll;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import org.junit.Test;
 
@@ -35,17 +35,17 @@ public class EpollEventLoopTest {
 
     @Test
     public void testScheduleBigDelayNotOverflow() {
-        final AtomicReference<Throwable> capture = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> capture = new AtomicReference<>();
 
-        final EventLoopGroup group = new EpollEventLoop(null,
-                new ThreadPerTaskExecutor(new DefaultThreadFactory(getClass())), 0,
-                DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy(), RejectedExecutionHandlers.reject()) {
-            @Override
-            void handleLoopException(Throwable t) {
-                capture.set(t);
-                super.handleLoopException(t);
-            }
-        };
+        final EventLoopGroup group = new SingleThreadEventLoop(
+                new ThreadPerTaskExecutor(new DefaultThreadFactory(getClass())),
+                new EpollHandler(0, DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy()) {
+                    @Override
+                    void handleLoopException(Throwable t) {
+                        capture.set(t);
+                        super.handleLoopException(t);
+                    }
+                });
 
         try {
             final EventLoop eventLoop = group.next();

@@ -26,10 +26,11 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.local.LocalEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -667,7 +668,7 @@ public class InboundHttp2ToHttpAdapterTest {
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
-        sb.group(new LocalEventLoopGroup());
+        sb.group(new MultithreadEventLoopGroup(LocalHandler.newFactory()));
         sb.channel(LocalServerChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -695,7 +696,7 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
 
-        cb.group(new LocalEventLoopGroup());
+        cb.group(new MultithreadEventLoopGroup(LocalHandler.newFactory()));
         cb.channel(LocalChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override

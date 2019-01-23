@@ -20,12 +20,13 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
-import static io.netty.util.internal.ObjectUtil.*;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Default implementation of {@link AuthoritativeDnsServerCache}, backed by a {@link ConcurrentMap}.
@@ -50,7 +51,7 @@ public class DefaultAuthoritativeDnsServerCache implements AuthoritativeDnsServe
         @Override
         protected void sortEntries(String hostname, List<InetSocketAddress> entries) {
             if (comparator != null) {
-                Collections.sort(entries, comparator);
+                entries.sort(comparator);
             }
         }
     };
@@ -80,7 +81,6 @@ public class DefaultAuthoritativeDnsServerCache implements AuthoritativeDnsServe
         this.comparator = comparator;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public DnsServerAddressStream get(String hostname) {
         checkNotNull(hostname, "hostname");

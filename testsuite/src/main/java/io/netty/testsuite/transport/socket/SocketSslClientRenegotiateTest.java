@@ -75,8 +75,8 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
 
     @Parameters(name = "{index}: serverEngine = {0}, clientEngine = {1}")
     public static Collection<Object[]> data() throws Exception {
-        List<SslContext> serverContexts = new ArrayList<SslContext>();
-        List<SslContext> clientContexts = new ArrayList<SslContext>();
+        List<SslContext> serverContexts = new ArrayList<>();
+        List<SslContext> clientContexts = new ArrayList<>();
         clientContexts.add(new JdkSslClientContext(CERT_FILE));
 
         boolean hasOpenSsl = OpenSsl.isAvailable();
@@ -87,7 +87,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
             logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
         }
 
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         for (SslContext sc: serverContexts) {
             for (SslContext cc: clientContexts) {
                 for (int i = 0; i < 32; i++) {
@@ -102,8 +102,8 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
     private final SslContext serverCtx;
     private final SslContext clientCtx;
 
-    private final AtomicReference<Throwable> clientException = new AtomicReference<Throwable>();
-    private final AtomicReference<Throwable> serverException = new AtomicReference<Throwable>();
+    private final AtomicReference<Throwable> clientException = new AtomicReference<>();
+    private final AtomicReference<Throwable> serverException = new AtomicReference<>();
 
     private volatile Channel clientChannel;
     private volatile Channel serverChannel;

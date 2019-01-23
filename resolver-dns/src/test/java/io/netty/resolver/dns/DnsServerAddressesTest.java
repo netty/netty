@@ -98,7 +98,7 @@ public class DnsServerAddressesTest {
 
         // Ensure that all three addresses are returned by the iterator.
         // In theory, this test can fail at extremely low chance, but we don't really care.
-        Set<InetSocketAddress> set = Collections.newSetFromMap(new IdentityHashMap<InetSocketAddress, Boolean>());
+        Set<InetSocketAddress> set = Collections.newSetFromMap(new IdentityHashMap<>());
         DnsServerAddressStream i = seq.stream();
         for (int j = 0; j < 1048576; j ++) {
             set.add(i.next());

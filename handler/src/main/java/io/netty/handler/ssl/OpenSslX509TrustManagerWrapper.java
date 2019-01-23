@@ -119,9 +119,7 @@ final class OpenSslX509TrustManagerWrapper {
                                 } while (clazz != null);
                             }
                             throw new NoSuchFieldException();
-                        } catch (NoSuchFieldException e) {
-                            return e;
-                        } catch (SecurityException e) {
+                        } catch (NoSuchFieldException | SecurityException e) {
                             return e;
                         }
                     }
@@ -174,11 +172,7 @@ final class OpenSslX509TrustManagerWrapper {
                             return (X509TrustManager) tm;
                         }
                     }
-                } catch (NoSuchAlgorithmException e) {
-                    // This should never happen as we did the same in the static
-                    // before.
-                    PlatformDependent.throwException(e);
-                } catch (KeyManagementException e) {
+                } catch (NoSuchAlgorithmException | KeyManagementException e) {
                     // This should never happen as we did the same in the static
                     // before.
                     PlatformDependent.throwException(e);

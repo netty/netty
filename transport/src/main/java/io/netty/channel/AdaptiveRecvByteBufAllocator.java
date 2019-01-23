@@ -43,7 +43,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
     private static final int[] SIZE_TABLE;
 
     static {
-        List<Integer> sizeTable = new ArrayList<Integer>();
+        List<Integer> sizeTable = new ArrayList<>();
         for (int i = 16; i < 512; i += 16) {
             sizeTable.add(i);
         }

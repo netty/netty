@@ -28,7 +28,7 @@ import java.util.List;
  * (like Multipart Mixed mode)
  */
 final class InternalAttribute extends AbstractReferenceCounted implements InterfaceHttpData {
-    private final List<ByteBuf> value = new ArrayList<ByteBuf>();
+    private final List<ByteBuf> value = new ArrayList<>();
     private final Charset charset;
     private int size;
 

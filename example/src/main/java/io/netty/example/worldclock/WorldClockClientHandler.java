@@ -38,7 +38,7 @@ public class WorldClockClientHandler extends SimpleChannelInboundHandler<LocalTi
 
     // Stateful properties
     private volatile Channel channel;
-    private final BlockingQueue<LocalTimes> answer = new LinkedBlockingQueue<LocalTimes>();
+    private final BlockingQueue<LocalTimes> answer = new LinkedBlockingQueue<>();
 
     public WorldClockClientHandler() {
         super(false);
@@ -71,7 +71,7 @@ public class WorldClockClientHandler extends SimpleChannelInboundHandler<LocalTi
             Thread.currentThread().interrupt();
         }
 
-        List<String> result = new ArrayList<String>();
+        List<String> result = new ArrayList<>();
         for (LocalTime lt: localTimes.getLocalTimeList()) {
             result.add(
                     new Formatter().format(

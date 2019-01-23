@@ -25,6 +25,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
@@ -49,7 +50,7 @@ public class LocalTransportThreadModelTest {
     @BeforeClass
     public static void init() {
         // Configure a test server
-        group = new LocalEventLoopGroup();
+        group = new MultithreadEventLoopGroup(LocalHandler.newFactory());
         ServerBootstrap sb = new ServerBootstrap();
         sb.group(group)
           .channel(LocalServerChannel.class)
@@ -84,7 +85,8 @@ public class LocalTransportThreadModelTest {
 
     @Test(timeout = 5000)
     public void testStagedExecution() throws Throwable {
-        EventLoopGroup l = new LocalEventLoopGroup(4, new DefaultThreadFactory("l"));
+        EventLoopGroup l = new MultithreadEventLoopGroup(4, new DefaultThreadFactory("l"),
+                LocalHandler.newFactory());
         EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e1"));
         EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e2"));
         ThreadNameAuditor h1 = new ThreadNameAuditor();
@@ -95,9 +97,9 @@ public class LocalTransportThreadModelTest {
         // With no EventExecutor specified, h1 will be always invoked by EventLoop 'l'.
         ch.pipeline().addLast(h1);
         // h2 will be always invoked by EventExecutor 'e1'.
-        ch.pipeline().addLast(e1, h2);
+        ch.pipeline().addLast(e1.next(), h2);
         // h3 will be always invoked by EventExecutor 'e2'.
-        ch.pipeline().addLast(e2, h3);
+        ch.pipeline().addLast(e2.next(), h3);
 
         ch.register().sync().channel().connect(localAddr).sync();
 
@@ -174,7 +176,7 @@ public class LocalTransportThreadModelTest {
             }
 
             // Assert that the events for the same handler were handled by the same thread.
-            Set<String> names = new HashSet<String>();
+            Set<String> names = new HashSet<>();
             names.addAll(h1.inboundThreadNames);
             names.addAll(h1.outboundThreadNames);
             names.addAll(h1.removalThreadNames);
@@ -227,7 +229,8 @@ public class LocalTransportThreadModelTest {
     @Test(timeout = 30000)
     @Ignore
     public void testConcurrentMessageBufferAccess() throws Throwable {
-        EventLoopGroup l = new LocalEventLoopGroup(4, new DefaultThreadFactory("l"));
+        EventLoopGroup l = new MultithreadEventLoopGroup(4, new DefaultThreadFactory("l"),
+                LocalHandler.newFactory());
         EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e1"));
         EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e2"));
         EventExecutorGroup e3 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e3"));
@@ -247,11 +250,11 @@ public class LocalTransportThreadModelTest {
             // inbound:  int -> byte[4] -> int -> int -> byte[4] -> int -> /dev/null
             // outbound: int -> int -> byte[4] -> int -> int -> byte[4] -> /dev/null
             ch.pipeline().addLast(h1)
-                         .addLast(e1, h2)
-                         .addLast(e2, h3)
-                         .addLast(e3, h4)
-                         .addLast(e4, h5)
-                         .addLast(e5, h6);
+                         .addLast(e1.next(), h2)
+                         .addLast(e2.next(), h3)
+                         .addLast(e3.next(), h4)
+                         .addLast(e4.next(), h5)
+                         .addLast(e5.next(), h6);
 
             ch.register().sync().channel().connect(localAddr).sync();
 
@@ -355,11 +358,11 @@ public class LocalTransportThreadModelTest {
 
     private static class ThreadNameAuditor extends ChannelDuplexHandler {
 
-        private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        private final AtomicReference<Throwable> exception = new AtomicReference<>();
 
-        private final Queue<String> inboundThreadNames = new ConcurrentLinkedQueue<String>();
-        private final Queue<String> outboundThreadNames = new ConcurrentLinkedQueue<String>();
-        private final Queue<String> removalThreadNames = new ConcurrentLinkedQueue<String>();
+        private final Queue<String> inboundThreadNames = new ConcurrentLinkedQueue<>();
+        private final Queue<String> outboundThreadNames = new ConcurrentLinkedQueue<>();
+        private final Queue<String> removalThreadNames = new ConcurrentLinkedQueue<>();
         private final boolean discard;
 
         ThreadNameAuditor() {
@@ -403,7 +406,7 @@ public class LocalTransportThreadModelTest {
      */
     private static class MessageForwarder1 extends ChannelDuplexHandler {
 
-        private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        private final AtomicReference<Throwable> exception = new AtomicReference<>();
         private volatile int inCnt;
         private volatile int outCnt;
         private volatile Thread t;
@@ -461,7 +464,7 @@ public class LocalTransportThreadModelTest {
      */
     private static class MessageForwarder2 extends ChannelDuplexHandler {
 
-        private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        private final AtomicReference<Throwable> exception = new AtomicReference<>();
         private volatile int inCnt;
         private volatile int outCnt;
         private volatile Thread t;
@@ -513,7 +516,7 @@ public class LocalTransportThreadModelTest {
      */
     private static class MessageForwarder3 extends ChannelDuplexHandler {
 
-        private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        private final AtomicReference<Throwable> exception = new AtomicReference<>();
         private volatile int inCnt;
         private volatile int outCnt;
         private volatile Thread t;
@@ -559,7 +562,7 @@ public class LocalTransportThreadModelTest {
      */
     private static class MessageDiscarder extends ChannelDuplexHandler {
 
-        private final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        private final AtomicReference<Throwable> exception = new AtomicReference<>();
         private volatile int inCnt;
         private volatile int outCnt;
         private volatile Thread t;

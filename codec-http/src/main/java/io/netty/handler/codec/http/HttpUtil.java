@@ -251,13 +251,9 @@ public final class HttpUtil {
      * present
      */
     public static boolean is100ContinueExpected(HttpMessage message) {
-        if (!isExpectHeaderValid(message)) {
-            return false;
-        }
-
-        final String expectValue = message.headers().get(HttpHeaderNames.EXPECT);
-        // unquoted tokens in the expect header are case-insensitive, thus 100-continue is case insensitive
-        return HttpHeaderValues.CONTINUE.toString().equalsIgnoreCase(expectValue);
+        return isExpectHeaderValid(message)
+          // unquoted tokens in the expect header are case-insensitive, thus 100-continue is case insensitive
+          && message.headers().contains(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE, true);
     }
 
     /**
@@ -329,7 +325,7 @@ public final class HttpUtil {
             if (encodings.isEmpty()) {
                 return;
             }
-            List<CharSequence> values = new ArrayList<CharSequence>(encodings);
+            List<CharSequence> values = new ArrayList<>(encodings);
             Iterator<CharSequence> valuesIt = values.iterator();
             while (valuesIt.hasNext()) {
                 CharSequence value = valuesIt.next();

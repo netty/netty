@@ -18,6 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.CharsetUtil;
@@ -188,6 +189,7 @@ public class HttpContentCompressorTest {
         assertThat(chunk.content().isReadable(), is(false));
         assertThat(chunk, is(instanceOf(LastHttpContent.class)));
         assertEquals("Netty", ((LastHttpContent) chunk).trailingHeaders().get(of("X-Test")));
+        assertEquals(DecoderResult.SUCCESS, chunk.decoderResult());
         chunk.release();
 
         assertThat(ch.readOutbound(), is(nullValue()));
@@ -331,6 +333,7 @@ public class HttpContentCompressorTest {
         assertThat(res.content().readableBytes(), is(0));
         assertThat(res.content().toString(CharsetUtil.US_ASCII), is(""));
         assertEquals("Netty", res.trailingHeaders().get(of("X-Test")));
+        assertEquals(DecoderResult.SUCCESS, res.decoderResult());
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 
@@ -370,6 +373,7 @@ public class HttpContentCompressorTest {
         assertThat(res.content().readableBytes(), is(0));
         assertThat(res.content().toString(CharsetUtil.US_ASCII), is(""));
         assertEquals("Netty", res.trailingHeaders().get(of("X-Test")));
+        assertEquals(DecoderResult.SUCCESS, res.decoderResult());
         assertThat(ch.readOutbound(), is(nullValue()));
     }
 

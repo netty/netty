@@ -83,11 +83,6 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
     }
 
     @Override
-    public EventExecutorGroup parent() {
-        return this;
-    }
-
-    @Override
     public boolean inEventLoop() {
         return false;
     }
@@ -99,22 +94,22 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
 
     @Override
     public <V> Promise<V> newPromise() {
-        return new DefaultPromise<V>(this);
+        return new DefaultPromise<>(this);
     }
 
     @Override
     public <V> ProgressivePromise<V> newProgressivePromise() {
-        return new DefaultProgressivePromise<V>(this);
+        return new DefaultProgressivePromise<>(this);
     }
 
     @Override
     public <V> Future<V> newSucceededFuture(V result) {
-        return new SucceededFuture<V>(this, result);
+        return new SucceededFuture<>(this, result);
     }
 
     @Override
     public <V> Future<V> newFailedFuture(Throwable cause) {
-        return new FailedFuture<V>(this, cause);
+        return new FailedFuture<>(this, cause);
     }
 
     @Override
@@ -161,12 +156,12 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
     @Override
     protected <V> RunnableScheduledFuture<V> decorateTask(Runnable runnable, RunnableScheduledFuture<V> task) {
         return runnable instanceof NonNotifyRunnable ?
-                task : new RunnableScheduledFutureTask<V>(this, runnable, task);
+                task : new RunnableScheduledFutureTask<>(this, runnable, task);
     }
 
     @Override
     protected <V> RunnableScheduledFuture<V> decorateTask(Callable<V> callable, RunnableScheduledFuture<V> task) {
-        return new RunnableScheduledFutureTask<V>(this, callable, task);
+        return new RunnableScheduledFutureTask<>(this, callable, task);
     }
 
     @Override

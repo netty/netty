@@ -24,6 +24,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
@@ -62,7 +63,7 @@ public class LocalTransportThreadModelTest3 {
     @BeforeClass
     public static void init() {
         // Configure a test server
-        group = new LocalEventLoopGroup();
+        group = new MultithreadEventLoopGroup(LocalHandler.newFactory());
         ServerBootstrap sb = new ServerBootstrap();
         sb.group(group)
                 .channel(LocalServerChannel.class)
@@ -116,7 +117,8 @@ public class LocalTransportThreadModelTest3 {
     }
 
     private static void testConcurrentAddRemove(boolean inbound) throws Exception {
-        EventLoopGroup l = new LocalEventLoopGroup(4, new DefaultThreadFactory("l"));
+        EventLoopGroup l = new MultithreadEventLoopGroup(4, new DefaultThreadFactory("l"),
+                LocalHandler.newFactory());
         EventExecutorGroup e1 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e1"));
         EventExecutorGroup e2 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e2"));
         EventExecutorGroup e3 = new DefaultEventExecutorGroup(4, new DefaultThreadFactory("e3"));
@@ -125,7 +127,7 @@ public class LocalTransportThreadModelTest3 {
 
         final EventExecutorGroup[] groups = {e1, e2, e3, e4, e5};
         try {
-            Deque<EventType> events = new ConcurrentLinkedDeque<EventType>();
+            Deque<EventType> events = new ConcurrentLinkedDeque<>();
             final EventForwarder h1 = new EventForwarder();
             final EventForwarder h2 = new EventForwarder();
             final EventForwarder h3 = new EventForwarder();
@@ -137,12 +139,12 @@ public class LocalTransportThreadModelTest3 {
             if (!inbound) {
                 ch.config().setAutoRead(false);
             }
-            ch.pipeline().addLast(e1, h1)
-                    .addLast(e1, h2)
-                    .addLast(e1, h3)
-                    .addLast(e1, h4)
-                    .addLast(e1, h5)
-                    .addLast(e1, "recorder", h6);
+            ch.pipeline().addLast(e1.next(), h1)
+                    .addLast(e1.next(), h2)
+                    .addLast(e1.next(), h3)
+                    .addLast(e1.next(), h4)
+                    .addLast(e1.next(), h5)
+                    .addLast(e1.next(), "recorder", h6);
 
             ch.register().sync().channel().connect(localAddr).sync();
 
@@ -166,7 +168,7 @@ public class LocalTransportThreadModelTest3 {
                         }
                         //EventForwardHandler forwardHandler = forwarders[random.nextInt(forwarders.length)];
                         ChannelHandler handler = ch.pipeline().removeFirst();
-                        ch.pipeline().addBefore(groups[random.nextInt(groups.length)], "recorder",
+                        ch.pipeline().addBefore(groups[random.nextInt(groups.length)].next(), "recorder",
                                 UUID.randomUUID().toString(), handler);
                     }
                 }
@@ -244,7 +246,7 @@ public class LocalTransportThreadModelTest3 {
         }
 
         Random random = new Random();
-        LinkedList<EventType> expectedEvents = new LinkedList<EventType>();
+        LinkedList<EventType> expectedEvents = new LinkedList<>();
         for (int i = 0; i < size; i++) {
             expectedEvents.add(events[random.nextInt(events.length)]);
         }

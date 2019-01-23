@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentMap;
  */
 final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider {
 
-    private final ConcurrentMap<String, OpenSslKeyMaterial> cache = new ConcurrentHashMap<String, OpenSslKeyMaterial>();
+    private final ConcurrentMap<String, OpenSslKeyMaterial> cache = new ConcurrentHashMap<>();
 
     OpenSslCachingKeyMaterialProvider(X509KeyManager keyManager, String password) {
         super(keyManager, password);

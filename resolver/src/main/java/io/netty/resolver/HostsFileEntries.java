@@ -32,17 +32,14 @@ public final class HostsFileEntries {
     /**
      * Empty entries
      */
-    static final HostsFileEntries EMPTY =
-            new HostsFileEntries(
-                    Collections.<String, Inet4Address>emptyMap(),
-                    Collections.<String, Inet6Address>emptyMap());
+    static final HostsFileEntries EMPTY = new HostsFileEntries(Collections.emptyMap(), Collections.emptyMap());
 
     private final Map<String, Inet4Address> inet4Entries;
     private final Map<String, Inet6Address> inet6Entries;
 
     public HostsFileEntries(Map<String, Inet4Address> inet4Entries, Map<String, Inet6Address> inet6Entries) {
-        this.inet4Entries = Collections.unmodifiableMap(new HashMap<String, Inet4Address>(inet4Entries));
-        this.inet6Entries = Collections.unmodifiableMap(new HashMap<String, Inet6Address>(inet6Entries));
+        this.inet4Entries = Collections.unmodifiableMap(new HashMap<>(inet4Entries));
+        this.inet6Entries = Collections.unmodifiableMap(new HashMap<>(inet6Entries));
     }
 
     /**

@@ -32,7 +32,7 @@ public abstract class AbstractInternalLoggerTest<T> {
     protected String loggerName = "foo";
     protected T mockLog;
     protected InternalLogger logger;
-    protected final Map<String, Object> result = new HashMap<String, Object>();
+    protected final Map<String, Object> result = new HashMap<>();
 
     @SuppressWarnings("unchecked")
     protected <V> V getResult(String key) {

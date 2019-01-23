@@ -33,7 +33,7 @@ import java.util.Map;
  * {@link ChannelInboundHandler}.
  */
 public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMessage> {
-    private final Map<Integer, ByteBuf> fragments = new HashMap<Integer, ByteBuf>();
+    private final Map<Integer, ByteBuf> fragments = new HashMap<>();
 
     @Override
     protected void decode(ChannelHandlerContext ctx, SctpMessage msg, List<Object> out) throws Exception {

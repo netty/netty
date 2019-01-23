@@ -91,7 +91,7 @@ public class CompositeByteBufWriteOutBenchmark extends AbstractMicrobenchmark {
 
     private static ByteBuf[] makeSmallChunks(int length) {
 
-        List<ByteBuf> buffers = new ArrayList<ByteBuf>(((length + 1) / 48) * 9);
+        List<ByteBuf> buffers = new ArrayList<>(((length + 1) / 48) * 9);
         for (int i = 0; i < length + 48; i += 48) {
             for (int j = 4; j <= 12; j++) {
                 buffers.add(wrappedBuffer(new byte[j]));
@@ -103,7 +103,7 @@ public class CompositeByteBufWriteOutBenchmark extends AbstractMicrobenchmark {
 
     private static ByteBuf[] makeLargeChunks(int length) {
 
-        List<ByteBuf> buffers = new ArrayList<ByteBuf>((length + 1) / 768);
+        List<ByteBuf> buffers = new ArrayList<>((length + 1) / 768);
         for (int i = 0; i < length + 1536; i += 1536) {
             buffers.add(wrappedBuffer(new byte[512]));
             buffers.add(wrappedBuffer(new byte[1024]));

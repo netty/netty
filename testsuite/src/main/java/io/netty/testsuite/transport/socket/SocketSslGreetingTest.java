@@ -76,10 +76,10 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
 
     @Parameters(name = "{index}: serverEngine = {0}, clientEngine = {1}")
     public static Collection<Object[]> data() throws Exception {
-        List<SslContext> serverContexts = new ArrayList<SslContext>();
+        List<SslContext> serverContexts = new ArrayList<>();
         serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.JDK).build());
 
-        List<SslContext> clientContexts = new ArrayList<SslContext>();
+        List<SslContext> clientContexts = new ArrayList<>();
         clientContexts.add(SslContextBuilder.forClient().sslProvider(SslProvider.JDK).trustManager(CERT_FILE).build());
 
         boolean hasOpenSsl = OpenSsl.isAvailable();
@@ -92,7 +92,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
             logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
         }
 
-        List<Object[]> params = new ArrayList<Object[]>();
+        List<Object[]> params = new ArrayList<>();
         for (SslContext sc: serverContexts) {
             for (SslContext cc: clientContexts) {
                 params.add(new Object[] { sc, cc });
@@ -164,7 +164,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
 
     private static class ClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
 
         @Override
@@ -189,7 +189,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
 
     private static class ServerHandler extends SimpleChannelInboundHandler<String> {
         volatile Channel channel;
-        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> exception = new AtomicReference<>();
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {

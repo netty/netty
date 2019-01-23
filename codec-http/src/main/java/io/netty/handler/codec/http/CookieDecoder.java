@@ -82,8 +82,8 @@ public final class CookieDecoder {
      * @return the decoded {@link Cookie}s
      */
     private Set<Cookie> doDecode(String header) {
-        List<String> names = new ArrayList<String>(8);
-        List<String> values = new ArrayList<String>(8);
+        List<String> names = new ArrayList<>(8);
+        List<String> values = new ArrayList<>(8);
         extractKeyValuePairs(header, names, values);
 
         if (names.isEmpty()) {
@@ -111,7 +111,7 @@ public final class CookieDecoder {
             return Collections.emptySet();
         }
 
-        Set<Cookie> cookies = new TreeSet<Cookie>();
+        Set<Cookie> cookies = new TreeSet<>();
         for (; i < names.size(); i ++) {
             String name = names.get(i);
             String value = values.get(i);
@@ -133,7 +133,7 @@ public final class CookieDecoder {
             String domain = null;
             String path = null;
             long maxAge = Long.MIN_VALUE;
-            List<Integer> ports = new ArrayList<Integer>(2);
+            List<Integer> ports = new ArrayList<>(2);
 
             for (int j = i + 1; j < names.size(); j++, i++) {
                 name = names.get(j);

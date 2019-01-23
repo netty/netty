@@ -21,7 +21,7 @@ import java.util.concurrent.RunnableFuture;
 class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
 
     static <T> Callable<T> toCallable(Runnable runnable, T result) {
-        return new RunnableAdapter<T>(runnable, result);
+        return new RunnableAdapter<>(runnable, result);
     }
 
     private static final class RunnableAdapter<T> implements Callable<T> {
@@ -123,6 +123,26 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
 
     protected final boolean setUncancellableInternal() {
         return super.setUncancellable();
+    }
+
+    @Override
+    public Promise<V> addListener(GenericFutureListener<? extends Future<? super V>> listener) {
+        return super.addListener(listener);
+    }
+
+    @Override
+    public Promise<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
+        return super.addListeners(listeners);
+    }
+
+    @Override
+    public Promise<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener) {
+        return super.removeListener(listener);
+    }
+
+    @Override
+    public Promise<V> removeListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
+        return super.removeListeners(listeners);
     }
 
     @Override

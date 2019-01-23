@@ -28,13 +28,13 @@ public class ResourceLeakDetectorTest {
     @Test(timeout = 60000)
     public void testConcurrentUsage() throws Throwable {
         final AtomicBoolean finished = new AtomicBoolean();
-        final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        final AtomicReference<Throwable> error = new AtomicReference<>();
         // With 50 threads issue #6087 is reproducible on every run.
         Thread[] threads = new Thread[50];
         final CyclicBarrier barrier = new CyclicBarrier(threads.length);
         for (int i = 0; i < threads.length; i++) {
             Thread t = new Thread(new Runnable() {
-                Queue<LeakAwareResource> resources = new ArrayDeque<LeakAwareResource>(100);
+                Queue<LeakAwareResource> resources = new ArrayDeque<>(100);
 
                 @Override
                 public void run() {
@@ -118,7 +118,7 @@ public class ResourceLeakDetectorTest {
 
     private static final class DefaultResource implements Resource {
         // Sample every allocation
-        static final TestResourceLeakDetector<Resource> detector = new TestResourceLeakDetector<Resource>(
+        static final TestResourceLeakDetector<Resource> detector = new TestResourceLeakDetector<>(
                 Resource.class, 1, Integer.MAX_VALUE);
 
         @Override
@@ -140,7 +140,7 @@ public class ResourceLeakDetectorTest {
 
     private static final class TestResourceLeakDetector<T> extends ResourceLeakDetector<T> {
 
-        private final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
+        private final AtomicReference<Throwable> error = new AtomicReference<>();
 
         TestResourceLeakDetector(Class<?> resourceType, int samplingInterval, long maxActive) {
             super(resourceType, samplingInterval, maxActive);

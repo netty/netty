@@ -49,7 +49,7 @@ public final class IdentityCipherSuiteFilter implements CipherSuiteFilter {
                     defaultCiphers.toArray(new String[0]) :
                     supportedCiphers.toArray(new String[0]);
         } else {
-            List<String> newCiphers = new ArrayList<String>(supportedCiphers.size());
+            List<String> newCiphers = new ArrayList<>(supportedCiphers.size());
             for (String c : ciphers) {
                 if (c == null) {
                     break;

@@ -30,11 +30,14 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoHandler;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.AfterClass;
@@ -70,9 +73,9 @@ public class LocalChannelTest {
 
     @BeforeClass
     public static void beforeClass() {
-        group1 = new LocalEventLoopGroup(2);
-        group2 = new LocalEventLoopGroup(2);
-        sharedGroup = new LocalEventLoopGroup(1);
+        group1 = new MultithreadEventLoopGroup(2, LocalHandler.newFactory());
+        group2 = new MultithreadEventLoopGroup(2, LocalHandler.newFactory());
+        sharedGroup = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
     }
 
     @AfterClass
@@ -228,19 +231,23 @@ public class LocalChannelTest {
     public void localChannelRaceCondition() throws Exception {
         final CountDownLatch closeLatch = new CountDownLatch(1);
         final EventLoopGroup clientGroup = new LocalEventLoopGroup(1) {
+
             @Override
-            protected EventLoop newChild(Executor threadFactory, Object... args)
-                    throws Exception {
-                return new LocalEventLoop(this, threadFactory) {
+            protected EventLoop newChild(
+                    Executor executor, int maxPendingTasks, RejectedExecutionHandler rejectedExecutionHandler,
+                    IoHandler ioHandler, int maxTasksPerRun, Object... args) {
+                return new SingleThreadEventLoop(executor, ioHandler, maxPendingTasks, rejectedExecutionHandler) {
+
                     @Override
                     protected void run() {
-                        for (;;) {
-                            Runnable task = takeTask();
+                        do {
+                            runIo();
+                            Runnable task = pollTask();
                             if (task != null) {
                                 /* Only slow down the anonymous class in LocalChannel#doRegister() */
                                 if (task.getClass().getEnclosingClass() == LocalChannel.class) {
                                     try {
-                                        closeLatch.await();
+                                        closeLatch.await(1, TimeUnit.SECONDS);
                                     } catch (InterruptedException e) {
                                         throw new Error(e);
                                     }
@@ -248,11 +255,7 @@ public class LocalChannelTest {
                                 task.run();
                                 updateLastExecutionTime();
                             }
-
-                            if (confirmShutdown()) {
-                                break;
-                            }
-                        }
+                        } while (!confirmShutdown());
                     }
                 };
             }
@@ -531,7 +534,7 @@ public class LocalChannelTest {
         final ByteBuf data = Unpooled.wrappedBuffer(new byte[1024]);
         final ByteBuf data2 = Unpooled.wrappedBuffer(new byte[512]);
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
-        final AtomicReference<Channel> serverChannelRef = new AtomicReference<Channel>();
+        final AtomicReference<Channel> serverChannelRef = new AtomicReference<>();
 
         cb.group(group1)
                 .channel(LocalChannel.class)
@@ -612,7 +615,7 @@ public class LocalChannelTest {
         final ByteBuf data = Unpooled.wrappedBuffer(new byte[1024]);
         final ByteBuf data2 = Unpooled.wrappedBuffer(new byte[512]);
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
-        final AtomicReference<Channel> serverChannelRef = new AtomicReference<Channel>();
+        final AtomicReference<Channel> serverChannelRef = new AtomicReference<>();
 
         try {
             cb.group(sharedGroup)
@@ -700,7 +703,7 @@ public class LocalChannelTest {
         final ByteBuf data = Unpooled.wrappedBuffer(new byte[1024]);
         final ByteBuf data2 = Unpooled.wrappedBuffer(new byte[512]);
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
-        final AtomicReference<Channel> serverChannelRef = new AtomicReference<Channel>();
+        final AtomicReference<Channel> serverChannelRef = new AtomicReference<>();
 
         try {
             cb.group(group1)

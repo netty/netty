@@ -359,7 +359,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      */
     private static List<CharSequence> splitHeader(CharSequence header) {
         final StringBuilder builder = new StringBuilder(header.length());
-        final List<CharSequence> protocols = new ArrayList<CharSequence>(4);
+        final List<CharSequence> protocols = new ArrayList<>(4);
         for (int i = 0; i < header.length(); ++i) {
             char c = header.charAt(i);
             if (Character.isWhitespace(c)) {

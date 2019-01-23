@@ -29,7 +29,8 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -52,7 +53,7 @@ public class FlowControlHandlerTest {
 
     @BeforeClass
     public static void init() {
-        GROUP = new NioEventLoopGroup();
+        GROUP = new MultithreadEventLoopGroup(NioHandler.newFactory());
     }
 
     @AfterClass
@@ -158,7 +159,7 @@ public class FlowControlHandlerTest {
      */
     @Test
     public void testAutoReadingOff() throws Exception {
-        final Exchanger<Channel> peerRef = new Exchanger<Channel>();
+        final Exchanger<Channel> peerRef = new Exchanger<>();
         final CountDownLatch latch = new CountDownLatch(3);
 
         ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
@@ -237,7 +238,7 @@ public class FlowControlHandlerTest {
      */
     @Test
     public void testFlowToggleAutoRead() throws Exception {
-        final Exchanger<Channel> peerRef = new Exchanger<Channel>();
+        final Exchanger<Channel> peerRef = new Exchanger<>();
         final CountDownLatch msgRcvLatch1 = new CountDownLatch(1);
         final CountDownLatch msgRcvLatch2 = new CountDownLatch(1);
         final CountDownLatch msgRcvLatch3 = new CountDownLatch(1);
@@ -319,7 +320,7 @@ public class FlowControlHandlerTest {
      */
     @Test
     public void testFlowAutoReadOff() throws Exception {
-        final Exchanger<Channel> peerRef = new Exchanger<Channel>();
+        final Exchanger<Channel> peerRef = new Exchanger<>();
         final CountDownLatch msgRcvLatch1 = new CountDownLatch(1);
         final CountDownLatch msgRcvLatch2 = new CountDownLatch(2);
         final CountDownLatch msgRcvLatch3 = new CountDownLatch(3);

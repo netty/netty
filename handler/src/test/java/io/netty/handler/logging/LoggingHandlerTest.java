@@ -57,7 +57,7 @@ public class LoggingHandlerTest {
     private static final Logger rootLogger = (Logger) LoggerFactory.getLogger(ROOT_LOGGER_NAME);
     private static final Logger logger = (Logger) LoggerFactory.getLogger(LOGGER_NAME);
 
-    private static final List<Appender<ILoggingEvent>> oldAppenders = new ArrayList<Appender<ILoggingEvent>>();
+    private static final List<Appender<ILoggingEvent>> oldAppenders = new ArrayList<>();
     /**
      * Custom logback appender which gets used to match on log messages.
      */

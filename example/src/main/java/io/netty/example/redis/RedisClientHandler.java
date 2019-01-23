@@ -41,7 +41,7 @@ public class RedisClientHandler extends ChannelDuplexHandler {
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         String[] commands = ((String) msg).split("\\s+");
-        List<RedisMessage> children = new ArrayList<RedisMessage>(commands.length);
+        List<RedisMessage> children = new ArrayList<>(commands.length);
         for (String cmdString : commands) {
             children.add(new FullBulkStringRedisMessage(ByteBufUtil.writeUtf8(ctx.alloc(), cmdString)));
         }
