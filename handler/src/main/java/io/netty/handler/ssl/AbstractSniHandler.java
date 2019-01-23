@@ -231,7 +231,7 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
             suppressRead = true;
             future.addListener(new FutureListener<T>() {
                 @Override
-                public void operationComplete(Future<T> future) throws Exception {
+                public void operationComplete(Future<T> future) {
                     try {
                         suppressRead = false;
                         try {
@@ -270,7 +270,7 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
      *
      * @see #onLookupComplete(ChannelHandlerContext, String, Future)
      */
-    protected abstract Future<T> lookup(ChannelHandlerContext ctx, String hostname) throws Exception;
+    protected abstract Future<T> lookup(ChannelHandlerContext ctx, String hostname);
 
     /**
      * Called upon completion of the {@link #lookup(ChannelHandlerContext, String)} {@link Future}.
@@ -278,10 +278,10 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
      * @see #lookup(ChannelHandlerContext, String)
      */
     protected abstract void onLookupComplete(ChannelHandlerContext ctx,
-                                             String hostname, Future<T> future) throws Exception;
+                                             String hostname, Future<T> future);
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         if (suppressRead) {
             readPending = true;
         } else {
@@ -290,43 +290,43 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
         ctx.bind(localAddress, promise);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) throws Exception {
+                        ChannelPromise promise) {
         ctx.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.disconnect(promise);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.close(promise);
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.register(promise);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.deregister(promise);
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         ctx.write(msg, promise);
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
+    public void flush(ChannelHandlerContext ctx) {
         ctx.flush();
     }
 }

@@ -26,7 +26,7 @@ public abstract class AbstractMarshallingTest {
     static final String RIVER_FACTORY = "river";
 
     @BeforeClass
-    public static void checkSupported() throws Throwable {
+    public static void checkSupported() {
         Throwable error = null;
         try {
             Marshalling.getProvidedMarshallerFactory(SERIAL_FACTORY);

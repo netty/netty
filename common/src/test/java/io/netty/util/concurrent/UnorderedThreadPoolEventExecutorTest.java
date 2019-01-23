@@ -38,7 +38,7 @@ public class UnorderedThreadPoolEventExecutorTest {
             executor.execute(task);
             Future<?> future = executor.submit(task).addListener(new FutureListener<Object>() {
                 @Override
-                public void operationComplete(Future<Object> future) throws Exception {
+                public void operationComplete(Future<Object> future) {
                     latch.countDown();
                 }
             });

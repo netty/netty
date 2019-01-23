@@ -64,7 +64,7 @@ public class DefaultHttp2FrameWriterTest {
     private ChannelHandlerContext ctx;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         MockitoAnnotations.initMocks(this);
 
         frameWriter = new DefaultHttp2FrameWriter();
@@ -79,7 +79,7 @@ public class DefaultHttp2FrameWriterTest {
 
         Answer<Object> answer = new Answer<Object>() {
             @Override
-            public Object answer(InvocationOnMock var1) throws Throwable {
+            public Object answer(InvocationOnMock var1) {
                 Object msg = var1.getArgument(0);
                 if (msg instanceof ByteBuf) {
                     outbound.writeBytes((ByteBuf) msg);
@@ -96,7 +96,7 @@ public class DefaultHttp2FrameWriterTest {
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         outbound.release();
         expectedOutbound.release();
         frameWriter.close();
@@ -205,7 +205,7 @@ public class DefaultHttp2FrameWriterTest {
     }
 
     @Test
-    public void writeFrameZeroPayload() throws Exception {
+    public void writeFrameZeroPayload() {
         frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), Unpooled.EMPTY_BUFFER, promise);
 
         byte[] expectedFrameBytes = {
@@ -220,7 +220,7 @@ public class DefaultHttp2FrameWriterTest {
     }
 
     @Test
-    public void writeFrameHasPayload() throws Exception {
+    public void writeFrameHasPayload() {
         byte[] payload = {(byte) 0x01, (byte) 0x03, (byte) 0x05, (byte) 0x07, (byte) 0x09};
 
         // will auto release after frameWriter.writeFrame succeed

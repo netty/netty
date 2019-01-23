@@ -87,7 +87,7 @@ public class SingleThreadEventLoopTest {
 
     @Test
     @SuppressWarnings("deprecation")
-    public void shutdownBeforeStart() throws Exception {
+    public void shutdownBeforeStart() {
         loopA.shutdown();
         assertRejection(loopA);
     }
@@ -344,7 +344,7 @@ public class SingleThreadEventLoopTest {
 
     @Test(timeout = 10000)
     @SuppressWarnings("deprecation")
-    public void testRegistrationAfterShutdown() throws Exception {
+    public void testRegistrationAfterShutdown() {
         loopA.shutdown();
 
         // Disable logging temporarily.
@@ -380,7 +380,7 @@ public class SingleThreadEventLoopTest {
         ChannelPromise promise = ch.newPromise();
         promise.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 latch.countDown();
             }
         });

@@ -119,7 +119,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         clientChannel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                 if (!ctx.channel().isWritable()) {
                     ctx.channel().flush();
                 }
@@ -228,7 +228,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
             public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
                 promise.addListener(new GenericFutureListener<Future<? super Void>>() {
                     @Override
-                    public void operationComplete(Future<? super Void> future) throws Exception {
+                    public void operationComplete(Future<? super Void> future) {
                         ctx.channel().close();
                     }
                 });
@@ -265,7 +265,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
             }
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 ctx.close();
             }
         });

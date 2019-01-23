@@ -30,7 +30,7 @@ public class HttpServerCodecTest {
      * Testcase for https://github.com/netty/netty/issues/433
      */
     @Test
-    public void testUnfinishedChunkedHttpRequestIsLastFlag() throws Exception {
+    public void testUnfinishedChunkedHttpRequestIsLastFlag() {
 
         int maxChunkSize = 2000;
         HttpServerCodec httpServerCodec = new HttpServerCodec(1000, 1000);
@@ -66,7 +66,7 @@ public class HttpServerCodecTest {
     }
 
     @Test
-    public void test100Continue() throws Exception {
+    public void test100Continue() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec(), new HttpObjectAggregator(1024));
 
         // Send the request headers.

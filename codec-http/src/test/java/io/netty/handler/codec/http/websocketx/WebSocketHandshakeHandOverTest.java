@@ -62,7 +62,7 @@ public class WebSocketHandshakeHandOverTest {
                 }
             }
             @Override
-            protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+            protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
             }
         });
 
@@ -74,7 +74,7 @@ public class WebSocketHandshakeHandOverTest {
                 }
             }
             @Override
-            protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+            protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
                 if (msg instanceof TextWebSocketFrame) {
                     clientReceivedMessage = true;
                 }

@@ -57,7 +57,7 @@ public final class InboundHttp2ToHttpAdapterBuilder
     protected InboundHttp2ToHttpAdapter build(Http2Connection connection,
                                               int maxContentLength,
                                               boolean validateHttpHeaders,
-                                              boolean propagateSettings) throws Exception {
+                                              boolean propagateSettings) {
 
         return new InboundHttp2ToHttpAdapter(connection, maxContentLength,
                                              validateHttpHeaders, propagateSettings);

@@ -68,7 +68,7 @@ public class LocalTransportThreadModelTest3 {
                 .channel(LocalServerChannel.class)
                 .childHandler(new ChannelInitializer<LocalChannel>() {
                     @Override
-                    public void initChannel(LocalChannel ch) throws Exception {
+                    public void initChannel(LocalChannel ch) {
                         ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -264,53 +264,53 @@ public class LocalTransportThreadModelTest3 {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             events.add(EventType.EXCEPTION_CAUGHT);
         }
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
             if (inbound) {
                 events.add(EventType.USER_EVENT);
             }
         }
 
         @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) {
             if (inbound) {
                 events.add(EventType.MESSAGE_RECEIVED_LAST);
             }
         }
 
         @Override
-        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        public void channelInactive(ChannelHandlerContext ctx) {
             events.add(EventType.INACTIVE);
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             events.add(EventType.ACTIVE);
         }
 
         @Override
-        public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+        public void channelUnregistered(ChannelHandlerContext ctx) {
             events.add(EventType.UNREGISTERED);
         }
 
         @Override
-        public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        public void channelRegistered(ChannelHandlerContext ctx) {
             events.add(EventType.REGISTERED);
         }
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             if (inbound) {
                 events.add(EventType.MESSAGE_RECEIVED);
             }
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             if (!inbound) {
                 events.add(EventType.WRITE);
             }

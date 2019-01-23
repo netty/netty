@@ -157,27 +157,27 @@ public class ChannelOutboundBufferTest {
         }
 
         @Override
-        protected void doBind(SocketAddress localAddress) throws Exception {
+        protected void doBind(SocketAddress localAddress) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        protected void doDisconnect() throws Exception {
+        protected void doDisconnect() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        protected void doClose() throws Exception {
+        protected void doClose() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        protected void doBeginRead() throws Exception {
+        protected void doBeginRead() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        protected void doWrite(ChannelOutboundBuffer in) {
             throw new UnsupportedOperationException();
         }
 
@@ -214,7 +214,7 @@ public class ChannelOutboundBufferTest {
         final StringBuilder buf = new StringBuilder();
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                 buf.append(ctx.channel().isWritable());
                 buf.append(' ');
             }
@@ -249,7 +249,7 @@ public class ChannelOutboundBufferTest {
         final StringBuilder buf = new StringBuilder();
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                 buf.append(ctx.channel().isWritable());
                 buf.append(' ');
             }
@@ -283,7 +283,7 @@ public class ChannelOutboundBufferTest {
         final StringBuilder buf = new StringBuilder();
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                 buf.append(ctx.channel().isWritable());
                 buf.append(' ');
             }
@@ -323,7 +323,7 @@ public class ChannelOutboundBufferTest {
         final StringBuilder buf = new StringBuilder();
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                 buf.append(ctx.channel().isWritable());
                 buf.append(' ');
             }
@@ -383,7 +383,7 @@ public class ChannelOutboundBufferTest {
         EmbeddedChannel ch = new EmbeddedChannel();
         ch.pipeline().addLast(executor, "handler", new ChannelOutboundHandlerAdapter() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 promise.setFailure(new AssertionError("Should not be called"));
             }
 

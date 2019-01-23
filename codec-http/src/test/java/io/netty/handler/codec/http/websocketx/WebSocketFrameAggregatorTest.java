@@ -107,7 +107,7 @@ public class WebSocketFrameAggregatorTest {
     }
 
     @Test
-    public void textFrameTooBig() throws Exception {
+    public void textFrameTooBig() {
         EmbeddedChannel channel = new EmbeddedChannel(new WebSocketFrameAggregator(8));
         channel.writeInbound(new BinaryWebSocketFrame(true, 1, Unpooled.wrappedBuffer(content1)));
         channel.writeInbound(new BinaryWebSocketFrame(false, 0, Unpooled.wrappedBuffer(content1)));

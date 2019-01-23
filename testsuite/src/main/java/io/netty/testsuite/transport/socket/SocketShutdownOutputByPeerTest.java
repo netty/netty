@@ -127,22 +127,22 @@ public class SocketShutdownOutputByPeerTest extends AbstractServerSocketTest {
         final AtomicInteger halfClosureCount = new AtomicInteger();
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             ch = (SocketChannel) ctx.channel();
         }
 
         @Override
-        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        public void channelInactive(ChannelHandlerContext ctx) {
             closure.countDown();
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
             queue.offer(msg.readByte());
         }
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
             if (evt instanceof ChannelInputShutdownEvent) {
                 halfClosureCount.incrementAndGet();
                 halfClosure.countDown();

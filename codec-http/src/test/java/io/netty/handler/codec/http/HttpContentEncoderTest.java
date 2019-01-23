@@ -44,7 +44,7 @@ public class HttpContentEncoderTest {
         protected Result beginEncode(HttpResponse headers, String acceptEncoding) {
             return new Result("test", new EmbeddedChannel(new MessageToByteEncoder<ByteBuf>() {
                 @Override
-                protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+                protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) {
                     out.writeBytes(String.valueOf(in.readableBytes()).getBytes(CharsetUtil.US_ASCII));
                     in.skipBytes(in.readableBytes());
                 }
@@ -53,7 +53,7 @@ public class HttpContentEncoderTest {
     }
 
     @Test
-    public void testSplitContent() throws Exception {
+    public void testSplitContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
@@ -86,7 +86,7 @@ public class HttpContentEncoderTest {
     }
 
     @Test
-    public void testChunkedContent() throws Exception {
+    public void testChunkedContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
@@ -123,7 +123,7 @@ public class HttpContentEncoderTest {
     }
 
     @Test
-    public void testChunkedContentWithTrailingHeader() throws Exception {
+    public void testChunkedContentWithTrailingHeader() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
@@ -164,7 +164,7 @@ public class HttpContentEncoderTest {
     }
 
     @Test
-    public void testFullContentWithContentLength() throws Exception {
+    public void testFullContentWithContentLength() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
@@ -192,7 +192,7 @@ public class HttpContentEncoderTest {
     }
 
     @Test
-    public void testFullContent() throws Exception {
+    public void testFullContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
@@ -218,7 +218,7 @@ public class HttpContentEncoderTest {
      * even if the actual length is turned out to be 0.
      */
     @Test
-    public void testEmptySplitContent() throws Exception {
+    public void testEmptySplitContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
@@ -243,7 +243,7 @@ public class HttpContentEncoderTest {
      * If the length of the content is 0 for sure, {@link HttpContentEncoder} should skip encoding.
      */
     @Test
-    public void testEmptyFullContent() throws Exception {
+    public void testEmptyFullContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
@@ -267,7 +267,7 @@ public class HttpContentEncoderTest {
     }
 
     @Test
-    public void testEmptyFullContentWithTrailer() throws Exception {
+    public void testEmptyFullContentWithTrailer() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         ch.writeInbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
 
@@ -292,7 +292,7 @@ public class HttpContentEncoderTest {
     }
 
     @Test
-    public void testEmptyHeadResponse() throws Exception {
+    public void testEmptyHeadResponse() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, "/");
         ch.writeInbound(req);
@@ -306,7 +306,7 @@ public class HttpContentEncoderTest {
     }
 
     @Test
-    public void testHttp304Response() throws Exception {
+    public void testHttp304Response() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
         req.headers().set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
@@ -321,7 +321,7 @@ public class HttpContentEncoderTest {
     }
 
     @Test
-    public void testConnect200Response() throws Exception {
+    public void testConnect200Response() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         HttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.CONNECT, "google.com:80");
         ch.writeInbound(req);
@@ -335,7 +335,7 @@ public class HttpContentEncoderTest {
     }
 
     @Test
-    public void testConnectFailureResponse() throws Exception {
+    public void testConnectFailureResponse() {
         String content = "Not allowed by configuration";
 
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
@@ -367,7 +367,7 @@ public class HttpContentEncoderTest {
     }
 
     @Test
-    public void testHttp1_0() throws Exception {
+    public void testHttp1_0() {
         EmbeddedChannel ch = new EmbeddedChannel(new TestEncoder());
         FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/");
         assertTrue(ch.writeInbound(req));
@@ -395,11 +395,11 @@ public class HttpContentEncoderTest {
     public void testCleanupThrows() {
         HttpContentEncoder encoder = new HttpContentEncoder() {
             @Override
-            protected Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception {
+            protected Result beginEncode(HttpResponse headers, String acceptEncoding) {
                 return new Result("myencoding", new EmbeddedChannel(
                         new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                    public void channelInactive(ChannelHandlerContext ctx) {
                         ctx.fireExceptionCaught(new EncoderException());
                         ctx.fireChannelInactive();
                     }

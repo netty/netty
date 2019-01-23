@@ -64,7 +64,7 @@ public final class CleartextHttp2ServerUpgradeHandler extends ChannelHandlerAdap
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         ctx.pipeline()
            .addBefore(ctx.name(), null, new PriorKnowledgeHandler())
            .addBefore(ctx.name(), null, httpServerCodec)
@@ -77,7 +77,7 @@ public final class CleartextHttp2ServerUpgradeHandler extends ChannelHandlerAdap
      */
     private final class PriorKnowledgeHandler extends ByteToMessageDecoder {
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
             int prefaceLength = CONNECTION_PREFACE.readableBytes();
             int bytesRead = Math.min(in.readableBytes(), prefaceLength);
 

@@ -23,7 +23,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 public abstract class SctpMessageToMessageDecoder extends MessageToMessageDecoder<SctpMessage> {
 
     @Override
-    public boolean acceptInboundMessage(Object msg) throws Exception {
+    public boolean acceptInboundMessage(Object msg) {
         if (msg instanceof SctpMessage) {
             SctpMessage sctpMsg = (SctpMessage) msg;
             if (sctpMsg.isComplete()) {

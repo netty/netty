@@ -42,12 +42,12 @@ public class ByteToMessageCodecTest {
     public void testForwardPendingData() {
         ByteToMessageCodec<Integer> codec = new ByteToMessageCodec<Integer>() {
             @Override
-            protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) throws Exception {
+            protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) {
                 out.writeInt(msg);
             }
 
             @Override
-            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
                 if (in.readableBytes() >= 4) {
                     out.add(in.readInt());
                 }
@@ -78,10 +78,10 @@ public class ByteToMessageCodecTest {
         }
 
         @Override
-        protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) throws Exception { }
+        protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) { }
 
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception { }
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) { }
     }
 
     @ChannelHandler.Sharable
@@ -91,9 +91,9 @@ public class ByteToMessageCodecTest {
         }
 
         @Override
-        protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) throws Exception { }
+        protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) { }
 
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception { }
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) { }
     }
 }

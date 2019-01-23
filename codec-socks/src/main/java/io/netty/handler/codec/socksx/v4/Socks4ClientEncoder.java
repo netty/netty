@@ -39,7 +39,7 @@ public final class Socks4ClientEncoder extends MessageToByteEncoder<Socks4Comman
     private Socks4ClientEncoder() { }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, Socks4CommandRequest msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, Socks4CommandRequest msg, ByteBuf out) {
         out.writeByte(msg.version().byteValue());
         out.writeByte(msg.type().byteValue());
         out.writeShort(msg.dstPort());

@@ -42,7 +42,7 @@ class PerMessageDeflateEncoder extends DeflateEncoder {
     }
 
     @Override
-    public boolean acceptOutboundMessage(Object msg) throws Exception {
+    public boolean acceptOutboundMessage(Object msg) {
         return ((msg instanceof TextWebSocketFrame ||
                 msg instanceof BinaryWebSocketFrame) &&
                    (((WebSocketFrame) msg).rsv() & WebSocketExtension.RSV1) == 0) ||

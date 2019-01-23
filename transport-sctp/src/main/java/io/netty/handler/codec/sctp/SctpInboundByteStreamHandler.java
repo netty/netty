@@ -54,7 +54,7 @@ public class SctpInboundByteStreamHandler extends MessageToMessageDecoder<SctpMe
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, SctpMessage msg, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, SctpMessage msg, List<Object> out) {
         if (!msg.isComplete()) {
             throw new CodecException(String.format("Received SctpMessage is not complete, please add %s in the " +
                     "pipeline before this handler", SctpMessageCompletionHandler.class.getSimpleName()));

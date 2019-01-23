@@ -99,7 +99,7 @@ public class LocalChannelTest {
               .channel(LocalServerChannel.class)
               .childHandler(new ChannelInitializer<LocalChannel>() {
                   @Override
-                  public void initChannel(LocalChannel ch) throws Exception {
+                  public void initChannel(LocalChannel ch) {
                       ch.pipeline().addLast(new TestHandler());
                   }
               });
@@ -152,7 +152,7 @@ public class LocalChannelTest {
                 .channel(LocalServerChannel.class)
                 .childHandler(new ChannelInitializer<LocalChannel>() {
                     @Override
-                    public void initChannel(LocalChannel ch) throws Exception {
+                    public void initChannel(LocalChannel ch) {
                         ch.pipeline().addLast(new TestHandler());
                     }
                 });
@@ -196,7 +196,7 @@ public class LocalChannelTest {
                 .channel(LocalServerChannel.class)
                 .childHandler(new SimpleChannelInboundHandler<Object>() {
                     @Override
-                    protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
                         ctx.close();
                         latch.countDown();
                     }
@@ -211,7 +211,7 @@ public class LocalChannelTest {
                     .channel(LocalChannel.class)
                     .handler(new SimpleChannelInboundHandler<Object>() {
                         @Override
-                        protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
                             // discard
                         }
                     });
@@ -229,8 +229,7 @@ public class LocalChannelTest {
         final CountDownLatch closeLatch = new CountDownLatch(1);
         final EventLoopGroup clientGroup = new LocalEventLoopGroup(1) {
             @Override
-            protected EventLoop newChild(Executor threadFactory, Object... args)
-                    throws Exception {
+            protected EventLoop newChild(Executor threadFactory, Object... args) {
                 return new LocalEventLoop(this, threadFactory) {
                     @Override
                     protected void run() {
@@ -265,7 +264,7 @@ public class LocalChannelTest {
                     channel(LocalServerChannel.class).
                     childHandler(new ChannelInitializer<Channel>() {
                         @Override
-                        protected void initChannel(Channel ch) throws Exception {
+                        protected void initChannel(Channel ch) {
                             ch.close();
                             closeLatch.countDown();
                         }
@@ -277,7 +276,7 @@ public class LocalChannelTest {
                     channel(LocalChannel.class).
                     handler(new ChannelInitializer<Channel>() {
                         @Override
-                        protected void initChannel(Channel ch) throws Exception {
+                        protected void initChannel(Channel ch) {
                             /* Do nothing */
                         }
                     });
@@ -304,7 +303,7 @@ public class LocalChannelTest {
                 .channel(LocalServerChannel.class)
                 .childHandler(new ChannelInitializer<LocalChannel>() {
                     @Override
-                    public void initChannel(LocalChannel ch) throws Exception {
+                    public void initChannel(LocalChannel ch) {
                         ch.pipeline().addLast(new TestHandler());
                     }
                 });
@@ -373,7 +372,7 @@ public class LocalChannelTest {
                         ChannelPromise promise = ccCpy.newPromise();
                         promise.addListener(new ChannelFutureListener() {
                             @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
+                            public void operationComplete(ChannelFuture future) {
                                 ccCpy.pipeline().lastContext().close();
                             }
                         });
@@ -404,7 +403,7 @@ public class LocalChannelTest {
                     .channel(LocalChannel.class)
                     .handler(new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        public void channelActive(ChannelHandlerContext ctx) {
                             ctx.writeAndFlush(data.retainedDuplicate());
                         }
 
@@ -504,7 +503,7 @@ public class LocalChannelTest {
                         ChannelPromise promise = ccCpy.newPromise();
                         promise.addListener(new ChannelFutureListener() {
                             @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
+                            public void operationComplete(ChannelFuture future) {
                                 ccCpy.writeAndFlush(data2.retainedDuplicate(), ccCpy.newPromise());
                             }
                         });
@@ -551,7 +550,7 @@ public class LocalChannelTest {
                 .channel(LocalServerChannel.class)
                 .childHandler(new ChannelInitializer<LocalChannel>() {
                     @Override
-                    public void initChannel(LocalChannel ch) throws Exception {
+                    public void initChannel(LocalChannel ch) {
                         ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -586,7 +585,7 @@ public class LocalChannelTest {
                     ChannelPromise promise = ccCpy.newPromise();
                     promise.addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             Channel serverChannelCpy = serverChannelRef.get();
                             serverChannelCpy.writeAndFlush(data2.retainedDuplicate(), serverChannelCpy.newPromise());
                         }
@@ -633,7 +632,7 @@ public class LocalChannelTest {
             .channel(LocalServerChannel.class)
             .childHandler(new ChannelInitializer<LocalChannel>() {
                 @Override
-                public void initChannel(LocalChannel ch) throws Exception {
+                public void initChannel(LocalChannel ch) {
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -668,7 +667,7 @@ public class LocalChannelTest {
                         ChannelPromise promise = ccCpy.newPromise();
                         promise.addListener(new ChannelFutureListener() {
                             @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
+                            public void operationComplete(ChannelFuture future) {
                                 Channel serverChannelCpy = serverChannelRef.get();
                                 serverChannelCpy.writeAndFlush(
                                         data2.retainedDuplicate(), serverChannelCpy.newPromise());
@@ -711,7 +710,7 @@ public class LocalChannelTest {
             .channel(LocalServerChannel.class)
             .childHandler(new ChannelInitializer<LocalChannel>() {
                 @Override
-                public void initChannel(LocalChannel ch) throws Exception {
+                public void initChannel(LocalChannel ch) {
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -750,7 +749,7 @@ public class LocalChannelTest {
                         ccCpy.writeAndFlush(data.retainedDuplicate(), ccCpy.newPromise())
                         .addListener(new ChannelFutureListener() {
                             @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
+                            public void operationComplete(ChannelFuture future) {
                                 serverChannelCpy.eventLoop().execute(new Runnable() {
                                     @Override
                                     public void run() {
@@ -771,7 +770,7 @@ public class LocalChannelTest {
                                                                        serverChannelCpy.newPromise())
                                             .addListener(new ChannelFutureListener() {
                                             @Override
-                                            public void operationComplete(ChannelFuture future) throws Exception {
+                                            public void operationComplete(ChannelFuture future) {
                                                 if (!future.isSuccess() &&
                                                     future.cause() instanceof ClosedChannelException) {
                                                     writeFailLatch.countDown();
@@ -815,7 +814,7 @@ public class LocalChannelTest {
                 .channel(LocalServerChannel.class)
                 .childHandler(new ChannelInitializer<LocalChannel>() {
                     @Override
-                    public void initChannel(LocalChannel ch) throws Exception {
+                    public void initChannel(LocalChannel ch) {
                         ch.pipeline().addLast(new TestHandler());
                     }
                 });
@@ -833,7 +832,7 @@ public class LocalChannelTest {
 
             cc.pipeline().addLast(new TestHandler() {
                 @Override
-                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                public void channelActive(ChannelHandlerContext ctx) {
                     // Ensure the promise was done before the handler method is triggered.
                     if (promise.isDone()) {
                         assertPromise.setSuccess(null);
@@ -868,7 +867,7 @@ public class LocalChannelTest {
         }
 
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(ChannelFuture future) {
             countDown();
         }
     }
@@ -881,7 +880,7 @@ public class LocalChannelTest {
 
     static class TestHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             logger.info(String.format("Received message: %s", msg));
             ReferenceCountUtil.safeRelease(msg);
         }
@@ -896,12 +895,12 @@ public class LocalChannelTest {
                 .channel(LocalChannel.class)
                 .handler(new SimpleChannelInboundHandler<ByteBuf>() {
                     @Override
-                    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+                    public void channelActive(final ChannelHandlerContext ctx) {
                         ctx.writeAndFlush(ctx.alloc().buffer().writeZero(100));
                     }
 
                     @Override
-                    public void channelRead0(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+                    public void channelRead0(ChannelHandlerContext ctx, ByteBuf buffer) {
                         // Just drop the buffer
                     }
                 });
@@ -910,11 +909,11 @@ public class LocalChannelTest {
                 .channel(LocalServerChannel.class)
                 .childHandler(new ChannelInitializer<LocalChannel>() {
                     @Override
-                    public void initChannel(LocalChannel ch) throws Exception {
+                    public void initChannel(LocalChannel ch) {
                         ch.pipeline().addLast(new SimpleChannelInboundHandler<ByteBuf>() {
 
                             @Override
-                            public void channelRead0(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+                            public void channelRead0(ChannelHandlerContext ctx, ByteBuf buffer) {
                                 while (buffer.isReadable()) {
                                     // Fill the ChannelOutboundBuffer with multiple buffers
                                     ctx.write(buffer.readRetainedSlice(1));
@@ -980,12 +979,12 @@ public class LocalChannelTest {
                 .handler(new ChannelInboundHandlerAdapter() {
 
                     @Override
-                    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+                    public void channelActive(final ChannelHandlerContext ctx) {
                         writeAndFlushReadOnSuccess(ctx, "test");
                     }
 
                     @Override
-                    public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
+                    public void channelRead(final ChannelHandlerContext ctx, Object msg) {
                         writeAndFlushReadOnSuccess(ctx, msg);
                     }
                 });
@@ -995,12 +994,12 @@ public class LocalChannelTest {
                 .childOption(ChannelOption.AUTO_READ, false)
                 .childHandler(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+                    public void channelActive(final ChannelHandlerContext ctx) {
                         ctx.read();
                     }
 
                     @Override
-                    public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
+                    public void channelRead(final ChannelHandlerContext ctx, Object msg) {
                         latch.countDown();
                         if (latch.getCount() > 0) {
                             writeAndFlushReadOnSuccess(ctx, msg);

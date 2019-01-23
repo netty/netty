@@ -33,7 +33,7 @@ public class HttpResponseEncoderTest {
     private static final FileRegion FILE_REGION = new DummyLongFileRegion();
 
     @Test
-    public void testLargeFileRegionChunked() throws Exception {
+    public void testLargeFileRegionChunked() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
@@ -87,7 +87,7 @@ public class HttpResponseEncoderTest {
         }
 
         @Override
-        public long transferTo(WritableByteChannel target, long position) throws IOException {
+        public long transferTo(WritableByteChannel target, long position) {
             throw new UnsupportedOperationException();
         }
 
@@ -128,7 +128,7 @@ public class HttpResponseEncoderTest {
     }
 
     @Test
-    public void testEmptyBufferBypass() throws Exception {
+    public void testEmptyBufferBypass() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
 
         // Test writing an empty buffer works when the encoder is at ST_INIT.
@@ -161,7 +161,7 @@ public class HttpResponseEncoderTest {
         testEmptyContent(false);
     }
 
-    private static void testEmptyContent(boolean chunked) throws Exception {
+    private static void testEmptyContent(boolean chunked) {
         String content = "netty rocks";
         ByteBuf contentBuffer = Unpooled.copiedBuffer(content, CharsetUtil.US_ASCII);
         int length = contentBuffer.readableBytes();
@@ -197,49 +197,49 @@ public class HttpResponseEncoderTest {
     }
 
     @Test
-    public void testStatusNoContent() throws Exception {
+    public void testStatusNoContent() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         assertEmptyResponse(channel, HttpResponseStatus.NO_CONTENT, null, false);
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testStatusNoContentContentLength() throws Exception {
+    public void testStatusNoContentContentLength() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         assertEmptyResponse(channel, HttpResponseStatus.NO_CONTENT, HttpHeaderNames.CONTENT_LENGTH, true);
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testStatusNoContentTransferEncoding() throws Exception {
+    public void testStatusNoContentTransferEncoding() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         assertEmptyResponse(channel, HttpResponseStatus.NO_CONTENT, HttpHeaderNames.TRANSFER_ENCODING, true);
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testStatusNotModified() throws Exception {
+    public void testStatusNotModified() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         assertEmptyResponse(channel, HttpResponseStatus.NOT_MODIFIED, null, false);
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testStatusNotModifiedContentLength() throws Exception {
+    public void testStatusNotModifiedContentLength() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         assertEmptyResponse(channel, HttpResponseStatus.NOT_MODIFIED, HttpHeaderNames.CONTENT_LENGTH, false);
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testStatusNotModifiedTransferEncoding() throws Exception {
+    public void testStatusNotModifiedTransferEncoding() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         assertEmptyResponse(channel, HttpResponseStatus.NOT_MODIFIED, HttpHeaderNames.TRANSFER_ENCODING, false);
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testStatusInformational() throws Exception {
+    public void testStatusInformational() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         for (int code = 100; code < 200; code++) {
             HttpResponseStatus status = HttpResponseStatus.valueOf(code);
@@ -249,7 +249,7 @@ public class HttpResponseEncoderTest {
     }
 
     @Test
-    public void testStatusInformationalContentLength() throws Exception {
+    public void testStatusInformationalContentLength() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         for (int code = 100; code < 200; code++) {
             HttpResponseStatus status = HttpResponseStatus.valueOf(code);
@@ -259,7 +259,7 @@ public class HttpResponseEncoderTest {
     }
 
     @Test
-    public void testStatusInformationalTransferEncoding() throws Exception {
+    public void testStatusInformationalTransferEncoding() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseEncoder());
         for (int code = 100; code < 200; code++) {
             HttpResponseStatus status = HttpResponseStatus.valueOf(code);
@@ -323,7 +323,7 @@ public class HttpResponseEncoderTest {
         testEmptyContents(false, true);
     }
 
-    private void testEmptyContents(boolean chunked, boolean trailers) throws Exception {
+    private void testEmptyContents(boolean chunked, boolean trailers) {
         HttpResponseEncoder encoder = new HttpResponseEncoder();
         EmbeddedChannel channel = new EmbeddedChannel(encoder);
         HttpResponse request = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);

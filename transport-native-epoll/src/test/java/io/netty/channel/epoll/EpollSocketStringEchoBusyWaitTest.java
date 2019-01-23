@@ -38,7 +38,7 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
     private static EventLoopGroup EPOLL_LOOP;
 
     @BeforeClass
-    public static void setup() throws Exception {
+    public static void setup() {
         EPOLL_LOOP = new EpollEventLoopGroup(2, new DefaultThreadFactory("testsuite-epoll-busy-wait", true),
                 new SelectStrategyFactory() {
                     @Override
@@ -54,7 +54,7 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
     }
 
     @AfterClass
-    public static void teardown() throws Exception {
+    public static void teardown() {
         if (EPOLL_LOOP != null) {
             EPOLL_LOOP.shutdownGracefully();
         }

@@ -55,13 +55,13 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
         final BlockingQueue<Object> queue = new LinkedBlockingQueue<>(1);
         sb.childHandler(new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            public void channelActive(ChannelHandlerContext ctx) {
                 // Create new channel and obtain a file descriptor from it.
                 final EpollDomainSocketChannel ch = new EpollDomainSocketChannel(ctx.channel().eventLoop());
 
                 ctx.writeAndFlush(ch.fd()).addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             Throwable cause = future.cause();
                             queue.offer(cause);
@@ -72,13 +72,13 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
         });
         cb.handler(new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 FileDescriptor fd = (FileDescriptor) msg;
                 queue.offer(fd);
             }
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 queue.add(cause);
                 ctx.close();
             }

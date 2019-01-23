@@ -28,7 +28,7 @@ import static org.junit.Assert.*;
 
 public class LengthFieldBasedFrameDecoderTest {
     @Test
-    public void testFailSlowTooLongFrameRecovery() throws Exception {
+    public void testFailSlowTooLongFrameRecovery() {
         EmbeddedChannel ch = new EmbeddedChannel(
                 new LengthFieldBasedFrameDecoder(5, 0, 4, 0, 4, false));
 
@@ -49,7 +49,7 @@ public class LengthFieldBasedFrameDecoderTest {
     }
 
     @Test
-    public void testFailFastTooLongFrameRecovery() throws Exception {
+    public void testFailFastTooLongFrameRecovery() {
         EmbeddedChannel ch = new EmbeddedChannel(
                 new LengthFieldBasedFrameDecoder(5, 0, 4, 0, 4));
 

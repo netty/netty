@@ -155,7 +155,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void stateChanges() throws Exception {
+    public void stateChanges() {
         frameInboundWriter.writeInboundHeaders(1, request, 31, true);
 
         Http2Stream stream = frameCodec.connection().stream(1);
@@ -187,7 +187,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void headerRequestHeaderResponse() throws Exception {
+    public void headerRequestHeaderResponse() {
         frameInboundWriter.writeInboundHeaders(1, request, 31, true);
 
         Http2Stream stream = frameCodec.connection().stream(1);
@@ -227,7 +227,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void entityRequestEntityResponse() throws Exception {
+    public void entityRequestEntityResponse() {
         frameInboundWriter.writeInboundHeaders(1, request, 0, false);
 
         Http2Stream stream = frameCodec.connection().stream(1);
@@ -269,7 +269,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void sendRstStream() throws Exception {
+    public void sendRstStream() {
         frameInboundWriter.writeInboundHeaders(3, request, 31, true);
 
         Http2Stream stream = frameCodec.connection().stream(3);
@@ -291,7 +291,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void receiveRstStream() throws Exception {
+    public void receiveRstStream() {
         frameInboundWriter.writeInboundHeaders(3, request, 31, false);
 
         Http2Stream stream = frameCodec.connection().stream(3);
@@ -312,7 +312,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void sendGoAway() throws Exception {
+    public void sendGoAway() {
         frameInboundWriter.writeInboundHeaders(3, request, 31, false);
         Http2Stream stream = frameCodec.connection().stream(3);
         assertNotNull(stream);
@@ -335,7 +335,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void receiveGoaway() throws Exception {
+    public void receiveGoaway() {
         ByteBuf debugData = bb("foo");
         frameInboundWriter.writeInboundGoAway(2, Http2Error.NO_ERROR.code(), debugData);
         Http2GoAwayFrame expectedFrame = new DefaultHttp2GoAwayFrame(2, Http2Error.NO_ERROR.code(), bb("foo"));
@@ -376,7 +376,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void goAwayLastStreamIdOverflowed() throws Exception {
+    public void goAwayLastStreamIdOverflowed() {
         frameInboundWriter.writeInboundHeaders(5, request, 31, false);
 
         Http2Stream stream = frameCodec.connection().stream(5);
@@ -445,7 +445,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void windowUpdateFrameDecrementsConsumedBytes() throws Exception {
+    public void windowUpdateFrameDecrementsConsumedBytes() {
         frameInboundWriter.writeInboundHeaders(3, request, 31, false);
 
         Http2Connection connection = frameCodec.connection();
@@ -469,7 +469,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void windowUpdateMayFail() throws Exception {
+    public void windowUpdateMayFail() {
         frameInboundWriter.writeInboundHeaders(3, request, 31, false);
         Http2Connection connection = frameCodec.connection();
         Http2Stream stream = connection.stream(3);
@@ -488,7 +488,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void inboundWindowUpdateShouldBeForwarded() throws Exception {
+    public void inboundWindowUpdateShouldBeForwarded() {
         frameInboundWriter.writeInboundHeaders(3, request, 31, false);
         frameInboundWriter.writeInboundWindowUpdate(3, 100);
         // Connection-level window update
@@ -575,7 +575,7 @@ public class Http2FrameCodecTest {
         channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), false).stream(stream))
                .addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         assertTrue(future.isSuccess());
                         assertTrue(isStreamIdValid(stream.id()));
                         listenerExecuted.setSuccess(null);
@@ -678,7 +678,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void receivePing() throws Http2Exception {
+    public void receivePing() {
         frameInboundWriter.writeInboundPing(false, 12345L);
 
         Http2PingFrame pingFrame = inboundHandler.readInbound();
@@ -696,7 +696,7 @@ public class Http2FrameCodecTest {
     }
 
     @Test
-    public void receiveSettings() throws Http2Exception {
+    public void receiveSettings() {
         Http2Settings settings = new Http2Settings().maxConcurrentStreams(1);
         frameInboundWriter.writeInboundSettings(settings);
 
@@ -760,7 +760,7 @@ public class Http2FrameCodecTest {
         channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2))
                 .addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         assertTrue(future.isSuccess());
                         assertEquals(State.OPEN, stream2.state());
                         listenerExecuted.set(true);
@@ -790,14 +790,14 @@ public class Http2FrameCodecTest {
     public void upgradeWithoutFlowControlling() throws Exception {
         channel.pipeline().addAfter(frameCodec.ctx.name(), null, new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead(final ChannelHandlerContext ctx, Object msg) {
                 if (msg instanceof Http2DataFrame) {
                     // Simulate consuming the frame and update the flow-controller.
                     Http2DataFrame data = (Http2DataFrame) msg;
                     ctx.writeAndFlush(new DefaultHttp2WindowUpdateFrame(data.initialFlowControlledBytes())
                             .stream(data.stream())).addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             Throwable cause = future.cause();
                             if (cause != null) {
                                 ctx.fireExceptionCaught(cause);

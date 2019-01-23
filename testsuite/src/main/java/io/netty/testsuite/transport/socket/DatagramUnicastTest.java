@@ -152,7 +152,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         try {
             cb.handler(new SimpleChannelInboundHandler<Object>() {
                 @Override
-                public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
+                public void channelRead0(ChannelHandlerContext ctx, Object msgs) {
                     // Nothing will be sent.
                 }
             });
@@ -211,7 +211,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
                                             WrapType wrapType) throws Throwable {
         cb.handler(new SimpleChannelInboundHandler<Object>() {
             @Override
-            public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
+            public void channelRead0(ChannelHandlerContext ctx, Object msgs) {
                 // Nothing will be sent.
             }
         });
@@ -268,10 +268,10 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
             throws Throwable {
         sb.handler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ch.pipeline().addLast(new SimpleChannelInboundHandler<DatagramPacket>() {
                     @Override
-                    public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+                    public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) {
                         ByteBuf buf = msg.content();
                         assertEquals(bytes.length, buf.readableBytes());
                         for (byte b : bytes) {

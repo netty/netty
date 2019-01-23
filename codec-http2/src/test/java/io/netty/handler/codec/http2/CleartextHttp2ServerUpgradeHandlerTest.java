@@ -79,14 +79,14 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
                 httpServerCodec, upgradeHandler, http2ConnectionHandler);
         channel = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 userEvents.add(evt);
             }
         });
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         channel.finishAndReleaseAll();
     }
 
@@ -111,7 +111,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     }
 
     @Test
-    public void upgrade() throws Exception {
+    public void upgrade() {
         setUpServerChannel();
 
         String upgradeString = "GET / HTTP/1.1\r\n" +
@@ -176,7 +176,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     }
 
     @Test
-    public void downgrade() throws Exception {
+    public void downgrade() {
         setUpServerChannel();
 
         String requestString = "GET / HTTP/1.1\r\n" +
@@ -199,10 +199,10 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     }
 
     @Test
-    public void usedHttp2MultiplexCodec() throws Exception {
+    public void usedHttp2MultiplexCodec() {
         final Http2MultiplexCodec http2Codec = new Http2MultiplexCodecBuilder(true, new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
             }
         }).build();
         UpgradeCodecFactory upgradeCodecFactory = new UpgradeCodecFactory() {
@@ -222,7 +222,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
                 httpServerCodec, upgradeHandler, http2Codec);
         channel = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 userEvents.add(evt);
             }
         });

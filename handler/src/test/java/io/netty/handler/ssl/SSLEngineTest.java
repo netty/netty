@@ -216,7 +216,7 @@ public abstract class SSLEngineTest {
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
             receiver.messageReceived(msg);
             latch.countDown();
         }
@@ -707,7 +707,7 @@ public abstract class SSLEngineTest {
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
 
                 ChannelPipeline p = ch.pipeline();
@@ -719,7 +719,7 @@ public abstract class SSLEngineTest {
                 p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
                             if (failureExpected) {
                                 serverException = new IllegalStateException("handshake complete. expected failure");
@@ -733,7 +733,7 @@ public abstract class SSLEngineTest {
                     }
 
                     @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         if (cause.getCause() instanceof SSLHandshakeException) {
                             serverException = cause.getCause();
                             serverLatch.countDown();
@@ -751,14 +751,14 @@ public abstract class SSLEngineTest {
         cb.channel(NioSocketChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
                 ChannelPipeline p = ch.pipeline();
                 p.addLast(clientSslCtx.newHandler(ch.alloc()));
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
                             // With TLS1.3 a mutal auth error will not be propagated as a handshake error most of the
                             // time as the handshake needs NO extra roundtrip.
@@ -773,7 +773,7 @@ public abstract class SSLEngineTest {
                     }
 
                     @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         if (cause.getCause() instanceof SSLException) {
                             clientException = cause.getCause();
                             clientLatch.countDown();
@@ -854,14 +854,14 @@ public abstract class SSLEngineTest {
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
                 ChannelPipeline p = ch.pipeline();
                 p.addLast(serverSslCtx.newHandler(ch.alloc()));
                 p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
                             if (failureExpected) {
                                 serverException = new IllegalStateException("handshake complete. expected failure");
@@ -875,7 +875,7 @@ public abstract class SSLEngineTest {
                     }
 
                     @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         if (cause.getCause() instanceof SSLHandshakeException) {
                             serverException = cause.getCause();
                             serverLatch.countDown();
@@ -893,7 +893,7 @@ public abstract class SSLEngineTest {
         cb.channel(NioSocketChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
                 ChannelPipeline p = ch.pipeline();
                 InetSocketAddress remoteAddress = (InetSocketAddress) serverChannel.localAddress();
@@ -909,7 +909,7 @@ public abstract class SSLEngineTest {
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
                             if (failureExpected) {
                                 clientException = new IllegalStateException("handshake complete. expected failure");
@@ -923,7 +923,7 @@ public abstract class SSLEngineTest {
                     }
 
                     @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         if (cause.getCause() instanceof SSLHandshakeException) {
                             clientException = cause.getCause();
                             clientLatch.countDown();
@@ -1028,7 +1028,7 @@ public abstract class SSLEngineTest {
                 p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         if (cause.getCause() instanceof SSLHandshakeException) {
                             serverException = cause.getCause();
                             serverLatch.countDown();
@@ -1039,7 +1039,7 @@ public abstract class SSLEngineTest {
                     }
 
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
                             try {
                                 verifySSLSessionForMutualAuth(
@@ -1058,7 +1058,7 @@ public abstract class SSLEngineTest {
         cb.channel(NioSocketChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
 
                 final SslHandler handler = clientSslCtx.newHandler(ch.alloc());
@@ -1068,7 +1068,7 @@ public abstract class SSLEngineTest {
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
                             try {
                                 verifySSLSessionForMutualAuth(
@@ -1080,7 +1080,7 @@ public abstract class SSLEngineTest {
                     }
 
                     @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         if (cause.getCause() instanceof SSLHandshakeException) {
                             clientException = cause.getCause();
                             clientLatch.countDown();
@@ -1238,7 +1238,7 @@ public abstract class SSLEngineTest {
 
     @Test(timeout = 30000)
     public void clientInitiatedRenegotiationWithFatalAlertDoesNotInfiniteLoopServer()
-            throws CertificateException, SSLException, InterruptedException, ExecutionException {
+            throws CertificateException, SSLException, InterruptedException {
         Assume.assumeTrue(PlatformDependent.javaVersion() >= 11);
         final SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
@@ -1576,8 +1576,7 @@ public abstract class SSLEngineTest {
         }
     }
 
-    protected void setupHandlers(SslContext serverCtx, SslContext clientCtx)
-            throws InterruptedException, SSLException, CertificateException {
+    protected void setupHandlers(SslContext serverCtx, SslContext clientCtx) {
 
         serverSslCtx = serverCtx;
         clientSslCtx = clientCtx;
@@ -1590,7 +1589,7 @@ public abstract class SSLEngineTest {
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
 
                 ChannelPipeline p = ch.pipeline();
@@ -1598,7 +1597,7 @@ public abstract class SSLEngineTest {
                 p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         if (cause.getCause() instanceof SSLHandshakeException) {
                             serverException = cause.getCause();
                             serverLatch.countDown();
@@ -1615,7 +1614,7 @@ public abstract class SSLEngineTest {
         cb.channel(NioSocketChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
 
                 ChannelPipeline p = ch.pipeline();
@@ -1623,7 +1622,7 @@ public abstract class SSLEngineTest {
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         if (cause.getCause() instanceof SSLHandshakeException) {
                             clientException = cause.getCause();
                             clientLatch.countDown();
@@ -1633,7 +1632,7 @@ public abstract class SSLEngineTest {
                     }
 
                     @Override
-                    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                    public void channelInactive(ChannelHandlerContext ctx) {
                         clientLatch.countDown();
                     }
                 });
@@ -1666,7 +1665,7 @@ public abstract class SSLEngineTest {
         final Promise<String> promise = sb.config().group().next().newPromise();
         serverChannel = sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
 
                 ch.pipeline().addFirst(serverSslCtx.newHandler(ch.alloc()));
@@ -1721,7 +1720,7 @@ public abstract class SSLEngineTest {
         cb.channel(NioSocketChannel.class);
         clientChannel = cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
                 ch.pipeline().addLast(new SslHandler(wrapEngine(clientSslCtx.newEngine(ch.alloc()))));
             }

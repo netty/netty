@@ -88,14 +88,14 @@ public class DefaultHttp2ConnectionTest {
         client.addListener(clientListener);
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock invocation) throws Throwable {
+            public Void answer(InvocationOnMock invocation) {
                 assertNotNull(client.stream(((Http2Stream) invocation.getArgument(0)).id()));
                 return null;
             }
         }).when(clientListener).onStreamClosed(any(Http2Stream.class));
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock invocation) throws Throwable {
+            public Void answer(InvocationOnMock invocation) {
                 assertNull(client.stream(((Http2Stream) invocation.getArgument(0)).id()));
                 return null;
             }
@@ -141,7 +141,7 @@ public class DefaultHttp2ConnectionTest {
         final Http2Stream streamB = client.remote().createStream(2, false);
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock invocation) throws Throwable {
+            public Void answer(InvocationOnMock invocation) {
                 streamA.close();
                 streamB.close();
                 return null;
@@ -170,7 +170,7 @@ public class DefaultHttp2ConnectionTest {
             public boolean visit(Http2Stream stream) {
                 client.close(promise).addListener(new FutureListener<Void>() {
                     @Override
-                    public void operationComplete(Future<Void> future) throws Exception {
+                    public void operationComplete(Future<Void> future) {
                         assertTrue(promise.isDone());
                         latch.countDown();
                     }
@@ -206,7 +206,7 @@ public class DefaultHttp2ConnectionTest {
         } catch (Http2Exception ignored) {
             client.close(promise).addListener(new FutureListener<Void>() {
                 @Override
-                public void operationComplete(Future<Void> future) throws Exception {
+                public void operationComplete(Future<Void> future) {
                     assertTrue(promise.isDone());
                     latch.countDown();
                 }
@@ -590,7 +590,7 @@ public class DefaultHttp2ConnectionTest {
         final Promise<Void> promise = group.next().newPromise();
         client.close(promise).addListener(new FutureListener<Void>() {
             @Override
-            public void operationComplete(Future<Void> future) throws Exception {
+            public void operationComplete(Future<Void> future) {
                 assertTrue(promise.isDone());
                 latch.countDown();
             }
@@ -630,7 +630,7 @@ public class DefaultHttp2ConnectionTest {
         }
 
         @Override
-        public Void answer(InvocationOnMock invocation) throws Throwable {
+        public Void answer(InvocationOnMock invocation) {
             array[index] = true;
             throw FAKE_EXCEPTION;
         }
@@ -646,7 +646,7 @@ public class DefaultHttp2ConnectionTest {
         }
 
         @Override
-        public Void answer(InvocationOnMock invocation) throws Throwable {
+        public Void answer(InvocationOnMock invocation) {
             assertTrue(array[index]);
             return null;
         }

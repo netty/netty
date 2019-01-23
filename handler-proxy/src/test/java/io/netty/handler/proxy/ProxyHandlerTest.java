@@ -434,7 +434,7 @@ public class ProxyHandlerTest {
     public ProxyHandlerTest(TestItem testItem) { this.testItem = testItem; }
 
     @Before
-    public void clearServerExceptions() throws Exception {
+    public void clearServerExceptions() {
         for (ProxyServer p: allProxies) {
             p.clearExceptions();
         }
@@ -446,7 +446,7 @@ public class ProxyHandlerTest {
     }
 
     @After
-    public void checkServerExceptions() throws Exception {
+    public void checkServerExceptions() {
         for (ProxyServer p: allProxies) {
             p.checkExceptions();
         }
@@ -465,13 +465,13 @@ public class ProxyHandlerTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             ctx.writeAndFlush(Unpooled.copiedBuffer("A\n", CharsetUtil.US_ASCII));
             readIfNeeded(ctx);
         }
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
             if (evt instanceof ProxyConnectionEvent) {
                 eventCount ++;
 
@@ -485,7 +485,7 @@ public class ProxyHandlerTest {
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
             String str = ((ByteBuf) msg).toString(CharsetUtil.US_ASCII);
             received.add(str);
             if ("2".equals(str)) {
@@ -495,7 +495,7 @@ public class ProxyHandlerTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             exceptions.add(cause);
             ctx.close();
         }
@@ -515,11 +515,11 @@ public class ProxyHandlerTest {
         final CountDownLatch latch = new CountDownLatch(2);
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             ctx.writeAndFlush(Unpooled.copiedBuffer("A\n", CharsetUtil.US_ASCII)).addListener(
                     new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             latch.countDown();
                             if (!(future.cause() instanceof ProxyConnectException)) {
                                 exceptions.add(new AssertionError(
@@ -530,24 +530,24 @@ public class ProxyHandlerTest {
         }
 
         @Override
-        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        public void channelInactive(ChannelHandlerContext ctx) {
             latch.countDown();
         }
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
             if (evt instanceof ProxyConnectionEvent) {
                 fail("Unexpected event: " + evt);
             }
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
             fail("Unexpected message: " + msg);
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             exceptions.add(cause);
             ctx.close();
         }
@@ -640,7 +640,7 @@ public class ProxyHandlerTest {
             b.resolver(NoopAddressResolverGroup.INSTANCE);
             b.handler(new ChannelInitializer<SocketChannel>() {
                 @Override
-                protected void initChannel(SocketChannel ch) throws Exception {
+                protected void initChannel(SocketChannel ch) {
                     ChannelPipeline p = ch.pipeline();
                     p.addLast(clientHandlers);
                     p.addLast(new LineBasedFrameDecoder(64));
@@ -688,7 +688,7 @@ public class ProxyHandlerTest {
             b.resolver(NoopAddressResolverGroup.INSTANCE);
             b.handler(new ChannelInitializer<SocketChannel>() {
                 @Override
-                protected void initChannel(SocketChannel ch) throws Exception {
+                protected void initChannel(SocketChannel ch) {
                     ChannelPipeline p = ch.pipeline();
                     p.addLast(clientHandlers);
                     p.addLast(new LineBasedFrameDecoder(64));
@@ -733,7 +733,7 @@ public class ProxyHandlerTest {
             b.resolver(NoopAddressResolverGroup.INSTANCE);
             b.handler(new ChannelInitializer<SocketChannel>() {
                 @Override
-                protected void initChannel(SocketChannel ch) throws Exception {
+                protected void initChannel(SocketChannel ch) {
                     ChannelPipeline p = ch.pipeline();
                     p.addLast(clientHandlers);
                     p.addLast(new LineBasedFrameDecoder(64));

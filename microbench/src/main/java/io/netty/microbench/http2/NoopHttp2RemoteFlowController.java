@@ -28,7 +28,7 @@ public final class NoopHttp2RemoteFlowController implements Http2RemoteFlowContr
     private NoopHttp2RemoteFlowController() { }
 
     @Override
-    public void initialWindowSize(int newWindowSize) throws Http2Exception {
+    public void initialWindowSize(int newWindowSize) {
     }
 
     @Override
@@ -47,11 +47,11 @@ public final class NoopHttp2RemoteFlowController implements Http2RemoteFlowContr
     }
 
     @Override
-    public void incrementWindowSize(Http2Stream stream, int delta) throws Http2Exception {
+    public void incrementWindowSize(Http2Stream stream, int delta) {
     }
 
     @Override
-    public void writePendingBytes() throws Http2Exception {
+    public void writePendingBytes() {
     }
 
     @Override
@@ -72,7 +72,7 @@ public final class NoopHttp2RemoteFlowController implements Http2RemoteFlowContr
     }
 
     @Override
-    public void channelHandlerContext(ChannelHandlerContext ctx) throws Http2Exception {
+    public void channelHandlerContext(ChannelHandlerContext ctx) {
         this.ctx = ctx;
     }
 
@@ -82,7 +82,7 @@ public final class NoopHttp2RemoteFlowController implements Http2RemoteFlowContr
     }
 
     @Override
-    public void channelWritabilityChanged() throws Http2Exception {
+    public void channelWritabilityChanged() {
     }
 
     @Override

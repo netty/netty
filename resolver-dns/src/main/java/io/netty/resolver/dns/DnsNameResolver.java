@@ -386,7 +386,7 @@ public class DnsNameResolver extends InetNameResolver {
         final DnsResponseHandler responseHandler = new DnsResponseHandler(executor().newPromise());
         b.handler(new ChannelInitializer<DatagramChannel>() {
             @Override
-            protected void initChannel(DatagramChannel ch) throws Exception {
+            protected void initChannel(DatagramChannel ch) {
                 ch.pipeline().addLast(DECODER, ENCODER, responseHandler);
             }
         });

@@ -111,7 +111,7 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
     };
 
     @TearDown(Level.Trial)
-    public void tearDownTrial() throws Exception {
+    public void tearDownTrial() {
         ctx.close();
     }
 

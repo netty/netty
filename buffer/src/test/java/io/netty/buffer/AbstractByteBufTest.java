@@ -1928,7 +1928,7 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
-    public void testSliceEndianness() throws Exception {
+    public void testSliceEndianness() {
         assertEquals(buffer.order(), buffer.slice(0, buffer.capacity()).order());
         assertEquals(buffer.order(), buffer.slice(0, buffer.capacity() - 1).order());
         assertEquals(buffer.order(), buffer.slice(1, buffer.capacity() - 1).order());
@@ -1936,7 +1936,7 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
-    public void testSliceIndex() throws Exception {
+    public void testSliceIndex() {
         assertEquals(0, buffer.slice(0, buffer.capacity()).readerIndex());
         assertEquals(0, buffer.slice(0, buffer.capacity() - 1).readerIndex());
         assertEquals(0, buffer.slice(1, buffer.capacity() - 1).readerIndex());
@@ -1949,7 +1949,7 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
-    public void testRetainedSliceIndex() throws Exception {
+    public void testRetainedSliceIndex() {
         ByteBuf retainedSlice = buffer.retainedSlice(0, buffer.capacity());
         assertEquals(0, retainedSlice.readerIndex());
         retainedSlice.release();
@@ -2252,7 +2252,7 @@ public abstract class AbstractByteBufTest {
             int i = CAPACITY / 4;
 
             @Override
-            public boolean process(byte value) throws Exception {
+            public boolean process(byte value) {
                 assertThat(value, is((byte) (i + 1)));
                 lastIndex.set(i);
                 i ++;
@@ -2275,7 +2275,7 @@ public abstract class AbstractByteBufTest {
             int i = CAPACITY / 3;
 
             @Override
-            public boolean process(byte value) throws Exception {
+            public boolean process(byte value) {
                 assertThat(value, is((byte) (i + 1)));
                 if (i == stop) {
                     return false;
@@ -3203,7 +3203,7 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test(expected = IllegalReferenceCountException.class)
-    public void testWriteZeroAfterRelease() throws IOException {
+    public void testWriteZeroAfterRelease() {
         releasedBuffer().writeZero(1);
     }
 
@@ -4442,7 +4442,7 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
-    public void testEmptyNioBuffers() throws Exception {
+    public void testEmptyNioBuffers() {
         ByteBuf buffer = newBuffer(8);
         buffer.clear();
         assertFalse(buffer.isReadable());
@@ -4586,7 +4586,7 @@ public abstract class AbstractByteBufTest {
                 private int index = bytes.length - 1;
 
                 @Override
-                public boolean process(byte value) throws Exception {
+                public boolean process(byte value) {
                     bytes[index--] = value;
                     return true;
                 }
@@ -4609,7 +4609,7 @@ public abstract class AbstractByteBufTest {
                 private int index;
 
                 @Override
-                public boolean process(byte value) throws Exception {
+                public boolean process(byte value) {
                     bytes[index++] = value;
                     return true;
                 }
@@ -4788,7 +4788,7 @@ public abstract class AbstractByteBufTest {
 
     private static final class TestByteProcessor implements ByteProcessor {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             return true;
         }
     }

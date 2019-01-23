@@ -86,7 +86,7 @@ public class LineEncoder extends MessageToMessageEncoder<CharSequence> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, CharSequence msg, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, CharSequence msg, List<Object> out) {
         ByteBuf buffer = ByteBufUtil.encodeString(ctx.alloc(), CharBuffer.wrap(msg), charset, lineSeparator.length);
         buffer.writeBytes(lineSeparator);
         out.add(buffer);

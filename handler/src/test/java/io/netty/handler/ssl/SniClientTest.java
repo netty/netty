@@ -125,7 +125,7 @@ public class SniClientTest {
             ServerBootstrap sb = new ServerBootstrap();
             sc = sb.group(group).channel(LocalServerChannel.class).childHandler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                     ch.pipeline().addFirst(new SniHandler(new Mapping<String, SslContext>() {
                         @Override
                         public SslContext map(String input) {

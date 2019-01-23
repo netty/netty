@@ -55,7 +55,7 @@ public class CoalescingBufferQueueTest {
         catPromise = newPromise();
         mouseListener = new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 mouseDone = true;
                 mouseSuccess = future.isSuccess();
             }

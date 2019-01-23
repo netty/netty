@@ -40,12 +40,12 @@ public class BinaryMemcacheEncoderTest {
     private EmbeddedChannel channel;
 
     @Before
-    public void setup() throws Exception {
+    public void setup() {
         channel = new EmbeddedChannel(new BinaryMemcacheRequestEncoder());
     }
 
     @After
-    public void teardown() throws Exception {
+    public void teardown() {
         channel.finishAndReleaseAll();
     }
 

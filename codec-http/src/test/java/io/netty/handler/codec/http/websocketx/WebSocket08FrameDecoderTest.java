@@ -37,7 +37,7 @@ public class WebSocket08FrameDecoderTest {
     }
 
     @Test
-    public void supportIanaStatusCodes() throws Exception {
+    public void supportIanaStatusCodes() {
         Set<Integer> forbiddenIanaCodes = new HashSet<>();
         forbiddenIanaCodes.add(1004);
         forbiddenIanaCodes.add(1005);

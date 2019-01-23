@@ -121,7 +121,7 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
      *
      * @param msg the message
      */
-    public boolean acceptInboundMessage(Object msg) throws Exception {
+    public boolean acceptInboundMessage(Object msg) {
         return inboundMsgMatcher.match(msg);
     }
 
@@ -130,7 +130,7 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
      *
      * @param msg the message
      */
-    public boolean acceptOutboundMessage(Object msg) throws Exception {
+    public boolean acceptOutboundMessage(Object msg) {
         return outboundMsgMatcher.match(msg);
     }
 

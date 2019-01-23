@@ -33,7 +33,7 @@ public class SocketCloseForciblyTest extends AbstractSocketTest {
     public void testCloseForcibly(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         sb.handler(new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 final SocketChannel childChannel = (SocketChannel) msg;
                 // Dispatch on the EventLoop as all operation on Unsafe should be done while on the EventLoop.
                 childChannel.eventLoop().execute(new Runnable() {

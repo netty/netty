@@ -89,11 +89,11 @@ public class DataCompressionHttp2Test {
     private ByteArrayOutputStream serverOut;
 
     @Before
-    public void setup() throws InterruptedException, Http2Exception {
+    public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock invocation) throws Throwable {
+            public Void answer(InvocationOnMock invocation) {
                 if (invocation.getArgument(4)) {
                     serverConnection.stream((Integer) invocation.getArgument(1)).close();
                 }
@@ -103,7 +103,7 @@ public class DataCompressionHttp2Test {
                 anyInt(), anyBoolean());
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock invocation) throws Throwable {
+            public Void answer(InvocationOnMock invocation) {
                 if (invocation.getArgument(7)) {
                     serverConnection.stream((Integer) invocation.getArgument(1)).close();
                 }
@@ -149,7 +149,7 @@ public class DataCompressionHttp2Test {
 
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, true, newPromiseClient());
                 clientHandler.flush(ctxClient());
             }
@@ -170,7 +170,7 @@ public class DataCompressionHttp2Test {
 
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
-                public void run() throws Http2Exception {
+                public void run() {
                     clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
                     clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
                     clientHandler.flush(ctxClient());
@@ -194,7 +194,7 @@ public class DataCompressionHttp2Test {
 
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
-                public void run() throws Http2Exception {
+                public void run() {
                     clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
                     clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
                     clientHandler.flush(ctxClient());
@@ -220,7 +220,7 @@ public class DataCompressionHttp2Test {
 
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
-                public void run() throws Http2Exception {
+                public void run() {
                     clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
                     clientEncoder.writeData(ctxClient(), 3, data1.retain(), 0, false, newPromiseClient());
                     clientEncoder.writeData(ctxClient(), 3, data2.retain(), 0, true, newPromiseClient());
@@ -248,7 +248,7 @@ public class DataCompressionHttp2Test {
 
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
-                public void run() throws Http2Exception {
+                public void run() {
                     clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false, newPromiseClient());
                     clientEncoder.writeData(ctxClient(), 3, data.retain(), 0, true, newPromiseClient());
                     clientHandler.flush(ctxClient());
@@ -302,7 +302,7 @@ public class DataCompressionHttp2Test {
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 serverConnectedChannel = ch;
                 ChannelPipeline p = ch.pipeline();
                 Http2FrameWriter frameWriter = new DefaultHttp2FrameWriter();
@@ -326,7 +326,7 @@ public class DataCompressionHttp2Test {
         cb.channel(NioSocketChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ChannelPipeline p = ch.pipeline();
                 Http2FrameWriter frameWriter = new DefaultHttp2FrameWriter();
                 clientConnection.remote().flowController(
@@ -346,7 +346,7 @@ public class DataCompressionHttp2Test {
                         .codec(decoder, clientEncoder).build();
                 p.addLast(clientHandler);
                 p.addLast(new ChannelInboundHandlerAdapter() {
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                         if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
                             prefaceWrittenLatch.countDown();
                             ctx.pipeline().remove(this);

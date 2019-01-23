@@ -50,7 +50,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testHttpUpgradeRequest() throws Exception {
+    public void testHttpUpgradeRequest() {
         EmbeddedChannel ch = createChannel(new MockOutboundHandler());
         ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
         writeUpgradeRequest(ch);
@@ -62,7 +62,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testSubsequentHttpRequestsAfterUpgradeShouldReturn403() throws Exception {
+    public void testSubsequentHttpRequestsAfterUpgradeShouldReturn403() {
         EmbeddedChannel ch = createChannel();
 
         writeUpgradeRequest(ch);
@@ -157,13 +157,13 @@ public class WebSocketServerProtocolHandlerTest {
     private class MockOutboundHandler extends ChannelOutboundHandlerAdapter {
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             responses.add((FullHttpResponse) msg);
             promise.setSuccess();
         }
 
         @Override
-        public void flush(ChannelHandlerContext ctx) throws Exception {
+        public void flush(ChannelHandlerContext ctx) {
         }
     }
 
@@ -171,7 +171,7 @@ public class WebSocketServerProtocolHandlerTest {
         private String content;
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             assertNull(content);
             content = "processed: " + ((TextWebSocketFrame) msg).text();
             ReferenceCountUtil.release(msg);

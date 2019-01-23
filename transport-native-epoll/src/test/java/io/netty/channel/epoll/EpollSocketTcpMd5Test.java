@@ -65,14 +65,14 @@ public class EpollSocketTcpMd5Test {
     }
 
     @Test
-    public void testServerSocketChannelOption() throws Exception {
+    public void testServerSocketChannelOption() {
         server.config().setOption(EpollChannelOption.TCP_MD5SIG,
                 Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
         server.config().setOption(EpollChannelOption.TCP_MD5SIG, Collections.<InetAddress, byte[]>emptyMap());
     }
 
     @Test
-    public void testServerOption() throws Exception {
+    public void testServerOption() {
         ServerBootstrap bootstrap = new ServerBootstrap();
         EpollServerSocketChannel ch = (EpollServerSocketChannel) bootstrap.group(GROUP)
                 .channel(EpollServerSocketChannel.class)
@@ -87,7 +87,7 @@ public class EpollSocketTcpMd5Test {
     }
 
     @Test(expected = ConnectTimeoutException.class)
-    public void testKeyMismatch() throws Exception {
+    public void testKeyMismatch() {
         server.config().setOption(EpollChannelOption.TCP_MD5SIG,
                 Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
 
@@ -102,7 +102,7 @@ public class EpollSocketTcpMd5Test {
     }
 
     @Test
-    public void testKeyMatch() throws Exception {
+    public void testKeyMatch() {
         server.config().setOption(EpollChannelOption.TCP_MD5SIG,
                 Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
 

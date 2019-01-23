@@ -66,13 +66,12 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     private State state = State.AWAIT_HEADERS;
 
     @Override
-    public boolean acceptOutboundMessage(Object msg) throws Exception {
+    public boolean acceptOutboundMessage(Object msg) {
         return msg instanceof HttpContent || msg instanceof HttpResponse;
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out)
-            throws Exception {
+    protected void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out) {
         CharSequence acceptedEncoding = msg.headers().get(HttpHeaderNames.ACCEPT_ENCODING);
         if (acceptedEncoding == null) {
             acceptedEncoding = HttpContentDecoder.IDENTITY;
@@ -286,7 +285,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
      *         {@code null} if {@code acceptEncoding} is unsupported or rejected
      *         and thus the content should be handled as-is (i.e. no encoding).
      */
-    protected abstract Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception;
+    protected abstract Result beginEncode(HttpResponse headers, String acceptEncoding);
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {

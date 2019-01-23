@@ -77,7 +77,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
     }
 
     @Override
-    public boolean acceptInboundMessage(Object msg) throws Exception {
+    public boolean acceptInboundMessage(Object msg) {
         return (msg instanceof Http2HeadersFrame) || (msg instanceof Http2DataFrame);
     }
 
@@ -150,7 +150,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
      * @throws Exception    is thrown if an error occurs
      */
     @Override
-    protected void encode(ChannelHandlerContext ctx, HttpObject obj, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, HttpObject obj, List<Object> out) {
         // 100-continue is typically a FullHttpResponse, but the decoded
         // Http2HeadersFrame should not be marked as endStream=true
         if (obj instanceof HttpResponse) {

@@ -47,7 +47,7 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testUnexpectedBlockIdentifier() throws Exception {
+    public void testUnexpectedBlockIdentifier() {
         expected.expect(DecompressionException.class);
         expected.expectMessage("unexpected block identifier");
 
@@ -59,7 +59,7 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testInvalidCompressedLength() throws Exception {
+    public void testInvalidCompressedLength() {
         expected.expect(DecompressionException.class);
         expected.expectMessage("invalid compressedLength");
 
@@ -71,7 +71,7 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testInvalidDecompressedLength() throws Exception {
+    public void testInvalidDecompressedLength() {
         expected.expect(DecompressionException.class);
         expected.expectMessage("invalid decompressedLength");
 
@@ -83,7 +83,7 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testDecompressedAndCompressedLengthMismatch() throws Exception {
+    public void testDecompressedAndCompressedLengthMismatch() {
         expected.expect(DecompressionException.class);
         expected.expectMessage("mismatch");
 
@@ -95,7 +95,7 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testUnexpectedBlockType() throws Exception {
+    public void testUnexpectedBlockType() {
         expected.expect(DecompressionException.class);
         expected.expectMessage("unexpected blockType");
 
@@ -107,7 +107,7 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testMismatchingChecksum() throws Exception {
+    public void testMismatchingChecksum() {
         expected.expect(DecompressionException.class);
         expected.expectMessage("mismatching checksum");
 
@@ -119,7 +119,7 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testChecksumErrorOfLastBlock() throws Exception {
+    public void testChecksumErrorOfLastBlock() {
         expected.expect(DecompressionException.class);
         expected.expectMessage("checksum error");
 

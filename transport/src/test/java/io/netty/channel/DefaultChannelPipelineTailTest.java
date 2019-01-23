@@ -232,20 +232,20 @@ public class DefaultChannelPipelineTailTest {
         }
 
         @Override
-        protected void doBind(SocketAddress localAddress) throws Exception {
+        protected void doBind(SocketAddress localAddress) {
         }
 
         @Override
-        protected void doDisconnect() throws Exception {
+        protected void doDisconnect() {
         }
 
         @Override
-        protected void doClose() throws Exception {
+        protected void doClose() {
             closed = true;
         }
 
         @Override
-        protected void doBeginRead() throws Exception {
+        protected void doBeginRead() {
         }
 
         @Override

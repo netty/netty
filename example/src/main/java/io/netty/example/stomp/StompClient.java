@@ -47,7 +47,7 @@ public final class StompClient {
             b.group(group).channel(NioSocketChannel.class);
             b.handler(new ChannelInitializer<SocketChannel>() {
                 @Override
-                protected void initChannel(SocketChannel ch) throws Exception {
+                protected void initChannel(SocketChannel ch) {
                     ChannelPipeline pipeline = ch.pipeline();
                     pipeline.addLast("decoder", new StompSubframeDecoder());
                     pipeline.addLast("encoder", new StompSubframeEncoder());

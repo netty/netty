@@ -205,7 +205,7 @@ public final class IovArray implements MessageProcessor {
     }
 
     @Override
-    public boolean processMessage(Object msg) throws Exception {
+    public boolean processMessage(Object msg) {
         return msg instanceof ByteBuf && add((ByteBuf) msg);
     }
 

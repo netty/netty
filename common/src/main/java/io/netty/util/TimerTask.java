@@ -29,5 +29,5 @@ public interface TimerTask {
      *
      * @param timeout a handle which is associated with this task
      */
-    void run(Timeout timeout) throws Exception;
+    void run(Timeout timeout);
 }

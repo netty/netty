@@ -155,7 +155,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
 
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(Channel sch) throws Exception {
+            public void initChannel(Channel sch) {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
                 p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
@@ -165,7 +165,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
 
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(Channel sch) throws Exception {
+            public void initChannel(Channel sch) {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
                 p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
@@ -237,8 +237,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx)
-                throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             if (!autoRead) {
                 ctx.read();
             }
@@ -246,7 +245,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, String msg) {
             if ("StartTlsResponse".equals(msg)) {
                 ctx.pipeline().addAfter("logger", "ssl", sslHandler);
                 handshakeFuture = sslHandler.handshakeFuture();
@@ -261,7 +260,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) {
             if (!autoRead) {
                 ctx.read();
             }
@@ -269,7 +268,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx,
-                Throwable cause) throws Exception {
+                Throwable cause) {
             if (logger.isWarnEnabled()) {
                 logger.warn("Unexpected exception from the client side", cause);
             }
@@ -292,7 +291,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             channel = ctx.channel();
             if (!autoRead) {
                 ctx.read();
@@ -300,7 +299,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, String msg) {
             if ("StartTlsRequest".equals(msg)) {
                 ctx.pipeline().addAfter("logger", "ssl", sslHandler);
                 ctx.writeAndFlush("StartTlsResponse\n");
@@ -312,7 +311,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) {
             if (!autoRead) {
                 ctx.read();
             }
@@ -320,7 +319,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx,
-                                    Throwable cause) throws Exception {
+                                    Throwable cause) {
             if (logger.isWarnEnabled()) {
                 logger.warn("Unexpected exception from the server side", cause);
             }

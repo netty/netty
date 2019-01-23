@@ -179,7 +179,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
      *         {@code null} otherwise (alternatively, you can throw an exception
      *         to block unknown encoding).
      */
-    protected abstract EmbeddedChannel newContentDecoder(String contentEncoding) throws Exception;
+    protected abstract EmbeddedChannel newContentDecoder(String contentEncoding);
 
     /**
      * Returns the expected content encoding of the decoded content.
@@ -190,7 +190,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
      * @return the expected content encoding of the new content
      */
     protected String getTargetContentEncoding(
-            @SuppressWarnings("UnusedParameters") String contentEncoding) throws Exception {
+            @SuppressWarnings("UnusedParameters") String contentEncoding) {
         return IDENTITY;
     }
 

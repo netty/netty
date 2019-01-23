@@ -495,7 +495,7 @@ public class StringUtilTest {
         testSimpleClassName(TestClass.class);
     }
 
-    private static void testSimpleClassName(Class<?> clazz) throws Exception {
+    private static void testSimpleClassName(Class<?> clazz) {
         Package pkg = clazz.getPackage();
         String name;
         if (pkg != null) {

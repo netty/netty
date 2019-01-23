@@ -66,12 +66,12 @@ public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
 
     @Ignore /* Does the JDK support a "max certificate chain length"? */
     @Override
-    public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth() throws Exception {
+    public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth() {
     }
 
     @Ignore /* Does the JDK support a "max certificate chain length"? */
     @Override
-    public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() throws Exception {
+    public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() {
     }
 
     @Override
@@ -82,7 +82,7 @@ public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
 
     @Ignore("Ignore due bug in Conscrypt")
     @Override
-    public void testSessionBindingEvent() throws Exception {
+    public void testSessionBindingEvent() {
         // Ignore due bug in Conscrypt where the incorrect SSLSession object is used in the SSLSessionBindingEvent.
         // See https://github.com/google/conscrypt/issues/593
     }

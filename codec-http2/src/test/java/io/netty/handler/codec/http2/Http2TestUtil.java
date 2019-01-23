@@ -479,7 +479,7 @@ public final class Http2TestUtil {
                         new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
                 promise.addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             channel().pipeline().fireExceptionCaught(future.cause());
                         }

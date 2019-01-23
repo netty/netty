@@ -195,7 +195,7 @@ public class DefaultHeadersTest {
     }
 
     @Test
-    public void testCopy() throws Exception {
+    public void testCopy() {
         TestDefaultHeaders headers = newInstance();
         headers.addBoolean(of("boolean"), true);
         headers.addLong(of("long"), Long.MAX_VALUE);

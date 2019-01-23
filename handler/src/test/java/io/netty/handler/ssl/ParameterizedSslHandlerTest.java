@@ -145,7 +145,7 @@ public class ParameterizedSslHandlerTest {
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
-                        protected void initChannel(Channel ch) throws Exception {
+                        protected void initChannel(Channel ch) {
                             final SslHandler handler = letHandlerCreateServerEngine
                                     ? sslServerCtx.newHandler(ch.alloc())
                                     : new SslHandler(sslServerCtx.newEngine(ch.alloc()));
@@ -170,7 +170,7 @@ public class ParameterizedSslHandlerTest {
                                             }
                                             ctx.writeAndFlush(content).addListener(new ChannelFutureListener() {
                                                 @Override
-                                                public void operationComplete(ChannelFuture future) throws Exception {
+                                                public void operationComplete(ChannelFuture future) {
                                                     writeCause = future.cause();
                                                     if (writeCause == null) {
                                                         sentData = true;
@@ -204,7 +204,7 @@ public class ParameterizedSslHandlerTest {
                     .channel(NioSocketChannel.class)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
-                        protected void initChannel(Channel ch) throws Exception {
+                        protected void initChannel(Channel ch) {
                             if (letHandlerCreateClientEngine) {
                                 ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
                             } else {
@@ -316,7 +316,7 @@ public class ParameterizedSslHandlerTest {
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
-                        protected void initChannel(Channel ch) throws Exception {
+                        protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
                             ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                                 @Override
@@ -333,7 +333,7 @@ public class ParameterizedSslHandlerTest {
                     .channel(NioSocketChannel.class)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
-                        protected void initChannel(Channel ch) throws Exception {
+                        protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
                             ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                                 @Override
@@ -409,7 +409,7 @@ public class ParameterizedSslHandlerTest {
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
-                        protected void initChannel(Channel ch) throws Exception {
+                        protected void initChannel(Channel ch) {
                             SslHandler handler = sslServerCtx.newHandler(ch.alloc());
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
                             handler.sslCloseFuture().addListener(
@@ -432,7 +432,7 @@ public class ParameterizedSslHandlerTest {
                     .channel(NioSocketChannel.class)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
-                        protected void initChannel(Channel ch) throws Exception {
+                        protected void initChannel(Channel ch) {
                             final AtomicBoolean closeSent = new AtomicBoolean();
                             if (timeout) {
                                 ch.pipeline().addFirst(new ChannelInboundHandlerAdapter() {

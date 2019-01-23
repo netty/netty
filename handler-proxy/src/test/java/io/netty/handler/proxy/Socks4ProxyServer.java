@@ -48,7 +48,7 @@ final class Socks4ProxyServer extends ProxyServer {
     }
 
     @Override
-    protected void configure(SocketChannel ch) throws Exception {
+    protected void configure(SocketChannel ch) {
         ChannelPipeline p = ch.pipeline();
         switch (testMode) {
         case INTERMEDIARY:
@@ -88,7 +88,7 @@ final class Socks4ProxyServer extends ProxyServer {
         private SocketAddress intermediaryDestination;
 
         @Override
-        protected boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg) throws Exception {
+        protected boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg) {
             Socks4CommandRequest req = (Socks4CommandRequest) msg;
             Socks4CommandResponse res;
 
@@ -115,7 +115,7 @@ final class Socks4ProxyServer extends ProxyServer {
 
     private final class Socks4TerminalHandler extends TerminalHandler {
         @Override
-        protected boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg) throws Exception {
+        protected boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg) {
             Socks4CommandRequest req = (Socks4CommandRequest) msg;
             boolean authzSuccess = authenticate(ctx, req);
 

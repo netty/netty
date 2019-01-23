@@ -210,7 +210,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         return socket.isOpen();
     }
 
-    void register0(EpollRegistration registration) throws Exception {
+    void register0(EpollRegistration registration) {
         // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
         // make sure the epollInReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
         // new EventLoop.
@@ -577,7 +577,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
                     promise.addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             if (future.isCancelled()) {
                                 if (connectTimeoutFuture != null) {
                                     connectTimeoutFuture.cancel(false);

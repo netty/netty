@@ -211,7 +211,7 @@ public class EpollReuseAddrTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             accepted.set(true);
             ctx.close();
         }
@@ -226,7 +226,7 @@ public class EpollReuseAddrTest {
         }
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             ReferenceCountUtil.release(msg);
             received.set(true);
         }

@@ -94,7 +94,7 @@ public final class Socks5ProxyHandler extends ProxyHandler {
     }
 
     @Override
-    protected void addCodec(ChannelHandlerContext ctx) throws Exception {
+    protected void addCodec(ChannelHandlerContext ctx) {
         ChannelPipeline p = ctx.pipeline();
         String name = ctx.name();
 
@@ -108,12 +108,12 @@ public final class Socks5ProxyHandler extends ProxyHandler {
     }
 
     @Override
-    protected void removeEncoder(ChannelHandlerContext ctx) throws Exception {
+    protected void removeEncoder(ChannelHandlerContext ctx) {
         ctx.pipeline().remove(encoderName);
     }
 
     @Override
-    protected void removeDecoder(ChannelHandlerContext ctx) throws Exception {
+    protected void removeDecoder(ChannelHandlerContext ctx) {
         ChannelPipeline p = ctx.pipeline();
         if (p.context(decoderName) != null) {
             p.remove(decoderName);
@@ -121,7 +121,7 @@ public final class Socks5ProxyHandler extends ProxyHandler {
     }
 
     @Override
-    protected Object newInitialMessage(ChannelHandlerContext ctx) throws Exception {
+    protected Object newInitialMessage(ChannelHandlerContext ctx) {
         return socksAuthMethod() == Socks5AuthMethod.PASSWORD? INIT_REQUEST_PASSWORD : INIT_REQUEST_NO_AUTH;
     }
 

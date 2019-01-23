@@ -67,14 +67,14 @@ public class IdleStateHandlerTest {
                 IdleStateEvent.ALL_IDLE_STATE_EVENT, IdleStateEvent.ALL_IDLE_STATE_EVENT);
     }
 
-    private static void anyIdle(TestableIdleStateHandler idleStateHandler, Object... expected) throws Exception {
+    private static void anyIdle(TestableIdleStateHandler idleStateHandler, Object... expected) {
 
         assertTrue("The number of expected events must be >= 1", expected.length >= 1);
 
         final List<Object> events = new ArrayList<>();
         ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 events.add(evt);
             }
         };
@@ -107,7 +107,7 @@ public class IdleStateHandlerTest {
 
         Action action = new Action() {
             @Override
-            public void run(EmbeddedChannel channel) throws Exception {
+            public void run(EmbeddedChannel channel) {
                 channel.writeInbound("Hello, World!");
             }
         };
@@ -122,7 +122,7 @@ public class IdleStateHandlerTest {
 
         Action action = new Action() {
             @Override
-            public void run(EmbeddedChannel channel) throws Exception {
+            public void run(EmbeddedChannel channel) {
                 channel.writeAndFlush("Hello, World!");
             }
         };
@@ -138,7 +138,7 @@ public class IdleStateHandlerTest {
 
         Action reader = new Action() {
             @Override
-            public void run(EmbeddedChannel channel) throws Exception {
+            public void run(EmbeddedChannel channel) {
                 channel.writeInbound("Hello, World!");
             }
         };
@@ -151,7 +151,7 @@ public class IdleStateHandlerTest {
 
         Action writer = new Action() {
             @Override
-            public void run(EmbeddedChannel channel) throws Exception {
+            public void run(EmbeddedChannel channel) {
                 channel.writeAndFlush("Hello, World!");
             }
         };
@@ -165,7 +165,7 @@ public class IdleStateHandlerTest {
         final List<Object> events = new ArrayList<>();
         ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 events.add(evt);
             }
         };
@@ -205,7 +205,7 @@ public class IdleStateHandlerTest {
         observeOutputIdle(false);
     }
 
-    private static void observeOutputIdle(boolean writer) throws Exception {
+    private static void observeOutputIdle(boolean writer) {
 
         long writerIdleTime = 0L;
         long allIdleTime = 0L;
@@ -225,7 +225,7 @@ public class IdleStateHandlerTest {
         final List<Object> events = new ArrayList<>();
         ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 events.add(evt);
             }
         };
@@ -306,7 +306,7 @@ public class IdleStateHandlerTest {
     }
 
     private interface Action {
-        void run(EmbeddedChannel channel) throws Exception;
+        void run(EmbeddedChannel channel);
     }
 
     private static class TestableIdleStateHandler extends IdleStateHandler {
@@ -374,7 +374,7 @@ public class IdleStateHandlerTest {
         }
 
         @Override
-        protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        protected void doWrite(ChannelOutboundBuffer in) {
             // Overridden to change EmbeddedChannel's default behavior. We went to keep
             // the messages in the ChannelOutboundBuffer.
         }

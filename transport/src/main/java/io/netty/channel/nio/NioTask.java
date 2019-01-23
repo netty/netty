@@ -28,7 +28,7 @@ public interface NioTask<C extends SelectableChannel> {
     /**
      * Invoked when the {@link SelectableChannel} has been selected by the {@link Selector}.
      */
-    void channelReady(C ch, SelectionKey key) throws Exception;
+    void channelReady(C ch, SelectionKey key);
 
     /**
      * Invoked when the {@link SelectionKey} of the specified {@link SelectableChannel} has been cancelled and thus
@@ -37,5 +37,5 @@ public interface NioTask<C extends SelectableChannel> {
      * @param cause the cause of the unregistration. {@code null} if a user called {@link SelectionKey#cancel()} or
      *              the event loop has been shut down.
      */
-    void channelUnregistered(C ch, Throwable cause) throws Exception;
+    void channelUnregistered(C ch, Throwable cause);
 }

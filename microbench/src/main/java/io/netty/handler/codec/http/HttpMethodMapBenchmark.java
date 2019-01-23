@@ -151,7 +151,7 @@ public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public int oldMapKnownMethods() throws Exception {
+    public int oldMapKnownMethods() {
         int x = 0;
         for (int i = 0; i < KNOWN_METHODS.length; ++i) {
             x += OLD_MAP.get(KNOWN_METHODS[i]).toString().length();
@@ -160,7 +160,7 @@ public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public int newMapKnownMethods() throws Exception {
+    public int newMapKnownMethods() {
         int x = 0;
         for (int i = 0; i < KNOWN_METHODS.length; ++i) {
             x += NEW_MAP.get(KNOWN_METHODS[i]).toString().length();
@@ -169,7 +169,7 @@ public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public int oldMapMixMethods() throws Exception {
+    public int oldMapMixMethods() {
         int x = 0;
         for (int i = 0; i < MIXED_METHODS.length; ++i) {
             HttpMethod method = OLD_MAP.get(MIXED_METHODS[i]);
@@ -181,7 +181,7 @@ public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public int newMapMixMethods() throws Exception {
+    public int newMapMixMethods() {
         int x = 0;
         for (int i = 0; i < MIXED_METHODS.length; ++i) {
             HttpMethod method = NEW_MAP.get(MIXED_METHODS[i]);
@@ -193,7 +193,7 @@ public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public int oldMapUnknownMethods() throws Exception {
+    public int oldMapUnknownMethods() {
         int x = 0;
         for (int i = 0; i < UNKNOWN_METHODS.length; ++i) {
             HttpMethod method = OLD_MAP.get(UNKNOWN_METHODS[i]);
@@ -205,7 +205,7 @@ public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public int newMapUnknownMethods() throws Exception {
+    public int newMapUnknownMethods() {
         int x = 0;
         for (int i = 0; i < UNKNOWN_METHODS.length; ++i) {
             HttpMethod method = NEW_MAP.get(UNKNOWN_METHODS[i]);

@@ -366,7 +366,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         super.userEventTriggered(ctx, evt);
     }
 
-    private void channelInputClosed(ChannelHandlerContext ctx, boolean callChannelInactive) throws Exception {
+    private void channelInputClosed(ChannelHandlerContext ctx, boolean callChannelInactive) {
         CodecOutputList out = CodecOutputList.newInstance();
         try {
             channelInputClosed(ctx, out);

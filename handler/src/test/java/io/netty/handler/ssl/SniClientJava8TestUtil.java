@@ -94,7 +94,7 @@ final class SniClientJava8TestUtil {
             final SslContext finalContext = sslServerContext;
             sc = sb.group(group).channel(LocalServerChannel.class).childHandler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                     SslHandler handler = finalContext.newHandler(ch.alloc());
                     SSLParameters parameters = handler.engine().getSSLParameters();
                     SNIMatcher matcher = new SNIMatcher(0) {
@@ -109,7 +109,7 @@ final class SniClientJava8TestUtil {
                     ch.pipeline().addFirst(handler);
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                             if (evt instanceof SslHandshakeCompletionEvent) {
                                 SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
                                 if (match) {
@@ -199,12 +199,12 @@ final class SniClientJava8TestUtil {
         }
 
         @Override
-        protected void engineInit(KeyStore keyStore) throws Exception {
+        protected void engineInit(KeyStore keyStore) {
             // NOOP
         }
 
         @Override
-        protected void engineInit(ManagerFactoryParameters managerFactoryParameters) throws Exception {
+        protected void engineInit(ManagerFactoryParameters managerFactoryParameters) {
             // NOOP
         }
 
@@ -212,38 +212,32 @@ final class SniClientJava8TestUtil {
         protected TrustManager[] engineGetTrustManagers() {
             return new TrustManager[] { new X509ExtendedTrustManager() {
                 @Override
-                public void checkClientTrusted(X509Certificate[] x509Certificates, String s, Socket socket)
-                        throws CertificateException {
+                public void checkClientTrusted(X509Certificate[] x509Certificates, String s, Socket socket) {
                     Assert.fail();
                 }
 
                 @Override
-                public void checkServerTrusted(X509Certificate[] x509Certificates, String s, Socket socket)
-                        throws CertificateException {
+                public void checkServerTrusted(X509Certificate[] x509Certificates, String s, Socket socket) {
                     Assert.fail();
                 }
 
                 @Override
-                public void checkClientTrusted(X509Certificate[] x509Certificates, String s, SSLEngine sslEngine)
-                        throws CertificateException {
+                public void checkClientTrusted(X509Certificate[] x509Certificates, String s, SSLEngine sslEngine) {
                     Assert.fail();
                 }
 
                 @Override
-                public void checkServerTrusted(X509Certificate[] x509Certificates, String s, SSLEngine sslEngine)
-                        throws CertificateException {
+                public void checkServerTrusted(X509Certificate[] x509Certificates, String s, SSLEngine sslEngine) {
                     assertSSLSession(sslEngine.getUseClientMode(), sslEngine.getHandshakeSession(), name);
                 }
 
                 @Override
-                public void checkClientTrusted(X509Certificate[] x509Certificates, String s)
-                        throws CertificateException {
+                public void checkClientTrusted(X509Certificate[] x509Certificates, String s) {
                     Assert.fail();
                 }
 
                 @Override
-                public void checkServerTrusted(X509Certificate[] x509Certificates, String s)
-                        throws CertificateException {
+                public void checkServerTrusted(X509Certificate[] x509Certificates, String s) {
                     Assert.fail();
                 }
 

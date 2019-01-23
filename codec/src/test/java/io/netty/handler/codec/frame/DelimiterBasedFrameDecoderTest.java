@@ -30,7 +30,7 @@ import static org.junit.Assert.*;
 public class DelimiterBasedFrameDecoderTest {
 
     @Test
-    public void testFailSlowTooLongFrameRecovery() throws Exception {
+    public void testFailSlowTooLongFrameRecovery() {
         EmbeddedChannel ch = new EmbeddedChannel(
                 new DelimiterBasedFrameDecoder(1, true, false, Delimiters.nulDelimiter()));
 
@@ -52,7 +52,7 @@ public class DelimiterBasedFrameDecoderTest {
     }
 
     @Test
-    public void testFailFastTooLongFrameRecovery() throws Exception {
+    public void testFailFastTooLongFrameRecovery() {
         EmbeddedChannel ch = new EmbeddedChannel(
                 new DelimiterBasedFrameDecoder(1, Delimiters.nulDelimiter()));
 

@@ -63,7 +63,7 @@ public class EpollSocketChannelTest {
         }
     }
 
-    private static void assertTcpInfo0(EpollTcpInfo info) throws Exception {
+    private static void assertTcpInfo0(EpollTcpInfo info) {
         Assert.assertNotNull(info);
 
         Assert.assertTrue(info.state() >= 0);
@@ -102,7 +102,7 @@ public class EpollSocketChannelTest {
 
     // See https://github.com/netty/netty/issues/7159
     @Test
-    public void testSoLingerNoAssertError() throws Exception {
+    public void testSoLingerNoAssertError() {
         EventLoopGroup group = new EpollEventLoopGroup(1);
 
         try {

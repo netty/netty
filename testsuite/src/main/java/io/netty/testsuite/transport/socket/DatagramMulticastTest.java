@@ -45,7 +45,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         sb.handler(new SimpleChannelInboundHandler<Object>() {
             @Override
-            public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead0(ChannelHandlerContext ctx, Object msg) {
                 // Nothing will be sent.
             }
         });
@@ -93,7 +93,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         private volatile boolean fail;
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+        protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) {
             if (done) {
                 fail = true;
             }

@@ -149,7 +149,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
     }
 
     @Override
-    public int available() throws IOException {
+    public int available() {
         return endIndex - buffer.readerIndex();
     }
 
@@ -164,7 +164,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
     }
 
     @Override
-    public int read() throws IOException {
+    public int read() {
         if (!buffer.isReadable()) {
             return -1;
         }
@@ -184,7 +184,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
     }
 
     @Override
-    public void reset() throws IOException {
+    public void reset() {
         buffer.readerIndex(markReaderIndex);
     }
 
@@ -246,7 +246,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
     private StringBuilder lineBuf;
 
     @Override
-    public String readLine() throws IOException {
+    public String readLine() {
         if (!buffer.isReadable()) {
             return null;
         }

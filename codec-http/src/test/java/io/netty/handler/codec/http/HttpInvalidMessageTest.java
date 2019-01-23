@@ -35,7 +35,7 @@ public class HttpInvalidMessageTest {
     private final Random rnd = new Random();
 
     @Test
-    public void testRequestWithBadInitialLine() throws Exception {
+    public void testRequestWithBadInitialLine() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.0 with extra\r\n", CharsetUtil.UTF_8));
         HttpRequest req = ch.readInbound();
@@ -46,7 +46,7 @@ public class HttpInvalidMessageTest {
     }
 
     @Test
-    public void testRequestWithBadHeader() throws Exception {
+    public void testRequestWithBadHeader() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("GET /maybe-something HTTP/1.0\r\n", CharsetUtil.UTF_8));
         ch.writeInbound(Unpooled.copiedBuffer("Good_Name: Good Value\r\n", CharsetUtil.UTF_8));
@@ -62,7 +62,7 @@ public class HttpInvalidMessageTest {
     }
 
     @Test
-    public void testResponseWithBadInitialLine() throws Exception {
+    public void testResponseWithBadInitialLine() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.0 BAD_CODE Bad Server\r\n", CharsetUtil.UTF_8));
         HttpResponse res = ch.readInbound();
@@ -73,7 +73,7 @@ public class HttpInvalidMessageTest {
     }
 
     @Test
-    public void testResponseWithBadHeader() throws Exception {
+    public void testResponseWithBadHeader() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.0 200 Maybe OK\r\n", CharsetUtil.UTF_8));
         ch.writeInbound(Unpooled.copiedBuffer("Good_Name: Good Value\r\n", CharsetUtil.UTF_8));
@@ -89,7 +89,7 @@ public class HttpInvalidMessageTest {
     }
 
     @Test
-    public void testBadChunk() throws Exception {
+    public void testBadChunk() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.0\r\n", CharsetUtil.UTF_8));
         ch.writeInbound(Unpooled.copiedBuffer("Transfer-Encoding: chunked\r\n\r\n", CharsetUtil.UTF_8));

@@ -56,7 +56,7 @@ public abstract class AbstractSslEngineThroughputBenchmark extends AbstractSslEn
         doSetup();
     }
 
-    protected void doSetup() throws Exception { }
+    protected void doSetup() { }
 
     @TearDown(Level.Iteration)
     public final void tearDown() throws Exception {
@@ -67,7 +67,7 @@ public abstract class AbstractSslEngineThroughputBenchmark extends AbstractSslEn
         doTearDown();
     }
 
-    protected void doTearDown() throws Exception { }
+    protected void doTearDown() { }
 
     protected final ByteBuffer doWrap(int numWraps) throws SSLException {
         wrapDstBuffer.clear();

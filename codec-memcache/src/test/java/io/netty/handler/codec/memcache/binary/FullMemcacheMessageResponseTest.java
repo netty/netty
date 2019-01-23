@@ -32,7 +32,7 @@ public class FullMemcacheMessageResponseTest {
     private EmbeddedChannel channel;
 
     @Before
-    public void setup() throws Exception {
+    public void setup() {
         channel = new EmbeddedChannel(
                 new BinaryMemcacheResponseEncoder(),
                 new BinaryMemcacheResponseDecoder(),
@@ -40,12 +40,12 @@ public class FullMemcacheMessageResponseTest {
     }
 
     @After
-    public void teardown() throws Exception {
+    public void teardown() {
         assertFalse(channel.finish());
     }
 
     @Test
-    public void testEncodeDecode() throws Exception {
+    public void testEncodeDecode() {
         ByteBuf key = Unpooled.wrappedBuffer("key".getBytes(CharsetUtil.UTF_8));
         ByteBuf content = Unpooled.wrappedBuffer("content".getBytes(CharsetUtil.UTF_8));
         ByteBuf extras = Unpooled.wrappedBuffer("extras".getBytes(CharsetUtil.UTF_8));

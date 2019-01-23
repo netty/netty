@@ -100,7 +100,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) {
         if (finished) {
             out.writeBytes(in);
             return;
@@ -196,11 +196,11 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
+    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) {
         ChannelFuture f = finishEncode(ctx, ctx.newPromise());
         f.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture f) throws Exception {
+            public void operationComplete(ChannelFuture f) {
                 ctx.close(promise);
             }
         });
@@ -248,7 +248,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         this.ctx = ctx;
     }
 }

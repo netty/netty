@@ -41,7 +41,7 @@ import java.util.Set;
 public final class HashCollisionTest {
     private HashCollisionTest() { }
 
-    public static void main(String[] args) throws IllegalAccessException, IOException, URISyntaxException {
+    public static void main(String[] args) throws IllegalAccessException, IOException {
         // Big initial size for when all name sources are pulled in.
         List<CharSequence> strings = new ArrayList<>(350000);
         addHttpHeaderNames(strings);
@@ -94,14 +94,14 @@ public final class HashCollisionTest {
         }
     }
 
-    private static void addHttp2HeaderNames(List<CharSequence> values) throws IllegalAccessException {
+    private static void addHttp2HeaderNames(List<CharSequence> values) {
         for (Http2Headers.PseudoHeaderName name : Http2Headers.PseudoHeaderName.values()) {
             values.add(name.value());
         }
     }
 
     private static void addWordsFromFile(File file, List<CharSequence> values)
-            throws IllegalAccessException, IOException {
+            throws IOException {
         BufferedReader br = new BufferedReader(new FileReader(file));
         try {
             String line;

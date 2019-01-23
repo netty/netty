@@ -478,9 +478,9 @@ public class Socket extends FileDescriptor {
             int fd, long memoryAddress, int length, byte[] address, int scopeId, int port);
 
     private static native DatagramSocketAddress recvFrom(
-            int fd, ByteBuffer buf, int pos, int limit) throws IOException;
+            int fd, ByteBuffer buf, int pos, int limit);
     private static native DatagramSocketAddress recvFromAddress(
-            int fd, long memoryAddress, int pos, int limit) throws IOException;
+            int fd, long memoryAddress, int pos, int limit);
     private static native int recvFd(int fd);
     private static native int sendFd(int socketFd, int fd);
 
@@ -488,25 +488,25 @@ public class Socket extends FileDescriptor {
     private static native int newSocketDgramFd();
     private static native int newSocketDomainFd();
 
-    private static native int isReuseAddress(int fd) throws IOException;
-    private static native int isReusePort(int fd) throws IOException;
-    private static native int getReceiveBufferSize(int fd) throws IOException;
-    private static native int getSendBufferSize(int fd) throws IOException;
-    private static native int isKeepAlive(int fd) throws IOException;
-    private static native int isTcpNoDelay(int fd) throws IOException;
-    private static native int isBroadcast(int fd) throws IOException;
-    private static native int getSoLinger(int fd) throws IOException;
-    private static native int getSoError(int fd) throws IOException;
-    private static native int getTrafficClass(int fd) throws IOException;
+    private static native int isReuseAddress(int fd);
+    private static native int isReusePort(int fd);
+    private static native int getReceiveBufferSize(int fd);
+    private static native int getSendBufferSize(int fd);
+    private static native int isKeepAlive(int fd);
+    private static native int isTcpNoDelay(int fd);
+    private static native int isBroadcast(int fd);
+    private static native int getSoLinger(int fd);
+    private static native int getSoError(int fd);
+    private static native int getTrafficClass(int fd);
 
-    private static native void setReuseAddress(int fd, int reuseAddress) throws IOException;
-    private static native void setReusePort(int fd, int reuseAddress) throws IOException;
-    private static native void setKeepAlive(int fd, int keepAlive) throws IOException;
-    private static native void setReceiveBufferSize(int fd, int receiveBufferSize) throws IOException;
-    private static native void setSendBufferSize(int fd, int sendBufferSize) throws IOException;
-    private static native void setTcpNoDelay(int fd, int tcpNoDelay) throws IOException;
-    private static native void setSoLinger(int fd, int soLinger) throws IOException;
-    private static native void setBroadcast(int fd, int broadcast) throws IOException;
-    private static native void setTrafficClass(int fd, int trafficClass) throws IOException;
+    private static native void setReuseAddress(int fd, int reuseAddress);
+    private static native void setReusePort(int fd, int reuseAddress);
+    private static native void setKeepAlive(int fd, int keepAlive);
+    private static native void setReceiveBufferSize(int fd, int receiveBufferSize);
+    private static native void setSendBufferSize(int fd, int sendBufferSize);
+    private static native void setTcpNoDelay(int fd, int tcpNoDelay);
+    private static native void setSoLinger(int fd, int soLinger);
+    private static native void setBroadcast(int fd, int broadcast);
+    private static native void setTrafficClass(int fd, int trafficClass);
     private static native void initialize(boolean ipv4Preferred);
 }

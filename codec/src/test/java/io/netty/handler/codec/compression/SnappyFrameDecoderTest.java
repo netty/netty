@@ -32,7 +32,7 @@ public class SnappyFrameDecoderTest {
     }
 
     @Test(expected = DecompressionException.class)
-    public void testReservedUnskippableChunkTypeCausesError() throws Exception {
+    public void testReservedUnskippableChunkTypeCausesError() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             0x03, 0x01, 0x00, 0x00, 0x00
         });
@@ -41,7 +41,7 @@ public class SnappyFrameDecoderTest {
     }
 
     @Test(expected = DecompressionException.class)
-    public void testInvalidStreamIdentifierLength() throws Exception {
+    public void testInvalidStreamIdentifierLength() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             -0x80, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
@@ -50,7 +50,7 @@ public class SnappyFrameDecoderTest {
     }
 
     @Test(expected = DecompressionException.class)
-    public void testInvalidStreamIdentifierValue() throws Exception {
+    public void testInvalidStreamIdentifierValue() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             (byte) 0xff, 0x06, 0x00, 0x00, 's', 'n', 'e', 't', 't', 'y'
         });
@@ -59,7 +59,7 @@ public class SnappyFrameDecoderTest {
     }
 
     @Test(expected = DecompressionException.class)
-    public void testReservedSkippableBeforeStreamIdentifier() throws Exception {
+    public void testReservedSkippableBeforeStreamIdentifier() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             -0x7f, 0x06, 0x00, 0x00, 's', 'n', 'e', 't', 't', 'y'
         });
@@ -68,7 +68,7 @@ public class SnappyFrameDecoderTest {
     }
 
     @Test(expected = DecompressionException.class)
-    public void testUncompressedDataBeforeStreamIdentifier() throws Exception {
+    public void testUncompressedDataBeforeStreamIdentifier() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             0x01, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
@@ -77,7 +77,7 @@ public class SnappyFrameDecoderTest {
     }
 
     @Test(expected = DecompressionException.class)
-    public void testCompressedDataBeforeStreamIdentifier() throws Exception {
+    public void testCompressedDataBeforeStreamIdentifier() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             0x00, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
@@ -86,7 +86,7 @@ public class SnappyFrameDecoderTest {
     }
 
     @Test
-    public void testReservedSkippableSkipsInput() throws Exception {
+    public void testReservedSkippableSkipsInput() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
            (byte) 0xff, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
            -0x7f, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
@@ -99,7 +99,7 @@ public class SnappyFrameDecoderTest {
     }
 
     @Test
-    public void testUncompressedDataAppendsToOut() throws Exception {
+    public void testUncompressedDataAppendsToOut() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
            (byte) 0xff, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
             0x01, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
@@ -116,7 +116,7 @@ public class SnappyFrameDecoderTest {
     }
 
     @Test
-    public void testCompressedDataDecodesAndAppendsToOut() throws Exception {
+    public void testCompressedDataDecodesAndAppendsToOut() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
            (byte) 0xff, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59,
             0x00, 0x0B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -140,7 +140,7 @@ public class SnappyFrameDecoderTest {
     // uncompressed string "netty"
 
     @Test(expected = DecompressionException.class)
-    public void testInvalidChecksumThrowsException() throws Exception {
+    public void testInvalidChecksumThrowsException() {
         EmbeddedChannel channel = new EmbeddedChannel(new SnappyFrameDecoder(true));
 
         // checksum here is presented as 0
@@ -153,7 +153,7 @@ public class SnappyFrameDecoderTest {
     }
 
     @Test
-    public void testInvalidChecksumDoesNotThrowException() throws Exception {
+    public void testInvalidChecksumDoesNotThrowException() {
         EmbeddedChannel channel = new EmbeddedChannel(new SnappyFrameDecoder(true));
 
         // checksum here is presented as a282986f (little endian)

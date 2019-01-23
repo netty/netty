@@ -201,10 +201,10 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
     }
 
     @Override
-    protected void engineInit(KeyStore keyStore) throws Exception { }
+    protected void engineInit(KeyStore keyStore) { }
 
     @Override
-    protected void engineInit(ManagerFactoryParameters managerFactoryParameters) throws Exception { }
+    protected void engineInit(ManagerFactoryParameters managerFactoryParameters) { }
 
     @Override
     protected TrustManager[] engineGetTrustManagers() {

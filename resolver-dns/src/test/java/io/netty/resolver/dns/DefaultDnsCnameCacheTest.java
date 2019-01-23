@@ -76,7 +76,7 @@ public class DefaultDnsCnameCacheTest {
     }
 
     @Test
-    public void testMultipleCnamesForSameHostname() throws Exception {
+    public void testMultipleCnamesForSameHostname() {
         EventLoopGroup group = new LocalEventLoopGroup(1);
 
         try {
@@ -92,7 +92,7 @@ public class DefaultDnsCnameCacheTest {
     }
 
     @Test
-    public void testAddSameCnameForSameHostname() throws Exception {
+    public void testAddSameCnameForSameHostname() {
         EventLoopGroup group = new LocalEventLoopGroup(1);
 
         try {
@@ -108,7 +108,7 @@ public class DefaultDnsCnameCacheTest {
     }
 
     @Test
-    public void testClear() throws Exception {
+    public void testClear() {
         EventLoopGroup group = new LocalEventLoopGroup(1);
 
         try {

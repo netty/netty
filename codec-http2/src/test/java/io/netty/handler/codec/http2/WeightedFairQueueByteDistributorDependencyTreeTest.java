@@ -43,7 +43,7 @@ public class WeightedFairQueueByteDistributorDependencyTreeTest extends
     private static final short followersWeight = 1;
 
     @Before
-    public void setup() throws Http2Exception {
+    public void setup() {
         MockitoAnnotations.initMocks(this);
 
         setup(0);

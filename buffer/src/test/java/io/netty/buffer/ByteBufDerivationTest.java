@@ -31,7 +31,7 @@ import static org.junit.Assert.*;
 public class ByteBufDerivationTest {
 
     @Test
-    public void testSlice() throws Exception {
+    public void testSlice() {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
         ByteBuf slice = buf.slice(1, 7);
 
@@ -48,7 +48,7 @@ public class ByteBufDerivationTest {
     }
 
     @Test
-    public void testSliceOfSlice() throws Exception {
+    public void testSliceOfSlice() {
         ByteBuf buf = Unpooled.buffer(8);
         ByteBuf slice = buf.slice(1, 7);
         ByteBuf slice2 = slice.slice(0, 6);
@@ -61,7 +61,7 @@ public class ByteBufDerivationTest {
     }
 
     @Test
-    public void testDuplicate() throws Exception {
+    public void testDuplicate() {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
         ByteBuf dup = buf.duplicate();
 
@@ -78,7 +78,7 @@ public class ByteBufDerivationTest {
     }
 
     @Test
-    public void testDuplicateOfDuplicate() throws Exception {
+    public void testDuplicateOfDuplicate() {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
         ByteBuf dup = buf.duplicate().setIndex(2, 6);
         ByteBuf dup2 = dup.duplicate();
@@ -93,7 +93,7 @@ public class ByteBufDerivationTest {
     }
 
     @Test
-    public void testReadOnly() throws Exception {
+    public void testReadOnly() {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
         ByteBuf ro = Unpooled.unmodifiableBuffer(buf);
 
@@ -109,7 +109,7 @@ public class ByteBufDerivationTest {
     }
 
     @Test
-    public void testReadOnlyOfReadOnly() throws Exception {
+    public void testReadOnlyOfReadOnly() {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
         ByteBuf ro = Unpooled.unmodifiableBuffer(buf).setIndex(2, 6);
         ByteBuf ro2 = Unpooled.unmodifiableBuffer(ro);
@@ -124,7 +124,7 @@ public class ByteBufDerivationTest {
     }
 
     @Test
-    public void testReadOnlyOfDuplicate() throws Exception {
+    public void testReadOnlyOfDuplicate() {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
         ByteBuf dup = buf.duplicate().setIndex(2, 6);
         ByteBuf ro = Unpooled.unmodifiableBuffer(dup);
@@ -138,7 +138,7 @@ public class ByteBufDerivationTest {
     }
 
     @Test
-    public void testDuplicateOfReadOnly() throws Exception {
+    public void testDuplicateOfReadOnly() {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
         ByteBuf ro = Unpooled.unmodifiableBuffer(buf).setIndex(2, 6);
         ByteBuf dup = ro.duplicate();
@@ -152,7 +152,7 @@ public class ByteBufDerivationTest {
     }
 
     @Test
-    public void testSwap() throws Exception {
+    public void testSwap() {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
         ByteBuf swapped = buf.order(ByteOrder.LITTLE_ENDIAN);
 
@@ -167,7 +167,7 @@ public class ByteBufDerivationTest {
     }
 
     @Test
-    public void testMixture() throws Exception {
+    public void testMixture() {
         ByteBuf buf = Unpooled.buffer(10000);
         ByteBuf derived = buf;
         Random rnd = new Random();

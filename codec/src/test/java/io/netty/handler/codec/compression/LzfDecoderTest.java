@@ -34,7 +34,7 @@ public class LzfDecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testUnexpectedBlockIdentifier() throws Exception {
+    public void testUnexpectedBlockIdentifier() {
         expected.expect(DecompressionException.class);
         expected.expectMessage("unexpected block identifier");
 
@@ -47,7 +47,7 @@ public class LzfDecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testUnknownTypeOfChunk() throws Exception {
+    public void testUnknownTypeOfChunk() {
         expected.expect(DecompressionException.class);
         expected.expectMessage("unknown type of chunk");
 
@@ -61,7 +61,7 @@ public class LzfDecoderTest extends AbstractDecoderTest {
     }
 
     @Override
-    protected byte[] compress(byte[] data) throws Exception {
+    protected byte[] compress(byte[] data) {
         return LZFEncoder.encode(data);
     }
 }

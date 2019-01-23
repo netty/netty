@@ -127,12 +127,12 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         this.ctx = ctx;
     }
 
     @Override
-    protected Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception {
+    protected Result beginEncode(HttpResponse headers, String acceptEncoding) {
         if (this.contentSizeThreshold > 0) {
             if (headers instanceof HttpContent &&
                     ((HttpContent) headers).content().readableBytes() < contentSizeThreshold) {

@@ -195,13 +195,13 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
      * Invoked by {@link #resolve(SocketAddress)} to perform the actual name
      * resolution.
      */
-    protected abstract void doResolve(T unresolvedAddress, Promise<T> promise) throws Exception;
+    protected abstract void doResolve(T unresolvedAddress, Promise<T> promise);
 
     /**
      * Invoked by {@link #resolveAll(SocketAddress)} to perform the actual name
      * resolution.
      */
-    protected abstract void doResolveAll(T unresolvedAddress, Promise<List<T>> promise) throws Exception;
+    protected abstract void doResolveAll(T unresolvedAddress, Promise<List<T>> promise);
 
     @Override
     public void close() { }

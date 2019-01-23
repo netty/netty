@@ -465,7 +465,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     private void notifyLifecycleManagerOnError(ChannelFuture future, final ChannelHandlerContext ctx) {
         future.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 Throwable cause = future.cause();
                 if (cause != null) {
                     lifecycleManager.onError(ctx, true, cause);
@@ -560,7 +560,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         }
 
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(ChannelFuture future) {
             if (!future.isSuccess()) {
                 error(flowController().channelHandlerContext(), future.cause());
             }

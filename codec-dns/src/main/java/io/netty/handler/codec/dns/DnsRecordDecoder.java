@@ -33,7 +33,7 @@ public interface DnsRecordDecoder {
      *
      * @param in the input buffer which contains a DNS question at its reader index
      */
-    DnsQuestion decodeQuestion(ByteBuf in) throws Exception;
+    DnsQuestion decodeQuestion(ByteBuf in);
 
     /**
      * Decodes a DNS record into its object representation.

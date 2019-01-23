@@ -88,22 +88,22 @@ public class HttpChunkedInputTest {
     public void testWrappedReturnNull() throws Exception {
         HttpChunkedInput input = new HttpChunkedInput(new ChunkedInput<ByteBuf>() {
             @Override
-            public boolean isEndOfInput() throws Exception {
+            public boolean isEndOfInput() {
                 return false;
             }
 
             @Override
-            public void close() throws Exception {
+            public void close() {
                 // NOOP
             }
 
             @Override
-            public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
+            public ByteBuf readChunk(ChannelHandlerContext ctx) {
                 return null;
             }
 
             @Override
-            public ByteBuf readChunk(ByteBufAllocator allocator) throws Exception {
+            public ByteBuf readChunk(ByteBufAllocator allocator) {
                 return null;
             }
 

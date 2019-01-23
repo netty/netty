@@ -95,7 +95,7 @@ public class HttpServerKeepAliveHandlerTest {
     }
 
     @Test
-    public void test_KeepAlive() throws Exception {
+    public void test_KeepAlive() {
         FullHttpRequest request = new DefaultFullHttpRequest(httpVersion, HttpMethod.GET, "/v1/foo/bar");
         setKeepAlive(request, REQUEST_KEEP_ALIVE.equals(sendKeepAlive));
         HttpResponse response = new DefaultFullHttpResponse(httpVersion, responseStatus);
@@ -118,7 +118,7 @@ public class HttpServerKeepAliveHandlerTest {
     }
 
     @Test
-    public void testConnectionCloseHeaderHandledCorrectly() throws Exception {
+    public void testConnectionCloseHeaderHandledCorrectly() {
         HttpResponse response = new DefaultFullHttpResponse(httpVersion, responseStatus);
         response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
         setupMessageLength(response);
@@ -132,7 +132,7 @@ public class HttpServerKeepAliveHandlerTest {
     }
 
     @Test
-    public void testConnectionCloseHeaderHandledCorrectlyForVoidPromise() throws Exception {
+    public void testConnectionCloseHeaderHandledCorrectlyForVoidPromise() {
         HttpResponse response = new DefaultFullHttpResponse(httpVersion, responseStatus);
         response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
         setupMessageLength(response);

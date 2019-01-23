@@ -39,7 +39,7 @@ public class ReflectiveChannelFactory<T extends Channel> implements ChannelFacto
     }
 
     @Override
-    public T newChannel(EventLoop eventLoop) throws Exception {
+    public T newChannel(EventLoop eventLoop) {
         try {
             return constructor.newInstance(eventLoop);
         } catch (Throwable t) {

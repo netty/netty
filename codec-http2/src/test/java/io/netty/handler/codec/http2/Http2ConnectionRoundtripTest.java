@@ -121,7 +121,7 @@ public class Http2ConnectionRoundtripTest {
     }
 
     @After
-    public void teardown() throws Exception {
+    public void teardown() {
         if (clientChannel != null) {
             clientChannel.close().syncUninterruptibly();
             clientChannel = null;
@@ -149,7 +149,7 @@ public class Http2ConnectionRoundtripTest {
         final CountDownLatch latch = new CountDownLatch(1);
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+            public Void answer(InvocationOnMock invocationOnMock) {
                 ChannelHandlerContext ctx = invocationOnMock.getArgument(0);
                 http2Server.encoder().writeHeaders(ctx,
                         (Integer) invocationOnMock.getArgument(1),
@@ -165,7 +165,7 @@ public class Http2ConnectionRoundtripTest {
 
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+            public Void answer(InvocationOnMock invocationOnMock) {
                 latch.countDown();
                 return null;
             }
@@ -177,7 +177,7 @@ public class Http2ConnectionRoundtripTest {
         final Http2Headers headers = dummyHeaders();
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, weight, false, 0, false, newPromise());
                 http2Client.flush(ctx());
                 http2Client.encoder().writeRstStream(ctx(), 3, Http2Error.INTERNAL_ERROR.code(), newPromise());
@@ -187,7 +187,7 @@ public class Http2ConnectionRoundtripTest {
 
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, weight, false, 0, false, newPromise());
                 http2Client.flush(ctx());
             }
@@ -205,7 +205,7 @@ public class Http2ConnectionRoundtripTest {
         final Http2Headers headers = dummyHeaders();
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, weight, false, 0, true,
                         newPromise());
                 http2Client.flush(ctx());
@@ -246,7 +246,7 @@ public class Http2ConnectionRoundtripTest {
 
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+            public Void answer(InvocationOnMock invocationOnMock) {
                 serverSettingsAckLatch1.countDown();
                 serverSettingsAckLatch2.countDown();
                 return null;
@@ -254,7 +254,7 @@ public class Http2ConnectionRoundtripTest {
         }).when(serverListener).onSettingsAckRead(any(ChannelHandlerContext.class));
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+            public Void answer(InvocationOnMock invocationOnMock) {
                 clientSettingsLatch1.countDown();
                 return null;
             }
@@ -263,7 +263,7 @@ public class Http2ConnectionRoundtripTest {
         // Manually add a listener for when we receive the expected headers on the server.
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+            public Void answer(InvocationOnMock invocationOnMock) {
                 serverRevHeadersLatch.countDown();
                 return null;
             }
@@ -274,7 +274,7 @@ public class Http2ConnectionRoundtripTest {
         // that we don't corrupt state if some can be written but not all.
         runInChannel(serverConnectedChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Server.encoder().writeSettings(serverCtx(),
                         new Http2Settings().copyFrom(http2Server.decoder().localSettings())
                                 .maxHeaderListSize(100),
@@ -287,11 +287,11 @@ public class Http2ConnectionRoundtripTest {
 
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, false, newPromise())
                         .addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         clientHeadersWriteException.set(future.cause());
                     }
                 });
@@ -299,7 +299,7 @@ public class Http2ConnectionRoundtripTest {
                 http2Client.encoder().writeData(ctx(), 3, Unpooled.buffer(), 0, true, newPromise())
                     .addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             clientDataWriteException.set(future.cause());
                             clientDataWrite.countDown();
                         }
@@ -315,7 +315,7 @@ public class Http2ConnectionRoundtripTest {
         // Set the maxHeaderListSize to the max value so we can send the headers.
         runInChannel(serverConnectedChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Server.encoder().writeSettings(serverCtx(),
                         new Http2Settings().copyFrom(http2Server.decoder().localSettings())
                                 .maxHeaderListSize(Http2CodecUtil.MAX_HEADER_LIST_SIZE),
@@ -329,11 +329,11 @@ public class Http2ConnectionRoundtripTest {
 
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, true,
                         newPromise()).addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         clientHeadersWriteException2.set(future.cause());
                         clientHeadersLatch.countDown();
                     }
@@ -372,7 +372,7 @@ public class Http2ConnectionRoundtripTest {
 
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+            public Void answer(InvocationOnMock invocationOnMock) {
                 serverSettingsAckLatch1.countDown();
                 serverSettingsAckLatch2.countDown();
                 return null;
@@ -397,7 +397,7 @@ public class Http2ConnectionRoundtripTest {
         // The server initially reduces the connection flow control window to 0.
         runInChannel(serverConnectedChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Server.encoder().writeSettings(serverCtx(),
                         new Http2Settings().copyFrom(http2Server.decoder().localSettings())
                                 .initialWindowSize(0),
@@ -412,7 +412,7 @@ public class Http2ConnectionRoundtripTest {
         // controller.
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0, false,
                         newPromise());
                 http2Client.encoder().writeData(ctx(), 3, Unpooled.wrappedBuffer(data), 0, true, newPromise());
@@ -426,7 +426,7 @@ public class Http2ConnectionRoundtripTest {
         // Now the server opens up the connection window to allow the client to send the pending data.
         runInChannel(serverConnectedChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Server.encoder().writeSettings(serverCtx(),
                         new Http2Settings().copyFrom(http2Server.decoder().localSettings())
                                 .initialWindowSize(data.length),
@@ -455,7 +455,7 @@ public class Http2ConnectionRoundtripTest {
         final Http2Headers headers = dummyHeaders();
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Client.encoder().writePriority(ctx(), 5, 3, (short) 14, false, newPromise());
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0, false,
                         newPromise());
@@ -487,7 +487,7 @@ public class Http2ConnectionRoundtripTest {
         final Http2Headers headers = dummyHeaders();
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, (short) 16, false, 0, false,
                         newPromise());
                 http2Client.encoder().frameWriter().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0, false,
@@ -526,7 +526,7 @@ public class Http2ConnectionRoundtripTest {
         final int streamId = 3;
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Client.encoder().writeHeaders(ctx(), streamId, headers, CONNECTION_STREAM_ID,
                         DEFAULT_PRIORITY_WEIGHT, false, 0, false, newPromise());
                 http2Client.encoder().writeRstStream(ctx(), streamId, Http2Error.CANCEL.code(), newPromise());
@@ -536,7 +536,7 @@ public class Http2ConnectionRoundtripTest {
 
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+            public Void answer(InvocationOnMock invocationOnMock) {
                 if (streamId == (Integer) invocationOnMock.getArgument(1)) {
                     serverGotRstLatch.countDown();
                 }
@@ -553,11 +553,11 @@ public class Http2ConnectionRoundtripTest {
         // Now have the server attempt to send a headers frame simulating some asynchronous work.
         runInChannel(serverConnectedChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Server.encoder().writeHeaders(serverCtx(), streamId, headers, 0, true, serverNewPromise())
                         .addListener(new ChannelFutureListener() {
                             @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
+                            public void operationComplete(ChannelFuture future) {
                                 serverWriteHeadersCauseRef.set(future.cause());
                                 serverWriteHeadersLatch.countDown();
                             }
@@ -587,7 +587,7 @@ public class Http2ConnectionRoundtripTest {
         final CountDownLatch closeLatch = new CountDownLatch(1);
         clientChannel.closeFuture().addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 closeLatch.countDown();
             }
         });
@@ -596,7 +596,7 @@ public class Http2ConnectionRoundtripTest {
         final Http2Headers headers = dummyHeaders();
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0, false,
                         newPromise());
                 http2Client.flush(ctx());
@@ -633,7 +633,7 @@ public class Http2ConnectionRoundtripTest {
         final CountDownLatch closeLatch = new CountDownLatch(1);
         clientChannel.closeFuture().addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 closeLatch.countDown();
             }
         });
@@ -641,7 +641,7 @@ public class Http2ConnectionRoundtripTest {
         // Create a single stream by sending a HEADERS frame to the server.
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0, false,
                         newPromise());
                 http2Client.flush(ctx());
@@ -691,7 +691,7 @@ public class Http2ConnectionRoundtripTest {
         final ChannelPromise emptyDataPromise = newPromise();
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0, (short) 16, false, 0, false,
                         newPromise());
                 ByteBuf emptyBuf = Unpooled.buffer();
@@ -791,7 +791,7 @@ public class Http2ConnectionRoundtripTest {
         final CountDownLatch closeLatch = new CountDownLatch(1);
         clientChannel.closeFuture().addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 closeLatch.countDown();
             }
         });
@@ -800,7 +800,7 @@ public class Http2ConnectionRoundtripTest {
         final Http2Headers headers = dummyHeaders();
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0, false,
                         newPromise());
                 http2Client.flush(ctx());
@@ -814,7 +814,7 @@ public class Http2ConnectionRoundtripTest {
         // Add a handler that will immediately throw an exception.
         clientChannel.pipeline().addFirst(new ChannelHandlerAdapter() {
             @Override
-            public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            public void handlerAdded(ChannelHandlerContext ctx) {
                 throw new RuntimeException("Fake Exception");
             }
         });
@@ -838,7 +838,7 @@ public class Http2ConnectionRoundtripTest {
         final Http2Headers headers = dummyHeaders();
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0,
                         true, newPromise());
                 http2Client.flush(ctx());
@@ -849,7 +849,7 @@ public class Http2ConnectionRoundtripTest {
 
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Client.encoder().writeHeaders(ctx(), MAX_VALUE + 1, headers, 0, (short) 16, false, 0,
                         true, newPromise());
                 http2Client.flush(ctx());
@@ -872,7 +872,7 @@ public class Http2ConnectionRoundtripTest {
         final CountDownLatch clientGoAwayLatch = new CountDownLatch(1);
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+            public Void answer(InvocationOnMock invocationOnMock) {
                 clientGoAwayLatch.countDown();
                 return null;
             }
@@ -882,7 +882,7 @@ public class Http2ConnectionRoundtripTest {
         final Http2Headers headers = dummyHeaders();
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0,
                         false, newPromise());
                 http2Client.flush(ctx());
@@ -896,7 +896,7 @@ public class Http2ConnectionRoundtripTest {
 
         runInChannel(serverChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Server.encoder().writeGoAway(serverCtx(), 3, NO_ERROR.code(), EMPTY_BUFFER, serverNewPromise());
                 http2Server.flush(serverCtx());
             }
@@ -911,14 +911,14 @@ public class Http2ConnectionRoundtripTest {
         final CountDownLatch clientWriteAfterGoAwayLatch = new CountDownLatch(1);
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 ChannelFuture f = http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, (short) 16, false, 0,
                         true, newPromise());
                 clientWriteAfterGoAwayFutureRef.set(f);
                 http2Client.flush(ctx());
                 f.addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         clientWriteAfterGoAwayLatch.countDown();
                     }
                 });
@@ -951,7 +951,7 @@ public class Http2ConnectionRoundtripTest {
         final CountDownLatch clientGoAwayLatch = new CountDownLatch(1);
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+            public Void answer(InvocationOnMock invocationOnMock) {
                 clientGoAwayLatch.countDown();
                 return null;
             }
@@ -966,13 +966,13 @@ public class Http2ConnectionRoundtripTest {
         final CountDownLatch clientWriteAfterGoAwayLatch = new CountDownLatch(1);
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+            public Void answer(InvocationOnMock invocationOnMock) {
                 ChannelFuture f = http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, (short) 16, false, 0,
                         true, newPromise());
                 clientWriteAfterGoAwayFutureRef.set(f);
                 f.addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         clientWriteAfterGoAwayLatch.countDown();
                     }
                 });
@@ -983,7 +983,7 @@ public class Http2ConnectionRoundtripTest {
 
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0,
                         true, newPromise());
                 http2Client.flush(ctx());
@@ -997,7 +997,7 @@ public class Http2ConnectionRoundtripTest {
 
         runInChannel(serverChannel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 http2Server.encoder().writeGoAway(serverCtx(), 3, NO_ERROR.code(), EMPTY_BUFFER, serverNewPromise());
                 http2Server.flush(serverCtx());
             }
@@ -1051,7 +1051,7 @@ public class Http2ConnectionRoundtripTest {
             // Create the stream and send all of the data at once.
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
-                public void run() throws Http2Exception {
+                public void run() {
                     http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0,
                             false, newPromise());
                     http2Client.encoder().writeData(ctx(), 3, data.retainedDuplicate(), 0, false, newPromise());
@@ -1101,7 +1101,7 @@ public class Http2ConnectionRoundtripTest {
             int nextIndex;
 
             @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
+            public Void answer(InvocationOnMock in) {
                 receivedPings[nextIndex++] = (Long) in.getArguments()[1];
                 return null;
             }
@@ -1111,7 +1111,7 @@ public class Http2ConnectionRoundtripTest {
         final StringBuilder[] receivedData = new StringBuilder[numStreams];
         doAnswer(new Answer<Integer>() {
             @Override
-            public Integer answer(InvocationOnMock in) throws Throwable {
+            public Integer answer(InvocationOnMock in) {
                 int streamId = (Integer) in.getArguments()[1];
                 ByteBuf buf = (ByteBuf) in.getArguments()[2];
                 int padding = (Integer) in.getArguments()[3];
@@ -1132,7 +1132,7 @@ public class Http2ConnectionRoundtripTest {
             bootstrapEnv(numStreams * length, 1, numStreams * 4, numStreams);
             runInChannel(clientChannel, new Http2Runnable() {
                 @Override
-                public void run() throws Http2Exception {
+                public void run() {
                     int upperLimit = 3 + 2 * numStreams;
                     for (int streamId = 3; streamId < upperLimit; streamId += 2) {
                         // Send a bunch of data on each stream.
@@ -1195,7 +1195,7 @@ public class Http2ConnectionRoundtripTest {
         sb.channel(LocalServerChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 serverConnectedChannel = ch;
                 ChannelPipeline p = ch.pipeline();
                 serverFrameCountDown =
@@ -1215,7 +1215,7 @@ public class Http2ConnectionRoundtripTest {
         cb.channel(LocalChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ChannelPipeline p = ch.pipeline();
                 p.addLast(new Http2ConnectionHandlerBuilder()
                         .server(false)
@@ -1225,7 +1225,7 @@ public class Http2ConnectionRoundtripTest {
                         .build());
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                         if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
                             prefaceWrittenLatch.countDown();
                             ctx.pipeline().remove(this);
@@ -1271,7 +1271,7 @@ public class Http2ConnectionRoundtripTest {
     private static void mockFlowControl(Http2FrameListener listener) throws Http2Exception {
         doAnswer(new Answer<Integer>() {
             @Override
-            public Integer answer(InvocationOnMock invocation) throws Throwable {
+            public Integer answer(InvocationOnMock invocation) {
                 ByteBuf buf = (ByteBuf) invocation.getArguments()[2];
                 int padding = (Integer) invocation.getArguments()[3];
                 int processedBytes = buf.readableBytes() + padding;
@@ -1295,7 +1295,7 @@ public class Http2ConnectionRoundtripTest {
         final CountDownLatch latch = new CountDownLatch(1);
         runInChannel(channel, new Http2Runnable() {
             @Override
-            public void run() throws Http2Exception {
+            public void run() {
                 handler.gracefulShutdownTimeoutMillis(millis);
                 latch.countDown();
             }

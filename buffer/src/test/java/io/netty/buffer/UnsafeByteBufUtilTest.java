@@ -34,7 +34,7 @@ public class UnsafeByteBufUtilTest {
     }
 
     @Test
-    public void testSetBytesOnReadOnlyByteBuffer() throws Exception {
+    public void testSetBytesOnReadOnlyByteBuffer() {
         byte[] testData = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
         int length = testData.length;
 
@@ -56,7 +56,7 @@ public class UnsafeByteBufUtilTest {
     }
 
     @Test
-    public void testSetBytesOnReadOnlyByteBufferWithPooledAlloc() throws Exception {
+    public void testSetBytesOnReadOnlyByteBufferWithPooledAlloc() {
         byte[] testData = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
         int length = testData.length;
 

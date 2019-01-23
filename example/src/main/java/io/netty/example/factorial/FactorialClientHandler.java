@@ -98,7 +98,7 @@ public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteg
 
     private final ChannelFutureListener numberSender = new ChannelFutureListener() {
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(ChannelFuture future) {
             if (future.isSuccess()) {
                 sendNumbers();
             } else {

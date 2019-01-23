@@ -42,7 +42,7 @@ public class SnappyIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    public void test1002() throws Throwable {
+    public void test1002() {
         // Data from https://github.com/netty/netty/issues/1002
         final byte[] data = {
                 11,    0,    0,    0,    0,    0,   16,   65,   96,  119,  -22,   79,  -43,   76,  -75,  -93,
@@ -83,7 +83,7 @@ public class SnappyIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    public void testRandom() throws Throwable {
+    public void testRandom() {
         for (int i = 0; i < RANDOM_RUNS; i++) {
             long seed = rand.nextLong();
             if (seed < 0) {

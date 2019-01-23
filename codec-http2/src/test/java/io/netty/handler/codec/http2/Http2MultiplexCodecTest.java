@@ -622,7 +622,7 @@ public class Http2MultiplexCodecTest {
         assertFalse(f.isDone());
         f.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 channelOpen.set(future.channel().isOpen());
                 channelActive.set(future.channel().isActive());
             }
@@ -733,7 +733,7 @@ public class Http2MultiplexCodecTest {
     }
 
     @Test
-    public void channelInactiveHappensAfterExceptionCaughtEvents() throws Exception {
+    public void channelInactiveHappensAfterExceptionCaughtEvents() {
         final AtomicInteger count = new AtomicInteger(0);
         final AtomicInteger exceptionCaught = new AtomicInteger(-1);
         final AtomicInteger channelInactive = new AtomicInteger(-1);
@@ -944,7 +944,7 @@ public class Http2MultiplexCodecTest {
 
         ChannelHandler readCompleteSupressHandler = new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            public void channelReadComplete(ChannelHandlerContext ctx) {
                 // We want to simulate the parent channel calling channelRead and delay calling channelReadComplete.
             }
         };

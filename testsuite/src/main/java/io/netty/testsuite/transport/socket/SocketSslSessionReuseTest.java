@@ -102,7 +102,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
 
         sb.childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
-            protected void initChannel(SocketChannel sch) throws Exception {
+            protected void initChannel(SocketChannel sch) {
                 SSLEngine engine = serverCtx.newEngine(sch.alloc());
                 engine.setUseClientMode(false);
                 engine.setEnabledProtocols(protocols);
@@ -115,7 +115,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
 
         cb.handler(new ChannelInitializer<SocketChannel>() {
             @Override
-            protected void initChannel(SocketChannel sch) throws Exception {
+            protected void initChannel(SocketChannel sch) {
                 InetSocketAddress serverAddr = (InetSocketAddress) sc.localAddress();
                 SSLEngine engine = clientCtx.newEngine(sch.alloc(), serverAddr.getHostString(), serverAddr.getPort());
                 engine.setUseClientMode(true);
@@ -183,14 +183,14 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
             ctx.close();
         }
 
         @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) {
             try {
                 ctx.flush();
             } finally {
@@ -202,7 +202,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx,
-                Throwable cause) throws Exception {
+                Throwable cause) {
             if (logger.isWarnEnabled()) {
                 logger.warn(
                         "Unexpected exception from the " +

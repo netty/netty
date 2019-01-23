@@ -41,7 +41,7 @@ class BaseChannelTest {
         sb.channel(LocalServerChannel.class);
         sb.childHandler(new ChannelInitializer<LocalChannel>() {
             @Override
-            public void initChannel(LocalChannel ch) throws Exception {
+            public void initChannel(LocalChannel ch) {
             }
         });
 

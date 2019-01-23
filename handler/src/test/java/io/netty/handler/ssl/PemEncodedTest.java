@@ -73,7 +73,7 @@ public class PemEncodedTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void testEncodedReturnsNull() throws Exception {
+    public void testEncodedReturnsNull() {
         PemPrivateKey.toPEM(UnpooledByteBufAllocator.DEFAULT, true, new PrivateKey() {
             @Override
             public String getAlgorithm() {

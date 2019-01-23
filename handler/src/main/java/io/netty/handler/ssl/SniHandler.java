@@ -92,13 +92,13 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
      * @see AsyncMapping#map(Object, Promise)
      */
     @Override
-    protected Future<SslContext> lookup(ChannelHandlerContext ctx, String hostname) throws Exception {
+    protected Future<SslContext> lookup(ChannelHandlerContext ctx, String hostname) {
         return mapping.map(hostname, ctx.executor().<SslContext>newPromise());
     }
 
     @Override
     protected final void onLookupComplete(ChannelHandlerContext ctx,
-                                          String hostname, Future<SslContext> future) throws Exception {
+                                          String hostname, Future<SslContext> future) {
         if (!future.isSuccess()) {
             final Throwable cause = future.cause();
             if (cause instanceof Error) {
@@ -126,7 +126,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
      *
      * It's also possible for the hostname argument to be {@code null}.
      */
-    protected void replaceHandler(ChannelHandlerContext ctx, String hostname, SslContext sslContext) throws Exception {
+    protected void replaceHandler(ChannelHandlerContext ctx, String hostname, SslContext sslContext) {
         SslHandler sslHandler = null;
         try {
             sslHandler = sslContext.newHandler(ctx.alloc());

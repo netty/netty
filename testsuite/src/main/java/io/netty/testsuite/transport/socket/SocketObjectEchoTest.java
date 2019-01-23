@@ -77,7 +77,7 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
 
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(Channel sch) throws Exception {
+            public void initChannel(Channel sch) {
                 sch.pipeline().addLast(
                         new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())),
                         new ObjectEncoder(),
@@ -87,7 +87,7 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
 
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(Channel sch) throws Exception {
+            public void initChannel(Channel sch) {
                 sch.pipeline().addLast(
                         new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())),
                         new ObjectEncoder(),
@@ -160,8 +160,7 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx)
-                throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             channel = ctx.channel();
             if (!autoRead) {
                 ctx.read();
@@ -169,7 +168,7 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             assertEquals(data[counter], msg);
 
             if (channel.parent() != null) {
@@ -180,7 +179,7 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) {
             try {
                 ctx.flush();
             } finally {
@@ -192,7 +191,7 @@ public class SocketObjectEchoTest extends AbstractSocketTest {
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx,
-                Throwable cause) throws Exception {
+                Throwable cause) {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();
             }

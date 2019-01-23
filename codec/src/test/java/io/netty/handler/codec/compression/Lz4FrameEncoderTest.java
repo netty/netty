@@ -251,7 +251,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
             sb.channel(NioServerSocketChannel.class);
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                 }
             });
 
@@ -260,7 +260,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
             bs.channel(NioSocketChannel.class);
             bs.handler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new Lz4FrameEncoder());
                 }
             });
@@ -278,7 +278,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
                     finalClientChannel.writeAndFlush(buf.writerIndex(buf.writerIndex() + size))
                             .addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             try {
                                 writeFailCauseRef.set(future.cause());
                             } finally {

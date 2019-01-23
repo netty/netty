@@ -93,7 +93,7 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
     }
 
     @Override
-    public Future<V> sync() throws InterruptedException {
+    public Future<V> sync() {
         return this;
     }
 

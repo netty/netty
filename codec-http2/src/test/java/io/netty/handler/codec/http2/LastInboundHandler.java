@@ -108,22 +108,22 @@ public class LastInboundHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         queue.add(msg);
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         channelReadCompleteConsumer.accept(ctx);
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
         queue.add(new UserEvent(evt));
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         if (lastException != null) {
             cause.printStackTrace();
         } else {
@@ -131,7 +131,7 @@ public class LastInboundHandler extends ChannelDuplexHandler {
         }
     }
 
-    public void checkException() throws Exception {
+    public void checkException() {
         if (lastException == null) {
             return;
         }

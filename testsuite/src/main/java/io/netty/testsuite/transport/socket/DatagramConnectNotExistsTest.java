@@ -44,7 +44,7 @@ public class DatagramConnectNotExistsTest extends AbstractClientSocketTest {
         run();
     }
 
-    public void testConnectNotExists(Bootstrap cb) throws Throwable {
+    public void testConnectNotExists(Bootstrap cb) {
         final Promise<Throwable> promise = ImmediateEventExecutor.INSTANCE.newPromise();
         cb.handler(new ChannelInboundHandlerAdapter() {
             @Override

@@ -266,7 +266,7 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
      * @return frame  the {@link ByteBuf} which represent the frame or {@code null} if no frame could
      *                be created
      */
-    private ByteBuf decodeStruct(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    private ByteBuf decodeStruct(ChannelHandlerContext ctx, ByteBuf buffer) {
         final int eoh = findEndOfHeader(buffer);
         if (!discarding) {
             if (eoh >= 0) {
@@ -309,7 +309,7 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
      * @return frame  the {@link ByteBuf} which represent the frame or {@code null} if no frame could
      *                be created
      */
-    private ByteBuf decodeLine(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    private ByteBuf decodeLine(ChannelHandlerContext ctx, ByteBuf buffer) {
         final int eol = findEndOfLine(buffer);
         if (!discarding) {
             if (eol >= 0) {

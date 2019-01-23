@@ -29,7 +29,7 @@ import static org.junit.Assert.*;
 public class WebSocketServerHandshakerFactoryTest {
 
     @Test
-    public void testUnsupportedVersion() throws Exception {
+    public void testUnsupportedVersion() {
         EmbeddedChannel ch = new EmbeddedChannel();
         WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ch);
         ch.runPendingTasks();

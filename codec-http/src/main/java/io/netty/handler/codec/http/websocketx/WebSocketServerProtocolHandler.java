@@ -179,7 +179,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         if (cause instanceof WebSocketHandshakeException) {
             FullHttpResponse response = new DefaultFullHttpResponse(
                     HTTP_1_1, HttpResponseStatus.BAD_REQUEST, Unpooled.wrappedBuffer(cause.getMessage().getBytes()));
@@ -201,7 +201,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     static ChannelHandler forbiddenHttpRequestResponder() {
         return new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 if (msg instanceof FullHttpRequest) {
                     ((FullHttpRequest) msg).release();
                     FullHttpResponse response =

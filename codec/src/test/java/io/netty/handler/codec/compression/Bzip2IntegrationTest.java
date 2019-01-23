@@ -31,21 +31,21 @@ public class Bzip2IntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    public void test3Tables() throws Exception {
+    public void test3Tables() {
         byte[] data = new byte[500];
         rand.nextBytes(data);
         testIdentity(data);
     }
 
     @Test
-    public void test4Tables() throws Exception {
+    public void test4Tables() {
         byte[] data = new byte[1100];
         rand.nextBytes(data);
         testIdentity(data);
     }
 
     @Test
-    public void test5Tables() throws Exception {
+    public void test5Tables() {
         byte[] data = new byte[2300];
         rand.nextBytes(data);
         testIdentity(data);

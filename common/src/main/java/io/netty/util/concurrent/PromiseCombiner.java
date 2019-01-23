@@ -37,7 +37,7 @@ public final class PromiseCombiner {
     private Throwable cause;
     private final GenericFutureListener<Future<?>> listener = new GenericFutureListener<Future<?>>() {
         @Override
-        public void operationComplete(Future<?> future) throws Exception {
+        public void operationComplete(Future<?> future) {
             ++doneCount;
             if (!future.isSuccess() && cause == null) {
                 cause = future.cause();

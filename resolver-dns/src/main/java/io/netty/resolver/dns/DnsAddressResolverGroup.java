@@ -102,8 +102,7 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
      */
     protected NameResolver<InetAddress> newNameResolver(EventLoop eventLoop,
                                                         ChannelFactory<? extends DatagramChannel> channelFactory,
-                                                        DnsServerAddressStreamProvider nameServerProvider)
-            throws Exception {
+                                                        DnsServerAddressStreamProvider nameServerProvider) {
         // once again, channelFactory and nameServerProvider are most probably set in builder already,
         // but I do reassign them again to avoid corner cases with override methods
         return dnsResolverBuilder.eventLoop(eventLoop)
@@ -117,8 +116,7 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
      * implementation or override the default configuration.
      */
     protected AddressResolver<InetSocketAddress> newAddressResolver(EventLoop eventLoop,
-                                                                    NameResolver<InetAddress> resolver)
-            throws Exception {
+                                                                    NameResolver<InetAddress> resolver) {
         return new InetSocketAddressResolver(eventLoop, resolver);
     }
 }

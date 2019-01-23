@@ -32,7 +32,7 @@ import io.netty.util.CharsetUtil;
 public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe> {
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, StompSubframe msg, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, StompSubframe msg, List<Object> out) {
         if (msg instanceof StompFrame) {
             StompFrame frame = (StompFrame) msg;
             ByteBuf frameBuf = encodeFrame(frame, ctx);

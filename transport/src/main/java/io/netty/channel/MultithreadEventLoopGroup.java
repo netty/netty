@@ -79,5 +79,5 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
     }
 
     @Override
-    protected abstract EventLoop newChild(Executor executor, Object... args) throws Exception;
+    protected abstract EventLoop newChild(Executor executor, Object... args);
 }

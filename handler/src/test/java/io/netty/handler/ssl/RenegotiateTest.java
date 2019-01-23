@@ -51,19 +51,19 @@ public abstract class RenegotiateTest {
             sb.group(group).channel(LocalServerChannel.class)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
-                        protected void initChannel(Channel ch) throws Exception {
+                        protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(context.newHandler(ch.alloc()));
                             ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                                 private boolean renegotiate;
 
                                 @Override
-                                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                     ReferenceCountUtil.release(msg);
                                 }
 
                                 @Override
                                 public void userEventTriggered(
-                                        final ChannelHandlerContext ctx, Object evt) throws Exception {
+                                        final ChannelHandlerContext ctx, Object evt) {
                                     if (!renegotiate && evt instanceof SslHandshakeCompletionEvent) {
                                         SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
 
@@ -73,7 +73,7 @@ public abstract class RenegotiateTest {
                                             renegotiate = true;
                                             handler.renegotiate().addListener(new FutureListener<Channel>() {
                                                 @Override
-                                                public void operationComplete(Future<Channel> future) throws Exception {
+                                                public void operationComplete(Future<Channel> future) {
                                                     if (!future.isSuccess()) {
                                                         error.compareAndSet(null, future.cause());
                                                         latch.countDown();
@@ -101,12 +101,12 @@ public abstract class RenegotiateTest {
             bootstrap.group(group).channel(LocalChannel.class)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
-                        protected void initChannel(Channel ch) throws Exception {
+                        protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(clientContext.newHandler(ch.alloc()));
                             ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                                 @Override
                                 public void userEventTriggered(
-                                        ChannelHandlerContext ctx, Object evt) throws Exception {
+                                        ChannelHandlerContext ctx, Object evt) {
                                     if (evt instanceof SslHandshakeCompletionEvent) {
                                         SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
                                         if (!event.isSuccess()) {

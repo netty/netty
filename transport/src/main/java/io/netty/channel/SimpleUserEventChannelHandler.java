@@ -85,7 +85,7 @@ public abstract class SimpleUserEventChannelHandler<I> extends ChannelInboundHan
      * Returns {@code true} if the given user event should be handled. If {@code false} it will be passed to the next
      * {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
      */
-    protected boolean acceptEvent(Object evt) throws Exception {
+    protected boolean acceptEvent(Object evt) {
         return matcher.match(evt);
     }
 
@@ -116,5 +116,5 @@ public abstract class SimpleUserEventChannelHandler<I> extends ChannelInboundHan
      *
      * @throws Exception is thrown if an error occurred
      */
-    protected abstract void eventReceived(ChannelHandlerContext ctx, I evt) throws Exception;
+    protected abstract void eventReceived(ChannelHandlerContext ctx, I evt);
 }

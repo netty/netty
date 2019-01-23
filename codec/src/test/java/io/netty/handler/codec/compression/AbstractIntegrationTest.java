@@ -43,13 +43,13 @@ public abstract class AbstractIntegrationTest {
     protected abstract EmbeddedChannel createDecoder();
 
     @Before
-    public void initChannels() throws Exception {
+    public void initChannels() {
         encoder = createEncoder();
         decoder = createDecoder();
     }
 
     @After
-    public void closeChannels() throws Exception {
+    public void closeChannels() {
         encoder.close();
         for (;;) {
             Object msg = encoder.readOutbound();
@@ -70,24 +70,24 @@ public abstract class AbstractIntegrationTest {
     }
 
     @Test
-    public void testEmpty() throws Exception {
+    public void testEmpty() {
         testIdentity(EmptyArrays.EMPTY_BYTES);
     }
 
     @Test
-    public void testOneByte() throws Exception {
+    public void testOneByte() {
         final byte[] data = { 'A' };
         testIdentity(data);
     }
 
     @Test
-    public void testTwoBytes() throws Exception {
+    public void testTwoBytes() {
         final byte[] data = { 'B', 'A' };
         testIdentity(data);
     }
 
     @Test
-    public void testRegular() throws Exception {
+    public void testRegular() {
         final byte[] data = ("Netty is a NIO client server framework which enables " +
                 "quick and easy development of network applications such as protocol " +
                 "servers and clients.").getBytes(CharsetUtil.UTF_8);
@@ -95,14 +95,14 @@ public abstract class AbstractIntegrationTest {
     }
 
     @Test
-    public void testLargeRandom() throws Exception {
+    public void testLargeRandom() {
         final byte[] data = new byte[1024 * 1024];
         rand.nextBytes(data);
         testIdentity(data);
     }
 
     @Test
-    public void testPartRandom() throws Exception {
+    public void testPartRandom() {
         final byte[] data = new byte[10240];
         rand.nextBytes(data);
         for (int i = 0; i < 1024; i++) {
@@ -112,7 +112,7 @@ public abstract class AbstractIntegrationTest {
     }
 
     @Test
-    public void testCompressible() throws Exception {
+    public void testCompressible() {
         final byte[] data = new byte[10240];
         for (int i = 0; i < data.length; i++) {
             data[i] = i % 4 != 0 ? 0 : (byte) rand.nextInt();
@@ -121,20 +121,20 @@ public abstract class AbstractIntegrationTest {
     }
 
     @Test
-    public void testLongBlank() throws Exception {
+    public void testLongBlank() {
         final byte[] data = new byte[102400];
         testIdentity(data);
     }
 
     @Test
-    public void testLongSame() throws Exception {
+    public void testLongSame() {
         final byte[] data = new byte[102400];
         Arrays.fill(data, (byte) 123);
         testIdentity(data);
     }
 
     @Test
-    public void testSequential() throws Exception {
+    public void testSequential() {
         final byte[] data = new byte[1024];
         for (int i = 0; i < data.length; i++) {
             data[i] = (byte) i;

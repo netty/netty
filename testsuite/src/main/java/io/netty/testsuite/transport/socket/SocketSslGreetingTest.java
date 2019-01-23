@@ -121,7 +121,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
 
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(Channel sch) throws Exception {
+            public void initChannel(Channel sch) {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast(serverCtx.newHandler(sch.alloc()));
                 p.addLast(new LoggingHandler(LOG_LEVEL));
@@ -131,7 +131,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
 
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(Channel sch) throws Exception {
+            public void initChannel(Channel sch) {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast(clientCtx.newHandler(sch.alloc()));
                 p.addLast(new LoggingHandler(LOG_LEVEL));
@@ -168,7 +168,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         final CountDownLatch latch = new CountDownLatch(1);
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf buf) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf buf) {
             assertEquals('a', buf.readByte());
             assertFalse(buf.isReadable());
             latch.countDown();
@@ -177,7 +177,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx,
-                                    Throwable cause) throws Exception {
+                                    Throwable cause) {
             if (logger.isWarnEnabled()) {
                 logger.warn("Unexpected exception from the client side", cause);
             }
@@ -192,20 +192,19 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         final AtomicReference<Throwable> exception = new AtomicReference<>();
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+        protected void channelRead0(ChannelHandlerContext ctx, String msg) {
             // discard
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx)
-                throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             channel = ctx.channel();
             channel.writeAndFlush(ctx.alloc().buffer().writeByte('a'));
         }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx,
-                                    Throwable cause) throws Exception {
+                                    Throwable cause) {
             if (logger.isWarnEnabled()) {
                 logger.warn("Unexpected exception from the server side", cause);
             }
@@ -215,7 +214,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         }
 
         @Override
-        public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
+        public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) {
             if (evt instanceof SslHandshakeCompletionEvent) {
                 final SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
                 if (event.isSuccess()) {

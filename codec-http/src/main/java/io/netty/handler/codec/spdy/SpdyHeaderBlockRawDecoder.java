@@ -88,7 +88,7 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
         }
     }
 
-    protected void decodeHeaderBlock(ByteBuf headerBlock, SpdyHeadersFrame frame) throws Exception {
+    protected void decodeHeaderBlock(ByteBuf headerBlock, SpdyHeadersFrame frame) {
         int skipLength;
         while (headerBlock.isReadable()) {
             switch(state) {

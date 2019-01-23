@@ -144,8 +144,7 @@ public class SslErrorTest {
                     }
 
                     @Override
-                    public void checkServerTrusted(X509Certificate[] x509Certificates, String s)
-                            throws CertificateException {
+                    public void checkServerTrusted(X509Certificate[] x509Certificates, String s) {
                         // NOOP
                     }
 
@@ -172,7 +171,7 @@ public class SslErrorTest {
                     .handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
-                        protected void initChannel(Channel ch) throws Exception {
+                        protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
                             ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
 
@@ -190,7 +189,7 @@ public class SslErrorTest {
                     .channel(NioSocketChannel.class)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
-                        protected void initChannel(Channel ch) throws Exception {
+                        protected void initChannel(Channel ch) {
                             ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
                             ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                                 @Override

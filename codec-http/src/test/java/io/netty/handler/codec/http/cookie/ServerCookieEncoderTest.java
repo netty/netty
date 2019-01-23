@@ -37,7 +37,7 @@ import org.junit.Test;
 public class ServerCookieEncoderTest {
 
     @Test
-    public void testEncodingSingleCookieV0() throws ParseException {
+    public void testEncodingSingleCookieV0() {
 
         int maxAge = 50;
 

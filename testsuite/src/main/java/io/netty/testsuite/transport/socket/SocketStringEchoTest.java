@@ -81,7 +81,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
 
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(Channel sch) throws Exception {
+            public void initChannel(Channel sch) {
                 sch.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
                 sch.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
                 sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
@@ -91,7 +91,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
 
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(Channel sch) throws Exception {
+            public void initChannel(Channel sch) {
                 sch.pipeline().addLast("framer", new DelimiterBasedFrameDecoder(512, Delimiters.lineDelimiter()));
                 sch.pipeline().addLast("decoder", new StringDecoder(CharsetUtil.ISO_8859_1));
                 sch.pipeline().addBefore("decoder", "encoder", new StringEncoder(CharsetUtil.ISO_8859_1));
@@ -139,7 +139,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             channel = ctx.channel();
             if (!autoRead) {
                 ctx.read();
@@ -147,7 +147,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, String msg) {
             if (!data[dataIndex].equals(msg)) {
                 donePromise.tryFailure(new IllegalStateException("index: " + dataIndex + " didn't match!"));
                 ctx.close();
@@ -165,7 +165,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) {
             try {
                 ctx.flush();
             } finally {
@@ -176,7 +176,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             if (exception.compareAndSet(null, cause)) {
                 donePromise.tryFailure(new IllegalStateException("exceptionCaught: " + ctx.channel(), cause));
                 ctx.close();
@@ -184,7 +184,7 @@ public class SocketStringEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        public void channelInactive(ChannelHandlerContext ctx) {
             donePromise.tryFailure(new IllegalStateException("channelInactive: " + ctx.channel()));
         }
     }

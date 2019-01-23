@@ -114,7 +114,7 @@ public class ObjectCleanerTest {
     }
 
     @Test(timeout = 5000)
-    public void testCleanerThreadIsDaemon() throws Exception {
+    public void testCleanerThreadIsDaemon() {
         temporaryObject = new Object();
         ObjectCleaner.register(temporaryObject, new Runnable() {
             @Override

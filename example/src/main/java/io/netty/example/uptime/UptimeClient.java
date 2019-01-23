@@ -43,14 +43,14 @@ public final class UptimeClient {
     private static final UptimeClientHandler handler = new UptimeClientHandler();
     private static final Bootstrap bs = new Bootstrap();
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         EventLoopGroup group = new NioEventLoopGroup();
         bs.group(group)
                 .channel(NioSocketChannel.class)
                 .remoteAddress(HOST, PORT)
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
-                    protected void initChannel(SocketChannel ch) throws Exception {
+                    protected void initChannel(SocketChannel ch) {
                         ch.pipeline().addLast(new IdleStateHandler(READ_TIMEOUT, 0, 0), handler);
                     }
                 });
@@ -60,7 +60,7 @@ public final class UptimeClient {
     static void connect() {
         bs.connect().addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 if (future.cause() != null) {
                     handler.startTime = -1;
                     handler.println("Failed to connect: " + future.cause());

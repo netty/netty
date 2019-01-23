@@ -37,12 +37,12 @@ public class StompSubframeDecoderTest {
     private EmbeddedChannel channel;
 
     @Before
-    public void setup() throws Exception {
+    public void setup() {
         channel = new EmbeddedChannel(new StompSubframeDecoder());
     }
 
     @After
-    public void teardown() throws Exception {
+    public void teardown() {
         assertFalse(channel.finish());
     }
 

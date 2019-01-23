@@ -33,7 +33,7 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         super.channelActive(ctx);
         handshaker.handshake(ctx.channel()).addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 if (!future.isSuccess()) {
                     ctx.fireExceptionCaught(future.cause());
                 } else {
@@ -45,7 +45,7 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         if (!(msg instanceof FullHttpResponse)) {
             ctx.fireChannelRead(msg);
             return;

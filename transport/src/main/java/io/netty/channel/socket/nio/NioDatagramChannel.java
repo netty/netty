@@ -221,7 +221,7 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected void doFinishConnect() throws Exception {
+    protected void doFinishConnect() {
         throw new Error();
     }
 
@@ -236,7 +236,7 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected int doReadMessages(List<Object> buf) throws Exception {
+    protected int doReadMessages(List<Object> buf) {
         DatagramChannel ch = javaChannel();
         DatagramChannelConfig config = config();
         RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();

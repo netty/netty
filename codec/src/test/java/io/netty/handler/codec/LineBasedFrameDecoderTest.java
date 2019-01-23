@@ -27,7 +27,7 @@ import static org.junit.Assert.*;
 
 public class LineBasedFrameDecoderTest {
     @Test
-    public void testDecodeWithStrip() throws Exception {
+    public void testDecodeWithStrip() {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(8192, true, false));
 
         ch.writeInbound(copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
@@ -47,7 +47,7 @@ public class LineBasedFrameDecoderTest {
     }
 
     @Test
-    public void testDecodeWithoutStrip() throws Exception {
+    public void testDecodeWithoutStrip() {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(8192, false, false));
 
         ch.writeInbound(copiedBuffer("first\r\nsecond\nthird", CharsetUtil.US_ASCII));
@@ -66,7 +66,7 @@ public class LineBasedFrameDecoderTest {
     }
 
     @Test
-    public void testTooLongLine1() throws Exception {
+    public void testTooLongLine1() {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(16, false, false));
 
         try {
@@ -86,7 +86,7 @@ public class LineBasedFrameDecoderTest {
     }
 
     @Test
-    public void testTooLongLine2() throws Exception {
+    public void testTooLongLine2() {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(16, false, false));
 
         assertFalse(ch.writeInbound(copiedBuffer("12345678901234567", CharsetUtil.US_ASCII)));
@@ -107,7 +107,7 @@ public class LineBasedFrameDecoderTest {
     }
 
     @Test
-    public void testTooLongLineWithFailFast() throws Exception {
+    public void testTooLongLineWithFailFast() {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(16, false, true));
 
         try {
@@ -130,7 +130,7 @@ public class LineBasedFrameDecoderTest {
     }
 
     @Test
-    public void testDecodeSplitsCorrectly() throws Exception {
+    public void testDecodeSplitsCorrectly() {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(8192, false, false));
 
         assertTrue(ch.writeInbound(copiedBuffer("line\r\n.\r\n", CharsetUtil.US_ASCII)));
@@ -147,7 +147,7 @@ public class LineBasedFrameDecoderTest {
     }
 
     @Test
-    public void testFragmentedDecode() throws Exception {
+    public void testFragmentedDecode() {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(8192, false, false));
 
         assertFalse(ch.writeInbound(copiedBuffer("huu", CharsetUtil.US_ASCII)));
@@ -169,7 +169,7 @@ public class LineBasedFrameDecoderTest {
     }
 
     @Test
-    public void testEmptyLine() throws Exception {
+    public void testEmptyLine() {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(8192, true, false));
 
         assertTrue(ch.writeInbound(copiedBuffer("\nabcna\r\n", CharsetUtil.US_ASCII)));
@@ -187,7 +187,7 @@ public class LineBasedFrameDecoderTest {
     }
 
     @Test
-    public void testNotFailFast() throws Exception {
+    public void testNotFailFast() {
         EmbeddedChannel ch = new EmbeddedChannel(new LineBasedFrameDecoder(2, false, false));
         assertFalse(ch.writeInbound(wrappedBuffer(new byte[] { 0, 1, 2 })));
         assertFalse(ch.writeInbound(wrappedBuffer(new byte[]{ 3, 4 })));

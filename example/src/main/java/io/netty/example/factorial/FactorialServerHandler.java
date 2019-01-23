@@ -33,7 +33,7 @@ public class FactorialServerHandler extends SimpleChannelInboundHandler<BigInteg
     private BigInteger factorial = new BigInteger("1");
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, BigInteger msg) throws Exception {
+    public void channelRead0(ChannelHandlerContext ctx, BigInteger msg) {
         // Calculate the cumulative factorial and send it to the client.
         lastMultiplier = msg;
         factorial = factorial.multiply(msg);
@@ -41,12 +41,12 @@ public class FactorialServerHandler extends SimpleChannelInboundHandler<BigInteg
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) {
         System.err.printf("Factorial of %,d is: %,d%n", lastMultiplier, factorial);
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
         ctx.close();
     }

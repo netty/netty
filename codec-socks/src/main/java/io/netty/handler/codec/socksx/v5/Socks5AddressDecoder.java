@@ -34,7 +34,7 @@ public interface Socks5AddressDecoder {
         private static final int IPv6_LEN = 16;
 
         @Override
-        public String decodeAddress(Socks5AddressType addrType, ByteBuf in) throws Exception {
+        public String decodeAddress(Socks5AddressType addrType, ByteBuf in) {
             if (addrType == Socks5AddressType.IPv4) {
                 return NetUtil.intToIpAddress(in.readInt());
             }
@@ -66,5 +66,5 @@ public interface Socks5AddressDecoder {
      * @param addrType the type of the address
      * @param in the input buffer which contains the SOCKS5 address field at its reader index
      */
-    String decodeAddress(Socks5AddressType addrType, ByteBuf in) throws Exception;
+    String decodeAddress(Socks5AddressType addrType, ByteBuf in);
 }

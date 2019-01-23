@@ -160,7 +160,7 @@ public class BootstrapTest {
             final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<>();
             future.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     queue.add(future.channel().eventLoop().inEventLoop(Thread.currentThread()));
                     queue.add(future.isSuccess());
                 }
@@ -211,7 +211,7 @@ public class BootstrapTest {
             final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<>();
             future.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     queue.add(future.channel().eventLoop().inEventLoop(Thread.currentThread()));
                     queue.add(future.isSuccess());
                 }
@@ -317,7 +317,7 @@ public class BootstrapTest {
             ChannelPromise newPromise = ctx.newPromise();
             newPromise.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     if (!future.isSuccess()) {
                         registerPromise.tryFailure(future.cause());
                     }
@@ -344,7 +344,7 @@ public class BootstrapTest {
         }
 
         @Override
-        protected AddressResolver<SocketAddress> newResolver(EventExecutor executor) throws Exception {
+        protected AddressResolver<SocketAddress> newResolver(EventExecutor executor) {
             return new AbstractAddressResolver<SocketAddress>(executor) {
 
                 @Override
@@ -369,8 +369,7 @@ public class BootstrapTest {
 
                 @Override
                 protected void doResolveAll(
-                        final SocketAddress unresolvedAddress, final Promise<List<SocketAddress>> promise)
-                        throws Exception {
+                        final SocketAddress unresolvedAddress, final Promise<List<SocketAddress>> promise) {
                     executor().execute(new Runnable() {
                         @Override
                         public void run() {

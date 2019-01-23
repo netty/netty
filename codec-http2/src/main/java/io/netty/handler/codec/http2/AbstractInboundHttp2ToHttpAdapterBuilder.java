@@ -132,5 +132,5 @@ public abstract class AbstractInboundHttp2ToHttpAdapterBuilder<
      * Creates a new {@link InboundHttp2ToHttpAdapter} with the specified properties.
      */
     protected abstract T build(Http2Connection connection, int maxContentLength,
-                               boolean validateHttpHeaders, boolean propagateSettings) throws Exception;
+                               boolean validateHttpHeaders, boolean propagateSettings);
 }

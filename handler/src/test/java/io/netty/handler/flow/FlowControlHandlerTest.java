@@ -76,7 +76,7 @@ public class FlowControlHandlerTest {
             .childOption(ChannelOption.AUTO_READ, autoRead)
             .childHandler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                     ChannelPipeline pipeline = ch.pipeline();
                     pipeline.addLast(new OneByteToThreeStringsDecoder());
                     pipeline.addLast(handlers);
@@ -374,7 +374,7 @@ public class FlowControlHandlerTest {
      */
     private static final class OneByteToThreeStringsDecoder extends ByteToMessageDecoder {
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
             for (int i = 0; i < in.readableBytes(); i++) {
                 out.add("1");
                 out.add("2");

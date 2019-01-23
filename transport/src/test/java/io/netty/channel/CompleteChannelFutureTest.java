@@ -30,7 +30,7 @@ public class CompleteChannelFutureTest {
     }
 
     @Test
-    public void shouldNotDoAnythingOnRemove() throws Exception {
+    public void shouldNotDoAnythingOnRemove() {
         Channel channel = Mockito.mock(Channel.class);
         CompleteChannelFuture future = new CompleteChannelFutureImpl(channel);
         ChannelFutureListener l = Mockito.mock(ChannelFutureListener.class);
@@ -72,7 +72,7 @@ public class CompleteChannelFutureTest {
         }
 
         @Override
-        public ChannelFuture sync() throws InterruptedException {
+        public ChannelFuture sync() {
             throw new Error();
         }
 

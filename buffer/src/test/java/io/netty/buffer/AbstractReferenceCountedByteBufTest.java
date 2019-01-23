@@ -223,17 +223,17 @@ public class AbstractReferenceCountedByteBufTest {
             }
 
             @Override
-            public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
+            public ByteBuf getBytes(int index, OutputStream out, int length) {
                 throw new UnsupportedOperationException();
             }
 
             @Override
-            public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
+            public int getBytes(int index, GatheringByteChannel out, int length) {
                 throw new UnsupportedOperationException();
             }
 
             @Override
-            public int getBytes(int index, FileChannel out, long position, int length) throws IOException {
+            public int getBytes(int index, FileChannel out, long position, int length) {
                 throw new UnsupportedOperationException();
             }
 
@@ -253,17 +253,17 @@ public class AbstractReferenceCountedByteBufTest {
             }
 
             @Override
-            public int setBytes(int index, InputStream in, int length) throws IOException {
+            public int setBytes(int index, InputStream in, int length) {
                 throw new UnsupportedOperationException();
             }
 
             @Override
-            public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
+            public int setBytes(int index, ScatteringByteChannel in, int length) {
                 throw new UnsupportedOperationException();
             }
 
             @Override
-            public int setBytes(int index, FileChannel in, long position, int length) throws IOException {
+            public int setBytes(int index, FileChannel in, long position, int length) {
                 throw new UnsupportedOperationException();
             }
 

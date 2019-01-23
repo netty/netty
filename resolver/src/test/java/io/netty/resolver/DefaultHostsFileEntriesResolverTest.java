@@ -32,7 +32,7 @@ public class DefaultHostsFileEntriesResolverTest {
      * HostsFileParser tries to resolve hostnames as case-sensitive
      */
     @Test
-    public void testCaseInsensitivity() throws Exception {
+    public void testCaseInsensitivity() {
         DefaultHostsFileEntriesResolver resolver = new DefaultHostsFileEntriesResolver();
         //normalized somehow
         Assert.assertEquals(resolver.normalize("localhost"), resolver.normalize("LOCALHOST"));

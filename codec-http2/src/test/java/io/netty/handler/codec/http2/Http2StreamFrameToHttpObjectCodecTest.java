@@ -64,7 +64,7 @@ import static org.junit.Assert.assertFalse;
 public class Http2StreamFrameToHttpObjectCodecTest {
 
     @Test
-    public void testUpgradeEmptyFullResponse() throws Exception {
+    public void testUpgradeEmptyFullResponse() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         assertTrue(ch.writeOutbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)));
 
@@ -77,7 +77,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void encode100ContinueAsHttp2HeadersFrameThatIsNotEndStream() throws Exception {
+    public void encode100ContinueAsHttp2HeadersFrameThatIsNotEndStream() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         assertTrue(ch.writeOutbound(new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE)));
@@ -91,7 +91,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test (expected = EncoderException.class)
-    public void encodeNonFullHttpResponse100ContinueIsRejected() throws Exception {
+    public void encodeNonFullHttpResponse100ContinueIsRejected() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         try {
             ch.writeOutbound(new DefaultHttpResponse(
@@ -102,7 +102,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testUpgradeNonEmptyFullResponse() throws Exception {
+    public void testUpgradeNonEmptyFullResponse() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         assertTrue(ch.writeOutbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, hello)));
@@ -124,7 +124,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testUpgradeEmptyFullResponseWithTrailers() throws Exception {
+    public void testUpgradeEmptyFullResponseWithTrailers() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         HttpHeaders trailers = response.trailingHeaders();
@@ -144,7 +144,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testUpgradeNonEmptyFullResponseWithTrailers() throws Exception {
+    public void testUpgradeNonEmptyFullResponseWithTrailers() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, hello);
@@ -173,7 +173,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testUpgradeHeaders() throws Exception {
+    public void testUpgradeHeaders() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         assertTrue(ch.writeOutbound(response));
@@ -187,7 +187,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testUpgradeChunk() throws Exception {
+    public void testUpgradeChunk() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         HttpContent content = new DefaultHttpContent(hello);
@@ -206,7 +206,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testUpgradeEmptyEnd() throws Exception {
+    public void testUpgradeEmptyEnd() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         LastHttpContent end = LastHttpContent.EMPTY_LAST_CONTENT;
         assertTrue(ch.writeOutbound(end));
@@ -224,7 +224,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testUpgradeDataEnd() throws Exception {
+    public void testUpgradeDataEnd() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         LastHttpContent end = new DefaultLastHttpContent(hello, true);
@@ -243,7 +243,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testUpgradeTrailers() throws Exception {
+    public void testUpgradeTrailers() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         LastHttpContent trailers = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, true);
         HttpHeaders headers = trailers.trailingHeaders();
@@ -259,7 +259,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testUpgradeDataEndWithTrailers() throws Exception {
+    public void testUpgradeDataEndWithTrailers() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         LastHttpContent trailers = new DefaultLastHttpContent(hello, true);
@@ -284,7 +284,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDowngradeHeaders() throws Exception {
+    public void testDowngradeHeaders() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         Http2Headers headers = new DefaultHttp2Headers();
         headers.path("/");
@@ -304,7 +304,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDowngradeHeadersWithContentLength() throws Exception {
+    public void testDowngradeHeadersWithContentLength() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         Http2Headers headers = new DefaultHttp2Headers();
         headers.path("/");
@@ -325,7 +325,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDowngradeFullHeaders() throws Exception {
+    public void testDowngradeFullHeaders() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         Http2Headers headers = new DefaultHttp2Headers();
         headers.path("/");
@@ -350,7 +350,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDowngradeTrailers() throws Exception {
+    public void testDowngradeTrailers() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         Http2Headers headers = new DefaultHttp2Headers();
         headers.set("key", "value");
@@ -370,7 +370,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDowngradeData() throws Exception {
+    public void testDowngradeData() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello)));
@@ -388,7 +388,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDowngradeEndData() throws Exception {
+    public void testDowngradeEndData() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello, true)));
@@ -406,7 +406,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testPassThroughOther() throws Exception {
+    public void testPassThroughOther() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         Http2ResetFrame reset = new DefaultHttp2ResetFrame(0);
         Http2GoAwayFrame goaway = new DefaultHttp2GoAwayFrame(0);
@@ -428,7 +428,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
     // client-specific tests
     @Test
-    public void testEncodeEmptyFullRequest() throws Exception {
+    public void testEncodeEmptyFullRequest() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world")));
 
@@ -452,7 +452,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         EmbeddedChannel ch = new EmbeddedChannel(ctx.newHandler(ByteBufAllocator.DEFAULT),
                 new ChannelOutboundHandlerAdapter() {
                     @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                         if (msg instanceof Http2StreamFrame) {
                             frames.add((Http2StreamFrame) msg);
                             ctx.write(Unpooled.EMPTY_BUFFER, promise);
@@ -482,7 +482,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeNonEmptyFullRequest() throws Exception {
+    public void testEncodeNonEmptyFullRequest() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(
@@ -509,7 +509,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeEmptyFullRequestWithTrailers() throws Exception {
+    public void testEncodeEmptyFullRequestWithTrailers() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         FullHttpRequest request = new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.PUT, "/hello/world");
@@ -535,7 +535,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeNonEmptyFullRequestWithTrailers() throws Exception {
+    public void testEncodeNonEmptyFullRequestWithTrailers() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         FullHttpRequest request = new DefaultFullHttpRequest(
@@ -570,7 +570,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeRequestHeaders() throws Exception {
+    public void testEncodeRequestHeaders() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world");
         assertTrue(ch.writeOutbound(request));
@@ -588,7 +588,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeChunkAsClient() throws Exception {
+    public void testEncodeChunkAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         HttpContent content = new DefaultHttpContent(hello);
@@ -607,7 +607,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeEmptyEndAsClient() throws Exception {
+    public void testEncodeEmptyEndAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         LastHttpContent end = LastHttpContent.EMPTY_LAST_CONTENT;
         assertTrue(ch.writeOutbound(end));
@@ -625,7 +625,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeDataEndAsClient() throws Exception {
+    public void testEncodeDataEndAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         LastHttpContent end = new DefaultLastHttpContent(hello, true);
@@ -644,7 +644,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeTrailersAsClient() throws Exception {
+    public void testEncodeTrailersAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         LastHttpContent trailers = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, true);
         HttpHeaders headers = trailers.trailingHeaders();
@@ -660,7 +660,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testEncodeDataEndWithTrailersAsClient() throws Exception {
+    public void testEncodeDataEndWithTrailersAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         LastHttpContent trailers = new DefaultLastHttpContent(hello, true);
@@ -685,7 +685,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void decode100ContinueHttp2HeadersAsFullHttpResponse() throws Exception {
+    public void decode100ContinueHttp2HeadersAsFullHttpResponse() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         Http2Headers headers = new DefaultHttp2Headers();
         headers.scheme(HttpScheme.HTTP.name());
@@ -706,7 +706,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDecodeResponseHeaders() throws Exception {
+    public void testDecodeResponseHeaders() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         Http2Headers headers = new DefaultHttp2Headers();
         headers.scheme(HttpScheme.HTTP.name());
@@ -725,7 +725,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDecodeResponseHeadersWithContentLength() throws Exception {
+    public void testDecodeResponseHeadersWithContentLength() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         Http2Headers headers = new DefaultHttp2Headers();
         headers.scheme(HttpScheme.HTTP.name());
@@ -754,7 +754,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         testDecodeFullResponseHeaders(true);
     }
 
-    private void testDecodeFullResponseHeaders(boolean withStreamId) throws Exception {
+    private void testDecodeFullResponseHeaders(boolean withStreamId) {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         Http2Headers headers = new DefaultHttp2Headers();
         headers.scheme(HttpScheme.HTTP.name());
@@ -797,7 +797,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDecodeResponseTrailersAsClient() throws Exception {
+    public void testDecodeResponseTrailersAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         Http2Headers headers = new DefaultHttp2Headers();
         headers.set("key", "value");
@@ -817,7 +817,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDecodeDataAsClient() throws Exception {
+    public void testDecodeDataAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello)));
@@ -835,7 +835,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDecodeEndDataAsClient() throws Exception {
+    public void testDecodeEndDataAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello, true)));
@@ -853,7 +853,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testPassThroughOtherAsClient() throws Exception {
+    public void testPassThroughOtherAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         Http2ResetFrame reset = new DefaultHttp2ResetFrame(0);
         Http2GoAwayFrame goaway = new DefaultHttp2GoAwayFrame(0);

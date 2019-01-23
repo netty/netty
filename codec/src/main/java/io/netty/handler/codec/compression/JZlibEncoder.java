@@ -277,7 +277,7 @@ public class JZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) {
         if (finished) {
             out.writeBytes(in);
             return;
@@ -344,7 +344,7 @@ public class JZlibEncoder extends ZlibEncoder {
         ChannelFuture f = finishEncode(ctx, ctx.newPromise());
         f.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture f) throws Exception {
+            public void operationComplete(ChannelFuture f) {
                 ctx.close(promise);
             }
         });
@@ -404,7 +404,7 @@ public class JZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         this.ctx = ctx;
     }
 }

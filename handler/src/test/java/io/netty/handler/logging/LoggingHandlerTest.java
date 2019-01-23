@@ -112,7 +112,7 @@ public class LoggingHandlerTest {
     }
 
     @Test
-    public void shouldLogChannelWritabilityChanged() throws Exception {
+    public void shouldLogChannelWritabilityChanged() {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         // this is used to switch the channel to become unwritable
         channel.config().setWriteBufferLowWaterMark(5);
@@ -159,14 +159,14 @@ public class LoggingHandlerTest {
     }
 
     @Test
-    public void shouldLogChannelInactive() throws Exception {
+    public void shouldLogChannelInactive() {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.pipeline().fireChannelInactive();
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+INACTIVE$")));
     }
 
     @Test
-    public void shouldLogChannelBind() throws Exception {
+    public void shouldLogChannelBind() {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.bind(new InetSocketAddress(80));
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+BIND: 0.0.0.0/0.0.0.0:80$")));
@@ -174,7 +174,7 @@ public class LoggingHandlerTest {
 
     @Test
     @SuppressWarnings("RedundantStringConstructorCall")
-    public void shouldLogChannelUserEvent() throws Exception {
+    public void shouldLogChannelUserEvent() {
         String userTriggered = "iAmCustom!";
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.pipeline().fireUserEventTriggered(new String(userTriggered));
@@ -182,7 +182,7 @@ public class LoggingHandlerTest {
     }
 
     @Test
-    public void shouldLogChannelException() throws Exception {
+    public void shouldLogChannelException() {
         String msg = "illegalState";
         Throwable cause = new IllegalStateException(msg);
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
@@ -192,7 +192,7 @@ public class LoggingHandlerTest {
     }
 
     @Test
-    public void shouldLogDataWritten() throws Exception {
+    public void shouldLogDataWritten() {
         String msg = "hello";
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeOutbound(msg);
@@ -201,7 +201,7 @@ public class LoggingHandlerTest {
     }
 
     @Test
-    public void shouldLogNonByteBufDataRead() throws Exception {
+    public void shouldLogNonByteBufDataRead() {
         String msg = "hello";
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeInbound(msg);
@@ -213,7 +213,7 @@ public class LoggingHandlerTest {
     }
 
     @Test
-    public void shouldLogByteBufDataRead() throws Exception {
+    public void shouldLogByteBufDataRead() {
         ByteBuf msg = Unpooled.copiedBuffer("hello", CharsetUtil.UTF_8);
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeInbound(msg);
@@ -226,7 +226,7 @@ public class LoggingHandlerTest {
     }
 
     @Test
-    public void shouldLogEmptyByteBufDataRead() throws Exception {
+    public void shouldLogEmptyByteBufDataRead() {
         ByteBuf msg = Unpooled.EMPTY_BUFFER;
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeInbound(msg);
@@ -238,7 +238,7 @@ public class LoggingHandlerTest {
     }
 
     @Test
-    public void shouldLogByteBufHolderDataRead() throws Exception {
+    public void shouldLogByteBufHolderDataRead() {
         ByteBufHolder msg = new DefaultByteBufHolder(Unpooled.copiedBuffer("hello", CharsetUtil.UTF_8)) {
             @Override
             public String toString() {
@@ -257,7 +257,7 @@ public class LoggingHandlerTest {
     }
 
     @Test
-    public void shouldLogChannelReadComplete() throws Exception {
+    public void shouldLogChannelReadComplete() {
         ByteBuf msg = Unpooled.EMPTY_BUFFER;
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
         channel.writeInbound(msg);

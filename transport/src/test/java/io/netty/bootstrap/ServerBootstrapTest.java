@@ -49,7 +49,7 @@ public class ServerBootstrapTest {
               .childHandler(new ChannelInboundHandlerAdapter())
               .handler(new ChannelHandlerAdapter() {
                   @Override
-                  public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                  public void handlerAdded(ChannelHandlerContext ctx) {
                       try {
                           assertTrue(ctx.executor().inEventLoop());
                       } catch (Throwable cause) {
@@ -107,7 +107,7 @@ public class ServerBootstrapTest {
             if (channelInitializer) {
                 sb.handler(new ChannelInitializer<Channel>() {
                     @Override
-                    protected void initChannel(Channel ch) throws Exception {
+                    protected void initChannel(Channel ch) {
                         ch.pipeline().addLast(handler);
                     }
                 });

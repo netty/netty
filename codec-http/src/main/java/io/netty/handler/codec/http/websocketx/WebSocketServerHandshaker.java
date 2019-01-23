@@ -193,7 +193,7 @@ public abstract class WebSocketServerHandshaker {
         }
         channel.writeAndFlush(response).addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 if (future.isSuccess()) {
                     ChannelPipeline p = future.channel().pipeline();
                     p.remove(encoderName);
@@ -265,14 +265,14 @@ public abstract class WebSocketServerHandshaker {
         p.addAfter(ctx.name(), aggregatorName, new HttpObjectAggregator(8192));
         p.addAfter(aggregatorName, "handshaker", new SimpleChannelInboundHandler<FullHttpRequest>() {
             @Override
-            protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
+            protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) {
                 // Remove ourself and do the actual handshake
                 ctx.pipeline().remove(this);
                 handshake(channel, msg, responseHeaders, promise);
             }
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 // Remove ourself and fail the handshake promise.
                 ctx.pipeline().remove(this);
                 promise.tryFailure(cause);
@@ -280,7 +280,7 @@ public abstract class WebSocketServerHandshaker {
             }
 
             @Override
-            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            public void channelInactive(ChannelHandlerContext ctx) {
                 // Fail promise if Channel was closed
                 promise.tryFailure(CLOSED_CHANNEL_EXCEPTION);
                 ctx.fireChannelInactive();

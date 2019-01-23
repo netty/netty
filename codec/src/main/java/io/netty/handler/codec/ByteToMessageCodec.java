@@ -94,7 +94,7 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
      *
      * @param msg the message
      */
-    public boolean acceptOutboundMessage(Object msg) throws Exception {
+    public boolean acceptOutboundMessage(Object msg) {
         return outboundMsgMatcher.match(msg);
     }
 
@@ -139,12 +139,12 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
     /**
      * @see MessageToByteEncoder#encode(ChannelHandlerContext, Object, ByteBuf)
      */
-    protected abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out) throws Exception;
+    protected abstract void encode(ChannelHandlerContext ctx, I msg, ByteBuf out);
 
     /**
      * @see ByteToMessageDecoder#decode(ChannelHandlerContext, ByteBuf, List)
      */
-    protected abstract void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception;
+    protected abstract void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out);
 
     /**
      * @see ByteToMessageDecoder#decodeLast(ChannelHandlerContext, ByteBuf, List)

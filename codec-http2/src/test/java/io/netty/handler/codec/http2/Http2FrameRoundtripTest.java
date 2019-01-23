@@ -91,7 +91,7 @@ public class Http2FrameRoundtripTest {
     private final List<ByteBuf> needReleasing = new LinkedList<>();
 
     @Before
-    public void setup() throws Exception {
+    public void setup() {
         MockitoAnnotations.initMocks(this);
 
         when(ctx.alloc()).thenReturn(alloc);
@@ -99,19 +99,19 @@ public class Http2FrameRoundtripTest {
         when(ctx.channel()).thenReturn(channel);
         doAnswer(new Answer<ByteBuf>() {
             @Override
-            public ByteBuf answer(InvocationOnMock in) throws Throwable {
+            public ByteBuf answer(InvocationOnMock in) {
                 return Unpooled.buffer();
             }
         }).when(alloc).buffer();
         doAnswer(new Answer<ByteBuf>() {
             @Override
-            public ByteBuf answer(InvocationOnMock in) throws Throwable {
+            public ByteBuf answer(InvocationOnMock in) {
                 return Unpooled.buffer((Integer) in.getArguments()[0]);
             }
         }).when(alloc).buffer(anyInt());
         doAnswer(new Answer<ChannelPromise>() {
             @Override
-            public ChannelPromise answer(InvocationOnMock invocation) throws Throwable {
+            public ChannelPromise answer(InvocationOnMock invocation) {
                 return new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE);
             }
         }).when(ctx).newPromise();

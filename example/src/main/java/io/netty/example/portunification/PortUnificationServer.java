@@ -53,7 +53,7 @@ public final class PortUnificationServer {
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override
-                public void initChannel(SocketChannel ch) throws Exception {
+                public void initChannel(SocketChannel ch) {
                     ch.pipeline().addLast(new PortUnificationServerHandler(sslCtx));
                 }
             });

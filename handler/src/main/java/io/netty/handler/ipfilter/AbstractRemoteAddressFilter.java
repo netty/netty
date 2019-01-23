@@ -84,7 +84,7 @@ public abstract class AbstractRemoteAddressFilter<T extends SocketAddress> exten
      *
      * @return Return true if connections from this IP address and port should be accepted. False otherwise.
      */
-    protected abstract boolean accept(ChannelHandlerContext ctx, T remoteAddress) throws Exception;
+    protected abstract boolean accept(ChannelHandlerContext ctx, T remoteAddress);
 
     /**
      * This method is called if {@code remoteAddress} gets accepted by

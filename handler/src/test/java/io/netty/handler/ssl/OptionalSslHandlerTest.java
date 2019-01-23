@@ -45,7 +45,7 @@ public class OptionalSslHandlerTest {
     private ChannelPipeline pipeline;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         when(context.pipeline()).thenReturn(pipeline);
     }
 

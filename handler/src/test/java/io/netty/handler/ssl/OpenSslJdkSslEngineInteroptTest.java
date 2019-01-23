@@ -69,12 +69,12 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
 
     @Ignore /* Does the JDK support a "max certificate chain length"? */
     @Override
-    public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth() throws Exception {
+    public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth() {
     }
 
     @Ignore /* Does the JDK support a "max certificate chain length"? */
     @Override
-    public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() throws Exception {
+    public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() {
     }
 
     @Override

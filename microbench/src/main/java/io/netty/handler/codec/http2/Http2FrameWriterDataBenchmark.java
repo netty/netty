@@ -88,7 +88,7 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
     }
 
     @TearDown(Level.Trial)
-    public void teardown() throws Exception {
+    public void teardown() {
         if (payload != null) {
             payload.release();
         }

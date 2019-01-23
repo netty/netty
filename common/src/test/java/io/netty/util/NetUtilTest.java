@@ -700,7 +700,7 @@ public class NetUtilTest {
     }
 
     @Test
-    public void testBytesToIpAddress() throws UnknownHostException {
+    public void testBytesToIpAddress() {
         for (Entry<String, String> e : validIpV4Hosts.entrySet()) {
             assertEquals(e.getKey(), bytesToIpAddress(createByteArrayFromIpAddressString(e.getKey())));
             assertEquals(e.getKey(), bytesToIpAddress(validIpV4ToBytes(e.getKey())));

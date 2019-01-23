@@ -24,7 +24,7 @@ public interface BooleanSupplier {
      * @return a boolean value.
      * @throws Exception If an exception occurs.
      */
-    boolean get() throws Exception;
+    boolean get();
 
     /**
      * A supplier which always returns {@code false} and never throws.

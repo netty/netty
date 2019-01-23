@@ -35,7 +35,7 @@ public class MessageAggregatorTest {
         int value;
 
         @Override
-        public void read(ChannelHandlerContext ctx) throws Exception {
+        public void read(ChannelHandlerContext ctx) {
             value++;
             ctx.read();
         }
@@ -49,7 +49,7 @@ public class MessageAggregatorTest {
         }
 
         @Override
-        protected ByteBufHolder beginAggregation(ByteBufHolder start, ByteBuf content) throws Exception {
+        protected ByteBufHolder beginAggregation(ByteBufHolder start, ByteBuf content) {
             return start.replace(content);
         }
     }

@@ -57,7 +57,7 @@ public class HttpPostRequestDecoderTest {
         testBinaryStreamUpload(false);
     }
 
-    private static void testBinaryStreamUpload(boolean withSpace) throws Exception {
+    private static void testBinaryStreamUpload(boolean withSpace) {
         final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
         final String contentTypeValue;
         if (withSpace) {
@@ -106,7 +106,7 @@ public class HttpPostRequestDecoderTest {
 
     // See https://github.com/netty/netty/issues/1089
     @Test
-    public void testFullHttpRequestUpload() throws Exception {
+    public void testFullHttpRequestUpload() {
         final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
 
         final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
@@ -185,7 +185,7 @@ public class HttpPostRequestDecoderTest {
 
     // See https://github.com/netty/netty/issues/2542
     @Test
-    public void testQuotedBoundary() throws Exception {
+    public void testQuotedBoundary() {
         final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
 
         final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
@@ -276,7 +276,7 @@ public class HttpPostRequestDecoderTest {
 
     // See https://github.com/netty/netty/issues/2305
     @Test
-    public void testChunkCorrect() throws Exception {
+    public void testChunkCorrect() {
        String payload = "town=794649819&town=784444184&town=794649672&town=794657800&town=" +
                 "794655734&town=794649377&town=794652136&town=789936338&town=789948986&town=" +
                 "789949643&town=786358677&town=794655880&town=786398977&town=789901165&town=" +
@@ -414,7 +414,7 @@ public class HttpPostRequestDecoderTest {
     }
 
     @Test
-    public void testMultipartRequestWithFileInvalidCharset() throws Exception {
+    public void testMultipartRequestWithFileInvalidCharset() {
         final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
         final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
             "http://localhost");
@@ -444,7 +444,7 @@ public class HttpPostRequestDecoderTest {
     }
 
     @Test
-    public void testMultipartRequestWithFieldInvalidCharset() throws Exception {
+    public void testMultipartRequestWithFieldInvalidCharset() {
         final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
         final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
             "http://localhost");
@@ -477,7 +477,7 @@ public class HttpPostRequestDecoderTest {
     }
 
     @Test
-    public void testFormEncodeIncorrect() throws Exception {
+    public void testFormEncodeIncorrect() {
         LastHttpContent content = new DefaultLastHttpContent(
                 Unpooled.copiedBuffer("project=netty&&project=netty", CharsetUtil.US_ASCII));
         DefaultHttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
@@ -565,7 +565,7 @@ public class HttpPostRequestDecoderTest {
 
     // https://github.com/netty/netty/pull/7265
     @Test
-    public void testDecodeMalformedNotEncodedContentDispositionFieldParameters() throws Exception {
+    public void testDecodeMalformedNotEncodedContentDispositionFieldParameters() {
 
         final String boundary = "74e78d11b0214bdcbc2f86491eeb4902";
 
@@ -597,7 +597,7 @@ public class HttpPostRequestDecoderTest {
 
     // https://github.com/netty/netty/pull/7265
     @Test
-    public void testDecodeMalformedBadCharsetContentDispositionFieldParameters() throws Exception {
+    public void testDecodeMalformedBadCharsetContentDispositionFieldParameters() {
 
         final String boundary = "74e78d11b0214bdcbc2f86491eeb4902";
 

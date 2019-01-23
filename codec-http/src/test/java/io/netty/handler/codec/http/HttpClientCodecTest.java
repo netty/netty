@@ -128,7 +128,7 @@ public class HttpClientCodecTest {
             sb.channel(NioServerSocketChannel.class);
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                     // Don't use the HttpServerCodec, because we don't want to have content-length or anything added.
                     ch.pipeline().addLast(new HttpRequestDecoder(4096, 8192, true));
                     ch.pipeline().addLast(new HttpObjectAggregator(4096));
@@ -148,14 +148,14 @@ public class HttpClientCodecTest {
                             "Content-Type: text/html\r\n\r\n").getBytes(CharsetUtil.ISO_8859_1)))
                                     .addListener(new ChannelFutureListener() {
                                 @Override
-                                public void operationComplete(ChannelFuture future) throws Exception {
+                                public void operationComplete(ChannelFuture future) {
                                     assertTrue(future.isSuccess());
                                     sChannel.writeAndFlush(Unpooled.wrappedBuffer(
                                             "<html><body>hello half closed!</body></html>\r\n"
                                             .getBytes(CharsetUtil.ISO_8859_1)))
                                             .addListener(new ChannelFutureListener() {
                                         @Override
-                                        public void operationComplete(ChannelFuture future) throws Exception {
+                                        public void operationComplete(ChannelFuture future) {
                                             assertTrue(future.isSuccess());
                                             sChannel.shutdownOutput();
                                         }
@@ -173,7 +173,7 @@ public class HttpClientCodecTest {
             cb.option(ChannelOption.ALLOW_HALF_CLOSURE, true);
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new HttpClientCodec(4096, 8192, true, true));
                     ch.pipeline().addLast(new HttpObjectAggregator(4096));
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<FullHttpResponse>() {
@@ -211,7 +211,7 @@ public class HttpClientCodecTest {
         testAfterConnect(false);
     }
 
-    private static void testAfterConnect(final boolean parseAfterConnect) throws Exception {
+    private static void testAfterConnect(final boolean parseAfterConnect) {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpClientCodec(4096, 8192, true, true, parseAfterConnect));
 
         Consumer connectResponseConsumer = new Consumer();

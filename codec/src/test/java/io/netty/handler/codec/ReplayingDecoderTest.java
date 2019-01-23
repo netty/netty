@@ -75,7 +75,7 @@ public class ReplayingDecoderTest {
     }
 
     @Test
-    public void testReplacement() throws Exception {
+    public void testReplacement() {
         EmbeddedChannel ch = new EmbeddedChannel(new BloatedLineDecoder());
 
         // "AB" should be forwarded to LineDecoder by BloatedLineDecoder.
@@ -98,14 +98,14 @@ public class ReplayingDecoderTest {
 
     private static final class BloatedLineDecoder extends ChannelInboundHandlerAdapter {
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             ctx.pipeline().replace(this, "less-bloated", new LineDecoder());
             ctx.pipeline().fireChannelRead(msg);
         }
     }
 
     @Test
-    public void testSingleDecode() throws Exception {
+    public void testSingleDecode() {
         LineDecoder decoder = new LineDecoder();
         decoder.setSingleDecode(true);
         EmbeddedChannel ch = new EmbeddedChannel(decoder);
@@ -141,7 +141,7 @@ public class ReplayingDecoderTest {
             private boolean removed;
 
             @Override
-            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
                 assertFalse(removed);
                 in.readByte();
                 ctx.pipeline().remove(this);
@@ -163,7 +163,7 @@ public class ReplayingDecoderTest {
             private boolean removed;
 
             @Override
-            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
                 assertFalse(removed);
                 ctx.pipeline().remove(this);
 
@@ -189,7 +189,7 @@ public class ReplayingDecoderTest {
             private boolean removed;
 
             @Override
-            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
                 assertFalse(removed);
                 in.readByte();
                 ctx.pipeline().remove(this);
@@ -214,7 +214,7 @@ public class ReplayingDecoderTest {
         EmbeddedChannel channel = new EmbeddedChannel(new ReplayingDecoder<Integer>() {
 
             @Override
-            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
                 int readable = in.readableBytes();
                 assertTrue(readable > 0);
                 in.skipBytes(readable);
@@ -222,23 +222,23 @@ public class ReplayingDecoderTest {
             }
 
             @Override
-            protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
                 assertFalse(in.isReadable());
                 out.add("data");
             }
         }, new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            public void channelInactive(ChannelHandlerContext ctx) {
                 queue.add(3);
             }
 
             @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 queue.add(1);
             }
 
             @Override
-            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            public void channelReadComplete(ChannelHandlerContext ctx) {
                 if (!ctx.channel().isActive()) {
                     queue.add(2);
                 }
@@ -261,7 +261,7 @@ public class ReplayingDecoderTest {
             private boolean decoded;
 
             @Override
-            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
                 if (!(in instanceof ReplayingDecoderByteBuf)) {
                     error.set(new AssertionError("in must be of type " + ReplayingDecoderByteBuf.class
                             + " but was " + in.getClass()));
@@ -292,13 +292,13 @@ public class ReplayingDecoderTest {
     public void handlerRemovedWillNotReleaseBufferIfDecodeInProgress() {
         EmbeddedChannel channel = new EmbeddedChannel(new ReplayingDecoder<Integer>() {
             @Override
-            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
                 ctx.pipeline().remove(this);
                 assertTrue(in.refCnt() != 0);
             }
 
             @Override
-            protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+            protected void handlerRemoved0(ChannelHandlerContext ctx) {
                 assertCumulationReleased(internalBuffer());
             }
         });

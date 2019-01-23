@@ -25,7 +25,7 @@ import static org.junit.Assert.*;
 public class TypeParameterMatcherTest {
 
     @Test
-    public void testConcreteClass() throws Exception {
+    public void testConcreteClass() {
         TypeParameterMatcher m = TypeParameterMatcher.find(new TypeQ(), TypeX.class, "A");
         assertFalse(m.match(new Object()));
         assertFalse(m.match(new A()));
@@ -39,12 +39,12 @@ public class TypeParameterMatcherTest {
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testUnsolvedParameter() throws Exception {
+    public void testUnsolvedParameter() {
         TypeParameterMatcher.find(new TypeQ(), TypeX.class, "B");
     }
 
     @Test
-    public void testAnonymousClass() throws Exception {
+    public void testAnonymousClass() {
         TypeParameterMatcher m = TypeParameterMatcher.find(new TypeQ<BBB>() { }, TypeX.class, "B");
         assertFalse(m.match(new Object()));
         assertFalse(m.match(new A()));
@@ -58,7 +58,7 @@ public class TypeParameterMatcherTest {
     }
 
     @Test
-    public void testAbstractClass() throws Exception {
+    public void testAbstractClass() {
         TypeParameterMatcher m = TypeParameterMatcher.find(new TypeQ(), TypeX.class, "C");
         assertFalse(m.match(new Object()));
         assertFalse(m.match(new A()));
@@ -95,7 +95,7 @@ public class TypeParameterMatcherTest {
     public static class CC extends C { }
 
     @Test
-    public void testInaccessibleClass() throws Exception {
+    public void testInaccessibleClass() {
         TypeParameterMatcher m = TypeParameterMatcher.find(new U<T>() { }, U.class, "E");
         assertFalse(m.match(new Object()));
         assertTrue(m.match(new T()));
@@ -105,14 +105,14 @@ public class TypeParameterMatcherTest {
     private static class U<E> { E a; }
 
     @Test
-    public void testArrayAsTypeParam() throws Exception {
+    public void testArrayAsTypeParam() {
         TypeParameterMatcher m = TypeParameterMatcher.find(new U<byte[]>() { }, U.class, "E");
         assertFalse(m.match(new Object()));
         assertTrue(m.match(new byte[1]));
     }
 
     @Test
-    public void testRawType() throws Exception {
+    public void testRawType() {
         TypeParameterMatcher m = TypeParameterMatcher.find(new U() { }, U.class, "E");
         assertTrue(m.match(new Object()));
     }
@@ -122,7 +122,7 @@ public class TypeParameterMatcherTest {
     }
 
     @Test
-    public void testInnerClass() throws Exception {
+    public void testInnerClass() {
         TypeParameterMatcher m = TypeParameterMatcher.find(new V<String>().u, U.class, "E");
         assertTrue(m.match(new Object()));
     }
@@ -136,7 +136,7 @@ public class TypeParameterMatcherTest {
     }
 
     @Test(expected = IllegalStateException.class)
-    public void testErasure() throws Exception {
+    public void testErasure() {
         TypeParameterMatcher m = TypeParameterMatcher.find(new X<String, Date>(), W.class, "E");
         assertTrue(m.match(new Date()));
         assertFalse(m.match(new Object()));

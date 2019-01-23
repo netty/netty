@@ -278,7 +278,7 @@ public class FastThreadLocal<V> {
     /**
      * Returns the initial value for this thread-local variable.
      */
-    protected V initialValue() throws Exception {
+    protected V initialValue() {
         return null;
     }
 
@@ -287,5 +287,5 @@ public class FastThreadLocal<V> {
      * is not guaranteed to be called when the `Thread` completes which means you can not depend on this for
      * cleanup of the resources in the case of `Thread` completion.
      */
-    protected void onRemoval(@SuppressWarnings("UnusedParameters") V value) throws Exception { }
+    protected void onRemoval(@SuppressWarnings("UnusedParameters") V value) { }
 }

@@ -208,7 +208,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
             final ChannelPromise promise = channel.newPromise();
             regFuture.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     // Directly obtain the cause and do a null check so we only need one volatile read in case of a
                     // failure.
                     Throwable cause = future.cause();
@@ -256,7 +256,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
             // Wait until the name resolution is finished.
             resolveFuture.addListener(new FutureListener<SocketAddress>() {
                 @Override
-                public void operationComplete(Future<SocketAddress> future) throws Exception {
+                public void operationComplete(Future<SocketAddress> future) {
                     if (future.cause() != null) {
                         channel.close();
                         promise.setFailure(future.cause());

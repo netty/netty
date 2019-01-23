@@ -103,7 +103,7 @@ public abstract class AbstractDecoderTest extends AbstractCompressionTest {
         testDecompressionOfBatchedFlow(WRAPPED_BYTES_LARGE, data);
     }
 
-    protected void testDecompression(final ByteBuf expected, final ByteBuf data) throws Exception {
+    protected void testDecompression(final ByteBuf expected, final ByteBuf data) {
         assertTrue(channel.writeInbound(data));
 
         ByteBuf decompressed = readDecompressed(channel);
@@ -112,7 +112,7 @@ public abstract class AbstractDecoderTest extends AbstractCompressionTest {
         decompressed.release();
     }
 
-    protected void testDecompressionOfBatchedFlow(final ByteBuf expected, final ByteBuf data) throws Exception {
+    protected void testDecompressionOfBatchedFlow(final ByteBuf expected, final ByteBuf data) {
         final int compressedLength = data.readableBytes();
         int written = 0, length = rand.nextInt(100);
         while (written + length < compressedLength) {

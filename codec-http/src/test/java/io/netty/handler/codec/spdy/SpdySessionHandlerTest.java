@@ -328,7 +328,7 @@ public class SpdySessionHandlerTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             // Initiate 4 new streams
             int streamId = server ? 2 : 1;
             SpdySynStreamFrame spdySynStreamFrame =
@@ -349,7 +349,7 @@ public class SpdySessionHandlerTest {
         }
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             if (msg instanceof SpdySynStreamFrame) {
 
                 SpdySynStreamFrame spdySynStreamFrame = (SpdySynStreamFrame) msg;

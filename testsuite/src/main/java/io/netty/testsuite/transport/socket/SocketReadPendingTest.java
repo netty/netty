@@ -94,7 +94,7 @@ public class SocketReadPendingTest extends AbstractSocketTest {
         volatile Channel channel;
 
         @Override
-        protected void initChannel(Channel ch) throws Exception {
+        protected void initChannel(Channel ch) {
             channel = ch;
             ch.pipeline().addLast(readPendingHandler);
             channelInitLatch.countDown();
@@ -107,7 +107,7 @@ public class SocketReadPendingTest extends AbstractSocketTest {
         private final CountDownLatch latch2 = new CountDownLatch(2);
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             ReferenceCountUtil.release(msg);
             if (count.incrementAndGet() == 1) {
                 // Call read the first time, to ensure it is not reset the second time.
@@ -116,7 +116,7 @@ public class SocketReadPendingTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) {
             latch.countDown();
             latch2.countDown();
         }

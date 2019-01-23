@@ -24,7 +24,7 @@ import org.junit.Test;
 public class MqttConnectPayloadTest {
 
     @Test
-    public void testNullWillMessage() throws Exception {
+    public void testNullWillMessage() {
         String clientIdentifier = "clientIdentifier";
         String willTopic = "willTopic";
         byte[] willMessage = null;
@@ -38,7 +38,7 @@ public class MqttConnectPayloadTest {
     }
 
     @Test
-    public void testNullPassword() throws Exception {
+    public void testNullPassword() {
         String clientIdentifier = "clientIdentifier";
         String willTopic = "willTopic";
         byte[] willMessage = "willMessage".getBytes(CharsetUtil.UTF_8);
@@ -52,7 +52,7 @@ public class MqttConnectPayloadTest {
     }
 
     @Test
-    public void testBuilderNullPassword() throws Exception {
+    public void testBuilderNullPassword() {
         MqttMessageBuilders.ConnectBuilder builder = new MqttMessageBuilders.ConnectBuilder();
         builder.password((String) null);
 
@@ -71,7 +71,7 @@ public class MqttConnectPayloadTest {
     }
 
     @Test
-    public void testBuilderNullWillMessage() throws Exception {
+    public void testBuilderNullWillMessage() {
         MqttMessageBuilders.ConnectBuilder builder = new MqttMessageBuilders.ConnectBuilder();
         builder.willMessage((String) null);
 

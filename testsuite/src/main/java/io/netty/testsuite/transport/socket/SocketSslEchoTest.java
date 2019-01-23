@@ -256,7 +256,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             @SuppressWarnings("deprecation")
-            public void initChannel(Channel sch) throws Exception {
+            public void initChannel(Channel sch) {
                 serverChannel = sch;
 
                 if (serverUsesDelegatedTaskExecutor) {
@@ -277,7 +277,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             @SuppressWarnings("deprecation")
-            public void initChannel(Channel sch) throws Exception {
+            public void initChannel(Channel sch) {
                 clientChannel = sch;
 
                 if (clientUsesDelegatedTaskExecutor) {
@@ -453,14 +453,14 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             if (!autoRead) {
                 ctx.read();
             }
         }
 
         @Override
-        public final void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public final void channelReadComplete(ChannelHandlerContext ctx) {
             try {
                 ctx.flush();
             } finally {
@@ -471,7 +471,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public final void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        public final void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
             if (evt instanceof SslHandshakeCompletionEvent) {
                 SslHandshakeCompletionEvent handshakeEvt = (SslHandshakeCompletionEvent) evt;
                 if (handshakeEvt.cause() != null) {
@@ -484,7 +484,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             if (logger.isWarnEnabled()) {
                 logger.warn("Unexpected exception from the client side:", cause);
             }
@@ -504,7 +504,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 
@@ -528,12 +528,12 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public final void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        public final void channelRegistered(ChannelHandlerContext ctx) {
             renegoFuture = null;
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 

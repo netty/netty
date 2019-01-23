@@ -253,7 +253,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
         }
 
         @Override
-        public void handle(long ssl, byte[] keyTypeBytes, byte[][] asn1DerEncodedPrincipals) throws Exception {
+        public void handle(long ssl, byte[] keyTypeBytes, byte[][] asn1DerEncodedPrincipals) {
             final ReferenceCountedOpenSslEngine engine = engineMap.get(ssl);
             try {
                 final Set<String> keyTypesSet = supportedClientKeyTypes(keyTypeBytes);

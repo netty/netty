@@ -207,8 +207,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     private abstract class BaseDecoder {
-        public abstract void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception;
-        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception { }
+        public abstract void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out);
+        public void handlerRemoved(ChannelHandlerContext ctx) { }
         public void channelActive(ChannelHandlerContext ctx) throws Exception { }
 
         public void channelInactive(ChannelHandlerContext ctx) throws Exception {
@@ -246,7 +246,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
 
         @Override
-        public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
             try {
                 if (ctx.channel().isActive() && readClientPrefaceString(in) && verifyFirstFrameIsSettings(in)) {
                     // After the preface is read, it is time to hand over control to the post initialized decoder.
@@ -274,7 +274,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
          * Releases the {@code clientPrefaceString}. Any active streams will be left in the open.
          */
         @Override
-        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        public void handlerRemoved(ChannelHandlerContext ctx) {
             cleanup();
         }
 
@@ -385,7 +385,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     private final class FrameDecoder extends BaseDecoder {
         @Override
-        public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
             try {
                 decoder.decodeFrame(ctx, in, out);
             } catch (Throwable e) {
@@ -451,23 +451,23 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
         ctx.bind(localAddress, promise);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) throws Exception {
+                        ChannelPromise promise) {
         ctx.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.disconnect(promise);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
         promise = promise.unvoid();
         // Avoid NotYetConnectedException
         if (!ctx.channel().isActive()) {
@@ -501,27 +501,27 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.register(promise);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.deregister(promise);
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         ctx.read();
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         ctx.write(msg, promise);
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         // Trigger flush after read on the assumption that flush is cheap if there is nothing to write and that
         // for flow-control the read may release window that causes data to be written that can now be flushed.
         try {
@@ -608,7 +608,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         } else {
             future.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     checkCloseConnection(future);
                 }
             });
@@ -752,7 +752,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         } else {
             future.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     closeConnectionOnError(ctx, future);
                 }
             });
@@ -797,7 +797,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         } else {
             future.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     processRstStreamWriteResult(ctx, stream, future);
                 }
             });
@@ -833,7 +833,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         } else {
             future.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     processGoAwayWriteResult(ctx, lastStreamId, errorCode, debugData, future);
                 }
             });
@@ -947,7 +947,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
 
         @Override
-        public void operationComplete(ChannelFuture sentGoAwayFuture) throws Exception {
+        public void operationComplete(ChannelFuture sentGoAwayFuture) {
             if (timeoutTask != null) {
                 timeoutTask.cancel(false);
             }

@@ -67,7 +67,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(Channel sch) throws Exception {
+            public void initChannel(Channel sch) {
                 sch.pipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
                 sch.pipeline().addAfter("decoder", "handler", sh);
             }
@@ -76,7 +76,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         cb.option(ChannelOption.AUTO_READ, autoRead);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(Channel sch) throws Exception {
+            public void initChannel(Channel sch) {
                 sch.pipeline().addLast("decoder", new FixedLengthFrameDecoder(1024));
                 sch.pipeline().addAfter("decoder", "handler", ch);
             }
@@ -149,7 +149,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             channel = ctx.channel();
             if (!autoRead) {
                 ctx.read();
@@ -157,7 +157,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
             assertEquals(1024, msg.readableBytes());
 
             byte[] actual = new byte[msg.readableBytes()];
@@ -176,7 +176,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) {
             try {
                 ctx.flush();
             } finally {
@@ -187,7 +187,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             if (exception.compareAndSet(null, cause)) {
                 ctx.close();
             }

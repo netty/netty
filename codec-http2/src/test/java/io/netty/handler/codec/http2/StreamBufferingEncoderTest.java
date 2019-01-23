@@ -132,7 +132,7 @@ public class StreamBufferingEncoderTest {
         when(executor.inEventLoop()).thenReturn(true);
         doAnswer(new Answer<ChannelPromise>() {
             @Override
-            public ChannelPromise answer(InvocationOnMock invocation) throws Throwable {
+            public ChannelPromise answer(InvocationOnMock invocation) {
                 return newPromise();
             }
         }).when(ctx).newPromise();
@@ -391,7 +391,7 @@ public class StreamBufferingEncoderTest {
     }
 
     @Test
-    public void bufferUntilSettingsReceived() throws Http2Exception {
+    public void bufferUntilSettingsReceived() {
         int initialLimit = SMALLEST_MAX_CONCURRENT_STREAMS;
         int numStreams = initialLimit * 2;
         for (int ix = 0, nextStreamId = 3; ix < numStreams; ++ix, nextStreamId += 2) {
@@ -433,7 +433,7 @@ public class StreamBufferingEncoderTest {
     }
 
     @Test
-    public void exhaustedStreamsDoNotBuffer() throws Http2Exception {
+    public void exhaustedStreamsDoNotBuffer() {
         // Write the highest possible stream ID for the client.
         // This will cause the next stream ID to be negative.
         encoderWriteHeaders(Integer.MAX_VALUE, newPromise());
@@ -468,7 +468,7 @@ public class StreamBufferingEncoderTest {
     }
 
     @Test
-    public void closeShouldCancelAllBufferedStreams() throws Http2Exception {
+    public void closeShouldCancelAllBufferedStreams() {
         encoder.writeSettingsAck(ctx, newPromise());
         connection.local().maxActiveStreams(0);
 
@@ -521,7 +521,7 @@ public class StreamBufferingEncoderTest {
     private Answer<ChannelFuture> successAnswer() {
         return new Answer<ChannelFuture>() {
             @Override
-            public ChannelFuture answer(InvocationOnMock invocation) throws Throwable {
+            public ChannelFuture answer(InvocationOnMock invocation) {
                 for (Object a : invocation.getArguments()) {
                     ReferenceCountUtil.safeRelease(a);
                 }

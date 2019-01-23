@@ -39,12 +39,12 @@ public final class SmtpRequestEncoder extends MessageToMessageEncoder<Object> {
     private boolean contentExpected;
 
     @Override
-    public boolean acceptOutboundMessage(Object msg) throws Exception {
+    public boolean acceptOutboundMessage(Object msg) {
         return msg instanceof SmtpRequest || msg instanceof SmtpContent;
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) {
         if (msg instanceof SmtpRequest) {
             final SmtpRequest req = (SmtpRequest) msg;
             if (contentExpected) {

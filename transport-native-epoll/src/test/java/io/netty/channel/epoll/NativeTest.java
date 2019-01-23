@@ -28,7 +28,7 @@ import static io.netty.channel.unix.NativeInetAddress.address;
 public class NativeTest {
 
     @Test
-    public void testAddressIpv4() throws Exception {
+    public void testAddressIpv4() {
         InetSocketAddress inetAddress = new InetSocketAddress(NetUtil.LOCALHOST4, 9999);
         byte[] bytes = new byte[8];
         ByteBuffer buffer = ByteBuffer.wrap(bytes);
@@ -38,7 +38,7 @@ public class NativeTest {
     }
 
     @Test
-    public void testAddressIpv6() throws Exception {
+    public void testAddressIpv6() {
         Inet6Address address = NetUtil.LOCALHOST6;
         InetSocketAddress inetAddress = new InetSocketAddress(address, 9999);
         byte[] bytes = new byte[24];

@@ -95,7 +95,7 @@ public class CombinedChannelDuplexHandlerTest {
 
         ChannelInboundHandler inboundHandler = new ChannelInboundHandlerAdapter() {
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 assertSame(exception, cause);
                 queue.add(this);
                 ctx.fireExceptionCaught(cause);
@@ -103,7 +103,7 @@ public class CombinedChannelDuplexHandlerTest {
         };
         ChannelOutboundHandler outboundHandler = new ChannelOutboundHandlerAdapter() {
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 assertSame(exception, cause);
                 queue.add(this);
                 ctx.fireExceptionCaught(cause);
@@ -111,7 +111,7 @@ public class CombinedChannelDuplexHandlerTest {
         };
         ChannelInboundHandler lastHandler = new ChannelInboundHandlerAdapter() {
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 assertSame(exception, cause);
                 queue.add(this);
             }
@@ -133,57 +133,57 @@ public class CombinedChannelDuplexHandlerTest {
 
         ChannelInboundHandler inboundHandler = new ChannelInboundHandlerAdapter() {
             @Override
-            public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            public void handlerAdded(ChannelHandlerContext ctx) {
                 queue.add(Event.HANDLER_ADDED);
             }
 
             @Override
-            public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+            public void handlerRemoved(ChannelHandlerContext ctx) {
                 queue.add(Event.HANDLER_REMOVED);
             }
 
             @Override
-            public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+            public void channelRegistered(ChannelHandlerContext ctx) {
                 queue.add(Event.REGISTERED);
             }
 
             @Override
-            public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+            public void channelUnregistered(ChannelHandlerContext ctx) {
                 queue.add(Event.UNREGISTERED);
             }
 
             @Override
-            public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            public void channelActive(ChannelHandlerContext ctx) {
                 queue.add(Event.ACTIVE);
             }
 
             @Override
-            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            public void channelInactive(ChannelHandlerContext ctx) {
                 queue.add(Event.INACTIVE);
             }
 
             @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 queue.add(Event.CHANNEL_READ);
             }
 
             @Override
-            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            public void channelReadComplete(ChannelHandlerContext ctx) {
                 queue.add(Event.CHANNEL_READ_COMPLETE);
             }
 
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 queue.add(Event.USER_EVENT_TRIGGERED);
             }
 
             @Override
-            public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                 queue.add(Event.CHANNEL_WRITABILITY_CHANGED);
             }
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 queue.add(Event.EXCEPTION_CAUGHT);
             }
         };
@@ -228,54 +228,53 @@ public class CombinedChannelDuplexHandlerTest {
         ChannelInboundHandler inboundHandler = new ChannelInboundHandlerAdapter();
         ChannelOutboundHandler outboundHandler = new ChannelOutboundHandlerAdapter() {
             @Override
-            public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            public void handlerAdded(ChannelHandlerContext ctx) {
                 queue.add(Event.HANDLER_ADDED);
             }
 
             @Override
-            public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+            public void handlerRemoved(ChannelHandlerContext ctx) {
                 queue.add(Event.HANDLER_REMOVED);
             }
 
             @Override
-            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise)
-                    throws Exception {
+            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
                 queue.add(Event.BIND);
             }
 
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                                SocketAddress localAddress, ChannelPromise promise) throws Exception {
+                                SocketAddress localAddress, ChannelPromise promise) {
                 queue.add(Event.CONNECT);
             }
 
             @Override
-            public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
                 queue.add(Event.DISCONNECT);
             }
 
             @Override
-            public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
                 queue.add(Event.CLOSE);
             }
 
             @Override
-            public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
                 queue.add(Event.DEREGISTER);
             }
 
             @Override
-            public void read(ChannelHandlerContext ctx) throws Exception {
+            public void read(ChannelHandlerContext ctx) {
                 queue.add(Event.READ);
             }
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 queue.add(Event.WRITE);
             }
 
             @Override
-            public void flush(ChannelHandlerContext ctx) throws Exception {
+            public void flush(ChannelHandlerContext ctx) {
                 queue.add(Event.FLUSH);
             }
         };
@@ -327,33 +326,33 @@ public class CombinedChannelDuplexHandlerTest {
         ChannelOutboundHandler outboundHandler = new ChannelOutboundHandlerAdapter() {
             @Override
             public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
-                             ChannelPromise promise) throws Exception {
+                             ChannelPromise promise) {
                 promise.setSuccess();
             }
 
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                                SocketAddress localAddress, ChannelPromise promise) throws Exception {
+                                SocketAddress localAddress, ChannelPromise promise) {
                 promise.setSuccess();
             }
 
             @Override
-            public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
                 promise.setSuccess();
             }
 
             @Override
-            public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
                 promise.setSuccess();
             }
 
             @Override
-            public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
                 promise.setSuccess();
             }
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 promise.setSuccess();
             }
         };

@@ -126,7 +126,7 @@ public class MqttCodecTest {
     }
 
     @Test
-    public void testConnectMessageNoPassword() throws Exception {
+    public void testConnectMessageNoPassword() {
         final MqttConnectMessage message = createConnectMessage(MqttVersion.MQTT_3_1_1, null, PASSWORD);
 
         try {

@@ -45,7 +45,7 @@ public class NonStickyEventExecutorGroupTest {
     }
 
     @Parameterized.Parameters(name = "{index}: maxTaskExecutePerRun = {0}")
-    public static Collection<Object[]> data() throws Exception {
+    public static Collection<Object[]> data() {
         List<Object[]> params = new ArrayList<>();
         params.add(new Object[] {64});
         params.add(new Object[] {256});

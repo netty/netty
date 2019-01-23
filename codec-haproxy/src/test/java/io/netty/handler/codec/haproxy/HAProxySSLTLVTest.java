@@ -26,7 +26,7 @@ import static org.junit.Assert.*;
 public class HAProxySSLTLVTest {
 
     @Test
-    public void testClientBitmask() throws Exception {
+    public void testClientBitmask() {
 
         // 0b0000_0111
         final byte allClientsEnabled = 0x7;

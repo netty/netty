@@ -46,7 +46,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
     private static final int HIGHEST_INVALID_VALUE_CHAR_MASK = ~15;
     private static final ByteProcessor HEADER_NAME_VALIDATOR = new ByteProcessor() {
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             validateHeaderNameElement(value);
             return true;
         }

@@ -71,7 +71,7 @@ public class DnsResponseTest {
     };
 
     @Test
-    public void readResponseTest() throws Exception {
+    public void readResponseTest() {
         EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsResponseDecoder());
         for (byte[] p: packets) {
             ByteBuf packet = embedder.alloc().buffer(512).writeBytes(p);
@@ -96,7 +96,7 @@ public class DnsResponseTest {
     public ExpectedException exception = ExpectedException.none();
 
     @Test
-    public void readMalformedResponseTest() throws Exception {
+    public void readMalformedResponseTest() {
         EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsResponseDecoder());
         ByteBuf packet = embedder.alloc().buffer(512).writeBytes(malformedLoopPacket);
         exception.expect(CorruptedFrameException.class);

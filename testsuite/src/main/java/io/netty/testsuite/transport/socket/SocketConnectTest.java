@@ -47,7 +47,7 @@ public class SocketConnectTest extends AbstractSocketTest {
             final Promise<InetSocketAddress> localAddressPromise = ImmediateEventExecutor.INSTANCE.newPromise();
             serverChannel = sb.childHandler(new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        public void channelActive(ChannelHandlerContext ctx) {
                             localAddressPromise.setSuccess((InetSocketAddress) ctx.channel().localAddress());
                         }
                     }).bind().syncUninterruptibly().channel();
@@ -88,12 +88,12 @@ public class SocketConnectTest extends AbstractSocketTest {
 
             cb.handler(new ChannelInboundHandlerAdapter() {
                 @Override
-                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                public void channelActive(ChannelHandlerContext ctx) {
                     events.add(0);
                 }
 
                 @Override
-                public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                public void channelInactive(ChannelHandlerContext ctx) {
                     events.add(1);
                 }
             });

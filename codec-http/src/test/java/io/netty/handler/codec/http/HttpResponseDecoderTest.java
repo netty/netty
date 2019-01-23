@@ -147,7 +147,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testClosureWithoutContentLength1() throws Exception {
+    public void testClosureWithoutContentLength1() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\n\r\n", CharsetUtil.US_ASCII));
 
@@ -170,7 +170,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testClosureWithoutContentLength2() throws Exception {
+    public void testClosureWithoutContentLength2() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
 
         // Write the partial response.
@@ -202,7 +202,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testPrematureClosureWithChunkedEncoding1() throws Exception {
+    public void testPrematureClosureWithChunkedEncoding1() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(
                 Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n", CharsetUtil.US_ASCII));
@@ -221,7 +221,7 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
-    public void testPrematureClosureWithChunkedEncoding2() throws Exception {
+    public void testPrematureClosureWithChunkedEncoding2() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
 
         // Write the partial response.

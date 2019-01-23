@@ -200,7 +200,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
     }
 
     @Override
-    public final void handlerAdded0(ChannelHandlerContext ctx) throws Exception {
+    public final void handlerAdded0(ChannelHandlerContext ctx) {
         if (ctx.executor() != ctx.channel().eventLoop()) {
             throw new IllegalStateException("EventExecutor must be EventLoop of Channel");
         }
@@ -382,7 +382,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
      * Notifies any child streams of the read completion.
      */
     @Override
-    public final void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public final void channelReadComplete(ChannelHandlerContext ctx) {
         try {
             onChannelReadComplete(ctx);
         } finally {

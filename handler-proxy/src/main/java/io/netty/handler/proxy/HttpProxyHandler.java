@@ -125,24 +125,24 @@ public final class HttpProxyHandler extends ProxyHandler {
     }
 
     @Override
-    protected void addCodec(ChannelHandlerContext ctx) throws Exception {
+    protected void addCodec(ChannelHandlerContext ctx) {
         ChannelPipeline p = ctx.pipeline();
         String name = ctx.name();
         p.addBefore(name, null, codec);
     }
 
     @Override
-    protected void removeEncoder(ChannelHandlerContext ctx) throws Exception {
+    protected void removeEncoder(ChannelHandlerContext ctx) {
         codec.removeOutboundHandler();
     }
 
     @Override
-    protected void removeDecoder(ChannelHandlerContext ctx) throws Exception {
+    protected void removeDecoder(ChannelHandlerContext ctx) {
         codec.removeInboundHandler();
     }
 
     @Override
-    protected Object newInitialMessage(ChannelHandlerContext ctx) throws Exception {
+    protected Object newInitialMessage(ChannelHandlerContext ctx) {
         InetSocketAddress raddr = destinationAddress();
 
         String hostString = HttpUtil.formatHostnameForHttp(raddr);

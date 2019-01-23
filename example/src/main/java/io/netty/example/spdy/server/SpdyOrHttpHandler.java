@@ -55,7 +55,7 @@ public class SpdyOrHttpHandler extends ApplicationProtocolNegotiationHandler {
         throw new IllegalStateException("unknown protocol: " + protocol);
     }
 
-    private static void configureSpdy(ChannelHandlerContext ctx, SpdyVersion version) throws Exception {
+    private static void configureSpdy(ChannelHandlerContext ctx, SpdyVersion version) {
         ChannelPipeline p = ctx.pipeline();
         p.addLast(new SpdyFrameCodec(version));
         p.addLast(new SpdySessionHandler(version, true));
@@ -65,7 +65,7 @@ public class SpdyOrHttpHandler extends ApplicationProtocolNegotiationHandler {
         p.addLast(new SpdyServerHandler());
     }
 
-    private static void configureHttp1(ChannelHandlerContext ctx) throws Exception {
+    private static void configureHttp1(ChannelHandlerContext ctx) {
         ChannelPipeline p = ctx.pipeline();
         p.addLast(new HttpServerCodec());
         p.addLast(new HttpObjectAggregator(MAX_CONTENT_LENGTH));

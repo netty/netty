@@ -66,7 +66,7 @@ public class EpollSpliceTest {
         bs2.childOption(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED);
         bs2.group(group).childHandler(new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+            public void channelActive(final ChannelHandlerContext ctx) {
                 ctx.channel().config().setAutoRead(false);
                 Bootstrap bs = new Bootstrap();
                 bs.option(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED);
@@ -74,7 +74,7 @@ public class EpollSpliceTest {
                 bs.channel(EpollSocketChannel.class);
                 bs.group(ctx.channel().eventLoop()).handler(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void channelActive(ChannelHandlerContext context) throws Exception {
+                    public void channelActive(ChannelHandlerContext context) {
                         final EpollSocketChannel ch = (EpollSocketChannel) ctx.channel();
                         final EpollSocketChannel ch2 = (EpollSocketChannel) context.channel();
                         // We are splicing two channels together, at this point we have a tcp proxy which handles all
@@ -83,7 +83,7 @@ public class EpollSpliceTest {
                         // Integer.MAX_VALUE will splice infinitly.
                         ch.spliceTo(ch2, Integer.MAX_VALUE).addListener(new ChannelFutureListener() {
                             @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
+                            public void operationComplete(ChannelFuture future) {
                                 if (!future.isSuccess()) {
                                     future.channel().close();
                                 }
@@ -92,7 +92,7 @@ public class EpollSpliceTest {
                         // Trigger multiple splices to see if partial splicing works as well.
                         ch2.spliceTo(ch, SPLICE_LEN).addListener(new ChannelFutureListener() {
                             @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
+                            public void operationComplete(ChannelFuture future) {
                                 if (!future.isSuccess()) {
                                     future.channel().close();
                                 } else {
@@ -104,19 +104,19 @@ public class EpollSpliceTest {
                     }
 
                     @Override
-                    public void channelInactive(ChannelHandlerContext context) throws Exception {
+                    public void channelInactive(ChannelHandlerContext context) {
                         context.close();
                     }
                 });
                 bs.connect(sc.localAddress()).addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             ctx.close();
                         } else {
                             future.channel().closeFuture().addListener(new ChannelFutureListener() {
                                 @Override
-                                public void operationComplete(ChannelFuture future) throws Exception {
+                                public void operationComplete(ChannelFuture future) {
                                     ctx.close();
                                 }
                             });
@@ -252,13 +252,12 @@ public class EpollSpliceTest {
         volatile int counter;
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx)
-                throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             channel = ctx.channel();
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 
@@ -275,13 +274,13 @@ public class EpollSpliceTest {
         }
 
         @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public void channelReadComplete(ChannelHandlerContext ctx) {
             ctx.flush();
         }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx,
-                                    Throwable cause) throws Exception {
+                                    Throwable cause) {
             if (exception.compareAndSet(null, cause)) {
                 cause.printStackTrace();
                 ctx.close();
@@ -312,7 +311,7 @@ public class EpollSpliceTest {
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx,
-                                    Throwable cause) throws Exception {
+                                    Throwable cause) {
             if (exception.compareAndSet(null, cause)) {
                 cause.printStackTrace();
                 ctx.close();

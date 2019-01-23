@@ -56,7 +56,7 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
     }
 
     @Override
-    public void initChannel(SocketChannel ch) throws Exception {
+    public void initChannel(SocketChannel ch) {
         final Http2Connection connection = new DefaultHttp2Connection(false);
         connectionHandler = new HttpToHttp2ConnectionHandlerBuilder()
                 .frameListener(new DelegatingDecompressorFrameListener(
@@ -131,7 +131,7 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
      */
     private final class UpgradeRequestHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             DefaultFullHttpRequest upgradeRequest =
                     new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
             ctx.writeAndFlush(upgradeRequest);
@@ -150,7 +150,7 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
      */
     private static class UserEventLogger extends ChannelInboundHandlerAdapter {
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
             System.out.println("User Event Triggered: " + evt);
             ctx.fireUserEventTriggered(evt);
         }

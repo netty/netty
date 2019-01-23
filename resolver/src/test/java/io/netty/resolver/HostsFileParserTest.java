@@ -92,7 +92,7 @@ public class HostsFileParserTest {
                                             CharsetUtil.UTF_8, CharsetUtil.ISO_8859_1, unicodeCharset));
     }
 
-    private static void testParseFile(HostsFileEntries entries) throws IOException {
+    private static void testParseFile(HostsFileEntries entries) {
         Map<String, Inet4Address> inet4Entries = entries.inet4Entries();
         Map<String, Inet6Address> inet6Entries = entries.inet6Entries();
 

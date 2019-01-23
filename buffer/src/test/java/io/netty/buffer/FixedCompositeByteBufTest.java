@@ -123,7 +123,7 @@ public class FixedCompositeByteBufTest {
     }
 
     @Test(expected = ReadOnlyBufferException.class)
-    public void testSetChar() throws IOException {
+    public void testSetChar() {
         ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
         try {
             buf.setChar(0, 'b');
@@ -133,7 +133,7 @@ public class FixedCompositeByteBufTest {
     }
 
     @Test(expected = ReadOnlyBufferException.class)
-    public void testSetDouble() throws IOException {
+    public void testSetDouble() {
         ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
         try {
             buf.setDouble(0, 1);
@@ -143,7 +143,7 @@ public class FixedCompositeByteBufTest {
     }
 
     @Test(expected = ReadOnlyBufferException.class)
-    public void testSetFloat() throws IOException {
+    public void testSetFloat() {
         ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
         try {
             buf.setFloat(0, 1);
@@ -153,7 +153,7 @@ public class FixedCompositeByteBufTest {
     }
 
     @Test(expected = ReadOnlyBufferException.class)
-    public void testSetInt() throws IOException {
+    public void testSetInt() {
         ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
         try {
             buf.setInt(0, 1);
@@ -173,7 +173,7 @@ public class FixedCompositeByteBufTest {
     }
 
     @Test(expected = ReadOnlyBufferException.class)
-    public void testSetMedium() throws IOException {
+    public void testSetMedium() {
         ByteBuf buf = newBuffer(wrappedBuffer(new byte[8]));
         try {
             buf.setMedium(0, 1);

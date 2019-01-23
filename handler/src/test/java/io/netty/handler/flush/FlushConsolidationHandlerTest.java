@@ -156,7 +156,7 @@ public class FlushConsolidationHandlerTest {
         return new EmbeddedChannel(
                 new ChannelOutboundHandlerAdapter() {
                     @Override
-                    public void flush(ChannelHandlerContext ctx) throws Exception {
+                    public void flush(ChannelHandlerContext ctx) {
                         flushCount.incrementAndGet();
                         ctx.flush();
                     }
@@ -164,7 +164,7 @@ public class FlushConsolidationHandlerTest {
                 new FlushConsolidationHandler(EXPLICIT_FLUSH_AFTER_FLUSHES, consolidateWhenNoReadInProgress),
                 new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         ctx.writeAndFlush(msg);
                     }
                 });

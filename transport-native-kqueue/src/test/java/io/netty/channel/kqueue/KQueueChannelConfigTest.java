@@ -71,7 +71,7 @@ public class KQueueChannelConfigTest {
 
     // See https://github.com/netty/netty/issues/7159
     @Test
-    public void testSoLingerNoAssertError() throws Exception {
+    public void testSoLingerNoAssertError() {
         EventLoopGroup group = new KQueueEventLoopGroup(1);
 
         try {

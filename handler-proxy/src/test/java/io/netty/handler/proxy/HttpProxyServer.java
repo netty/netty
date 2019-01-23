@@ -54,7 +54,7 @@ final class HttpProxyServer extends ProxyServer {
     }
 
     @Override
-    protected void configure(SocketChannel ch) throws Exception {
+    protected void configure(SocketChannel ch) {
         ChannelPipeline p = ch.pipeline();
         switch (testMode) {
         case INTERMEDIARY:
@@ -110,7 +110,7 @@ final class HttpProxyServer extends ProxyServer {
         private SocketAddress intermediaryDestination;
 
         @Override
-        protected boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg) throws Exception {
+        protected boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg) {
             FullHttpRequest req = (FullHttpRequest) msg;
             FullHttpResponse res;
             if (!authenticate(ctx, req)) {
@@ -139,7 +139,7 @@ final class HttpProxyServer extends ProxyServer {
     private final class HttpTerminalHandler extends TerminalHandler {
 
         @Override
-        protected boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg) throws Exception {
+        protected boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg) {
             FullHttpRequest req = (FullHttpRequest) msg;
             FullHttpResponse res;
             boolean sendGreeting = false;

@@ -126,7 +126,7 @@ final class HpackEncoder {
     }
 
     private void encodeHeadersIgnoreMaxHeaderListSize(ByteBuf out, Http2Headers headers,
-                                                      SensitivityDetector sensitivityDetector) throws Http2Exception {
+                                                      SensitivityDetector sensitivityDetector) {
         for (Map.Entry<CharSequence, CharSequence> header : headers) {
             CharSequence name = header.getKey();
             CharSequence value = header.getValue();

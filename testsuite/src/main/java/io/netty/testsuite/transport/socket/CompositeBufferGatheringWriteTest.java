@@ -54,10 +54,10 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             final AtomicReference<Object> clientReceived = new AtomicReference<>();
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        public void channelActive(ChannelHandlerContext ctx) {
                             ctx.writeAndFlush(newCompositeBuffer(ctx.alloc()))
                                     .addListener(ChannelFutureListener.CLOSE);
                         }
@@ -66,7 +66,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             });
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         private ByteBuf aggregator;
                         @Override
@@ -86,7 +86,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                         }
 
                         @Override
-                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                             // IOException is fine as it will also close the channel and may just be a connection reset.
                             if (!(cause instanceof IOException)) {
                                 clientReceived.set(cause);
@@ -95,7 +95,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                         }
 
                         @Override
-                        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                        public void channelInactive(ChannelHandlerContext ctx) {
                             if (clientReceived.compareAndSet(null, aggregator)) {
                                 try {
                                     assertEquals(EXPECTED_BYTES, aggregator.readableBytes());
@@ -164,10 +164,10 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             sb.childOption(ChannelOption.SO_SNDBUF, soSndBuf)
               .childHandler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        public void channelActive(ChannelHandlerContext ctx) {
                             compositeBufferPartialWriteDoesNotCorruptDataInitServerConfig(ctx.channel().config(),
                                     soSndBuf);
                             // First single write
@@ -196,7 +196,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                         }
 
                         @Override
-                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                             // IOException is fine as it will also close the channel and may just be a connection reset.
                             if (!(cause instanceof IOException)) {
                                 clientReceived.set(cause);
@@ -208,7 +208,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             });
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
+                protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         private ByteBuf aggregator;
                         @Override
@@ -228,7 +228,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                         }
 
                         @Override
-                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                             // IOException is fine as it will also close the channel and may just be a connection reset.
                             if (!(cause instanceof IOException)) {
                                 clientReceived.set(cause);
@@ -237,7 +237,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
                         }
 
                         @Override
-                        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                        public void channelInactive(ChannelHandlerContext ctx) {
                             if (clientReceived.compareAndSet(null, aggregator)) {
                                 try {
                                     assertEquals(expectedContent.readableBytes(), aggregator.readableBytes());

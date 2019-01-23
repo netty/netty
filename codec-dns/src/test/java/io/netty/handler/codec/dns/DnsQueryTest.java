@@ -32,7 +32,7 @@ import static org.junit.Assert.assertThat;
 public class DnsQueryTest {
 
     @Test
-    public void writeQueryTest() throws Exception {
+    public void writeQueryTest() {
         InetSocketAddress addr = SocketUtils.socketAddress("8.8.8.8", 53);
         EmbeddedChannel embedder = new EmbeddedChannel(new DatagramDnsQueryEncoder());
         List<DnsQuery> queries = new ArrayList<>(5);

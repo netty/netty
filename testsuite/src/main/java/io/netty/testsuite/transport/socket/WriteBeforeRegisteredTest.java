@@ -29,7 +29,7 @@ public class WriteBeforeRegisteredTest extends AbstractClientSocketTest {
         run();
     }
 
-    public void testWriteBeforeConnect(Bootstrap cb) throws Throwable {
+    public void testWriteBeforeConnect(Bootstrap cb) {
         TestHandler h = new TestHandler();
         SocketChannel ch = null;
         try {
@@ -44,7 +44,7 @@ public class WriteBeforeRegisteredTest extends AbstractClientSocketTest {
 
     private static class TestHandler extends ChannelInboundHandlerAdapter {
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             cause.printStackTrace();
         }
     }

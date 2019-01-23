@@ -35,7 +35,7 @@ public class SnappyTest {
     }
 
     @Test
-    public void testDecodeLiteral() throws Exception {
+    public void testDecodeLiteral() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             0x05, // preamble length
             0x04 << 2, // literal tag + length
@@ -56,7 +56,7 @@ public class SnappyTest {
     }
 
     @Test
-    public void testDecodeCopyWith1ByteOffset() throws Exception {
+    public void testDecodeCopyWith1ByteOffset() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             0x0a, // preamble length
             0x04 << 2, // literal tag + length
@@ -79,7 +79,7 @@ public class SnappyTest {
     }
 
     @Test(expected = DecompressionException.class)
-    public void testDecodeCopyWithTinyOffset() throws Exception {
+    public void testDecodeCopyWithTinyOffset() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             0x0b, // preamble length
             0x04 << 2, // literal tag + length
@@ -97,7 +97,7 @@ public class SnappyTest {
     }
 
     @Test(expected = DecompressionException.class)
-    public void testDecodeCopyWithOffsetBeforeChunk() throws Exception {
+    public void testDecodeCopyWithOffsetBeforeChunk() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             0x0a, // preamble length
             0x04 << 2, // literal tag + length
@@ -115,7 +115,7 @@ public class SnappyTest {
     }
 
     @Test(expected = DecompressionException.class)
-    public void testDecodeWithOverlyLongPreamble() throws Exception {
+    public void testDecodeWithOverlyLongPreamble() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             -0x80, -0x80, -0x80, -0x80, 0x7f, // preamble length
             0x04 << 2, // literal tag + length
@@ -131,7 +131,7 @@ public class SnappyTest {
     }
 
     @Test
-    public void encodeShortTextIsLiteral() throws Exception {
+    public void encodeShortTextIsLiteral() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             0x6e, 0x65, 0x74, 0x74, 0x79
         });

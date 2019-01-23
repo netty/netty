@@ -55,7 +55,7 @@ public class LocalTransportThreadModelTest {
           .channel(LocalServerChannel.class)
           .childHandler(new ChannelInitializer<LocalChannel>() {
               @Override
-              public void initChannel(LocalChannel ch) throws Exception {
+              public void initChannel(LocalChannel ch) {
                   ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                       @Override
                       public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -371,12 +371,12 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        public void handlerRemoved(ChannelHandlerContext ctx) {
             removalThreadNames.add(Thread.currentThread().getName());
         }
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             inboundThreadNames.add(Thread.currentThread().getName());
             if (!discard) {
                 ctx.fireChannelRead(msg);
@@ -384,7 +384,7 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             outboundThreadNames.add(Thread.currentThread().getName());
             ctx.write(msg, promise);
         }
@@ -409,7 +409,7 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -427,7 +427,7 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             Assert.assertSame(t, Thread.currentThread());
 
             // Don't let the write request go to the server-side channel - just swallow.
@@ -467,7 +467,7 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -487,7 +487,7 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             Assert.assertSame(t, Thread.currentThread());
 
             ByteBuf out = ctx.alloc().buffer(4);
@@ -519,7 +519,7 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -535,7 +535,7 @@ public class LocalTransportThreadModelTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             Assert.assertSame(t, Thread.currentThread());
 
             int actual = (Integer) msg;
@@ -565,7 +565,7 @@ public class LocalTransportThreadModelTest {
         private volatile Thread t;
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             Thread t = this.t;
             if (t == null) {
                 this.t = Thread.currentThread();
@@ -580,7 +580,7 @@ public class LocalTransportThreadModelTest {
 
         @Override
         public void write(
-                ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             Assert.assertSame(t, Thread.currentThread());
 
             int actual = (Integer) msg;

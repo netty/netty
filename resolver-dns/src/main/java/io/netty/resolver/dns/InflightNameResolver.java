@@ -83,7 +83,7 @@ final class InflightNameResolver<T> implements NameResolver<T> {
             } else {
                 earlyPromise.addListener(new FutureListener<U>() {
                     @Override
-                    public void operationComplete(Future<U> f) throws Exception {
+                    public void operationComplete(Future<U> f) {
                         transferResult(f, promise);
                     }
                 });
@@ -105,7 +105,7 @@ final class InflightNameResolver<T> implements NameResolver<T> {
                 } else {
                     promise.addListener(new FutureListener<U>() {
                         @Override
-                        public void operationComplete(Future<U> f) throws Exception {
+                        public void operationComplete(Future<U> f) {
                             resolveMap.remove(inetHost);
                         }
                     });

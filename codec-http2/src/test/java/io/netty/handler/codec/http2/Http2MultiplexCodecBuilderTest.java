@@ -74,12 +74,12 @@ public class Http2MultiplexCodecBuilderTest {
                 .group(group)
                 .childHandler(new ChannelInitializer<Channel>() {
                     @Override
-                    protected void initChannel(Channel ch) throws Exception {
+                    protected void initChannel(Channel ch) {
                         serverConnectedChannel = ch;
                         ch.pipeline().addLast(new Http2MultiplexCodecBuilder(true, new ChannelInitializer<Channel>() {
 
                             @Override
-                            protected void initChannel(Channel ch) throws Exception {
+                            protected void initChannel(Channel ch) {
                                 ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                                     private boolean writable;
 
@@ -114,7 +114,7 @@ public class Http2MultiplexCodecBuilderTest {
                 .group(group)
                 .handler(new Http2MultiplexCodecBuilder(false, new ChannelInitializer<Channel>() {
                     @Override
-                    protected void initChannel(Channel ch) throws Exception {
+                    protected void initChannel(Channel ch) {
                         Assert.fail("Should not be called for outbound streams");
                     }
                 }).build());
@@ -128,7 +128,7 @@ public class Http2MultiplexCodecBuilderTest {
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         if (clientChannel != null) {
             clientChannel.close().syncUninterruptibly();
             clientChannel = null;
@@ -217,12 +217,12 @@ public class Http2MultiplexCodecBuilderTest {
     private static class SharableLastInboundHandler extends LastInboundHandler {
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        public void channelActive(ChannelHandlerContext ctx) {
             ctx.fireChannelActive();
         }
 
         @Override
-        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        public void channelInactive(ChannelHandlerContext ctx) {
             ctx.fireChannelInactive();
         }
     }

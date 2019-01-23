@@ -117,7 +117,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
 
             promise.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     if (future.isSuccess()) {
                         for (WebSocketServerExtension extension : validExtensions) {
                             WebSocketExtensionDecoder decoder = extension.newExtensionDecoder();

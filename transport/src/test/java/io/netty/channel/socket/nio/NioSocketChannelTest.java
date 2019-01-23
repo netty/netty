@@ -73,7 +73,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             sb.childOption(ChannelOption.SO_SNDBUF, 1024);
             sb.childHandler(new ChannelInboundHandlerAdapter() {
                 @Override
-                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                public void channelActive(ChannelHandlerContext ctx) {
                     // Write a large enough data so that it is split into two loops.
                     futures.add(ctx.write(
                             ctx.alloc().buffer().writeZero(1048576)).addListener(ChannelFutureListener.CLOSE));
@@ -127,13 +127,13 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             sb.group(group).channel(NioServerSocketChannel.class);
             sb.childHandler(new ChannelInboundHandlerAdapter() {
                 @Override
-                public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+                public void channelActive(final ChannelHandlerContext ctx) {
                     // Trigger a gathering write by writing two buffers.
                     ctx.write(Unpooled.wrappedBuffer(new byte[] { 'a' }));
                     ChannelFuture f = ctx.write(Unpooled.wrappedBuffer(new byte[] { 'b' }));
                     f.addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             // This message must be flushed
                             ctx.writeAndFlush(Unpooled.wrappedBuffer(new byte[]{'c'}));
                         }
@@ -177,7 +177,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
              .childOption(ChannelOption.SO_KEEPALIVE, true)
              .childHandler(new ChannelInitializer<Channel>() {
                  @Override
-                 protected void initChannel(final Channel ch) throws Exception {
+                 protected void initChannel(final Channel ch) {
                      ChannelPipeline pipeline = ch.pipeline();
                      pipeline.addLast(new SimpleChannelInboundHandler<ByteBuf>() {
                          @Override
@@ -187,7 +187,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                          }
 
                          @Override
-                         public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+                         public void channelActive(final ChannelHandlerContext ctx) {
                              final EventLoop loop = group.next();
                              deregister(ctx, loop);
                          }

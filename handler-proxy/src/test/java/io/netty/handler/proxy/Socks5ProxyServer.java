@@ -61,7 +61,7 @@ final class Socks5ProxyServer extends ProxyServer {
     }
 
     @Override
-    protected void configure(SocketChannel ch) throws Exception {
+    protected void configure(SocketChannel ch) {
         ChannelPipeline p = ch.pipeline();
         switch (testMode) {
         case INTERMEDIARY:
@@ -111,7 +111,7 @@ final class Socks5ProxyServer extends ProxyServer {
         private SocketAddress intermediaryDestination;
 
         @Override
-        protected boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg) throws Exception {
+        protected boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg) {
             if (!authenticated) {
                 authenticated = authenticate(ctx, msg);
                 return false;
@@ -143,7 +143,7 @@ final class Socks5ProxyServer extends ProxyServer {
         private boolean authenticated;
 
         @Override
-        protected boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg) throws Exception {
+        protected boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg) {
             if (!authenticated) {
                 authenticated = authenticate(ctx, msg);
                 return false;

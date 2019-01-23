@@ -589,7 +589,7 @@ public class HAProxyMessageDecoderTest {
     }
 
     @Test
-    public void testV2WithSslTLVs() throws Exception {
+    public void testV2WithSslTLVs() {
         ch = new EmbeddedChannel(new HAProxyMessageDecoder());
 
         final byte[] bytes = {

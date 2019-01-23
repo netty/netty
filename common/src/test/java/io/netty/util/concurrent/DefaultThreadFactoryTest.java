@@ -121,7 +121,7 @@ public class DefaultThreadFactoryTest {
         runStickyThreadGroupTest(
                 new Callable<DefaultThreadFactory>() {
                     @Override
-                    public DefaultThreadFactory call() throws Exception {
+                    public DefaultThreadFactory call() {
                         return new DefaultThreadFactory("test", false, Thread.NORM_PRIORITY, sticky);
                     }
                 },
@@ -176,7 +176,7 @@ public class DefaultThreadFactoryTest {
             runStickyThreadGroupTest(
                     new Callable<DefaultThreadFactory>() {
                         @Override
-                        public DefaultThreadFactory call() throws Exception {
+                        public DefaultThreadFactory call() {
                             return new DefaultThreadFactory("test");
                         }
                     },

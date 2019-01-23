@@ -30,12 +30,12 @@ public class StompSubframeAggregatorTest {
     private EmbeddedChannel channel;
 
     @Before
-    public void setup() throws Exception {
+    public void setup() {
         channel = new EmbeddedChannel(new StompSubframeDecoder(), new StompSubframeAggregator(100000));
     }
 
     @After
-    public void teardown() throws Exception {
+    public void teardown() {
         Assert.assertFalse(channel.finish());
     }
 

@@ -706,23 +706,23 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
         ctx.bind(localAddress, promise);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) throws Exception {
+                        ChannelPromise promise) {
         ctx.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.register(promise);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.deregister(promise);
     }
 
@@ -739,7 +739,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         if (!handshakePromise.isDone()) {
             readDuringHandshake = true;
         }
@@ -752,7 +752,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (!(msg instanceof ByteBuf)) {
             UnsupportedMessageTypeException exception = new UnsupportedMessageTypeException(msg, ByteBuf.class);
             ReferenceCountUtil.safeRelease(msg);
@@ -766,7 +766,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
+    public void flush(ChannelHandlerContext ctx) {
         // Do not encrypt the first write request if this handler is
         // created with startTLS flag turned on.
         if (startTls && !sentFirstMessage) {
@@ -1060,7 +1060,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         if (ignoreException(cause)) {
             // It is safe to ignore the 'connection reset by peer' or
             // 'broken pipe' error after sending close_notify.
@@ -1256,7 +1256,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         // Discard bytes of the cumulation buffer if needed.
         discardSomeReadBytes();
 
@@ -1795,7 +1795,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // Cancel the handshake timeout when handshake is finished.
         localHandshakePromise.addListener(new FutureListener<Channel>() {
             @Override
-            public void operationComplete(Future<Channel> f) throws Exception {
+            public void operationComplete(Future<Channel> f) {
                 timeoutFuture.cancel(false);
             }
         });
@@ -1810,7 +1810,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Issues an initial TLS handshake once connected when used in client-mode
      */
     @Override
-    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+    public void channelActive(final ChannelHandlerContext ctx) {
         if (!startTls) {
             startHandshakeProcessing();
         }
@@ -1851,8 +1851,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // Close the connection if close_notify is sent in time.
         flushFuture.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture f)
-                    throws Exception {
+            public void operationComplete(ChannelFuture f) {
                 if (timeoutFuture != null) {
                     timeoutFuture.cancel(false);
                 }
@@ -1885,7 +1884,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     // Do the close once the we received the close_notify.
                     sslClosePromise.addListener(new FutureListener<Channel>() {
                         @Override
-                        public void operationComplete(Future<Channel> future) throws Exception {
+                        public void operationComplete(Future<Channel> future) {
                             if (closeNotifyReadTimeoutFuture != null) {
                                 closeNotifyReadTimeoutFuture.cancel(false);
                             }

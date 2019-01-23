@@ -188,7 +188,7 @@ public class CorsHandlerTest {
         final CorsConfig config = forOrigin("http://localhost:8888")
                 .preflightResponseHeader("GenHeader", new Callable<String>() {
                     @Override
-                    public String call() throws Exception {
+                    public String call() {
                         return "generatedValue";
                     }
                 }).build();
@@ -356,7 +356,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightRequestWithConnectionKeepAliveShouldStayOpen() throws Exception {
+    public void preflightRequestWithConnectionKeepAliveShouldStayOpen() {
 
         final CorsConfig config = forOrigin("http://localhost:8888").build();
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
@@ -372,7 +372,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightRequestWithoutConnectionShouldStayOpen() throws Exception {
+    public void preflightRequestWithoutConnectionShouldStayOpen() {
 
         final CorsConfig config = forOrigin("http://localhost:8888").build();
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
@@ -388,7 +388,7 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightRequestWithConnectionCloseShouldClose() throws Exception {
+    public void preflightRequestWithConnectionCloseShouldClose() {
 
         final CorsConfig config = forOrigin("http://localhost:8888").build();
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
@@ -518,7 +518,7 @@ public class CorsHandlerTest {
 
     private static class EchoHandler extends SimpleChannelInboundHandler<Object> {
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, Object msg) {
             ctx.writeAndFlush(new DefaultFullHttpResponse(HTTP_1_1, OK, true, true));
         }
     }

@@ -175,7 +175,7 @@ public class HttpRequestEncoderTest {
         testEmptyContents(false, true);
     }
 
-    private void testEmptyContents(boolean chunked, boolean trailers) throws Exception {
+    private void testEmptyContents(boolean chunked, boolean trailers) {
         HttpRequestEncoder encoder = new HttpRequestEncoder();
         EmbeddedChannel channel = new EmbeddedChannel(encoder);
         HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
@@ -211,7 +211,7 @@ public class HttpRequestEncoderTest {
      * when a certain initialization order of {@link EmptyHttpHeaders} would occur.
      */
     @Test
-    public void testForChunkedRequestNpe() throws Exception {
+    public void testForChunkedRequestNpe() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestEncoder());
         assertTrue(channel.writeOutbound(new CustomHttpRequest()));
         assertTrue(channel.writeOutbound(new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII))));

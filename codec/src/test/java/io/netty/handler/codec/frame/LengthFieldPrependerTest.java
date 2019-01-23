@@ -33,12 +33,12 @@ public class LengthFieldPrependerTest {
     private ByteBuf msg;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         msg = copiedBuffer("A", CharsetUtil.ISO_8859_1);
     }
 
     @Test
-    public void testPrependLength() throws Exception {
+    public void testPrependLength() {
         final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4));
         ch.writeOutbound(msg);
         ByteBuf buf = ch.readOutbound();
@@ -52,7 +52,7 @@ public class LengthFieldPrependerTest {
     }
 
     @Test
-    public void testPrependLengthIncludesLengthFieldLength() throws Exception {
+    public void testPrependLengthIncludesLengthFieldLength() {
         final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4, true));
         ch.writeOutbound(msg);
         ByteBuf buf = ch.readOutbound();
@@ -66,7 +66,7 @@ public class LengthFieldPrependerTest {
     }
 
     @Test
-    public void testPrependAdjustedLength() throws Exception {
+    public void testPrependAdjustedLength() {
         final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4, -1));
         ch.writeOutbound(msg);
         ByteBuf buf = ch.readOutbound();
@@ -80,7 +80,7 @@ public class LengthFieldPrependerTest {
     }
 
     @Test
-    public void testAdjustedLengthLessThanZero() throws Exception {
+    public void testAdjustedLengthLessThanZero() {
         final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(4, -2));
         try {
             ch.writeOutbound(msg);
@@ -91,7 +91,7 @@ public class LengthFieldPrependerTest {
     }
 
     @Test
-    public void testPrependLengthInLittleEndian() throws Exception {
+    public void testPrependLengthInLittleEndian() {
         final EmbeddedChannel ch = new EmbeddedChannel(new LengthFieldPrepender(ByteOrder.LITTLE_ENDIAN, 4, 0, false));
         ch.writeOutbound(msg);
         ByteBuf buf = ch.readOutbound();

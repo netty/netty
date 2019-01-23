@@ -132,19 +132,19 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(pushStream.id()).thenReturn(PUSH_STREAM_ID);
         doAnswer(new Answer<Boolean>() {
             @Override
-            public Boolean answer(InvocationOnMock in) throws Throwable {
+            public Boolean answer(InvocationOnMock in) {
                 return (headersReceivedState.get() & STATE_RECV_HEADERS) != 0;
             }
         }).when(stream).isHeadersReceived();
         doAnswer(new Answer<Boolean>() {
             @Override
-            public Boolean answer(InvocationOnMock in) throws Throwable {
+            public Boolean answer(InvocationOnMock in) {
                 return (headersReceivedState.get() & STATE_RECV_TRAILERS) != 0;
             }
         }).when(stream).isTrailersReceived();
         doAnswer(new Answer<Http2Stream>() {
             @Override
-            public Http2Stream answer(InvocationOnMock in) throws Throwable {
+            public Http2Stream answer(InvocationOnMock in) {
                 boolean isInformational = in.getArgument(0);
                 if (isInformational) {
                     return stream;
@@ -393,13 +393,13 @@ public class DefaultHttp2ConnectionDecoderTest {
         final AtomicInteger unprocessed = new AtomicInteger(data.readableBytes() + padding);
         doAnswer(new Answer<Integer>() {
             @Override
-            public Integer answer(InvocationOnMock in) throws Throwable {
+            public Integer answer(InvocationOnMock in) {
                 return unprocessed.get();
             }
         }).when(localFlow).unconsumedBytes(eq(stream));
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
+            public Void answer(InvocationOnMock in) {
                 int delta = (Integer) in.getArguments()[1];
                 int newValue = unprocessed.addAndGet(-delta);
                 if (newValue < 0) {
@@ -761,7 +761,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     private void mockFlowControl(final int processedBytes) throws Http2Exception {
         doAnswer(new Answer<Integer>() {
             @Override
-            public Integer answer(InvocationOnMock invocation) throws Throwable {
+            public Integer answer(InvocationOnMock invocation) {
                 return processedBytes;
             }
         }).when(listener).onDataRead(any(ChannelHandlerContext.class), anyInt(),

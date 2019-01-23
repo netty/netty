@@ -49,7 +49,7 @@ public class HttpContentDecoderTest {
     };
 
     @Test
-    public void testBinaryDecompression() throws Exception {
+    public void testBinaryDecompression() {
         // baseline test: zlib library and test helpers work correctly.
         byte[] helloWorld = gzDecompress(GZ_HELLO_WORLD);
         assertEquals(HELLO_WORLD.length(), helloWorld.length);
@@ -276,7 +276,7 @@ public class HttpContentDecoderTest {
         final AtomicReference<FullHttpRequest> secondRequestRef = new AtomicReference<>();
         EmbeddedChannel channel = new EmbeddedChannel(decoder, aggregator, new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 if (msg instanceof FullHttpRequest) {
                     if (!secondRequestRef.compareAndSet(null, (FullHttpRequest) msg)) {
                         ((FullHttpRequest) msg).release();
@@ -530,10 +530,10 @@ public class HttpContentDecoderTest {
     public void testCleanupThrows() {
         HttpContentDecoder decoder = new HttpContentDecoder() {
             @Override
-            protected EmbeddedChannel newContentDecoder(String contentEncoding) throws Exception {
+            protected EmbeddedChannel newContentDecoder(String contentEncoding) {
                 return new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                    public void channelInactive(ChannelHandlerContext ctx) {
                         ctx.fireExceptionCaught(new DecoderException());
                         ctx.fireChannelInactive();
                     }

@@ -35,7 +35,7 @@ import static org.junit.Assert.*;
 public class HttpContentCompressorTest {
 
     @Test
-    public void testGetTargetContentEncoding() throws Exception {
+    public void testGetTargetContentEncoding() {
         HttpContentCompressor compressor = new HttpContentCompressor();
 
         String[] tests = {
@@ -72,7 +72,7 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void testSplitContent() throws Exception {
+    public void testSplitContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
@@ -110,7 +110,7 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void testChunkedContent() throws Exception {
+    public void testChunkedContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
@@ -151,7 +151,7 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void testChunkedContentWithTrailingHeader() throws Exception {
+    public void testChunkedContentWithTrailingHeader() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
@@ -196,7 +196,7 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void testFullContentWithContentLength() throws Exception {
+    public void testFullContentWithContentLength() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
@@ -234,7 +234,7 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void testFullContent() throws Exception {
+    public void testFullContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
@@ -264,7 +264,7 @@ public class HttpContentCompressorTest {
      * even if the actual length is turned out to be 0.
      */
     @Test
-    public void testEmptySplitContent() throws Exception {
+    public void testEmptySplitContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
@@ -289,7 +289,7 @@ public class HttpContentCompressorTest {
      * If the length of the content is 0 for sure, {@link HttpContentEncoder} should skip encoding.
      */
     @Test
-    public void testEmptyFullContent() throws Exception {
+    public void testEmptyFullContent() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
@@ -313,7 +313,7 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void testEmptyFullContentWithTrailer() throws Exception {
+    public void testEmptyFullContentWithTrailer() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(newRequest());
 
@@ -338,7 +338,7 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void test100Continue() throws Exception {
+    public void test100Continue() {
         FullHttpRequest request = newRequest();
         HttpUtil.set100ContinueExpected(request, true);
 
@@ -378,7 +378,7 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void testTooManyResponses() throws Exception {
+    public void testTooManyResponses() {
         FullHttpRequest request = newRequest();
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         ch.writeInbound(request);
@@ -411,7 +411,7 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void testIdentity() throws Exception {
+    public void testIdentity() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         assertTrue(ch.writeInbound(newRequest()));
 
@@ -433,7 +433,7 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void testCustomEncoding() throws Exception {
+    public void testCustomEncoding() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         assertTrue(ch.writeInbound(newRequest()));
 
@@ -455,7 +455,7 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void testCompressThresholdAllCompress() throws Exception {
+    public void testCompressThresholdAllCompress() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
         assertTrue(ch.writeInbound(newRequest()));
 
@@ -478,7 +478,7 @@ public class HttpContentCompressorTest {
     }
 
     @Test
-    public void testCompressThresholdNotCompress() throws Exception {
+    public void testCompressThresholdNotCompress() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor(6, 15, 8, 1024));
         assertTrue(ch.writeInbound(newRequest()));
 

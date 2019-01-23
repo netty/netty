@@ -227,7 +227,7 @@ public class DefaultHttpHeadersTest {
     }
 
     @Test
-    public void providesHeaderNamesAsArray() throws Exception {
+    public void providesHeaderNamesAsArray() {
         Set<String> nettyHeaders = new DefaultHttpHeaders()
                 .add(HttpHeaderNames.CONTENT_LENGTH, 10)
                 .names();

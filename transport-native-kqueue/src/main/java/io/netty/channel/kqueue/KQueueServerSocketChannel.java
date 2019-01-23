@@ -77,7 +77,7 @@ public final class KQueueServerSocketChannel extends AbstractKQueueServerChannel
     }
 
     @Override
-    protected Channel newChildChannel(int fd, byte[] address, int offset, int len) throws Exception {
+    protected Channel newChildChannel(int fd, byte[] address, int offset, int len) {
         return new KQueueSocketChannel(this, childEventLoopGroup().next(),
                                        new BsdSocket(fd), address(address, offset, len));
     }

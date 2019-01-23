@@ -353,7 +353,7 @@ public abstract class WebSocketClientHandshaker {
             p.addAfter(ctx.name(), aggregatorName, new HttpObjectAggregator(8192));
             p.addAfter(aggregatorName, "handshaker", new SimpleChannelInboundHandler<FullHttpResponse>() {
                 @Override
-                protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
+                protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) {
                     // Remove ourself and do the actual handshake
                     ctx.pipeline().remove(this);
                     try {
@@ -365,14 +365,14 @@ public abstract class WebSocketClientHandshaker {
                 }
 
                 @Override
-                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                     // Remove ourself and fail the handshake promise.
                     ctx.pipeline().remove(this);
                     promise.setFailure(cause);
                 }
 
                 @Override
-                public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                public void channelInactive(ChannelHandlerContext ctx) {
                     // Fail promise if Channel was closed
                     promise.tryFailure(CLOSED_CHANNEL_EXCEPTION);
                     ctx.fireChannelInactive();

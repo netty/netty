@@ -28,7 +28,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 public class WebSocketFrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, WebSocketFrame frame) {
         // ping and pong frames already handled
 
         if (frame instanceof TextWebSocketFrame) {

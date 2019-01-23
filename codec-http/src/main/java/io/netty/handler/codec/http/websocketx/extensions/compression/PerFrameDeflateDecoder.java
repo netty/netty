@@ -35,7 +35,7 @@ class PerFrameDeflateDecoder extends DeflateDecoder {
     }
 
     @Override
-    public boolean acceptInboundMessage(Object msg) throws Exception {
+    public boolean acceptInboundMessage(Object msg) {
         return (msg instanceof TextWebSocketFrame ||
                 msg instanceof BinaryWebSocketFrame ||
                 msg instanceof ContinuationWebSocketFrame) &&

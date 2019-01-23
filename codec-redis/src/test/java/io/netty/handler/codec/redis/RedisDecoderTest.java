@@ -40,7 +40,7 @@ public class RedisDecoderTest {
     private EmbeddedChannel channel;
 
     @Before
-    public void setup() throws Exception {
+    public void setup() {
         channel = newChannel(false);
     }
 
@@ -52,12 +52,12 @@ public class RedisDecoderTest {
     }
 
     @After
-    public void teardown() throws Exception {
+    public void teardown() {
         assertFalse(channel.finish());
     }
 
     @Test
-    public void splitEOLDoesNotInfiniteLoop() throws Exception {
+    public void splitEOLDoesNotInfiniteLoop() {
         assertFalse(channel.writeInbound(byteBufOf("$6\r\nfoobar\r")));
         assertTrue(channel.writeInbound(byteBufOf("\n")));
 
@@ -213,7 +213,7 @@ public class RedisDecoderTest {
     }
 
     @Test
-    public void shouldDecodeSimpleArray() throws Exception {
+    public void shouldDecodeSimpleArray() {
         assertFalse(channel.writeInbound(byteBufOf("*3\r\n")));
         assertFalse(channel.writeInbound(byteBufOf(":1234\r\n")));
         assertFalse(channel.writeInbound(byteBufOf("+sim")));
@@ -236,7 +236,7 @@ public class RedisDecoderTest {
     }
 
     @Test
-    public void shouldDecodeNestedArray() throws Exception {
+    public void shouldDecodeNestedArray() {
         ByteBuf buf = Unpooled.buffer();
         buf.writeBytes(byteBufOf("*2\r\n"));
         buf.writeBytes(byteBufOf("*3\r\n:1\r\n:2\r\n:3\r\n"));
@@ -264,7 +264,7 @@ public class RedisDecoderTest {
     }
 
     @Test(expected = IllegalReferenceCountException.class)
-    public void shouldErrorOnDoubleReleaseArrayReferenceCounted() throws Exception {
+    public void shouldErrorOnDoubleReleaseArrayReferenceCounted() {
         ByteBuf buf = Unpooled.buffer();
         buf.writeBytes(byteBufOf("*2\r\n"));
         buf.writeBytes(byteBufOf("*3\r\n:1\r\n:2\r\n:3\r\n"));
@@ -278,7 +278,7 @@ public class RedisDecoderTest {
     }
 
     @Test(expected = IllegalReferenceCountException.class)
-    public void shouldErrorOnReleaseArrayChildReferenceCounted() throws Exception {
+    public void shouldErrorOnReleaseArrayChildReferenceCounted() {
         ByteBuf buf = Unpooled.buffer();
         buf.writeBytes(byteBufOf("*2\r\n"));
         buf.writeBytes(byteBufOf("*3\r\n:1\r\n:2\r\n:3\r\n"));
@@ -293,7 +293,7 @@ public class RedisDecoderTest {
     }
 
     @Test(expected = IllegalReferenceCountException.class)
-    public void shouldErrorOnReleasecontentOfArrayChildReferenceCounted() throws Exception {
+    public void shouldErrorOnReleasecontentOfArrayChildReferenceCounted() {
         ByteBuf buf = Unpooled.buffer();
         buf.writeBytes(byteBufOf("*2\r\n"));
         buf.writeBytes(byteBufOf("$3\r\nFoo\r\n$3\r\nBar\r\n"));

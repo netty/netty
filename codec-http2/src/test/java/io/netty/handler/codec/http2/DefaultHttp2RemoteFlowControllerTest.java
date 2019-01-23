@@ -759,13 +759,13 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         final AtomicInteger size = new AtomicInteger(150);
         doAnswer(new Answer<Integer>() {
             @Override
-            public Integer answer(InvocationOnMock invocationOnMock) throws Throwable {
+            public Integer answer(InvocationOnMock invocationOnMock) {
                 return size.get();
             }
         }).when(flowControlled).size();
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
+            public Void answer(InvocationOnMock invocationOnMock) {
                 size.addAndGet(-50);
                 return null;
             }
@@ -956,13 +956,13 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
         }
     }
 
-    private static Http2RemoteFlowController.FlowControlled mockedFlowControlledThatThrowsOnWrite() throws Exception {
+    private static Http2RemoteFlowController.FlowControlled mockedFlowControlledThatThrowsOnWrite() {
         final Http2RemoteFlowController.FlowControlled flowControlled =
                 mock(Http2RemoteFlowController.FlowControlled.class);
         when(flowControlled.size()).thenReturn(100);
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
+            public Void answer(InvocationOnMock in) {
                 // Write most of the bytes and then fail
                 when(flowControlled.size()).thenReturn(10);
                 throw new RuntimeException("Write failed");

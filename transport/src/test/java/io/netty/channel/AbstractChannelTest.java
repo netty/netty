@@ -53,7 +53,7 @@ public class AbstractChannelTest {
 
         doAnswer(new Answer() {
             @Override
-            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+            public Object answer(InvocationOnMock invocationOnMock) {
                 ((Runnable) invocationOnMock.getArgument(0)).run();
                 return null;
             }
@@ -139,18 +139,18 @@ public class AbstractChannelTest {
         }
 
         @Override
-        protected void doBind(SocketAddress localAddress) throws Exception { }
+        protected void doBind(SocketAddress localAddress) { }
 
         @Override
-        protected void doDisconnect() throws Exception { }
+        protected void doDisconnect() { }
 
         @Override
-        protected void doClose() throws Exception { }
+        protected void doClose() { }
 
         @Override
-        protected void doBeginRead() throws Exception { }
+        protected void doBeginRead() { }
 
         @Override
-        protected void doWrite(ChannelOutboundBuffer in) throws Exception { }
+        protected void doWrite(ChannelOutboundBuffer in) { }
     }
 }

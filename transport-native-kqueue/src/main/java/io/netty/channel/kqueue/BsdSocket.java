@@ -106,14 +106,14 @@ final class BsdSocket extends Socket {
     }
 
     private static native long sendFile(int socketFd, DefaultFileRegion src, long baseOffset,
-                                        long offset, long length) throws IOException;
+                                        long offset, long length);
 
-    private static native String[] getAcceptFilter(int fd) throws IOException;
-    private static native int getTcpNoPush(int fd) throws IOException;
-    private static native int getSndLowAt(int fd) throws IOException;
-    private static native PeerCredentials getPeerCredentials(int fd) throws IOException;
+    private static native String[] getAcceptFilter(int fd);
+    private static native int getTcpNoPush(int fd);
+    private static native int getSndLowAt(int fd);
+    private static native PeerCredentials getPeerCredentials(int fd);
 
-    private static native void setAcceptFilter(int fd, String filterName, String filterArgs) throws IOException;
-    private static native void setTcpNoPush(int fd, int tcpNoPush) throws IOException;
-    private static native void setSndLowAt(int fd, int lowAt) throws IOException;
+    private static native void setAcceptFilter(int fd, String filterName, String filterArgs);
+    private static native void setTcpNoPush(int fd, int tcpNoPush);
+    private static native void setSndLowAt(int fd, int lowAt);
 }

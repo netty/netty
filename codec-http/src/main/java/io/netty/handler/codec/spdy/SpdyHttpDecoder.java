@@ -136,8 +136,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, SpdyFrame msg, List<Object> out)
-            throws Exception {
+    protected void decode(ChannelHandlerContext ctx, SpdyFrame msg, List<Object> out) {
         if (msg instanceof SpdySynStreamFrame) {
 
             // HTTP requests/responses are mapped one-to-one to SPDY streams.
@@ -359,8 +358,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
         }
     }
 
-    private static FullHttpRequest createHttpRequest(SpdyHeadersFrame requestFrame, ByteBufAllocator alloc)
-       throws Exception {
+    private static FullHttpRequest createHttpRequest(SpdyHeadersFrame requestFrame, ByteBufAllocator alloc) {
         // Create the first line of the request from the name/value pairs
         SpdyHeaders headers     = requestFrame.headers();
         HttpMethod  method      = HttpMethod.valueOf(headers.getAsString(METHOD));
@@ -402,7 +400,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
     }
 
     private static FullHttpResponse createHttpResponse(SpdyHeadersFrame responseFrame, ByteBufAllocator alloc,
-                                                       boolean validateHeaders) throws Exception {
+                                                       boolean validateHeaders) {
 
         // Create the first line of the response from the name/value pairs
         SpdyHeaders headers = responseFrame.headers();

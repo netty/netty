@@ -111,7 +111,7 @@ public abstract class ZlibTest {
         }
     }
 
-    private void testCompress0(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper, ByteBuf data) throws Exception {
+    private void testCompress0(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper, ByteBuf data) {
         EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(encoderWrapper));
         EmbeddedChannel chDecoderZlib = new EmbeddedChannel(createDecoder(decoderWrapper));
 
@@ -165,7 +165,7 @@ public abstract class ZlibTest {
         }
     }
 
-    private void testCompressNone(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper) throws Exception {
+    private void testCompressNone(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper) {
         EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(encoderWrapper));
         EmbeddedChannel chDecoderZlib = new EmbeddedChannel(createDecoder(decoderWrapper));
 
@@ -221,7 +221,7 @@ public abstract class ZlibTest {
     }
 
     // Test for https://github.com/netty/netty/issues/2572
-    private void testDecompressOnly(ZlibWrapper decoderWrapper, byte[] compressed, byte[] data) throws Exception {
+    private void testDecompressOnly(ZlibWrapper decoderWrapper, byte[] compressed, byte[] data) {
         EmbeddedChannel chDecoder = new EmbeddedChannel(createDecoder(decoderWrapper));
         chDecoder.writeInbound(Unpooled.wrappedBuffer(compressed));
         assertTrue(chDecoder.finish());

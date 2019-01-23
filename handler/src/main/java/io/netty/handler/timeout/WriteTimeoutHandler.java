@@ -105,7 +105,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (timeoutNanos > 0) {
             promise = promise.unvoid();
             scheduleTimeout(ctx, promise);
@@ -114,7 +114,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
     }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+    public void handlerRemoved(ChannelHandlerContext ctx) {
         WriteTimeoutTask task = lastTask;
         lastTask = null;
         while (task != null) {
@@ -172,7 +172,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
     /**
      * Is called when a write timeout was detected
      */
-    protected void writeTimedOut(ChannelHandlerContext ctx) throws Exception {
+    protected void writeTimedOut(ChannelHandlerContext ctx) {
         if (!closed) {
             ctx.fireExceptionCaught(WriteTimeoutException.INSTANCE);
             ctx.close();
@@ -212,7 +212,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
         }
 
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(ChannelFuture future) {
             // scheduledFuture has already be set when reaching here
             scheduledFuture.cancel(false);
             removeWriteTimeoutTask(this);

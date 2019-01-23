@@ -133,7 +133,7 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
     }
 
     @Override
-    public boolean isEndOfInput() throws Exception {
+    public boolean isEndOfInput() {
         return !(offset < endOffset && in.isOpen());
     }
 

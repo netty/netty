@@ -113,7 +113,7 @@ abstract class ProxyServer {
         return new InetSocketAddress(NetUtil.LOCALHOST, ch.localAddress().getPort());
     }
 
-    protected abstract void configure(SocketChannel ch) throws Exception;
+    protected abstract void configure(SocketChannel ch);
 
     final void recordException(Throwable t) {
         logger.warn("Unexpected exception from proxy server:", t);
@@ -171,7 +171,7 @@ abstract class ProxyServer {
                 ChannelFuture f = connectToDestination(ctx.channel().eventLoop(), new BackendHandler(ctx));
                 f.addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             recordException(future.cause());
                             ctx.close();
@@ -202,7 +202,7 @@ abstract class ProxyServer {
             }
         }
 
-        protected abstract boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg) throws Exception;
+        protected abstract boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg);
 
         protected abstract SocketAddress intermediaryDestination();
 
@@ -215,19 +215,19 @@ abstract class ProxyServer {
         }
 
         @Override
-        public final void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public final void channelReadComplete(ChannelHandlerContext ctx) {
             ctx.flush();
         }
 
         @Override
-        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        public void channelInactive(ChannelHandlerContext ctx) {
             if (backend != null) {
                 backend.close();
             }
         }
 
         @Override
-        public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             recordException(cause);
             ctx.close();
         }
@@ -241,22 +241,22 @@ abstract class ProxyServer {
             }
 
             @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 frontend.write(msg);
             }
 
             @Override
-            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            public void channelReadComplete(ChannelHandlerContext ctx) {
                 frontend.flush();
             }
 
             @Override
-            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            public void channelInactive(ChannelHandlerContext ctx) {
                 frontend.close();
             }
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 recordException(cause);
                 ctx.close();
             }
@@ -290,15 +290,15 @@ abstract class ProxyServer {
             }
         }
 
-        protected abstract boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg) throws Exception;
+        protected abstract boolean handleProxyProtocol(ChannelHandlerContext ctx, Object msg);
 
         @Override
-        public final void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        public final void channelReadComplete(ChannelHandlerContext ctx) {
             ctx.flush();
         }
 
         @Override
-        public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             recordException(cause);
             ctx.close();
         }

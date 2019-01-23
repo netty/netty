@@ -51,7 +51,7 @@ public class IpSubnetFilterTest {
     }
 
     @Test
-    public void testIp4SubnetFilterRule() throws Exception {
+    public void testIp4SubnetFilterRule() {
         IpSubnetFilterRule rule = new IpSubnetFilterRule("192.168.56.1", 24, IpFilterRuleType.ACCEPT);
         for (int i = 0; i <= 255; i++) {
             Assert.assertTrue(rule.matches(newSockAddress(String.format("192.168.56.%d", i))));
@@ -77,7 +77,7 @@ public class IpSubnetFilterTest {
     }
 
     @Test
-    public void testIpFilterRuleHandler() throws Exception {
+    public void testIpFilterRuleHandler() {
         IpFilterRule filter0 = new IpFilterRule() {
             @Override
             public boolean matches(InetSocketAddress remoteAddress) {

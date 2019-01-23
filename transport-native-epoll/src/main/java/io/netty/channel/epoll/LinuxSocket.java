@@ -193,37 +193,37 @@ final class LinuxSocket extends Socket {
     }
 
     private static native long sendFile(int socketFd, DefaultFileRegion src, long baseOffset,
-                                        long offset, long length) throws IOException;
+                                        long offset, long length);
 
-    private static native int getTcpDeferAccept(int fd) throws IOException;
-    private static native int isTcpQuickAck(int fd) throws IOException;
-    private static native int isTcpCork(int fd) throws IOException;
-    private static native int getSoBusyPoll(int fd) throws IOException;
-    private static native int getTcpNotSentLowAt(int fd) throws IOException;
-    private static native int getTcpKeepIdle(int fd) throws IOException;
-    private static native int getTcpKeepIntvl(int fd) throws IOException;
-    private static native int getTcpKeepCnt(int fd) throws IOException;
-    private static native int getTcpUserTimeout(int fd) throws IOException;
-    private static native int isIpFreeBind(int fd) throws IOException;
-    private static native int isIpTransparent(int fd) throws IOException;
-    private static native int isIpRecvOrigDestAddr(int fd) throws IOException;
-    private static native void getTcpInfo(int fd, long[] array) throws IOException;
-    private static native PeerCredentials getPeerCredentials(int fd) throws IOException;
-    private static native int isTcpFastOpenConnect(int fd) throws IOException;
+    private static native int getTcpDeferAccept(int fd);
+    private static native int isTcpQuickAck(int fd);
+    private static native int isTcpCork(int fd);
+    private static native int getSoBusyPoll(int fd);
+    private static native int getTcpNotSentLowAt(int fd);
+    private static native int getTcpKeepIdle(int fd);
+    private static native int getTcpKeepIntvl(int fd);
+    private static native int getTcpKeepCnt(int fd);
+    private static native int getTcpUserTimeout(int fd);
+    private static native int isIpFreeBind(int fd);
+    private static native int isIpTransparent(int fd);
+    private static native int isIpRecvOrigDestAddr(int fd);
+    private static native void getTcpInfo(int fd, long[] array);
+    private static native PeerCredentials getPeerCredentials(int fd);
+    private static native int isTcpFastOpenConnect(int fd);
 
-    private static native void setTcpDeferAccept(int fd, int deferAccept) throws IOException;
-    private static native void setTcpQuickAck(int fd, int quickAck) throws IOException;
-    private static native void setTcpCork(int fd, int tcpCork) throws IOException;
-    private static native void setSoBusyPoll(int fd, int loopMicros) throws IOException;
-    private static native void setTcpNotSentLowAt(int fd, int tcpNotSentLowAt) throws IOException;
-    private static native void setTcpFastOpen(int fd, int tcpFastopenBacklog) throws IOException;
-    private static native void setTcpFastOpenConnect(int fd, int tcpFastOpenConnect) throws IOException;
-    private static native void setTcpKeepIdle(int fd, int seconds) throws IOException;
-    private static native void setTcpKeepIntvl(int fd, int seconds) throws IOException;
-    private static native void setTcpKeepCnt(int fd, int probes) throws IOException;
-    private static native void setTcpUserTimeout(int fd, int milliseconds)throws IOException;
-    private static native void setIpFreeBind(int fd, int freeBind) throws IOException;
-    private static native void setIpTransparent(int fd, int transparent) throws IOException;
-    private static native void setIpRecvOrigDestAddr(int fd, int transparent) throws IOException;
-    private static native void setTcpMd5Sig(int fd, byte[] address, int scopeId, byte[] key) throws IOException;
+    private static native void setTcpDeferAccept(int fd, int deferAccept);
+    private static native void setTcpQuickAck(int fd, int quickAck);
+    private static native void setTcpCork(int fd, int tcpCork);
+    private static native void setSoBusyPoll(int fd, int loopMicros);
+    private static native void setTcpNotSentLowAt(int fd, int tcpNotSentLowAt);
+    private static native void setTcpFastOpen(int fd, int tcpFastopenBacklog);
+    private static native void setTcpFastOpenConnect(int fd, int tcpFastOpenConnect);
+    private static native void setTcpKeepIdle(int fd, int seconds);
+    private static native void setTcpKeepIntvl(int fd, int seconds);
+    private static native void setTcpKeepCnt(int fd, int probes);
+    private static native void setTcpUserTimeout(int fd, int milliseconds);
+    private static native void setIpFreeBind(int fd, int freeBind);
+    private static native void setIpTransparent(int fd, int transparent);
+    private static native void setIpRecvOrigDestAddr(int fd, int transparent);
+    private static native void setTcpMd5Sig(int fd, byte[] address, int scopeId, byte[] key);
 }

@@ -41,7 +41,7 @@ class LimitingByteInput implements ByteInput {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         // Nothing to do
     }
 

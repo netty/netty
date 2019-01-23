@@ -89,7 +89,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         this.ctx = ctx;
     }
 
@@ -126,23 +126,23 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         queue.add(new PendingWrite(msg, promise));
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
+    public void flush(ChannelHandlerContext ctx) {
         doFlush(ctx);
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) {
         doFlush(ctx);
         ctx.fireChannelInactive();
     }
 
     @Override
-    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+    public void channelWritabilityChanged(ChannelHandlerContext ctx) {
         if (ctx.channel().isWritable()) {
             // channel is writable again try to continue flushing
             doFlush(ctx);
@@ -278,7 +278,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                     // See https://github.com/netty/netty/issues/303
                     f.addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             if (!future.isSuccess()) {
                                 closeInput(chunks);
                                 currentWrite.fail(future.cause());
@@ -291,7 +291,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                 } else if (channel.isWritable()) {
                     f.addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             if (!future.isSuccess()) {
                                 closeInput((ChunkedInput<?>) pendingMessage);
                                 currentWrite.fail(future.cause());
@@ -303,7 +303,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                 } else {
                     f.addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             if (!future.isSuccess()) {
                                 closeInput((ChunkedInput<?>) pendingMessage);
                                 currentWrite.fail(future.cause());

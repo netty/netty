@@ -33,7 +33,7 @@ public class SnappyFrameEncoderTest {
     }
 
     @Test
-    public void testSmallAmountOfDataIsUncompressed() throws Exception {
+    public void testSmallAmountOfDataIsUncompressed() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             'n', 'e', 't', 't', 'y'
         });
@@ -53,7 +53,7 @@ public class SnappyFrameEncoderTest {
     }
 
     @Test
-    public void testLargeAmountOfDataIsCompressed() throws Exception {
+    public void testLargeAmountOfDataIsCompressed() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             'n', 'e', 't', 't', 'y', 'n', 'e', 't', 't', 'y',
             'n', 'e', 't', 't', 'y', 'n', 'e', 't', 't', 'y'
@@ -77,7 +77,7 @@ public class SnappyFrameEncoderTest {
     }
 
     @Test
-    public void testStreamStartIsOnlyWrittenOnce() throws Exception {
+    public void testStreamStartIsOnlyWrittenOnce() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
             'n', 'e', 't', 't', 'y'
         });
@@ -113,7 +113,7 @@ public class SnappyFrameEncoderTest {
      * emit a literal rather than trying to see if we can emit another copy.
      */
     @Test
-    public void testInputBufferOverseek() throws Exception {
+    public void testInputBufferOverseek() {
         ByteBuf in = Unpooled.wrappedBuffer(new byte[] {
              11,    0, // literal
               0,    0,    0,    0, // 1st copy

@@ -114,18 +114,18 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         config = ctx.channel().config();
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) {
         destroy();
         ctx.fireChannelInactive();
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         if (dequeue(ctx, 1) == 0) {
             // It seems no messages were consumed. We need to read() some
             // messages from upstream and once one arrives it need to be
@@ -136,7 +136,7 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         if (queue == null) {
             queue = RecyclableArrayDeque.newInstance();
         }
@@ -153,7 +153,7 @@ public class FlowControlHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         // Don't relay completion events from upstream as they
         // make no sense in this context. See dequeue() where
         // a new set of completion events is being produced.

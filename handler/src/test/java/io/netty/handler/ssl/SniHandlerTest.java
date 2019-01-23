@@ -150,7 +150,7 @@ public class SniHandlerTest {
             SniHandler handler = new SniHandler(new DomainNameMappingBuilder<>(nettyContext).build());
             EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
                 @Override
-                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                     if (evt instanceof SslHandshakeCompletionEvent) {
                         assertTrue(evtRef.compareAndSet(null, (SslHandshakeCompletionEvent) evt));
                     }
@@ -197,7 +197,7 @@ public class SniHandlerTest {
             SniHandler handler = new SniHandler(mapping);
             EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandlerAdapter() {
                 @Override
-                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                     if (evt instanceof SniCompletionEvent) {
                         assertTrue(evtRef.compareAndSet(null, (SniCompletionEvent) evt));
                     } else {
@@ -355,7 +355,7 @@ public class SniHandlerTest {
                 sb.channel(NioServerSocketChannel.class);
                 sb.childHandler(new ChannelInitializer<Channel>() {
                     @Override
-                    protected void initChannel(Channel ch) throws Exception {
+                    protected void initChannel(Channel ch) {
                         ChannelPipeline p = ch.pipeline();
                         // Server side SNI.
                         p.addLast(handler);
@@ -374,7 +374,7 @@ public class SniHandlerTest {
                 cb.channel(NioSocketChannel.class);
                 cb.handler(new ChannelInitializer<Channel>() {
                     @Override
-                    protected void initChannel(Channel ch) throws Exception {
+                    protected void initChannel(Channel ch) {
                         ch.pipeline().addLast(new SslHandler(clientContext.newEngine(
                                 ch.alloc(), "sni.fake.site", -1)));
                         // Catch the notification event that APN has completed successfully.
@@ -443,8 +443,7 @@ public class SniHandlerTest {
                     final SniHandler handler = new SniHandler(mapping) {
                         @Override
                         protected void replaceHandler(ChannelHandlerContext ctx,
-                                                      String hostname, final SslContext sslContext)
-                                throws Exception {
+                                                      String hostname, final SslContext sslContext) {
 
                             boolean success = false;
                             try {
@@ -485,7 +484,7 @@ public class SniHandlerTest {
                     sc = sb.group(group).channel(LocalServerChannel.class)
                             .childHandler(new ChannelInitializer<Channel>() {
                         @Override
-                        protected void initChannel(Channel ch) throws Exception {
+                        protected void initChannel(Channel ch) {
                             ch.pipeline().addFirst(handler);
                         }
                     }).bind(address).syncUninterruptibly().channel();

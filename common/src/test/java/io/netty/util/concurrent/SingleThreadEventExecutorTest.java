@@ -141,7 +141,7 @@ public class SingleThreadEventExecutorTest {
                     try {
                         Set<Callable<Boolean>> set = Collections.<Callable<Boolean>>singleton(new Callable<Boolean>() {
                             @Override
-                            public Boolean call() throws Exception {
+                            public Boolean call() {
                                 promise.setFailure(new AssertionError("Should never execute the Callable"));
                                 return Boolean.TRUE;
                             }

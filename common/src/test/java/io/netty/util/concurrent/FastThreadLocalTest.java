@@ -37,7 +37,7 @@ public class FastThreadLocalTest {
     }
 
     @Test(timeout = 10000)
-    public void testRemoveAll() throws Exception {
+    public void testRemoveAll() {
         final AtomicBoolean removed = new AtomicBoolean();
         final FastThreadLocal<Boolean> var = new FastThreadLocal<Boolean>() {
             @Override
@@ -202,12 +202,12 @@ public class FastThreadLocalTest {
         final AtomicReference<String> onRemovalCalled = new AtomicReference<>();
 
         @Override
-        protected String initialValue() throws Exception {
+        protected String initialValue() {
             return Thread.currentThread().getName();
         }
 
         @Override
-        protected void onRemoval(String value) throws Exception {
+        protected void onRemoval(String value) {
             onRemovalCalled.set(value);
         }
     }

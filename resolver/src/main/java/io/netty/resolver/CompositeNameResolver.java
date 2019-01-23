@@ -64,7 +64,7 @@ public final class CompositeNameResolver<T> extends SimpleNameResolver<T> {
     private void doResolveRec(final String inetHost,
                               final Promise<T> promise,
                               final int resolverIndex,
-                              Throwable lastFailure) throws Exception {
+                              Throwable lastFailure) {
         if (resolverIndex >= resolvers.length) {
             promise.setFailure(lastFailure);
         } else {
@@ -90,7 +90,7 @@ public final class CompositeNameResolver<T> extends SimpleNameResolver<T> {
     private void doResolveAllRec(final String inetHost,
                               final Promise<List<T>> promise,
                               final int resolverIndex,
-                              Throwable lastFailure) throws Exception {
+                              Throwable lastFailure) {
         if (resolverIndex >= resolvers.length) {
             promise.setFailure(lastFailure);
         } else {

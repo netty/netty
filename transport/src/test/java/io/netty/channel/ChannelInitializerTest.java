@@ -123,11 +123,11 @@ public class ChannelInitializerTest {
 
         client.handler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ch.pipeline().addLast(handler1);
                 ch.pipeline().addLast(new ChannelInitializer<Channel>() {
                     @Override
-                    protected void initChannel(Channel ch) throws Exception {
+                    protected void initChannel(Channel ch) {
                         ch.pipeline().addLast(handler2);
                         ch.pipeline().addLast(handler3);
                     }
@@ -162,14 +162,14 @@ public class ChannelInitializerTest {
         final AtomicInteger registeredCalled = new AtomicInteger(0);
         final ChannelInboundHandlerAdapter handler1 = new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+            public void channelRegistered(ChannelHandlerContext ctx) {
                 registeredCalled.incrementAndGet();
             }
         };
         final AtomicInteger initChannelCalled = new AtomicInteger(0);
         client.handler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 initChannelCalled.incrementAndGet();
                 ch.pipeline().addLast(handler1);
                 ch.pipeline().fireChannelRegistered();
@@ -227,10 +227,10 @@ public class ChannelInitializerTest {
         final AtomicBoolean called = new AtomicBoolean();
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ChannelHandler handler = new ChannelInitializer<Channel>() {
                     @Override
-                    protected void initChannel(Channel ch) throws Exception {
+                    protected void initChannel(Channel ch) {
                         called.set(true);
                     }
                 };

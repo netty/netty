@@ -54,7 +54,7 @@ public class HttpClientUpgradeHandlerTest {
         }
 
         @Override
-        public void upgradeTo(ChannelHandlerContext ctx, FullHttpResponse upgradeResponse) throws Exception {
+        public void upgradeTo(ChannelHandlerContext ctx, FullHttpResponse upgradeResponse) {
         }
     }
 

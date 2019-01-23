@@ -84,7 +84,7 @@ public class AsciiStringMemoryTest {
         aAsciiString.forEachByte(new ByteProcessor() {
             int i;
             @Override
-            public boolean process(byte value) throws Exception {
+            public boolean process(byte value) {
                 assertEquals("failed at index: " + i, value, bAsciiString.byteAt(i++));
                 aCount.set(aCount.get() + 1);
                 return true;
@@ -93,7 +93,7 @@ public class AsciiStringMemoryTest {
         bAsciiString.forEachByte(new ByteProcessor() {
             int i;
             @Override
-            public boolean process(byte value) throws Exception {
+            public boolean process(byte value) {
                 assertEquals("failed at index: " + i, value, aAsciiString.byteAt(i++));
                 bCount.set(bCount.get() + 1);
                 return true;
@@ -122,7 +122,7 @@ public class AsciiStringMemoryTest {
         aAsciiString.forEachByteDesc(new ByteProcessor() {
             int i = 1;
             @Override
-            public boolean process(byte value) throws Exception {
+            public boolean process(byte value) {
                 assertEquals("failed at index: " + i, value, bAsciiString.byteAt(bAsciiString.length() - (i++)));
                 aCount.set(aCount.get() + 1);
                 return true;
@@ -131,7 +131,7 @@ public class AsciiStringMemoryTest {
         bAsciiString.forEachByteDesc(new ByteProcessor() {
             int i = 1;
             @Override
-            public boolean process(byte value) throws Exception {
+            public boolean process(byte value) {
                 assertEquals("failed at index: " + i, value, aAsciiString.byteAt(aAsciiString.length() - (i++)));
                 bCount.set(bCount.get() + 1);
                 return true;

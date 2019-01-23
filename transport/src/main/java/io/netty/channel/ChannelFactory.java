@@ -22,5 +22,5 @@ public interface ChannelFactory<T extends Channel> {
     /**
      * Creates a new channel.
      */
-    T newChannel(EventLoop eventLoop) throws Exception;
+    T newChannel(EventLoop eventLoop);
 }

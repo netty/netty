@@ -29,7 +29,7 @@ public class CipherSuiteConverterTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(CipherSuiteConverterTest.class);
 
     @Test
-    public void testJ2OMappings() throws Exception {
+    public void testJ2OMappings() {
         testJ2OMapping("TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256", "ECDHE-ECDSA-AES128-SHA256");
         testJ2OMapping("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256", "ECDHE-RSA-AES128-SHA256");
         testJ2OMapping("TLS_RSA_WITH_AES_128_CBC_SHA256", "AES128-SHA256");
@@ -135,7 +135,7 @@ public class CipherSuiteConverterTest {
     }
 
     @Test
-    public void testO2JMappings() throws Exception {
+    public void testO2JMappings() {
         testO2JMapping("ECDHE_ECDSA_WITH_AES_128_CBC_SHA256", "ECDHE-ECDSA-AES128-SHA256");
         testO2JMapping("ECDHE_RSA_WITH_AES_128_CBC_SHA256", "ECDHE-RSA-AES128-SHA256");
         testO2JMapping("RSA_WITH_AES_128_CBC_SHA256", "AES128-SHA256");

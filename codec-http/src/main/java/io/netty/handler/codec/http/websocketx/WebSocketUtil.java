@@ -32,7 +32,7 @@ final class WebSocketUtil {
 
     private static final FastThreadLocal<MessageDigest> MD5 = new FastThreadLocal<MessageDigest>() {
         @Override
-        protected MessageDigest initialValue() throws Exception {
+        protected MessageDigest initialValue() {
             try {
                 //Try to get a MessageDigest that uses MD5
                 return MessageDigest.getInstance("MD5");
@@ -45,7 +45,7 @@ final class WebSocketUtil {
 
     private static final FastThreadLocal<MessageDigest> SHA1 = new FastThreadLocal<MessageDigest>() {
         @Override
-        protected MessageDigest initialValue() throws Exception {
+        protected MessageDigest initialValue() {
             try {
                 //Try to get a MessageDigest that uses SHA1
                 return MessageDigest.getInstance("SHA1");

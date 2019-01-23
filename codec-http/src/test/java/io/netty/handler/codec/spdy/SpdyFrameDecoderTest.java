@@ -148,7 +148,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testSpdyDataFrame() throws Exception {
+    public void testSpdyDataFrame() {
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
         byte flags = 0;
         int length = 1024;
@@ -165,7 +165,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testEmptySpdyDataFrame() throws Exception {
+    public void testEmptySpdyDataFrame() {
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
         byte flags = 0;
         int length = 0;
@@ -180,7 +180,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testLastSpdyDataFrame() throws Exception {
+    public void testLastSpdyDataFrame() {
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
         byte flags = 0x01; // FLAG_FIN
         int length = 0;
@@ -195,7 +195,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testUnknownSpdyDataFrameFlags() throws Exception {
+    public void testUnknownSpdyDataFrameFlags() {
         int streamId = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
         byte flags = (byte) 0xFE; // should ignore any unknown flags
         int length = 0;
@@ -210,7 +210,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testIllegalSpdyDataFrameStreamId() throws Exception {
+    public void testIllegalSpdyDataFrameStreamId() {
         int streamId = 0; // illegal stream identifier
         byte flags = 0;
         int length = 0;
@@ -225,7 +225,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testPipelinedSpdyDataFrames() throws Exception {
+    public void testPipelinedSpdyDataFrames() {
         int streamId1 = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
         int streamId2 = RANDOM.nextInt() & 0x7FFFFFFF | 0x01;
         byte flags = 0;
@@ -243,7 +243,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testSpdySynStreamFrame() throws Exception {
+    public void testSpdySynStreamFrame() {
         short type = 1;
         byte flags = 0;
         int length = 10;
@@ -266,7 +266,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testLastSpdySynStreamFrame() throws Exception {
+    public void testLastSpdySynStreamFrame() {
         short type = 1;
         byte flags = 0x01; // FLAG_FIN
         int length = 10;
@@ -289,7 +289,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testUnidirectionalSpdySynStreamFrame() throws Exception {
+    public void testUnidirectionalSpdySynStreamFrame() {
         short type = 1;
         byte flags = 0x02; // FLAG_UNIDIRECTIONAL
         int length = 10;
@@ -312,7 +312,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testIndependentSpdySynStreamFrame() throws Exception {
+    public void testIndependentSpdySynStreamFrame() {
         short type = 1;
         byte flags = 0;
         int length = 10;
@@ -335,7 +335,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testUnknownSpdySynStreamFrameFlags() throws Exception {
+    public void testUnknownSpdySynStreamFrameFlags() {
         short type = 1;
         byte flags = (byte) 0xFC; // undefined flags
         int length = 10;
@@ -358,7 +358,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testReservedSpdySynStreamFrameBits() throws Exception {
+    public void testReservedSpdySynStreamFrameBits() {
         short type = 1;
         byte flags = 0;
         int length = 10;
@@ -381,7 +381,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testInvalidSpdySynStreamFrameLength() throws Exception {
+    public void testInvalidSpdySynStreamFrameLength() {
         short type = 1;
         byte flags = 0;
         int length = 8; // invalid length
@@ -400,7 +400,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testIllegalSpdySynStreamFrameStreamId() throws Exception {
+    public void testIllegalSpdySynStreamFrameStreamId() {
         short type = 1;
         byte flags = 0;
         int length = 10;
@@ -422,7 +422,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testSpdySynStreamFrameHeaderBlock() throws Exception {
+    public void testSpdySynStreamFrameHeaderBlock() {
         short type = 1;
         byte flags = 0;
         int length = 10;
@@ -455,7 +455,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testSpdySynReplyFrame() throws Exception {
+    public void testSpdySynReplyFrame() {
         short type = 2;
         byte flags = 0;
         int length = 4;
@@ -473,7 +473,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testLastSpdySynReplyFrame() throws Exception {
+    public void testLastSpdySynReplyFrame() {
         short type = 2;
         byte flags = 0x01; // FLAG_FIN
         int length = 4;
@@ -491,7 +491,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testUnknownSpdySynReplyFrameFlags() throws Exception {
+    public void testUnknownSpdySynReplyFrameFlags() {
         short type = 2;
         byte flags = (byte) 0xFE; // undefined flags
         int length = 4;
@@ -509,7 +509,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testReservedSpdySynReplyFrameBits() throws Exception {
+    public void testReservedSpdySynReplyFrameBits() {
         short type = 2;
         byte flags = 0;
         int length = 4;
@@ -528,7 +528,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testInvalidSpdySynReplyFrameLength() throws Exception {
+    public void testInvalidSpdySynReplyFrameLength() {
         short type = 2;
         byte flags = 0;
         int length = 0; // invalid length
@@ -543,7 +543,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testIllegalSpdySynReplyFrameStreamId() throws Exception {
+    public void testIllegalSpdySynReplyFrameStreamId() {
         short type = 2;
         byte flags = 0;
         int length = 4;
@@ -560,7 +560,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testSpdySynReplyFrameHeaderBlock() throws Exception {
+    public void testSpdySynReplyFrameHeaderBlock() {
         short type = 2;
         byte flags = 0;
         int length = 4;
@@ -588,7 +588,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testSpdyRstStreamFrame() throws Exception {
+    public void testSpdyRstStreamFrame() {
         short type = 3;
         byte flags = 0;
         int length = 8;
@@ -607,7 +607,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testReservedSpdyRstStreamFrameBits() throws Exception {
+    public void testReservedSpdyRstStreamFrameBits() {
         short type = 3;
         byte flags = 0;
         int length = 8;
@@ -626,7 +626,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testInvalidSpdyRstStreamFrameFlags() throws Exception {
+    public void testInvalidSpdyRstStreamFrameFlags() {
         short type = 3;
         byte flags = (byte) 0xFF; // invalid flags
         int length = 8;
@@ -645,7 +645,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testInvalidSpdyRstStreamFrameLength() throws Exception {
+    public void testInvalidSpdyRstStreamFrameLength() {
         short type = 3;
         byte flags = 0;
         int length = 12; // invalid length
@@ -664,7 +664,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testIllegalSpdyRstStreamFrameStreamId() throws Exception {
+    public void testIllegalSpdyRstStreamFrameStreamId() {
         short type = 3;
         byte flags = 0;
         int length = 8;
@@ -683,7 +683,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testIllegalSpdyRstStreamFrameStatusCode() throws Exception {
+    public void testIllegalSpdyRstStreamFrameStatusCode() {
         short type = 3;
         byte flags = 0;
         int length = 8;
@@ -702,7 +702,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testSpdySettingsFrame() throws Exception {
+    public void testSpdySettingsFrame() {
         short type = 4;
         byte flags = 0;
         int numSettings = 2;
@@ -729,7 +729,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testEmptySpdySettingsFrame() throws Exception {
+    public void testEmptySpdySettingsFrame() {
         short type = 4;
         byte flags = 0;
         int numSettings = 0;
@@ -747,7 +747,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testSpdySettingsFrameClearFlag() throws Exception {
+    public void testSpdySettingsFrameClearFlag() {
         short type = 4;
         byte flags = 0x01; // FLAG_SETTINGS_CLEAR_SETTINGS
         int numSettings = 0;
@@ -765,7 +765,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testSpdySettingsPersistValues() throws Exception {
+    public void testSpdySettingsPersistValues() {
         short type = 4;
         byte flags = 0;
         int numSettings = 1;
@@ -792,7 +792,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testSpdySettingsPersistedValues() throws Exception {
+    public void testSpdySettingsPersistedValues() {
         short type = 4;
         byte flags = 0;
         int numSettings = 1;
@@ -819,7 +819,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testUnknownSpdySettingsFrameFlags() throws Exception {
+    public void testUnknownSpdySettingsFrameFlags() {
         short type = 4;
         byte flags = (byte) 0xFE; // undefined flags
         int numSettings = 0;
@@ -837,7 +837,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testUnknownSpdySettingsFlags() throws Exception {
+    public void testUnknownSpdySettingsFlags() {
         short type = 4;
         byte flags = 0;
         int numSettings = 1;
@@ -864,7 +864,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testInvalidSpdySettingsFrameLength() throws Exception {
+    public void testInvalidSpdySettingsFrameLength() {
         short type = 4;
         byte flags = 0;
         int numSettings = 2;
@@ -889,7 +889,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testInvalidSpdySettingsFrameNumSettings() throws Exception {
+    public void testInvalidSpdySettingsFrameNumSettings() {
         short type = 4;
         byte flags = 0;
         int numSettings = 2;
@@ -914,7 +914,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testDiscardUnknownFrame() throws Exception {
+    public void testDiscardUnknownFrame() {
         short type = 5;
         byte flags = (byte) 0xFF;
         int length = 8;
@@ -930,7 +930,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testDiscardUnknownEmptyFrame() throws Exception {
+    public void testDiscardUnknownEmptyFrame() {
         short type = 5;
         byte flags = (byte) 0xFF;
         int length = 0;
@@ -945,7 +945,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testProgressivelyDiscardUnknownEmptyFrame() throws Exception {
+    public void testProgressivelyDiscardUnknownEmptyFrame() {
         short type = 5;
         byte flags = (byte) 0xFF;
         int segment = 4;
@@ -971,7 +971,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testSpdyPingFrame() throws Exception {
+    public void testSpdyPingFrame() {
         short type = 6;
         byte flags = 0;
         int length = 4;
@@ -988,7 +988,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testUnknownSpdyPingFrameFlags() throws Exception {
+    public void testUnknownSpdyPingFrameFlags() {
         short type = 6;
         byte flags = (byte) 0xFF; // undefined flags
         int length = 4;
@@ -1005,7 +1005,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testInvalidSpdyPingFrameLength() throws Exception {
+    public void testInvalidSpdyPingFrameLength() {
         short type = 6;
         byte flags = 0;
         int length = 8; // invalid length
@@ -1022,7 +1022,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testSpdyGoAwayFrame() throws Exception {
+    public void testSpdyGoAwayFrame() {
         short type = 7;
         byte flags = 0;
         int length = 8;
@@ -1041,7 +1041,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testUnknownSpdyGoAwayFrameFlags() throws Exception {
+    public void testUnknownSpdyGoAwayFrameFlags() {
         short type = 7;
         byte flags = (byte) 0xFF; // undefined flags
         int length = 8;
@@ -1060,7 +1060,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testReservedSpdyGoAwayFrameBits() throws Exception {
+    public void testReservedSpdyGoAwayFrameBits() {
         short type = 7;
         byte flags = 0;
         int length = 8;
@@ -1079,7 +1079,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testInvalidSpdyGoAwayFrameLength() throws Exception {
+    public void testInvalidSpdyGoAwayFrameLength() {
         short type = 7;
         byte flags = 0;
         int length = 12; // invalid length
@@ -1098,7 +1098,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testSpdyHeadersFrame() throws Exception {
+    public void testSpdyHeadersFrame() {
         short type = 8;
         byte flags = 0;
         int length = 4;
@@ -1116,7 +1116,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testLastSpdyHeadersFrame() throws Exception {
+    public void testLastSpdyHeadersFrame() {
         short type = 8;
         byte flags = 0x01; // FLAG_FIN
         int length = 4;
@@ -1134,7 +1134,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testUnknownSpdyHeadersFrameFlags() throws Exception {
+    public void testUnknownSpdyHeadersFrameFlags() {
         short type = 8;
         byte flags = (byte) 0xFE; // undefined flags
         int length = 4;
@@ -1152,7 +1152,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testReservedSpdyHeadersFrameBits() throws Exception {
+    public void testReservedSpdyHeadersFrameBits() {
         short type = 8;
         byte flags = 0;
         int length = 4;
@@ -1170,7 +1170,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testInvalidSpdyHeadersFrameLength() throws Exception {
+    public void testInvalidSpdyHeadersFrameLength() {
         short type = 8;
         byte flags = 0;
         int length = 0; // invalid length
@@ -1185,7 +1185,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testInvalidSpdyHeadersFrameStreamId() throws Exception {
+    public void testInvalidSpdyHeadersFrameStreamId() {
         short type = 8;
         byte flags = 0;
         int length = 4;
@@ -1202,7 +1202,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testSpdyHeadersFrameHeaderBlock() throws Exception {
+    public void testSpdyHeadersFrameHeaderBlock() {
         short type = 8;
         byte flags = 0;
         int length = 4;
@@ -1229,7 +1229,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testSpdyWindowUpdateFrame() throws Exception {
+    public void testSpdyWindowUpdateFrame() {
         short type = 9;
         byte flags = 0;
         int length = 8;
@@ -1247,7 +1247,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testUnknownSpdyWindowUpdateFrameFlags() throws Exception {
+    public void testUnknownSpdyWindowUpdateFrameFlags() {
         short type = 9;
         byte flags = (byte) 0xFF; // undefined flags
         int length = 8;
@@ -1266,7 +1266,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testReservedSpdyWindowUpdateFrameBits() throws Exception {
+    public void testReservedSpdyWindowUpdateFrameBits() {
         short type = 9;
         byte flags = 0;
         int length = 8;
@@ -1285,7 +1285,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testInvalidSpdyWindowUpdateFrameLength() throws Exception {
+    public void testInvalidSpdyWindowUpdateFrameLength() {
         short type = 9;
         byte flags = 0;
         int length = 12; // invalid length
@@ -1304,7 +1304,7 @@ public class SpdyFrameDecoderTest {
     }
 
     @Test
-    public void testIllegalSpdyWindowUpdateFrameDeltaWindowSize() throws Exception {
+    public void testIllegalSpdyWindowUpdateFrameDeltaWindowSize() {
         short type = 9;
         byte flags = 0;
         int length = 8;

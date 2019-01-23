@@ -90,7 +90,7 @@ public final class WebSocketExtensionTestUtil {
     static class DummyEncoder extends WebSocketExtensionEncoder {
         @Override
         protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg,
-                List<Object> out) throws Exception {
+                List<Object> out) {
             // unused
         }
     }
@@ -98,7 +98,7 @@ public final class WebSocketExtensionTestUtil {
     static class DummyDecoder extends WebSocketExtensionDecoder {
         @Override
         protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg,
-                List<Object> out) throws Exception {
+                List<Object> out) {
             // unused
         }
     }
@@ -106,7 +106,7 @@ public final class WebSocketExtensionTestUtil {
     static class Dummy2Encoder extends WebSocketExtensionEncoder {
         @Override
         protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg,
-                List<Object> out) throws Exception {
+                List<Object> out) {
             // unused
         }
     }
@@ -114,7 +114,7 @@ public final class WebSocketExtensionTestUtil {
     static class Dummy2Decoder extends WebSocketExtensionDecoder {
         @Override
         protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg,
-                List<Object> out) throws Exception {
+                List<Object> out) {
             // unused
         }
     }

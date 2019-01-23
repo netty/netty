@@ -105,7 +105,7 @@ public class DelimiterBasedFrameDecoderTest {
     }
 
     @Test
-    public void testDecode() throws Exception {
+    public void testDecode() {
         EmbeddedChannel ch = new EmbeddedChannel(
                 new DelimiterBasedFrameDecoder(8192, true, Delimiters.lineDelimiter()));
 

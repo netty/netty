@@ -62,7 +62,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     private ScheduledFuture<?> connectTimeoutFuture;
     private final ChannelFutureListener writeListener = new ChannelFutureListener() {
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(ChannelFuture future) {
             if (!future.isSuccess()) {
                 setConnectFailure(future.cause());
             }
@@ -155,22 +155,22 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     /**
      * Adds the codec handlers required to communicate with the proxy server.
      */
-    protected abstract void addCodec(ChannelHandlerContext ctx) throws Exception;
+    protected abstract void addCodec(ChannelHandlerContext ctx);
 
     /**
      * Removes the encoders added in {@link #addCodec(ChannelHandlerContext)}.
      */
-    protected abstract void removeEncoder(ChannelHandlerContext ctx) throws Exception;
+    protected abstract void removeEncoder(ChannelHandlerContext ctx);
 
     /**
      * Removes the decoders added in {@link #addCodec(ChannelHandlerContext)}.
      */
-    protected abstract void removeDecoder(ChannelHandlerContext ctx) throws Exception;
+    protected abstract void removeDecoder(ChannelHandlerContext ctx);
 
     @Override
     public final void connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-            ChannelPromise promise) throws Exception {
+            ChannelPromise promise) {
 
         if (destinationAddress != null) {
             promise.setFailure(new ConnectionPendingException());
@@ -217,7 +217,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
      *
      * @return the initial message, or {@code null} if the proxy server is expected to send the first message instead
      */
-    protected abstract Object newInitialMessage(ChannelHandlerContext ctx) throws Exception;
+    protected abstract Object newInitialMessage(ChannelHandlerContext ctx);
 
     /**
      * Sends the specified message to the proxy server.  Use this method to send a response to the proxy server in
@@ -228,7 +228,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public final void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public final void channelInactive(ChannelHandlerContext ctx) {
         if (finished) {
             ctx.fireChannelInactive();
         } else {
@@ -238,7 +238,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         if (finished) {
             ctx.fireExceptionCaught(cause);
         } else {
@@ -248,7 +248,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public final void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public final void channelRead(ChannelHandlerContext ctx, Object msg) {
         if (finished) {
             // Received a message after the connection has been established; pass through.
             suppressChannelReadComplete = false;
@@ -389,7 +389,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public final void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public final void channelReadComplete(ChannelHandlerContext ctx) {
         if (suppressChannelReadComplete) {
             suppressChannelReadComplete = false;
 
@@ -400,7 +400,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public final void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public final void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (finished) {
             writePendingWrites();
             ctx.write(msg, promise);
@@ -410,7 +410,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public final void flush(ChannelHandlerContext ctx) throws Exception {
+    public final void flush(ChannelHandlerContext ctx) {
         if (finished) {
             writePendingWrites();
             ctx.flush();

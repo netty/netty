@@ -144,19 +144,19 @@ public class CipherSuiteCanaryTest {
 
                 ChannelHandler serverHandler = new ChannelInitializer<Channel>() {
                     @Override
-                    protected void initChannel(Channel ch) throws Exception {
+                    protected void initChannel(Channel ch) {
                         ChannelPipeline pipeline = ch.pipeline();
                         pipeline.addLast(sslServerContext.newHandler(ch.alloc()));
 
                         pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                             @Override
-                            public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                            public void channelInactive(ChannelHandlerContext ctx) {
                                 serverPromise.cancel(true);
                                 ctx.fireChannelInactive();
                             }
 
                             @Override
-                            public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                            public void channelRead0(ChannelHandlerContext ctx, Object msg) {
                                 if (serverPromise.trySuccess(null)) {
                                     ctx.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {'P', 'O', 'N', 'G'}));
                                 }
@@ -164,7 +164,7 @@ public class CipherSuiteCanaryTest {
                             }
 
                             @Override
-                            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                 if (!serverPromise.tryFailure(cause)) {
                                     ctx.fireExceptionCaught(cause);
                                 }
@@ -180,26 +180,25 @@ public class CipherSuiteCanaryTest {
                 try {
                     ChannelHandler clientHandler = new ChannelInitializer<Channel>() {
                         @Override
-                        protected void initChannel(Channel ch) throws Exception {
+                        protected void initChannel(Channel ch) {
                             ChannelPipeline pipeline = ch.pipeline();
                             pipeline.addLast(sslClientContext.newHandler(ch.alloc()));
 
                             pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                                 @Override
-                                public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                                public void channelInactive(ChannelHandlerContext ctx) {
                                     clientPromise.cancel(true);
                                     ctx.fireChannelInactive();
                                 }
 
                                 @Override
-                                public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                public void channelRead0(ChannelHandlerContext ctx, Object msg) {
                                     clientPromise.trySuccess(null);
                                     ctx.close();
                                 }
 
                                 @Override
-                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
-                                        throws Exception {
+                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                     if (!clientPromise.tryFailure(cause)) {
                                         ctx.fireExceptionCaught(cause);
                                     }

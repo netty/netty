@@ -45,7 +45,7 @@ public class PrivilegedSocketOperationsBenchmark extends AbstractMicrobenchmark 
     public static class SecurityManagerInstalled {
 
         @Setup
-        public void setup() throws IOException, NoSuchAlgorithmException, URISyntaxException {
+        public void setup() throws NoSuchAlgorithmException, URISyntaxException {
             final URI policyFile = PrivilegedSocketOperationsBenchmark.class.getResource("/jmh-security.policy")
                     .toURI();
             Policy.setPolicy(Policy.getInstance("JavaPolicy", new URIParameter(policyFile)));
@@ -53,7 +53,7 @@ public class PrivilegedSocketOperationsBenchmark extends AbstractMicrobenchmark 
         }
 
         @TearDown
-        public void tearDown() throws IOException {
+        public void tearDown() {
             System.setSecurityManager(null);
         }
     }
@@ -62,7 +62,7 @@ public class PrivilegedSocketOperationsBenchmark extends AbstractMicrobenchmark 
     public static class SecurityManagerEmpty {
 
         @Setup
-        public void setup() throws IOException, NoSuchAlgorithmException, URISyntaxException {
+        public void setup() {
             System.setSecurityManager(null);
         }
     }

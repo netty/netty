@@ -165,7 +165,7 @@ public class OcspTest {
         final CountDownLatch latch = new CountDownLatch(1);
         ChannelInboundHandlerAdapter serverHandler = new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            public void channelActive(ChannelHandlerContext ctx) {
                 ctx.writeAndFlush(Unpooled.wrappedBuffer("Hello, World!".getBytes()));
                 ctx.fireChannelActive();
             }
@@ -173,7 +173,7 @@ public class OcspTest {
 
         ChannelInboundHandlerAdapter clientHandler = new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 try {
                     ReferenceCountUtil.release(msg);
                 } finally {
@@ -213,7 +213,7 @@ public class OcspTest {
 
         ChannelInboundHandlerAdapter clientHandler = new ChannelInboundHandlerAdapter() {
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 try {
                     causeRef.set(cause);
                 } finally {
@@ -254,7 +254,7 @@ public class OcspTest {
         final CountDownLatch latch = new CountDownLatch(1);
         ChannelInboundHandlerAdapter serverHandler = new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            public void channelActive(ChannelHandlerContext ctx) {
                 ctx.writeAndFlush(Unpooled.wrappedBuffer("Hello, World!".getBytes()));
                 ctx.fireChannelActive();
             }
@@ -262,7 +262,7 @@ public class OcspTest {
 
         ChannelInboundHandlerAdapter clientHandler = new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 try {
                     ReferenceCountUtil.release(msg);
                 } finally {
@@ -303,7 +303,7 @@ public class OcspTest {
 
         ChannelInboundHandlerAdapter clientHandler = new ChannelInboundHandlerAdapter() {
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 try {
                     causeRef.set(cause);
                 } finally {
@@ -316,7 +316,7 @@ public class OcspTest {
         byte[] response = newOcspResponse();
         OcspClientCallback callback = new OcspClientCallback() {
             @Override
-            public boolean verify(byte[] response) throws Exception {
+            public boolean verify(byte[] response) {
                 throw clientException;
             }
         };
@@ -399,7 +399,7 @@ public class OcspTest {
             final byte[] response, final ChannelHandler handler) {
         return new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ChannelPipeline pipeline = ch.pipeline();
                 SslHandler sslHandler = context.newHandler(ch.alloc());
 
@@ -421,7 +421,7 @@ public class OcspTest {
             final OcspClientCallback callback, final ChannelHandler handler) {
         return new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ChannelPipeline pipeline = ch.pipeline();
 
                 SslHandler sslHandler = context.newHandler(ch.alloc());
@@ -449,7 +449,7 @@ public class OcspTest {
     }
 
     private interface OcspClientCallback {
-        boolean verify(byte[] staple) throws Exception;
+        boolean verify(byte[] staple);
     }
 
     private static final class TestClientOcspContext implements OcspClientCallback {
@@ -463,13 +463,13 @@ public class OcspTest {
             this.valid = valid;
         }
 
-        public byte[] response() throws InterruptedException, TimeoutException {
+        public byte[] response() throws InterruptedException {
             assertTrue(latch.await(10L, TimeUnit.SECONDS));
             return response;
         }
 
         @Override
-        public boolean verify(byte[] response) throws Exception {
+        public boolean verify(byte[] response) {
             this.response = response;
             latch.countDown();
 

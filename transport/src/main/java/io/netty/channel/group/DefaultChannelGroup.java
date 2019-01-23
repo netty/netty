@@ -48,7 +48,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     private final ConcurrentMap<ChannelId, Channel> nonServerChannels = new ConcurrentHashMap<>();
     private final ChannelFutureListener remover = new ChannelFutureListener() {
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(ChannelFuture future) {
             remove(future.channel());
         }
     };

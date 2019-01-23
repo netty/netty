@@ -70,7 +70,7 @@ public class OpenSslKeyMaterialManagerTest {
         OpenSslKeyMaterialManager manager = new OpenSslKeyMaterialManager(
                 new OpenSslKeyMaterialProvider(keyManager, null) {
             @Override
-            OpenSslKeyMaterial chooseKeyMaterial(ByteBufAllocator allocator, String alias) throws Exception {
+            OpenSslKeyMaterial chooseKeyMaterial(ByteBufAllocator allocator, String alias) {
                 Assert.fail("Should not be called when alias is null");
                 return null;
             }

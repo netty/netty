@@ -204,7 +204,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
         }
 
         @Override
-        public void handle(long ssl, byte[] keyTypeBytes, byte[][] asn1DerEncodedPrincipals) throws Exception {
+        public void handle(long ssl, byte[] keyTypeBytes, byte[][] asn1DerEncodedPrincipals) {
             final ReferenceCountedOpenSslEngine engine = engineMap.get(ssl);
             try {
                 // For now we just ignore the asn1DerEncodedPrincipals as this is kind of inline with what the

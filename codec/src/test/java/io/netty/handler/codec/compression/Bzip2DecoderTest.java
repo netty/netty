@@ -58,7 +58,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testUnexpectedStreamIdentifier() throws Exception {
+    public void testUnexpectedStreamIdentifier() {
         expected.expect(DecompressionException.class);
         expected.expectMessage("Unexpected stream identifier contents");
 
@@ -68,7 +68,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testInvalidBlockSize() throws Exception {
+    public void testInvalidBlockSize() {
         expected.expect(DecompressionException.class);
         expected.expectMessage("block size is invalid");
 
@@ -80,7 +80,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testBadBlockHeader() throws Exception {
+    public void testBadBlockHeader() {
         expected.expect(DecompressionException.class);
         expected.expectMessage("bad block header");
 
@@ -95,7 +95,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testStreamCrcErrorOfEmptyBlock() throws Exception {
+    public void testStreamCrcErrorOfEmptyBlock() {
         expected.expect(DecompressionException.class);
         expected.expectMessage("stream CRC error");
 
@@ -110,7 +110,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testStreamCrcError() throws Exception {
+    public void testStreamCrcError() {
         expected.expect(DecompressionException.class);
         expected.expectMessage("stream CRC error");
 
@@ -121,7 +121,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testIncorrectHuffmanGroupsNumber() throws Exception {
+    public void testIncorrectHuffmanGroupsNumber() {
         expected.expect(DecompressionException.class);
         expected.expectMessage("incorrect huffman groups number");
 
@@ -133,7 +133,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testIncorrectSelectorsNumber() throws Exception {
+    public void testIncorrectSelectorsNumber() {
         expected.expect(DecompressionException.class);
         expected.expectMessage("incorrect selectors number");
 
@@ -145,7 +145,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testBlockCrcError() throws Exception {
+    public void testBlockCrcError() {
         expected.expect(DecompressionException.class);
         expected.expectMessage("block CRC error");
 
@@ -157,7 +157,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
     }
 
     @Test
-    public void testStartPointerInvalid() throws Exception {
+    public void testStartPointerInvalid() {
         expected.expect(DecompressionException.class);
         expected.expectMessage("start pointer invalid");
 

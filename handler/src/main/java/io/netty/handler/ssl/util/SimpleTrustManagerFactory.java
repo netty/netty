@@ -82,14 +82,14 @@ public abstract class SimpleTrustManagerFactory extends TrustManagerFactory {
      *
      * @see TrustManagerFactorySpi#engineInit(KeyStore)
      */
-    protected abstract void engineInit(KeyStore keyStore) throws Exception;
+    protected abstract void engineInit(KeyStore keyStore);
 
     /**
      * Initializes this factory with a source of provider-specific key material.
      *
      * @see TrustManagerFactorySpi#engineInit(ManagerFactoryParameters)
      */
-    protected abstract void engineInit(ManagerFactoryParameters managerFactoryParameters) throws Exception;
+    protected abstract void engineInit(ManagerFactoryParameters managerFactoryParameters);
 
     /**
      * Returns one trust manager for each type of trust material.

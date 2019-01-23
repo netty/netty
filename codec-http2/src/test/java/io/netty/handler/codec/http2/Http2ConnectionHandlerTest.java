@@ -157,7 +157,7 @@ public class Http2ConnectionHandlerTest {
         when(decoder.flowController()).thenReturn(localFlow);
         doAnswer(new Answer<ChannelFuture>() {
             @Override
-            public ChannelFuture answer(InvocationOnMock invocation) throws Throwable {
+            public ChannelFuture answer(InvocationOnMock invocation) {
                 ByteBuf buf = invocation.getArgument(3);
                 goAwayDebugCap = buf.toString(UTF_8);
                 buf.release();
@@ -208,7 +208,7 @@ public class Http2ConnectionHandlerTest {
         when(ctx.executor()).thenReturn(executor);
         doAnswer(new Answer() {
             @Override
-            public Object answer(InvocationOnMock in) throws Throwable {
+            public Object answer(InvocationOnMock in) {
                 Object msg = in.getArgument(0);
                 ReferenceCountUtil.release(msg);
                 return null;
@@ -230,7 +230,7 @@ public class Http2ConnectionHandlerTest {
     }
 
     @Test
-    public void onHttpServerUpgradeWithoutHandlerAdded() throws Exception {
+    public void onHttpServerUpgradeWithoutHandlerAdded() {
         handler = new Http2ConnectionHandlerBuilder().frameListener(new Http2FrameAdapter()).server(true).build();
         try {
             handler.onHttpServerUpgrade(new Http2Settings());
@@ -241,7 +241,7 @@ public class Http2ConnectionHandlerTest {
     }
 
     @Test
-    public void onHttpClientUpgradeWithoutHandlerAdded() throws Exception {
+    public void onHttpClientUpgradeWithoutHandlerAdded() {
         handler = new Http2ConnectionHandlerBuilder().frameListener(new Http2FrameAdapter()).server(false).build();
         try {
             handler.onHttpClientUpgrade();
@@ -264,7 +264,7 @@ public class Http2ConnectionHandlerTest {
         final AtomicBoolean verified = new AtomicBoolean(false);
         final Answer verifier = new Answer() {
             @Override
-            public Object answer(final InvocationOnMock in) throws Throwable {
+            public Object answer(final InvocationOnMock in) {
                 assertTrue(in.getArgument(0).equals(evt));  // sanity check...
                 verify(ctx).write(eq(connectionPrefaceBuf()));
                 verify(encoder).writeSettings(eq(ctx), any(Http2Settings.class), any(ChannelPromise.class));
@@ -459,7 +459,7 @@ public class Http2ConnectionHandlerTest {
         final CountDownLatch latch = new CountDownLatch(1);
         handler = new Http2ConnectionHandler(decoder, encoder, new Http2Settings()) {
             @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
                     latch.countDown();
                 }
@@ -571,7 +571,7 @@ public class Http2ConnectionHandlerTest {
                 // Simulate that all streams have become inactive by the time the future completes.
                 doAnswer(new Answer<Http2Stream>() {
                     @Override
-                    public Http2Stream answer(InvocationOnMock in) throws Throwable {
+                    public Http2Stream answer(InvocationOnMock in) {
                         return null;
                     }
                 }).when(connection).forEachActiveStream(any(Http2StreamVisitor.class));
@@ -668,7 +668,7 @@ public class Http2ConnectionHandlerTest {
         final Throwable cause = new RuntimeException("fake exception");
         doAnswer(new Answer<ChannelFuture>() {
             @Override
-            public ChannelFuture answer(InvocationOnMock invocation) throws Throwable {
+            public ChannelFuture answer(InvocationOnMock invocation) {
                 ChannelPromise promise = invocation.getArgument(4);
                 assertFalse(promise.isVoid());
                 // This is what DefaultHttp2FrameWriter does... I hate mocking :-(.
@@ -745,7 +745,7 @@ public class Http2ConnectionHandlerTest {
         when(frameWriter.writeRstStream(eq(ctx), eq(streamId), anyLong(), any(ChannelPromise.class)))
                 .then(new Answer<ChannelFuture>() {
                     @Override
-                    public ChannelFuture answer(InvocationOnMock invocationOnMock) throws Throwable {
+                    public ChannelFuture answer(InvocationOnMock invocationOnMock) {
                         ChannelPromise promise = invocationOnMock.getArgument(3);
                         assertFalse(promise.isVoid());
                         return promise.setFailure(cause);

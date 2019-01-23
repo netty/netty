@@ -153,7 +153,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
+    protected void doBind(SocketAddress localAddress) {
         this.localAddress =
                 LocalChannelRegistry.register(this, this.localAddress,
                         localAddress);
@@ -166,7 +166,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doClose() {
         final LocalChannel peer = this.peer;
         State oldState = state;
         try {
@@ -267,7 +267,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doBeginRead() throws Exception {
+    protected void doBeginRead() {
         if (readInProgress) {
             return;
         }

@@ -143,7 +143,7 @@ public final class Http2StreamChannelBootstrap {
         ChannelFuture future = streamChannel.register();
         future.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 if (future.isSuccess()) {
                     promise.setSuccess(streamChannel);
                 } else if (future.isCancelled()) {
@@ -162,7 +162,7 @@ public final class Http2StreamChannelBootstrap {
     }
 
     @SuppressWarnings("unchecked")
-    private void init(Channel channel) throws Exception {
+    private void init(Channel channel) {
         ChannelPipeline p = channel.pipeline();
         ChannelHandler handler = this.handler;
         if (handler != null) {

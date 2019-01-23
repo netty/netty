@@ -316,7 +316,7 @@ final class OpenSslTlsv13X509ExtendedTrustManager extends X509ExtendedTrustManag
                 }
 
                 @Override
-                public Certificate[] getPeerCertificates() throws SSLPeerUnverifiedException {
+                public Certificate[] getPeerCertificates() {
                     return EmptyArrays.EMPTY_CERTIFICATES;
                 }
 
@@ -326,13 +326,12 @@ final class OpenSslTlsv13X509ExtendedTrustManager extends X509ExtendedTrustManag
                 }
 
                 @Override
-                public javax.security.cert.X509Certificate[] getPeerCertificateChain()
-                        throws SSLPeerUnverifiedException {
+                public javax.security.cert.X509Certificate[] getPeerCertificateChain() {
                     return EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
                 }
 
                 @Override
-                public Principal getPeerPrincipal() throws SSLPeerUnverifiedException {
+                public Principal getPeerPrincipal() {
                     return null;
                 }
 
@@ -374,14 +373,12 @@ final class OpenSslTlsv13X509ExtendedTrustManager extends X509ExtendedTrustManag
         }
 
         @Override
-        public SSLEngineResult wrap(ByteBuffer[] byteBuffers, int i, int i1, ByteBuffer byteBuffer)
-                            throws SSLException {
+        public SSLEngineResult wrap(ByteBuffer[] byteBuffers, int i, int i1, ByteBuffer byteBuffer) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public SSLEngineResult unwrap(ByteBuffer byteBuffer, ByteBuffer[] byteBuffers, int i, int i1)
-                            throws SSLException {
+        public SSLEngineResult unwrap(ByteBuffer byteBuffer, ByteBuffer[] byteBuffers, int i, int i1) {
             throw new UnsupportedOperationException();
         }
 
@@ -391,7 +388,7 @@ final class OpenSslTlsv13X509ExtendedTrustManager extends X509ExtendedTrustManag
         }
 
         @Override
-        public void closeInbound() throws SSLException {
+        public void closeInbound() {
             // NOOP
         }
 
@@ -446,7 +443,7 @@ final class OpenSslTlsv13X509ExtendedTrustManager extends X509ExtendedTrustManag
         }
 
         @Override
-        public void beginHandshake() throws SSLException {
+        public void beginHandshake() {
             // NOOP
         }
 

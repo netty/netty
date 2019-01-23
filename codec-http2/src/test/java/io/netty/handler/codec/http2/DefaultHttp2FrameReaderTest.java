@@ -45,7 +45,7 @@ public class DefaultHttp2FrameReaderTest {
     private HpackEncoder hpackEncoder;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         MockitoAnnotations.initMocks(this);
 
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);

@@ -85,7 +85,7 @@ public class UniformStreamByteDistributorTest {
     private Answer<Void> writeAnswer() {
         return new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
+            public Void answer(InvocationOnMock in) {
                 Http2Stream stream = in.getArgument(0);
                 int numBytes = in.getArgument(1);
                 TestStreamByteDistributorStreamState state = stateMap.get(stream.id());

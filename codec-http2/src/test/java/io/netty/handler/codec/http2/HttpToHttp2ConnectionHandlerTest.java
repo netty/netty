@@ -97,12 +97,12 @@ public class HttpToHttp2ConnectionHandlerTest {
     private FrameCountDown serverFrameCountDown;
 
     @Before
-    public void setup() throws Exception {
+    public void setup() {
         MockitoAnnotations.initMocks(this);
     }
 
     @After
-    public void teardown() throws Exception {
+    public void teardown() {
         if (clientChannel != null) {
             clientChannel.close().syncUninterruptibly();
             clientChannel = null;
@@ -338,7 +338,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<>());
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
+            public Void answer(InvocationOnMock in) {
                 receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
                 return null;
             }
@@ -381,7 +381,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<>());
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
+            public Void answer(InvocationOnMock in) {
                 receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
                 return null;
             }
@@ -433,7 +433,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<>());
         doAnswer(new Answer<Void>() {
             @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
+            public Void answer(InvocationOnMock in) {
                 receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
                 return null;
             }
@@ -512,7 +512,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         sb.channel(LocalServerChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 serverConnectedChannel = ch;
                 ChannelPipeline p = ch.pipeline();
                 serverFrameCountDown =
@@ -529,7 +529,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         cb.channel(LocalChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ChannelPipeline p = ch.pipeline();
                 HttpToHttp2ConnectionHandler handler = new HttpToHttp2ConnectionHandlerBuilder()
                         .server(false)
@@ -539,7 +539,7 @@ public class HttpToHttp2ConnectionHandlerTest {
                 p.addLast(handler);
                 p.addLast(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                         if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
                             prefaceWrittenLatch.countDown();
                             ctx.pipeline().remove(this);

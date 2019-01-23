@@ -352,7 +352,7 @@ public final class Base64 {
         }
 
         @Override
-        public boolean process(byte value) throws Exception {
+        public boolean process(byte value) {
             sbiCrop = (byte) (value & 0x7f); // Only the low seven bits
             sbiDecode = decodabet[sbiCrop];
 

@@ -87,12 +87,12 @@ public class DefaultChannelPipelineTest {
         sb.group(group).channel(LocalServerChannel.class);
         sb.childHandler(new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+            public void channelRegistered(ChannelHandlerContext ctx) {
                 peerRef.set(ctx.channel());
             }
 
             @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 ReferenceCountUtil.release(msg);
             }
         });
@@ -103,7 +103,7 @@ public class DefaultChannelPipelineTest {
         b.group(group).channel(LocalChannel.class);
         b.handler(new ChannelInitializer<LocalChannel>() {
             @Override
-            protected void initChannel(LocalChannel ch) throws Exception {
+            protected void initChannel(LocalChannel ch) {
                 ch.pipeline().addLast(handlers);
             }
         });
@@ -115,7 +115,7 @@ public class DefaultChannelPipelineTest {
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         if (peer != null) {
             peer.close();
             peer = null;
@@ -154,7 +154,7 @@ public class DefaultChannelPipelineTest {
         boolean called;
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             called = true;
             if (!(msg instanceof String)) {
                 ctx.fireChannelRead(msg);
@@ -280,10 +280,10 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.addLast(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+                    public void channelRegistered(ChannelHandlerContext ctx) {
                         latch.countDown();
                     }
                 });
@@ -519,7 +519,7 @@ public class DefaultChannelPipelineTest {
 
     // Tests for https://github.com/netty/netty/issues/2349
     @Test
-    public void testCancelBind() throws Exception {
+    public void testCancelBind() {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.channel().register();
 
@@ -530,7 +530,7 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
-    public void testCancelConnect() throws Exception {
+    public void testCancelConnect() {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.channel().register();
 
@@ -541,7 +541,7 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
-    public void testCancelDisconnect() throws Exception {
+    public void testCancelDisconnect() {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.channel().register();
 
@@ -552,7 +552,7 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
-    public void testCancelClose() throws Exception {
+    public void testCancelClose() {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.channel().register();
 
@@ -645,25 +645,25 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
-    public void testFirstContextEmptyPipeline() throws Exception {
+    public void testFirstContextEmptyPipeline() {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         assertNull(pipeline.firstContext());
     }
 
     @Test
-    public void testLastContextEmptyPipeline() throws Exception {
+    public void testLastContextEmptyPipeline() {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         assertNull(pipeline.lastContext());
     }
 
     @Test
-    public void testFirstHandlerEmptyPipeline() throws Exception {
+    public void testFirstHandlerEmptyPipeline() {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         assertNull(pipeline.first());
     }
 
     @Test
-    public void testLastHandlerEmptyPipeline() throws Exception {
+    public void testLastHandlerEmptyPipeline() {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         assertNull(pipeline.last());
     }
@@ -675,7 +675,7 @@ public class DefaultChannelPipelineTest {
         final CountDownLatch latch = new CountDownLatch(1);
         EmbeddedChannel channel = new EmbeddedChannel(false, false, new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 throw exception;
             }
 
@@ -698,17 +698,17 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
         pipeline.addLast(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ch.pipeline().addLast(new WrapperExecutor(),
                         new ChannelInboundHandlerAdapter() {
 
                             @Override
-                            public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+                            public void channelUnregistered(ChannelHandlerContext ctx) {
                                 channelLatch.countDown();
                             }
 
                             @Override
-                            public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+                            public void handlerRemoved(ChannelHandlerContext ctx) {
                                 handlerLatch.countDown();
                             }
                         });
@@ -749,7 +749,7 @@ public class DefaultChannelPipelineTest {
         pipeline.channel().register();
         pipeline.replace(handler, null, new ChannelHandlerAdapter() {
             @Override
-            public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            public void handlerAdded(ChannelHandlerContext ctx) {
                 latch.countDown();
             }
         });
@@ -979,29 +979,29 @@ public class DefaultChannelPipelineTest {
         testAddInListener(newLocalChannel());
     }
 
-    private static void testAddInListener(Channel channel) throws Throwable {
+    private static void testAddInListener(Channel channel) {
         ChannelPipeline pipeline1 = channel.pipeline();
         try {
             final Object event = new Object();
             final Promise<Object> promise = ImmediateEventExecutor.INSTANCE.newPromise();
             pipeline1.channel().register().addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     ChannelPipeline pipeline = future.channel().pipeline();
                     final AtomicBoolean handlerAddedCalled = new AtomicBoolean();
                     pipeline.addLast(new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                        public void handlerAdded(ChannelHandlerContext ctx) {
                             handlerAddedCalled.set(true);
                         }
 
                         @Override
-                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                             promise.setSuccess(event);
                         }
 
                         @Override
-                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                             promise.setFailure(cause);
                         }
                     });
@@ -1045,13 +1045,13 @@ public class DefaultChannelPipelineTest {
             final CountDownLatch latch = new CountDownLatch(1);
             pipeline1.addLast(eventExecutors, new ChannelInboundHandlerAdapter() {
                 @Override
-                public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                public void handlerAdded(ChannelHandlerContext ctx) {
                     // Just block one of the two threads.
                     LockSupport.park();
                 }
 
                 @Override
-                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                     latch.countDown();
                 }
             });
@@ -1104,7 +1104,7 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test(timeout = 3000)
-    public void testVoidPromiseNotify() throws Throwable {
+    public void testVoidPromiseNotify() {
         EventLoopGroup defaultGroup = new LocalEventLoopGroup(1);
         EventLoop eventLoop1 = defaultGroup.next();
         ChannelPipeline pipeline1 = new LocalChannel(eventLoop1).pipeline();
@@ -1658,7 +1658,7 @@ public class DefaultChannelPipelineTest {
         final AtomicReference<Throwable> error = new AtomicReference<>();
 
         @Override
-        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        public void handlerAdded(ChannelHandlerContext ctx) {
             if (!addedHandler.trySuccess(true)) {
                 error.set(new AssertionError("handlerAdded(...) called multiple times: " + ctx.name()));
             } else if (removedHandler.getNow() == Boolean.TRUE) {
@@ -1667,7 +1667,7 @@ public class DefaultChannelPipelineTest {
         }
 
         @Override
-        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        public void handlerRemoved(ChannelHandlerContext ctx) {
             if (!removedHandler.trySuccess(true)) {
                 error.set(new AssertionError("handlerRemoved(...) called multiple times: " + ctx.name()));
             } else if (addedHandler.getNow() == Boolean.FALSE) {
@@ -1686,7 +1686,7 @@ public class DefaultChannelPipelineTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             if (cause instanceof ChannelPipelineException && cause.getCause() == expected) {
                 promise.setSuccess(null);
             } else {
@@ -1716,19 +1716,19 @@ public class DefaultChannelPipelineTest {
         }
 
         @Override
-        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        public void handlerAdded(ChannelHandlerContext ctx) {
             addedQueue.add(this);
             checkExecutor(ctx);
         }
 
         @Override
-        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        public void handlerRemoved(ChannelHandlerContext ctx) {
             removedQueue.add(this);
             checkExecutor(ctx);
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             error.set(cause);
         }
 
@@ -1758,12 +1758,12 @@ public class DefaultChannelPipelineTest {
         }
 
         @Override
-        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        public void handlerAdded(ChannelHandlerContext ctx) {
             assertExecutor(ctx, addedPromise);
         }
 
         @Override
-        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        public void handlerRemoved(ChannelHandlerContext ctx) {
             assertExecutor(ctx, removedPromise);
         }
 
@@ -1790,12 +1790,12 @@ public class DefaultChannelPipelineTest {
         }
 
         @Override
-        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        public void handlerAdded(ChannelHandlerContext ctx) {
             error.set(new AssertionError());
         }
 
         @Override
-        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        public void handlerRemoved(ChannelHandlerContext ctx) {
             error.set(new AssertionError());
         }
     }
@@ -1850,17 +1850,17 @@ public class DefaultChannelPipelineTest {
         final Queue<Object> outboundBuffer = new ArrayDeque<>();
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             outboundBuffer.add(msg);
         }
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             inboundBuffer.add(msg);
         }
 
         @Override
-        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        public void handlerRemoved(ChannelHandlerContext ctx) {
             if (!inboundBuffer.isEmpty()) {
                 for (Object o: inboundBuffer) {
                     ctx.fireChannelRead(o);
