@@ -461,13 +461,10 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 continue;
             }
             PoolSubpage<?> s = head.next;
-            for (;;) {
+            do {
                 metrics.add(s);
                 s = s.next;
-                if (s == head) {
-                    break;
-                }
-            }
+            } while (s != head);
         }
         return metrics;
     }
@@ -631,13 +628,10 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                     .append(i)
                     .append(": ");
             PoolSubpage<?> s = head.next;
-            for (;;) {
+            do {
                 buf.append(s);
                 s = s.next;
-                if (s == head) {
-                    break;
-                }
-            }
+            } while (s != head);
         }
     }
 

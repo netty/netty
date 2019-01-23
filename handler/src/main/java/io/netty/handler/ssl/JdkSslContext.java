@@ -101,9 +101,7 @@ public class JdkSslContext extends SslContext {
         // Choose the sensible default list of protocols.
         final String[] supportedProtocols = engine.getSupportedProtocols();
         Set<String> supportedProtocolsSet = new HashSet<>(supportedProtocols.length);
-        for (int i = 0; i < supportedProtocols.length; ++i) {
-            supportedProtocolsSet.add(supportedProtocols[i]);
-        }
+        Collections.addAll(supportedProtocolsSet, supportedProtocols);
         List<String> protocols = new ArrayList<>();
         addIfSupported(
                 supportedProtocolsSet, protocols,

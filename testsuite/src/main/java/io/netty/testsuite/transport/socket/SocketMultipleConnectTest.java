@@ -61,12 +61,6 @@ public class SocketMultipleConnectTest extends AbstractSocketTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
-        List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> factories
-                = new ArrayList<>();
-        for (TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap> comboFactory
-                : SocketTestPermutation.INSTANCE.socket()) {
-            factories.add(comboFactory);
-        }
-        return factories;
+        return new ArrayList<>(SocketTestPermutation.INSTANCE.socket());
     }
 }
