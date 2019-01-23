@@ -170,8 +170,8 @@ public final class PlatformDependent {
         if (CLEANER == NOOP && !PlatformDependent0.isExplicitNoUnsafe()) {
             logger.info(
                     "Your platform does not provide complete low-level API for accessing direct buffers reliably. " +
-                            "Unless explicitly requested, heap buffer will always be preferred to avoid potential system " +
-                            "instability.");
+                            "Unless explicitly requested, heap buffer will always be preferred to avoid potential " +
+                            "system instability.");
         }
     }
 
