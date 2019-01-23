@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.util.internal.ResourcesUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -38,58 +39,58 @@ public abstract class SslContextTest {
     @Test(expected = IOException.class)
     public void testUnencryptedEmptyPassword() throws Exception {
         PrivateKey key = SslContext.toPrivateKey(
-                new File(getClass().getResource("test2_unencrypted.pem").getFile()), "");
+                ResourcesUtil.getFile(getClass(), "test2_unencrypted.pem"), "");
         Assert.assertNotNull(key);
     }
 
     @Test
     public void testUnEncryptedNullPassword() throws Exception {
         PrivateKey key = SslContext.toPrivateKey(
-                new File(getClass().getResource("test2_unencrypted.pem").getFile()), null);
+                ResourcesUtil.getFile(getClass(), "test2_unencrypted.pem"), null);
         Assert.assertNotNull(key);
     }
 
     @Test
     public void testEncryptedEmptyPassword() throws Exception {
         PrivateKey key = SslContext.toPrivateKey(
-                new File(getClass().getResource("test_encrypted_empty_pass.pem").getFile()), "");
+                ResourcesUtil.getFile(getClass(), "test_encrypted_empty_pass.pem"), "");
         Assert.assertNotNull(key);
     }
 
     @Test(expected = InvalidKeySpecException.class)
     public void testEncryptedNullPassword() throws Exception {
         SslContext.toPrivateKey(
-                new File(getClass().getResource("test_encrypted_empty_pass.pem").getFile()), null);
+                ResourcesUtil.getFile(getClass(), "test_encrypted_empty_pass.pem"), null);
     }
 
     @Test
     public void testSslServerWithEncryptedPrivateKey() throws SSLException {
-        File keyFile = new File(getClass().getResource("test_encrypted.pem").getFile());
-        File crtFile = new File(getClass().getResource("test.crt").getFile());
+        File keyFile = ResourcesUtil.getFile(getClass(), "test_encrypted.pem");
+        File crtFile = ResourcesUtil.getFile(getClass(), "test.crt");
 
         newServerContext(crtFile, keyFile, "12345");
     }
 
     @Test
     public void testSslServerWithEncryptedPrivateKey2() throws SSLException {
-        File keyFile = new File(getClass().getResource("test2_encrypted.pem").getFile());
-        File crtFile = new File(getClass().getResource("test2.crt").getFile());
+        File keyFile = ResourcesUtil.getFile(getClass(), "test2_encrypted.pem");
+        File crtFile = ResourcesUtil.getFile(getClass(), "test2.crt");
 
         newServerContext(crtFile, keyFile, "12345");
     }
 
     @Test
     public void testSslServerWithUnencryptedPrivateKey() throws SSLException {
-        File keyFile = new File(getClass().getResource("test_unencrypted.pem").getFile());
-        File crtFile = new File(getClass().getResource("test.crt").getFile());
+        File keyFile = ResourcesUtil.getFile(getClass(), "test_unencrypted.pem");
+        File crtFile = ResourcesUtil.getFile(getClass(), "test.crt");
 
         newServerContext(crtFile, keyFile, null);
     }
 
     @Test(expected = SSLException.class)
     public void testSslServerWithUnencryptedPrivateKeyEmptyPass() throws SSLException {
-        File keyFile = new File(getClass().getResource("test_unencrypted.pem").getFile());
-        File crtFile = new File(getClass().getResource("test.crt").getFile());
+        File keyFile = ResourcesUtil.getFile(getClass(), "test_unencrypted.pem");
+        File crtFile = ResourcesUtil.getFile(getClass(), "test.crt");
 
         newServerContext(crtFile, keyFile, "");
     }
@@ -108,8 +109,8 @@ public abstract class SslContextTest {
             exception = e;
         }
         assumeNotNull(exception);
-        File keyFile = new File(getClass().getResource("test_unencrypted.pem").getFile());
-        File crtFile = new File(getClass().getResource("test.crt").getFile());
+        File keyFile = ResourcesUtil.getFile(getClass(), "test_unencrypted.pem");
+        File crtFile = ResourcesUtil.getFile(getClass(), "test.crt");
 
         SslContext sslContext = newServerContext(crtFile, keyFile, null);
         assertFalse(sslContext.cipherSuites().contains(unsupportedCipher));

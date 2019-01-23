@@ -39,6 +39,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ResourcesUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
@@ -85,6 +86,8 @@ import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSessionBindingEvent;
+import javax.net.ssl.SSLSessionBindingListener;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
@@ -501,9 +504,9 @@ public abstract class SSLEngineTest {
 
     @Test
     public void testMutualAuthSameCerts() throws Throwable {
-        mySetupMutualAuth(new File(getClass().getResource("test_unencrypted.pem").getFile()),
-                          new File(getClass().getResource("test.crt").getFile()),
-                          null);
+        mySetupMutualAuth(ResourcesUtil.getFile(getClass(), "test_unencrypted.pem"),
+                ResourcesUtil.getFile(getClass(), "test.crt"),
+                null);
         runTest(null);
         assertTrue(serverLatch.await(2, TimeUnit.SECONDS));
         Throwable cause = serverException;
@@ -514,11 +517,11 @@ public abstract class SSLEngineTest {
 
     @Test
     public void testMutualAuthDiffCerts() throws Exception {
-        File serverKeyFile = new File(getClass().getResource("test_encrypted.pem").getFile());
-        File serverCrtFile = new File(getClass().getResource("test.crt").getFile());
+        File serverKeyFile =  ResourcesUtil.getFile(getClass(), "test_encrypted.pem");
+        File serverCrtFile = ResourcesUtil.getFile(getClass(), "test.crt");
         String serverKeyPassword = "12345";
-        File clientKeyFile = new File(getClass().getResource("test2_encrypted.pem").getFile());
-        File clientCrtFile = new File(getClass().getResource("test2.crt").getFile());
+        File clientKeyFile = ResourcesUtil.getFile(getClass(), "test2_encrypted.pem");
+        File clientCrtFile = ResourcesUtil.getFile(getClass(), "test2.crt");
         String clientKeyPassword = "12345";
         mySetupMutualAuth(clientCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
                           serverCrtFile, clientKeyFile, clientCrtFile, clientKeyPassword);
@@ -528,11 +531,11 @@ public abstract class SSLEngineTest {
 
     @Test
     public void testMutualAuthDiffCertsServerFailure() throws Exception {
-        File serverKeyFile = new File(getClass().getResource("test_encrypted.pem").getFile());
-        File serverCrtFile = new File(getClass().getResource("test.crt").getFile());
+        File serverKeyFile = ResourcesUtil.getFile(getClass(), "test_encrypted.pem");
+        File serverCrtFile = ResourcesUtil.getFile(getClass(), "test.crt");
         String serverKeyPassword = "12345";
-        File clientKeyFile = new File(getClass().getResource("test2_encrypted.pem").getFile());
-        File clientCrtFile = new File(getClass().getResource("test2.crt").getFile());
+        File clientKeyFile = ResourcesUtil.getFile(getClass(), "test2_encrypted.pem");
+        File clientCrtFile = ResourcesUtil.getFile(getClass(), "test2.crt");
         String clientKeyPassword = "12345";
         // Client trusts server but server only trusts itself
         mySetupMutualAuth(serverCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
@@ -543,11 +546,11 @@ public abstract class SSLEngineTest {
 
     @Test
     public void testMutualAuthDiffCertsClientFailure() throws Exception {
-        File serverKeyFile = new File(getClass().getResource("test_unencrypted.pem").getFile());
-        File serverCrtFile = new File(getClass().getResource("test.crt").getFile());
+        File serverKeyFile = ResourcesUtil.getFile(getClass(), "test_unencrypted.pem");
+        File serverCrtFile = ResourcesUtil.getFile(getClass(), "test.crt");
         String serverKeyPassword = null;
-        File clientKeyFile = new File(getClass().getResource("test2_unencrypted.pem").getFile());
-        File clientCrtFile = new File(getClass().getResource("test2.crt").getFile());
+        File clientKeyFile = ResourcesUtil.getFile(getClass(), "test2_unencrypted.pem");
+        File clientCrtFile = ResourcesUtil.getFile(getClass(), "test2.crt");
         String clientKeyPassword = null;
         // Server trusts client but client only trusts itself
         mySetupMutualAuth(clientCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
@@ -593,7 +596,7 @@ public abstract class SSLEngineTest {
         final KeyManagerFactory clientKeyManagerFactory =
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         clientKeyManagerFactory.init(clientKeyStore, password);
-        File commonCertChain = new File(getClass().getResource("mutual_auth_ca.pem").getFile());
+        File commonCertChain = ResourcesUtil.getFile(getClass(), "mutual_auth_ca.pem");
 
         mySetupMutualAuth(serverKeyManagerFactory, commonCertChain, clientKeyManagerFactory, commonCertChain,
                 auth, false, false);
@@ -620,7 +623,7 @@ public abstract class SSLEngineTest {
         final KeyManagerFactory clientKeyManagerFactory =
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         clientKeyManagerFactory.init(clientKeyStore, password);
-        File commonCertChain = new File(getClass().getResource("mutual_auth_ca.pem").getFile());
+        File commonCertChain = ResourcesUtil.getFile(getClass(), "mutual_auth_ca.pem");
 
         mySetupMutualAuth(serverKeyManagerFactory, commonCertChain, clientKeyManagerFactory, commonCertChain,
                           auth, true, serverInitEngine);
@@ -784,9 +787,9 @@ public abstract class SSLEngineTest {
 
     @Test
     public void testClientHostnameValidationSuccess() throws InterruptedException, SSLException {
-        mySetupClientHostnameValidation(new File(getClass().getResource("localhost_server.pem").getFile()),
-                                        new File(getClass().getResource("localhost_server.key").getFile()),
-                                        new File(getClass().getResource("mutual_auth_ca.pem").getFile()),
+        mySetupClientHostnameValidation(ResourcesUtil.getFile(getClass(),  "localhost_server.pem"),
+                                        ResourcesUtil.getFile(getClass(), "localhost_server.key"),
+                                        ResourcesUtil.getFile(getClass(), "mutual_auth_ca.pem"),
                                         false);
         assertTrue(clientLatch.await(5, TimeUnit.SECONDS));
         assertNull(clientException);
@@ -796,9 +799,9 @@ public abstract class SSLEngineTest {
 
     @Test
     public void testClientHostnameValidationFail() throws InterruptedException, SSLException {
-        mySetupClientHostnameValidation(new File(getClass().getResource("notlocalhost_server.pem").getFile()),
-                                        new File(getClass().getResource("notlocalhost_server.key").getFile()),
-                                        new File(getClass().getResource("mutual_auth_ca.pem").getFile()),
+        mySetupClientHostnameValidation(ResourcesUtil.getFile(getClass(),  "notlocalhost_server.pem"),
+                                        ResourcesUtil.getFile(getClass(), "notlocalhost_server.key"),
+                                        ResourcesUtil.getFile(getClass(), "mutual_auth_ca.pem"),
                                         true);
         assertTrue(clientLatch.await(5, TimeUnit.SECONDS));
         assertTrue("unexpected exception: " + clientException,
@@ -1347,8 +1350,8 @@ public abstract class SSLEngineTest {
     protected void testEnablingAnAlreadyDisabledSslProtocol(String[] protocols1, String[] protocols2) throws Exception {
         SSLEngine sslEngine = null;
         try {
-            File serverKeyFile = new File(getClass().getResource("test_unencrypted.pem").getFile());
-            File serverCrtFile = new File(getClass().getResource("test.crt").getFile());
+            File serverKeyFile = ResourcesUtil.getFile(getClass(), "test_unencrypted.pem");
+            File serverCrtFile = ResourcesUtil.getFile(getClass(), "test.crt");
             serverSslCtx = SslContextBuilder.forServer(serverCrtFile, serverKeyFile)
                                             .sslProvider(sslServerProvider())
                                             .sslContextProvider(serverSslContextProvider())
@@ -2727,6 +2730,86 @@ public abstract class SSLEngineTest {
             cleanupServerSslEngine(serverEngine);
             ssc.delete();
         }
+    }
+
+    @Test
+    public void testSessionBindingEvent() throws Exception {
+        clientSslCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
+                .build();
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
+                .build();
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            handshake(clientEngine, serverEngine);
+            SSLSession session = clientEngine.getSession();
+            assertEquals(0, session.getValueNames().length);
+
+            class SSLSessionBindingEventValue implements SSLSessionBindingListener {
+                SSLSessionBindingEvent boundEvent;
+                SSLSessionBindingEvent unboundEvent;
+
+                @Override
+                public void valueBound(SSLSessionBindingEvent sslSessionBindingEvent) {
+                    assertNull(boundEvent);
+                    boundEvent = sslSessionBindingEvent;
+                }
+
+                @Override
+                public void valueUnbound(SSLSessionBindingEvent sslSessionBindingEvent) {
+                    assertNull(unboundEvent);
+                    unboundEvent = sslSessionBindingEvent;
+                }
+            }
+
+            String name = "name";
+            String name2 = "name2";
+
+            SSLSessionBindingEventValue value1 = new SSLSessionBindingEventValue();
+            session.putValue(name, value1);
+            assertSSLSessionBindingEventValue(name, session, value1.boundEvent);
+            assertNull(value1.unboundEvent);
+            assertEquals(1, session.getValueNames().length);
+
+            session.putValue(name2, "value");
+
+            SSLSessionBindingEventValue value2 = new SSLSessionBindingEventValue();
+            session.putValue(name, value2);
+            assertEquals(2, session.getValueNames().length);
+
+            assertSSLSessionBindingEventValue(name, session, value1.unboundEvent);
+            assertSSLSessionBindingEventValue(name, session, value2.boundEvent);
+            assertNull(value2.unboundEvent);
+            assertEquals(2, session.getValueNames().length);
+
+            session.removeValue(name);
+            assertSSLSessionBindingEventValue(name, session, value2.unboundEvent);
+            assertEquals(1, session.getValueNames().length);
+            session.removeValue(name2);
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
+            ssc.delete();
+        }
+    }
+
+    private static void assertSSLSessionBindingEventValue(
+            String name, SSLSession session, SSLSessionBindingEvent event) {
+        assertEquals(name, event.getName());
+        assertEquals(session, event.getSession());
+        assertEquals(session, event.getSource());
     }
 
     @Test

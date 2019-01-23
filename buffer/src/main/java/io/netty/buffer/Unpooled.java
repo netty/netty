@@ -219,7 +219,7 @@ public final class Unpooled {
      * Creates a new buffer which wraps the specified buffer's readable bytes.
      * A modification on the specified buffer's content will be visible to the
      * returned buffer.
-     * @param buffer The buffer to wrap. Reference count ownership of this variable is transfered to this method.
+     * @param buffer The buffer to wrap. Reference count ownership of this variable is transferred to this method.
      * @return The readable portion of the {@code buffer}, or an empty buffer if there is no readable portion.
      * The caller is responsible for releasing this buffer.
      */
@@ -245,7 +245,7 @@ public final class Unpooled {
      * Creates a new big-endian composite buffer which wraps the readable bytes of the
      * specified buffers without copying them.  A modification on the content
      * of the specified buffers will be visible to the returned buffer.
-     * @param buffers The buffers to wrap. Reference count ownership of all variables is transfered to this method.
+     * @param buffers The buffers to wrap. Reference count ownership of all variables is transferred to this method.
      * @return The readable portion of the {@code buffers}. The caller is responsible for releasing this buffer.
      */
     public static ByteBuf wrappedBuffer(ByteBuf... buffers) {
@@ -300,7 +300,7 @@ public final class Unpooled {
      * of the specified buffers will be visible to the returned buffer.
      * @param maxNumComponents Advisement as to how many independent buffers are allowed to exist before
      * consolidation occurs.
-     * @param buffers The buffers to wrap. Reference count ownership of all variables is transfered to this method.
+     * @param buffers The buffers to wrap. Reference count ownership of all variables is transferred to this method.
      * @return The readable portion of the {@code buffers}. The caller is responsible for releasing this buffer.
      */
     public static ByteBuf wrappedBuffer(int maxNumComponents, ByteBuf... buffers) {

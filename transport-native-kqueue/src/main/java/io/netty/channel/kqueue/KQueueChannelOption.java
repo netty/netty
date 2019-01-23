@@ -27,7 +27,7 @@ public final class KQueueChannelOption<T> extends UnixChannelOption<T> {
     public static final ChannelOption<AcceptFilter> SO_ACCEPTFILTER =
             valueOf(KQueueChannelOption.class, "SO_ACCEPTFILTER");
     /**
-     * If this is {@code true} then the {@link RecvByteBufAllocator.Handle#guess()} will be overriden to always attempt
+     * If this is {@code true} then the {@link RecvByteBufAllocator.Handle#guess()} will be overridden to always attempt
      * to read as many bytes as kqueue says are available.
      */
     public static final ChannelOption<Boolean> RCV_ALLOC_TRANSPORT_PROVIDES_GUESS =

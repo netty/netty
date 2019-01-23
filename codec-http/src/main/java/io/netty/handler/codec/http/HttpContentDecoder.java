@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
+import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
 
@@ -164,7 +165,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
             if (headers.isEmpty()) {
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
             } else {
-                out.add(new ComposedLastHttpContent(headers));
+                out.add(new ComposedLastHttpContent(headers, DecoderResult.SUCCESS));
             }
         }
     }

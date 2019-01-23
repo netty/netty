@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.33.Final-SNAPSHOT</version>
+    <version>4.1.34.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-transport-udt</artifactId>
@@ -39,10 +39,14 @@
 
     <dependency>
       <groupId>${project.groupId}</groupId>
+      <artifactId>netty-common</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
       <artifactId>netty-buffer</artifactId>
       <version>${project.version}</version>
     </dependency>
-
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-transport</artifactId>
@@ -78,7 +82,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <forkMode>always</forkMode>
+          <reuseForks>false</reuseForks>
         </configuration>
       </plugin>
     </plugins>

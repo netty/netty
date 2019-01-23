@@ -48,6 +48,7 @@ import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -496,6 +497,29 @@ abstract class DnsResolveContext<T> {
                       queryLifecycleObserver.queryNoAnswer(code), true, promise, null);
             } else {
                 queryLifecycleObserver.queryFailed(NXDOMAIN_QUERY_FAILED_EXCEPTION);
+
+                // Try with the next server if is not authoritative for the domain.
+                //
+                // From https://tools.ietf.org/html/rfc1035 :
+                //
+                //   RCODE        Response code - this 4 bit field is set as part of
+                //                responses.  The values have the following
+                //                interpretation:
+                //
+                //                ....
+                //                ....
+                //
+                //                3               Name Error - Meaningful only for
+                //                                responses from an authoritative name
+                //                                server, this code signifies that the
+                //                                domain name referenced in the query does
+                //                                not exist.
+                //                ....
+                //                ....
+                if (!res.isAuthoritativeAnswer()) {
+                    query(nameServerAddrStream, nameServerAddrStreamIndex + 1, question,
+                            newDnsQueryLifecycleObserver(question), true, promise, null);
+                }
             }
         } finally {
             ReferenceCountUtil.safeRelease(envelope);
@@ -651,10 +675,11 @@ abstract class DnsResolveContext<T> {
 
             // Make sure the record is for the questioned domain.
             if (!recordName.equals(questionName)) {
+                Map<String, String> cnamesCopy = new HashMap<String, String>(cnames);
                 // Even if the record's name is not exactly same, it might be an alias defined in the CNAME records.
                 String resolved = questionName;
                 do {
-                    resolved = cnames.get(resolved);
+                    resolved = cnamesCopy.remove(resolved);
                     if (recordName.equals(resolved)) {
                         break;
                     }
@@ -749,8 +774,12 @@ abstract class DnsResolveContext<T> {
             String mapping = domainName.toLowerCase(Locale.US);
 
             // Cache the CNAME as well.
-            cache.cache(hostnameWithDot(name), hostnameWithDot(mapping), r.timeToLive(), loop);
-            cnames.put(name, mapping);
+            String nameWithDot = hostnameWithDot(name);
+            String mappingWithDot = hostnameWithDot(mapping);
+            if (!nameWithDot.equalsIgnoreCase(mappingWithDot)) {
+                cache.cache(nameWithDot, mappingWithDot, r.timeToLive(), loop);
+                cnames.put(name, mapping);
+            }
         }
 
         return cnames != null? cnames : Collections.<String, String>emptyMap();
@@ -875,10 +904,19 @@ abstract class DnsResolveContext<T> {
 
     private void followCname(DnsQuestion question, String cname, DnsQueryLifecycleObserver queryLifecycleObserver,
                              Promise<List<T>> promise) {
+        Set<String> cnames = null;
         for (;;) {
             // Resolve from cnameCache() until there is no more cname entry cached.
             String mapping = cnameCache().get(hostnameWithDot(cname));
             if (mapping == null) {
+                break;
+            }
+            if (cnames == null) {
+                // Detect loops.
+                cnames = new HashSet<String>(2);
+            }
+            if (!cnames.add(cname)) {
+                // Follow CNAME from cache would loop. Lets break here.
                 break;
             }
             cname = mapping;
