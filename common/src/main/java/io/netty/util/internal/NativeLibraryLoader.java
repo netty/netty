@@ -35,7 +35,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -180,7 +179,7 @@ public final class NativeLibraryLoader {
 
             int index = libname.lastIndexOf('.');
             String prefix = libname.substring(0, index);
-            String suffix = libname.substring(index, libname.length());
+            String suffix = libname.substring(index);
 
             tmpFile = File.createTempFile(prefix, suffix, WORKDIR);
             in = url.openStream();
@@ -307,10 +306,7 @@ public final class NativeLibraryLoader {
                 loadLibraryByHelper(newHelper, name, absolute);
                 logger.debug("Successfully loaded the library {}", name);
                 return;
-            } catch (UnsatisfiedLinkError e) { // Should by pass the UnsatisfiedLinkError here!
-                suppressed = e;
-                logger.debug("Unable to load the library '{}', trying other loading mechanism.", name, e);
-            } catch (Exception e) {
+            } catch (UnsatisfiedLinkError | Exception e) { // Should by pass the UnsatisfiedLinkError here!
                 suppressed = e;
                 logger.debug("Unable to load the library '{}', trying other loading mechanism.", name, e);
             }
@@ -388,13 +384,7 @@ public final class NativeLibraryLoader {
                         }
                     }
                 });
-            } catch (ClassNotFoundException e2) {
-                ThrowableUtil.addSuppressed(e2, e1);
-                throw e2;
-            } catch (RuntimeException e2) {
-                ThrowableUtil.addSuppressed(e2, e1);
-                throw e2;
-            } catch (Error e2) {
+            } catch (ClassNotFoundException | Error | RuntimeException e2) {
                 ThrowableUtil.addSuppressed(e2, e1);
                 throw e2;
             }
