@@ -95,9 +95,9 @@ public class LocalTransportThreadModelTest {
         // With no EventExecutor specified, h1 will be always invoked by EventLoop 'l'.
         ch.pipeline().addLast(h1);
         // h2 will be always invoked by EventExecutor 'e1'.
-        ch.pipeline().addLast(e1, h2);
+        ch.pipeline().addLast(e1.next(), h2);
         // h3 will be always invoked by EventExecutor 'e2'.
-        ch.pipeline().addLast(e2, h3);
+        ch.pipeline().addLast(e2.next(), h3);
 
         ch.register().sync().channel().connect(localAddr).sync();
 
@@ -247,11 +247,11 @@ public class LocalTransportThreadModelTest {
             // inbound:  int -> byte[4] -> int -> int -> byte[4] -> int -> /dev/null
             // outbound: int -> int -> byte[4] -> int -> int -> byte[4] -> /dev/null
             ch.pipeline().addLast(h1)
-                         .addLast(e1, h2)
-                         .addLast(e2, h3)
-                         .addLast(e3, h4)
-                         .addLast(e4, h5)
-                         .addLast(e5, h6);
+                         .addLast(e1.next(), h2)
+                         .addLast(e2.next(), h3)
+                         .addLast(e3.next(), h4)
+                         .addLast(e4.next(), h5)
+                         .addLast(e5.next(), h6);
 
             ch.register().sync().channel().connect(localAddr).sync();
 
