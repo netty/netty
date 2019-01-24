@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import static io.netty.util.internal.ObjectUtil.*;
 import static io.netty.util.internal.StringUtil.*;
@@ -256,11 +257,13 @@ public class QueryStringDecoder {
         }
         String name = decodeComponent(s, nameStart, valueStart - 1, charset, false);
         String value = decodeComponent(s, valueStart, valueEnd, charset, false);
-        List<String> values = params.get(name);
-        if (values == null) {
-            values = new ArrayList<>(1);  // Often there's only 1 value.
-            params.put(name, values);
-        }
+        List<String> values = params.computeIfAbsent(name, new Function<String, List<String>>() {
+            @Override
+            public List<String> apply(final String s) {
+                return new ArrayList<>(1);
+            }
+        });
+        // Often there's only 1 value.
         values.add(value);
         return true;
     }

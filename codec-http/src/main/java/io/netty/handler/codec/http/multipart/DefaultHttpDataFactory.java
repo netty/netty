@@ -28,6 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Function;
 
 /**
  * Default factory giving {@link Attribute} and {@link FileUpload} according to constructor.
@@ -120,12 +121,13 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
      * @return the associated list of {@link HttpData} for the request
      */
     private List<HttpData> getList(HttpRequest request) {
-        List<HttpData> list = requestFileDeleteMap.get(request);
-        if (list == null) {
-            list = new ArrayList<>();
-            requestFileDeleteMap.put(request, list);
-        }
-        return list;
+        return requestFileDeleteMap.computeIfAbsent(request,
+            new Function<HttpRequest, List<HttpData>>() {
+            @Override
+            public List<HttpData> apply(final HttpRequest httpRequest) {
+                return new ArrayList<>();
+            }
+        });
     }
 
     @Override

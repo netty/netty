@@ -23,6 +23,7 @@ import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 public abstract class TypeParameterMatcher {
 
@@ -57,11 +58,13 @@ public abstract class TypeParameterMatcher {
                 InternalThreadLocalMap.get().typeParameterMatcherFindCache();
         final Class<?> thisClass = object.getClass();
 
-        Map<String, TypeParameterMatcher> map = findCache.get(thisClass);
-        if (map == null) {
-            map = new HashMap<>();
-            findCache.put(thisClass, map);
-        }
+        Map<String, TypeParameterMatcher> map = findCache.computeIfAbsent(thisClass,
+            new Function<Class<?>, Map<String, TypeParameterMatcher>>() {
+                @Override
+                public Map<String, TypeParameterMatcher> apply(final Class<?> aClass) {
+                    return new HashMap<>();
+                }
+            });
 
         TypeParameterMatcher matcher = map.get(typeParamName);
         if (matcher == null) {

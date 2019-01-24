@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.Function;
 
 import static io.netty.buffer.Unpooled.buffer;
 import static io.netty.handler.codec.http.multipart.HttpPostBodyUtil.BINARY_STRING;
@@ -422,11 +423,13 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         if (data == null) {
             return;
         }
-        List<InterfaceHttpData> datas = bodyMapHttpData.get(data.getName());
-        if (datas == null) {
-            datas = new ArrayList<>(1);
-            bodyMapHttpData.put(data.getName(), datas);
-        }
+        List<InterfaceHttpData> datas = bodyMapHttpData.computeIfAbsent(data.getName(),
+            new Function<String, List<InterfaceHttpData>>() {
+                @Override
+                public List<InterfaceHttpData> apply(final String s) {
+                    return new ArrayList<>(1);
+                }
+            });
         datas.add(data);
         bodyListHttpData.add(data);
     }
