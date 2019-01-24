@@ -1398,7 +1398,7 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise)  {
+            public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
                 executionMask |= MASK_DISCONNECT;
                 promise.setSuccess();
             }
@@ -1422,7 +1422,7 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void read(ChannelHandlerContext ctx)  {
+            public void read(ChannelHandlerContext ctx) {
                 executionMask |= MASK_READ;
             }
 
@@ -1563,8 +1563,10 @@ public class DefaultChannelPipelineTest {
 
         pipeline.register().syncUninterruptibly();
         pipeline.deregister().syncUninterruptibly();
-        pipeline.bind(new SocketAddress() { }).syncUninterruptibly();
-        pipeline.connect(new SocketAddress() { }).syncUninterruptibly();
+        pipeline.bind(new SocketAddress() {
+        }).syncUninterruptibly();
+        pipeline.connect(new SocketAddress() {
+        }).syncUninterruptibly();
         pipeline.disconnect().syncUninterruptibly();
         pipeline.close().syncUninterruptibly();
         pipeline.write("");
@@ -1580,6 +1582,51 @@ public class DefaultChannelPipelineTest {
         outboundCalledHandler.assertCalled();
         inboundCalledHandler.assertCalled();
         skipHandler.assertSkipped();
+    }
+
+    @Test
+    public void testWriteThrowsReleaseMessage() {
+        testWriteThrowsReleaseMessage0(false);
+    }
+
+    @Test
+    public void testWriteAndFlushThrowsReleaseMessage() {
+        testWriteThrowsReleaseMessage0(true);
+    }
+
+    private void testWriteThrowsReleaseMessage0(boolean flush) {
+        ReferenceCounted referenceCounted = new AbstractReferenceCounted() {
+            @Override
+            protected void deallocate() {
+                // NOOP
+            }
+
+            @Override
+            public ReferenceCounted touch(Object hint) {
+                return this;
+            }
+        };
+        assertEquals(1, referenceCounted.refCnt());
+
+        Channel channel = new LocalChannel(group.next());
+        Channel channel2 = new LocalChannel(group.next());
+        channel.register().syncUninterruptibly();
+        channel2.register().syncUninterruptibly();
+
+        try {
+            if (flush) {
+                channel.writeAndFlush(referenceCounted, channel2.newPromise());
+            } else {
+                channel.write(referenceCounted, channel2.newPromise());
+            }
+            fail();
+        } catch (IllegalArgumentException expected) {
+            // expected
+        }
+        assertEquals(0, referenceCounted.refCnt());
+
+        channel.close().syncUninterruptibly();
+        channel2.close().syncUninterruptibly();
     }
 
     @Test(timeout = 5000)
