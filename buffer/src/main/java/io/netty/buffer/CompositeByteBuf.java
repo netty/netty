@@ -497,7 +497,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             return;
         }
 
-        int nextIndex = cIndex > 0 ? components[cIndex].endOffset : 0;
+        int nextIndex = cIndex > 0 ? components[cIndex - 1].endOffset : 0;
         for (; cIndex < size; cIndex++) {
             Component c = components[cIndex];
             c.reposition(nextIndex);
@@ -748,6 +748,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 consolidateIfNeeded();
             }
         } else if (newCapacity < oldCapacity) {
+            lastAccessed = null;
             int i = size - 1;
             for (int bytesToTrim = oldCapacity - newCapacity; i >= 0; i--) {
                 Component c = components[i];
@@ -801,7 +802,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      */
     public int toComponentIndex(int offset) {
         checkIndex(offset);
-        return toComponentIndex(offset);
+        return toComponentIndex0(offset);
     }
 
     private int toComponentIndex0(int offset) {
