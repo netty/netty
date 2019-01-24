@@ -293,7 +293,7 @@ public class DefaultChannelPipelineTailTest {
 
         private class MyChannelPipeline extends DefaultChannelPipeline {
 
-            public MyChannelPipeline(Channel channel) {
+            MyChannelPipeline(Channel channel) {
                 super(channel);
             }
 

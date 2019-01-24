@@ -176,7 +176,7 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
             return RSV1;
         }
 
-        public PermessageDeflateExtension(boolean serverNoContext, int serverWindowSize,
+        PermessageDeflateExtension(boolean serverNoContext, int serverWindowSize,
                 boolean clientNoContext, int clientWindowSize) {
             this.serverNoContext = serverNoContext;
             this.serverWindowSize = serverWindowSize;

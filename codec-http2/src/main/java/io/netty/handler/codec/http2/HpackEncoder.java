@@ -75,14 +75,14 @@ final class HpackEncoder {
     /**
      * Creates a new encoder.
      */
-    public HpackEncoder(boolean ignoreMaxHeaderListSize) {
+    HpackEncoder(boolean ignoreMaxHeaderListSize) {
         this(ignoreMaxHeaderListSize, 16);
     }
 
     /**
      * Creates a new encoder.
      */
-    public HpackEncoder(boolean ignoreMaxHeaderListSize, int arraySizeHint) {
+    HpackEncoder(boolean ignoreMaxHeaderListSize, int arraySizeHint) {
         this.ignoreMaxHeaderListSize = ignoreMaxHeaderListSize;
         maxHeaderTableSize = DEFAULT_HEADER_TABLE_SIZE;
         maxHeaderListSize = MAX_HEADER_LIST_SIZE;

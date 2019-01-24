@@ -81,7 +81,7 @@ public final class DeflateFrameClientExtensionHandshaker implements WebSocketCli
 
         private final int compressionLevel;
 
-        public DeflateFrameClientExtension(int compressionLevel) {
+        DeflateFrameClientExtension(int compressionLevel) {
             this.compressionLevel = compressionLevel;
         }
 

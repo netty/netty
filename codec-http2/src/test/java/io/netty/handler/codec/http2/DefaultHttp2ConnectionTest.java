@@ -626,7 +626,7 @@ public class DefaultHttp2ConnectionTest {
         private final boolean[] array;
         private final int index;
 
-        public ListenerExceptionThrower(boolean[] array, int index) {
+        ListenerExceptionThrower(boolean[] array, int index) {
             this.array = array;
             this.index = index;
         }
@@ -642,7 +642,7 @@ public class DefaultHttp2ConnectionTest {
         private final boolean[] array;
         private final int index;
 
-        public ListenerVerifyCallAnswer(boolean[] array, int index) {
+        ListenerVerifyCallAnswer(boolean[] array, int index) {
             this.array = array;
             this.index = index;
         }

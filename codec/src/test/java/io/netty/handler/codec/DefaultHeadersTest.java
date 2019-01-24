@@ -41,11 +41,11 @@ public class DefaultHeadersTest {
 
     private static final class TestDefaultHeaders extends
             DefaultHeaders<CharSequence, CharSequence, TestDefaultHeaders> {
-        public TestDefaultHeaders() {
+        TestDefaultHeaders() {
             this(CharSequenceValueConverter.INSTANCE);
         }
 
-        public TestDefaultHeaders(ValueConverter<CharSequence> converter) {
+        TestDefaultHeaders(ValueConverter<CharSequence> converter) {
             super(converter);
         }
     }
