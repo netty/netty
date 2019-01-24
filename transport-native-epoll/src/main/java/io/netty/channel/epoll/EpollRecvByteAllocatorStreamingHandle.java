@@ -18,7 +18,7 @@ package io.netty.channel.epoll;
 import io.netty.channel.RecvByteBufAllocator;
 
 final class EpollRecvByteAllocatorStreamingHandle extends EpollRecvByteAllocatorHandle {
-    public EpollRecvByteAllocatorStreamingHandle(RecvByteBufAllocator.ExtendedHandle handle) {
+    EpollRecvByteAllocatorStreamingHandle(RecvByteBufAllocator.ExtendedHandle handle) {
         super(handle);
     }
 

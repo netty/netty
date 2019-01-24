@@ -392,7 +392,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
         abstract void readReady(KQueueRecvByteAllocatorHandle allocHandle);
 
-        final void readReadyBefore() { maybeMoreDataToRead = false; }
+        final void readReadyBefore() {
+            maybeMoreDataToRead = false;
+        }
 
         final void readReadyFinally(ChannelConfig config) {
             maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();

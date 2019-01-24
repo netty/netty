@@ -151,7 +151,7 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
         private final boolean clientNoContext;
         private final int clientWindowSize;
 
-        public PermessageDeflateExtension(int compressionLevel, boolean serverNoContext,
+        PermessageDeflateExtension(int compressionLevel, boolean serverNoContext,
                 int serverWindowSize, boolean clientNoContext, int clientWindowSize) {
             this.compressionLevel = compressionLevel;
             this.serverNoContext = serverNoContext;

@@ -930,7 +930,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         private final Set<Http2Stream> streams = new LinkedHashSet<Http2Stream>();
         private int pendingIterations;
 
-        public ActiveStreams(List<Listener> listeners) {
+        ActiveStreams(List<Listener> listeners) {
             this.listeners = listeners;
         }
 

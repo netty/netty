@@ -296,7 +296,7 @@ public class EpollSpliceTest {
         volatile ChannelFuture future;
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
-        public SpliceHandler(File file) {
+        SpliceHandler(File file) {
             this.file = file;
         }
 
