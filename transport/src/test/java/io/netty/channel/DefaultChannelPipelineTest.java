@@ -1223,6 +1223,51 @@ public class DefaultChannelPipelineTest {
         }
     }
 
+    @Test
+    public void testWriteThrowsReleaseMessage() {
+        testWriteThrowsReleaseMessage0(false);
+    }
+
+    @Test
+    public void testWriteAndFlushThrowsReleaseMessage() {
+        testWriteThrowsReleaseMessage0(true);
+    }
+
+    private void testWriteThrowsReleaseMessage0(boolean flush) {
+        ReferenceCounted referenceCounted = new AbstractReferenceCounted() {
+            @Override
+            protected void deallocate() {
+                // NOOP
+            }
+
+            @Override
+            public ReferenceCounted touch(Object hint) {
+                return this;
+            }
+        };
+        assertEquals(1, referenceCounted.refCnt());
+
+        Channel channel = new LocalChannel();
+        Channel channel2 = new LocalChannel();
+        group.register(channel).syncUninterruptibly();
+        group.register(channel2).syncUninterruptibly();
+
+        try {
+            if (flush) {
+                channel.writeAndFlush(referenceCounted, channel2.newPromise());
+            } else {
+                channel.write(referenceCounted, channel2.newPromise());
+            }
+            fail();
+        } catch (IllegalArgumentException expected) {
+            // expected
+        }
+        assertEquals(0, referenceCounted.refCnt());
+
+        channel.close().syncUninterruptibly();
+        channel2.close().syncUninterruptibly();
+    }
+
     @Test(timeout = 5000)
     public void handlerAddedStateUpdatedBeforeHandlerAddedDoneForceEventLoop() throws InterruptedException {
         handlerAddedStateUpdatedBeforeHandlerAddedDone(true);
