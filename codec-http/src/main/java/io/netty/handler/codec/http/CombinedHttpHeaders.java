@@ -79,7 +79,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
             return charSequenceEscaper;
         }
 
-        public CombinedHttpHeadersImpl(HashingStrategy<CharSequence> nameHashingStrategy,
+        CombinedHttpHeadersImpl(HashingStrategy<CharSequence> nameHashingStrategy,
                 ValueConverter<CharSequence> valueConverter,
                 io.netty.handler.codec.DefaultHeaders.NameValidator<CharSequence> nameValidator) {
             super(nameHashingStrategy, valueConverter, nameValidator);

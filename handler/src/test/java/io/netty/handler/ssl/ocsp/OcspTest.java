@@ -460,7 +460,7 @@ public class OcspTest {
 
         private volatile byte[] response;
 
-        public TestClientOcspContext(boolean valid) {
+        TestClientOcspContext(boolean valid) {
             this.valid = valid;
         }
 
@@ -482,7 +482,7 @@ public class OcspTest {
 
         private final OcspClientCallback callback;
 
-        public OcspClientCallbackHandler(ReferenceCountedOpenSslEngine engine, OcspClientCallback callback) {
+        OcspClientCallbackHandler(ReferenceCountedOpenSslEngine engine, OcspClientCallback callback) {
             super(engine);
             this.callback = callback;
         }
@@ -497,7 +497,7 @@ public class OcspTest {
     private static final class OcspTestException extends IllegalStateException {
         private static final long serialVersionUID = 4516426833250228159L;
 
-        public OcspTestException(String message) {
+        OcspTestException(String message) {
             super(message);
         }
     }

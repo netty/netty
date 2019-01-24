@@ -81,16 +81,16 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
     }
 
     private final class HttpServerRequestDecoder extends HttpRequestDecoder {
-        public HttpServerRequestDecoder(int maxInitialLineLength, int maxHeaderSize) {
+        HttpServerRequestDecoder(int maxInitialLineLength, int maxHeaderSize) {
             super(maxInitialLineLength, maxHeaderSize);
         }
 
-        public HttpServerRequestDecoder(int maxInitialLineLength, int maxHeaderSize,
+        HttpServerRequestDecoder(int maxInitialLineLength, int maxHeaderSize,
                                         boolean validateHeaders) {
             super(maxInitialLineLength, maxHeaderSize, validateHeaders);
         }
 
-        public HttpServerRequestDecoder(int maxInitialLineLength, int maxHeaderSize,
+        HttpServerRequestDecoder(int maxInitialLineLength, int maxHeaderSize,
                                         boolean validateHeaders, int initialBufferSize) {
             super(maxInitialLineLength, maxHeaderSize, validateHeaders, initialBufferSize);
         }

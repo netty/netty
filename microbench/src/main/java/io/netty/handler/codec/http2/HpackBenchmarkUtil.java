@@ -49,7 +49,7 @@ public final class HpackBenchmarkUtil {
         final HpackHeadersSize size;
         final boolean limitToAscii;
 
-        public HeadersKey(HpackHeadersSize size, boolean limitToAscii) {
+        HeadersKey(HpackHeadersSize size, boolean limitToAscii) {
             this.size = size;
             this.limitToAscii = limitToAscii;
         }

@@ -41,7 +41,7 @@ final class OpenSslX509Certificate extends X509Certificate {
     private final byte[] bytes;
     private X509Certificate wrapped;
 
-    public OpenSslX509Certificate(byte[] bytes) {
+    OpenSslX509Certificate(byte[] bytes) {
         this.bytes = bytes;
     }
 

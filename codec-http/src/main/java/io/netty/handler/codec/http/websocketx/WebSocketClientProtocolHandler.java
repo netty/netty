@@ -45,7 +45,9 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
     /**
      * Returns the used handshaker
      */
-    public WebSocketClientHandshaker handshaker() { return handshaker; }
+    public WebSocketClientHandshaker handshaker() {
+        return handshaker;
+    }
 
     /**
      * Events that are fired to notify about handshake status

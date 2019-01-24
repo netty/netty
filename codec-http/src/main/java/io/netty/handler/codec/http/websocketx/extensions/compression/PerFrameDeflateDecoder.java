@@ -30,7 +30,7 @@ class PerFrameDeflateDecoder extends DeflateDecoder {
      * Constructor
      * @param noContext true to disable context takeover.
      */
-    public PerFrameDeflateDecoder(boolean noContext) {
+    PerFrameDeflateDecoder(boolean noContext) {
         super(noContext);
     }
 
