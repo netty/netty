@@ -1691,7 +1691,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             throw new IllegalStateException();
         }
 
-        return renegotiate(ctx.executor().<Channel>newPromise());
+        return renegotiate(ctx.executor().newPromise());
     }
 
     /**

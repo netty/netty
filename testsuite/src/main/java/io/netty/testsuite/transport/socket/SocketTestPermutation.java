@@ -102,7 +102,7 @@ public class SocketTestPermutation {
 
     public List<BootstrapComboFactory<Bootstrap, Bootstrap>> datagram() {
         // Make the list of Bootstrap factories.
-        List<BootstrapFactory<Bootstrap>> bfs = Collections.<BootstrapFactory<Bootstrap>>singletonList(
+        List<BootstrapFactory<Bootstrap>> bfs = Collections.singletonList(
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
@@ -126,7 +126,7 @@ public class SocketTestPermutation {
     }
 
     public List<BootstrapFactory<ServerBootstrap>> serverSocket() {
-        return Collections.<BootstrapFactory<ServerBootstrap>>singletonList(
+        return Collections.singletonList(
                 new BootstrapFactory<ServerBootstrap>() {
                     @Override
                     public ServerBootstrap newInstance() {
@@ -138,7 +138,7 @@ public class SocketTestPermutation {
     }
 
     public List<BootstrapFactory<Bootstrap>> clientSocket() {
-        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+        return Collections.singletonList(
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
@@ -149,7 +149,7 @@ public class SocketTestPermutation {
     }
 
     public List<BootstrapFactory<Bootstrap>> datagramSocket() {
-        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+        return Collections.singletonList(
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {

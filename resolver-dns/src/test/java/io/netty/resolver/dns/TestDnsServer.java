@@ -303,7 +303,7 @@ class TestDnsServer extends DnsServer {
                     default:
                         return null;
                 }
-                return Collections.<ResourceRecord>singleton(
+                return Collections.singleton(
                         new TestResourceRecord(name, questionRecord.getRecordType(), attr));
             }
             return null;

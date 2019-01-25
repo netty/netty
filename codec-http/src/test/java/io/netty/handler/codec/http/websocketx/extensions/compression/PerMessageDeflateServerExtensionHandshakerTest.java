@@ -41,7 +41,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
 
         // execute
         extension = handshaker.handshakeExtension(
-                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, Collections.<String, String>emptyMap()));
+                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, Collections.emptyMap()));
 
         // test
         assertNotNull(extension);
@@ -62,7 +62,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
 
         // execute
         extension = handshaker.handshakeExtension(
-                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, Collections.<String, String>emptyMap()));
+                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, Collections.emptyMap()));
 
         // test
         assertNotNull(extension);

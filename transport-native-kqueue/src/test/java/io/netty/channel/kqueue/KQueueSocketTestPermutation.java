@@ -145,7 +145,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     }
 
     public List<BootstrapFactory<ServerBootstrap>> serverDomainSocket() {
-        return Collections.<BootstrapFactory<ServerBootstrap>>singletonList(
+        return Collections.singletonList(
                 new BootstrapFactory<ServerBootstrap>() {
                     @Override
                     public ServerBootstrap newInstance() {
@@ -157,7 +157,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     }
 
     public List<BootstrapFactory<Bootstrap>> clientDomainSocket() {
-        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+        return Collections.singletonList(
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
@@ -169,7 +169,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
 
     @Override
     public List<BootstrapFactory<Bootstrap>> datagramSocket() {
-        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+        return Collections.singletonList(
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {

@@ -93,7 +93,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
      */
     @Override
     protected Future<SslContext> lookup(ChannelHandlerContext ctx, String hostname) throws Exception {
-        return mapping.map(hostname, ctx.executor().<SslContext>newPromise());
+        return mapping.map(hostname, ctx.executor().newPromise());
     }
 
     @Override
