@@ -96,7 +96,7 @@ public class DataCompressionHttp2Test {
             @Override
             public Void answer(InvocationOnMock invocation) throws Throwable {
                 if (invocation.getArgument(4)) {
-                    serverConnection.stream((Integer) invocation.getArgument(1)).close();
+                    serverConnection.stream(invocation.getArgument(1)).close();
                 }
                 return null;
             }
@@ -106,7 +106,7 @@ public class DataCompressionHttp2Test {
             @Override
             public Void answer(InvocationOnMock invocation) throws Throwable {
                 if (invocation.getArgument(7)) {
-                    serverConnection.stream((Integer) invocation.getArgument(1)).close();
+                    serverConnection.stream(invocation.getArgument(1)).close();
                 }
                 return null;
             }
@@ -291,7 +291,7 @@ public class DataCompressionHttp2Test {
                 buf.readBytes(serverOut, buf.readableBytes());
 
                 if (in.getArgument(4)) {
-                    serverConnection.stream((Integer) in.getArgument(1)).close();
+                    serverConnection.stream(in.getArgument(1)).close();
                 }
                 return processedBytes;
             }

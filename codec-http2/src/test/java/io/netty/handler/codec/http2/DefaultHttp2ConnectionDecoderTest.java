@@ -261,8 +261,8 @@ public class DefaultHttp2ConnectionDecoderTest {
         } finally {
             try {
                 verify(localFlow)
-                        .receiveFlowControlledFrame(eq((Http2Stream) null), eq(data), eq(padding), eq(true));
-                verify(localFlow).consumeBytes(eq((Http2Stream) null), eq(processedBytes));
+                        .receiveFlowControlledFrame(eq(null), eq(data), eq(padding), eq(true));
+                verify(localFlow).consumeBytes(eq(null), eq(processedBytes));
                 verify(localFlow).frameWriter(any(Http2FrameWriter.class));
                 verifyNoMoreInteractions(localFlow);
                 verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
@@ -284,8 +284,8 @@ public class DefaultHttp2ConnectionDecoderTest {
                 fail();
             } catch (Http2Exception e) {
                 verify(localFlow)
-                        .receiveFlowControlledFrame(eq((Http2Stream) null), eq(data), eq(padding), eq(true));
-                verify(localFlow).consumeBytes(eq((Http2Stream) null), eq(processedBytes));
+                        .receiveFlowControlledFrame(eq(null), eq(data), eq(padding), eq(true));
+                verify(localFlow).consumeBytes(eq(null), eq(processedBytes));
                 verify(localFlow).frameWriter(any(Http2FrameWriter.class));
                 verifyNoMoreInteractions(localFlow);
 
@@ -351,7 +351,7 @@ public class DefaultHttp2ConnectionDecoderTest {
         final ByteBuf data = dummyData();
         try {
             decode().onDataRead(ctx, STREAM_ID, data, 10, true);
-            verify(localFlow).receiveFlowControlledFrame((Http2Stream) isNull(), eq(data), eq(10), eq(true));
+            verify(localFlow).receiveFlowControlledFrame(isNull(), eq(data), eq(10), eq(true));
             verify(listener, never()).onDataRead(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean());
         } finally {
             data.release();

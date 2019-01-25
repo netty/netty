@@ -122,7 +122,7 @@ public class DatagramDnsResponseEncoder
     private void encodeQuestions(DnsResponse response, ByteBuf buf) throws Exception {
         final int count = response.count(DnsSection.QUESTION);
         for (int i = 0; i < count; i++) {
-            recordEncoder.encodeQuestion((DnsQuestion) response.recordAt(DnsSection.QUESTION, i), buf);
+            recordEncoder.encodeQuestion(response.recordAt(DnsSection.QUESTION, i), buf);
         }
     }
 

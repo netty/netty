@@ -278,7 +278,7 @@ public class BootstrapTest {
 
         // Should fail with the RuntimeException.
         assertThat(connectFuture.await(10000), is(true));
-        assertThat(connectFuture.cause(), sameInstance((Throwable) exception));
+        assertThat(connectFuture.cause(), sameInstance(exception));
         assertThat(connectFuture.channel(), is(not(nullValue())));
     }
 

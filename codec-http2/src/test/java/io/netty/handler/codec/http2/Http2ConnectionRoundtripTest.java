@@ -153,8 +153,8 @@ public class Http2ConnectionRoundtripTest {
             public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
                 ChannelHandlerContext ctx = invocationOnMock.getArgument(0);
                 http2Server.encoder().writeHeaders(ctx,
-                        (Integer) invocationOnMock.getArgument(1),
-                        (Http2Headers) invocationOnMock.getArgument(2),
+                        invocationOnMock.getArgument(1),
+                        invocationOnMock.getArgument(2),
                         0,
                         false,
                         ctx.newPromise());

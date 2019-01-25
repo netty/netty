@@ -187,7 +187,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             @Override
             public boolean visit(Http2Stream stream) {
                 try {
-                    return streamVisitor.visit((Http2FrameStream) stream.getProperty(streamKey));
+                    return streamVisitor.visit(stream.getProperty(streamKey));
                 } catch (Throwable cause) {
                     onError(ctx, false, cause);
                     return false;

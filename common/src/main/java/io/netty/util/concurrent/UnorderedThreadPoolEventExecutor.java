@@ -44,7 +44,7 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
             UnorderedThreadPoolEventExecutor.class);
 
     private final Promise<?> terminationFuture = GlobalEventExecutor.INSTANCE.newPromise();
-    private final Set<EventExecutor> executorSet = Collections.singleton((EventExecutor) this);
+    private final Set<EventExecutor> executorSet = Collections.singleton(this);
 
     /**
      * Calls {@link UnorderedThreadPoolEventExecutor#UnorderedThreadPoolEventExecutor(int, ThreadFactory)}

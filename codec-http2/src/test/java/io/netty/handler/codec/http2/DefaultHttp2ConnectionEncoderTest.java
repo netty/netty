@@ -130,7 +130,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         doAnswer(new Answer<ChannelFuture>() {
             @Override
             public ChannelFuture answer(InvocationOnMock in) {
-                return newPromise().setFailure((Throwable) in.getArgument(0));
+                return newPromise().setFailure(in.getArgument(0));
             }
         }).when(channel).newFailedFuture(any(Throwable.class));
 
@@ -805,7 +805,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         ChannelPromise promise = newPromise();
         encoder.writeGoAway(ctx, STREAM_ID, Http2Error.INTERNAL_ERROR.code(), null, promise);
         verify(lifecycleManager).goAway(eq(ctx), eq(STREAM_ID), eq(Http2Error.INTERNAL_ERROR.code()),
-                eq((ByteBuf) null), eq(promise));
+                eq(null), eq(promise));
         verifyNoMoreInteractions(writer);
     }
 

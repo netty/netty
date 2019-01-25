@@ -122,7 +122,7 @@ public class CorsConfigTest {
     @Test
     public void emptyPreflightResponseHeaders() {
         final CorsConfig cors = forAnyOrigin().noPreflightResponseHeaders().build();
-        assertThat(cors.preflightResponseHeaders(), equalTo((HttpHeaders) EmptyHttpHeaders.INSTANCE));
+        assertThat(cors.preflightResponseHeaders(), equalTo(EmptyHttpHeaders.INSTANCE));
     }
 
     @Test (expected = IllegalArgumentException.class)

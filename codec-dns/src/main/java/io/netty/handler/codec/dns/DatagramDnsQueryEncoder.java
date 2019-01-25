@@ -109,7 +109,7 @@ public class DatagramDnsQueryEncoder extends MessageToMessageEncoder<AddressedEn
     private void encodeQuestions(DnsQuery query, ByteBuf buf) throws Exception {
         final int count = query.count(DnsSection.QUESTION);
         for (int i = 0; i < count; i++) {
-            recordEncoder.encodeQuestion((DnsQuestion) query.recordAt(DnsSection.QUESTION, i), buf);
+            recordEncoder.encodeQuestion(query.recordAt(DnsSection.QUESTION, i), buf);
         }
     }
 

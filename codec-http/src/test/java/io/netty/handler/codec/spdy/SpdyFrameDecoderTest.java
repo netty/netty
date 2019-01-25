@@ -219,7 +219,7 @@ public class SpdyFrameDecoderTest {
         encodeDataFrameHeader(buf, streamId, flags, length);
 
         decoder.decode(buf);
-        verify(delegate).readFrameError((String) any());
+        verify(delegate).readFrameError(any());
         assertFalse(buf.isReadable());
         buf.release();
     }

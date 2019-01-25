@@ -610,7 +610,7 @@ public final class Http2TestUtil {
                 anyLong(), any(ByteBuf.class), any(ChannelPromise.class))).thenAnswer(new Answer<ChannelFuture>() {
             @Override
             public ChannelFuture answer(InvocationOnMock invocationOnMock) {
-                buffers.offer((ByteBuf) invocationOnMock.getArgument(3));
+                buffers.offer(invocationOnMock.getArgument(3));
                 return ((ChannelPromise) invocationOnMock.getArgument(4)).setSuccess();
             }
         });
@@ -635,7 +635,7 @@ public final class Http2TestUtil {
                 anyBoolean(), any(ChannelPromise.class))).thenAnswer(new Answer<ChannelFuture>() {
             @Override
             public ChannelFuture answer(InvocationOnMock invocationOnMock) {
-                buffers.offer((ByteBuf) invocationOnMock.getArgument(2));
+                buffers.offer(invocationOnMock.getArgument(2));
                 return ((ChannelPromise) invocationOnMock.getArgument(5)).setSuccess();
             }
         });
@@ -668,7 +668,7 @@ public final class Http2TestUtil {
                 any(ByteBuf.class), anyChannelPromise())).thenAnswer(new Answer<ChannelFuture>() {
             @Override
             public ChannelFuture answer(InvocationOnMock invocationOnMock) {
-                buffers.offer((ByteBuf) invocationOnMock.getArgument(4));
+                buffers.offer(invocationOnMock.getArgument(4));
                 return ((ChannelPromise) invocationOnMock.getArgument(5)).setSuccess();
             }
         });

@@ -42,7 +42,7 @@ public final class OpenSslClientContext extends OpenSslContext {
      */
     @Deprecated
     public OpenSslClientContext() throws SSLException {
-        this((File) null, null, null, null, null, null, null, IdentityCipherSuiteFilter.INSTANCE, null, 0, 0);
+        this(null, null, null, null, null, null, null, IdentityCipherSuiteFilter.INSTANCE, null, 0, 0);
     }
 
     /**
