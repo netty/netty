@@ -542,7 +542,7 @@ public class SniHandlerTest {
     private static class CustomSslHandler extends SslHandler {
         private final SslContext sslContext;
 
-        public CustomSslHandler(SslContext sslContext, SSLEngine sslEngine) {
+        CustomSslHandler(SslContext sslContext, SSLEngine sslEngine) {
             super(sslEngine);
             this.sslContext = ObjectUtil.checkNotNull(sslContext, "sslContext");
         }

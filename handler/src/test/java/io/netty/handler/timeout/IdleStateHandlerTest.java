@@ -317,7 +317,7 @@ public class IdleStateHandlerTest {
 
         private long ticksInNanos;
 
-        public TestableIdleStateHandler(boolean observeOutput,
+        TestableIdleStateHandler(boolean observeOutput,
                 long readerIdleTime, long writerIdleTime, long allIdleTime,
                 TimeUnit unit) {
             super(observeOutput, readerIdleTime, writerIdleTime, allIdleTime, unit);
@@ -369,7 +369,7 @@ public class IdleStateHandlerTest {
 
     private static class ObservableChannel extends EmbeddedChannel {
 
-        public ObservableChannel(ChannelHandler... handlers) {
+        ObservableChannel(ChannelHandler... handlers) {
             super(handlers);
         }
 

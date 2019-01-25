@@ -233,7 +233,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         private ByteBuf clientPrefaceString;
         private boolean prefaceSent;
 
-        public PrefaceDecoder(ChannelHandlerContext ctx) throws Exception {
+        PrefaceDecoder(ChannelHandlerContext ctx) throws Exception {
             clientPrefaceString = clientPrefaceString(encoder.connection());
             // This handler was just added to the context. In case it was handled after
             // the connection became active, send the connection preface now.

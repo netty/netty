@@ -49,7 +49,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
      * @param windowSize maximum size of the window compressor buffer.
      * @param noContext true to disable context takeover.
      */
-    public DeflateEncoder(int compressionLevel, int windowSize, boolean noContext) {
+    DeflateEncoder(int compressionLevel, int windowSize, boolean noContext) {
         this.compressionLevel = compressionLevel;
         this.windowSize = windowSize;
         this.noContext = noContext;

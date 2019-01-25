@@ -96,7 +96,7 @@ public class AbstractChannelTest {
             public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) { }
         }
 
-        public TestChannel() {
+        TestChannel() {
             super(null);
         }
 

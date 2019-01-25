@@ -38,13 +38,21 @@ public class XmlNamespace {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
 
         XmlNamespace that = (XmlNamespace) o;
 
-        if (prefix != null ? !prefix.equals(that.prefix) : that.prefix != null) { return false; }
-        if (uri != null ? !uri.equals(that.uri) : that.uri != null) { return false; }
+        if (prefix != null ? !prefix.equals(that.prefix) : that.prefix != null) {
+            return false;
+        }
+        if (uri != null ? !uri.equals(that.uri) : that.uri != null) {
+            return false;
+        }
 
         return true;
     }

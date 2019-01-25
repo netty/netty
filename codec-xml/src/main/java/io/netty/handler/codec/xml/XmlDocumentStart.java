@@ -54,17 +54,27 @@ public class XmlDocumentStart {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
 
         XmlDocumentStart that = (XmlDocumentStart) o;
 
-        if (standalone != that.standalone) { return false; }
-        if (encoding != null ? !encoding.equals(that.encoding) : that.encoding != null) { return false; }
+        if (standalone != that.standalone) {
+            return false;
+        }
+        if (encoding != null ? !encoding.equals(that.encoding) : that.encoding != null) {
+            return false;
+        }
         if (encodingScheme != null ? !encodingScheme.equals(that.encodingScheme) : that.encodingScheme != null) {
             return false;
         }
-        if (version != null ? !version.equals(that.version) : that.version != null) { return false; }
+        if (version != null ? !version.equals(that.version) : that.version != null) {
+            return false;
+        }
 
         return true;
     }

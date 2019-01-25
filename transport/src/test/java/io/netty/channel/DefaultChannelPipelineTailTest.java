@@ -237,7 +237,7 @@ public class DefaultChannelPipelineTailTest {
     private static class MyChannelFactory implements ChannelFactory<MyChannel> {
         private final MyChannel channel;
 
-        public MyChannelFactory(MyChannel channel) {
+        MyChannelFactory(MyChannel channel) {
             this.channel = channel;
         }
 
@@ -365,7 +365,7 @@ public class DefaultChannelPipelineTailTest {
 
         private class MyChannelPipeline extends DefaultChannelPipeline {
 
-            public MyChannelPipeline(Channel channel) {
+            MyChannelPipeline(Channel channel) {
                 super(channel);
             }
 

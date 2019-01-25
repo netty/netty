@@ -32,7 +32,7 @@ class PerFrameDeflateEncoder extends DeflateEncoder {
      * @param windowSize maximum size of the window compressor buffer.
      * @param noContext true to disable context takeover.
      */
-    public PerFrameDeflateEncoder(int compressionLevel, int windowSize, boolean noContext) {
+    PerFrameDeflateEncoder(int compressionLevel, int windowSize, boolean noContext) {
         super(compressionLevel, windowSize, noContext);
     }
 

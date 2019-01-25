@@ -26,7 +26,7 @@ public class FixedRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufAllo
     private final class HandleImpl extends MaxMessageHandle {
         private final int bufferSize;
 
-        public HandleImpl(int bufferSize) {
+        HandleImpl(int bufferSize) {
             this.bufferSize = bufferSize;
         }
 

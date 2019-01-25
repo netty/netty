@@ -528,7 +528,7 @@ final class HpackDecoder {
         private HeaderType previousType;
         private Http2Exception validationException;
 
-        public Http2HeadersSink(int streamId, Http2Headers headers, long maxHeaderListSize, boolean validate) {
+        Http2HeadersSink(int streamId, Http2Headers headers, long maxHeaderListSize, boolean validate) {
             this.headers = headers;
             this.maxHeaderListSize = maxHeaderListSize;
             this.streamId = streamId;
