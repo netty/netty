@@ -63,13 +63,10 @@ public class LocalChannel extends AbstractChannel {
     private final ChannelConfig config = new DefaultChannelConfig(this);
     // To further optimize this we could write our own SPSC queue.
     final Queue<Object> inboundBuffer = PlatformDependent.newSpscQueue();
-    private final Runnable readTask = new Runnable() {
-        @Override
-        public void run() {
-            // Ensure the inboundBuffer is not empty as readInbound() will always call fireChannelReadComplete()
-            if (!inboundBuffer.isEmpty()) {
-                readInbound();
-            }
+    private final Runnable readTask = () -> {
+        // Ensure the inboundBuffer is not empty as readInbound() will always call fireChannelReadComplete()
+        if (!inboundBuffer.isEmpty()) {
+            readInbound();
         }
     };
 
@@ -197,12 +194,7 @@ public class LocalChannel extends AbstractChannel {
                 EventLoop peerEventLoop = peer.eventLoop();
                 final boolean peerIsActive = peer.isActive();
                 try {
-                    peerEventLoop.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            peer.tryClose(peerIsActive);
-                        }
-                    });
+                    peerEventLoop.execute(() -> peer.tryClose(peerIsActive));
                 } catch (Throwable cause) {
                     logger.warn("Releasing Inbound Queues for channels {}-{} because exception occurred!",
                             this, peer, cause);
@@ -350,12 +342,7 @@ public class LocalChannel extends AbstractChannel {
     private void runFinishPeerReadTask(final LocalChannel peer) {
         // If the peer is writing, we must wait until after reads are completed for that peer before we can read. So
         // we keep track of the task, and coordinate later that our read can't happen until the peer is done.
-        final Runnable finishPeerReadTask = new Runnable() {
-            @Override
-            public void run() {
-                finishPeerRead0(peer);
-            }
-        };
+        final Runnable finishPeerReadTask = () -> finishPeerRead0(peer);
         try {
             if (peer.writeInProgress) {
                 peer.finishReadFuture = peer.eventLoop().submit(finishPeerReadTask);
@@ -470,17 +457,14 @@ public class LocalChannel extends AbstractChannel {
                 // This ensures that if both channels are on the same event loop, the peer's channelActive
                 // event is triggered *after* this channel's channelRegistered event, so that this channel's
                 // pipeline is fully initialized by ChannelInitializer before any channelRead events.
-                peer.eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        ChannelPromise promise = peer.connectPromise;
+                peer.eventLoop().execute(() -> {
+                    ChannelPromise promise = peer.connectPromise;
 
-                        // Only trigger fireChannelActive() if the promise was not null and was not completed yet.
-                        // connectPromise may be set to null if doClose() was called in the meantime.
-                        if (promise != null && promise.trySuccess()) {
-                            peer.pipeline().fireChannelActive();
-                            peer.readIfIsAutoRead();
-                        }
+                    // Only trigger fireChannelActive() if the promise was not null and was not completed yet.
+                    // connectPromise may be set to null if doClose() was called in the meantime.
+                    if (promise != null && promise.trySuccess()) {
+                        peer.pipeline().fireChannelActive();
+                        peer.readIfIsAutoRead();
                     }
                 });
             }

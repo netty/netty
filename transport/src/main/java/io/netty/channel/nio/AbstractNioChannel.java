@@ -57,12 +57,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     protected final int readInterestOp;
     volatile SelectionKey selectionKey;
     boolean readPending;
-    private final Runnable clearReadPendingRunnable = new Runnable() {
-        @Override
-        public void run() {
-            clearReadPending0();
-        }
-    };
+    private final Runnable clearReadPendingRunnable = this::clearReadPending0;
 
     /**
      * The future of the current connection attempt.  If not null, subsequent
@@ -142,12 +137,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             if (eventLoop.inEventLoop()) {
                 setReadPending0(readPending);
             } else {
-                eventLoop.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        setReadPending0(readPending);
-                    }
-                });
+                eventLoop.execute(() -> setReadPending0(readPending));
             }
         } else {
             // Best effort if we are not registered yet clear readPending.
@@ -255,29 +245,23 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     // Schedule connect timeout.
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
-                        connectTimeoutFuture = eventLoop().schedule(new Runnable() {
-                            @Override
-                            public void run() {
-                                ChannelPromise connectPromise = AbstractNioChannel.this.connectPromise;
-                                ConnectTimeoutException cause =
-                                        new ConnectTimeoutException("connection timed out: " + remoteAddress);
-                                if (connectPromise != null && connectPromise.tryFailure(cause)) {
-                                    close(voidPromise());
-                                }
+                        connectTimeoutFuture = eventLoop().schedule(() -> {
+                            ChannelPromise connectPromise = AbstractNioChannel.this.connectPromise;
+                            ConnectTimeoutException cause =
+                                    new ConnectTimeoutException("connection timed out: " + remoteAddress);
+                            if (connectPromise != null && connectPromise.tryFailure(cause)) {
+                                close(voidPromise());
                             }
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
 
-                    promise.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            if (future.isCancelled()) {
-                                if (connectTimeoutFuture != null) {
-                                    connectTimeoutFuture.cancel(false);
-                                }
-                                connectPromise = null;
-                                close(voidPromise());
+                    promise.addListener((ChannelFutureListener) future -> {
+                        if (future.isCancelled()) {
+                            if (connectTimeoutFuture != null) {
+                                connectTimeoutFuture.cancel(false);
                             }
+                            connectPromise = null;
+                            close(voidPromise());
                         }
                     });
                 }

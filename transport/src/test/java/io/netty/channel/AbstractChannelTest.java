@@ -51,12 +51,9 @@ public class AbstractChannelTest {
         when(eventLoop.inEventLoop()).thenReturn(true);
         when(eventLoop.unsafe()).thenReturn(mock(EventLoop.Unsafe.class));
 
-        doAnswer(new Answer() {
-            @Override
-            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
-                ((Runnable) invocationOnMock.getArgument(0)).run();
-                return null;
-            }
+        doAnswer(invocationOnMock -> {
+            ((Runnable) invocationOnMock.getArgument(0)).run();
+            return null;
         }).when(eventLoop).execute(any(Runnable.class));
 
         final TestChannel channel = new TestChannel(eventLoop);

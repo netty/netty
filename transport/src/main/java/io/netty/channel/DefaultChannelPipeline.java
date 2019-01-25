@@ -123,12 +123,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             EventExecutor ctxExecutor = newCtx.executor();
             if (!ctxExecutor.inEventLoop()) {
                 newCtx.setAddPending();
-                ctxExecutor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        callHandlerAdded0(newCtx);
-                    }
-                });
+                ctxExecutor.execute(() -> callHandlerAdded0(newCtx));
                 return this;
             }
         }
@@ -162,12 +157,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             EventExecutor ctxExecutor = newCtx.executor();
             if (!ctxExecutor.inEventLoop()) {
                 newCtx.setAddPending();
-                ctxExecutor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        callHandlerAdded0(newCtx);
-                    }
-                });
+                ctxExecutor.execute(() -> callHandlerAdded0(newCtx));
                 return this;
             }
         }
@@ -205,12 +195,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             EventExecutor ctxExecutor = newCtx.executor();
             if (!ctxExecutor.inEventLoop()) {
                 newCtx.setAddPending();
-                ctxExecutor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        callHandlerAdded0(newCtx);
-                    }
-                });
+                ctxExecutor.execute(() -> callHandlerAdded0(newCtx));
                 return this;
             }
         }
@@ -256,12 +241,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             EventExecutor ctxExecutor = newCtx.executor();
             if (!ctxExecutor.inEventLoop()) {
                 newCtx.setAddPending();
-                ctxExecutor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        callHandlerAdded0(newCtx);
-                    }
-                });
+                ctxExecutor.execute(() -> callHandlerAdded0(newCtx));
                 return this;
             }
         }
@@ -407,12 +387,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             EventExecutor executor = ctx.executor();
             if (!executor.inEventLoop()) {
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        callHandlerRemoved0(ctx);
-                    }
-                });
+                executor.execute(() -> callHandlerRemoved0(ctx));
                 return ctx;
             }
         }
@@ -483,15 +458,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             EventExecutor executor = ctx.executor();
             if (!executor.inEventLoop()) {
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        // Invoke newHandler.handlerAdded() first (i.e. before oldHandler.handlerRemoved() is invoked)
-                        // because callHandlerRemoved() will trigger channelRead() or flush() on newHandler and
-                        // those event handlers must be called after handlerAdded().
-                        callHandlerAdded0(newCtx);
-                        callHandlerRemoved0(ctx);
-                    }
+                executor.execute(() -> {
+                    // Invoke newHandler.handlerAdded() first (i.e. before oldHandler.handlerRemoved() is invoked)
+                    // because callHandlerRemoved() will trigger channelRead() or flush() on newHandler and
+                    // those event handlers must be called after handlerAdded().
+                    callHandlerAdded0(newCtx);
+                    callHandlerRemoved0(ctx);
                 });
                 return ctx.handler();
             }
@@ -776,12 +748,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             final EventExecutor executor = ctx.executor();
             if (!inEventLoop && !executor.inEventLoop(currentThread)) {
                 final AbstractChannelHandlerContext finalCtx = ctx;
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        destroyUp(finalCtx, true);
-                    }
-                });
+                executor.execute(() -> destroyUp(finalCtx, true));
                 break;
             }
 
@@ -806,12 +773,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 callHandlerRemoved0(ctx);
             } else {
                 final AbstractChannelHandlerContext finalCtx = ctx;
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        destroyDown(Thread.currentThread(), finalCtx, true);
-                    }
-                });
+                executor.execute(() -> destroyDown(Thread.currentThread(), finalCtx, true));
                 break;
             }
 

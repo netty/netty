@@ -23,12 +23,7 @@ import io.netty.channel.ServerChannel;
  */
 public final class ChannelMatchers {
 
-    private static final ChannelMatcher ALL_MATCHER = new ChannelMatcher() {
-        @Override
-        public boolean matches(Channel channel) {
-            return true;
-        }
-    };
+    private static final ChannelMatcher ALL_MATCHER = channel -> true;
 
     private static final ChannelMatcher SERVER_CHANNEL_MATCHER = isInstanceOf(ServerChannel.class);
     private static final ChannelMatcher NON_SERVER_CHANNEL_MATCHER = isNotInstanceOf(ServerChannel.class);

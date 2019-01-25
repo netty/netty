@@ -46,10 +46,7 @@ import static org.junit.Assert.*;
 
 public class SingleThreadEventLoopTest {
 
-    private static final Runnable NOOP = new Runnable() {
-        @Override
-        public void run() { }
-    };
+    private static final Runnable NOOP = () -> { };
 
     private SingleThreadEventLoopA loopA;
     private SingleThreadEventLoopB loopB;
@@ -98,12 +95,7 @@ public class SingleThreadEventLoopTest {
     @SuppressWarnings("deprecation")
     public void shutdownAfterStart() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        loopA.execute(new Runnable() {
-            @Override
-            public void run() {
-                latch.countDown();
-            }
-        });
+        loopA.execute(latch::countDown);
 
         // Wait for the event loop thread to start.
         latch.await();
@@ -142,12 +134,7 @@ public class SingleThreadEventLoopTest {
     private static void testScheduleTask(EventLoop loopA) throws InterruptedException, ExecutionException {
         long startTime = System.nanoTime();
         final AtomicLong endTime = new AtomicLong();
-        loopA.schedule(new Runnable() {
-            @Override
-            public void run() {
-                endTime.set(System.nanoTime());
-            }
-        }, 500, TimeUnit.MILLISECONDS).get();
+        loopA.schedule(() -> endTime.set(System.nanoTime()), 500, TimeUnit.MILLISECONDS).get();
         assertThat(endTime.get() - startTime,
                    is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(500))));
     }
@@ -166,17 +153,14 @@ public class SingleThreadEventLoopTest {
         final Queue<Long> timestamps = new LinkedBlockingQueue<>();
         final int expectedTimeStamps = 5;
         final CountDownLatch allTimeStampsLatch = new CountDownLatch(expectedTimeStamps);
-        ScheduledFuture<?> f = loopA.scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                timestamps.add(System.nanoTime());
-                try {
-                    Thread.sleep(50);
-                } catch (InterruptedException e) {
-                    // Ignore
-                }
-                allTimeStampsLatch.countDown();
+        ScheduledFuture<?> f = loopA.scheduleAtFixedRate(() -> {
+            timestamps.add(System.nanoTime());
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                // Ignore
             }
+            allTimeStampsLatch.countDown();
         }, 100, 100, TimeUnit.MILLISECONDS);
         allTimeStampsLatch.await();
         assertTrue(f.cancel(true));
@@ -214,20 +198,17 @@ public class SingleThreadEventLoopTest {
         final Queue<Long> timestamps = new LinkedBlockingQueue<>();
         final int expectedTimeStamps = 5;
         final CountDownLatch allTimeStampsLatch = new CountDownLatch(expectedTimeStamps);
-        ScheduledFuture<?> f = loopA.scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                boolean empty = timestamps.isEmpty();
-                timestamps.add(System.nanoTime());
-                if (empty) {
-                    try {
-                        Thread.sleep(401);
-                    } catch (InterruptedException e) {
-                        // Ignore
-                    }
+        ScheduledFuture<?> f = loopA.scheduleAtFixedRate(() -> {
+            boolean empty = timestamps.isEmpty();
+            timestamps.add(System.nanoTime());
+            if (empty) {
+                try {
+                    Thread.sleep(401);
+                } catch (InterruptedException e) {
+                    // Ignore
                 }
-                allTimeStampsLatch.countDown();
             }
+            allTimeStampsLatch.countDown();
         }, 100, 100, TimeUnit.MILLISECONDS);
         allTimeStampsLatch.await();
         assertTrue(f.cancel(true));
@@ -268,17 +249,14 @@ public class SingleThreadEventLoopTest {
         final Queue<Long> timestamps = new LinkedBlockingQueue<>();
         final int expectedTimeStamps = 3;
         final CountDownLatch allTimeStampsLatch = new CountDownLatch(expectedTimeStamps);
-        ScheduledFuture<?> f = loopA.scheduleWithFixedDelay(new Runnable() {
-            @Override
-            public void run() {
-                timestamps.add(System.nanoTime());
-                try {
-                    Thread.sleep(51);
-                } catch (InterruptedException e) {
-                    // Ignore
-                }
-                allTimeStampsLatch.countDown();
+        ScheduledFuture<?> f = loopA.scheduleWithFixedDelay(() -> {
+            timestamps.add(System.nanoTime());
+            try {
+                Thread.sleep(51);
+            } catch (InterruptedException e) {
+                // Ignore
             }
+            allTimeStampsLatch.countDown();
         }, 100, 100, TimeUnit.MILLISECONDS);
         allTimeStampsLatch.await();
         assertTrue(f.cancel(true));
@@ -305,16 +283,13 @@ public class SingleThreadEventLoopTest {
         final int NUM_TASKS = 3;
         final AtomicInteger ranTasks = new AtomicInteger();
         final CountDownLatch latch = new CountDownLatch(1);
-        final Runnable task = new Runnable() {
-            @Override
-            public void run() {
-                ranTasks.incrementAndGet();
-                while (latch.getCount() > 0) {
-                    try {
-                        latch.await();
-                    } catch (InterruptedException e) {
-                        // Ignored
-                    }
+        final Runnable task = () -> {
+            ranTasks.incrementAndGet();
+            while (latch.getCount() > 0) {
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    // Ignored
                 }
             }
         };
@@ -380,12 +355,7 @@ public class SingleThreadEventLoopTest {
         final CountDownLatch latch = new CountDownLatch(1);
         Channel ch = new LocalChannel(loopA);
         ChannelPromise promise = ch.newPromise();
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                latch.countDown();
-            }
-        });
+        promise.addListener((ChannelFutureListener) future -> latch.countDown());
 
         // Disable logging temporarily.
         Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);

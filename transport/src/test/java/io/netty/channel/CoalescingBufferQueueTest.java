@@ -53,12 +53,9 @@ public class CoalescingBufferQueueTest {
         channel = new EmbeddedChannel();
         writeQueue = new CoalescingBufferQueue(channel, 16, true);
         catPromise = newPromise();
-        mouseListener = new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                mouseDone = true;
-                mouseSuccess = future.isSuccess();
-            }
+        mouseListener = future -> {
+            mouseDone = true;
+            mouseSuccess = future.isSuccess();
         };
         emptyPromise = newPromise();
         voidPromise = channel.voidPromise();

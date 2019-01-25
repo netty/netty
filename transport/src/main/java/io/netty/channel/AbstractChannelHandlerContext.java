@@ -232,12 +232,8 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     private static boolean isSkippable(
             final Class<?> handlerType, final String methodName, final Class<?>... paramTypes) throws Exception {
 
-        return AccessController.doPrivileged(new PrivilegedExceptionAction<Boolean>() {
-            @Override
-            public Boolean run() throws Exception {
-                return handlerType.getMethod(methodName, paramTypes).isAnnotationPresent(ChannelHandler.Skip.class);
-            }
-        });
+        return AccessController.doPrivileged((PrivilegedExceptionAction<Boolean>) () ->
+                handlerType.getMethod(methodName, paramTypes).isAnnotationPresent(ChannelHandler.Skip.class));
     }
 
     @Override
@@ -280,12 +276,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeChannelRegistered();
         } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeChannelRegistered();
-                }
-            });
+            executor.execute(next::invokeChannelRegistered);
         }
     }
 
@@ -312,12 +303,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeChannelUnregistered();
         } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeChannelUnregistered();
-                }
-            });
+            executor.execute(next::invokeChannelUnregistered);
         }
     }
 
@@ -344,12 +330,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeChannelActive();
         } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeChannelActive();
-                }
-            });
+            executor.execute(next::invokeChannelActive);
         }
     }
 
@@ -376,12 +357,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeChannelInactive();
         } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeChannelInactive();
-                }
-            });
+            executor.execute(next::invokeChannelInactive);
         }
     }
 
@@ -410,12 +386,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
             next.invokeExceptionCaught(cause);
         } else {
             try {
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        next.invokeExceptionCaught(cause);
-                    }
-                });
+                executor.execute(() -> next.invokeExceptionCaught(cause));
             } catch (Throwable t) {
                 if (logger.isWarnEnabled()) {
                     logger.warn("Failed to submit an exceptionCaught() event.", t);
@@ -460,12 +431,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeUserEventTriggered(event);
         } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeUserEventTriggered(event);
-                }
-            });
+            executor.execute(() -> next.invokeUserEventTriggered(event));
         }
     }
 
@@ -493,12 +459,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeChannelRead(m);
         } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeChannelRead(m);
-                }
-            });
+            executor.execute(() -> next.invokeChannelRead(m));
         }
     }
 
@@ -527,12 +488,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         } else {
             Runnable task = next.invokeChannelReadCompleteTask;
             if (task == null) {
-                next.invokeChannelReadCompleteTask = task = new Runnable() {
-                    @Override
-                    public void run() {
-                        next.invokeChannelReadComplete();
-                    }
-                };
+                next.invokeChannelReadCompleteTask = task = next::invokeChannelReadComplete;
             }
             executor.execute(task);
         }
@@ -563,12 +519,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         } else {
             Runnable task = next.invokeChannelWritableStateChangedTask;
             if (task == null) {
-                next.invokeChannelWritableStateChangedTask = task = new Runnable() {
-                    @Override
-                    public void run() {
-                        next.invokeChannelWritabilityChanged();
-                    }
-                };
+                next.invokeChannelWritableStateChangedTask = task = next::invokeChannelWritabilityChanged;
             }
             executor.execute(task);
         }
@@ -636,12 +587,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeBind(localAddress, promise);
         } else {
-            safeExecute(executor, new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeBind(localAddress, promise);
-                }
-            }, promise, null);
+            safeExecute(executor, () -> next.invokeBind(localAddress, promise), promise, null);
         }
         return promise;
     }
@@ -680,12 +626,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeConnect(remoteAddress, localAddress, promise);
         } else {
-            safeExecute(executor, new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeConnect(remoteAddress, localAddress, promise);
-                }
-            }, promise, null);
+            safeExecute(executor, () -> next.invokeConnect(remoteAddress, localAddress, promise), promise, null);
         }
         return promise;
     }
@@ -720,14 +661,11 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
                 next.invokeDisconnect(promise);
             }
         } else {
-            safeExecute(executor, new Runnable() {
-                @Override
-                public void run() {
-                    if (!channel().metadata().hasDisconnect()) {
-                        next.invokeClose(promise);
-                    } else {
-                        next.invokeDisconnect(promise);
-                    }
+            safeExecute(executor, () -> {
+                if (!channel().metadata().hasDisconnect()) {
+                    next.invokeClose(promise);
+                } else {
+                    next.invokeDisconnect(promise);
                 }
             }, promise, null);
         }
@@ -758,12 +696,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeClose(promise);
         } else {
-            safeExecute(executor, new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeClose(promise);
-                }
-            }, promise, null);
+            safeExecute(executor, () -> next.invokeClose(promise), promise, null);
         }
 
         return promise;
@@ -793,12 +726,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeRegister(promise);
         } else {
-            safeExecute(executor, new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeRegister(promise);
-                }
-            }, promise, null);
+            safeExecute(executor, () -> next.invokeRegister(promise), promise, null);
         }
 
         return promise;
@@ -828,12 +756,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeDeregister(promise);
         } else {
-            safeExecute(executor, new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeDeregister(promise);
-                }
-            }, promise, null);
+            safeExecute(executor, () -> next.invokeDeregister(promise), promise, null);
         }
 
         return promise;
@@ -860,12 +783,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         } else {
             Runnable task = next.invokeReadTask;
             if (task == null) {
-                next.invokeReadTask = task = new Runnable() {
-                    @Override
-                    public void run() {
-                        next.invokeRead();
-                    }
-                };
+                next.invokeReadTask = task = next::invokeRead;
             }
             executor.execute(task);
         }
@@ -922,12 +840,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         } else {
             Runnable task = next.invokeFlushTask;
             if (task == null) {
-                next.invokeFlushTask = task = new Runnable() {
-                    @Override
-                    public void run() {
-                        next.invokeFlush();
-                    }
-                };
+                next.invokeFlushTask = task = next::invokeFlush;
             }
             safeExecute(executor, task, channel().voidPromise(), null);
         }

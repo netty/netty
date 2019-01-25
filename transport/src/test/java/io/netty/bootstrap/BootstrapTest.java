@@ -16,8 +16,6 @@
 
 package io.netty.bootstrap;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
@@ -26,18 +24,15 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MultithreadEventLoopGroup;
-import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ServerChannel;
-import io.netty.channel.ServerChannelFactory;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.resolver.AbstractAddressResolver;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.AbstractAddressResolver;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -55,8 +50,14 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.sameInstance;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class BootstrapTest {
 
@@ -88,18 +89,12 @@ public class BootstrapTest {
 
         // Try to bind from each other.
         for (int i = 0; i < 1024; i ++) {
-            bindFutures.add(groupA.next().submit(new Runnable() {
-                @Override
-                public void run() {
-                    bootstrapB.bind(LocalAddress.ANY);
-                }
+            bindFutures.add(groupA.next().submit(() -> {
+                bootstrapB.bind(LocalAddress.ANY);
             }));
 
-            bindFutures.add(groupB.next().submit(new Runnable() {
-                @Override
-                public void run() {
-                    bootstrapA.bind(LocalAddress.ANY);
-                }
+            bindFutures.add(groupB.next().submit(() -> {
+                bootstrapA.bind(LocalAddress.ANY);
             }));
         }
 
@@ -124,18 +119,12 @@ public class BootstrapTest {
 
         // Try to connect from each other.
         for (int i = 0; i < 1024; i ++) {
-            bindFutures.add(groupA.next().submit(new Runnable() {
-                @Override
-                public void run() {
-                    bootstrapB.connect(LocalAddress.ANY);
-                }
+            bindFutures.add(groupA.next().submit(() -> {
+                bootstrapB.connect(LocalAddress.ANY);
             }));
 
-            bindFutures.add(groupB.next().submit(new Runnable() {
-                @Override
-                public void run() {
-                    bootstrapA.connect(LocalAddress.ANY);
-                }
+            bindFutures.add(groupB.next().submit(() -> {
+                bootstrapA.connect(LocalAddress.ANY);
             }));
         }
 
@@ -159,12 +148,9 @@ public class BootstrapTest {
             assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess();
             final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<>();
-            future.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    queue.add(future.channel().eventLoop().inEventLoop(Thread.currentThread()));
-                    queue.add(future.isSuccess());
-                }
+            future.addListener((ChannelFutureListener) future1 -> {
+                queue.add(future1.channel().eventLoop().inEventLoop(Thread.currentThread()));
+                queue.add(future1.isSuccess());
             });
             assertTrue(queue.take());
             assertTrue(queue.take());
@@ -181,10 +167,8 @@ public class BootstrapTest {
         try {
             ServerBootstrap bootstrap = new ServerBootstrap();
             bootstrap.group(group);
-            bootstrap.channelFactory(new ServerChannelFactory<ServerChannel>() {
-                @Override
-                public ServerChannel newChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-                    return new LocalServerChannel(eventLoop, childEventLoopGroup) {
+            bootstrap.channelFactory((eventLoop, childEventLoopGroup) ->
+                    new LocalServerChannel(eventLoop, childEventLoopGroup) {
                         @Override
                         public ChannelFuture bind(SocketAddress localAddress) {
                             // Close the Channel to emulate what NIO and others impl do on bind failure
@@ -200,9 +184,7 @@ public class BootstrapTest {
                             close();
                             return promise.setFailure(new SocketException());
                         }
-                    };
-                }
-            });
+                    });
             bootstrap.childHandler(new DummyHandler());
             bootstrap.handler(registerHandler);
             bootstrap.localAddress(new LocalAddress("1"));
@@ -210,12 +192,9 @@ public class BootstrapTest {
             assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess();
             final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<>();
-            future.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    queue.add(future.channel().eventLoop().inEventLoop(Thread.currentThread()));
-                    queue.add(future.isSuccess());
-                }
+            future.addListener((ChannelFutureListener) future1 -> {
+                queue.add(future1.channel().eventLoop().inEventLoop(Thread.currentThread()));
+                queue.add(future1.isSuccess());
             });
             assertTrue(queue.take());
             assertFalse(queue.take());
@@ -291,12 +270,9 @@ public class BootstrapTest {
         final Bootstrap bootstrap = new Bootstrap()
                 .handler(dummyHandler)
                 .group(groupA)
-                .channelFactory(new ChannelFactory<Channel>() {
-            @Override
-            public Channel newChannel(EventLoop eventLoop) {
-                throw exception;
-            }
-        });
+                .channelFactory(eventLoop -> {
+                    throw exception;
+                });
 
         ChannelFuture connectFuture = bootstrap.connect(LocalAddress.ANY);
 
@@ -316,12 +292,9 @@ public class BootstrapTest {
             registerPromise = promise;
             latch.countDown();
             ChannelPromise newPromise = ctx.newPromise();
-            newPromise.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    if (!future.isSuccess()) {
-                        registerPromise.tryFailure(future.cause());
-                    }
+            newPromise.addListener((ChannelFutureListener) future -> {
+                if (!future.isSuccess()) {
+                    registerPromise.tryFailure(future.cause());
                 }
             });
             super.register(ctx, newPromise);
@@ -356,14 +329,11 @@ public class BootstrapTest {
                 @Override
                 protected void doResolve(
                         final SocketAddress unresolvedAddress, final Promise<SocketAddress> promise) {
-                    executor().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (success) {
-                                promise.setSuccess(unresolvedAddress);
-                            } else {
-                                promise.setFailure(new UnknownHostException(unresolvedAddress.toString()));
-                            }
+                    executor().execute(() -> {
+                        if (success) {
+                            promise.setSuccess(unresolvedAddress);
+                        } else {
+                            promise.setFailure(new UnknownHostException(unresolvedAddress.toString()));
                         }
                     });
                 }
@@ -372,14 +342,11 @@ public class BootstrapTest {
                 protected void doResolveAll(
                         final SocketAddress unresolvedAddress, final Promise<List<SocketAddress>> promise)
                         throws Exception {
-                    executor().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (success) {
-                                promise.setSuccess(Collections.singletonList(unresolvedAddress));
-                            } else {
-                                promise.setFailure(new UnknownHostException(unresolvedAddress.toString()));
-                            }
+                    executor().execute(() -> {
+                        if (success) {
+                            promise.setSuccess(Collections.singletonList(unresolvedAddress));
+                        } else {
+                            promise.setFailure(new UnknownHostException(unresolvedAddress.toString()));
                         }
                     });
                 }

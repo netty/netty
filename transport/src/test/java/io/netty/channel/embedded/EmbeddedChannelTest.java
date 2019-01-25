@@ -22,6 +22,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import io.netty.channel.ChannelOutboundInvoker;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -79,12 +80,7 @@ public class EmbeddedChannelTest {
     @Test(timeout = 2000)
     public void promiseDoesNotInfiniteLoop() throws InterruptedException {
         EmbeddedChannel channel = new EmbeddedChannel();
-        channel.closeFuture().addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                future.channel().close();
-            }
-        });
+        channel.closeFuture().addListener((ChannelFutureListener) future -> future.channel().close());
 
         channel.close().syncUninterruptibly();
     }
@@ -121,18 +117,8 @@ public class EmbeddedChannelTest {
     public void testScheduling() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
         final CountDownLatch latch = new CountDownLatch(2);
-        ScheduledFuture future = ch.eventLoop().schedule(new Runnable() {
-            @Override
-            public void run() {
-                latch.countDown();
-            }
-        }, 1, TimeUnit.SECONDS);
-        future.addListener(new FutureListener() {
-            @Override
-            public void operationComplete(Future future) throws Exception {
-                latch.countDown();
-            }
-        });
+        ScheduledFuture future = ch.eventLoop().schedule(latch::countDown, 1, TimeUnit.SECONDS);
+        future.addListener((FutureListener) future1 -> latch.countDown());
         long next = ch.runScheduledPendingTasks();
         assertTrue(next > 0);
         // Sleep for the nanoseconds but also give extra 50ms as the clock my not be very precise and so fail the test
@@ -145,10 +131,7 @@ public class EmbeddedChannelTest {
     @Test
     public void testScheduledCancelled() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
-        ScheduledFuture<?> future = ch.eventLoop().schedule(new Runnable() {
-            @Override
-            public void run() { }
-        }, 1, TimeUnit.DAYS);
+        ScheduledFuture<?> future = ch.eventLoop().schedule(() -> { }, 1, TimeUnit.DAYS);
         ch.finish();
         assertTrue(future.isCancelled());
     }
@@ -200,35 +183,15 @@ public class EmbeddedChannelTest {
     // See https://github.com/netty/netty/issues/4316.
     @Test(timeout = 2000)
     public void testFireChannelInactiveAndUnregisteredOnClose() throws InterruptedException {
-        testFireChannelInactiveAndUnregistered(new Action() {
-            @Override
-            public ChannelFuture doRun(Channel channel) {
-                return channel.close();
-            }
-        });
-        testFireChannelInactiveAndUnregistered(new Action() {
-            @Override
-            public ChannelFuture doRun(Channel channel) {
-                return channel.close(channel.newPromise());
-            }
-        });
+        testFireChannelInactiveAndUnregistered(ChannelOutboundInvoker::close);
+        testFireChannelInactiveAndUnregistered(channel -> channel.close(channel.newPromise()));
     }
 
     @Test(timeout = 2000)
     public void testFireChannelInactiveAndUnregisteredOnDisconnect() throws InterruptedException {
-        testFireChannelInactiveAndUnregistered(new Action() {
-            @Override
-            public ChannelFuture doRun(Channel channel) {
-                return channel.disconnect();
-            }
-        });
+        testFireChannelInactiveAndUnregistered(ChannelOutboundInvoker::disconnect);
 
-        testFireChannelInactiveAndUnregistered(new Action() {
-            @Override
-            public ChannelFuture doRun(Channel channel) {
-                return channel.disconnect(channel.newPromise());
-            }
-        });
+        testFireChannelInactiveAndUnregistered(channel -> channel.disconnect(channel.newPromise()));
     }
 
     private static void testFireChannelInactiveAndUnregistered(Action action) throws InterruptedException {
@@ -237,13 +200,8 @@ public class EmbeddedChannelTest {
             @Override
             public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                 latch.countDown();
-                ctx.executor().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        // Should be executed.
-                        latch.countDown();
-                    }
-                });
+                // Should be executed.
+                ctx.executor().execute(latch::countDown);
             }
 
             @Override
@@ -368,12 +326,7 @@ public class EmbeddedChannelTest {
             @Override
             public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
                     throws Exception {
-                ctx.executor().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        ctx.write(msg, promise);
-                    }
-                });
+                ctx.executor().execute(() -> ctx.write(msg, promise));
             }
         });
         Object msg = new Object();
@@ -391,11 +344,8 @@ public class EmbeddedChannelTest {
             @Override
             public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
                     throws Exception {
-                ctx.executor().schedule(new Runnable() {
-                    @Override
-                    public void run() {
-                        ctx.writeAndFlush(msg, promise);
-                    }
+                ctx.executor().schedule(() -> {
+                    ctx.writeAndFlush(msg, promise);
                 }, delay, TimeUnit.MILLISECONDS);
             }
         });

@@ -83,12 +83,7 @@ public class LocalTransportThreadModelTest2 {
             return;
         }
 
-        localChannel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                close(localChannel, localRegistrationHandler);
-            }
-        });
+        localChannel.eventLoop().execute(() -> close(localChannel, localRegistrationHandler));
 
         // Wait until the connection is closed or the connection attempt fails.
         localChannel.closeFuture().awaitUninterruptibly();

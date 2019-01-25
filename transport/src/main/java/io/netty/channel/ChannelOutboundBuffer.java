@@ -602,12 +602,7 @@ public final class ChannelOutboundBuffer {
         if (invokeLater) {
             Runnable task = fireChannelWritabilityChangedTask;
             if (task == null) {
-                fireChannelWritabilityChangedTask = task = new Runnable() {
-                    @Override
-                    public void run() {
-                        pipeline.fireChannelWritabilityChanged();
-                    }
-                };
+                fireChannelWritabilityChangedTask = task = pipeline::fireChannelWritabilityChanged;
             }
             channel.eventLoop().execute(task);
         } else {
@@ -654,12 +649,7 @@ public final class ChannelOutboundBuffer {
 
     void close(final Throwable cause, final boolean allowChannelOpen) {
         if (inFail) {
-            channel.eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    close(cause, allowChannelOpen);
-                }
-            });
+            channel.eventLoop().execute(() -> close(cause, allowChannelOpen));
             return;
         }
 

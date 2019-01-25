@@ -117,13 +117,10 @@ public class LocalChannelTest {
                 // Connect to the server
                 cc = cb.connect(sc.localAddress()).sync().channel();
                 final Channel ccCpy = cc;
-                cc.eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        // Send a message event up the pipeline.
-                        ccCpy.pipeline().fireChannelRead("Hello, World");
-                        latch.countDown();
-                    }
+                cc.eventLoop().execute(() -> {
+                    // Send a message event up the pipeline.
+                    ccCpy.pipeline().fireChannelRead("Hello, World");
+                    latch.countDown();
                 });
                 assertTrue(latch.await(5, SECONDS));
 
@@ -370,18 +367,10 @@ public class LocalChannelTest {
 
                 final Channel ccCpy = cc;
                 // Make sure a write operation is executed in the eventloop
-                cc.pipeline().lastContext().executor().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        ChannelPromise promise = ccCpy.newPromise();
-                        promise.addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
-                                ccCpy.pipeline().lastContext().close();
-                            }
-                        });
-                        ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
-                    }
+                cc.pipeline().lastContext().executor().execute(() -> {
+                    ChannelPromise promise = ccCpy.newPromise();
+                    promise.addListener((ChannelFutureListener) future -> ccCpy.pipeline().lastContext().close());
+                    ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
                 });
 
                 assertTrue(messageLatch.await(5, SECONDS));
@@ -501,18 +490,11 @@ public class LocalChannelTest {
 
                 final Channel ccCpy = cc;
                 // Make sure a write operation is executed in the eventloop
-                cc.pipeline().lastContext().executor().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        ChannelPromise promise = ccCpy.newPromise();
-                        promise.addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
-                                ccCpy.writeAndFlush(data2.retainedDuplicate(), ccCpy.newPromise());
-                            }
-                        });
-                        ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
-                    }
+                cc.pipeline().lastContext().executor().execute(() -> {
+                    ChannelPromise promise = ccCpy.newPromise();
+                    promise.addListener((ChannelFutureListener) future ->
+                            ccCpy.writeAndFlush(data2.retainedDuplicate(), ccCpy.newPromise()));
+                    ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
                 });
 
                 assertTrue(messageLatch.await(5, SECONDS));
@@ -583,19 +565,13 @@ public class LocalChannelTest {
 
             final Channel ccCpy = cc;
             // Make sure a write operation is executed in the eventloop
-            cc.pipeline().lastContext().executor().execute(new Runnable() {
-                @Override
-                public void run() {
-                    ChannelPromise promise = ccCpy.newPromise();
-                    promise.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            Channel serverChannelCpy = serverChannelRef.get();
-                            serverChannelCpy.writeAndFlush(data2.retainedDuplicate(), serverChannelCpy.newPromise());
-                        }
-                    });
-                    ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
-                }
+            cc.pipeline().lastContext().executor().execute(() -> {
+                ChannelPromise promise = ccCpy.newPromise();
+                promise.addListener((ChannelFutureListener) future -> {
+                    Channel serverChannelCpy = serverChannelRef.get();
+                    serverChannelCpy.writeAndFlush(data2.retainedDuplicate(), serverChannelCpy.newPromise());
+                });
+                ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
             });
 
             assertTrue(messageLatch.await(5, SECONDS));
@@ -665,20 +641,14 @@ public class LocalChannelTest {
 
                 final Channel ccCpy = cc;
                 // Make sure a write operation is executed in the eventloop
-                cc.pipeline().lastContext().executor().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        ChannelPromise promise = ccCpy.newPromise();
-                        promise.addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
-                                Channel serverChannelCpy = serverChannelRef.get();
-                                serverChannelCpy.writeAndFlush(
-                                        data2.retainedDuplicate(), serverChannelCpy.newPromise());
-                            }
-                        });
-                        ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
-                    }
+                cc.pipeline().lastContext().executor().execute(() -> {
+                    ChannelPromise promise = ccCpy.newPromise();
+                    promise.addListener((ChannelFutureListener) future -> {
+                        Channel serverChannelCpy = serverChannelRef.get();
+                        serverChannelCpy.writeAndFlush(
+                            data2.retainedDuplicate(), serverChannelCpy.newPromise());
+                    });
+                    ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
                 });
 
                 assertTrue(messageLatch.await(5, SECONDS));
@@ -747,47 +717,34 @@ public class LocalChannelTest {
                 ccCpy.closeFuture().addListener(clientChannelCloseLatch);
 
                 // Make sure a write operation is executed in the eventloop
-                cc.pipeline().lastContext().executor().execute(new Runnable() {
-                    @Override
-                    public void run() {
+                cc.pipeline().lastContext().executor().execute(() ->
                         ccCpy.writeAndFlush(data.retainedDuplicate(), ccCpy.newPromise())
-                        .addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
-                                serverChannelCpy.eventLoop().execute(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        // The point of this test is to write while the peer is closed, so we should
-                                        // ensure the peer is actually closed before we write.
-                                        int waitCount = 0;
-                                        while (ccCpy.isOpen()) {
-                                            try {
-                                                Thread.sleep(50);
-                                            } catch (InterruptedException ignored) {
-                                                // ignored
-                                            }
-                                            if (++waitCount > 5) {
-                                                fail();
-                                            }
-                                        }
-                                        serverChannelCpy.writeAndFlush(data2.retainedDuplicate(),
-                                                                       serverChannelCpy.newPromise())
-                                            .addListener(new ChannelFutureListener() {
-                                            @Override
-                                            public void operationComplete(ChannelFuture future) throws Exception {
-                                                if (!future.isSuccess() &&
-                                                    future.cause() instanceof ClosedChannelException) {
-                                                    writeFailLatch.countDown();
-                                                }
-                                            }
-                                        });
-                                    }
-                                });
-                                ccCpy.close();
+                .addListener((ChannelFutureListener) future -> {
+                    serverChannelCpy.eventLoop().execute(() -> {
+                        // The point of this test is to write while the peer is closed, so we should
+                        // ensure the peer is actually closed before we write.
+                        int waitCount = 0;
+                        while (ccCpy.isOpen()) {
+                            try {
+                                Thread.sleep(50);
+                            } catch (InterruptedException ignored) {
+                                // ignored
                             }
-                        });
-                    }
-                });
+                            if (++waitCount > 5) {
+                                fail();
+                            }
+                        }
+                        serverChannelCpy.writeAndFlush(data2.retainedDuplicate(),
+                            serverChannelCpy.newPromise())
+                            .addListener((ChannelFutureListener) future1 -> {
+                                if (!future1.isSuccess() &&
+                                    future1.cause() instanceof ClosedChannelException) {
+                                    writeFailLatch.countDown();
+                                }
+                            });
+                    });
+                    ccCpy.close();
+                }));
 
                 assertTrue(serverMessageLatch.await(5, SECONDS));
                 assertTrue(writeFailLatch.await(5, SECONDS));
@@ -952,12 +909,9 @@ public class LocalChannelTest {
     }
 
     private static void writeAndFlushReadOnSuccess(final ChannelHandlerContext ctx, Object msg) {
-        ctx.writeAndFlush(msg).addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                if (future.isSuccess()) {
-                    ctx.read();
-                }
+        ctx.writeAndFlush(msg).addListener((ChannelFutureListener) future -> {
+            if (future.isSuccess()) {
+                ctx.read();
             }
         });
     }
@@ -1182,12 +1136,9 @@ public class LocalChannelTest {
                 if (!autoRead) {
                     // The read will be scheduled 100ms in the future to ensure we not receive any
                     // channelRead calls in the meantime.
-                    ctx.executor().schedule(new Runnable() {
-                        @Override
-                        public void run() {
-                            read = 0;
-                            ctx.read();
-                        }
+                    ctx.executor().schedule(() -> {
+                        read = 0;
+                        ctx.read();
                     }, 100, TimeUnit.MILLISECONDS);
                 } else {
                     read = 0;
