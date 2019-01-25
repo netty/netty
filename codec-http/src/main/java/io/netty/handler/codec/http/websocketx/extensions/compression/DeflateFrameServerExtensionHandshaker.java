@@ -74,7 +74,7 @@ public final class DeflateFrameServerExtensionHandshaker implements WebSocketSer
         private final String extensionName;
         private final int compressionLevel;
 
-        public DeflateFrameServerExtension(int compressionLevel, String extensionName) {
+        DeflateFrameServerExtension(int compressionLevel, String extensionName) {
             this.extensionName = extensionName;
             this.compressionLevel = compressionLevel;
         }

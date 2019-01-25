@@ -34,7 +34,7 @@ class PemValue extends AbstractReferenceCounted implements PemEncoded {
 
     private final boolean sensitive;
 
-    public PemValue(ByteBuf content, boolean sensitive) {
+    PemValue(ByteBuf content, boolean sensitive) {
         this.content = ObjectUtil.checkNotNull(content, "content");
         this.sensitive = sensitive;
     }

@@ -461,7 +461,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         private final ByteBufAllocator allocator;
         private final AtomicReference<Object> finish = new AtomicReference<Object>();
 
-        public AllocationThread(ByteBufAllocator allocator) {
+        AllocationThread(ByteBufAllocator allocator) {
             this.allocator = allocator;
         }
 

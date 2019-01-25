@@ -35,7 +35,7 @@ class PerMessageDeflateDecoder extends DeflateDecoder {
      * Constructor
      * @param noContext true to disable context takeover.
      */
-    public PerMessageDeflateDecoder(boolean noContext) {
+    PerMessageDeflateDecoder(boolean noContext) {
         super(noContext);
     }
 

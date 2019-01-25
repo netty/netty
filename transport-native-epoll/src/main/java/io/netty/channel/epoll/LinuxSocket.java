@@ -40,7 +40,7 @@ final class LinuxSocket extends Socket {
     private static final ClosedChannelException SENDFILE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new ClosedChannelException(), Native.class, "sendfile(...)");
 
-    public LinuxSocket(int fd) {
+    LinuxSocket(int fd) {
         super(fd);
     }
 

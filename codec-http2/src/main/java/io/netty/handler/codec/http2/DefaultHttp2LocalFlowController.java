@@ -296,7 +296,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
      * received.
      */
     private final class AutoRefillState extends DefaultState {
-        public AutoRefillState(Http2Stream stream, int initialWindowSize) {
+        AutoRefillState(Http2Stream stream, int initialWindowSize) {
             super(stream, initialWindowSize);
         }
 
@@ -349,7 +349,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         private int lowerBound;
         private boolean endOfStream;
 
-        public DefaultState(Http2Stream stream, int initialWindowSize) {
+        DefaultState(Http2Stream stream, int initialWindowSize) {
             this.stream = stream;
             window(initialWindowSize);
             streamWindowUpdateRatio = windowUpdateRatio;
@@ -613,7 +613,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         private CompositeStreamException compositeException;
         private final int delta;
 
-        public WindowUpdateVisitor(int delta) {
+        WindowUpdateVisitor(int delta) {
             this.delta = delta;
         }
 

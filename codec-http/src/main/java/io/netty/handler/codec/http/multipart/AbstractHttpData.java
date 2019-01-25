@@ -59,7 +59,9 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
     }
 
     @Override
-    public long getMaxSize() { return maxSize; }
+    public long getMaxSize() {
+        return maxSize;
+    }
 
     @Override
     public void setMaxSize(long maxSize) {
