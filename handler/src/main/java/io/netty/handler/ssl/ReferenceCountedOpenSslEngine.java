@@ -246,82 +246,78 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         this.alloc = checkNotNull(alloc, "alloc");
         apn = (OpenSslApplicationProtocolNegotiator) context.applicationProtocolNegotiator();
         clientMode = context.isClient();
-        if (PlatformDependent.javaVersion() >= 7) {
-            session = new ExtendedOpenSslSession(new DefaultOpenSslSession(context.sessionContext())) {
-                private String[] peerSupportedSignatureAlgorithms;
-                private List requestedServerNames;
+        session = new ExtendedOpenSslSession(new DefaultOpenSslSession(context.sessionContext())) {
+            private String[] peerSupportedSignatureAlgorithms;
+            private List requestedServerNames;
 
-                @Override
-                public List getRequestedServerNames() {
-                    if (clientMode) {
-                        return Java8SslUtils.getSniHostNames(sniHostNames);
-                    } else {
-                        synchronized (ReferenceCountedOpenSslEngine.this) {
-                            if (requestedServerNames == null) {
-                                if (isDestroyed()) {
+            @Override
+            public List getRequestedServerNames() {
+                if (clientMode) {
+                    return Java8SslUtils.getSniHostNames(sniHostNames);
+                } else {
+                    synchronized (ReferenceCountedOpenSslEngine.this) {
+                        if (requestedServerNames == null) {
+                            if (isDestroyed()) {
+                                requestedServerNames = Collections.emptyList();
+                            } else {
+                                String name = SSL.getSniHostname(ssl);
+                                if (name == null) {
                                     requestedServerNames = Collections.emptyList();
                                 } else {
-                                    String name = SSL.getSniHostname(ssl);
-                                    if (name == null) {
-                                        requestedServerNames = Collections.emptyList();
-                                    } else {
-                                        // Convert to bytes as we do not want to do any strict validation of the
-                                        // SNIHostName while creating it.
-                                        requestedServerNames =
-                                                Java8SslUtils.getSniHostName(
-                                                        SSL.getSniHostname(ssl).getBytes(CharsetUtil.UTF_8));
-                                    }
+                                    // Convert to bytes as we do not want to do any strict validation of the
+                                    // SNIHostName while creating it.
+                                    requestedServerNames =
+                                            Java8SslUtils.getSniHostName(
+                                                    SSL.getSniHostname(ssl).getBytes(CharsetUtil.UTF_8));
                                 }
                             }
-                            return requestedServerNames;
                         }
+                        return requestedServerNames;
                     }
                 }
+            }
 
-                @Override
-                public String[] getPeerSupportedSignatureAlgorithms() {
-                    synchronized (ReferenceCountedOpenSslEngine.this) {
-                        if (peerSupportedSignatureAlgorithms == null) {
-                            if (isDestroyed()) {
+            @Override
+            public String[] getPeerSupportedSignatureAlgorithms() {
+                synchronized (ReferenceCountedOpenSslEngine.this) {
+                    if (peerSupportedSignatureAlgorithms == null) {
+                        if (isDestroyed()) {
+                            peerSupportedSignatureAlgorithms = EmptyArrays.EMPTY_STRINGS;
+                        } else {
+                            String[] algs = SSL.getSigAlgs(ssl);
+                            if (algs == null) {
                                 peerSupportedSignatureAlgorithms = EmptyArrays.EMPTY_STRINGS;
                             } else {
-                                String[] algs = SSL.getSigAlgs(ssl);
-                                if (algs == null) {
-                                    peerSupportedSignatureAlgorithms = EmptyArrays.EMPTY_STRINGS;
-                                } else {
-                                    Set<String> algorithmList = new LinkedHashSet<>(algs.length);
-                                    for (String alg: algs) {
-                                        String converted = SignatureAlgorithmConverter.toJavaName(alg);
+                                Set<String> algorithmList = new LinkedHashSet<>(algs.length);
+                                for (String alg: algs) {
+                                    String converted = SignatureAlgorithmConverter.toJavaName(alg);
 
-                                        if (converted != null) {
-                                            algorithmList.add(converted);
-                                        }
+                                    if (converted != null) {
+                                        algorithmList.add(converted);
                                     }
-                                    peerSupportedSignatureAlgorithms = algorithmList.toArray(new String[0]);
                                 }
+                                peerSupportedSignatureAlgorithms = algorithmList.toArray(new String[0]);
                             }
                         }
-                        return peerSupportedSignatureAlgorithms.clone();
                     }
+                    return peerSupportedSignatureAlgorithms.clone();
                 }
+            }
 
-                @Override
-                public List<byte[]> getStatusResponses() {
-                    byte[] ocspResponse = null;
-                    if (enableOcsp && clientMode) {
-                        synchronized (ReferenceCountedOpenSslEngine.this) {
-                            if (!isDestroyed()) {
-                                ocspResponse = SSL.getOcspResponse(ssl);
-                            }
+            @Override
+            public List<byte[]> getStatusResponses() {
+                byte[] ocspResponse = null;
+                if (enableOcsp && clientMode) {
+                    synchronized (ReferenceCountedOpenSslEngine.this) {
+                        if (!isDestroyed()) {
+                            ocspResponse = SSL.getOcspResponse(ssl);
                         }
                     }
-                    return ocspResponse == null ?
-                            Collections.<byte[]>emptyList() : Collections.singletonList(ocspResponse);
                 }
-            };
-        } else {
-            session = new DefaultOpenSslSession(context.sessionContext());
-        }
+                return ocspResponse == null ?
+                        Collections.<byte[]>emptyList() : Collections.singletonList(ocspResponse);
+            }
+        };
         engineMap = context.engineMap;
         enableOcsp = context.enableOcsp;
         // context.keyCertChain will only be non-null if we do not use the KeyManagerFactory. In this case

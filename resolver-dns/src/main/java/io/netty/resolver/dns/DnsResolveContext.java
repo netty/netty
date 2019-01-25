@@ -400,8 +400,7 @@ abstract class DnsResolveContext<T> {
                                            final DnsQueryLifecycleObserver queryLifecycleObserver,
                                            final Promise<List<T>> promise,
                                            final Throwable cause) {
-        final String nameServerName = PlatformDependent.javaVersion() >= 7 ?
-                nameServerAddr.getHostString() : nameServerAddr.getHostName();
+        final String nameServerName = nameServerAddr.getHostString();
         assert nameServerName != null;
 
         // Placeholder so we will not try to finish the original query yet.

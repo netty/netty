@@ -104,9 +104,6 @@ public final class NioDatagramChannel
     }
 
     private static void checkJavaVersion() {
-        if (PlatformDependent.javaVersion() < 7) {
-            throw new UnsupportedOperationException("Only supported on java 7+.");
-        }
     }
 
     /**
@@ -194,11 +191,7 @@ public final class NioDatagramChannel
     }
 
     private void doBind0(SocketAddress localAddress) throws Exception {
-        if (PlatformDependent.javaVersion() >= 7) {
-            SocketUtils.bind(javaChannel(), localAddress);
-        } else {
-            javaChannel().socket().bind(localAddress);
-        }
+        SocketUtils.bind(javaChannel(), localAddress);
     }
 
     @Override

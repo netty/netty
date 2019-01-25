@@ -32,9 +32,7 @@ public class NativeLibraryLoaderTest {
             fail();
         } catch (UnsatisfiedLinkError error) {
             assertTrue(error.getCause() instanceof FileNotFoundException);
-            if (PlatformDependent.javaVersion() >= 7) {
-                verifySuppressedException(error, UnsatisfiedLinkError.class);
-            }
+            verifySuppressedException(error, UnsatisfiedLinkError.class);
         }
     }
 
@@ -45,9 +43,7 @@ public class NativeLibraryLoaderTest {
             fail();
         } catch (UnsatisfiedLinkError error) {
             assertTrue(error.getCause() instanceof FileNotFoundException);
-            if (PlatformDependent.javaVersion() >= 7) {
-                verifySuppressedException(error, ClassNotFoundException.class);
-            }
+            verifySuppressedException(error, ClassNotFoundException.class);
         }
     }
 

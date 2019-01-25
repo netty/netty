@@ -135,12 +135,10 @@ public abstract class SimpleTrustManagerFactory extends TrustManagerFactory {
             TrustManager[] trustManagers = this.trustManagers;
             if (trustManagers == null) {
                 trustManagers = parent.engineGetTrustManagers();
-                if (PlatformDependent.javaVersion() >= 7) {
-                    for (int i = 0; i < trustManagers.length; i++) {
-                        final TrustManager tm = trustManagers[i];
-                        if (tm instanceof X509TrustManager && !(tm instanceof X509ExtendedTrustManager)) {
-                            trustManagers[i] = new X509TrustManagerWrapper((X509TrustManager) tm);
-                        }
+                for (int i = 0; i < trustManagers.length; i++) {
+                    final TrustManager tm = trustManagers[i];
+                    if (tm instanceof X509TrustManager && !(tm instanceof X509ExtendedTrustManager)) {
+                        trustManagers[i] = new X509TrustManagerWrapper((X509TrustManager) tm);
                     }
                 }
                 this.trustManagers = trustManagers;

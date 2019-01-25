@@ -1281,8 +1281,7 @@ public class DnsNameResolverTest {
 
         // Java7 will strip of the "." so we need to adjust the expected dnsname. Both are valid in terms of the RFC
         // so its ok.
-        String expectedDnsName = PlatformDependent.javaVersion() == 7 ?
-                "dns4.some.record.netty.io" : "dns4.some.record.netty.io.";
+        String expectedDnsName = "dns4.some.record.netty.io.";
 
         try {
             resolver.resolveAll(hostname).syncUninterruptibly();

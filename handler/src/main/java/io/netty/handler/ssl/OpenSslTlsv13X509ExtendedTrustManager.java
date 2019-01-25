@@ -94,7 +94,7 @@ final class OpenSslTlsv13X509ExtendedTrustManager extends X509ExtendedTrustManag
 
                 @Override
                 public SSLSession getHandshakeSession() {
-                    if (PlatformDependent.javaVersion() >= 7 && session instanceof ExtendedOpenSslSession) {
+                    if (session instanceof ExtendedOpenSslSession) {
                         final ExtendedOpenSslSession extendedOpenSslSession = (ExtendedOpenSslSession) session;
                         return new ExtendedOpenSslSession(extendedOpenSslSession) {
                             @Override

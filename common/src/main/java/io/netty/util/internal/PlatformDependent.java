@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -867,11 +866,7 @@ public final class PlatformDependent {
      * Returns a new concurrent {@link Deque}.
      */
     public static <C> Deque<C> newConcurrentDeque() {
-        if (javaVersion() < 7) {
-            return new LinkedBlockingDeque<>();
-        } else {
-            return new ConcurrentLinkedDeque<>();
-        }
+        return new ConcurrentLinkedDeque<>();
     }
 
     private static boolean isWindows0() {

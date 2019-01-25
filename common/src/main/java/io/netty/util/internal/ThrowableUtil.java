@@ -54,15 +54,8 @@ public final class ThrowableUtil {
         }
     }
 
-    public static boolean haveSuppressed() {
-        return PlatformDependent.javaVersion() >= 7;
-    }
-
     @SuppressJava6Requirement(reason = "Throwable addSuppressed is only available for >= 7. Has check for < 7.")
     public static void addSuppressed(Throwable target, Throwable suppressed) {
-        if (!haveSuppressed()) {
-            return;
-        }
         target.addSuppressed(suppressed);
     }
 

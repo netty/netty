@@ -168,13 +168,10 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                     }
                 }
 
-                if (PlatformDependent.javaVersion() >= 8) {
-                    // Only do on Java8+ as SNIMatcher is not supported in earlier releases.
-                    // IMPORTANT: The callbacks set for hostname matching must be static to prevent memory leak as
-                    //            otherwise the context can never be collected. This is because the JNI code holds
-                    //            a global reference to the matcher.
-                    SSLContext.setSniHostnameMatcher(ctx, new OpenSslSniHostnameMatcher(engineMap));
-                }
+                // IMPORTANT: The callbacks set for hostname matching must be static to prevent memory leak as
+                //            otherwise the context can never be collected. This is because the JNI code holds
+                //            a global reference to the matcher.
+                SSLContext.setSniHostnameMatcher(ctx, new OpenSslSniHostnameMatcher(engineMap));
             } catch (SSLException e) {
                 throw e;
             } catch (Exception e) {

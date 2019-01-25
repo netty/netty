@@ -45,10 +45,7 @@ public class DefaultAuthoritativeDnsServerCache implements AuthoritativeDnsServe
 
         @Override
         protected boolean equals(InetSocketAddress entry, InetSocketAddress otherEntry) {
-            if (PlatformDependent.javaVersion() >= 7) {
-                return entry.getHostString().equalsIgnoreCase(otherEntry.getHostString());
-            }
-            return entry.getHostName().equalsIgnoreCase(otherEntry.getHostName());
+            return entry.getHostString().equalsIgnoreCase(otherEntry.getHostString());
         }
 
         @Override
@@ -101,7 +98,7 @@ public class DefaultAuthoritativeDnsServerCache implements AuthoritativeDnsServe
         checkNotNull(address, "address");
         checkNotNull(loop, "loop");
 
-        if (PlatformDependent.javaVersion() >= 7 && address.getHostString() == null) {
+        if (address.getHostString() == null) {
             // We only cache addresses that have also a host string as we will need it later when trying to replace
             // unresolved entries in the cache.
             return;

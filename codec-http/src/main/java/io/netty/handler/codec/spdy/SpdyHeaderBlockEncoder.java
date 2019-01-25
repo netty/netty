@@ -23,14 +23,7 @@ abstract class SpdyHeaderBlockEncoder {
 
     static SpdyHeaderBlockEncoder newInstance(
             SpdyVersion version, int compressionLevel, int windowBits, int memLevel) {
-
-        if (PlatformDependent.javaVersion() >= 7) {
-            return new SpdyHeaderBlockZlibEncoder(
-                    version, compressionLevel);
-        } else {
-            return new SpdyHeaderBlockJZlibEncoder(
-                    version, compressionLevel, windowBits, memLevel);
-        }
+        return new SpdyHeaderBlockZlibEncoder(version, compressionLevel);
     }
 
     abstract ByteBuf encode(ByteBufAllocator alloc, SpdyHeadersFrame frame) throws Exception;
