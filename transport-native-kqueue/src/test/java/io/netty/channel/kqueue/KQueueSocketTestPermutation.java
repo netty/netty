@@ -68,21 +68,11 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     @Override
     public List<BootstrapFactory<ServerBootstrap>> serverSocket() {
         List<BootstrapFactory<ServerBootstrap>> toReturn = new ArrayList<>();
-        toReturn.add(new BootstrapFactory<ServerBootstrap>() {
-            @Override
-            public ServerBootstrap newInstance() {
-                return new ServerBootstrap().group(KQUEUE_BOSS_GROUP, KQUEUE_WORKER_GROUP)
-                                            .channel(KQueueServerSocketChannel.class);
-            }
-        });
+        toReturn.add(() -> new ServerBootstrap().group(KQUEUE_BOSS_GROUP, KQUEUE_WORKER_GROUP)
+                                    .channel(KQueueServerSocketChannel.class));
 
-        toReturn.add(new BootstrapFactory<ServerBootstrap>() {
-            @Override
-            public ServerBootstrap newInstance() {
-                return new ServerBootstrap().group(nioBossGroup, nioWorkerGroup)
-                                            .channel(NioServerSocketChannel.class);
-            }
-        });
+        toReturn.add(() -> new ServerBootstrap().group(nioBossGroup, nioWorkerGroup)
+                                    .channel(NioServerSocketChannel.class));
 
         return toReturn;
     }
@@ -91,18 +81,8 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     @Override
     public List<BootstrapFactory<Bootstrap>> clientSocket() {
         return Arrays.asList(
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueSocketChannel.class);
-                    }
-                },
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class);
-                    }
-                }
+                () -> new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueSocketChannel.class),
+                () -> new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class)
         );
     }
 
@@ -111,28 +91,18 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
         // Make the list of Bootstrap factories.
         @SuppressWarnings("unchecked")
         List<BootstrapFactory<Bootstrap>> bfs = Arrays.asList(
-                new BootstrapFactory<Bootstrap>() {
+                () -> new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
                     @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
-                            @Override
-                            public Channel newChannel(EventLoop eventLoop) {
-                                return new NioDatagramChannel(eventLoop, InternetProtocolFamily.IPv4);
-                            }
+                    public Channel newChannel(EventLoop eventLoop) {
+                        return new NioDatagramChannel(eventLoop, InternetProtocolFamily.IPv4);
+                    }
 
-                            @Override
-                            public String toString() {
-                                return NioDatagramChannel.class.getSimpleName() + ".class";
-                            }
-                        });
-                    }
-                },
-                new BootstrapFactory<Bootstrap>() {
                     @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDatagramChannel.class);
+                    public String toString() {
+                        return NioDatagramChannel.class.getSimpleName() + ".class";
                     }
-                }
+                }),
+                () -> new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDatagramChannel.class)
         );
         return combo(bfs, bfs);
     }
@@ -146,36 +116,21 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
 
     public List<BootstrapFactory<ServerBootstrap>> serverDomainSocket() {
         return Collections.<BootstrapFactory<ServerBootstrap>>singletonList(
-                new BootstrapFactory<ServerBootstrap>() {
-                    @Override
-                    public ServerBootstrap newInstance() {
-                        return new ServerBootstrap().group(KQUEUE_BOSS_GROUP, KQUEUE_WORKER_GROUP)
-                                .channel(KQueueServerDomainSocketChannel.class);
-                    }
-                }
+                () -> new ServerBootstrap().group(KQUEUE_BOSS_GROUP, KQUEUE_WORKER_GROUP)
+                        .channel(KQueueServerDomainSocketChannel.class)
         );
     }
 
     public List<BootstrapFactory<Bootstrap>> clientDomainSocket() {
         return Collections.<BootstrapFactory<Bootstrap>>singletonList(
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDomainSocketChannel.class);
-                    }
-                }
+                () -> new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDomainSocketChannel.class)
         );
     }
 
     @Override
     public List<BootstrapFactory<Bootstrap>> datagramSocket() {
         return Collections.<BootstrapFactory<Bootstrap>>singletonList(
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDatagramChannel.class);
-                    }
-                }
+                () -> new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDatagramChannel.class)
         );
     }
     public static DomainSocketAddress newSocketAddress() {

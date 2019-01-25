@@ -229,26 +229,23 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
             onLookupComplete(ctx, hostname, future);
         } else {
             suppressRead = true;
-            future.addListener(new FutureListener<T>() {
-                @Override
-                public void operationComplete(Future<T> future) throws Exception {
+            future.addListener((FutureListener<T>) future1 -> {
+                try {
+                    suppressRead = false;
                     try {
-                        suppressRead = false;
-                        try {
-                            fireSniCompletionEvent(ctx, hostname, future);
-                            onLookupComplete(ctx, hostname, future);
-                        } catch (DecoderException err) {
-                            ctx.fireExceptionCaught(err);
-                        } catch (Exception cause) {
-                            ctx.fireExceptionCaught(new DecoderException(cause));
-                        } catch (Throwable cause) {
-                            ctx.fireExceptionCaught(cause);
-                        }
-                    } finally {
-                        if (readPending) {
-                            readPending = false;
-                            ctx.read();
-                        }
+                        fireSniCompletionEvent(ctx, hostname, future1);
+                        onLookupComplete(ctx, hostname, future1);
+                    } catch (DecoderException err) {
+                        ctx.fireExceptionCaught(err);
+                    } catch (Exception cause) {
+                        ctx.fireExceptionCaught(new DecoderException(cause));
+                    } catch (Throwable cause) {
+                        ctx.fireExceptionCaught(cause);
+                    }
+                } finally {
+                    if (readPending) {
+                        readPending = false;
+                        ctx.read();
                     }
                 }
             });

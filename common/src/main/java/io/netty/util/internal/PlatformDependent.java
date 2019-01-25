@@ -99,11 +99,8 @@ public final class PlatformDependent {
 
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
-    private static final Cleaner NOOP = new Cleaner() {
-        @Override
-        public void freeDirectBuffer(ByteBuffer buffer) {
-            // NOOP
-        }
+    private static final Cleaner NOOP = buffer -> {
+        // NOOP
     };
 
     static {
@@ -775,12 +772,9 @@ public final class PlatformDependent {
                 // jctools goes through its own process of initializing unsafe; of
                 // course, this requires permissions which might not be granted to calling code, so we
                 // must mark this block as privileged too
-                unsafe = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                    @Override
-                    public Object run() {
-                        // force JCTools to initialize unsafe
-                        return UnsafeAccess.UNSAFE;
-                    }
+                unsafe = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+                    // force JCTools to initialize unsafe
+                    return UnsafeAccess.UNSAFE;
                 });
             }
 

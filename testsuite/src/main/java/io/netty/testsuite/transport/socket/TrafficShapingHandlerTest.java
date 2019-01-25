@@ -513,23 +513,17 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
                         if (isAutoRead == -3) {
                             wait = stepms * 3;
                         }
-                        executor.schedule(new Runnable() {
-                            @Override
-                            public void run() {
-                                loggerServer.info("Step: " + exactStep + " Reset AutoRead");
-                                channel.config().setAutoRead(true);
-                            }
+                        executor.schedule(() -> {
+                            loggerServer.info("Step: " + exactStep + " Reset AutoRead");
+                            channel.config().setAutoRead(true);
                         }, wait, TimeUnit.MILLISECONDS);
                     } else {
                         if (isAutoRead > 1) {
                             loggerServer.debug("Step: " + step + " Will Set AutoRead: True");
                             final int exactStep = step;
-                            executor.schedule(new Runnable() {
-                                @Override
-                                public void run() {
-                                    loggerServer.info("Step: " + exactStep + " Set AutoRead: True");
-                                    channel.config().setAutoRead(true);
-                                }
+                            executor.schedule(() -> {
+                                loggerServer.info("Step: " + exactStep + " Set AutoRead: True");
+                                channel.config().setAutoRead(true);
                             }, stepms + minimalms, TimeUnit.MILLISECONDS);
                         }
                     }

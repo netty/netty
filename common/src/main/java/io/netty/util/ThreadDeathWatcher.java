@@ -114,12 +114,9 @@ public final class ThreadDeathWatcher {
             // See:
             // - https://github.com/netty/netty/issues/7290
             // - https://bugs.openjdk.java.net/browse/JDK-7008595
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
-                    watcherThread.setContextClassLoader(null);
-                    return null;
-                }
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                watcherThread.setContextClassLoader(null);
+                return null;
             });
 
             watcherThread.start();

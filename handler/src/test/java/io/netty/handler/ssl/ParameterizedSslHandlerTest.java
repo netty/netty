@@ -169,13 +169,10 @@ public class ParameterizedSslHandlerTest {
                                                 buf.writerIndex(buf.writerIndex() + singleComponentSize);
                                                 content.addComponent(true, buf);
                                             }
-                                            ctx.writeAndFlush(content).addListener(new ChannelFutureListener() {
-                                                @Override
-                                                public void operationComplete(ChannelFuture future) throws Exception {
-                                                    writeCause = future.cause();
-                                                    if (writeCause == null) {
-                                                        sentData = true;
-                                                    }
+                                            ctx.writeAndFlush(content).addListener((ChannelFutureListener) future -> {
+                                                writeCause = future.cause();
+                                                if (writeCause == null) {
+                                                    sentData = true;
                                                 }
                                             });
                                         } else {
@@ -415,13 +412,10 @@ public class ParameterizedSslHandlerTest {
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
                             handler.sslCloseFuture().addListener(
                                     new PromiseNotifier<>(serverPromise));
-                            handler.handshakeFuture().addListener(new FutureListener<Channel>() {
-                                @Override
-                                public void operationComplete(Future<Channel> future) {
-                                    if (!future.isSuccess()) {
-                                        // Something bad happened during handshake fail the promise!
-                                        serverPromise.tryFailure(future.cause());
-                                    }
+                            handler.handshakeFuture().addListener((FutureListener<Channel>) future -> {
+                                if (!future.isSuccess()) {
+                                    // Something bad happened during handshake fail the promise!
+                                    serverPromise.tryFailure(future.cause());
                                 }
                             });
                             ch.pipeline().addLast(handler);
@@ -454,16 +448,13 @@ public class ParameterizedSslHandlerTest {
                             handler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeout);
                             handler.sslCloseFuture().addListener(
                                     new PromiseNotifier<>(clientPromise));
-                            handler.handshakeFuture().addListener(new FutureListener<Channel>() {
-                                @Override
-                                public void operationComplete(Future<Channel> future) {
-                                    if (future.isSuccess()) {
-                                        closeSent.compareAndSet(false, true);
-                                        future.getNow().close();
-                                    } else {
-                                        // Something bad happened during handshake fail the promise!
-                                        clientPromise.tryFailure(future.cause());
-                                    }
+                            handler.handshakeFuture().addListener((FutureListener<Channel>) future -> {
+                                if (future.isSuccess()) {
+                                    closeSent.compareAndSet(false, true);
+                                    future.getNow().close();
+                                } else {
+                                    // Something bad happened during handshake fail the promise!
+                                    clientPromise.tryFailure(future.cause());
                                 }
                             });
                             ch.pipeline().addLast(handler);

@@ -81,19 +81,16 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
                 WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
             } else {
                 final ChannelFuture handshakeFuture = handshaker.handshake(ctx.channel(), req);
-                handshakeFuture.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            ctx.fireExceptionCaught(future.cause());
-                        } else {
-                            // Kept for compatibility
-                            ctx.fireUserEventTriggered(
-                                    WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE);
-                            ctx.fireUserEventTriggered(
-                                    new WebSocketServerProtocolHandler.HandshakeComplete(
-                                            req.uri(), req.headers(), handshaker.selectedSubprotocol()));
-                        }
+                handshakeFuture.addListener((ChannelFutureListener) future -> {
+                    if (!future.isSuccess()) {
+                        ctx.fireExceptionCaught(future.cause());
+                    } else {
+                        // Kept for compatibility
+                        ctx.fireUserEventTriggered(
+                                WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE);
+                        ctx.fireUserEventTriggered(
+                                new WebSocketServerProtocolHandler.HandshakeComplete(
+                                        req.uri(), req.headers(), handshaker.selectedSubprotocol()));
                     }
                 });
                 WebSocketServerProtocolHandler.setHandshaker(ctx.channel(), handshaker);

@@ -88,19 +88,13 @@ public class DefaultHttp2ConnectionTest {
         server = new DefaultHttp2Connection(true);
         client = new DefaultHttp2Connection(false);
         client.addListener(clientListener);
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock invocation) throws Throwable {
-                assertNotNull(client.stream(((Http2Stream) invocation.getArgument(0)).id()));
-                return null;
-            }
+        doAnswer((Answer<Void>) invocation -> {
+            assertNotNull(client.stream(((Http2Stream) invocation.getArgument(0)).id()));
+            return null;
         }).when(clientListener).onStreamClosed(any(Http2Stream.class));
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock invocation) throws Throwable {
-                assertNull(client.stream(((Http2Stream) invocation.getArgument(0)).id()));
-                return null;
-            }
+        doAnswer((Answer<Void>) invocation -> {
+            assertNull(client.stream(((Http2Stream) invocation.getArgument(0)).id()));
+            return null;
         }).when(clientListener).onStreamRemoved(any(Http2Stream.class));
     }
 
@@ -141,13 +135,10 @@ public class DefaultHttp2ConnectionTest {
     public void removeIndividualStreamsWhileCloseDoesNotNPE() throws InterruptedException, Http2Exception {
         final Http2Stream streamA = client.local().createStream(3, false);
         final Http2Stream streamB = client.remote().createStream(2, false);
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock invocation) throws Throwable {
-                streamA.close();
-                streamB.close();
-                return null;
-            }
+        doAnswer((Answer<Void>) invocation -> {
+            streamA.close();
+            streamB.close();
+            return null;
         }).when(clientListener2).onStreamClosed(any(Http2Stream.class));
         try {
             client.addListener(clientListener2);
@@ -167,18 +158,12 @@ public class DefaultHttp2ConnectionTest {
         }
         final Promise<Void> promise = group.next().newPromise();
         final CountDownLatch latch = new CountDownLatch(client.numActiveStreams());
-        client.forEachActiveStream(new Http2StreamVisitor() {
-            @Override
-            public boolean visit(Http2Stream stream) {
-                client.close(promise).addListener(new FutureListener<Void>() {
-                    @Override
-                    public void operationComplete(Future<Void> future) throws Exception {
-                        assertTrue(promise.isDone());
-                        latch.countDown();
-                    }
-                });
-                return true;
-            }
+        client.forEachActiveStream(stream -> {
+            client.close(promise).addListener((FutureListener<Void>) future -> {
+                assertTrue(promise.isDone());
+                latch.countDown();
+            });
+            return true;
         });
         assertTrue(latch.await(5, TimeUnit.SECONDS));
     }
@@ -195,23 +180,17 @@ public class DefaultHttp2ConnectionTest {
         final Promise<Void> promise = group.next().newPromise();
         final CountDownLatch latch = new CountDownLatch(1);
         try {
-            client.forEachActiveStream(new Http2StreamVisitor() {
-                @Override
-                public boolean visit(Http2Stream stream) throws Http2Exception {
-                    // This close call is basically a noop, because the following statement will throw an exception.
-                    client.close(promise);
-                    // Do an invalid operation while iterating.
-                    remote.createStream(3, false);
-                    return true;
-                }
+            client.forEachActiveStream(stream -> {
+                // This close call is basically a noop, because the following statement will throw an exception.
+                client.close(promise);
+                // Do an invalid operation while iterating.
+                remote.createStream(3, false);
+                return true;
             });
         } catch (Http2Exception ignored) {
-            client.close(promise).addListener(new FutureListener<Void>() {
-                @Override
-                public void operationComplete(Future<Void> future) throws Exception {
-                    assertTrue(promise.isDone());
-                    latch.countDown();
-                }
+            client.close(promise).addListener((FutureListener<Void>) future -> {
+                assertTrue(promise.isDone());
+                latch.countDown();
             });
         }
         assertTrue(latch.await(5, TimeUnit.SECONDS));
@@ -590,12 +569,9 @@ public class DefaultHttp2ConnectionTest {
     private void testRemoveAllStreams() throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final Promise<Void> promise = group.next().newPromise();
-        client.close(promise).addListener(new FutureListener<Void>() {
-            @Override
-            public void operationComplete(Future<Void> future) throws Exception {
-                assertTrue(promise.isDone());
-                latch.countDown();
-            }
+        client.close(promise).addListener((FutureListener<Void>) future -> {
+            assertTrue(promise.isDone());
+            latch.countDown();
         });
         assertTrue(latch.await(5, TimeUnit.SECONDS));
     }

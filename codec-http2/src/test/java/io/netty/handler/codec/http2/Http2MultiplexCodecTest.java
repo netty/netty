@@ -245,12 +245,7 @@ public class Http2MultiplexCodecTest {
         frameInboundWriter.writeInboundData(channel.stream().id(), tenBytes, 0, true);
 
         // Verify we marked the bytes as consumed
-        verify(flowController).consumeBytes(argThat(new ArgumentMatcher<Http2Stream>() {
-            @Override
-            public boolean matches(Http2Stream http2Stream) {
-                return http2Stream.id() == channel.stream().id();
-            }
-        }), eq(10));
+        verify(flowController).consumeBytes(argThat(http2Stream -> http2Stream.id() == channel.stream().id()), eq(10));
 
         // headers and data frame
         verifyFramesMultiplexedToCorrectChannel(channel, handler, 2);
@@ -459,13 +454,9 @@ public class Http2MultiplexCodecTest {
         Http2Headers headers = new DefaultHttp2Headers();
         when(frameWriter.writeHeaders(eqMultiplexCodecCtx(), anyInt(),
                 eq(headers), anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean(),
-                any(ChannelPromise.class))).thenAnswer(new Answer<ChannelFuture>() {
-            @Override
-            public ChannelFuture answer(InvocationOnMock invocationOnMock) {
-                return ((ChannelPromise) invocationOnMock.getArgument(8)).setFailure(
-                        new StreamException(childChannel.stream().id(), Http2Error.STREAM_CLOSED, "Stream Closed"));
-            }
-        });
+                any(ChannelPromise.class))).thenAnswer((Answer<ChannelFuture>) invocationOnMock ->
+                ((ChannelPromise) invocationOnMock.getArgument(8)).setFailure(
+                        new StreamException(childChannel.stream().id(), Http2Error.STREAM_CLOSED, "Stream Closed")));
         ChannelFuture future = childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
 
         parentChannel.flush();
@@ -521,13 +512,9 @@ public class Http2MultiplexCodecTest {
         Http2Headers headers = new DefaultHttp2Headers();
         when(frameWriter.writeHeaders(eqMultiplexCodecCtx(), anyInt(),
                eq(headers), anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean(),
-               any(ChannelPromise.class))).thenAnswer(new Answer<ChannelFuture>() {
-           @Override
-           public ChannelFuture answer(InvocationOnMock invocationOnMock) {
-               return ((ChannelPromise) invocationOnMock.getArgument(8)).setFailure(
-                       new Http2NoMoreStreamIdsException());
-            }
-        });
+               any(ChannelPromise.class))).thenAnswer((Answer<ChannelFuture>) invocationOnMock ->
+                ((ChannelPromise) invocationOnMock.getArgument(8)).setFailure(
+                       new Http2NoMoreStreamIdsException()));
 
         ChannelFuture future = childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(headers));
         parentChannel.flush();
@@ -554,12 +541,9 @@ public class Http2MultiplexCodecTest {
         // Create a promise before actually doing the close, because otherwise we would be adding a listener to a future
         // that is already completed because we are using EmbeddedChannel which executes code in the JUnit thread.
         ChannelPromise p = childChannel.newPromise();
-        p.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                channelOpen.set(future.channel().isOpen());
-                channelActive.set(future.channel().isActive());
-            }
+        p.addListener((ChannelFutureListener) future -> {
+            channelOpen.set(future.channel().isOpen());
+            channelActive.set(future.channel().isActive());
         });
         childChannel.close(p).syncUninterruptibly();
 
@@ -579,12 +563,9 @@ public class Http2MultiplexCodecTest {
          final AtomicBoolean channelOpen = new AtomicBoolean(true);
          final AtomicBoolean channelActive = new AtomicBoolean(true);
 
-         childChannel.closeFuture().addListener(new ChannelFutureListener() {
-             @Override
-             public void operationComplete(ChannelFuture future) {
-                 channelOpen.set(future.channel().isOpen());
-                 channelActive.set(future.channel().isActive());
-             }
+         childChannel.closeFuture().addListener((ChannelFutureListener) future -> {
+             channelOpen.set(future.channel().isOpen());
+             channelActive.set(future.channel().isActive());
          });
          childChannel.close().syncUninterruptibly();
 
@@ -609,23 +590,17 @@ public class Http2MultiplexCodecTest {
         Http2Headers headers = new DefaultHttp2Headers();
         when(frameWriter.writeHeaders(eqMultiplexCodecCtx(), anyInt(),
                 eq(headers), anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean(),
-                any(ChannelPromise.class))).thenAnswer(new Answer<ChannelFuture>() {
-            @Override
-            public ChannelFuture answer(InvocationOnMock invocationOnMock) {
-                ChannelPromise promise = invocationOnMock.getArgument(8);
-                writePromises.offer(promise);
-                return promise;
-            }
-        });
+                any(ChannelPromise.class))).thenAnswer((Answer<ChannelFuture>) invocationOnMock -> {
+                    ChannelPromise promise = invocationOnMock.getArgument(8);
+                    writePromises.offer(promise);
+                    return promise;
+                });
 
         ChannelFuture f = childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(headers));
         assertFalse(f.isDone());
-        f.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                channelOpen.set(future.channel().isOpen());
-                channelActive.set(future.channel().isActive());
-            }
+        f.addListener((ChannelFutureListener) future -> {
+            channelOpen.set(future.channel().isOpen());
+            channelActive.set(future.channel().isActive());
         });
 
         ChannelPromise first = writePromises.poll();
@@ -794,12 +769,9 @@ public class Http2MultiplexCodecTest {
     public void endOfStreamDoesNotDiscardData() {
         AtomicInteger numReads = new AtomicInteger(1);
         final AtomicBoolean shouldDisableAutoRead = new AtomicBoolean();
-        Consumer<ChannelHandlerContext> ctxConsumer = new Consumer<ChannelHandlerContext>() {
-            @Override
-            public void accept(ChannelHandlerContext obj) {
-                if (shouldDisableAutoRead.get()) {
-                    obj.channel().config().setAutoRead(false);
-                }
+        Consumer<ChannelHandlerContext> ctxConsumer = obj -> {
+            if (shouldDisableAutoRead.get()) {
+                obj.channel().config().setAutoRead(false);
             }
         };
         LastInboundHandler inboundHandler = new LastInboundHandler(ctxConsumer);
@@ -859,13 +831,10 @@ public class Http2MultiplexCodecTest {
         AtomicInteger numReads = new AtomicInteger(1);
         final AtomicInteger channelReadCompleteCount = new AtomicInteger(0);
         final AtomicBoolean shouldDisableAutoRead = new AtomicBoolean();
-        Consumer<ChannelHandlerContext> ctxConsumer = new Consumer<ChannelHandlerContext>() {
-            @Override
-            public void accept(ChannelHandlerContext obj) {
-                channelReadCompleteCount.incrementAndGet();
-                if (shouldDisableAutoRead.get()) {
-                    obj.channel().config().setAutoRead(false);
-                }
+        Consumer<ChannelHandlerContext> ctxConsumer = obj -> {
+            channelReadCompleteCount.incrementAndGet();
+            if (shouldDisableAutoRead.get()) {
+                obj.channel().config().setAutoRead(false);
             }
         };
         LastInboundHandler inboundHandler = new LastInboundHandler(ctxConsumer);
@@ -922,13 +891,10 @@ public class Http2MultiplexCodecTest {
         final AtomicInteger numReads = new AtomicInteger(1);
         final AtomicInteger channelReadCompleteCount = new AtomicInteger(0);
         final AtomicBoolean shouldDisableAutoRead = new AtomicBoolean();
-        Consumer<ChannelHandlerContext> ctxConsumer = new Consumer<ChannelHandlerContext>() {
-            @Override
-            public void accept(ChannelHandlerContext obj) {
-                channelReadCompleteCount.incrementAndGet();
-                if (shouldDisableAutoRead.get()) {
-                    obj.channel().config().setAutoRead(false);
-                }
+        Consumer<ChannelHandlerContext> ctxConsumer = obj -> {
+            channelReadCompleteCount.incrementAndGet();
+            if (shouldDisableAutoRead.get()) {
+                obj.channel().config().setAutoRead(false);
             }
         };
         final LastInboundHandler inboundHandler = new LastInboundHandler(ctxConsumer);

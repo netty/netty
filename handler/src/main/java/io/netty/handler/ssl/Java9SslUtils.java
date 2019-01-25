@@ -49,50 +49,26 @@ final class Java9SslUtils {
             SSLContext context = SSLContext.getInstance(JdkSslContext.PROTOCOL);
             context.init(null, null, null);
             SSLEngine engine = context.createSSLEngine();
-            getHandshakeApplicationProtocol = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
-                @Override
-                public Method run() throws Exception {
-                    return SSLEngine.class.getMethod("getHandshakeApplicationProtocol");
-                }
-            });
+            getHandshakeApplicationProtocol = AccessController.doPrivileged((PrivilegedExceptionAction<Method>) () ->
+                    SSLEngine.class.getMethod("getHandshakeApplicationProtocol"));
             getHandshakeApplicationProtocol.invoke(engine);
-            getApplicationProtocol = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
-                @Override
-                public Method run() throws Exception {
-                    return SSLEngine.class.getMethod("getApplicationProtocol");
-                }
-            });
+            getApplicationProtocol = AccessController.doPrivileged((PrivilegedExceptionAction<Method>) () ->
+                    SSLEngine.class.getMethod("getApplicationProtocol"));
             getApplicationProtocol.invoke(engine);
 
-            setApplicationProtocols = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
-                @Override
-                public Method run() throws Exception {
-                    return SSLParameters.class.getMethod("setApplicationProtocols", String[].class);
-                }
-            });
+            setApplicationProtocols = AccessController.doPrivileged((PrivilegedExceptionAction<Method>) () ->
+                    SSLParameters.class.getMethod("setApplicationProtocols", String[].class));
             setApplicationProtocols.invoke(engine.getSSLParameters(), new Object[]{EmptyArrays.EMPTY_STRINGS});
 
             setHandshakeApplicationProtocolSelector =
-                    AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
-                @Override
-                public Method run() throws Exception {
-                    return SSLEngine.class.getMethod("setHandshakeApplicationProtocolSelector", BiFunction.class);
-                }
-            });
-            setHandshakeApplicationProtocolSelector.invoke(engine, new BiFunction<SSLEngine, List<String>, String>() {
-                @Override
-                public String apply(SSLEngine sslEngine, List<String> strings) {
-                    return null;
-                }
-            });
+                    AccessController.doPrivileged((PrivilegedExceptionAction<Method>) () ->
+                            SSLEngine.class.getMethod("setHandshakeApplicationProtocolSelector", BiFunction.class));
+            setHandshakeApplicationProtocolSelector.invoke(engine,
+                    (BiFunction<SSLEngine, List<String>, String>) (sslEngine, strings) -> null);
 
             getHandshakeApplicationProtocolSelector =
-                    AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
-                @Override
-                public Method run() throws Exception {
-                    return SSLEngine.class.getMethod("getHandshakeApplicationProtocolSelector");
-                }
-            });
+                    AccessController.doPrivileged((PrivilegedExceptionAction<Method>) () ->
+                            SSLEngine.class.getMethod("getHandshakeApplicationProtocolSelector"));
             getHandshakeApplicationProtocolSelector.invoke(engine);
         } catch (Throwable t) {
             logger.error("Unable to initialize Java9SslUtils, but the detected javaVersion was: {}",

@@ -147,22 +147,16 @@ public class HttpClientCodecTest {
                             sChannel.writeAndFlush(Unpooled.wrappedBuffer(("HTTP/1.0 200 OK\r\n" +
                             "Date: Fri, 31 Dec 1999 23:59:59 GMT\r\n" +
                             "Content-Type: text/html\r\n\r\n").getBytes(CharsetUtil.ISO_8859_1)))
-                                    .addListener(new ChannelFutureListener() {
-                                @Override
-                                public void operationComplete(ChannelFuture future) throws Exception {
-                                    assertTrue(future.isSuccess());
-                                    sChannel.writeAndFlush(Unpooled.wrappedBuffer(
-                                            "<html><body>hello half closed!</body></html>\r\n"
-                                            .getBytes(CharsetUtil.ISO_8859_1)))
-                                            .addListener(new ChannelFutureListener() {
-                                        @Override
-                                        public void operationComplete(ChannelFuture future) throws Exception {
-                                            assertTrue(future.isSuccess());
-                                            sChannel.shutdownOutput();
-                                        }
+                                    .addListener((ChannelFutureListener) future -> {
+                                        assertTrue(future.isSuccess());
+                                        sChannel.writeAndFlush(Unpooled.wrappedBuffer(
+                                                "<html><body>hello half closed!</body></html>\r\n"
+                                                .getBytes(CharsetUtil.ISO_8859_1)))
+                                                .addListener((ChannelFutureListener) future1 -> {
+                                                    assertTrue(future1.isSuccess());
+                                                    sChannel.shutdownOutput();
+                                                });
                                     });
-                                }
-                            });
                         }
                     });
                     serverChannelLatch.countDown();

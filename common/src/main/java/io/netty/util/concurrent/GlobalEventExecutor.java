@@ -46,12 +46,9 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
     static {
         INSTANCE = new GlobalEventExecutor();
         QUIET_PERIOD_TASK = new RunnableScheduledFutureAdapter<>(
-                INSTANCE, INSTANCE.newPromise(), Executors.callable(new Runnable() {
-            @Override
-            public void run() {
-                // NOOP
-            }
-        }, null), deadlineNanos(SCHEDULE_QUIET_PERIOD_INTERVAL), -SCHEDULE_QUIET_PERIOD_INTERVAL);
+                INSTANCE, INSTANCE.newPromise(), Executors.callable(() -> {
+                    // NOOP
+                }, null), deadlineNanos(SCHEDULE_QUIET_PERIOD_INTERVAL), -SCHEDULE_QUIET_PERIOD_INTERVAL);
 
         INSTANCE.scheduledTaskQueue().add(QUIET_PERIOD_TASK);
     }
@@ -228,12 +225,9 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
             // See:
             // - https://github.com/netty/netty/issues/7290
             // - https://bugs.openjdk.java.net/browse/JDK-7008595
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
-                    t.setContextClassLoader(null);
-                    return null;
-                }
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                t.setContextClassLoader(null);
+                return null;
             });
 
             // Set the thread before starting it as otherwise inEventLoop() may return false and so produce

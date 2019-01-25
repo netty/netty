@@ -117,19 +117,16 @@ final class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRespo
         if (parent.channelFuture.isDone()) {
             writeQuery(query, flush, writePromise);
         } else {
-            parent.channelFuture.addListener(new GenericFutureListener<Future<? super Channel>>() {
-                @Override
-                public void operationComplete(Future<? super Channel> future) {
-                    if (future.isSuccess()) {
-                        // If the query is done in a late fashion (as the channel was not ready yet) we always flush
-                        // to ensure we did not race with a previous flush() that was done when the Channel was not
-                        // ready yet.
-                        writeQuery(query, true, writePromise);
-                    } else {
-                        Throwable cause = future.cause();
-                        promise.tryFailure(cause);
-                        writePromise.setFailure(cause);
-                    }
+            parent.channelFuture.addListener(future -> {
+                if (future.isSuccess()) {
+                    // If the query is done in a late fashion (as the channel was not ready yet) we always flush
+                    // to ensure we did not race with a previous flush() that was done when the Channel was not
+                    // ready yet.
+                    writeQuery(query, true, writePromise);
+                } else {
+                    Throwable cause = future.cause();
+                    promise.tryFailure(cause);
+                    writePromise.setFailure(cause);
                 }
             });
         }
@@ -141,12 +138,7 @@ final class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRespo
         if (writeFuture.isDone()) {
             onQueryWriteCompletion(writeFuture);
         } else {
-            writeFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) {
-                    onQueryWriteCompletion(writeFuture);
-                }
-            });
+            writeFuture.addListener((ChannelFutureListener) future -> onQueryWriteCompletion(writeFuture));
         }
     }
 
@@ -159,16 +151,13 @@ final class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRespo
         // Schedule a query timeout task if necessary.
         final long queryTimeoutMillis = parent.queryTimeoutMillis();
         if (queryTimeoutMillis > 0) {
-            timeoutFuture = parent.ch.eventLoop().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    if (promise.isDone()) {
-                        // Received a response before the query times out.
-                        return;
-                    }
-
-                    setFailure("query timed out after " + queryTimeoutMillis + " milliseconds", null);
+            timeoutFuture = parent.ch.eventLoop().schedule(() -> {
+                if (promise.isDone()) {
+                    // Received a response before the query times out.
+                    return;
                 }
+
+                setFailure("query timed out after " + queryTimeoutMillis + " milliseconds", null);
             }, queryTimeoutMillis, TimeUnit.MILLISECONDS);
         }
     }

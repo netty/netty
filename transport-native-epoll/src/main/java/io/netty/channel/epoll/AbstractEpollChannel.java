@@ -183,14 +183,11 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 if (loop.inEventLoop()) {
                     doDeregister();
                 } else {
-                    loop.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                doDeregister();
-                            } catch (Throwable cause) {
-                                pipeline().fireExceptionCaught(cause);
-                            }
+                    loop.execute(() -> {
+                        try {
+                            doDeregister();
+                        } catch (Throwable cause) {
+                            pipeline().fireExceptionCaught(cause);
                         }
                     });
                 }
@@ -260,13 +257,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 unsafe.clearEpollIn0();
             } else {
                 // schedule a task to clear the EPOLLIN as it is not safe to modify it directly
-                loop.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (!unsafe.readPending && !config().isAutoRead()) {
-                            // Still no read triggered so clear it now
-                            unsafe.clearEpollIn0();
-                        }
+                loop.execute(() -> {
+                    if (!unsafe.readPending && !config().isAutoRead()) {
+                        // Still no read triggered so clear it now
+                        unsafe.clearEpollIn0();
                     }
                 });
             }
@@ -564,29 +558,23 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                     // Schedule connect timeout.
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
-                        connectTimeoutFuture = eventLoop().schedule(new Runnable() {
-                            @Override
-                            public void run() {
-                                ChannelPromise connectPromise = AbstractEpollChannel.this.connectPromise;
-                                ConnectTimeoutException cause =
-                                        new ConnectTimeoutException("connection timed out: " + remoteAddress);
-                                if (connectPromise != null && connectPromise.tryFailure(cause)) {
-                                    close(voidPromise());
-                                }
+                        connectTimeoutFuture = eventLoop().schedule(() -> {
+                            ChannelPromise connectPromise = AbstractEpollChannel.this.connectPromise;
+                            ConnectTimeoutException cause =
+                                    new ConnectTimeoutException("connection timed out: " + remoteAddress);
+                            if (connectPromise != null && connectPromise.tryFailure(cause)) {
+                                close(voidPromise());
                             }
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
 
-                    promise.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            if (future.isCancelled()) {
-                                if (connectTimeoutFuture != null) {
-                                    connectTimeoutFuture.cancel(false);
-                                }
-                                connectPromise = null;
-                                close(voidPromise());
+                    promise.addListener((ChannelFutureListener) future -> {
+                        if (future.isCancelled()) {
+                            if (connectTimeoutFuture != null) {
+                                connectTimeoutFuture.cancel(false);
                             }
+                            connectPromise = null;
+                            close(voidPromise());
                         }
                     });
                 }

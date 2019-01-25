@@ -79,13 +79,10 @@ public class WeightedFairQueueByteDistributorDependencyTreeTest extends
         final Http2Stream streamB = connection.local().createStream(5, false);
         final Http2Stream streamC = connection.local().createStream(7, false);
         setPriority(streamB.id(), streamA.id(), DEFAULT_PRIORITY_WEIGHT, false);
-        connection.forEachActiveStream(new Http2StreamVisitor() {
-            @Override
-            public boolean visit(Http2Stream stream) throws Http2Exception {
-                streamA.close();
-                setPriority(streamB.id(), streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
-                return true;
-            }
+        connection.forEachActiveStream(stream -> {
+            streamA.close();
+            setPriority(streamB.id(), streamC.id(), DEFAULT_PRIORITY_WEIGHT, false);
+            return true;
         });
     }
 

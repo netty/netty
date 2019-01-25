@@ -49,11 +49,8 @@ public class EpollEventLoopTest {
 
         try {
             final EventLoop eventLoop = group.next();
-            Future<?> future = eventLoop.schedule(new Runnable() {
-                @Override
-                public void run() {
-                    // NOOP
-                }
+            Future<?> future = eventLoop.schedule(() -> {
+                // NOOP
             }, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
 
             assertFalse(future.awaitUninterruptibly(1000));

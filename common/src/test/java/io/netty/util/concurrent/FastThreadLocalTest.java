@@ -82,14 +82,11 @@ public class FastThreadLocalTest {
     @Test
     public void testMultipleSetRemove() throws Exception {
         final FastThreadLocal<String> threadLocal = new FastThreadLocal<>();
-        final Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                threadLocal.set("1");
-                threadLocal.remove();
-                threadLocal.set("2");
-                threadLocal.remove();
-            }
+        final Runnable runnable = () -> {
+            threadLocal.set("1");
+            threadLocal.remove();
+            threadLocal.set("2");
+            threadLocal.remove();
         };
 
         final int sizeWhenStart = ObjectCleaner.getLiveSetCount();
@@ -110,18 +107,15 @@ public class FastThreadLocalTest {
     public void testMultipleSetRemove_multipleThreadLocal() throws Exception {
         final FastThreadLocal<String> threadLocal = new FastThreadLocal<>();
         final FastThreadLocal<String> threadLocal2 = new FastThreadLocal<>();
-        final Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                threadLocal.set("1");
-                threadLocal.remove();
-                threadLocal.set("2");
-                threadLocal.remove();
-                threadLocal2.set("1");
-                threadLocal2.remove();
-                threadLocal2.set("2");
-                threadLocal2.remove();
-            }
+        final Runnable runnable = () -> {
+            threadLocal.set("1");
+            threadLocal.remove();
+            threadLocal.set("2");
+            threadLocal.remove();
+            threadLocal2.set("1");
+            threadLocal2.remove();
+            threadLocal2.set("2");
+            threadLocal2.remove();
         };
 
         final int sizeWhenStart = ObjectCleaner.getLiveSetCount();
@@ -165,16 +159,13 @@ public class FastThreadLocalTest {
         final TestFastThreadLocal threadLocal = new TestFastThreadLocal();
         final TestFastThreadLocal threadLocal2 = new TestFastThreadLocal();
 
-        Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                if (callGet) {
-                    assertEquals(Thread.currentThread().getName(), threadLocal.get());
-                    assertEquals(Thread.currentThread().getName(), threadLocal2.get());
-                } else {
-                    threadLocal.set(Thread.currentThread().getName());
-                    threadLocal2.set(Thread.currentThread().getName());
-                }
+        Runnable runnable = () -> {
+            if (callGet) {
+                assertEquals(Thread.currentThread().getName(), threadLocal.get());
+                assertEquals(Thread.currentThread().getName(), threadLocal2.get());
+            } else {
+                threadLocal.set(Thread.currentThread().getName());
+                threadLocal2.set(Thread.currentThread().getName());
             }
         };
         Thread thread = fastThreadLocal ? new FastThreadLocalThread(runnable) : new Thread(runnable);

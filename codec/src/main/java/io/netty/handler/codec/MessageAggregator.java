@@ -210,12 +210,9 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
                 // Cache the write listener for reuse.
                 ChannelFutureListener listener = continueResponseWriteListener;
                 if (listener == null) {
-                    continueResponseWriteListener = listener = new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            if (!future.isSuccess()) {
-                                ctx.fireExceptionCaught(future.cause());
-                            }
+                    continueResponseWriteListener = listener = future -> {
+                        if (!future.isSuccess()) {
+                            ctx.fireExceptionCaught(future.cause());
                         }
                     };
                 }

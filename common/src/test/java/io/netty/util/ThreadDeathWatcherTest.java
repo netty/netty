@@ -46,12 +46,9 @@ public class ThreadDeathWatcherTest {
             }
         };
 
-        final Runnable task = new Runnable() {
-            @Override
-            public void run() {
-                if (!t.isAlive()) {
-                    latch.countDown();
-                }
+        final Runnable task = () -> {
+            if (!t.isAlive()) {
+                latch.countDown();
             }
         };
 
@@ -91,12 +88,7 @@ public class ThreadDeathWatcherTest {
             }
         };
 
-        final Runnable task = new Runnable() {
-            @Override
-            public void run() {
-                run.set(true);
-            }
-        };
+        final Runnable task = () -> run.set(true);
 
         t.start();
 
@@ -121,16 +113,10 @@ public class ThreadDeathWatcherTest {
     public void testThreadGroup() throws InterruptedException {
         final ThreadGroup group = new ThreadGroup("group");
         final AtomicReference<ThreadGroup> capturedGroup = new AtomicReference<>();
-        final Thread thread = new Thread(group, new Runnable() {
-            @Override
-            public void run() {
-                final Thread t = ThreadDeathWatcher.threadFactory.newThread(new Runnable() {
-                    @Override
-                    public void run() {
-                    }
-                });
-                capturedGroup.set(t.getThreadGroup());
-            }
+        final Thread thread = new Thread(group, () -> {
+            final Thread t = ThreadDeathWatcher.threadFactory.newThread(() -> {
+            });
+            capturedGroup.set(t.getThreadGroup());
         });
         thread.start();
         thread.join();

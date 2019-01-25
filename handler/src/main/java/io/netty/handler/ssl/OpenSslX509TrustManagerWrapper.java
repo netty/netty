@@ -46,12 +46,7 @@ final class OpenSslX509TrustManagerWrapper {
 
     static {
         // By default we will not do any wrapping but just return the passed in manager.
-        TrustManagerWrapper wrapper = new TrustManagerWrapper() {
-            @Override
-            public X509TrustManager wrapIfNeeded(X509TrustManager manager) {
-                return manager;
-            }
-        };
+        TrustManagerWrapper wrapper = manager -> manager;
 
         Throwable cause = null;
         Throwable unsafeCause = PlatformDependent.getUnsafeUnavailabilityCause();
@@ -92,36 +87,33 @@ final class OpenSslX509TrustManagerWrapper {
                 LOGGER.debug("Unable to access wrapped TrustManager", cause);
             } else {
                 final SSLContext finalContext = context;
-                Object maybeWrapper = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                    @Override
-                    public Object run() {
-                        try {
-                            Field contextSpiField = SSLContext.class.getDeclaredField("contextSpi");
-                            final long spiOffset = PlatformDependent.objectFieldOffset(contextSpiField);
-                            Object spi = PlatformDependent.getObject(finalContext, spiOffset);
-                            if (spi != null) {
-                                Class<?> clazz = spi.getClass();
+                Object maybeWrapper = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+                    try {
+                        Field contextSpiField = SSLContext.class.getDeclaredField("contextSpi");
+                        final long spiOffset = PlatformDependent.objectFieldOffset(contextSpiField);
+                        Object spi = PlatformDependent.getObject(finalContext, spiOffset);
+                        if (spi != null) {
+                            Class<?> clazz = spi.getClass();
 
-                                // Let's cycle through the whole hierarchy until we find what we are looking for or
-                                // there is nothing left in which case we will not wrap at all.
-                                do {
-                                    try {
-                                        Field trustManagerField = clazz.getDeclaredField("trustManager");
-                                        final long tmOffset = PlatformDependent.objectFieldOffset(trustManagerField);
-                                        Object trustManager = PlatformDependent.getObject(spi, tmOffset);
-                                        if (trustManager instanceof X509ExtendedTrustManager) {
-                                            return new UnsafeTrustManagerWrapper(spiOffset, tmOffset);
-                                        }
-                                    } catch (NoSuchFieldException ignore) {
-                                        // try next
+                            // Let's cycle through the whole hierarchy until we find what we are looking for or
+                            // there is nothing left in which case we will not wrap at all.
+                            do {
+                                try {
+                                    Field trustManagerField = clazz.getDeclaredField("trustManager");
+                                    final long tmOffset = PlatformDependent.objectFieldOffset(trustManagerField);
+                                    Object trustManager = PlatformDependent.getObject(spi, tmOffset);
+                                    if (trustManager instanceof X509ExtendedTrustManager) {
+                                        return new UnsafeTrustManagerWrapper(spiOffset, tmOffset);
                                     }
-                                    clazz = clazz.getSuperclass();
-                                } while (clazz != null);
-                            }
-                            throw new NoSuchFieldException();
-                        } catch (NoSuchFieldException | SecurityException e) {
-                            return e;
+                                } catch (NoSuchFieldException ignore) {
+                                    // try next
+                                }
+                                clazz = clazz.getSuperclass();
+                            } while (clazz != null);
                         }
+                        throw new NoSuchFieldException();
+                    } catch (NoSuchFieldException | SecurityException e) {
+                        return e;
                     }
                 });
                 if (maybeWrapper instanceof Throwable) {

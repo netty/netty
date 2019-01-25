@@ -102,17 +102,14 @@ public class NettyRuntimeTests {
             final NettyRuntime.AvailableProcessorsHolder holder,
             final CyclicBarrier barrier,
             final AtomicReference<IllegalStateException> reference) {
-        return new Runnable() {
-            @Override
-            public void run() {
-                await(barrier);
-                try {
-                    holder.availableProcessors();
-                } catch (final IllegalStateException e) {
-                    reference.set(e);
-                }
-                await(barrier);
+        return () -> {
+            await(barrier);
+            try {
+                holder.availableProcessors();
+            } catch (final IllegalStateException e) {
+                reference.set(e);
             }
+            await(barrier);
         };
     }
 
@@ -120,28 +117,22 @@ public class NettyRuntimeTests {
     public void testRacingGetAndSet() throws InterruptedException {
         final NettyRuntime.AvailableProcessorsHolder holder = new NettyRuntime.AvailableProcessorsHolder();
         final CyclicBarrier barrier = new CyclicBarrier(3);
-        final Thread get = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                await(barrier);
-                holder.availableProcessors();
-                await(barrier);
-            }
+        final Thread get = new Thread(() -> {
+            await(barrier);
+            holder.availableProcessors();
+            await(barrier);
         });
         get.start();
 
         final AtomicReference<IllegalStateException> setException = new AtomicReference<>();
-        final Thread set = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                await(barrier);
-                try {
-                    holder.setAvailableProcessors(2048);
-                } catch (final IllegalStateException e) {
-                    setException.set(e);
-                }
-                await(barrier);
+        final Thread set = new Thread(() -> {
+            await(barrier);
+            try {
+                holder.setAvailableProcessors(2048);
+            } catch (final IllegalStateException e) {
+                setException.set(e);
             }
+            await(barrier);
         });
         set.start();
 

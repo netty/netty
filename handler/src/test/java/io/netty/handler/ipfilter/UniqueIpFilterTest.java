@@ -57,17 +57,14 @@ public class UniqueIpFilterTest {
     private static Future<EmbeddedChannel> newChannelAsync(final CyclicBarrier barrier,
             ExecutorService executorService,
             final ChannelHandler... handler) {
-        return executorService.submit(new Callable<EmbeddedChannel>() {
-            @Override
-            public EmbeddedChannel call() throws Exception {
-                barrier.await();
-                return new EmbeddedChannel(handler) {
-                    @Override
-                    protected SocketAddress remoteAddress0() {
-                        return isActive() ? SocketUtils.socketAddress("91.92.93.1", 5421) : null;
-                    }
-                };
-            }
+        return executorService.submit(() -> {
+            barrier.await();
+            return new EmbeddedChannel(handler) {
+                @Override
+                protected SocketAddress remoteAddress0() {
+                    return isActive() ? SocketUtils.socketAddress("91.92.93.1", 5421) : null;
+                }
+            };
         });
     }
 

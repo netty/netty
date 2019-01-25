@@ -60,12 +60,9 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     private boolean flushedPrematurely;
     private final LazyChannelPromise connectPromise = new LazyChannelPromise();
     private ScheduledFuture<?> connectTimeoutFuture;
-    private final ChannelFutureListener writeListener = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-            if (!future.isSuccess()) {
-                setConnectFailure(future.cause());
-            }
+    private final ChannelFutureListener writeListener = future -> {
+        if (!future.isSuccess()) {
+            setConnectFailure(future.cause());
         }
     };
 
@@ -194,12 +191,9 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     private void sendInitialMessage(final ChannelHandlerContext ctx) throws Exception {
         final long connectTimeoutMillis = this.connectTimeoutMillis;
         if (connectTimeoutMillis > 0) {
-            connectTimeoutFuture = ctx.executor().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    if (!connectPromise.isDone()) {
-                        setConnectFailure(new ProxyConnectException(exceptionMessage("timeout")));
-                    }
+            connectTimeoutFuture = ctx.executor().schedule(() -> {
+                if (!connectPromise.isDone()) {
+                    setConnectFailure(new ProxyConnectException(exceptionMessage("timeout")));
                 }
             }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
         }

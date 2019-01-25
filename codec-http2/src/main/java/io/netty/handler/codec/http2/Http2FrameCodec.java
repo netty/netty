@@ -183,15 +183,12 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     final void forEachActiveStream(final Http2FrameStreamVisitor streamVisitor) throws Http2Exception {
         assert ctx.executor().inEventLoop();
 
-        connection().forEachActiveStream(new Http2StreamVisitor() {
-            @Override
-            public boolean visit(Http2Stream stream) {
-                try {
-                    return streamVisitor.visit((Http2FrameStream) stream.getProperty(streamKey));
-                } catch (Throwable cause) {
-                    onError(ctx, false, cause);
-                    return false;
-                }
+        connection().forEachActiveStream(stream -> {
+            try {
+                return streamVisitor.visit((Http2FrameStream) stream.getProperty(streamKey));
+            } catch (Throwable cause) {
+                onError(ctx, false, cause);
+                return false;
             }
         });
     }
@@ -381,13 +378,10 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             } else {
                 numBufferedStreams++;
 
-                writePromise.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        numBufferedStreams--;
+                writePromise.addListener((ChannelFutureListener) future -> {
+                    numBufferedStreams--;
 
-                        notifyHeaderWritePromise(future, promise);
-                    }
+                    notifyHeaderWritePromise(future, promise);
                 });
             }
         }

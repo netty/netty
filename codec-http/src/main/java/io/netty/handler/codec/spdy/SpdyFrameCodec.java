@@ -109,12 +109,9 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         super.handlerAdded(ctx);
         this.ctx = ctx;
-        ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                spdyHeaderBlockDecoder.end();
-                spdyHeaderBlockEncoder.end();
-            }
+        ctx.channel().closeFuture().addListener((ChannelFutureListener) future -> {
+            spdyHeaderBlockDecoder.end();
+            spdyHeaderBlockEncoder.end();
         });
     }
 

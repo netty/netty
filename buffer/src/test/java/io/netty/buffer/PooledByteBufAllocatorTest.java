@@ -257,23 +257,20 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
         final AtomicBoolean threadCachesCreated = new AtomicBoolean(true);
 
-        final Runnable task = new Runnable() {
-            @Override
-            public void run() {
-                ByteBuf buf = allocator.newHeapBuffer(1024, 1024);
-                for (int i = 0; i < buf.capacity(); i++) {
-                    buf.writeByte(0);
-                }
-
-                // Make sure that thread caches are actually created,
-                // so that down below we are not testing for zero
-                // thread caches without any of them ever having been initialized.
-                if (allocator.metric().numThreadLocalCaches() == 0) {
-                    threadCachesCreated.set(false);
-                }
-
-                buf.release();
+        final Runnable task = () -> {
+            ByteBuf buf = allocator.newHeapBuffer(1024, 1024);
+            for (int i = 0; i < buf.capacity(); i++) {
+                buf.writeByte(0);
             }
+
+            // Make sure that thread caches are actually created,
+            // so that down below we are not testing for zero
+            // thread caches without any of them ever having been initialized.
+            if (allocator.metric().numThreadLocalCaches() == 0) {
+                threadCachesCreated.set(false);
+            }
+
+            buf.release();
         };
 
         for (int i = 0; i < numArenas; i++) {
@@ -368,39 +365,32 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
             throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final CountDownLatch cacheLatch = new CountDownLatch(1);
-        final Thread t = new FastThreadLocalThread(new Runnable() {
+        final Thread t = new FastThreadLocalThread(() -> {
+            ByteBuf buf = allocator.newHeapBuffer(1024, 1024);
 
-            @Override
-            public void run() {
-                ByteBuf buf = allocator.newHeapBuffer(1024, 1024);
+            // Countdown the latch after we allocated a buffer. At this point the cache must exists.
+            cacheLatch.countDown();
 
-                // Countdown the latch after we allocated a buffer. At this point the cache must exists.
-                cacheLatch.countDown();
+            buf.writeZero(buf.capacity());
 
-                buf.writeZero(buf.capacity());
-
-                try {
-                    latch.await();
-                } catch (InterruptedException e) {
-                    throw new IllegalStateException(e);
-                }
-
-                buf.release();
-
-                FastThreadLocal.removeAll();
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(e);
             }
+
+            buf.release();
+
+            FastThreadLocal.removeAll();
         });
         t.start();
 
         // Wait until we allocated a buffer and so be sure the thread was started and the cache exists.
         cacheLatch.await();
 
-        return new ThreadCache() {
-            @Override
-            public void destroy() throws InterruptedException {
-                latch.countDown();
-                t.join();
-            }
+        return () -> {
+            latch.countDown();
+            t.join();
         };
     }
 

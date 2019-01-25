@@ -108,12 +108,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultHttp2StreamChannel.class);
 
-    private static final ChannelFutureListener CHILD_CHANNEL_REGISTRATION_LISTENER = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) {
-            registerDone(future);
-        }
-    };
+    private static final ChannelFutureListener CHILD_CHANNEL_REGISTRATION_LISTENER = Http2MultiplexCodec::registerDone;
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final ClosedChannelException CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
@@ -131,15 +126,10 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
         static final FlowControlledFrameSizeEstimator INSTANCE = new FlowControlledFrameSizeEstimator();
 
-        static final MessageSizeEstimator.Handle HANDLE_INSTANCE = new MessageSizeEstimator.Handle() {
-            @Override
-            public int size(Object msg) {
-                return msg instanceof Http2DataFrame ?
-                        // Guard against overflow.
-                        (int) min(Integer.MAX_VALUE, ((Http2DataFrame) msg).initialFlowControlledBytes() +
-                                (long) MIN_HTTP2_FRAME_SIZE) : MIN_HTTP2_FRAME_SIZE;
-            }
-        };
+        static final MessageSizeEstimator.Handle HANDLE_INSTANCE = msg -> msg instanceof Http2DataFrame ?
+                // Guard against overflow.
+                (int) min(Integer.MAX_VALUE, ((Http2DataFrame) msg).initialFlowControlledBytes() +
+                        (long) MIN_HTTP2_FRAME_SIZE) : MIN_HTTP2_FRAME_SIZE;
 
         @Override
         public Handle newHandle() {
@@ -361,16 +351,13 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
     private void onHttp2GoAwayFrame(ChannelHandlerContext ctx, final Http2GoAwayFrame goAwayFrame) {
         try {
-            forEachActiveStream(new Http2FrameStreamVisitor() {
-                @Override
-                public boolean visit(Http2FrameStream stream) {
-                    final int streamId = stream.id();
-                    final DefaultHttp2StreamChannel childChannel = ((Http2MultiplexCodecStream) stream).channel;
-                    if (streamId > goAwayFrame.lastStreamId() && connection().local().isValidStreamId(streamId)) {
-                        childChannel.pipeline().fireUserEventTriggered(goAwayFrame.retainedDuplicate());
-                    }
-                    return true;
+            forEachActiveStream(stream -> {
+                final int streamId = stream.id();
+                final DefaultHttp2StreamChannel childChannel = ((Http2MultiplexCodecStream) stream).channel;
+                if (streamId > goAwayFrame.lastStreamId() && connection().local().isValidStreamId(streamId)) {
+                    childChannel.pipeline().fireUserEventTriggered(goAwayFrame.retainedDuplicate());
                 }
+                return true;
             });
         } catch (Http2Exception e) {
             ctx.fireExceptionCaught(e);
@@ -890,12 +877,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                         promise.setSuccess();
                     } else if (!(promise instanceof VoidChannelPromise)) { // Only needed if no VoidChannelPromise.
                         // This means close() was called before so we just register a listener and return
-                        closePromise.addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) {
-                                promise.setSuccess();
-                            }
-                        });
+                        closePromise.addListener((ChannelFutureListener) future -> promise.setSuccess());
                     }
                     return;
                 }
@@ -959,20 +941,17 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                 //
                 // See:
                 // https://github.com/netty/netty/issues/4435
-                invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (fireChannelInactive) {
-                            pipeline.fireChannelInactive();
-                        }
-                        // The user can fire `deregister` events multiple times but we only want to fire the pipeline
-                        // event if the channel was actually registered.
-                        if (registered) {
-                            registered = false;
-                            pipeline.fireChannelUnregistered();
-                        }
-                        safeSetSuccess(promise);
+                invokeLater(() -> {
+                    if (fireChannelInactive) {
+                        pipeline.fireChannelInactive();
                     }
+                    // The user can fire `deregister` events multiple times but we only want to fire the pipeline
+                    // event if the channel was actually registered.
+                    if (registered) {
+                        registered = false;
+                        pipeline.fireChannelUnregistered();
+                    }
+                    safeSetSuccess(promise);
                 });
             }
 
@@ -1127,12 +1106,8 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                             if (future.isDone()) {
                                 firstWriteComplete(future, promise);
                             } else {
-                                future.addListener(new ChannelFutureListener() {
-                                    @Override
-                                    public void operationComplete(ChannelFuture future) {
-                                        firstWriteComplete(future, promise);
-                                    }
-                                });
+                                future.addListener((ChannelFutureListener) future12 ->
+                                        firstWriteComplete(future12, promise));
                             }
                             return;
                         }
@@ -1149,12 +1124,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                     if (future.isDone()) {
                         writeComplete(future, promise);
                     } else {
-                        future.addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) {
-                                writeComplete(future, promise);
-                            }
-                        });
+                        future.addListener((ChannelFutureListener) future1 -> writeComplete(future1, promise));
                     }
                 } catch (Throwable t) {
                     promise.tryFailure(t);

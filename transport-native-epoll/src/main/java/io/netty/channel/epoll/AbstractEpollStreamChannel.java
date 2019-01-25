@@ -70,13 +70,10 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     private static final ClosedChannelException FAIL_SPLICE_IF_CLOSED_CLOSED_CHANNEL_EXCEPTION =
             ThrowableUtil.unknownStackTrace(new ClosedChannelException(),
             AbstractEpollStreamChannel.class, "failSpliceIfClosed(...)");
-    private final Runnable flushTask = new Runnable() {
-        @Override
-        public void run() {
-            // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
-            // meantime.
-            ((AbstractEpollUnsafe) unsafe()).flush0();
-        }
+    private final Runnable flushTask = () -> {
+        // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
+        // meantime.
+        ((AbstractEpollUnsafe) unsafe()).flush0();
     };
     private Queue<SpliceInTask> spliceQueue;
 
@@ -238,13 +235,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             // Seems like the Channel was closed in the meantime try to fail the promise to prevent any
             // cases where a future may not be notified otherwise.
             if (promise.tryFailure(FAIL_SPLICE_IF_CLOSED_CLOSED_CHANNEL_EXCEPTION)) {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        // Call this via the EventLoop as it is a MPSC queue.
-                        clearSpliceQueue();
-                    }
-                });
+                // Call this via the EventLoop as it is a MPSC queue.
+                eventLoop().execute(this::clearSpliceQueue);
             }
         }
     }
@@ -582,12 +574,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         if (loop.inEventLoop()) {
             ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
         } else {
-            loop.execute(new Runnable() {
-                @Override
-                public void run() {
-                    ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
-                }
-            });
+            loop.execute(() -> ((AbstractUnsafe) unsafe()).shutdownOutput(promise));
         }
 
         return promise;
@@ -602,23 +589,13 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     public ChannelFuture shutdownInput(final ChannelPromise promise) {
         Executor closeExecutor = ((EpollStreamUnsafe) unsafe()).prepareToClose();
         if (closeExecutor != null) {
-            closeExecutor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    shutdownInput0(promise);
-                }
-            });
+            closeExecutor.execute(() -> shutdownInput0(promise));
         } else {
             EventLoop loop = eventLoop();
             if (loop.inEventLoop()) {
                 shutdownInput0(promise);
             } else {
-                loop.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        shutdownInput0(promise);
-                    }
-                });
+                loop.execute(() -> shutdownInput0(promise));
             }
         }
         return promise;
@@ -635,12 +612,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         if (shutdownOutputFuture.isDone()) {
             shutdownOutputDone(shutdownOutputFuture, promise);
         } else {
-            shutdownOutputFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(final ChannelFuture shutdownOutputFuture) throws Exception {
-                    shutdownOutputDone(shutdownOutputFuture, promise);
-                }
-            });
+            shutdownOutputFuture.addListener((ChannelFutureListener) shutdownOutputFuture1 ->
+                    shutdownOutputDone(shutdownOutputFuture1, promise));
         }
         return promise;
     }
@@ -650,12 +623,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         if (shutdownInputFuture.isDone()) {
             shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
         } else {
-            shutdownInputFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture shutdownInputFuture) throws Exception {
-                    shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
-                }
-            });
+            shutdownInputFuture.addListener((ChannelFutureListener) shutdownInputFuture1 ->
+                    shutdownDone(shutdownOutputFuture, shutdownInputFuture1, promise));
         }
     }
 
@@ -838,12 +807,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         if (eventLoop.inEventLoop()) {
             addToSpliceQueue0(task);
         } else {
-            eventLoop.execute(new Runnable() {
-                @Override
-                public void run() {
-                    addToSpliceQueue0(task);
-                }
-            });
+            eventLoop.execute(() -> addToSpliceQueue0(task));
         }
     }
 

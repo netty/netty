@@ -72,14 +72,11 @@ public abstract class RenegotiateTest {
                                             final SslHandler handler = ctx.pipeline().get(SslHandler.class);
 
                                             renegotiate = true;
-                                            handler.renegotiate().addListener(new FutureListener<Channel>() {
-                                                @Override
-                                                public void operationComplete(Future<Channel> future) throws Exception {
-                                                    if (!future.isSuccess()) {
-                                                        error.compareAndSet(null, future.cause());
-                                                        latch.countDown();
-                                                        ctx.close();
-                                                    }
+                                            handler.renegotiate().addListener((FutureListener<Channel>) future -> {
+                                                if (!future.isSuccess()) {
+                                                    error.compareAndSet(null, future.cause());
+                                                    latch.countDown();
+                                                    ctx.close();
                                                 }
                                             });
                                         } else {

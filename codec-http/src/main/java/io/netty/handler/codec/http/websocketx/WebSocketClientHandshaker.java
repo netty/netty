@@ -174,26 +174,23 @@ public abstract class WebSocketClientHandshaker {
             }
         }
 
-        channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                if (future.isSuccess()) {
-                    ChannelPipeline p = future.channel().pipeline();
-                    ChannelHandlerContext ctx = p.context(HttpRequestEncoder.class);
-                    if (ctx == null) {
-                        ctx = p.context(HttpClientCodec.class);
-                    }
-                    if (ctx == null) {
-                        promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
-                                "a HttpRequestEncoder or HttpClientCodec"));
-                        return;
-                    }
-                    p.addAfter(ctx.name(), "ws-encoder", newWebSocketEncoder());
-
-                    promise.setSuccess();
-                } else {
-                    promise.setFailure(future.cause());
+        channel.writeAndFlush(request).addListener((ChannelFutureListener) future -> {
+            if (future.isSuccess()) {
+                ChannelPipeline p = future.channel().pipeline();
+                ChannelHandlerContext ctx = p.context(HttpRequestEncoder.class);
+                if (ctx == null) {
+                    ctx = p.context(HttpClientCodec.class);
                 }
+                if (ctx == null) {
+                    promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
+                            "a HttpRequestEncoder or HttpClientCodec"));
+                    return;
+                }
+                p.addAfter(ctx.name(), "ws-encoder", newWebSocketEncoder());
+
+                promise.setSuccess();
+            } else {
+                promise.setFailure(future.cause());
             }
         });
         return promise;
@@ -274,12 +271,7 @@ public abstract class WebSocketClientHandshaker {
             // Delay the removal of the decoder so the user can setup the pipeline if needed to handle
             // WebSocketFrame messages.
             // See https://github.com/netty/netty/issues/4533
-            channel.eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    p.remove(codec);
-                }
-            });
+            channel.eventLoop().execute(() -> p.remove(codec));
         } else {
             if (p.get(HttpRequestEncoder.class) != null) {
                 // Remove the encoder part of the codec as the user may start writing frames after this method returns.
@@ -291,12 +283,7 @@ public abstract class WebSocketClientHandshaker {
             // Delay the removal of the decoder so the user can setup the pipeline if needed to handle
             // WebSocketFrame messages.
             // See https://github.com/netty/netty/issues/4533
-            channel.eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    p.remove(context.handler());
-                }
-            });
+            channel.eventLoop().execute(() -> p.remove(context.handler()));
         }
     }
 

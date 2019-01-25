@@ -98,11 +98,8 @@ public class Http2RequestHandler extends SimpleChannelInboundHandler<FullHttpReq
             final FullHttpResponse response, final FullHttpRequest request) {
         setContentLength(response, response.content().readableBytes());
         streamId(response, streamId);
-        ctx.executor().schedule(new Runnable() {
-            @Override
-            public void run() {
-                ctx.writeAndFlush(response);
-            }
+        ctx.executor().schedule(() -> {
+            ctx.writeAndFlush(response);
         }, latency, TimeUnit.MILLISECONDS);
     }
 

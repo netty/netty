@@ -62,12 +62,7 @@ public final class KQueueHandler implements IoHandler {
     private final KQueueEventArray eventList;
     private final SelectStrategy selectStrategy;
     private final IovArray iovArray = new IovArray();
-    private final IntSupplier selectNowSupplier = new IntSupplier() {
-        @Override
-        public int get() throws Exception {
-            return kqueueWaitNow();
-        }
-    };
+    private final IntSupplier selectNowSupplier = this::kqueueWaitNow;
     private final IntObjectMap<AbstractKQueueChannel> channels = new IntObjectHashMap<AbstractKQueueChannel>(4096);
 
     private volatile int wakenUp;
@@ -105,12 +100,7 @@ public final class KQueueHandler implements IoHandler {
      * Returns a new {@link IoHandlerFactory} that creates {@link KQueueHandler} instances.
      */
     public static IoHandlerFactory newFactory() {
-        return new IoHandlerFactory() {
-            @Override
-            public IoHandler newHandler() {
-                return new KQueueHandler();
-            }
-        };
+        return KQueueHandler::new;
     }
 
     /**
@@ -120,12 +110,7 @@ public final class KQueueHandler implements IoHandler {
                                               final SelectStrategyFactory selectStrategyFactory) {
         ObjectUtil.checkPositiveOrZero(maxEvents, "maxEvents");
         ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
-        return new IoHandlerFactory() {
-            @Override
-            public IoHandler newHandler() {
-                return new KQueueHandler(maxEvents, selectStrategyFactory.newSelectStrategy());
-            }
-        };
+        return () -> new KQueueHandler(maxEvents, selectStrategyFactory.newSelectStrategy());
     }
 
     @Override

@@ -315,11 +315,8 @@ public class OcspTest {
 
         final OcspTestException clientException = new OcspTestException("testClientException");
         byte[] response = newOcspResponse();
-        OcspClientCallback callback = new OcspClientCallback() {
-            @Override
-            public boolean verify(byte[] response) throws Exception {
-                throw clientException;
-            }
+        OcspClientCallback callback = response1 -> {
+            throw clientException;
         };
 
         handshake(sslProvider, latch, null, response, clientHandler, callback);

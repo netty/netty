@@ -64,12 +64,7 @@ public class HttpServerUpgradeHandlerTest {
     @Test
     public void upgradesPipelineInSameMethodInvocation() {
         final HttpServerCodec httpServerCodec = new HttpServerCodec();
-        final UpgradeCodecFactory factory = new UpgradeCodecFactory() {
-            @Override
-            public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
-                return new TestUpgradeCodec();
-            }
-        };
+        final UpgradeCodecFactory factory = protocol -> new TestUpgradeCodec();
 
         ChannelHandler testInStackFrame = new ChannelDuplexHandler() {
             // marker boolean to signal that we're in the `channelRead` method
@@ -102,18 +97,8 @@ public class HttpServerUpgradeHandlerTest {
                 // make sure the pipeline was reformed irrespective of the flush completing.
                 assertTrue(inReadCall);
                 writeUpgradeMessage = true;
-                ctx.channel().eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        ctx.write(msg, promise);
-                    }
-                });
-                promise.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) {
-                        writeFlushed = true;
-                    }
-                });
+                ctx.channel().eventLoop().execute(() -> ctx.write(msg, promise));
+                promise.addListener((ChannelFutureListener) future -> writeFlushed = true);
             }
         };
 

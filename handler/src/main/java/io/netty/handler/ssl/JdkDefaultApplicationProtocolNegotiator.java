@@ -27,13 +27,8 @@ import javax.net.ssl.SSLEngine;
 final class JdkDefaultApplicationProtocolNegotiator implements JdkApplicationProtocolNegotiator {
     public static final JdkDefaultApplicationProtocolNegotiator INSTANCE =
             new JdkDefaultApplicationProtocolNegotiator();
-    private static final SslEngineWrapperFactory DEFAULT_SSL_ENGINE_WRAPPER_FACTORY = new SslEngineWrapperFactory() {
-        @Override
-        public SSLEngine wrapSslEngine(SSLEngine engine,
-                                       JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer) {
-            return engine;
-        }
-    };
+    private static final SslEngineWrapperFactory DEFAULT_SSL_ENGINE_WRAPPER_FACTORY =
+            (engine, applicationNegotiator, isServer) -> engine;
 
     private JdkDefaultApplicationProtocolNegotiator() {
     }

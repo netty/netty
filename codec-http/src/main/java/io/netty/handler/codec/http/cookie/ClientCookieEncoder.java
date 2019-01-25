@@ -91,26 +91,23 @@ public final class ClientCookieEncoder extends CookieEncoder {
      * Sort cookies into decreasing order of path length, breaking ties by sorting into increasing chronological
      * order of creation time, as recommended by RFC 6265.
      */
-    private static final Comparator<Cookie> COOKIE_COMPARATOR = new Comparator<Cookie>() {
-        @Override
-        public int compare(Cookie c1, Cookie c2) {
-            String path1 = c1.path();
-            String path2 = c2.path();
-            // Cookies with unspecified path default to the path of the request. We don't
-            // know the request path here, but we assume that the length of an unspecified
-            // path is longer than any specified path (i.e. pathless cookies come first),
-            // because setting cookies with a path longer than the request path is of
-            // limited use.
-            int len1 = path1 == null ? Integer.MAX_VALUE : path1.length();
-            int len2 = path2 == null ? Integer.MAX_VALUE : path2.length();
-            int diff = len2 - len1;
-            if (diff != 0) {
-                return diff;
-            }
-            // Rely on Java's sort stability to retain creation order in cases where
-            // cookies have same path length.
-            return -1;
+    private static final Comparator<Cookie> COOKIE_COMPARATOR = (c1, c2) -> {
+        String path1 = c1.path();
+        String path2 = c2.path();
+        // Cookies with unspecified path default to the path of the request. We don't
+        // know the request path here, but we assume that the length of an unspecified
+        // path is longer than any specified path (i.e. pathless cookies come first),
+        // because setting cookies with a path longer than the request path is of
+        // limited use.
+        int len1 = path1 == null ? Integer.MAX_VALUE : path1.length();
+        int len2 = path2 == null ? Integer.MAX_VALUE : path2.length();
+        int diff = len2 - len1;
+        if (diff != 0) {
+            return diff;
         }
+        // Rely on Java's sort stability to retain creation order in cases where
+        // cookies have same path length.
+        return -1;
     };
 
     /**

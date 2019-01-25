@@ -31,15 +31,12 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         super.channelActive(ctx);
-        handshaker.handshake(ctx.channel()).addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (!future.isSuccess()) {
-                    ctx.fireExceptionCaught(future.cause());
-                } else {
-                    ctx.fireUserEventTriggered(
-                            WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_ISSUED);
-                }
+        handshaker.handshake(ctx.channel()).addListener((ChannelFutureListener) future -> {
+            if (!future.isSuccess()) {
+                ctx.fireExceptionCaught(future.cause());
+            } else {
+                ctx.fireUserEventTriggered(
+                        WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_ISSUED);
             }
         });
     }

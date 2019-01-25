@@ -41,17 +41,7 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
     @BeforeClass
     public static void setup() throws Exception {
         EPOLL_LOOP = new MultithreadEventLoopGroup(2, new DefaultThreadFactory("testsuite-epoll-busy-wait", true),
-                EpollHandler.newFactory(0, new SelectStrategyFactory() {
-                    @Override
-                    public SelectStrategy newSelectStrategy() {
-                        return new SelectStrategy() {
-                            @Override
-                            public int calculateStrategy(IntSupplier selectSupplier, boolean hasTasks) {
-                                return SelectStrategy.BUSY_WAIT;
-                            }
-                        };
-                    }
-                }));
+                EpollHandler.newFactory(0, () -> (selectSupplier, hasTasks) -> SelectStrategy.BUSY_WAIT));
     }
 
     @AfterClass
@@ -83,20 +73,10 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
     }
 
     private static BootstrapFactory<ServerBootstrap> serverSocket() {
-        return new BootstrapFactory<ServerBootstrap>() {
-            @Override
-            public ServerBootstrap newInstance() {
-                return new ServerBootstrap().group(EPOLL_LOOP, EPOLL_LOOP).channel(EpollServerSocketChannel.class);
-            }
-        };
+        return () -> new ServerBootstrap().group(EPOLL_LOOP, EPOLL_LOOP).channel(EpollServerSocketChannel.class);
     }
 
     private static BootstrapFactory<Bootstrap> clientSocket() {
-        return new BootstrapFactory<Bootstrap>() {
-            @Override
-            public Bootstrap newInstance() {
-                return new Bootstrap().group(EPOLL_LOOP).channel(EpollSocketChannel.class);
-            }
-        };
+        return () -> new Bootstrap().group(EPOLL_LOOP).channel(EpollSocketChannel.class);
     }
 }

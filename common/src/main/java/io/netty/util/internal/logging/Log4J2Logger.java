@@ -35,19 +35,16 @@ class Log4J2Logger extends ExtendedLoggerWrapper implements InternalLogger {
         // Older Log4J2 versions have only log methods that takes the format + varargs. So we should not use
         // Log4J2 if the version is too old.
         // See https://github.com/netty/netty/issues/8217
-        VARARGS_ONLY = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            @Override
-            public Boolean run() {
-                try {
-                    Logger.class.getMethod("debug", String.class, Object.class);
-                    return false;
-                } catch (NoSuchMethodException ignore) {
-                    // Log4J2 version too old.
-                    return true;
-                } catch (SecurityException ignore) {
-                    // We could not detect the version so we will use Log4J2 if its on the classpath.
-                    return false;
-                }
+        VARARGS_ONLY = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+            try {
+                Logger.class.getMethod("debug", String.class, Object.class);
+                return false;
+            } catch (NoSuchMethodException ignore) {
+                // Log4J2 version too old.
+                return true;
+            } catch (SecurityException ignore) {
+                // We could not detect the version so we will use Log4J2 if its on the classpath.
+                return false;
             }
         });
     }

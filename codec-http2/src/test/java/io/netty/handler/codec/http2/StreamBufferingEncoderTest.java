@@ -130,12 +130,7 @@ public class StreamBufferingEncoderTest {
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(channel.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(executor.inEventLoop()).thenReturn(true);
-        doAnswer(new Answer<ChannelPromise>() {
-            @Override
-            public ChannelPromise answer(InvocationOnMock invocation) throws Throwable {
-                return newPromise();
-            }
-        }).when(ctx).newPromise();
+        doAnswer((Answer<ChannelPromise>) invocation -> newPromise()).when(ctx).newPromise();
         when(ctx.executor()).thenReturn(executor);
         when(channel.isActive()).thenReturn(false);
         when(channel.config()).thenReturn(config);
@@ -519,17 +514,14 @@ public class StreamBufferingEncoderTest {
     }
 
     private Answer<ChannelFuture> successAnswer() {
-        return new Answer<ChannelFuture>() {
-            @Override
-            public ChannelFuture answer(InvocationOnMock invocation) throws Throwable {
-                for (Object a : invocation.getArguments()) {
-                    ReferenceCountUtil.safeRelease(a);
-                }
-
-                ChannelPromise future = newPromise();
-                future.setSuccess();
-                return future;
+        return invocation -> {
+            for (Object a : invocation.getArguments()) {
+                ReferenceCountUtil.safeRelease(a);
             }
+
+            ChannelPromise future = newPromise();
+            future.setSuccess();
+            return future;
         };
     }
 

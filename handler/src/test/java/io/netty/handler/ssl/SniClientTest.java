@@ -122,12 +122,9 @@ public class SniClientTest {
             sc = sb.group(group).channel(LocalServerChannel.class).childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addFirst(new SniHandler(new Mapping<String, SslContext>() {
-                        @Override
-                        public SslContext map(String input) {
-                            promise.setSuccess(input);
-                            return finalContext;
-                        }
+                    ch.pipeline().addFirst(new SniHandler(input -> {
+                        promise.setSuccess(input);
+                        return finalContext;
                     }));
                 }
             }).bind(address).syncUninterruptibly().channel();

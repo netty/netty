@@ -354,12 +354,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                 promise.setFailure(t);
             }
         } else {
-            eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    bindAddress(localAddress, promise);
-                }
-            });
+            eventLoop().execute(() -> bindAddress(localAddress, promise));
         }
         return promise;
     }
@@ -379,12 +374,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                 promise.setFailure(t);
             }
         } else {
-            eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    unbindAddress(localAddress, promise);
-                }
-            });
+            eventLoop().execute(() -> unbindAddress(localAddress, promise));
         }
         return promise;
     }

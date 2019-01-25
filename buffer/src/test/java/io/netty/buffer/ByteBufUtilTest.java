@@ -680,16 +680,13 @@ public class ByteBufUtilTest {
             final AtomicReference<Throwable> errorRef = new AtomicReference<>();
             List<Thread> threads = new ArrayList<>();
             for (int i = 0; i < 10; i++) {
-                Thread thread = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            while (errorRef.get() == null && counter.decrementAndGet() > 0) {
-                                assertTrue(ByteBufUtil.isText(buffer, CharsetUtil.ISO_8859_1));
-                            }
-                        } catch (Throwable cause) {
-                            errorRef.compareAndSet(null, cause);
+                Thread thread = new Thread(() -> {
+                    try {
+                        while (errorRef.get() == null && counter.decrementAndGet() > 0) {
+                            assertTrue(ByteBufUtil.isText(buffer, CharsetUtil.ISO_8859_1));
                         }
+                    } catch (Throwable cause) {
+                        errorRef.compareAndSet(null, cause);
                     }
                 });
                 threads.add(thread);

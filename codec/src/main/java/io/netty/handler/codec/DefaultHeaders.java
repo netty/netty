@@ -64,12 +64,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         void validateName(K name);
 
         @SuppressWarnings("rawtypes")
-        NameValidator NOT_NULL = new NameValidator() {
-            @Override
-            public void validateName(Object name) {
-                checkNotNull(name, "name");
-            }
-        };
+        NameValidator NOT_NULL = name -> checkNotNull(name, "name");
     }
 
     @SuppressWarnings("unchecked")

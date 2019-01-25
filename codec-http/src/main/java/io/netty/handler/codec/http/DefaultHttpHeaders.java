@@ -44,30 +44,24 @@ import static io.netty.util.AsciiString.CASE_SENSITIVE_HASHER;
  */
 public class DefaultHttpHeaders extends HttpHeaders {
     private static final int HIGHEST_INVALID_VALUE_CHAR_MASK = ~15;
-    private static final ByteProcessor HEADER_NAME_VALIDATOR = new ByteProcessor() {
-        @Override
-        public boolean process(byte value) throws Exception {
-            validateHeaderNameElement(value);
-            return true;
-        }
+    private static final ByteProcessor HEADER_NAME_VALIDATOR = value -> {
+        validateHeaderNameElement(value);
+        return true;
     };
-    static final NameValidator<CharSequence> HttpNameValidator = new NameValidator<CharSequence>() {
-        @Override
-        public void validateName(CharSequence name) {
-            if (name == null || name.length() == 0) {
-                throw new IllegalArgumentException("empty headers are not allowed [" + name + "]");
+    static final NameValidator<CharSequence> HttpNameValidator = name -> {
+        if (name == null || name.length() == 0) {
+            throw new IllegalArgumentException("empty headers are not allowed [" + name + "]");
+        }
+        if (name instanceof AsciiString) {
+            try {
+                ((AsciiString) name).forEachByte(HEADER_NAME_VALIDATOR);
+            } catch (Exception e) {
+                PlatformDependent.throwException(e);
             }
-            if (name instanceof AsciiString) {
-                try {
-                    ((AsciiString) name).forEachByte(HEADER_NAME_VALIDATOR);
-                } catch (Exception e) {
-                    PlatformDependent.throwException(e);
-                }
-            } else {
-                // Go through each character in the name
-                for (int index = 0; index < name.length(); ++index) {
-                    validateHeaderNameElement(name.charAt(index));
-                }
+        } else {
+            // Go through each character in the name
+            for (int index = 0; index < name.length(); ++index) {
+                validateHeaderNameElement(name.charAt(index));
             }
         }
     };

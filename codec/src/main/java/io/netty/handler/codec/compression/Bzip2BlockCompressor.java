@@ -33,12 +33,7 @@ import static io.netty.handler.codec.compression.Bzip2Constants.*;
  * 7. Huffman encode and write data - {@link #close(ByteBuf)} (through {@link Bzip2HuffmanStageEncoder})
  */
 final class Bzip2BlockCompressor {
-    private final ByteProcessor writeProcessor = new ByteProcessor() {
-        @Override
-        public boolean process(byte value) throws Exception {
-            return write(value);
-        }
-    };
+    private final ByteProcessor writeProcessor = this::write;
 
     /**
      * A writer that provides bit-level writes.

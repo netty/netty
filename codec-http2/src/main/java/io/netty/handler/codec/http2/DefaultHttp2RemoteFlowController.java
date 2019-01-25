@@ -641,12 +641,9 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
 
             final int delta = newWindowSize - initialWindowSize;
             initialWindowSize = newWindowSize;
-            connection.forEachActiveStream(new Http2StreamVisitor() {
-                @Override
-                public boolean visit(Http2Stream stream) throws Http2Exception {
-                    state(stream).incrementStreamWindow(delta);
-                    return true;
-                }
+            connection.forEachActiveStream(stream -> {
+                state(stream).incrementStreamWindow(delta);
+                return true;
             });
 
             if (delta > 0 && isChannelWritable()) {

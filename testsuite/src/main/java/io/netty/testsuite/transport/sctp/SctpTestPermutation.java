@@ -48,14 +48,9 @@ public final class SctpTestPermutation {
         }
 
         // Make the list of ServerBootstrap factories.
-        return Collections.<BootstrapFactory<ServerBootstrap>>singletonList(new BootstrapFactory<ServerBootstrap>() {
-            @Override
-            public ServerBootstrap newInstance() {
-                return new ServerBootstrap().
-                        group(nioBossGroup, nioWorkerGroup).
-                        channel(NioSctpServerChannel.class);
-            }
-        });
+        return Collections.<BootstrapFactory<ServerBootstrap>>singletonList(() -> new ServerBootstrap().
+                group(nioBossGroup, nioWorkerGroup).
+                channel(NioSctpServerChannel.class));
     }
 
     static List<BootstrapFactory<Bootstrap>> sctpClientChannel() {
@@ -63,12 +58,8 @@ public final class SctpTestPermutation {
             return Collections.emptyList();
         }
 
-        return Collections.<BootstrapFactory<Bootstrap>>singletonList(new BootstrapFactory<Bootstrap>() {
-            @Override
-            public Bootstrap newInstance() {
-                return new Bootstrap().group(nioWorkerGroup).channel(NioSctpChannel.class);
-            }
-        });
+        return Collections.<BootstrapFactory<Bootstrap>>singletonList(() ->
+                new Bootstrap().group(nioWorkerGroup).channel(NioSctpChannel.class));
     }
 
     static List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> sctpChannel() {

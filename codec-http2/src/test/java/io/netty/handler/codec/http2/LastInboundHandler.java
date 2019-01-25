@@ -46,10 +46,7 @@ public class LastInboundHandler extends ChannelDuplexHandler {
         void accept(T obj);
     }
 
-    private static final Consumer<Object> NOOP_CONSUMER = new Consumer<Object>() {
-        @Override
-        public void accept(Object obj) {
-        }
+    private static final Consumer<Object> NOOP_CONSUMER = obj -> {
     };
 
     @SuppressWarnings("unchecked")

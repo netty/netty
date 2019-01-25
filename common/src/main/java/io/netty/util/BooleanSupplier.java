@@ -29,20 +29,10 @@ public interface BooleanSupplier {
     /**
      * A supplier which always returns {@code false} and never throws.
      */
-    BooleanSupplier FALSE_SUPPLIER = new BooleanSupplier() {
-        @Override
-        public boolean get() {
-            return false;
-        }
-    };
+    BooleanSupplier FALSE_SUPPLIER = () -> false;
 
     /**
      * A supplier which always returns {@code true} and never throws.
      */
-    BooleanSupplier TRUE_SUPPLIER = new BooleanSupplier() {
-        @Override
-        public boolean get() {
-            return true;
-        }
-    };
+    BooleanSupplier TRUE_SUPPLIER = () -> true;
 }

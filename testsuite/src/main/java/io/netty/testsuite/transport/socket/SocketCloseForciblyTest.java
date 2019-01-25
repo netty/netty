@@ -36,12 +36,9 @@ public class SocketCloseForciblyTest extends AbstractSocketTest {
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 final SocketChannel childChannel = (SocketChannel) msg;
                 // Dispatch on the EventLoop as all operation on Unsafe should be done while on the EventLoop.
-                childChannel.eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        childChannel.config().setSoLinger(0);
-                        childChannel.unsafe().closeForcibly();
-                    }
+                childChannel.eventLoop().execute(() -> {
+                    childChannel.config().setSoLinger(0);
+                    childChannel.unsafe().closeForcibly();
                 });
             }
         }).childHandler(new ChannelInboundHandlerAdapter());

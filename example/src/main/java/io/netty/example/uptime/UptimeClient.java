@@ -59,13 +59,10 @@ public final class UptimeClient {
     }
 
     static void connect() {
-        bs.connect().addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (future.cause() != null) {
-                    handler.startTime = -1;
-                    handler.println("Failed to connect: " + future.cause());
-                }
+        bs.connect().addListener((ChannelFutureListener) future -> {
+            if (future.cause() != null) {
+                handler.startTime = -1;
+                handler.println("Failed to connect: " + future.cause());
             }
         });
     }

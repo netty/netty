@@ -60,11 +60,8 @@ public class SingleThreadEventExecutorTest {
 
     private static void executeShouldFail(Executor executor) {
         try {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    // Noop.
-                }
+            executor.execute(() -> {
+                // Noop.
             });
             Assert.fail();
         } catch (RejectedExecutionException expected) {
@@ -133,34 +130,28 @@ public class SingleThreadEventExecutorTest {
         };
         try {
             final Promise<Void> promise = executor.newPromise();
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        Set<Callable<Boolean>> set = Collections.<Callable<Boolean>>singleton(new Callable<Boolean>() {
-                            @Override
-                            public Boolean call() throws Exception {
-                                promise.setFailure(new AssertionError("Should never execute the Callable"));
-                                return Boolean.TRUE;
-                            }
-                        });
-                        if (any) {
-                            if (timeout) {
-                                executor.invokeAny(set, 10, TimeUnit.SECONDS);
-                            } else {
-                                executor.invokeAny(set);
-                            }
+            executor.execute(() -> {
+                try {
+                    Set<Callable<Boolean>> set = Collections.<Callable<Boolean>>singleton(() -> {
+                        promise.setFailure(new AssertionError("Should never execute the Callable"));
+                        return Boolean.TRUE;
+                    });
+                    if (any) {
+                        if (timeout) {
+                            executor.invokeAny(set, 10, TimeUnit.SECONDS);
                         } else {
-                            if (timeout) {
-                                executor.invokeAll(set, 10, TimeUnit.SECONDS);
-                            } else {
-                                executor.invokeAll(set);
-                            }
+                            executor.invokeAny(set);
                         }
-                        promise.setFailure(new AssertionError("Should never reach here"));
-                    } catch (Throwable cause) {
-                        promise.setFailure(cause);
+                    } else {
+                        if (timeout) {
+                            executor.invokeAll(set, 10, TimeUnit.SECONDS);
+                        } else {
+                            executor.invokeAll(set);
+                        }
                     }
+                    promise.setFailure(new AssertionError("Should never reach here"));
+                } catch (Throwable cause) {
+                    promise.setFailure(cause);
                 }
             });
             promise.syncUninterruptibly();

@@ -103,22 +103,17 @@ public class SocketTestPermutation {
     public List<BootstrapComboFactory<Bootstrap, Bootstrap>> datagram() {
         // Make the list of Bootstrap factories.
         List<BootstrapFactory<Bootstrap>> bfs = Collections.<BootstrapFactory<Bootstrap>>singletonList(
-                new BootstrapFactory<Bootstrap>() {
+                () -> new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
                     @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
-                            @Override
-                            public Channel newChannel(EventLoop eventLoop) {
-                                return new NioDatagramChannel(eventLoop, InternetProtocolFamily.IPv4);
-                            }
-
-                            @Override
-                            public String toString() {
-                                return NioDatagramChannel.class.getSimpleName() + ".class";
-                            }
-                        });
+                    public Channel newChannel(EventLoop eventLoop) {
+                        return new NioDatagramChannel(eventLoop, InternetProtocolFamily.IPv4);
                     }
-                }
+
+                    @Override
+                    public String toString() {
+                        return NioDatagramChannel.class.getSimpleName() + ".class";
+                    }
+                })
         );
 
         // Populare the combinations.
@@ -127,35 +122,20 @@ public class SocketTestPermutation {
 
     public List<BootstrapFactory<ServerBootstrap>> serverSocket() {
         return Collections.<BootstrapFactory<ServerBootstrap>>singletonList(
-                new BootstrapFactory<ServerBootstrap>() {
-                    @Override
-                    public ServerBootstrap newInstance() {
-                        return new ServerBootstrap().group(nioBossGroup, nioWorkerGroup)
-                                .channel(NioServerSocketChannel.class);
-                    }
-                }
+                () -> new ServerBootstrap().group(nioBossGroup, nioWorkerGroup)
+                        .channel(NioServerSocketChannel.class)
         );
     }
 
     public List<BootstrapFactory<Bootstrap>> clientSocket() {
         return Collections.<BootstrapFactory<Bootstrap>>singletonList(
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class);
-                    }
-                }
+                () -> new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class)
         );
     }
 
     public List<BootstrapFactory<Bootstrap>> datagramSocket() {
         return Collections.<BootstrapFactory<Bootstrap>>singletonList(
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(nioWorkerGroup).channel(NioDatagramChannel.class);
-                    }
-                }
+                () -> new Bootstrap().group(nioWorkerGroup).channel(NioDatagramChannel.class)
         );
     }
 }

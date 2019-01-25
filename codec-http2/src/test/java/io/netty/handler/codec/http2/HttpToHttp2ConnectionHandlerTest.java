@@ -337,12 +337,9 @@ public class HttpToHttp2ConnectionHandlerTest {
     public void testRequestWithBody() throws Exception {
         final String text = "foooooogoooo";
         final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<>());
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
-                receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
-                return null;
-            }
+        doAnswer((Answer<Void>) in -> {
+            receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
+            return null;
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
                 any(ByteBuf.class), eq(0), eq(true));
         bootstrapEnv(3, 1, 0);
@@ -380,12 +377,9 @@ public class HttpToHttp2ConnectionHandlerTest {
     public void testRequestWithBodyAndTrailingHeaders() throws Exception {
         final String text = "foooooogoooo";
         final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<>());
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
-                receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
-                return null;
-            }
+        doAnswer((Answer<Void>) in -> {
+            receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
+            return null;
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
                 any(ByteBuf.class), eq(0), eq(false));
         bootstrapEnv(4, 1, 1);
@@ -432,12 +426,9 @@ public class HttpToHttp2ConnectionHandlerTest {
         final String text = "foooooo";
         final String text2 = "goooo";
         final List<String> receivedBuffers = Collections.synchronizedList(new ArrayList<>());
-        doAnswer(new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
-                receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
-                return null;
-            }
+        doAnswer((Answer<Void>) in -> {
+            receivedBuffers.add(((ByteBuf) in.getArguments()[2]).toString(UTF_8));
+            return null;
         }).when(serverListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
                 any(ByteBuf.class), eq(0), eq(false));
         bootstrapEnv(4, 1, 1);

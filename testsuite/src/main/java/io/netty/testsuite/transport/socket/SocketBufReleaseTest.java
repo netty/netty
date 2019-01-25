@@ -90,12 +90,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
             // call retain on it so it can't be put back on the pool
             buf.writeBytes(data).retain();
 
-            ctx.channel().writeAndFlush(buf).addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    latch.countDown();
-                }
-            });
+            ctx.channel().writeAndFlush(buf).addListener((ChannelFutureListener) future -> latch.countDown());
         }
 
         @Override

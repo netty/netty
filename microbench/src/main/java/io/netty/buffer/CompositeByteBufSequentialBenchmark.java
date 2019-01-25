@@ -70,11 +70,8 @@ public class CompositeByteBufSequentialBenchmark extends AbstractMicrobenchmark 
         buffer.release();
     }
 
-    private static final ByteProcessor TEST_PROCESSOR = new ByteProcessor() {
-        @Override
-        public boolean process(byte value) throws Exception {
-            return value == 'b'; // false
-        }
+    private static final ByteProcessor TEST_PROCESSOR = value -> {
+        return value == 'b'; // false
     };
 
     @Benchmark
