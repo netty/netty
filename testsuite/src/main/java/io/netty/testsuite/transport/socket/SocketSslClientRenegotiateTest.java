@@ -24,12 +24,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.DecoderException;
-import io.netty.handler.ssl.JdkSslClientContext;
 import io.netty.handler.ssl.OpenSsl;
-import io.netty.handler.ssl.OpenSslServerContext;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
+import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogger;
@@ -77,12 +77,20 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
     public static Collection<Object[]> data() throws Exception {
         List<SslContext> serverContexts = new ArrayList<>();
         List<SslContext> clientContexts = new ArrayList<>();
-        clientContexts.add(new JdkSslClientContext(CERT_FILE));
+        clientContexts.add(
+          SslContextBuilder.forClient()
+            .trustManager(CERT_FILE)
+            .sslProvider(SslProvider.JDK)
+            .build()
+        );
 
         boolean hasOpenSsl = OpenSsl.isAvailable();
         if (hasOpenSsl) {
-            OpenSslServerContext context = new OpenSslServerContext(CERT_FILE, KEY_FILE);
-            serverContexts.add(context);
+            serverContexts.add(
+              SslContextBuilder.forServer(CERT_FILE, KEY_FILE)
+                .sslProvider(SslProvider.OPENSSL)
+                .build()
+            );
         } else {
             logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
         }
