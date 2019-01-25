@@ -15,6 +15,7 @@
 */
 package io.netty.channel;
 
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectUtil;
 
 final class DefaultChannelHandlerContext extends AbstractChannelHandlerContext {
@@ -23,12 +24,17 @@ final class DefaultChannelHandlerContext extends AbstractChannelHandlerContext {
 
     DefaultChannelHandlerContext(
             DefaultChannelPipeline pipeline, String name, ChannelHandler handler) {
-        super(pipeline, pipeline.executor, name, ObjectUtil.checkNotNull(handler, "handler").getClass());
+        super(pipeline, name, ObjectUtil.checkNotNull(handler, "handler").getClass());
         this.handler = handler;
     }
 
     @Override
     public ChannelHandler handler() {
         return handler;
+    }
+
+    @Override
+    public EventExecutor executor() {
+        return pipeline().executor();
     }
 }
