@@ -33,7 +33,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.function.Function;
 
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.util.internal.ObjectUtil.*;
@@ -368,13 +367,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
         if (data == null) {
             return;
         }
-        List<InterfaceHttpData> datas = bodyMapHttpData.computeIfAbsent(data.getName(),
-            new Function<String, List<InterfaceHttpData>>() {
-                @Override
-                public List<InterfaceHttpData> apply(final String s) {
-                    return new ArrayList<>(1);
-                }
-            });
+        List<InterfaceHttpData> datas = bodyMapHttpData.computeIfAbsent(data.getName(), s -> new ArrayList<>(1));
         datas.add(data);
         bodyListHttpData.add(data);
     }
