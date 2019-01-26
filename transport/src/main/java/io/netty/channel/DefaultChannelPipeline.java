@@ -20,7 +20,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
-import io.netty.util.concurrent.OrderedEventExecutor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
@@ -64,7 +63,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     DefaultChannelPipeline.class, MessageSizeEstimator.Handle.class, "estimatorHandle");
     final AbstractChannelHandlerContext head;
     final AbstractChannelHandlerContext tail;
-    final OrderedEventExecutor executor;
 
     private final Channel channel;
     private final ChannelFuture succeededFuture;
@@ -75,13 +73,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private volatile MessageSizeEstimator.Handle estimatorHandle;
 
     public DefaultChannelPipeline(Channel channel) {
-        this(channel, channel.eventLoop());
-    }
-
-    DefaultChannelPipeline(Channel channel, OrderedEventExecutor executor) {
         this.channel = ObjectUtil.checkNotNull(channel, "channel");
-        this.executor = executor;
-        succeededFuture = new SucceededChannelFuture(channel, executor);
+        succeededFuture = new SucceededChannelFuture(channel, channel.eventLoop());
         voidPromise =  new VoidChannelPromise(channel, true);
 
         tail = new TailContext(this);
@@ -117,7 +110,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final EventExecutor executor() {
-        return executor;
+        return channel().eventLoop();
     }
 
     @Override
@@ -129,7 +122,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         AbstractChannelHandlerContext newCtx = newContext(name, handler);
         EventExecutor executor = executor();
-        boolean inEventLoop = executor().inEventLoop();
+        boolean inEventLoop = executor.inEventLoop();
         synchronized (handlers) {
             if (context(name) != null) {
                 throw new IllegalArgumentException("Duplicate handler name: " + name);
@@ -140,7 +133,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     executor.execute(() -> addFirst0(newCtx));
                     return this;
                 } catch (Throwable cause) {
-                    handlers.remove(newCtx);
+                    handlers.remove(0);
                     throw cause;
                 }
             }
@@ -168,7 +161,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         AbstractChannelHandlerContext newCtx = newContext(name, handler);
         EventExecutor executor = executor();
-        boolean inEventLoop = executor().inEventLoop();
+        boolean inEventLoop = executor.inEventLoop();
         synchronized (this) {
             if (context(name) != null) {
                 throw new IllegalArgumentException("Duplicate handler name: " + name);
@@ -179,7 +172,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     executor.execute(() -> addLast0(newCtx));
                     return this;
                 } catch (Throwable cause) {
-                    handlers.remove(newCtx);
+                    handlers.remove(handlers.size() - 1);
                     throw cause;
                 }
             }
@@ -209,7 +202,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         AbstractChannelHandlerContext newCtx = newContext(name, handler);
         EventExecutor executor = executor();
-        boolean inEventLoop = executor().inEventLoop();
+        boolean inEventLoop = executor.inEventLoop();
         synchronized (handlers) {
             int i = findCtxIdx(context -> context.name().equals(baseName));
 
@@ -227,7 +220,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     executor.execute(() -> addBefore0(ctx, newCtx));
                     return this;
                 } catch (Throwable cause) {
-                    handlers.remove(newCtx);
+                    handlers.remove(i);
                     throw cause;
                 }
             }
@@ -256,7 +249,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         AbstractChannelHandlerContext newCtx = newContext(name, handler);
         EventExecutor executor = executor();
-        boolean inEventLoop = executor().inEventLoop();
+        boolean inEventLoop = executor.inEventLoop();
         synchronized (handlers) {
             int i = findCtxIdx(context -> context.name().equals(baseName));
 
@@ -274,7 +267,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     executor.execute(() -> addAfter0(ctx, newCtx));
                     return this;
                 } catch (Throwable cause) {
-                    handlers.remove(newCtx);
+                    handlers.remove(i + 1);
                     throw cause;
                 }
             }
@@ -545,9 +538,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
         AbstractChannelHandlerContext oldCtx;
         AbstractChannelHandlerContext newCtx = newContext(newName, newHandler);
-        final int idx;
+        EventExecutor executor = executor();
+        boolean inEventLoop = executor.inEventLoop();
         synchronized (handlers) {
-            idx = findCtxIdx(predicate);
+            int idx = findCtxIdx(predicate);
             if (idx == -1) {
                 throw new NoSuchElementException();
             }
@@ -559,25 +553,21 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     throw new IllegalArgumentException("Duplicate handler name: " + newName);
                 }
             }
-            AbstractChannelHandlerContext removed = handlers.remove(idx);
+            AbstractChannelHandlerContext removed = handlers.set(idx, newCtx);
             assert removed != null;
-            handlers.add(idx, newCtx);
-        }
 
-        EventExecutor executor = executor();
-        if (executor.inEventLoop()) {
-            replace0(oldCtx, newCtx);
-        } else {
-            try {
-                executor.execute(() -> replace0(oldCtx, newCtx));
-            } catch (Throwable cause) {
-                synchronized (handlers) {
-                    handlers.remove(idx);
-                    handlers.add(idx, oldCtx);
+            if (!inEventLoop) {
+                try {
+                    executor.execute(() -> replace0(oldCtx, newCtx));
+                    return oldCtx.handler();
+                } catch (Throwable cause) {
+                    handlers.set(idx, oldCtx);
+                    throw cause;
                 }
-                throw cause;
             }
         }
+
+        replace0(oldCtx, newCtx);
         return oldCtx.handler();
     }
 
@@ -673,8 +663,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private AbstractChannelHandlerContext findCtx(Predicate<AbstractChannelHandlerContext> predicate) {
-        int idx = findCtxIdx(predicate);
-        return idx == -1 ? null :  handlers.get(idx);
+        for (int i = 0; i < handlers.size(); i++) {
+            AbstractChannelHandlerContext ctx = handlers.get(i);
+            if (predicate.test(ctx)) {
+                return ctx;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -998,12 +993,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPromise newPromise() {
-        return new DefaultChannelPromise(channel, executor);
+        return new DefaultChannelPromise(channel(), executor());
     }
 
     @Override
     public final ChannelProgressivePromise newProgressivePromise() {
-        return new DefaultChannelProgressivePromise(channel, executor);
+        return new DefaultChannelProgressivePromise(channel(), executor());
     }
 
     @Override
@@ -1013,7 +1008,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelFuture newFailedFuture(Throwable cause) {
-        return new FailedChannelFuture(channel, executor, cause);
+        return new FailedChannelFuture(channel(), executor(), cause);
     }
 
     @Override
@@ -1185,7 +1180,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public EventExecutor executor() {
-            return channel.eventLoop();
+            return pipeline().executor();
         }
 
         @Override
