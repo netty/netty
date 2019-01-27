@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.buffer.CompositeByteBuf.ByteWrapper;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
@@ -575,9 +576,7 @@ public final class Unpooled {
      * {@code 0} and the length of the encoded string respectively.
      */
     public static ByteBuf copiedBuffer(CharSequence string, Charset charset) {
-        if (string == null) {
-            throw new NullPointerException("string");
-        }
+        ObjectUtil.checkNotNull(string, "string");
 
         if (string instanceof CharBuffer) {
             return copiedBuffer((CharBuffer) string, charset);
@@ -594,9 +593,7 @@ public final class Unpooled {
      */
     public static ByteBuf copiedBuffer(
             CharSequence string, int offset, int length, Charset charset) {
-        if (string == null) {
-            throw new NullPointerException("string");
-        }
+        ObjectUtil.checkNotNull(string, "string");
         if (length == 0) {
             return EMPTY_BUFFER;
         }
@@ -626,9 +623,7 @@ public final class Unpooled {
      * {@code 0} and the length of the encoded string respectively.
      */
     public static ByteBuf copiedBuffer(char[] array, Charset charset) {
-        if (array == null) {
-            throw new NullPointerException("array");
-        }
+        ObjectUtil.checkNotNull(array, "array");
         return copiedBuffer(array, 0, array.length, charset);
     }
 
@@ -639,9 +634,7 @@ public final class Unpooled {
      * {@code 0} and the length of the encoded string respectively.
      */
     public static ByteBuf copiedBuffer(char[] array, int offset, int length, Charset charset) {
-        if (array == null) {
-            throw new NullPointerException("array");
-        }
+        ObjectUtil.checkNotNull(array, "array");
         if (length == 0) {
             return EMPTY_BUFFER;
         }

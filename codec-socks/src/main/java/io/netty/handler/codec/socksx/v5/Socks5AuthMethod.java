@@ -16,6 +16,8 @@
 
 package io.netty.handler.codec.socksx.v5;
 
+import io.netty.util.internal.ObjectUtil;
+
 /**
  * The authentication method of SOCKS5.
  */
@@ -54,9 +56,7 @@ public class Socks5AuthMethod implements Comparable<Socks5AuthMethod> {
     }
 
     public Socks5AuthMethod(int byteValue, String name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
+        ObjectUtil.checkNotNull(name, "name");
 
         this.byteValue = (byte) byteValue;
         this.name = name;

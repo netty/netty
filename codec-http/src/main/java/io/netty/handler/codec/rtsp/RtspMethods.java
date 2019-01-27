@@ -16,6 +16,7 @@
 package io.netty.handler.codec.rtsp;
 
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -117,9 +118,7 @@ public final class RtspMethods {
      * will be returned.  Otherwise, a new instance will be returned.
      */
     public static HttpMethod valueOf(String name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
+        ObjectUtil.checkNotNull(name, "name");
 
         name = name.trim().toUpperCase();
         if (name.isEmpty()) {

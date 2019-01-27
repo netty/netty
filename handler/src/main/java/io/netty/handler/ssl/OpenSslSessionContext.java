@@ -54,9 +54,7 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
 
     @Override
     public SSLSession getSession(byte[] bytes) {
-        if (bytes == null) {
-            throw new NullPointerException("bytes");
-        }
+        ObjectUtil.checkNotNull(bytes, "bytes");
         return null;
     }
 

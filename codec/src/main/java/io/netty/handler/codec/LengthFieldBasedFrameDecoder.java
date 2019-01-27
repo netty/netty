@@ -21,6 +21,7 @@ import java.util.List;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.serialization.ObjectDecoder;
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * A decoder that splits the received {@link ByteBuf}s dynamically by the
@@ -298,9 +299,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
     public LengthFieldBasedFrameDecoder(
             ByteOrder byteOrder, int maxFrameLength, int lengthFieldOffset, int lengthFieldLength,
             int lengthAdjustment, int initialBytesToStrip, boolean failFast) {
-        if (byteOrder == null) {
-            throw new NullPointerException("byteOrder");
-        }
+        ObjectUtil.checkNotNull(byteOrder, "byteOrder");
 
         if (maxFrameLength <= 0) {
             throw new IllegalArgumentException(

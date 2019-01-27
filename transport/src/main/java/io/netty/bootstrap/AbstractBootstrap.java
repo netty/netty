@@ -24,6 +24,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.StringUtil;
@@ -73,9 +74,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      * {@link Channel}
      */
     public B group(EventLoopGroup group) {
-        if (group == null) {
-            throw new NullPointerException("group");
-        }
+        ObjectUtil.checkNotNull(group, "group");
         if (this.group != null) {
             throw new IllegalStateException("group set already");
         }
@@ -122,9 +121,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.
      */
     public <T> B option(ChannelOption<T> option, T value) {
-        if (option == null) {
-            throw new NullPointerException("option");
-        }
+        ObjectUtil.checkNotNull(option, "option");
         if (value == null) {
             synchronized (options) {
                 options.remove(option);
@@ -142,9 +139,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      * {@code null}, the attribute of the specified {@code key} is removed.
      */
     public <T> B attr(AttributeKey<T> key, T value) {
-        if (key == null) {
-            throw new NullPointerException("key");
-        }
+        ObjectUtil.checkNotNull(key, "key");
         if (value == null) {
             synchronized (attrs) {
                 attrs.remove(key);
@@ -223,9 +218,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      */
     public ChannelFuture bind(SocketAddress localAddress) {
         validate();
-        if (localAddress == null) {
-            throw new NullPointerException("localAddress");
-        }
+        ObjectUtil.checkNotNull(localAddress, "localAddress");
         return doBind(localAddress);
     }
 
@@ -303,9 +296,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      * the {@link ChannelHandler} to use for serving the requests.
      */
     public B handler(ChannelHandler handler) {
-        if (handler == null) {
-            throw new NullPointerException("handler");
-        }
+        ObjectUtil.checkNotNull(handler, "handler");
         this.handler = handler;
         return self();
     }

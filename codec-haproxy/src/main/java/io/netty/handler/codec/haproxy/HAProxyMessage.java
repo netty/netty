@@ -20,6 +20,7 @@ import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -90,9 +91,7 @@ public final class HAProxyMessage {
             String sourceAddress, String destinationAddress, int sourcePort, int destinationPort,
             List<HAProxyTLV> tlvs) {
 
-        if (proxiedProtocol == null) {
-            throw new NullPointerException("proxiedProtocol");
-        }
+        ObjectUtil.checkNotNull(proxiedProtocol, "proxiedProtocol");
         AddressFamily addrFamily = proxiedProtocol.addressFamily();
 
         checkAddress(sourceAddress, addrFamily);
@@ -118,9 +117,7 @@ public final class HAProxyMessage {
      * @throws HAProxyProtocolException  if any portion of the header is invalid
      */
     static HAProxyMessage decodeHeader(ByteBuf header) {
-        if (header == null) {
-            throw new NullPointerException("header");
-        }
+        ObjectUtil.checkNotNull(header, "header");
 
         if (header.readableBytes() < 16) {
             throw new HAProxyProtocolException(

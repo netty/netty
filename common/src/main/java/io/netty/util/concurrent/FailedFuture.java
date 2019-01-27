@@ -15,6 +15,7 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
 /**
@@ -34,10 +35,7 @@ public final class FailedFuture<V> extends CompleteFuture<V> {
      */
     public FailedFuture(EventExecutor executor, Throwable cause) {
         super(executor);
-        if (cause == null) {
-            throw new NullPointerException("cause");
-        }
-        this.cause = cause;
+        this.cause = ObjectUtil.checkNotNull(cause, "cause");
     }
 
     @Override

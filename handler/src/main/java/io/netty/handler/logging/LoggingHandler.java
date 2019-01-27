@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -62,9 +63,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
      * @param level the log level
      */
     public LoggingHandler(LogLevel level) {
-        if (level == null) {
-            throw new NullPointerException("level");
-        }
+        ObjectUtil.checkNotNull(level, "level");
 
         logger = InternalLoggerFactory.getInstance(getClass());
         this.level = level;
@@ -88,12 +87,8 @@ public class LoggingHandler extends ChannelDuplexHandler {
      * @param level the log level
      */
     public LoggingHandler(Class<?> clazz, LogLevel level) {
-        if (clazz == null) {
-            throw new NullPointerException("clazz");
-        }
-        if (level == null) {
-            throw new NullPointerException("level");
-        }
+        ObjectUtil.checkNotNull(clazz, "clazz");
+        ObjectUtil.checkNotNull(level, "level");
 
         logger = InternalLoggerFactory.getInstance(clazz);
         this.level = level;
@@ -116,12 +111,8 @@ public class LoggingHandler extends ChannelDuplexHandler {
      * @param level the log level
      */
     public LoggingHandler(String name, LogLevel level) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-        if (level == null) {
-            throw new NullPointerException("level");
-        }
+        ObjectUtil.checkNotNull(name, "name");
+        ObjectUtil.checkNotNull(level, "level");
 
         logger = InternalLoggerFactory.getInstance(name);
         this.level = level;

@@ -15,6 +15,7 @@
 package io.netty.util.internal;
 
 import java.util.Collection;
+import java.util.Objects;
 
 /**
  * A grab-bag of useful utility methods.
@@ -29,10 +30,7 @@ public final class ObjectUtil {
      * Otherwise, returns the argument.
      */
     public static <T> T checkNotNull(T arg, String text) {
-        if (arg == null) {
-            throw new NullPointerException(text);
-        }
-        return arg;
+        return Objects.requireNonNull(arg, text);
     }
 
     /**

@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -74,12 +75,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
      */
     protected UnpooledDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity) {
         super(maxCapacity);
-        if (alloc == null) {
-            throw new NullPointerException("alloc");
-        }
-        if (initialBuffer == null) {
-            throw new NullPointerException("initialBuffer");
-        }
+        ObjectUtil.checkNotNull(alloc, "alloc");
+        ObjectUtil.checkNotNull(initialBuffer, "initialBuffer");
         if (!initialBuffer.isDirect()) {
             throw new IllegalArgumentException("initialBuffer is not a direct buffer.");
         }

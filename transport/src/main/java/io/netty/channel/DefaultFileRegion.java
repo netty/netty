@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -49,9 +50,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
      * @param count     the number of bytes to transfer
      */
     public DefaultFileRegion(FileChannel file, long position, long count) {
-        if (file == null) {
-            throw new NullPointerException("file");
-        }
+        ObjectUtil.checkNotNull(file, "file");
         if (position < 0) {
             throw new IllegalArgumentException("position must be >= 0 but was " + position);
         }
@@ -73,9 +72,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
      * @param count     the number of bytes to transfer
      */
     public DefaultFileRegion(File f, long position, long count) {
-        if (f == null) {
-            throw new NullPointerException("f");
-        }
+        ObjectUtil.checkNotNull(f, "f");
         if (position < 0) {
             throw new IllegalArgumentException("position must be >= 0 but was " + position);
         }

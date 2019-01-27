@@ -32,6 +32,7 @@ import io.netty.channel.ReflectiveServerChannelFactory;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.ServerChannelFactory;
 import io.netty.util.AttributeKey;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -86,9 +87,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      */
     public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
         super.group(parentGroup);
-        if (childGroup == null) {
-            throw new NullPointerException("childGroup");
-        }
+        ObjectUtil.checkNotNull(childGroup, "childGroup");
         if (this.childGroup != null) {
             throw new IllegalStateException("childGroup set already");
         }
@@ -102,9 +101,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      * {@link ChannelOption}.
      */
     public <T> ServerBootstrap childOption(ChannelOption<T> childOption, T value) {
-        if (childOption == null) {
-            throw new NullPointerException("childOption");
-        }
+        ObjectUtil.checkNotNull(childOption, "childOption");
         if (value == null) {
             synchronized (childOptions) {
                 childOptions.remove(childOption);
@@ -122,9 +119,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      * {@code null} the {@link AttributeKey} is removed
      */
     public <T> ServerBootstrap childAttr(AttributeKey<T> childKey, T value) {
-        if (childKey == null) {
-            throw new NullPointerException("childKey");
-        }
+        ObjectUtil.checkNotNull(childKey, "childKey");
         if (value == null) {
             childAttrs.remove(childKey);
         } else {
@@ -137,9 +132,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      * Set the {@link ChannelHandler} which is used to serve the request for the {@link Channel}'s.
      */
     public ServerBootstrap childHandler(ChannelHandler childHandler) {
-        if (childHandler == null) {
-            throw new NullPointerException("childHandler");
-        }
+        ObjectUtil.checkNotNull(childHandler, "childHandler");
         this.childHandler = childHandler;
         return this;
     }
@@ -150,9 +143,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      * {@link Channel} implementation has no no-args constructor.
      */
     public ServerBootstrap channel(Class<? extends ServerChannel> channelClass) {
-        if (channelClass == null) {
-            throw new NullPointerException("channelClass");
-        }
+        ObjectUtil.checkNotNull(channelClass, "channelClass");
         return channelFactory(new ReflectiveServerChannelFactory<ServerChannel>(channelClass));
     }
 
@@ -164,9 +155,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      * simplify your code.
      */
     public ServerBootstrap channelFactory(ServerChannelFactory<? extends ServerChannel> channelFactory) {
-        if (channelFactory == null) {
-            throw new NullPointerException("channelFactory");
-        }
+        ObjectUtil.checkNotNull(channelFactory, "channelFactory");
         if (this.channelFactory != null) {
             throw new IllegalStateException("channelFactory set already");
         }

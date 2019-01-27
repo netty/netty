@@ -24,6 +24,7 @@ import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -43,9 +44,7 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
 
     public DefaultSctpChannelConfig(io.netty.channel.sctp.SctpChannel channel, SctpChannel javaChannel) {
         super(channel);
-        if (javaChannel == null) {
-            throw new NullPointerException("javaChannel");
-        }
+        ObjectUtil.checkNotNull(javaChannel, "javaChannel");
         this.javaChannel = javaChannel;
 
         // Enable TCP_NODELAY by default if possible.

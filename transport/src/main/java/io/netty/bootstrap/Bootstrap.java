@@ -32,6 +32,7 @@ import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -116,9 +117,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
      * {@link Channel} implementation has no no-args constructor.
      */
     public Bootstrap channel(Class<? extends Channel> channelClass) {
-        if (channelClass == null) {
-            throw new NullPointerException("channelClass");
-        }
+        ObjectUtil.checkNotNull(channelClass, "channelClass");
         return channelFactory(new ReflectiveChannelFactory<Channel>(channelClass));
     }
 
@@ -130,9 +129,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
      * simplify your code.
      */
     public Bootstrap channelFactory(ChannelFactory<? extends Channel> channelFactory) {
-        if (channelFactory == null) {
-            throw new NullPointerException("channelFactory");
-        }
+        ObjectUtil.checkNotNull(channelFactory, "channelFactory");
         if (this.channelFactory != null) {
             throw new IllegalStateException("channelFactory set already");
         }
@@ -172,9 +169,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
      * Connect a {@link Channel} to the remote peer.
      */
     public ChannelFuture connect(SocketAddress remoteAddress) {
-        if (remoteAddress == null) {
-            throw new NullPointerException("remoteAddress");
-        }
+        ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
 
         validate();
         return doResolveAndConnect(remoteAddress, config.localAddress());
@@ -184,9 +179,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
      * Connect a {@link Channel} to the remote peer.
      */
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        if (remoteAddress == null) {
-            throw new NullPointerException("remoteAddress");
-        }
+        ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
         validate();
         return doResolveAndConnect(remoteAddress, localAddress);
     }
