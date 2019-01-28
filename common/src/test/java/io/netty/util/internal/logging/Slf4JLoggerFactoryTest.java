@@ -84,21 +84,21 @@ public class Slf4JLoggerFactoryTest {
         internalLogger.warn("{}", "warn");
         internalLogger.warn("{} {}", "warn1", "warn2");
 
-        verify(logger, times(2)).log(ArgumentMatchers.<Marker>isNull(), eq(LocationAwareSlf4JLogger.FQCN),
+        verify(logger, times(2)).log(ArgumentMatchers.isNull(), eq(LocationAwareSlf4JLogger.FQCN),
                 eq(LocationAwareLogger.DEBUG_INT), captor.capture(), any(Object[].class),
-                ArgumentMatchers.<Throwable>isNull());
-        verify(logger, times(2)).log(ArgumentMatchers.<Marker>isNull(), eq(LocationAwareSlf4JLogger.FQCN),
+                ArgumentMatchers.isNull());
+        verify(logger, times(2)).log(ArgumentMatchers.isNull(), eq(LocationAwareSlf4JLogger.FQCN),
                 eq(LocationAwareLogger.ERROR_INT), captor.capture(), any(Object[].class),
-                ArgumentMatchers.<Throwable>isNull());
-        verify(logger, times(2)).log(ArgumentMatchers.<Marker>isNull(), eq(LocationAwareSlf4JLogger.FQCN),
+                ArgumentMatchers.isNull());
+        verify(logger, times(2)).log(ArgumentMatchers.isNull(), eq(LocationAwareSlf4JLogger.FQCN),
                 eq(LocationAwareLogger.INFO_INT), captor.capture(), any(Object[].class),
-                ArgumentMatchers.<Throwable>isNull());
-        verify(logger, times(2)).log(ArgumentMatchers.<Marker>isNull(), eq(LocationAwareSlf4JLogger.FQCN),
+                ArgumentMatchers.isNull());
+        verify(logger, times(2)).log(ArgumentMatchers.isNull(), eq(LocationAwareSlf4JLogger.FQCN),
                 eq(LocationAwareLogger.TRACE_INT), captor.capture(), any(Object[].class),
-                ArgumentMatchers.<Throwable>isNull());
-        verify(logger, times(2)).log(ArgumentMatchers.<Marker>isNull(), eq(LocationAwareSlf4JLogger.FQCN),
+                ArgumentMatchers.isNull());
+        verify(logger, times(2)).log(ArgumentMatchers.isNull(), eq(LocationAwareSlf4JLogger.FQCN),
                 eq(LocationAwareLogger.WARN_INT), captor.capture(), any(Object[].class),
-                ArgumentMatchers.<Throwable>isNull());
+                ArgumentMatchers.isNull());
 
         Iterator<String> logMessages = captor.getAllValues().iterator();
         assertEquals("debug", logMessages.next());
