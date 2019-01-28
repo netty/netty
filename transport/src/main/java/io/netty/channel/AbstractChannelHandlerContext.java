@@ -76,10 +76,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
     // There is no need to make this volatile as at worse it will just create a few more instances then needed.
-    private Runnable invokeChannelReadCompleteTask;
-    private Runnable invokeReadTask;
-    private Runnable invokeChannelWritableStateChangedTask;
-    private Runnable invokeFlushTask;
+    private Tasks invokeTasks;
 
     private volatile int handlerState = INIT;
 
@@ -379,16 +376,11 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeChannelReadComplete();
         } else {
-            Runnable task = next.invokeChannelReadCompleteTask;
-            if (task == null) {
-                next.invokeChannelReadCompleteTask = task = new Runnable() {
-                    @Override
-                    public void run() {
-                        next.invokeChannelReadComplete();
-                    }
-                };
+            Tasks tasks = next.invokeTasks;
+            if (tasks == null) {
+                next.invokeTasks = tasks = new Tasks(next);
             }
-            executor.execute(task);
+            executor.execute(tasks.invokeChannelReadCompleteTask);
         }
     }
 
@@ -415,16 +407,11 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeChannelWritabilityChanged();
         } else {
-            Runnable task = next.invokeChannelWritableStateChangedTask;
-            if (task == null) {
-                next.invokeChannelWritableStateChangedTask = task = new Runnable() {
-                    @Override
-                    public void run() {
-                        next.invokeChannelWritabilityChanged();
-                    }
-                };
+            Tasks tasks = next.invokeTasks;
+            if (tasks == null) {
+                next.invokeTasks = tasks = new Tasks(next);
             }
-            executor.execute(task);
+            executor.execute(tasks.invokeChannelWritableStateChangedTask);
         }
     }
 
@@ -672,16 +659,11 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeRead();
         } else {
-            Runnable task = next.invokeReadTask;
-            if (task == null) {
-                next.invokeReadTask = task = new Runnable() {
-                    @Override
-                    public void run() {
-                        next.invokeRead();
-                    }
-                };
+            Tasks tasks = next.invokeTasks;
+            if (tasks == null) {
+                next.invokeTasks = tasks = new Tasks(next);
             }
-            executor.execute(task);
+            executor.execute(tasks.invokeReadTask);
         }
 
         return this;
@@ -734,16 +716,11 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         if (executor.inEventLoop()) {
             next.invokeFlush();
         } else {
-            Runnable task = next.invokeFlushTask;
-            if (task == null) {
-                next.invokeFlushTask = task = new Runnable() {
-                    @Override
-                    public void run() {
-                        next.invokeFlush();
-                    }
-                };
+            Tasks tasks = next.invokeTasks;
+            if (tasks == null) {
+                next.invokeTasks = tasks = new Tasks(next);
             }
-            safeExecute(executor, task, channel().voidPromise(), null);
+            safeExecute(executor, tasks.invokeFlushTask, channel().voidPromise(), null);
         }
 
         return this;
@@ -1160,6 +1137,38 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
         public void write(AbstractChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             super.write(ctx, msg, promise);
             ctx.invokeFlush();
+        }
+    }
+
+    private static final class Tasks {
+        private final AbstractChannelHandlerContext next;
+        private final Runnable invokeChannelReadCompleteTask = new Runnable() {
+            @Override
+            public void run() {
+                next.invokeChannelReadComplete();
+            }
+        };
+        private final Runnable invokeReadTask = new Runnable() {
+            @Override
+            public void run() {
+                next.invokeRead();
+            }
+        };
+        private final Runnable invokeChannelWritableStateChangedTask = new Runnable() {
+            @Override
+            public void run() {
+                next.invokeChannelWritabilityChanged();
+            }
+        };
+        private final Runnable invokeFlushTask = new Runnable() {
+            @Override
+            public void run() {
+                next.invokeFlush();
+            }
+        };
+
+        Tasks(AbstractChannelHandlerContext next) {
+            this.next = next;
         }
     }
 }
