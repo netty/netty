@@ -772,7 +772,7 @@ abstract class DnsResolveContext<T> {
             }
         }
 
-        return cnames != null? cnames : Collections.<String, String>emptyMap();
+        return cnames != null? cnames : Collections.emptyMap();
     }
 
     private void tryToFinishResolve(final DnsServerAddressStream nameServerAddrStream,

@@ -127,21 +127,21 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
     }
 
     public List<BootstrapFactory<ServerBootstrap>> serverDomainSocket() {
-        return Collections.<BootstrapFactory<ServerBootstrap>>singletonList(
+        return Collections.singletonList(
                 () -> new ServerBootstrap().group(EPOLL_BOSS_GROUP, EPOLL_WORKER_GROUP)
                         .channel(EpollServerDomainSocketChannel.class)
         );
     }
 
     public List<BootstrapFactory<Bootstrap>> clientDomainSocket() {
-        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+        return Collections.singletonList(
                 () -> new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollDomainSocketChannel.class)
         );
     }
 
     @Override
     public List<BootstrapFactory<Bootstrap>> datagramSocket() {
-        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+        return Collections.singletonList(
                 () -> new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollDatagramChannel.class)
         );
     }

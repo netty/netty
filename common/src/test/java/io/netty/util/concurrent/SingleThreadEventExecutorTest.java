@@ -132,7 +132,7 @@ public class SingleThreadEventExecutorTest {
             final Promise<Void> promise = executor.newPromise();
             executor.execute(() -> {
                 try {
-                    Set<Callable<Boolean>> set = Collections.<Callable<Boolean>>singleton(() -> {
+                    Set<Callable<Boolean>> set = Collections.singleton(() -> {
                         promise.setFailure(new AssertionError("Should never execute the Callable"));
                         return Boolean.TRUE;
                     });

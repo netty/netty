@@ -48,7 +48,7 @@ public final class SctpTestPermutation {
         }
 
         // Make the list of ServerBootstrap factories.
-        return Collections.<BootstrapFactory<ServerBootstrap>>singletonList(() -> new ServerBootstrap().
+        return Collections.singletonList(() -> new ServerBootstrap().
                 group(nioBossGroup, nioWorkerGroup).
                 channel(NioSctpServerChannel.class));
     }
@@ -58,7 +58,7 @@ public final class SctpTestPermutation {
             return Collections.emptyList();
         }
 
-        return Collections.<BootstrapFactory<Bootstrap>>singletonList(() ->
+        return Collections.singletonList(() ->
                 new Bootstrap().group(nioWorkerGroup).channel(NioSctpChannel.class));
     }
 

@@ -115,21 +115,21 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     }
 
     public List<BootstrapFactory<ServerBootstrap>> serverDomainSocket() {
-        return Collections.<BootstrapFactory<ServerBootstrap>>singletonList(
+        return Collections.singletonList(
                 () -> new ServerBootstrap().group(KQUEUE_BOSS_GROUP, KQUEUE_WORKER_GROUP)
                         .channel(KQueueServerDomainSocketChannel.class)
         );
     }
 
     public List<BootstrapFactory<Bootstrap>> clientDomainSocket() {
-        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+        return Collections.singletonList(
                 () -> new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDomainSocketChannel.class)
         );
     }
 
     @Override
     public List<BootstrapFactory<Bootstrap>> datagramSocket() {
-        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+        return Collections.singletonList(
                 () -> new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDatagramChannel.class)
         );
     }

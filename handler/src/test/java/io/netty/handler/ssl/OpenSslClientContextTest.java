@@ -32,7 +32,11 @@ public class OpenSslClientContextTest extends SslContextTest  {
 
     @Override
     protected SslContext newServerContext(File crtFile, File keyFile, String pass) throws SSLException {
-        return new OpenSslClientContext(crtFile, InsecureTrustManagerFactory.INSTANCE, crtFile, keyFile, pass,
-                null, null, IdentityCipherSuiteFilter.INSTANCE, ApplicationProtocolConfig.DISABLED, 0, 0);
+        return SslContextBuilder.forClient()
+          .sslProvider(SslProvider.OPENSSL)
+          .trustManager(InsecureTrustManagerFactory.INSTANCE)
+          .keyManager(crtFile, keyFile, pass)
+          .applicationProtocolConfig(ApplicationProtocolConfig.DISABLED)
+          .build();
     }
 }

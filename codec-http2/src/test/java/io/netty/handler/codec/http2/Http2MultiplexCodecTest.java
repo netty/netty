@@ -203,8 +203,8 @@ public class Http2MultiplexCodecTest {
 
         assertEquals(headersFrame, inboundHandler.readInbound());
 
-        assertEqualsAndRelease(dataFrame1, inboundHandler.<Http2Frame>readInbound());
-        assertEqualsAndRelease(dataFrame2, inboundHandler.<Http2Frame>readInbound());
+        assertEqualsAndRelease(dataFrame1, inboundHandler.readInbound());
+        assertEqualsAndRelease(dataFrame2, inboundHandler.readInbound());
 
         assertNull(inboundHandler.readInbound());
     }
@@ -918,7 +918,7 @@ public class Http2MultiplexCodecTest {
 
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("1"), 0, false);
 
-        assertEqualsAndRelease(dataFrame1, inboundHandler.<Http2Frame>readInbound());
+        assertEqualsAndRelease(dataFrame1, inboundHandler.readInbound());
 
         // We want one item to be in the queue, and allow the numReads to be larger than 1. This will ensure that
         // when beginRead() is called the child channel is added to the readPending queue of the parent channel.
@@ -927,7 +927,7 @@ public class Http2MultiplexCodecTest {
         numReads.set(2);
         childChannel.read();
 
-        assertEqualsAndRelease(dataFrame2, inboundHandler.<Http2Frame>readInbound());
+        assertEqualsAndRelease(dataFrame2, inboundHandler.readInbound());
 
         assertNull(inboundHandler.readInbound());
 
@@ -935,14 +935,14 @@ public class Http2MultiplexCodecTest {
         // notify of readComplete().
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("3"), 0, false);
 
-        assertEqualsAndRelease(dataFrame3, inboundHandler.<Http2Frame>readInbound());
+        assertEqualsAndRelease(dataFrame3, inboundHandler.readInbound());
 
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("4"), 0, false);
         assertNull(inboundHandler.readInbound());
 
         childChannel.read();
 
-        assertEqualsAndRelease(dataFrame4, inboundHandler.<Http2Frame>readInbound());
+        assertEqualsAndRelease(dataFrame4, inboundHandler.readInbound());
 
         assertNull(inboundHandler.readInbound());
 

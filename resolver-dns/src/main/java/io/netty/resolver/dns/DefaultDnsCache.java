@@ -127,7 +127,7 @@ public class DefaultDnsCache implements DnsCache {
     public List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
         checkNotNull(hostname, "hostname");
         if (!emptyAdditionals(additionals)) {
-            return Collections.<DnsCacheEntry>emptyList();
+            return Collections.emptyList();
         }
 
         return resolveCache.get(appendDot(hostname));
