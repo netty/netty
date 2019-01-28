@@ -19,7 +19,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
-import io.netty.util.concurrent.EventExecutor;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;

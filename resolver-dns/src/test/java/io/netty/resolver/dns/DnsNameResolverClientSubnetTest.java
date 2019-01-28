@@ -20,7 +20,6 @@ import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.dns.DefaultDnsOptEcsRecord;
-import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.concurrent.Future;
 import org.junit.Ignore;

@@ -24,7 +24,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.util.CharsetUtil;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 

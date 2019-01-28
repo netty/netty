@@ -15,8 +15,6 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.PlatformDependent;
-
 import javax.net.ssl.SSLEngine;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;

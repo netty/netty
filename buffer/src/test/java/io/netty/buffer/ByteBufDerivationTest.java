@@ -22,7 +22,6 @@ import java.nio.ByteOrder;
 import java.util.Random;
 
 import static org.hamcrest.Matchers.*;
-import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.Assert.*;
 
 /**
