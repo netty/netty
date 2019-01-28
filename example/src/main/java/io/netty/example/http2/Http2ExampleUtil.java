@@ -14,7 +14,6 @@
  */
 package io.netty.example.http2;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.QueryStringDecoder;
@@ -22,6 +21,7 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Utility methods used by the example client and server.
@@ -73,7 +73,7 @@ public final class Http2ExampleUtil {
      * @return the first occurrence of that key in the string parameters
      */
     public static String firstValue(QueryStringDecoder query, String key) {
-        checkNotNull(query, "Query can't be null!");
+        Objects.requireNonNull(query, "Query can't be null!");
         List<String> values = query.parameters().get(key);
         if (values == null || values.isEmpty()) {
             return null;

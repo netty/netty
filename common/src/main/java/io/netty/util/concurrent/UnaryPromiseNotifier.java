@@ -19,12 +19,14 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.Objects;
+
 public final class UnaryPromiseNotifier<T> implements FutureListener<T> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(UnaryPromiseNotifier.class);
     private final Promise<? super T> promise;
 
     public UnaryPromiseNotifier(Promise<? super T> promise) {
-        this.promise = ObjectUtil.checkNotNull(promise, "promise");
+        this.promise = Objects.requireNonNull(promise, "promise");
     }
 
     @Override

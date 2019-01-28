@@ -16,7 +16,6 @@
 package io.netty.handler.ssl;
 
 import static io.netty.handler.ssl.SslUtils.toSSLHandshakeException;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.min;
 
 import io.netty.buffer.ByteBuf;
@@ -27,6 +26,7 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
@@ -107,9 +107,8 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
                 }
             });
 
-            protocolListener = checkNotNull(applicationNegotiator
-                            .protocolListenerFactory().newListener(this, applicationNegotiator.protocols()),
-                    "protocolListener");
+            protocolListener = Objects.requireNonNull(applicationNegotiator
+                    .protocolListenerFactory().newListener(this, applicationNegotiator.protocols()), "protocolListener");
         }
 
         private void selectProtocol() throws SSLException {
@@ -137,10 +136,9 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
                 }
             });
 
-            protocolSelector = checkNotNull(applicationNegotiator.protocolSelectorFactory()
-                            .newSelector(this,
-                                    new LinkedHashSet<>(applicationNegotiator.protocols())),
-                    "protocolSelector");
+            protocolSelector = Objects.requireNonNull(applicationNegotiator.protocolSelectorFactory()
+                    .newSelector(this,
+                            new LinkedHashSet<>(applicationNegotiator.protocols())), "protocolSelector");
         }
 
         private void selectProtocol() throws SSLException {

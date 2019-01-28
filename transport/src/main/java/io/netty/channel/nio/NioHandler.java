@@ -43,10 +43,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.spi.SelectorProvider;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -147,8 +144,8 @@ public final class NioHandler implements IoHandler {
      */
     public static IoHandlerFactory newFactory(final SelectorProvider selectorProvider,
                                               final SelectStrategyFactory selectStrategyFactory) {
-        ObjectUtil.checkNotNull(selectorProvider, "selectorProvider");
-        ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
+        Objects.requireNonNull(selectorProvider, "selectorProvider");
+        Objects.requireNonNull(selectStrategyFactory, "selectStrategyFactory");
         return () -> new NioHandler(selectorProvider, selectStrategyFactory.newSelectStrategy());
     }
 
@@ -267,9 +264,7 @@ public final class NioHandler implements IoHandler {
      * be executed by this event loop when the {@link SelectableChannel} is ready.
      */
     public void register(final SelectableChannel ch, final int interestOps, final NioTask<?> task) {
-        if (ch == null) {
-            throw new NullPointerException("ch");
-        }
+        Objects.requireNonNull(ch, "ch");
         if (interestOps == 0) {
             throw new IllegalArgumentException("interestOps must be non-zero.");
         }
@@ -277,9 +272,7 @@ public final class NioHandler implements IoHandler {
             throw new IllegalArgumentException(
                     "invalid interestOps: " + interestOps + "(validOps: " + ch.validOps() + ')');
         }
-        if (task == null) {
-            throw new NullPointerException("task");
-        }
+        Objects.requireNonNull(task, "task");
 
         register0(ch, interestOps, task);
     }

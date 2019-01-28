@@ -25,9 +25,9 @@ import io.netty.util.internal.PlatformDependent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.locks.LockSupport;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
@@ -62,7 +62,7 @@ public class LastInboundHandler extends ChannelDuplexHandler {
     }
 
     public LastInboundHandler(Consumer<ChannelHandlerContext> channelReadCompleteConsumer) {
-        this.channelReadCompleteConsumer = checkNotNull(channelReadCompleteConsumer, "channelReadCompleteConsumer");
+        this.channelReadCompleteConsumer = Objects.requireNonNull(channelReadCompleteConsumer, "channelReadCompleteConsumer");
     }
 
     @Override

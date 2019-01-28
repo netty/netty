@@ -22,12 +22,7 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.ConcurrentModificationException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
@@ -58,7 +53,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     private final ByteOrder order;
 
     protected AbstractCompositeByteBufTest(ByteOrder order) {
-        ObjectUtil.checkNotNull(order, "order");
+        Objects.requireNonNull(order, "order");
         this.order = order;
     }
 

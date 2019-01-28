@@ -18,6 +18,7 @@ package io.netty.channel;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayDeque;
+import java.util.Objects;
 import java.util.Queue;
 
 /**
@@ -63,7 +64,7 @@ public final class ChannelFlushPromiseNotifier {
      * {@code pendingDataSize} was reached.
      */
     public ChannelFlushPromiseNotifier add(ChannelPromise promise, long pendingDataSize) {
-        ObjectUtil.checkNotNull(promise, "promise");
+        Objects.requireNonNull(promise, "promise");
         if (pendingDataSize < 0) {
             throw new IllegalArgumentException("pendingDataSize must be >= 0 but was " + pendingDataSize);
         }

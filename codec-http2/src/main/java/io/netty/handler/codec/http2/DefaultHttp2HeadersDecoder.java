@@ -19,6 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.util.Objects;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_INITIAL_HUFFMAN_DECODE_CAPACITY;
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
@@ -79,7 +81,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
      * for testing but violate the RFC if used outside the scope of testing.
      */
     DefaultHttp2HeadersDecoder(boolean validateHeaders, HpackDecoder hpackDecoder) {
-        this.hpackDecoder = ObjectUtil.checkNotNull(hpackDecoder, "hpackDecoder");
+        this.hpackDecoder = Objects.requireNonNull(hpackDecoder, "hpackDecoder");
         this.validateHeaders = validateHeaders;
         this.maxHeaderListSizeGoAway =
                 Http2CodecUtil.calculateMaxHeaderListSizeGoAway(hpackDecoder.getMaxHeaderListSize());

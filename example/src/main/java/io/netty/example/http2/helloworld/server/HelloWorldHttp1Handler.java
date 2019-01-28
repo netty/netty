@@ -21,7 +21,6 @@ import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -34,6 +33,8 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpHeaderValues;
 
+import java.util.Objects;
+
 /**
  * HTTP handler that responds with a "Hello World"
  */
@@ -41,7 +42,7 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
     private final String establishApproach;
 
     public HelloWorldHttp1Handler(String establishApproach) {
-        this.establishApproach = checkNotNull(establishApproach, "establishApproach");
+        this.establishApproach = Objects.requireNonNull(establishApproach, "establishApproach");
     }
 
     @Override

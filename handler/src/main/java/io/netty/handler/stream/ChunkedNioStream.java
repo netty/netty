@@ -22,6 +22,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
+import java.util.Objects;
 
 /**
  * A {@link ChunkedInput} that fetches data from a {@link ReadableByteChannel}
@@ -54,7 +55,7 @@ public class ChunkedNioStream implements ChunkedInput<ByteBuf> {
      *                  {@link #readChunk(ChannelHandlerContext)} call
      */
     public ChunkedNioStream(ReadableByteChannel in, int chunkSize) {
-        ObjectUtil.checkNotNull(in, "in");
+        Objects.requireNonNull(in, "in");
         if (chunkSize <= 0) {
             throw new IllegalArgumentException("chunkSize: " + chunkSize +
                     " (expected: a positive integer)");

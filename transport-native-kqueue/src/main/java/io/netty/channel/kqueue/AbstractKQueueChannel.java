@@ -47,12 +47,12 @@ import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
+import java.util.Objects;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.UnixChannelUtil.computeRemoteAddr;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
@@ -77,7 +77,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
     AbstractKQueueChannel(Channel parent, EventLoop eventLoop, BsdSocket fd, boolean active) {
         super(parent, eventLoop);
-        socket = checkNotNull(fd, "fd");
+        socket = Objects.requireNonNull(fd, "fd");
         this.active = active;
         if (active) {
             // Directly cache the remote and local addresses
@@ -89,7 +89,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
     AbstractKQueueChannel(Channel parent, EventLoop eventLoop, BsdSocket fd, SocketAddress remote) {
         super(parent, eventLoop);
-        socket = checkNotNull(fd, "fd");
+        socket = Objects.requireNonNull(fd, "fd");
         active = true;
         // Directly cache the remote and local addresses
         // See https://github.com/netty/netty/issues/2359

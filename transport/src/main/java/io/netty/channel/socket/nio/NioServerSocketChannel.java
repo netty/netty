@@ -40,6 +40,7 @@ import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * A {@link io.netty.channel.socket.ServerSocketChannel} implementation which uses
@@ -91,7 +92,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     public NioServerSocketChannel(
             EventLoop eventLoop, EventLoopGroup childEventLoopGroup, ServerSocketChannel channel) {
         super(null, eventLoop, channel, SelectionKey.OP_ACCEPT);
-        this.childEventLoopGroup = ObjectUtil.checkNotNull(childEventLoopGroup, "childEventLoopGroup");
+        this.childEventLoopGroup = Objects.requireNonNull(childEventLoopGroup, "childEventLoopGroup");
         config = new NioServerSocketChannelConfig(this, javaChannel().socket());
     }
 

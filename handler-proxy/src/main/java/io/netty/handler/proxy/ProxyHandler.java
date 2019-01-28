@@ -34,6 +34,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.nio.channels.ConnectionPendingException;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 public abstract class ProxyHandler extends ChannelDuplexHandler {
@@ -71,7 +72,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     };
 
     protected ProxyHandler(SocketAddress proxyAddress) {
-        ObjectUtil.checkNotNull(proxyAddress, "proxyAddress");
+        Objects.requireNonNull(proxyAddress, "proxyAddress");
         this.proxyAddress = proxyAddress;
     }
 

@@ -452,8 +452,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     @Deprecated
     public SslHandler(SSLEngine engine, boolean startTls, Executor delegatedTaskExecutor) {
-        ObjectUtil.checkNotNull(engine, "engine");
-        ObjectUtil.checkNotNull(delegatedTaskExecutor, "delegatedTaskExecutor");
+        Objects.requireNonNull(engine, "engine");
+        Objects.requireNonNull(delegatedTaskExecutor, "delegatedTaskExecutor");
         this.engine = engine;
         engineType = SslEngineType.forEngine(engine);
         this.delegatedTaskExecutor = delegatedTaskExecutor;
@@ -467,7 +467,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     public void setHandshakeTimeout(long handshakeTimeout, TimeUnit unit) {
-        ObjectUtil.checkNotNull(unit, "unit");
+        Objects.requireNonNull(unit, "unit");
 
         setHandshakeTimeoutMillis(unit.toMillis(handshakeTimeout));
     }
@@ -1694,7 +1694,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Performs TLS renegotiation.
      */
     public Future<Channel> renegotiate(final Promise<Channel> promise) {
-        ObjectUtil.checkNotNull(promise, "promise");
+        Objects.requireNonNull(promise, "promise");
 
         ChannelHandlerContext ctx = this.ctx;
         if (ctx == null) {

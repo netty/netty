@@ -20,6 +20,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 /**
  * Representation of SCTP Data Chunk
  */
@@ -62,7 +64,7 @@ public final class SctpMessage extends DefaultByteBufHolder {
      */
     public SctpMessage(MessageInfo msgInfo, ByteBuf payloadBuffer) {
         super(payloadBuffer);
-        ObjectUtil.checkNotNull(msgInfo, "msgInfo");
+        Objects.requireNonNull(msgInfo, "msgInfo");
         this.msgInfo = msgInfo;
         streamIdentifier = msgInfo.streamNumber();
         protocolIdentifier = msgInfo.payloadProtocolID();

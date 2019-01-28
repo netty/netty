@@ -32,13 +32,7 @@ import java.security.Security;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import javax.crypto.NoSuchPaddingException;
 import javax.net.ssl.KeyManagerFactory;
@@ -49,7 +43,6 @@ import javax.net.ssl.SSLSessionContext;
 import static io.netty.handler.ssl.SslUtils.DEFAULT_CIPHER_SUITES;
 import static io.netty.handler.ssl.SslUtils.addIfSupported;
 import static io.netty.handler.ssl.SslUtils.useFallbackCiphersIfDefaultIsEmpty;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * An {@link SslContext} which uses JDK's SSL/TLS implementation.
@@ -237,9 +230,9 @@ public class JdkSslContext extends SslContext {
     JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                   JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth, String[] protocols, boolean startTls) {
         super(startTls);
-        this.apn = checkNotNull(apn, "apn");
-        this.clientAuth = checkNotNull(clientAuth, "clientAuth");
-        this.sslContext = checkNotNull(sslContext, "sslContext");
+        this.apn = Objects.requireNonNull(apn, "apn");
+        this.clientAuth = Objects.requireNonNull(clientAuth, "clientAuth");
+        this.sslContext = Objects.requireNonNull(sslContext, "sslContext");
 
         final List<String> defaultCiphers;
         final Set<String> supportedCiphers;
@@ -278,7 +271,7 @@ public class JdkSslContext extends SslContext {
             }
         }
 
-        cipherSuites = checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
+        cipherSuites = Objects.requireNonNull(cipherFilter, "cipherFilter").filterCipherSuites(
                 ciphers, defaultCiphers, supportedCiphers);
 
         unmodifiableCipherSuites = Collections.unmodifiableList(Arrays.asList(cipherSuites));

@@ -34,6 +34,7 @@ import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.xxhash.XXHashFactory;
 
 import java.nio.ByteBuffer;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Checksum;
 
@@ -164,13 +165,8 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
          */
     public Lz4FrameEncoder(LZ4Factory factory, boolean highCompressor, int blockSize,
                            Checksum checksum, int maxEncodeSize) {
-        if (factory == null) {
-            throw new NullPointerException("factory");
-        }
-        if (checksum == null) {
-            throw new NullPointerException("checksum");
-        }
-
+        Objects.requireNonNull(factory, "factory");
+        Objects.requireNonNull(checksum, "checksum");
         compressor = highCompressor ? factory.highCompressor() : factory.fastCompressor();
         this.checksum = ByteBufChecksum.wrapChecksum(checksum);
 

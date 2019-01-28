@@ -27,6 +27,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.util.Objects;
 
 /**
  * A NIO {@link ByteBuffer} based buffer. It is recommended to use
@@ -51,7 +52,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
      */
     public UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
         super(maxCapacity);
-        ObjectUtil.checkNotNull(alloc, "alloc");
+        Objects.requireNonNull(alloc, "alloc");
         if (initialCapacity < 0) {
             throw new IllegalArgumentException("initialCapacity: " + initialCapacity);
         }
@@ -87,8 +88,8 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
     UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity, boolean doFree) {
         super(maxCapacity);
-        ObjectUtil.checkNotNull(alloc, "alloc");
-        ObjectUtil.checkNotNull(initialBuffer, "initialBuffer");
+        Objects.requireNonNull(alloc, "alloc");
+        Objects.requireNonNull(initialBuffer, "initialBuffer");
 
         if (!initialBuffer.isDirect()) {
             throw new IllegalArgumentException("initialBuffer is not a direct buffer.");

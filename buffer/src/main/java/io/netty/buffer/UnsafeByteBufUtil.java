@@ -23,9 +23,9 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
+import java.util.Objects;
 
 import static io.netty.util.internal.MathUtil.isOutOfBounds;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.PlatformDependent.BIG_ENDIAN_NATIVE_ORDER;
 
 /**
@@ -463,7 +463,7 @@ final class UnsafeByteBufUtil {
 
     static void getBytes(AbstractByteBuf buf, long addr, int index, ByteBuf dst, int dstIndex, int length) {
         buf.checkIndex(index, length);
-        checkNotNull(dst, "dst");
+        Objects.requireNonNull(dst, "dst");
         if (isOutOfBounds(dstIndex, length, dst.capacity())) {
             throw new IndexOutOfBoundsException("dstIndex: " + dstIndex);
         }
@@ -479,7 +479,7 @@ final class UnsafeByteBufUtil {
 
     static void getBytes(AbstractByteBuf buf, long addr, int index, byte[] dst, int dstIndex, int length) {
         buf.checkIndex(index, length);
-        checkNotNull(dst, "dst");
+        Objects.requireNonNull(dst, "dst");
         if (isOutOfBounds(dstIndex, length, dst.length)) {
             throw new IndexOutOfBoundsException("dstIndex: " + dstIndex);
         }
@@ -514,7 +514,7 @@ final class UnsafeByteBufUtil {
 
     static void setBytes(AbstractByteBuf buf, long addr, int index, ByteBuf src, int srcIndex, int length) {
         buf.checkIndex(index, length);
-        checkNotNull(src, "src");
+        Objects.requireNonNull(src, "src");
         if (isOutOfBounds(srcIndex, length, src.capacity())) {
             throw new IndexOutOfBoundsException("srcIndex: " + srcIndex);
         }

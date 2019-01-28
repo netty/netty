@@ -57,6 +57,7 @@ import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -545,7 +546,7 @@ public class SniHandlerTest {
 
         CustomSslHandler(SslContext sslContext, SSLEngine sslEngine) {
             super(sslEngine);
-            this.sslContext = ObjectUtil.checkNotNull(sslContext, "sslContext");
+            this.sslContext = Objects.requireNonNull(sslContext, "sslContext");
         }
 
         @Override

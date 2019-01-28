@@ -31,11 +31,7 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 
 import static io.netty.util.internal.ObjectUtil.*;
@@ -125,8 +121,8 @@ public final class HostsFileParser {
      * @throws IOException file could not be read
      */
     public static HostsFileEntries parse(File file, Charset... charsets) throws IOException {
-        checkNotNull(file, "file");
-        checkNotNull(charsets, "charsets");
+        Objects.requireNonNull(file, "file");
+        Objects.requireNonNull(charsets, "charsets");
         if (file.exists() && file.isFile()) {
             for (Charset charset: charsets) {
                 HostsFileEntries entries = parse(new BufferedReader(new InputStreamReader(
@@ -147,7 +143,7 @@ public final class HostsFileParser {
      * @throws IOException file could not be read
      */
     public static HostsFileEntries parse(Reader reader) throws IOException {
-        checkNotNull(reader, "reader");
+        Objects.requireNonNull(reader, "reader");
         BufferedReader buff = new BufferedReader(reader);
         try {
             Map<String, Inet4Address> ipv4Entries = new HashMap<>();

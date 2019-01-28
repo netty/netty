@@ -37,6 +37,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static java.lang.Math.min;
@@ -166,7 +167,7 @@ public class EpollHandler implements IoHandler {
     public static IoHandlerFactory newFactory(final int maxEvents,
                                               final SelectStrategyFactory selectStrategyFactory) {
         ObjectUtil.checkPositiveOrZero(maxEvents, "maxEvents");
-        ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
+        Objects.requireNonNull(selectStrategyFactory, "selectStrategyFactory");
         return new IoHandlerFactory() {
             @Override
             public IoHandler newHandler() {

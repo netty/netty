@@ -22,8 +22,7 @@ import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 import java.util.List;
-
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import java.util.Objects;
 
 /**
  * Combines two {@link DnsQueryLifecycleObserver} into a single {@link DnsQueryLifecycleObserver}.
@@ -39,8 +38,8 @@ public final class BiDnsQueryLifecycleObserver implements DnsQueryLifecycleObser
      * @param b The {@link DnsQueryLifecycleObserver} that will receive events second.
      */
     public BiDnsQueryLifecycleObserver(DnsQueryLifecycleObserver a, DnsQueryLifecycleObserver b) {
-        this.a = checkNotNull(a, "a");
-        this.b = checkNotNull(b, "b");
+        this.a = Objects.requireNonNull(a, "a");
+        this.b = Objects.requireNonNull(b, "b");
     }
 
     @Override

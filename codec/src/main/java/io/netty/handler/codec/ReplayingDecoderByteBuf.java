@@ -21,6 +21,7 @@ import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ByteProcessor;
 import io.netty.util.Signal;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.io.InputStream;
@@ -31,6 +32,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
+import java.util.Objects;
 
 /**
  * Special {@link ByteBuf} implementation which is used by the {@link ReplayingDecoder}
@@ -461,9 +463,7 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf order(ByteOrder endianness) {
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
+        Objects.requireNonNull(endianness, "endianness");
         if (endianness == order()) {
             return this;
         }

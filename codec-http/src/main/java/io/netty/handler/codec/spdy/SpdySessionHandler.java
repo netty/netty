@@ -23,6 +23,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.ThrowableUtil;
 
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_SESSION_STREAM_ID;
@@ -70,7 +71,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
      *                handle the client endpoint of the connection.
      */
     public SpdySessionHandler(SpdyVersion version, boolean server) {
-        ObjectUtil.checkNotNull(version, "version");
+        Objects.requireNonNull(version, "version");
         this.server = server;
         minorVersion = version.getMinorVersion();
     }

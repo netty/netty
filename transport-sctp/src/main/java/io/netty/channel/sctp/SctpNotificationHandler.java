@@ -26,6 +26,8 @@ import com.sun.nio.sctp.ShutdownNotification;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 
 /**
  * {@link AbstractNotificationHandler} implementation which will handle all {@link Notification}s by trigger a
@@ -36,7 +38,7 @@ public final class SctpNotificationHandler extends AbstractNotificationHandler<O
     private final SctpChannel sctpChannel;
 
     public SctpNotificationHandler(SctpChannel sctpChannel) {
-        ObjectUtil.checkNotNull(sctpChannel, "sctpChannel");
+        Objects.requireNonNull(sctpChannel, "sctpChannel");
         this.sctpChannel = sctpChannel;
     }
 

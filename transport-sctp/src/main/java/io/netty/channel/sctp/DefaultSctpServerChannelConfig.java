@@ -29,6 +29,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * The default {@link SctpServerChannelConfig} implementation for SCTP.
@@ -44,7 +45,7 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     public DefaultSctpServerChannelConfig(
             io.netty.channel.sctp.SctpServerChannel channel, SctpServerChannel javaChannel) {
         super(channel);
-        ObjectUtil.checkNotNull(javaChannel, "javaChannel");
+        Objects.requireNonNull(javaChannel, "javaChannel");
         this.javaChannel = javaChannel;
     }
 

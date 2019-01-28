@@ -19,10 +19,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
@@ -60,7 +57,7 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
     }
 
     private static EventExecutorGroup verify(EventExecutorGroup group) {
-        Iterator<EventExecutor> executors = ObjectUtil.checkNotNull(group, "group").iterator();
+        Iterator<EventExecutor> executors = Objects.requireNonNull(group, "group").iterator();
         while (executors.hasNext()) {
             EventExecutor executor = executors.next();
             if (executor instanceof OrderedEventExecutor) {

@@ -23,6 +23,8 @@ import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.internal.UnstableApi;
 
+import java.util.Objects;
+
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderValues.DEFLATE;
@@ -32,7 +34,6 @@ import static io.netty.handler.codec.http.HttpHeaderValues.X_DEFLATE;
 import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * A HTTP2 frame listener that will decompress data frames according to the {@code content-encoding} header for each
@@ -286,7 +287,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         private final Http2LocalFlowController flowController;
 
         ConsumedBytesConverter(Http2LocalFlowController flowController) {
-            this.flowController = checkNotNull(flowController, "flowController");
+            this.flowController = Objects.requireNonNull(flowController, "flowController");
         }
 
         @Override

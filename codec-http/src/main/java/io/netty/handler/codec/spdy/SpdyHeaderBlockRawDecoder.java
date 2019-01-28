@@ -20,6 +20,8 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.getSignedInt;
 
 public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
@@ -50,7 +52,7 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
     }
 
     public SpdyHeaderBlockRawDecoder(SpdyVersion spdyVersion, int maxHeaderSize) {
-        ObjectUtil.checkNotNull(spdyVersion, "spdyVersion");
+        Objects.requireNonNull(spdyVersion, "spdyVersion");
         this.maxHeaderSize = maxHeaderSize;
         state = State.READ_NUM_HEADERS;
     }
@@ -63,8 +65,8 @@ public class SpdyHeaderBlockRawDecoder extends SpdyHeaderBlockDecoder {
 
     @Override
     void decode(ByteBufAllocator alloc, ByteBuf headerBlock, SpdyHeadersFrame frame) throws Exception {
-        ObjectUtil.checkNotNull(headerBlock, "headerBlock");
-        ObjectUtil.checkNotNull(frame, "frame");
+        Objects.requireNonNull(headerBlock, "headerBlock");
+        Objects.requireNonNull(frame, "frame");
 
         if (cumulation == null) {
             decodeHeaderBlock(headerBlock, frame);

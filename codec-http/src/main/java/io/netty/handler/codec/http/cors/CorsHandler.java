@@ -32,13 +32,13 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import static io.netty.handler.codec.http.HttpMethod.OPTIONS;
 import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.util.ReferenceCountUtil.release;
 import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Handles <a href="http://www.w3.org/TR/cors/">Cross Origin Resource Sharing</a> (CORS) requests.
@@ -61,7 +61,7 @@ public class CorsHandler extends ChannelDuplexHandler {
      * Creates a new instance with a single {@link CorsConfig}.
      */
     public CorsHandler(final CorsConfig config) {
-        this(Collections.singletonList(checkNotNull(config, "config")), config.isShortCircuit());
+        this(Collections.singletonList(Objects.requireNonNull(config, "config")), config.isShortCircuit());
     }
 
     /**

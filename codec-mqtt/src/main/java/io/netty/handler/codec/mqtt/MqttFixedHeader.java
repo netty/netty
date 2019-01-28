@@ -19,6 +19,8 @@ package io.netty.handler.codec.mqtt;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
+import java.util.Objects;
+
 /**
  * See <a href="http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#fixed-header">
  *     MQTTV3.1/fixed-header</a>
@@ -37,9 +39,9 @@ public final class MqttFixedHeader {
             MqttQoS qosLevel,
             boolean isRetain,
             int remainingLength) {
-        this.messageType = ObjectUtil.checkNotNull(messageType, "messageType");
+        this.messageType = Objects.requireNonNull(messageType, "messageType");
         this.isDup = isDup;
-        this.qosLevel = ObjectUtil.checkNotNull(qosLevel, "qosLevel");
+        this.qosLevel = Objects.requireNonNull(qosLevel, "qosLevel");
         this.isRetain = isRetain;
         this.remainingLength = remainingLength;
     }

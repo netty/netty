@@ -18,7 +18,7 @@ package io.netty.resolver.dns;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import java.util.Objects;
 
 /**
  * Combines two {@link DnsQueryLifecycleObserverFactory} into a single {@link DnsQueryLifecycleObserverFactory}.
@@ -34,8 +34,8 @@ public final class BiDnsQueryLifecycleObserverFactory implements DnsQueryLifecyc
      * @param b The {@link DnsQueryLifecycleObserverFactory} that will receive events second.
      */
     public BiDnsQueryLifecycleObserverFactory(DnsQueryLifecycleObserverFactory a, DnsQueryLifecycleObserverFactory b) {
-        this.a = checkNotNull(a, "a");
-        this.b = checkNotNull(b, "b");
+        this.a = Objects.requireNonNull(a, "a");
+        this.b = Objects.requireNonNull(b, "b");
     }
 
     @Override

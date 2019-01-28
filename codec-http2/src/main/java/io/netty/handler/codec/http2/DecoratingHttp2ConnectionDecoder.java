@@ -14,13 +14,12 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Decorator around another {@link Http2ConnectionDecoder} instance.
@@ -30,7 +29,7 @@ public class DecoratingHttp2ConnectionDecoder implements Http2ConnectionDecoder 
     private final Http2ConnectionDecoder delegate;
 
     public DecoratingHttp2ConnectionDecoder(Http2ConnectionDecoder delegate) {
-        this.delegate = checkNotNull(delegate, "delegate");
+        this.delegate = Objects.requireNonNull(delegate, "delegate");
     }
 
     @Override

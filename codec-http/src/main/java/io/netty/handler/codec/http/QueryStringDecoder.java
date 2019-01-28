@@ -25,11 +25,7 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CoderResult;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static io.netty.util.internal.ObjectUtil.*;
 import static io.netty.util.internal.StringUtil.*;
@@ -109,8 +105,8 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(String uri, Charset charset, boolean hasPath, int maxParams) {
-        this.uri = checkNotNull(uri, "uri");
-        this.charset = checkNotNull(charset, "charset");
+        this.uri = Objects.requireNonNull(uri, "uri");
+        this.charset = Objects.requireNonNull(charset, "charset");
         this.maxParams = checkPositive(maxParams, "maxParams");
 
         // `-1` means that path end index will be initialized lazily
@@ -145,7 +141,7 @@ public class QueryStringDecoder {
         String rawQuery = uri.getRawQuery();
         // Also take care of cut of things like "http://localhost"
         this.uri = rawQuery == null? rawPath : rawPath + '?' + rawQuery;
-        this.charset = checkNotNull(charset, "charset");
+        this.charset = Objects.requireNonNull(charset, "charset");
         this.maxParams = checkPositive(maxParams, "maxParams");
         pathEndIdx = rawPath.length();
     }

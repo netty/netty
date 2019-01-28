@@ -21,6 +21,7 @@ import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -94,7 +95,7 @@ public final class ObjectCleaner {
      */
     public static void register(Object object, Runnable cleanupTask) {
         AutomaticCleanerReference reference = new AutomaticCleanerReference(object,
-                ObjectUtil.checkNotNull(cleanupTask, "cleanupTask"));
+                Objects.requireNonNull(cleanupTask, "cleanupTask"));
         // Its important to add the reference to the LIVE_SET before we access CLEANER_RUNNING to ensure correct
         // behavior in multi-threaded environments.
         LIVE_SET.add(reference);

@@ -23,6 +23,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.util.concurrent.EventExecutor;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
@@ -95,9 +96,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
         }
-        if (wrapper == null) {
-            throw new NullPointerException("wrapper");
-        }
+        Objects.requireNonNull(wrapper, "wrapper");
         if (wrapper == ZlibWrapper.ZLIB_OR_NONE) {
             throw new IllegalArgumentException(
                     "wrapper '" + ZlibWrapper.ZLIB_OR_NONE + "' is not " +
@@ -141,9 +140,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
         }
-        if (dictionary == null) {
-            throw new NullPointerException("dictionary");
-        }
+        Objects.requireNonNull(dictionary, "dictionary");
 
         wrapper = ZlibWrapper.ZLIB;
         deflater = new Deflater(compressionLevel);

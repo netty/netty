@@ -26,11 +26,11 @@ import java.nio.charset.CharsetEncoder;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import static io.netty.util.internal.MathUtil.isOutOfBounds;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * A string which has been encoded into a character encoding whose character always takes a single byte, similarly to
@@ -413,7 +413,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
                             + length + ") <= srcLen(" + length() + ')');
         }
 
-        System.arraycopy(value, srcIdx + offset, checkNotNull(dst, "dst"), dstIdx, length);
+        System.arraycopy(value, srcIdx + offset, Objects.requireNonNull(dst, "dst"), dstIdx, length);
     }
 
     @Override

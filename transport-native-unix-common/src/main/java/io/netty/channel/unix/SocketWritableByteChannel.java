@@ -18,12 +18,13 @@ package io.netty.channel.unix;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.ObjectUtil;
 import java.nio.channels.WritableByteChannel;
+import java.util.Objects;
 
 public abstract class SocketWritableByteChannel implements WritableByteChannel {
     private final FileDescriptor fd;
 
     protected SocketWritableByteChannel(FileDescriptor fd) {
-        this.fd = ObjectUtil.checkNotNull(fd, "fd");
+        this.fd = Objects.requireNonNull(fd, "fd");
     }
 
     @Override

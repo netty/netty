@@ -20,6 +20,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
+import java.util.Objects;
 
 
 /**
@@ -63,7 +64,7 @@ final class ReadOnlyUnsafeDirectByteBuf extends ReadOnlyByteBufferBuf {
     @Override
     public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         checkIndex(index, length);
-        ObjectUtil.checkNotNull(dst, "dst");
+        Objects.requireNonNull(dst, "dst");
         if (dstIndex < 0 || dstIndex > dst.capacity() - length) {
             throw new IndexOutOfBoundsException("dstIndex: " + dstIndex);
         }
@@ -81,7 +82,7 @@ final class ReadOnlyUnsafeDirectByteBuf extends ReadOnlyByteBufferBuf {
     @Override
     public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
         checkIndex(index, length);
-        ObjectUtil.checkNotNull(dst, "dst");
+        Objects.requireNonNull(dst, "dst");
         if (dstIndex < 0 || dstIndex > dst.length - length) {
             throw new IndexOutOfBoundsException(String.format(
                     "dstIndex: %d, length: %d (expected: range(0, %d))", dstIndex, length, dst.length));
@@ -96,7 +97,7 @@ final class ReadOnlyUnsafeDirectByteBuf extends ReadOnlyByteBufferBuf {
     @Override
     public ByteBuf getBytes(int index, ByteBuffer dst) {
         checkIndex(index);
-        ObjectUtil.checkNotNull(dst, "dst");
+        Objects.requireNonNull(dst, "dst");
 
         int bytesToCopy = Math.min(capacity() - index, dst.remaining());
         ByteBuffer tmpBuf = internalNioBuffer();

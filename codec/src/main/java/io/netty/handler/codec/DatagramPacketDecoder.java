@@ -20,9 +20,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.protobuf.ProtobufDecoder;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * A decoder that decodes the content of the received {@link DatagramPacket} using
@@ -43,7 +43,7 @@ public class DatagramPacketDecoder extends MessageToMessageDecoder<DatagramPacke
      * @param decoder the specified {@link ByteBuf} decoder
      */
     public DatagramPacketDecoder(MessageToMessageDecoder<ByteBuf> decoder) {
-        this.decoder = checkNotNull(decoder, "decoder");
+        this.decoder = Objects.requireNonNull(decoder, "decoder");
     }
 
     @Override

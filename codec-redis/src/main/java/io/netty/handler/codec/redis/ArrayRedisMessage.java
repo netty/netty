@@ -23,6 +23,7 @@ import io.netty.util.internal.UnstableApi;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Arrays of <a href="http://redis.io/topics/protocol">RESP</a>.
@@ -43,7 +44,7 @@ public class ArrayRedisMessage extends AbstractReferenceCounted implements Redis
      */
     public ArrayRedisMessage(List<RedisMessage> children) {
         // do not retain here. children are already retained when created.
-        this.children = ObjectUtil.checkNotNull(children, "children");
+        this.children = Objects.requireNonNull(children, "children");
     }
 
     /**

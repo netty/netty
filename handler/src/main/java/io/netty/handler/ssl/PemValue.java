@@ -21,6 +21,8 @@ import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 /**
  * A PEM encoded value.
  *
@@ -35,7 +37,7 @@ class PemValue extends AbstractReferenceCounted implements PemEncoded {
     private final boolean sensitive;
 
     PemValue(ByteBuf content, boolean sensitive) {
-        this.content = ObjectUtil.checkNotNull(content, "content");
+        this.content = Objects.requireNonNull(content, "content");
         this.sensitive = sensitive;
     }
 

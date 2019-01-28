@@ -23,6 +23,8 @@ import io.netty.channel.unix.PreferredDirectByteBufAllocator;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 class EpollRecvByteAllocatorHandle implements RecvByteBufAllocator.ExtendedHandle {
     private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
             new PreferredDirectByteBufAllocator();
@@ -37,7 +39,7 @@ class EpollRecvByteAllocatorHandle implements RecvByteBufAllocator.ExtendedHandl
     private boolean receivedRdHup;
 
     EpollRecvByteAllocatorHandle(RecvByteBufAllocator.ExtendedHandle handle) {
-        delegate = ObjectUtil.checkNotNull(handle, "handle");
+        delegate = Objects.requireNonNull(handle, "handle");
     }
 
     final void receivedRdHup() {

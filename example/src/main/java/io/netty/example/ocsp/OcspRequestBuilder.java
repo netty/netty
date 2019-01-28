@@ -16,13 +16,12 @@
 
 package io.netty.example.ocsp;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
+import java.util.Objects;
 
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
@@ -77,10 +76,10 @@ public class OcspRequestBuilder {
      * and CA's will (should) reject subsequent requests that have the same nonce value.
      */
     public OCSPReq build() throws OCSPException, IOException, CertificateEncodingException {
-        SecureRandom generator = checkNotNull(this.generator, "generator");
-        DigestCalculator calculator = checkNotNull(this.calculator, "calculator");
-        X509Certificate certificate = checkNotNull(this.certificate, "certificate");
-        X509Certificate issuer = checkNotNull(this.issuer, "issuer");
+        SecureRandom generator = Objects.requireNonNull(this.generator, "generator");
+        DigestCalculator calculator = Objects.requireNonNull(this.calculator, "calculator");
+        X509Certificate certificate = Objects.requireNonNull(this.certificate, "certificate");
+        X509Certificate issuer = Objects.requireNonNull(this.issuer, "issuer");
 
         BigInteger serial = certificate.getSerialNumber();
 

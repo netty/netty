@@ -26,6 +26,7 @@ import io.netty.handler.codec.MessageToMessageEncoder;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Encodes the requested {@link String} into a {@link ByteBuf}.
@@ -65,10 +66,7 @@ public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
      * Creates a new instance with the specified character set.
      */
     public StringEncoder(Charset charset) {
-        if (charset == null) {
-            throw new NullPointerException("charset");
-        }
-        this.charset = charset;
+        this.charset = Objects.requireNonNull(charset, "charset");
     }
 
     @Override

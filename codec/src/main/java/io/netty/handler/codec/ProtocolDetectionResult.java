@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import java.util.Objects;
 
 /**
  * Result of detecting a protocol.
@@ -55,7 +55,7 @@ public final class ProtocolDetectionResult<T> {
      */
     @SuppressWarnings("unchecked")
     public static <T> ProtocolDetectionResult<T> detected(T protocol) {
-        return new ProtocolDetectionResult<>(ProtocolDetectionState.DETECTED, checkNotNull(protocol, "protocol"));
+        return new ProtocolDetectionResult<>(ProtocolDetectionState.DETECTED, Objects.requireNonNull(protocol, "protocol"));
     }
 
     private ProtocolDetectionResult(ProtocolDetectionState state, T result) {

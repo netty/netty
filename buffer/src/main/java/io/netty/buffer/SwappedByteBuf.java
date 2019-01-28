@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.ByteProcessor;
+import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,6 +27,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
+import java.util.Objects;
 
 /**
  * Wrapper which swap the {@link ByteOrder} of a {@link ByteBuf}.
@@ -40,10 +42,7 @@ public class SwappedByteBuf extends ByteBuf {
     private final ByteOrder order;
 
     public SwappedByteBuf(ByteBuf buf) {
-        if (buf == null) {
-            throw new NullPointerException("buf");
-        }
-        this.buf = buf;
+        this.buf = Objects.requireNonNull(buf, "buf");
         if (buf.order() == ByteOrder.BIG_ENDIAN) {
             order = ByteOrder.LITTLE_ENDIAN;
         } else {
@@ -58,9 +57,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf order(ByteOrder endianness) {
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
+        Objects.requireNonNull(endianness, "endianness");
         if (endianness == order) {
             return this;
         }

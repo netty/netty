@@ -23,8 +23,7 @@ import io.netty.util.internal.logging.InternalLogger;
 
 import java.net.InetSocketAddress;
 import java.util.List;
-
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import java.util.Objects;
 
 final class TraceDnsQueryLifecycleObserver implements DnsQueryLifecycleObserver {
     private final InternalLogger logger;
@@ -33,9 +32,9 @@ final class TraceDnsQueryLifecycleObserver implements DnsQueryLifecycleObserver 
     private InetSocketAddress dnsServerAddress;
 
     TraceDnsQueryLifecycleObserver(DnsQuestion question, InternalLogger logger, InternalLogLevel level) {
-        this.question = checkNotNull(question, "question");
-        this.logger = checkNotNull(logger, "logger");
-        this.level = checkNotNull(level, "level");
+        this.question = Objects.requireNonNull(question, "question");
+        this.logger = Objects.requireNonNull(logger, "logger");
+        this.level = Objects.requireNonNull(level, "level");
     }
 
     @Override

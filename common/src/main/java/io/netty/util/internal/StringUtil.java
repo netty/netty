@@ -18,6 +18,7 @@ package io.netty.util.internal;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
@@ -281,7 +282,7 @@ public final class StringUtil {
      * with anonymous classes.
      */
     public static String simpleClassName(Class<?> clazz) {
-        String className = checkNotNull(clazz, "clazz").getName();
+        String className = Objects.requireNonNull(clazz, "clazz").getName();
         final int lastDotIdx = className.lastIndexOf(PACKAGE_SEPARATOR_CHAR);
         if (lastDotIdx > -1) {
             return className.substring(lastDotIdx + 1);
@@ -312,7 +313,7 @@ public final class StringUtil {
      * @return {@link CharSequence} the escaped value if necessary, or the value unchanged
      */
     public static CharSequence escapeCsv(CharSequence value, boolean trimWhiteSpace) {
-        int length = checkNotNull(value, "value").length();
+        int length = Objects.requireNonNull(value, "value").length();
         int start;
         int last;
         if (trimWhiteSpace) {
@@ -398,7 +399,7 @@ public final class StringUtil {
      * @return {@link CharSequence} the unescaped value if necessary, or the value unchanged
      */
     public static CharSequence unescapeCsv(CharSequence value) {
-        int length = checkNotNull(value, "value").length();
+        int length = Objects.requireNonNull(value, "value").length();
         if (length == 0) {
             return value;
         }

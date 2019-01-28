@@ -24,6 +24,7 @@ import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Objects;
 
 /**
  * An {@link InputStream} which reads data from a {@link ByteBuf}.
@@ -105,7 +106,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
      *            {@code writerIndex}
      */
     public ByteBufInputStream(ByteBuf buffer, int length, boolean releaseOnClose) {
-        ObjectUtil.checkNotNull(buffer, "buffer");
+        Objects.requireNonNull(buffer, "buffer");
         if (length < 0) {
             if (releaseOnClose) {
                 buffer.release();

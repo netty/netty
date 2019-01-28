@@ -16,13 +16,13 @@
 
 package io.netty.handler.ssl;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -54,12 +54,11 @@ final class JettyNpnSslEngine extends JdkSslEngine {
 
     JettyNpnSslEngine(SSLEngine engine, final JdkApplicationProtocolNegotiator applicationNegotiator, boolean server) {
         super(engine);
-        checkNotNull(applicationNegotiator, "applicationNegotiator");
+        Objects.requireNonNull(applicationNegotiator, "applicationNegotiator");
 
         if (server) {
-            final ProtocolSelectionListener protocolListener = checkNotNull(applicationNegotiator
-                    .protocolListenerFactory().newListener(this, applicationNegotiator.protocols()),
-                    "protocolListener");
+            final ProtocolSelectionListener protocolListener = Objects.requireNonNull(applicationNegotiator
+                    .protocolListenerFactory().newListener(this, applicationNegotiator.protocols()), "protocolListener");
             NextProtoNego.put(engine, new ServerProvider() {
                 @Override
                 public void unsupported() {
@@ -81,9 +80,8 @@ final class JettyNpnSslEngine extends JdkSslEngine {
                 }
             });
         } else {
-            final ProtocolSelector protocolSelector = checkNotNull(applicationNegotiator.protocolSelectorFactory()
-                    .newSelector(this, new LinkedHashSet<>(applicationNegotiator.protocols())),
-                    "protocolSelector");
+            final ProtocolSelector protocolSelector = Objects.requireNonNull(applicationNegotiator.protocolSelectorFactory()
+                    .newSelector(this, new LinkedHashSet<>(applicationNegotiator.protocols())), "protocolSelector");
             NextProtoNego.put(engine, new ClientProvider() {
                 @Override
                 public boolean supports() {

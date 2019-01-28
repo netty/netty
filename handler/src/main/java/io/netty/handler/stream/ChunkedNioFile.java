@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
+import java.util.Objects;
 
 /**
  * A {@link ChunkedInput} that fetches data from a file chunk by chunk using
@@ -86,7 +87,7 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
      */
     public ChunkedNioFile(FileChannel in, long offset, long length, int chunkSize)
             throws IOException {
-        ObjectUtil.checkNotNull(in, "in");
+        Objects.requireNonNull(in, "in");
         if (offset < 0) {
             throw new IllegalArgumentException(
                     "offset: " + offset + " (expected: 0 or greater)");

@@ -26,6 +26,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 
 import java.nio.charset.Charset;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Decodes a received {@link ByteBuf} into a {@link String}.  Please
@@ -68,10 +69,7 @@ public class StringDecoder extends MessageToMessageDecoder<ByteBuf> {
      * Creates a new instance with the specified character set.
      */
     public StringDecoder(Charset charset) {
-        if (charset == null) {
-            throw new NullPointerException("charset");
-        }
-        this.charset = charset;
+        this.charset = Objects.requireNonNull(charset, "charset");
     }
 
     @Override

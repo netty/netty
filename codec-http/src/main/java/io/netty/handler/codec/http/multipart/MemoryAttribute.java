@@ -22,6 +22,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.Objects;
 
 import static io.netty.buffer.Unpooled.*;
 
@@ -67,7 +68,7 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
 
     @Override
     public void setValue(String value) throws IOException {
-        ObjectUtil.checkNotNull(value, "value");
+        Objects.requireNonNull(value, "value");
         byte [] bytes = value.getBytes(getCharset());
         checkSize(bytes.length);
         ByteBuf buffer = wrappedBuffer(bytes);

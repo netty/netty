@@ -26,8 +26,7 @@ import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import java.util.Objects;
 
 /**
  * A skeletal implementation of {@link DnsMessage}.
@@ -87,7 +86,7 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
 
     @Override
     public DnsMessage setOpCode(DnsOpCode opCode) {
-        this.opCode = checkNotNull(opCode, "opCode");
+        this.opCode = Objects.requireNonNull(opCode, "opCode");
         return this;
     }
 
@@ -452,11 +451,11 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
     }
 
     private static int sectionOrdinal(DnsSection section) {
-        return checkNotNull(section, "section").ordinal();
+        return Objects.requireNonNull(section, "section").ordinal();
     }
 
     private static DnsRecord checkQuestion(int section, DnsRecord record) {
-        if (section == SECTION_QUESTION && !(checkNotNull(record, "record") instanceof DnsQuestion)) {
+        if (section == SECTION_QUESTION && !(Objects.requireNonNull(record, "record") instanceof DnsQuestion)) {
             throw new IllegalArgumentException(
                     "record: " + record + " (expected: " + StringUtil.simpleClassName(DnsQuestion.class) + ')');
         }

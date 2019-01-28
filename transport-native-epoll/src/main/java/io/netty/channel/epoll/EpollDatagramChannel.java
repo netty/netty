@@ -41,6 +41,7 @@ import java.net.NetworkInterface;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 
 import static io.netty.channel.epoll.LinuxSocket.newSocketDgram;
 
@@ -140,8 +141,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     public ChannelFuture joinGroup(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
             final InetAddress source, final ChannelPromise promise) {
-        ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
-        ObjectUtil.checkNotNull(networkInterface, "networkInterface");
+        Objects.requireNonNull(multicastAddress, "multicastAddress");
+        Objects.requireNonNull(networkInterface, "networkInterface");
         promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
         return promise;
     }
@@ -185,8 +186,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     public ChannelFuture leaveGroup(
             final InetAddress multicastAddress, final NetworkInterface networkInterface, final InetAddress source,
             final ChannelPromise promise) {
-        ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
-        ObjectUtil.checkNotNull(networkInterface, "networkInterface");
+        Objects.requireNonNull(multicastAddress, "multicastAddress");
+        Objects.requireNonNull(networkInterface, "networkInterface");
 
         promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
 
@@ -204,9 +205,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     public ChannelFuture block(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
             final InetAddress sourceToBlock, final ChannelPromise promise) {
-        ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
-        ObjectUtil.checkNotNull(sourceToBlock, "sourceToBlock");
-        ObjectUtil.checkNotNull(networkInterface, "networkInterface");
+        Objects.requireNonNull(multicastAddress, "multicastAddress");
+        Objects.requireNonNull(sourceToBlock, "sourceToBlock");
+        Objects.requireNonNull(networkInterface, "networkInterface");
         promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
         return promise;
     }

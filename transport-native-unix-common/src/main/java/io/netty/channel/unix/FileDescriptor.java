@@ -21,12 +21,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.channel.unix.Errors.ioResult;
 import static io.netty.channel.unix.Errors.newIOException;
 import static io.netty.channel.unix.Limits.IOV_MAX;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.min;
 
 /**
@@ -207,7 +207,7 @@ public class FileDescriptor {
      * Open a new {@link FileDescriptor} for the given path.
      */
     public static FileDescriptor from(String path) throws IOException {
-        checkNotNull(path, "path");
+        Objects.requireNonNull(path, "path");
         int res = open(path);
         if (res < 0) {
             throw newIOException("open", res);
@@ -219,7 +219,7 @@ public class FileDescriptor {
      * Open a new {@link FileDescriptor} for the given {@link File}.
      */
     public static FileDescriptor from(File file) throws IOException {
-        return from(checkNotNull(file, "file").getPath());
+        return from(Objects.requireNonNull(file, "file").getPath());
     }
 
     /**

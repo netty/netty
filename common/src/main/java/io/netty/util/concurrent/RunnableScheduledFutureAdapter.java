@@ -20,6 +20,7 @@ import io.netty.util.internal.DefaultPriorityQueue;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.ExecutionException;
@@ -45,9 +46,9 @@ final class RunnableScheduledFutureAdapter<V> implements RunnableScheduledFuture
 
     RunnableScheduledFutureAdapter(AbstractScheduledEventExecutor executor, Promise<V> promise, Callable<V> callable,
                                    long deadlineNanos, long periodNanos) {
-        this.executor = ObjectUtil.checkNotNull(executor, "executor");
-        this.promise = ObjectUtil.checkNotNull(promise, "promise");
-        this.callable = ObjectUtil.checkNotNull(callable, "callable");
+        this.executor = Objects.requireNonNull(executor, "executor");
+        this.promise = Objects.requireNonNull(promise, "promise");
+        this.callable = Objects.requireNonNull(callable, "callable");
         this.deadlineNanos = deadlineNanos;
         this.periodNanos = periodNanos;
     }

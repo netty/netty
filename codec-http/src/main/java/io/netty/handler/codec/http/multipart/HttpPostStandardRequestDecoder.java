@@ -29,10 +29,7 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDat
 
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 import static io.netty.buffer.Unpooled.*;
 import static io.netty.util.internal.ObjectUtil.*;
@@ -145,9 +142,9 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      *             errors
      */
     public HttpPostStandardRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset) {
-        this.request = checkNotNull(request, "request");
-        this.charset = checkNotNull(charset, "charset");
-        this.factory = checkNotNull(factory, "factory");
+        this.request = Objects.requireNonNull(request, "request");
+        this.charset = Objects.requireNonNull(charset, "charset");
+        this.factory = Objects.requireNonNull(factory, "factory");
         if (request instanceof HttpContent) {
             // Offer automatically if the given request is als type of HttpContent
             // See #1089

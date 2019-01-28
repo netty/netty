@@ -15,8 +15,9 @@
  */
 package io.netty.handler.codec.http.cookie;
 
+import java.util.Objects;
+
 import static io.netty.handler.codec.http.cookie.CookieUtil.*;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * The default {@link Cookie} implementation.
@@ -36,7 +37,7 @@ public class DefaultCookie implements Cookie {
      * Creates a new cookie with the specified name and value.
      */
     public DefaultCookie(String name, String value) {
-        name = checkNotNull(name, "name").trim();
+        name = Objects.requireNonNull(name, "name").trim();
         if (name.isEmpty()) {
             throw new IllegalArgumentException("empty name");
         }
@@ -56,7 +57,7 @@ public class DefaultCookie implements Cookie {
 
     @Override
     public void setValue(String value) {
-        this.value = checkNotNull(value, "value");
+        this.value = Objects.requireNonNull(value, "value");
     }
 
     @Override

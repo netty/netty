@@ -25,6 +25,7 @@ import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.Map;
+import java.util.Objects;
 
 public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
         implements DomainSocketChannelConfig {
@@ -138,7 +139,7 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
 
     @Override
     public EpollDomainSocketChannelConfig setReadMode(DomainSocketReadMode mode) {
-        ObjectUtil.checkNotNull(mode, "mode");
+        Objects.requireNonNull(mode, "mode");
         this.mode = mode;
         return this;
     }

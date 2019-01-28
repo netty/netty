@@ -35,6 +35,7 @@ import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
+import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
@@ -102,7 +103,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     private EventLoop validateEventLoop(EventLoop eventLoop) {
-        return ObjectUtil.checkNotNull(eventLoop, "eventLoop");
+        return Objects.requireNonNull(eventLoop, "eventLoop");
     }
 
     @Override

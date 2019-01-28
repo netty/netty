@@ -35,6 +35,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.nio.channels.ClosedChannelException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 @UnstableApi
 public final class Http2StreamChannelBootstrap {
@@ -46,7 +47,7 @@ public final class Http2StreamChannelBootstrap {
     private volatile ChannelHandler handler;
 
     public Http2StreamChannelBootstrap(Channel channel) {
-        this.channel = ObjectUtil.checkNotNull(channel, "channel");
+        this.channel = Objects.requireNonNull(channel, "channel");
     }
 
     /**
@@ -96,7 +97,7 @@ public final class Http2StreamChannelBootstrap {
      */
     @SuppressWarnings("unchecked")
     public Http2StreamChannelBootstrap handler(ChannelHandler handler) {
-        this.handler = ObjectUtil.checkNotNull(handler, "handler");
+        this.handler = Objects.requireNonNull(handler, "handler");
         return this;
     }
 

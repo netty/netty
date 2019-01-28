@@ -18,7 +18,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import java.util.Objects;
 
 /**
  * Builder for the {@link Http2FrameCodec}.
@@ -49,7 +49,7 @@ public class Http2FrameCodecBuilder extends
 
     // For testing only.
     Http2FrameCodecBuilder frameWriter(Http2FrameWriter frameWriter) {
-        this.frameWriter = checkNotNull(frameWriter, "frameWriter");
+        this.frameWriter = Objects.requireNonNull(frameWriter, "frameWriter");
         return this;
     }
 

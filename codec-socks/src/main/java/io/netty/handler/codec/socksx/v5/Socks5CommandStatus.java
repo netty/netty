@@ -18,6 +18,8 @@ package io.netty.handler.codec.socksx.v5;
 
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 /**
  * The status of {@link Socks5CommandResponse}.
  */
@@ -67,7 +69,7 @@ public class Socks5CommandStatus implements Comparable<Socks5CommandStatus> {
     }
 
     public Socks5CommandStatus(int byteValue, String name) {
-        ObjectUtil.checkNotNull(name, "name");
+        Objects.requireNonNull(name, "name");
 
         this.byteValue = (byte) byteValue;
         this.name = name;

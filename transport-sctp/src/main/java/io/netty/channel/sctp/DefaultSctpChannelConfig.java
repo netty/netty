@@ -29,6 +29,7 @@ import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
 
 import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_SNDBUF;
@@ -44,7 +45,7 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
 
     public DefaultSctpChannelConfig(io.netty.channel.sctp.SctpChannel channel, SctpChannel javaChannel) {
         super(channel);
-        ObjectUtil.checkNotNull(javaChannel, "javaChannel");
+        Objects.requireNonNull(javaChannel, "javaChannel");
         this.javaChannel = javaChannel;
 
         // Enable TCP_NODELAY by default if possible.

@@ -18,6 +18,7 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -29,8 +30,8 @@ final class RunnableFutureAdapter<V> implements RunnableFuture<V> {
     private final Callable<V> task;
 
     RunnableFutureAdapter(Promise<V> promise, Callable<V> task) {
-        this.promise = ObjectUtil.checkNotNull(promise, "promise");
-        this.task = ObjectUtil.checkNotNull(task, "task");
+        this.promise = Objects.requireNonNull(promise, "promise");
+        this.task = Objects.requireNonNull(task, "task");
     }
 
     @Override

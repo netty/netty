@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import java.security.PrivateKey;
+import java.util.Objects;
 
 import javax.security.auth.Destroyable;
 
@@ -118,7 +119,7 @@ public final class PemPrivateKey extends AbstractReferenceCounted implements Pri
     private final ByteBuf content;
 
     private PemPrivateKey(ByteBuf content) {
-        this.content = ObjectUtil.checkNotNull(content, "content");
+        this.content = Objects.requireNonNull(content, "content");
     }
 
     @Override

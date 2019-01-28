@@ -18,6 +18,8 @@ package io.netty.handler.codec;
 import io.netty.util.Signal;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 public class DecoderResult {
 
     protected static final Signal SIGNAL_UNFINISHED = Signal.valueOf(DecoderResult.class, "UNFINISHED");
@@ -27,14 +29,14 @@ public class DecoderResult {
     public static final DecoderResult SUCCESS = new DecoderResult(SIGNAL_SUCCESS);
 
     public static DecoderResult failure(Throwable cause) {
-        ObjectUtil.checkNotNull(cause, "cause");
+        Objects.requireNonNull(cause, "cause");
         return new DecoderResult(cause);
     }
 
     private final Throwable cause;
 
     protected DecoderResult(Throwable cause) {
-        this.cause = ObjectUtil.checkNotNull(cause, "cause");
+        this.cause = Objects.requireNonNull(cause, "cause");
     }
 
     public boolean isFinished() {

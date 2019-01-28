@@ -47,11 +47,7 @@ import java.nio.channels.DatagramChannel;
 import java.nio.channels.MembershipKey;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.spi.SelectorProvider;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * An NIO datagram {@link Channel} that sends and receives an
@@ -395,8 +391,8 @@ public final class NioDatagramChannel
             InetAddress source, ChannelPromise promise) {
 
         checkJavaVersion();
-        ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
-        ObjectUtil.checkNotNull(networkInterface, "networkInterface");
+        Objects.requireNonNull(multicastAddress, "multicastAddress");
+        Objects.requireNonNull(networkInterface, "networkInterface");
 
         try {
             MembershipKey key;
@@ -468,8 +464,8 @@ public final class NioDatagramChannel
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source,
             ChannelPromise promise) {
         checkJavaVersion();
-        ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
-        ObjectUtil.checkNotNull(networkInterface, "networkInterface");
+        Objects.requireNonNull(multicastAddress, "multicastAddress");
+        Objects.requireNonNull(networkInterface, "networkInterface");
 
         synchronized (this) {
             if (memberships != null) {
@@ -517,9 +513,9 @@ public final class NioDatagramChannel
             InetAddress sourceToBlock, ChannelPromise promise) {
         checkJavaVersion();
 
-        ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
-        ObjectUtil.checkNotNull(sourceToBlock, "sourceToBlock");
-        ObjectUtil.checkNotNull(networkInterface, "networkInterface");
+        Objects.requireNonNull(multicastAddress, "multicastAddress");
+        Objects.requireNonNull(sourceToBlock, "sourceToBlock");
+        Objects.requireNonNull(networkInterface, "networkInterface");
         synchronized (this) {
             if (memberships != null) {
                 List<MembershipKey> keys = memberships.get(multicastAddress);

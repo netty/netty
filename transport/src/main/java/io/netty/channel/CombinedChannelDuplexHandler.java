@@ -25,6 +25,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
+import java.util.Objects;
 
 /**
  *  Combines a {@link ChannelInboundHandler} and a {@link ChannelOutboundHandler} into one {@link ChannelHandler}.
@@ -78,8 +79,8 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
                     "init() can not be invoked if " + CombinedChannelDuplexHandler.class.getSimpleName() +
                             " was constructed with non-default constructor.");
         }
-        ObjectUtil.checkNotNull(inboundHandler, "inboundHandler");
-        ObjectUtil.checkNotNull(outboundHandler, "outboundHandler");
+        Objects.requireNonNull(inboundHandler, "inboundHandler");
+        Objects.requireNonNull(outboundHandler, "outboundHandler");
         if (inboundHandler instanceof ChannelOutboundHandler) {
             throw new IllegalArgumentException(
                     "inboundHandler must not implement " +

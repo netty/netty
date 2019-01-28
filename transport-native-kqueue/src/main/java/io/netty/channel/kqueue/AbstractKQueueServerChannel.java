@@ -28,6 +28,7 @@ import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Objects;
 
 @UnstableApi
 public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel implements ServerChannel {
@@ -40,7 +41,7 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
 
     AbstractKQueueServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket fd, boolean active) {
         super(null, eventLoop, fd, active);
-        this.childEventLoopGroup = ObjectUtil.checkNotNull(childEventLoopGroup, "childEventLoopGroup");
+        this.childEventLoopGroup = Objects.requireNonNull(childEventLoopGroup, "childEventLoopGroup");
     }
 
     @Override

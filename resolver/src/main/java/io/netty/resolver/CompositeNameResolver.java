@@ -23,6 +23,7 @@ import io.netty.util.internal.UnstableApi;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
@@ -43,7 +44,7 @@ public final class CompositeNameResolver<T> extends SimpleNameResolver<T> {
      */
     public CompositeNameResolver(EventExecutor executor, NameResolver<T>... resolvers) {
         super(executor);
-        checkNotNull(resolvers, "resolvers");
+        Objects.requireNonNull(resolvers, "resolvers");
         for (int i = 0; i < resolvers.length; i++) {
             if (resolvers[i] == null) {
                 throw new NullPointerException("resolvers[" + i + ']');

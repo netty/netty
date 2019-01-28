@@ -36,9 +36,8 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 final class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>> {
 
@@ -61,11 +60,11 @@ final class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRespo
                     DnsRecord[] additionals,
                     Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
 
-        this.parent = checkNotNull(parent, "parent");
-        this.nameServerAddr = checkNotNull(nameServerAddr, "nameServerAddr");
-        this.question = checkNotNull(question, "question");
-        this.additionals = checkNotNull(additionals, "additionals");
-        this.promise = checkNotNull(promise, "promise");
+        this.parent = Objects.requireNonNull(parent, "parent");
+        this.nameServerAddr = Objects.requireNonNull(nameServerAddr, "nameServerAddr");
+        this.question = Objects.requireNonNull(question, "question");
+        this.additionals = Objects.requireNonNull(additionals, "additionals");
+        this.promise = Objects.requireNonNull(promise, "promise");
         recursionDesired = parent.isRecursionDesired();
         id = parent.queryContextManager.add(this);
 

@@ -18,6 +18,8 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
+import java.util.Objects;
+
 /**
  * The {@link CompleteFuture} which is failed already.  It is
  * recommended to use {@link EventExecutor#newFailedFuture(Throwable)}
@@ -35,7 +37,7 @@ public final class FailedFuture<V> extends CompleteFuture<V> {
      */
     public FailedFuture(EventExecutor executor, Throwable cause) {
         super(executor);
-        this.cause = ObjectUtil.checkNotNull(cause, "cause");
+        this.cause = Objects.requireNonNull(cause, "cause");
     }
 
     @Override

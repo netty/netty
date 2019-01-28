@@ -16,8 +16,10 @@
 package io.netty.channel.local;
 
 import io.netty.channel.Channel;
+import io.netty.util.internal.ObjectUtil;
 
 import java.net.SocketAddress;
+import java.util.Objects;
 
 /**
  * An endpoint in the local transport.  Each endpoint is identified by a unique
@@ -50,9 +52,7 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
      * Creates a new instance with the specified ID.
      */
     public LocalAddress(String id) {
-        if (id == null) {
-            throw new NullPointerException("id");
-        }
+        Objects.requireNonNull(id, "id");
         id = id.trim().toLowerCase();
         if (id.isEmpty()) {
             throw new IllegalArgumentException("empty id");

@@ -21,10 +21,7 @@ import io.netty.util.AsciiString;
 import io.netty.util.internal.ObjectUtil;
 
 import java.net.SocketAddress;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
 import static io.netty.util.ReferenceCountUtil.release;
@@ -116,8 +113,8 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
     public HttpClientUpgradeHandler(SourceCodec sourceCodec, UpgradeCodec upgradeCodec,
                                     int maxContentLength) {
         super(maxContentLength);
-        ObjectUtil.checkNotNull(sourceCodec, "sourceCodec");
-        ObjectUtil.checkNotNull(upgradeCodec, "upgradeCodec");
+        Objects.requireNonNull(sourceCodec, "sourceCodec");
+        Objects.requireNonNull(upgradeCodec, "upgradeCodec");
         this.sourceCodec = sourceCodec;
         this.upgradeCodec = upgradeCodec;
     }

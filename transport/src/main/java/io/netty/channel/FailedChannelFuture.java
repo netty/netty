@@ -19,6 +19,8 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
+import java.util.Objects;
+
 /**
  * The {@link CompleteChannelFuture} which is failed already.  It is
  * recommended to use {@link Channel#newFailedFuture(Throwable)}
@@ -36,7 +38,7 @@ final class FailedChannelFuture extends CompleteChannelFuture {
      */
     FailedChannelFuture(Channel channel, EventExecutor executor, Throwable cause) {
         super(channel, executor);
-        ObjectUtil.checkNotNull(cause, "cause");
+        Objects.requireNonNull(cause, "cause");
         this.cause = cause;
     }
 

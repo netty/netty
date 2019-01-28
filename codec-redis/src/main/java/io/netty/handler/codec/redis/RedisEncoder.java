@@ -25,6 +25,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Encodes {@link RedisMessage} into bytes following
@@ -47,7 +48,7 @@ public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
      * @param messagePool the predefined message pool.
      */
     public RedisEncoder(RedisMessagePool messagePool) {
-        this.messagePool = ObjectUtil.checkNotNull(messagePool, "messagePool");
+        this.messagePool = Objects.requireNonNull(messagePool, "messagePool");
     }
 
     @Override

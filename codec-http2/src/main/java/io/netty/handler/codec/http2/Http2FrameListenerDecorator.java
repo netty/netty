@@ -14,10 +14,11 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.UnstableApi;
+
+import java.util.Objects;
 
 /**
  * Provides a decorator around a {@link Http2FrameListener} and delegates all method calls
@@ -27,7 +28,7 @@ public class Http2FrameListenerDecorator implements Http2FrameListener {
     protected final Http2FrameListener listener;
 
     public Http2FrameListenerDecorator(Http2FrameListener listener) {
-        this.listener = checkNotNull(listener, "listener");
+        this.listener = Objects.requireNonNull(listener, "listener");
     }
 
     @Override

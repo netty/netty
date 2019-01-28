@@ -23,6 +23,7 @@ import io.netty.util.internal.ObjectUtil;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * This Attribute is only for Encoder use to insert special command between object if needed
@@ -43,21 +44,21 @@ final class InternalAttribute extends AbstractReferenceCounted implements Interf
     }
 
     public void addValue(String value) {
-        ObjectUtil.checkNotNull(value, "value");
+        Objects.requireNonNull(value, "value");
         ByteBuf buf = Unpooled.copiedBuffer(value, charset);
         this.value.add(buf);
         size += buf.readableBytes();
     }
 
     public void addValue(String value, int rank) {
-        ObjectUtil.checkNotNull(value, "value");
+        Objects.requireNonNull(value, "value");
         ByteBuf buf = Unpooled.copiedBuffer(value, charset);
         this.value.add(rank, buf);
         size += buf.readableBytes();
     }
 
     public void setValue(String value, int rank) {
-        ObjectUtil.checkNotNull(value, "value");
+        Objects.requireNonNull(value, "value");
         ByteBuf buf = Unpooled.copiedBuffer(value, charset);
         ByteBuf old = this.value.set(rank, buf);
         if (old != null) {

@@ -27,6 +27,7 @@ import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.EmptyArrays;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -130,9 +131,7 @@ public class JZlibEncoder extends ZlibEncoder {
             throw new IllegalArgumentException(
                     "memLevel: " + memLevel + " (expected: 1-9)");
         }
-        if (wrapper == null) {
-            throw new NullPointerException("wrapper");
-        }
+        Objects.requireNonNull(wrapper, "wrapper");
         if (wrapper == ZlibWrapper.ZLIB_OR_NONE) {
             throw new IllegalArgumentException(
                     "wrapper '" + ZlibWrapper.ZLIB_OR_NONE + "' is not " +
@@ -220,9 +219,7 @@ public class JZlibEncoder extends ZlibEncoder {
             throw new IllegalArgumentException(
                     "memLevel: " + memLevel + " (expected: 1-9)");
         }
-        if (dictionary == null) {
-            throw new NullPointerException("dictionary");
-        }
+        Objects.requireNonNull(dictionary, "dictionary");
         int resultCode;
         resultCode = z.deflateInit(
                 compressionLevel, windowBits, memLevel,

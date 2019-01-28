@@ -22,6 +22,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 
+import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
@@ -136,7 +137,7 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
                                  IoHandler ioHandler, int maxPendingTasks,
                                  RejectedExecutionHandler rejectedHandler, int maxTasksPerRun) {
         super(threadFactory, maxPendingTasks, rejectedHandler);
-        this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
+        this.ioHandler = Objects.requireNonNull(ioHandler, "ioHandler");
         this.maxTasksPerRun = ObjectUtil.checkPositive(maxTasksPerRun, "maxTasksPerRun");
     }
 
@@ -154,7 +155,7 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
                                  IoHandler ioHandler, int maxPendingTasks,
                                  RejectedExecutionHandler rejectedHandler, int maxTasksPerRun) {
         super(executor, maxPendingTasks, rejectedHandler);
-        this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
+        this.ioHandler = Objects.requireNonNull(ioHandler, "ioHandler");
         this.maxTasksPerRun = ObjectUtil.checkPositive(maxTasksPerRun, "maxTasksPerRun");
     }
 

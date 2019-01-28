@@ -26,6 +26,7 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -94,7 +95,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
      *        the {@link TimeUnit} of {@code timeout}
      */
     public WriteTimeoutHandler(long timeout, TimeUnit unit) {
-        ObjectUtil.checkNotNull(unit, "unit");
+        Objects.requireNonNull(unit, "unit");
 
         if (timeout <= 0) {
             timeoutNanos = 0;

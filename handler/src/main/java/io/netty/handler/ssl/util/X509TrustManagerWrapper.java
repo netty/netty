@@ -21,6 +21,7 @@ import javax.net.ssl.X509TrustManager;
 import java.net.Socket;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Objects;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
@@ -29,7 +30,7 @@ final class X509TrustManagerWrapper extends X509ExtendedTrustManager {
     private final X509TrustManager delegate;
 
     X509TrustManagerWrapper(X509TrustManager delegate) {
-        this.delegate = checkNotNull(delegate, "delegate");
+        this.delegate = Objects.requireNonNull(delegate, "delegate");
     }
 
     @Override

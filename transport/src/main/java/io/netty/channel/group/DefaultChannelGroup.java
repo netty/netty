@@ -27,12 +27,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
-import java.util.AbstractSet;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -87,7 +82,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
      * the same name, which means no duplicate check is done against group names.
      */
     public DefaultChannelGroup(String name, EventExecutor executor, boolean stayClosed) {
-        ObjectUtil.checkNotNull(name, "name");
+        Objects.requireNonNull(name, "name");
         this.name = name;
         this.executor = executor;
         this.stayClosed = stayClosed;
@@ -250,8 +245,8 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public ChannelGroupFuture write(Object message, ChannelMatcher matcher, boolean voidPromise) {
-        ObjectUtil.checkNotNull(message, "message");
-        ObjectUtil.checkNotNull(matcher, "matcher");
+        Objects.requireNonNull(message, "message");
+        Objects.requireNonNull(matcher, "matcher");
 
         final ChannelGroupFuture future;
         if (voidPromise) {
@@ -291,7 +286,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public ChannelGroupFuture disconnect(ChannelMatcher matcher) {
-        ObjectUtil.checkNotNull(matcher, "matcher");
+        Objects.requireNonNull(matcher, "matcher");
 
         Map<Channel, ChannelFuture> futures =
                 new LinkedHashMap<>(size());
@@ -312,7 +307,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public ChannelGroupFuture close(ChannelMatcher matcher) {
-        ObjectUtil.checkNotNull(matcher, "matcher");
+        Objects.requireNonNull(matcher, "matcher");
 
         Map<Channel, ChannelFuture> futures =
                 new LinkedHashMap<>(size());
@@ -343,7 +338,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public ChannelGroupFuture deregister(ChannelMatcher matcher) {
-        ObjectUtil.checkNotNull(matcher, "matcher");
+        Objects.requireNonNull(matcher, "matcher");
 
         Map<Channel, ChannelFuture> futures =
                 new LinkedHashMap<>(size());
@@ -384,7 +379,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public ChannelGroupFuture writeAndFlush(Object message, ChannelMatcher matcher, boolean voidPromise) {
-        ObjectUtil.checkNotNull(matcher, "matcher");
+        Objects.requireNonNull(matcher, "matcher");
 
         final ChannelGroupFuture future;
         if (voidPromise) {

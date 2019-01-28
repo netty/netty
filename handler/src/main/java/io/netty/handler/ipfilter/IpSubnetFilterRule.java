@@ -24,6 +24,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.Objects;
 
 /**
  * Use this class to create rules for {@link RuleBasedIpFilter} that group IP addresses into subnets.
@@ -46,8 +47,8 @@ public final class IpSubnetFilterRule implements IpFilterRule {
     }
 
     private static IpFilterRule selectFilterRule(InetAddress ipAddress, int cidrPrefix, IpFilterRuleType ruleType) {
-        ObjectUtil.checkNotNull(ipAddress, "ipAddress");
-        ObjectUtil.checkNotNull(ruleType, "ruleType");
+        Objects.requireNonNull(ipAddress, "ipAddress");
+        Objects.requireNonNull(ruleType, "ruleType");
 
         if (ipAddress instanceof Inet4Address) {
             return new Ip4SubnetFilterRule((Inet4Address) ipAddress, cidrPrefix, ruleType);

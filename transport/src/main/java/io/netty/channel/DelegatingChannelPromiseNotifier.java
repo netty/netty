@@ -22,11 +22,10 @@ import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 @UnstableApi
 public final class DelegatingChannelPromiseNotifier implements ChannelPromise, ChannelFutureListener {
@@ -40,7 +39,7 @@ public final class DelegatingChannelPromiseNotifier implements ChannelPromise, C
     }
 
     public DelegatingChannelPromiseNotifier(ChannelPromise delegate, boolean logNotifyFailure) {
-        this.delegate = checkNotNull(delegate, "delegate");
+        this.delegate = Objects.requireNonNull(delegate, "delegate");
         this.logNotifyFailure = logNotifyFailure;
     }
 

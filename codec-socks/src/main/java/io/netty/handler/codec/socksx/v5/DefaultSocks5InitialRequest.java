@@ -22,6 +22,7 @@ import io.netty.util.internal.StringUtil;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * The default {@link Socks5InitialRequest}.
@@ -31,7 +32,7 @@ public class DefaultSocks5InitialRequest extends AbstractSocks5Message implement
     private final List<Socks5AuthMethod> authMethods;
 
     public DefaultSocks5InitialRequest(Socks5AuthMethod... authMethods) {
-        ObjectUtil.checkNotNull(authMethods, "authMethods");
+        Objects.requireNonNull(authMethods, "authMethods");
 
         List<Socks5AuthMethod> list = new ArrayList<>(authMethods.length);
         for (Socks5AuthMethod m: authMethods) {

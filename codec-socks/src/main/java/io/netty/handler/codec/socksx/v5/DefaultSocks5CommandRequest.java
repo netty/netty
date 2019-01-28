@@ -21,6 +21,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.net.IDN;
+import java.util.Objects;
 
 /**
  * The default {@link Socks5CommandRequest}.
@@ -34,9 +35,9 @@ public final class DefaultSocks5CommandRequest extends AbstractSocks5Message imp
 
     public DefaultSocks5CommandRequest(
             Socks5CommandType type, Socks5AddressType dstAddrType, String dstAddr, int dstPort) {
-        ObjectUtil.checkNotNull(type, "type");
-        ObjectUtil.checkNotNull(dstAddrType, "dstAddrType");
-        ObjectUtil.checkNotNull(dstAddr, "dstAddr");
+        Objects.requireNonNull(type, "type");
+        Objects.requireNonNull(dstAddrType, "dstAddrType");
+        Objects.requireNonNull(dstAddr, "dstAddr");
 
         if (dstAddrType == Socks5AddressType.IPv4) {
             if (!NetUtil.isValidIpV4Address(dstAddr)) {

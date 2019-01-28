@@ -25,6 +25,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.lang.reflect.Constructor;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Objects;
 
 /**
  * This static factory should be used to load {@link ResourceLeakDetector}s as needed
@@ -51,7 +52,7 @@ public abstract class ResourceLeakDetectorFactory {
      * @param factory the instance that will become the current {@link ResourceLeakDetectorFactory}'s singleton
      */
     public static void setResourceLeakDetectorFactory(ResourceLeakDetectorFactory factory) {
-        factoryInstance = ObjectUtil.checkNotNull(factory, "factory");
+        factoryInstance = Objects.requireNonNull(factory, "factory");
     }
 
     /**

@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Provides an infinite sequence of DNS server addresses to {@link DnsNameResolver}.
@@ -150,7 +151,7 @@ public abstract class DnsServerAddresses {
      * Returns the {@link DnsServerAddresses} that yields only a single {@code address}.
      */
     public static DnsServerAddresses singleton(final InetSocketAddress address) {
-        ObjectUtil.checkNotNull(address, "address");
+        Objects.requireNonNull(address, "address");
         if (address.isUnresolved()) {
             throw new IllegalArgumentException("cannot use an unresolved DNS server address: " + address);
         }
@@ -159,7 +160,7 @@ public abstract class DnsServerAddresses {
     }
 
     private static List<InetSocketAddress> sanitize(Iterable<? extends InetSocketAddress> addresses) {
-        ObjectUtil.checkNotNull(addresses, "addresses");
+        Objects.requireNonNull(addresses, "addresses");
 
         final List<InetSocketAddress> list;
         if (addresses instanceof Collection) {
@@ -186,7 +187,7 @@ public abstract class DnsServerAddresses {
     }
 
     private static List<InetSocketAddress> sanitize(InetSocketAddress[] addresses) {
-        ObjectUtil.checkNotNull(addresses, "addresses");
+        Objects.requireNonNull(addresses, "addresses");
 
         List<InetSocketAddress> list = new ArrayList<>(addresses.length);
         for (InetSocketAddress a: addresses) {

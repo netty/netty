@@ -28,6 +28,7 @@ import io.netty.util.internal.ObjectUtil;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Apply a line separator to the requested {@link String} and encode it into a {@link ByteBuf}.
@@ -81,8 +82,8 @@ public class LineEncoder extends MessageToMessageEncoder<CharSequence> {
      * Creates a new instance with the specified line separator and character set.
      */
     public LineEncoder(LineSeparator lineSeparator, Charset charset) {
-        this.charset = ObjectUtil.checkNotNull(charset, "charset");
-        this.lineSeparator = ObjectUtil.checkNotNull(lineSeparator, "lineSeparator").value().getBytes(charset);
+        this.charset = Objects.requireNonNull(charset, "charset");
+        this.lineSeparator = Objects.requireNonNull(lineSeparator, "lineSeparator").value().getBytes(charset);
     }
 
     @Override

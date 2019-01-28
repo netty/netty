@@ -16,7 +16,6 @@
 package io.netty.util;
 
 import io.netty.util.internal.InternalThreadLocalMap;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
@@ -24,6 +23,7 @@ import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * A utility class that provides various common operations and constants
@@ -81,7 +81,7 @@ public final class CharsetUtil {
      */
     public static CharsetEncoder encoder(Charset charset, CodingErrorAction malformedInputAction,
                                          CodingErrorAction unmappableCharacterAction) {
-        checkNotNull(charset, "charset");
+        Objects.requireNonNull(charset, "charset");
         CharsetEncoder e = charset.newEncoder();
         e.onMalformedInput(malformedInputAction).onUnmappableCharacter(unmappableCharacterAction);
         return e;
@@ -105,7 +105,7 @@ public final class CharsetUtil {
      * @return The encoder for the specified {@code charset}
      */
     public static CharsetEncoder encoder(Charset charset) {
-        checkNotNull(charset, "charset");
+        Objects.requireNonNull(charset, "charset");
 
         Map<Charset, CharsetEncoder> map = InternalThreadLocalMap.get().charsetEncoderCache();
         CharsetEncoder e = map.get(charset);
@@ -137,7 +137,7 @@ public final class CharsetUtil {
      */
     public static CharsetDecoder decoder(Charset charset, CodingErrorAction malformedInputAction,
                                          CodingErrorAction unmappableCharacterAction) {
-        checkNotNull(charset, "charset");
+        Objects.requireNonNull(charset, "charset");
         CharsetDecoder d = charset.newDecoder();
         d.onMalformedInput(malformedInputAction).onUnmappableCharacter(unmappableCharacterAction);
         return d;
@@ -161,7 +161,7 @@ public final class CharsetUtil {
      * @return The decoder for the specified {@code charset}
      */
     public static CharsetDecoder decoder(Charset charset) {
-        checkNotNull(charset, "charset");
+        Objects.requireNonNull(charset, "charset");
 
         Map<Charset, CharsetDecoder> map = InternalThreadLocalMap.get().charsetDecoderCache();
         CharsetDecoder d = map.get(charset);

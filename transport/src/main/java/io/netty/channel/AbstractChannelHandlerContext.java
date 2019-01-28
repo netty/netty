@@ -38,6 +38,7 @@ import java.net.SocketAddress;
 import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
+import java.util.Objects;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -125,7 +126,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     AbstractChannelHandlerContext(DefaultChannelPipeline pipeline, EventExecutor executor, String name,
                                   Class<? extends ChannelHandler> handlerClass) {
-        this.name = ObjectUtil.checkNotNull(name, "name");
+        this.name = Objects.requireNonNull(name, "name");
         this.pipeline = pipeline;
         this.executor = executor;
         this.executionMask = mask(handlerClass);
@@ -380,7 +381,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     static void invokeExceptionCaught(final AbstractChannelHandlerContext next, final Throwable cause) {
-        ObjectUtil.checkNotNull(cause, "cause");
+        Objects.requireNonNull(cause, "cause");
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeExceptionCaught(cause);
@@ -426,7 +427,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     static void invokeUserEventTriggered(final AbstractChannelHandlerContext next, final Object event) {
-        ObjectUtil.checkNotNull(event, "event");
+        Objects.requireNonNull(event, "event");
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeUserEventTriggered(event);
@@ -454,7 +455,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     static void invokeChannelRead(final AbstractChannelHandlerContext next, Object msg) {
-        final Object m = next.pipeline.touch(ObjectUtil.checkNotNull(msg, "msg"), next);
+        final Object m = next.pipeline.touch(Objects.requireNonNull(msg, "msg"), next);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             next.invokeChannelRead(m);
@@ -574,7 +575,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelFuture bind(final SocketAddress localAddress, final ChannelPromise promise) {
-        ObjectUtil.checkNotNull(localAddress, "localAddress");
+        Objects.requireNonNull(localAddress, "localAddress");
         if (isNotValidPromise(promise, false)) {
             // cancelled
             return promise;
@@ -610,7 +611,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     @Override
     public ChannelFuture connect(
             final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
-        ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
+        Objects.requireNonNull(remoteAddress, "remoteAddress");
         if (isNotValidPromise(promise, false)) {
             // cancelled
             return promise;
@@ -875,7 +876,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void write(Object msg, boolean flush, ChannelPromise promise) {
-        ObjectUtil.checkNotNull(msg, "msg");
+        Objects.requireNonNull(msg, "msg");
         try {
             if (isNotValidPromise(promise, true)) {
                 ReferenceCountUtil.release(msg);
@@ -982,7 +983,7 @@ abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
     }
 
     private boolean isNotValidPromise(ChannelPromise promise, boolean allowVoidPromise) {
-        ObjectUtil.checkNotNull(promise, "promise");
+        Objects.requireNonNull(promise, "promise");
 
         if (promise.isDone()) {
             // Check if the promise was cancelled and if so signal that the processing of the operation

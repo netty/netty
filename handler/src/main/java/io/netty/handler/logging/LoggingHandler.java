@@ -29,6 +29,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
+import java.util.Objects;
 
 import static io.netty.buffer.ByteBufUtil.appendPrettyHexDump;
 import static io.netty.util.internal.StringUtil.NEWLINE;
@@ -63,7 +64,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
      * @param level the log level
      */
     public LoggingHandler(LogLevel level) {
-        ObjectUtil.checkNotNull(level, "level");
+        Objects.requireNonNull(level, "level");
 
         logger = InternalLoggerFactory.getInstance(getClass());
         this.level = level;
@@ -87,8 +88,8 @@ public class LoggingHandler extends ChannelDuplexHandler {
      * @param level the log level
      */
     public LoggingHandler(Class<?> clazz, LogLevel level) {
-        ObjectUtil.checkNotNull(clazz, "clazz");
-        ObjectUtil.checkNotNull(level, "level");
+        Objects.requireNonNull(clazz, "clazz");
+        Objects.requireNonNull(level, "level");
 
         logger = InternalLoggerFactory.getInstance(clazz);
         this.level = level;
@@ -111,8 +112,8 @@ public class LoggingHandler extends ChannelDuplexHandler {
      * @param level the log level
      */
     public LoggingHandler(String name, LogLevel level) {
-        ObjectUtil.checkNotNull(name, "name");
-        ObjectUtil.checkNotNull(level, "level");
+        Objects.requireNonNull(name, "name");
+        Objects.requireNonNull(level, "level");
 
         logger = InternalLoggerFactory.getInstance(name);
         this.level = level;

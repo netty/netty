@@ -27,10 +27,10 @@ import io.netty.util.ReferenceCounted;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * A server-side handler that receives HTTP requests and optionally performs a protocol switch if
@@ -201,8 +201,8 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
             SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory, int maxContentLength) {
         super(maxContentLength);
 
-        this.sourceCodec = checkNotNull(sourceCodec, "sourceCodec");
-        this.upgradeCodecFactory = checkNotNull(upgradeCodecFactory, "upgradeCodecFactory");
+        this.sourceCodec = Objects.requireNonNull(sourceCodec, "sourceCodec");
+        this.upgradeCodecFactory = Objects.requireNonNull(upgradeCodecFactory, "upgradeCodecFactory");
     }
 
     @Override

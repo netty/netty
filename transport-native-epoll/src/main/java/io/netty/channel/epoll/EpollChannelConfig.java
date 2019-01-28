@@ -26,6 +26,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
 
 import static io.netty.channel.unix.Limits.SSIZE_MAX;
 
@@ -148,7 +149,7 @@ public class EpollChannelConfig extends DefaultChannelConfig {
      * <strong>Be aware this config setting can only be adjusted before the channel was registered.</strong>
      */
     public EpollChannelConfig setEpollMode(EpollMode mode) {
-        ObjectUtil.checkNotNull(mode, "mode");
+        Objects.requireNonNull(mode, "mode");
         try {
             switch (mode) {
             case EDGE_TRIGGERED:

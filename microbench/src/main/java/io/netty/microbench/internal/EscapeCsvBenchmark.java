@@ -24,6 +24,7 @@ import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.util.internal.ObjectUtil.*;
@@ -59,7 +60,7 @@ public class EscapeCsvBenchmark extends AbstractMicrobenchmark {
     }
 
     private static CharSequence escapeCsvOld(CharSequence value, boolean trimWhiteSpace) {
-        int length = checkNotNull(value, "value").length();
+        int length = Objects.requireNonNull(value, "value").length();
         if (length == 0) {
             return value;
         }

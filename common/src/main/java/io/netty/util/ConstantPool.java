@@ -18,6 +18,7 @@ package io.netty.util;
 
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -114,7 +115,7 @@ public abstract class ConstantPool<T extends Constant<T>> {
     }
 
     private static String checkNotNullAndNotEmpty(String name) {
-        ObjectUtil.checkNotNull(name, "name");
+        Objects.requireNonNull(name, "name");
 
         if (name.isEmpty()) {
             throw new IllegalArgumentException("empty name");

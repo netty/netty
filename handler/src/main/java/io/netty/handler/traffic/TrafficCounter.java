@@ -19,6 +19,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.Objects;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -252,7 +253,7 @@ public class TrafficCounter {
      *            the checkInterval in millisecond between two computations.
      */
     public TrafficCounter(ScheduledExecutorService executor, String name, long checkInterval) {
-        ObjectUtil.checkNotNull(name, "name");
+        Objects.requireNonNull(name, "name");
 
         trafficShapingHandler = null;
         this.executor = executor;
@@ -282,7 +283,7 @@ public class TrafficCounter {
         if (trafficShapingHandler == null) {
             throw new IllegalArgumentException("trafficShapingHandler");
         }
-        ObjectUtil.checkNotNull(name, "name");
+        Objects.requireNonNull(name, "name");
 
         this.trafficShapingHandler = trafficShapingHandler;
         this.executor = executor;

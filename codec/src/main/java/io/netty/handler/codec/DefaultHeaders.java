@@ -16,20 +16,11 @@ package io.netty.handler.codec;
 
 import io.netty.util.HashingStrategy;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.NoSuchElementException;
-import java.util.Set;
 
 import static io.netty.util.HashingStrategy.JAVA_HASHER;
 import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -67,7 +58,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         NameValidator NOT_NULL = new NameValidator() {
             @Override
             public void validateName(Object name) {
-                checkNotNull(name, "name");
+                Objects.requireNonNull(name, "name");
             }
         };
     }
@@ -103,9 +94,9 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @SuppressWarnings("unchecked")
     public DefaultHeaders(HashingStrategy<K> nameHashingStrategy,
             ValueConverter<V> valueConverter, NameValidator<K> nameValidator, int arraySizeHint) {
-        this.valueConverter = checkNotNull(valueConverter, "valueConverter");
-        this.nameValidator = checkNotNull(nameValidator, "nameValidator");
-        this.hashingStrategy = checkNotNull(nameHashingStrategy, "nameHashingStrategy");
+        this.valueConverter = Objects.requireNonNull(valueConverter, "valueConverter");
+        this.nameValidator = Objects.requireNonNull(nameValidator, "nameValidator");
+        this.hashingStrategy = Objects.requireNonNull(nameHashingStrategy, "nameHashingStrategy");
         // Enforce a bound of [2, 128] because hashMask is a byte. The max possible value of hashMask is one less
         // than the length of this array, and we want the mask to be > 0.
         entries = new DefaultHeaders.HeaderEntry[findNextPositivePowerOfTwo(max(2, min(arraySizeHint, 128)))];
@@ -115,7 +106,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public V get(K name) {
-        checkNotNull(name, "name");
+        Objects.requireNonNull(name, "name");
 
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
@@ -144,7 +135,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public V getAndRemove(K name) {
         int h = hashingStrategy.hashCode(name);
-        return remove0(h, index(h), checkNotNull(name, "name"));
+        return remove0(h, index(h), Objects.requireNonNull(name, "name"));
     }
 
     @Override
@@ -158,7 +149,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public List<V> getAll(K name) {
-        checkNotNull(name, "name");
+        Objects.requireNonNull(name, "name");
 
         LinkedList<V> values = new LinkedList<>();
 
@@ -197,7 +188,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public boolean containsObject(K name, Object value) {
-        return contains(name, valueConverter.convertObject(checkNotNull(value, "value")));
+        return contains(name, valueConverter.convertObject(Objects.requireNonNull(value, "value")));
     }
 
     @Override
@@ -252,7 +243,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     }
 
     public final boolean contains(K name, V value, HashingStrategy<? super V> valueHashingStrategy) {
-        checkNotNull(name, "name");
+        Objects.requireNonNull(name, "name");
 
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
@@ -293,7 +284,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public T add(K name, V value) {
         nameValidator.validateName(name);
-        checkNotNull(value, "value");
+        Objects.requireNonNull(value, "value");
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
         add0(h, i, name, value);
@@ -324,7 +315,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T addObject(K name, Object value) {
-        return add(name, valueConverter.convertObject(checkNotNull(value, "value")));
+        return add(name, valueConverter.convertObject(Objects.requireNonNull(value, "value")));
     }
 
     @Override
@@ -428,7 +419,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public T set(K name, V value) {
         nameValidator.validateName(name);
-        checkNotNull(value, "value");
+        Objects.requireNonNull(value, "value");
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
         remove0(h, i, name);
@@ -439,7 +430,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public T set(K name, Iterable<? extends V> values) {
         nameValidator.validateName(name);
-        checkNotNull(values, "values");
+        Objects.requireNonNull(values, "values");
 
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
@@ -458,7 +449,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public T set(K name, V... values) {
         nameValidator.validateName(name);
-        checkNotNull(values, "values");
+        Objects.requireNonNull(values, "values");
 
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
@@ -476,8 +467,8 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public T setObject(K name, Object value) {
-        checkNotNull(value, "value");
-        V convertedValue = checkNotNull(valueConverter.convertObject(value), "convertedValue");
+        Objects.requireNonNull(value, "value");
+        V convertedValue = Objects.requireNonNull(valueConverter.convertObject(value), "convertedValue");
         return set(name, convertedValue);
     }
 
@@ -1058,7 +1049,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         private HeaderEntry<K, V> next;
 
         ValueIterator(K name) {
-            this.name = checkNotNull(name, "name");
+            this.name = Objects.requireNonNull(name, "name");
             hash = hashingStrategy.hashCode(name);
             calculateNext(entries[index(hash)]);
         }
@@ -1160,7 +1151,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
         @Override
         public final V setValue(V value) {
-            checkNotNull(value, "value");
+            Objects.requireNonNull(value, "value");
             V oldValue = this.value;
             this.value = value;
             return oldValue;

@@ -17,6 +17,8 @@ package io.netty.handler.codec.socksx.v4;
 
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 /**
  * The status of {@link Socks4CommandResponse}.
  */
@@ -51,7 +53,7 @@ public class Socks4CommandStatus implements Comparable<Socks4CommandStatus> {
     }
 
     public Socks4CommandStatus(int byteValue, String name) {
-        ObjectUtil.checkNotNull(name, "name");
+        Objects.requireNonNull(name, "name");
         this.byteValue = (byte) byteValue;
         this.name = name;
     }

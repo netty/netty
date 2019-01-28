@@ -27,8 +27,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
-
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import java.util.Objects;
 
 /**
  * Big endian Java heap buffer implementation. It is recommended to use
@@ -50,7 +49,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     public UnpooledHeapByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
         super(maxCapacity);
 
-        checkNotNull(alloc, "alloc");
+        Objects.requireNonNull(alloc, "alloc");
 
         if (initialCapacity > maxCapacity) {
             throw new IllegalArgumentException(String.format(
@@ -71,8 +70,8 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     protected UnpooledHeapByteBuf(ByteBufAllocator alloc, byte[] initialArray, int maxCapacity) {
         super(maxCapacity);
 
-        checkNotNull(alloc, "alloc");
-        checkNotNull(initialArray, "initialArray");
+        Objects.requireNonNull(alloc, "alloc");
+        Objects.requireNonNull(initialArray, "initialArray");
 
         if (initialArray.length > maxCapacity) {
             throw new IllegalArgumentException(String.format(

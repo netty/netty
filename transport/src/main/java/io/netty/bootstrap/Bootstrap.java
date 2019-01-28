@@ -41,6 +41,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 
 /**
  * A {@link Bootstrap} that makes it easy to bootstrap a {@link Channel} to use
@@ -117,7 +118,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
      * {@link Channel} implementation has no no-args constructor.
      */
     public Bootstrap channel(Class<? extends Channel> channelClass) {
-        ObjectUtil.checkNotNull(channelClass, "channelClass");
+        Objects.requireNonNull(channelClass, "channelClass");
         return channelFactory(new ReflectiveChannelFactory<Channel>(channelClass));
     }
 
@@ -129,7 +130,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
      * simplify your code.
      */
     public Bootstrap channelFactory(ChannelFactory<? extends Channel> channelFactory) {
-        ObjectUtil.checkNotNull(channelFactory, "channelFactory");
+        Objects.requireNonNull(channelFactory, "channelFactory");
         if (this.channelFactory != null) {
             throw new IllegalStateException("channelFactory set already");
         }
@@ -169,7 +170,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
      * Connect a {@link Channel} to the remote peer.
      */
     public ChannelFuture connect(SocketAddress remoteAddress) {
-        ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
+        Objects.requireNonNull(remoteAddress, "remoteAddress");
 
         validate();
         return doResolveAndConnect(remoteAddress, config.localAddress());
@@ -179,7 +180,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
      * Connect a {@link Channel} to the remote peer.
      */
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
+        Objects.requireNonNull(remoteAddress, "remoteAddress");
         validate();
         return doResolveAndConnect(remoteAddress, localAddress);
     }

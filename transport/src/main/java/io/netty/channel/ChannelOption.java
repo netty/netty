@@ -22,6 +22,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.util.Objects;
 
 /**
  * A {@link ChannelOption} allows to configure a {@link ChannelConfig} in a type-safe
@@ -144,6 +145,6 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
      * may override this for special checks.
      */
     public void validate(T value) {
-        ObjectUtil.checkNotNull(value, "value");
+        Objects.requireNonNull(value, "value");
     }
 }

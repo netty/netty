@@ -18,13 +18,15 @@ package io.netty.channel;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 final class DefaultChannelHandlerContext extends AbstractChannelHandlerContext {
 
     private final ChannelHandler handler;
 
     DefaultChannelHandlerContext(
             DefaultChannelPipeline pipeline, EventExecutor executor, String name, ChannelHandler handler) {
-        super(pipeline, executor, name, ObjectUtil.checkNotNull(handler, "handler").getClass());
+        super(pipeline, executor, name, Objects.requireNonNull(handler, "handler").getClass());
         this.handler = handler;
     }
 

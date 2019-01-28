@@ -19,6 +19,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.io.File;
 import java.net.SocketAddress;
+import java.util.Objects;
 
 /**
  * A address for a
@@ -29,7 +30,7 @@ public final class DomainSocketAddress extends SocketAddress {
     private final String socketPath;
 
     public DomainSocketAddress(String socketPath) {
-        ObjectUtil.checkNotNull(socketPath, "socketPath");
+        Objects.requireNonNull(socketPath, "socketPath");
         this.socketPath = socketPath;
     }
 

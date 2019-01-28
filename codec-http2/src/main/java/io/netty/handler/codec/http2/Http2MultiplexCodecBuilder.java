@@ -19,7 +19,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import java.util.Objects;
 
 /**
  * A builder for {@link Http2MultiplexCodec}.
@@ -34,7 +34,7 @@ public class Http2MultiplexCodecBuilder
 
     Http2MultiplexCodecBuilder(boolean server, ChannelHandler childHandler) {
         server(server);
-        this.childHandler = checkSharable(checkNotNull(childHandler, "childHandler"));
+        this.childHandler = checkSharable(Objects.requireNonNull(childHandler, "childHandler"));
     }
 
     private static ChannelHandler checkSharable(ChannelHandler handler) {
@@ -47,7 +47,7 @@ public class Http2MultiplexCodecBuilder
 
     // For testing only.
     Http2MultiplexCodecBuilder frameWriter(Http2FrameWriter frameWriter) {
-        this.frameWriter = checkNotNull(frameWriter, "frameWriter");
+        this.frameWriter = Objects.requireNonNull(frameWriter, "frameWriter");
         return this;
     }
 

@@ -19,19 +19,16 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 
 final class TcpMd5Util {
 
     static Collection<InetAddress> newTcpMd5Sigs(AbstractEpollChannel channel, Collection<InetAddress> current,
                                          Map<InetAddress, byte[]> newKeys) throws IOException {
-        ObjectUtil.checkNotNull(channel, "channel");
-        ObjectUtil.checkNotNull(current, "current");
-        ObjectUtil.checkNotNull(newKeys, "newKeys");
+        Objects.requireNonNull(channel, "channel");
+        Objects.requireNonNull(current, "current");
+        Objects.requireNonNull(newKeys, "newKeys");
 
         // Validate incoming values
         for (Entry<InetAddress, byte[]> e : newKeys.entrySet()) {

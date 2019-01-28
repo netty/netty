@@ -21,8 +21,9 @@ import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.util.Objects;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.verifyPadding;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * The default {@link Http2DataFrame} implementation.
@@ -71,7 +72,7 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
      *                256 (inclusive).
      */
     public DefaultHttp2DataFrame(ByteBuf content, boolean endStream, int padding) {
-        this.content = checkNotNull(content, "content");
+        this.content = Objects.requireNonNull(content, "content");
         this.endStream = endStream;
         verifyPadding(padding);
         this.padding = padding;

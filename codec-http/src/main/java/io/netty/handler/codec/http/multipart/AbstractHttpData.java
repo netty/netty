@@ -23,6 +23,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
@@ -41,7 +42,7 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
     private long maxSize = DefaultHttpDataFactory.MAXSIZE;
 
     protected AbstractHttpData(String name, Charset charset, long size) {
-        ObjectUtil.checkNotNull(name, "name");
+        Objects.requireNonNull(name, "name");
 
         name = REPLACE_PATTERN.matcher(name).replaceAll(" ");
         name = STRIP_PATTERN.matcher(name).replaceAll("");

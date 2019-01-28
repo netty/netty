@@ -15,11 +15,7 @@
  */
 package io.netty.util.internal;
 
-import java.util.AbstractQueue;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
+import java.util.*;
 
 import static io.netty.util.internal.PriorityQueueNode.INDEX_NOT_IN_QUEUE;
 
@@ -37,7 +33,7 @@ public final class DefaultPriorityQueue<T extends PriorityQueueNode> extends Abs
 
     @SuppressWarnings("unchecked")
     public DefaultPriorityQueue(Comparator<T> comparator, int initialSize) {
-        this.comparator = ObjectUtil.checkNotNull(comparator, "comparator");
+        this.comparator = Objects.requireNonNull(comparator, "comparator");
         queue = (T[]) (initialSize != 0 ? new PriorityQueueNode[initialSize] : EMPTY_ARRAY);
     }
 

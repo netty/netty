@@ -40,10 +40,7 @@ import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.CertificateRevokedException;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -61,7 +58,6 @@ import javax.net.ssl.X509TrustManager;
 
 import static io.netty.handler.ssl.OpenSsl.DEFAULT_CIPHERS;
 import static io.netty.handler.ssl.OpenSsl.availableJavaCipherSuites;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
@@ -211,16 +207,16 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
         leak = leakDetection ? leakDetector.track(this) : null;
         this.mode = mode;
-        this.clientAuth = isServer() ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
+        this.clientAuth = isServer() ? Objects.requireNonNull(clientAuth, "clientAuth") : ClientAuth.NONE;
         this.protocols = protocols;
         this.enableOcsp = enableOcsp;
 
         this.keyCertChain = keyCertChain == null ? null : keyCertChain.clone();
 
-        unmodifiableCiphers = Arrays.asList(checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
+        unmodifiableCiphers = Arrays.asList(Objects.requireNonNull(cipherFilter, "cipherFilter").filterCipherSuites(
                 ciphers, DEFAULT_CIPHERS, availableJavaCipherSuites()));
 
-        this.apn = checkNotNull(apn, "apn");
+        this.apn = Objects.requireNonNull(apn, "apn");
 
         // Create a new SSL_CTX and configure it.
         boolean success = false;

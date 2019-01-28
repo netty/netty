@@ -23,7 +23,6 @@ import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import io.netty.buffer.ByteBuf;
@@ -32,6 +31,8 @@ import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
+
+import java.util.Objects;
 
 /**
  * Basic implementation of {@link Http2LocalFlowController}.
@@ -74,7 +75,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
     public DefaultHttp2LocalFlowController(Http2Connection connection,
                                            float windowUpdateRatio,
                                            boolean autoRefillConnectionWindow) {
-        this.connection = checkNotNull(connection, "connection");
+        this.connection = Objects.requireNonNull(connection, "connection");
         windowUpdateRatio(windowUpdateRatio);
 
         // Add a flow state for the connection.
@@ -125,13 +126,13 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
     @Override
     public DefaultHttp2LocalFlowController frameWriter(Http2FrameWriter frameWriter) {
-        this.frameWriter = checkNotNull(frameWriter, "frameWriter");
+        this.frameWriter = Objects.requireNonNull(frameWriter, "frameWriter");
         return this;
     }
 
     @Override
     public void channelHandlerContext(ChannelHandlerContext ctx) {
-        this.ctx = checkNotNull(ctx, "ctx");
+        this.ctx = Objects.requireNonNull(ctx, "ctx");
     }
 
     @Override

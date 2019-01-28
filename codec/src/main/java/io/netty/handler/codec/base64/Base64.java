@@ -26,6 +26,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteOrder;
+import java.util.Objects;
 
 /**
  * Utility class for {@link ByteBuf} that encodes and decodes to and from
@@ -51,17 +52,17 @@ public final class Base64 {
     private static final byte EQUALS_SIGN_ENC = -1; // Indicates equals sign in encoding
 
     private static byte[] alphabet(Base64Dialect dialect) {
-        ObjectUtil.checkNotNull(dialect, "dialect");
+        Objects.requireNonNull(dialect, "dialect");
         return dialect.alphabet;
     }
 
     private static byte[] decodabet(Base64Dialect dialect) {
-        ObjectUtil.checkNotNull(dialect, "dialect");
+        Objects.requireNonNull(dialect, "dialect");
         return dialect.decodabet;
     }
 
     private static boolean breakLines(Base64Dialect dialect) {
-        ObjectUtil.checkNotNull(dialect, "dialect");
+        Objects.requireNonNull(dialect, "dialect");
         return dialect.breakLinesByDefault;
     }
 
@@ -78,7 +79,7 @@ public final class Base64 {
     }
 
     public static ByteBuf encode(ByteBuf src, boolean breakLines, Base64Dialect dialect) {
-        ObjectUtil.checkNotNull(src, "src");
+        Objects.requireNonNull(src, "src");
         ByteBuf dest = encode(src, src.readerIndex(), src.readableBytes(), breakLines, dialect);
         src.readerIndex(src.writerIndex());
         return dest;
@@ -104,8 +105,8 @@ public final class Base64 {
 
     public static ByteBuf encode(
             ByteBuf src, int off, int len, boolean breakLines, Base64Dialect dialect, ByteBufAllocator allocator) {
-        ObjectUtil.checkNotNull(src, "src");
-        ObjectUtil.checkNotNull(dialect, "dialect");
+        Objects.requireNonNull(src, "src");
+        Objects.requireNonNull(dialect, "dialect");
 
         ByteBuf dest = allocator.buffer(encodedBufferSize(len, breakLines)).order(src.order());
         byte[] alphabet = alphabet(dialect);
@@ -278,7 +279,7 @@ public final class Base64 {
     }
 
     public static ByteBuf decode(ByteBuf src, Base64Dialect dialect) {
-        ObjectUtil.checkNotNull(src, "src");
+        Objects.requireNonNull(src, "src");
 
         ByteBuf dest = decode(src, src.readerIndex(), src.readableBytes(), dialect);
         src.readerIndex(src.writerIndex());
@@ -297,8 +298,8 @@ public final class Base64 {
 
     public static ByteBuf decode(
             ByteBuf src, int off, int len, Base64Dialect dialect, ByteBufAllocator allocator) {
-        ObjectUtil.checkNotNull(src, "src");
-        ObjectUtil.checkNotNull(dialect, "dialect");
+        Objects.requireNonNull(src, "src");
+        Objects.requireNonNull(dialect, "dialect");
 
         // Using a ByteProcessor to reduce bound and reference count checking.
         return new Decoder().decode(src, off, len, allocator, dialect);

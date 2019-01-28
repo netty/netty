@@ -17,11 +17,11 @@ package io.netty.handler.ssl;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import javax.net.ssl.SSLEngine;
 
 import static io.netty.handler.ssl.ApplicationProtocolUtil.toList;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Provides an {@link SSLEngine} agnostic way to configure a {@link ApplicationProtocolNegotiator}.
@@ -72,10 +72,10 @@ public final class ApplicationProtocolConfig {
     private ApplicationProtocolConfig(
             Protocol protocol, SelectorFailureBehavior selectorBehavior,
             SelectedListenerFailureBehavior selectedBehavior, List<String> supportedProtocols) {
-        this.supportedProtocols = Collections.unmodifiableList(checkNotNull(supportedProtocols, "supportedProtocols"));
-        this.protocol = checkNotNull(protocol, "protocol");
-        this.selectorBehavior = checkNotNull(selectorBehavior, "selectorBehavior");
-        this.selectedBehavior = checkNotNull(selectedBehavior, "selectedBehavior");
+        this.supportedProtocols = Collections.unmodifiableList(Objects.requireNonNull(supportedProtocols, "supportedProtocols"));
+        this.protocol = Objects.requireNonNull(protocol, "protocol");
+        this.selectorBehavior = Objects.requireNonNull(selectorBehavior, "selectorBehavior");
+        this.selectedBehavior = Objects.requireNonNull(selectedBehavior, "selectedBehavior");
 
         if (protocol == Protocol.NONE) {
             throw new IllegalArgumentException("protocol (" + Protocol.NONE + ") must not be " + Protocol.NONE + '.');

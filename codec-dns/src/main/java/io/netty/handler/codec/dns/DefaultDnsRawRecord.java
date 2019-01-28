@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import java.util.Objects;
 
 /**
  * The default {@code DnsRawRecord} implementation.
@@ -59,7 +59,7 @@ public class DefaultDnsRawRecord extends AbstractDnsRecord implements DnsRawReco
     public DefaultDnsRawRecord(
             String name, DnsRecordType type, int dnsClass, long timeToLive, ByteBuf content) {
         super(name, type, dnsClass, timeToLive);
-        this.content = checkNotNull(content, "content");
+        this.content = Objects.requireNonNull(content, "content");
     }
 
     @Override

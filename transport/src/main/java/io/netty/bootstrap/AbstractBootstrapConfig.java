@@ -27,6 +27,7 @@ import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Exposes the configuration of an {@link AbstractBootstrap}.
@@ -36,7 +37,7 @@ public abstract class AbstractBootstrapConfig<B extends AbstractBootstrap<B, C, 
     protected final B bootstrap;
 
     AbstractBootstrapConfig(B bootstrap) {
-        this.bootstrap = ObjectUtil.checkNotNull(bootstrap, "bootstrap");
+        this.bootstrap = Objects.requireNonNull(bootstrap, "bootstrap");
     }
 
     /**

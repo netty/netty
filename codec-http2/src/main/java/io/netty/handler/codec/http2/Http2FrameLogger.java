@@ -25,7 +25,7 @@ import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import java.util.Objects;
 
 /**
  * Logs HTTP2 frames for debugging purposes.
@@ -55,8 +55,8 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
     }
 
     private Http2FrameLogger(InternalLogLevel level, InternalLogger logger) {
-        this.level = checkNotNull(level, "level");
-        this.logger = checkNotNull(logger, "logger");
+        this.level = Objects.requireNonNull(level, "level");
+        this.logger = Objects.requireNonNull(logger, "logger");
     }
 
     public boolean isEnabled() {

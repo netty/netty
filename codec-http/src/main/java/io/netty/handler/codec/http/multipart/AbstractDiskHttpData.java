@@ -30,6 +30,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.util.Objects;
 
 import static io.netty.buffer.Unpooled.*;
 
@@ -101,7 +102,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
 
     @Override
     public void setContent(ByteBuf buffer) throws IOException {
-        ObjectUtil.checkNotNull(buffer, "buffer");
+        Objects.requireNonNull(buffer, "buffer");
         try {
             size = buffer.readableBytes();
             checkSize(size);
@@ -186,7 +187,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             fileChannel = null;
             setCompleted();
         } else {
-            ObjectUtil.checkNotNull(buffer, "buffer");
+            Objects.requireNonNull(buffer, "buffer");
         }
     }
 
@@ -204,7 +205,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
 
     @Override
     public void setContent(InputStream inputStream) throws IOException {
-        ObjectUtil.checkNotNull(inputStream, "inputStream");
+        Objects.requireNonNull(inputStream, "inputStream");
         if (file != null) {
             delete();
         }

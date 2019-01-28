@@ -22,6 +22,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.io.InputStream;
 import java.io.PushbackInputStream;
+import java.util.Objects;
 
 /**
  * A {@link ChunkedInput} that fetches data from an {@link InputStream} chunk by
@@ -56,7 +57,7 @@ public class ChunkedStream implements ChunkedInput<ByteBuf> {
      *                  {@link #readChunk(ChannelHandlerContext)} call
      */
     public ChunkedStream(InputStream in, int chunkSize) {
-        ObjectUtil.checkNotNull(in, "in");
+        Objects.requireNonNull(in, "in");
         if (chunkSize <= 0) {
             throw new IllegalArgumentException(
                     "chunkSize: " + chunkSize +

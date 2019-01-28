@@ -22,9 +22,11 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * {@link ChannelInboundHandlerAdapter} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an
@@ -191,10 +193,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * Set the {@link Cumulator} to use for cumulate the received {@link ByteBuf}s.
      */
     public void setCumulator(Cumulator cumulator) {
-        if (cumulator == null) {
-            throw new NullPointerException("cumulator");
-        }
-        this.cumulator = cumulator;
+        this.cumulator = Objects.requireNonNull(cumulator, "cumulator");
     }
 
     /**

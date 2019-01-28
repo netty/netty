@@ -20,6 +20,8 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
+import java.util.Objects;
+
 /**
  * A class to represent line separators in different environments.
  */
@@ -46,7 +48,7 @@ public final class LineSeparator {
      * Create {@link LineSeparator} with the specified {@code lineSeparator} string.
      */
     public LineSeparator(String lineSeparator) {
-        this.value = ObjectUtil.checkNotNull(lineSeparator, "lineSeparator");
+        this.value = Objects.requireNonNull(lineSeparator, "lineSeparator");
     }
 
     /**

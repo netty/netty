@@ -26,16 +26,10 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 
 import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.indexOfNonWhiteSpace;
 
 /**
@@ -91,7 +85,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
      * @throws IOException If an error occurs while parsing the input files.
      */
     public UnixResolverDnsServerAddressStreamProvider(File etcResolvConf, File... etcResolverFiles) throws IOException {
-        Map<String, DnsServerAddresses> etcResolvConfMap = parse(checkNotNull(etcResolvConf, "etcResolvConf"));
+        Map<String, DnsServerAddresses> etcResolvConfMap = parse(Objects.requireNonNull(etcResolvConf, "etcResolvConf"));
         final boolean useEtcResolverFiles = etcResolverFiles != null && etcResolverFiles.length != 0;
         domainToNameServerStreamMap = useEtcResolverFiles ? parse(etcResolverFiles) : etcResolvConfMap;
 

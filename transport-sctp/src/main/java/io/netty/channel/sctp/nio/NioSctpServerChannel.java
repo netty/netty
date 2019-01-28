@@ -34,11 +34,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * {@link io.netty.channel.sctp.SctpServerChannel} implementation which use non-blocking mode to accept new
@@ -69,7 +65,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     public NioSctpServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
         super(null, eventLoop, newSocket(), SelectionKey.OP_ACCEPT);
         config = new NioSctpServerChannelConfig(this, javaChannel());
-        this.childEventLoopGroup = ObjectUtil.checkNotNull(childEventLoopGroup, "childEventLoopGroup");
+        this.childEventLoopGroup = Objects.requireNonNull(childEventLoopGroup, "childEventLoopGroup");
     }
 
     @Override

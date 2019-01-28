@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.util.Objects;
 
 /**
  * An {@link ObjectOutput} which is interoperable with {@link ObjectDecoder}
@@ -63,9 +64,7 @@ public class ObjectEncoderOutputStream extends OutputStream implements
      *        cost, please specify the properly estimated value.
      */
     public ObjectEncoderOutputStream(OutputStream out, int estimatedLength) {
-        if (out == null) {
-            throw new NullPointerException("out");
-        }
+        Objects.requireNonNull(out, "out");
         if (estimatedLength < 0) {
             throw new IllegalArgumentException("estimatedLength: " + estimatedLength);
         }

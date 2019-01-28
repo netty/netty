@@ -22,6 +22,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.nio.ByteOrder;
 import java.util.List;
+import java.util.Objects;
 
 
 /**
@@ -148,7 +149,7 @@ public class LengthFieldPrepender extends MessageToMessageEncoder<ByteBuf> {
                     "lengthFieldLength must be either 1, 2, 3, 4, or 8: " +
                     lengthFieldLength);
         }
-        ObjectUtil.checkNotNull(byteOrder, "byteOrder");
+        Objects.requireNonNull(byteOrder, "byteOrder");
 
         this.byteOrder = byteOrder;
         this.lengthFieldLength = lengthFieldLength;

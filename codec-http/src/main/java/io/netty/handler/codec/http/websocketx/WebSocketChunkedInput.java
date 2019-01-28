@@ -21,6 +21,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.stream.ChunkedInput;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 /**
  * A {@link ChunkedInput} that fetches data chunk by chunk for use with WebSocket chunked transfers.
  * <p>
@@ -48,7 +50,7 @@ public final class WebSocketChunkedInput implements ChunkedInput<WebSocketFrame>
      * @throws  NullPointerException if {@code input} is null
      */
     public WebSocketChunkedInput(ChunkedInput<ByteBuf> input, int rsv) {
-        this.input = ObjectUtil.checkNotNull(input, "input");
+        this.input = Objects.requireNonNull(input, "input");
         this.rsv = rsv;
     }
 

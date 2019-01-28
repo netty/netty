@@ -26,6 +26,7 @@ import io.netty.util.internal.ObjectUtil;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * {@link OptionalSslHandler} is a utility decoder to support both SSL and non-SSL handlers
@@ -36,7 +37,7 @@ public class OptionalSslHandler extends ByteToMessageDecoder {
     private final SslContext sslContext;
 
     public OptionalSslHandler(SslContext sslContext) {
-        this.sslContext = ObjectUtil.checkNotNull(sslContext, "sslContext");
+        this.sslContext = Objects.requireNonNull(sslContext, "sslContext");
     }
 
     @Override

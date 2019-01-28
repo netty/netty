@@ -20,6 +20,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * The request getMethod of RTSP.
@@ -118,7 +119,7 @@ public final class RtspMethods {
      * will be returned.  Otherwise, a new instance will be returned.
      */
     public static HttpMethod valueOf(String name) {
-        ObjectUtil.checkNotNull(name, "name");
+        Objects.requireNonNull(name, "name");
 
         name = name.trim().toUpperCase();
         if (name.isEmpty()) {

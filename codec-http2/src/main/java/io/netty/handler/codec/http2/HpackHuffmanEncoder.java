@@ -37,6 +37,8 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
+import java.util.Objects;
+
 final class HpackHuffmanEncoder {
 
     private final int[] codes;
@@ -66,7 +68,7 @@ final class HpackHuffmanEncoder {
      * @param data the string literal to be Huffman encoded
      */
     public void encode(ByteBuf out, CharSequence data) {
-        ObjectUtil.checkNotNull(out, "out");
+        Objects.requireNonNull(out, "out");
         if (data instanceof AsciiString) {
             AsciiString string = (AsciiString) data;
             try {

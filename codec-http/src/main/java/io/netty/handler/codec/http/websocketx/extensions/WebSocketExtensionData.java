@@ -19,6 +19,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * A WebSocket Extension data from the <tt>Sec-WebSocket-Extensions</tt> header.
@@ -31,7 +32,7 @@ public final class WebSocketExtensionData {
     private final Map<String, String> parameters;
 
     public WebSocketExtensionData(String name, Map<String, String> parameters) {
-        ObjectUtil.checkNotNull(name, "name");
+        Objects.requireNonNull(name, "name");
 
         if (parameters == null) {
             throw new NullPointerException("parameters");

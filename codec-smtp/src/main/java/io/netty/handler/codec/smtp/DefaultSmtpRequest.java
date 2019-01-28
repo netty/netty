@@ -20,6 +20,7 @@ import io.netty.util.internal.UnstableApi;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Default {@link SmtpRequest} implementation.
@@ -34,7 +35,7 @@ public final class DefaultSmtpRequest implements SmtpRequest {
      * Creates a new instance with the given command and no parameters.
      */
     public DefaultSmtpRequest(SmtpCommand command) {
-        this.command = ObjectUtil.checkNotNull(command, "command");
+        this.command = Objects.requireNonNull(command, "command");
         parameters = Collections.emptyList();
     }
 
@@ -42,7 +43,7 @@ public final class DefaultSmtpRequest implements SmtpRequest {
      * Creates a new instance with the given command and parameters.
      */
     public DefaultSmtpRequest(SmtpCommand command, CharSequence... parameters) {
-        this.command = ObjectUtil.checkNotNull(command, "command");
+        this.command = Objects.requireNonNull(command, "command");
         this.parameters = SmtpUtils.toUnmodifiableList(parameters);
     }
 
@@ -54,7 +55,7 @@ public final class DefaultSmtpRequest implements SmtpRequest {
     }
 
     DefaultSmtpRequest(SmtpCommand command, List<CharSequence> parameters) {
-        this.command = ObjectUtil.checkNotNull(command, "command");
+        this.command = Objects.requireNonNull(command, "command");
         this.parameters = parameters != null ?
                 Collections.unmodifiableList(parameters) : Collections.<CharSequence>emptyList();
     }

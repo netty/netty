@@ -19,8 +19,7 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.IDN;
-
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import java.util.Objects;
 
 /**
  * A skeletal implementation of {@link DnsRecord}.
@@ -69,8 +68,8 @@ public abstract class AbstractDnsRecord implements DnsRecord {
         // See:
         //   - https://github.com/netty/netty/issues/4937
         //   - https://github.com/netty/netty/issues/4935
-        this.name = appendTrailingDot(IDN.toASCII(checkNotNull(name, "name")));
-        this.type = checkNotNull(type, "type");
+        this.name = appendTrailingDot(IDN.toASCII(Objects.requireNonNull(name, "name")));
+        this.type = Objects.requireNonNull(type, "type");
         this.dnsClass = (short) dnsClass;
         this.timeToLive = timeToLive;
     }

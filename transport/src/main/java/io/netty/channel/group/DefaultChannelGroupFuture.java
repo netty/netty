@@ -26,13 +26,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.internal.ObjectUtil;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 /**
@@ -83,8 +77,8 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
      */
     DefaultChannelGroupFuture(ChannelGroup group, Collection<ChannelFuture> futures,  EventExecutor executor) {
         super(executor);
-        ObjectUtil.checkNotNull(group, "group");
-        ObjectUtil.checkNotNull(futures, "futures");
+        Objects.requireNonNull(group, "group");
+        Objects.requireNonNull(futures, "futures");
 
         this.group = group;
 

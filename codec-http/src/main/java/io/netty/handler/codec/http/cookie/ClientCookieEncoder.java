@@ -20,15 +20,11 @@ import static io.netty.handler.codec.http.cookie.CookieUtil.addQuoted;
 import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
 import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparator;
 import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparatorOrNull;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.internal.InternalThreadLocalMap;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 /**
  * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie encoder to be used client side, so
@@ -83,7 +79,7 @@ public final class ClientCookieEncoder extends CookieEncoder {
      */
     public String encode(Cookie cookie) {
         StringBuilder buf = stringBuilder();
-        encode(buf, checkNotNull(cookie, "cookie"));
+        encode(buf, Objects.requireNonNull(cookie, "cookie"));
         return stripTrailingSeparator(buf);
     }
 
@@ -121,7 +117,7 @@ public final class ClientCookieEncoder extends CookieEncoder {
      * @return a Rfc6265 style Cookie header value, null if no cookies are passed.
      */
     public String encode(Cookie... cookies) {
-        if (checkNotNull(cookies, "cookies").length == 0) {
+        if (Objects.requireNonNull(cookies, "cookies").length == 0) {
             return null;
         }
 
@@ -152,7 +148,7 @@ public final class ClientCookieEncoder extends CookieEncoder {
      * @return a Rfc6265 style Cookie header value, null if no cookies are passed.
      */
     public String encode(Collection<? extends Cookie> cookies) {
-        if (checkNotNull(cookies, "cookies").isEmpty()) {
+        if (Objects.requireNonNull(cookies, "cookies").isEmpty()) {
             return null;
         }
 
@@ -182,7 +178,7 @@ public final class ClientCookieEncoder extends CookieEncoder {
      * @return a Rfc6265 style Cookie header value, null if no cookies are passed.
      */
     public String encode(Iterable<? extends Cookie> cookies) {
-        Iterator<? extends Cookie> cookiesIt = checkNotNull(cookies, "cookies").iterator();
+        Iterator<? extends Cookie> cookiesIt = Objects.requireNonNull(cookies, "cookies").iterator();
         if (!cookiesIt.hasNext()) {
             return null;
         }

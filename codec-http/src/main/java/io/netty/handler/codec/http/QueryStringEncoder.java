@@ -23,6 +23,7 @@ import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
+import java.util.Objects;
 
 /**
  * Creates an URL-encoded URI from a path string and key-value parameter pairs.
@@ -62,7 +63,7 @@ public class QueryStringEncoder {
      * Adds a parameter with the specified name and value to this encoder.
      */
     public void addParam(String name, String value) {
-        ObjectUtil.checkNotNull(name, "name");
+        Objects.requireNonNull(name, "name");
         if (hasParams) {
             uriBuilder.append('&');
         } else {

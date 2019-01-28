@@ -19,9 +19,8 @@ import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.MathUtil;
 
 import java.util.AbstractList;
+import java.util.Objects;
 import java.util.RandomAccess;
-
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Special {@link AbstractList} implementation which is used within our codec base classes.
@@ -117,7 +116,7 @@ final class CodecOutputList extends AbstractList<Object> implements RandomAccess
 
     @Override
     public boolean add(Object element) {
-        checkNotNull(element, "element");
+        Objects.requireNonNull(element, "element");
         try {
             insert(size, element);
         } catch (IndexOutOfBoundsException ignore) {
@@ -131,7 +130,7 @@ final class CodecOutputList extends AbstractList<Object> implements RandomAccess
 
     @Override
     public Object set(int index, Object element) {
-        checkNotNull(element, "element");
+        Objects.requireNonNull(element, "element");
         checkIndex(index);
 
         Object old = array[index];
@@ -141,7 +140,7 @@ final class CodecOutputList extends AbstractList<Object> implements RandomAccess
 
     @Override
     public void add(int index, Object element) {
-        checkNotNull(element, "element");
+        Objects.requireNonNull(element, "element");
         checkIndex(index);
 
         if (size == array.length) {

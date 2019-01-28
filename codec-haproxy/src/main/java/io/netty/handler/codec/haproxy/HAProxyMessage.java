@@ -25,6 +25,7 @@ import io.netty.util.internal.ObjectUtil;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Message container for decoded HAProxy proxy protocol parameters
@@ -91,7 +92,7 @@ public final class HAProxyMessage {
             String sourceAddress, String destinationAddress, int sourcePort, int destinationPort,
             List<HAProxyTLV> tlvs) {
 
-        ObjectUtil.checkNotNull(proxiedProtocol, "proxiedProtocol");
+        Objects.requireNonNull(proxiedProtocol, "proxiedProtocol");
         AddressFamily addrFamily = proxiedProtocol.addressFamily();
 
         checkAddress(sourceAddress, addrFamily);
@@ -117,7 +118,7 @@ public final class HAProxyMessage {
      * @throws HAProxyProtocolException  if any portion of the header is invalid
      */
     static HAProxyMessage decodeHeader(ByteBuf header) {
-        ObjectUtil.checkNotNull(header, "header");
+        Objects.requireNonNull(header, "header");
 
         if (header.readableBytes() < 16) {
             throw new HAProxyProtocolException(

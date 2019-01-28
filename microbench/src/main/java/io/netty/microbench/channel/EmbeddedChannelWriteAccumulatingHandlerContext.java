@@ -23,6 +23,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends EmbeddedChannelHandlerContext {
     private ByteBuf cumulation;
     private ByteToMessageDecoder.Cumulator cumulator;
@@ -36,7 +38,7 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
                                                           ByteToMessageDecoder.Cumulator writeCumulator,
                                                           EmbeddedChannel channel) {
         super(alloc, handler, channel);
-        this.cumulator = ObjectUtil.checkNotNull(writeCumulator, "writeCumulator");
+        this.cumulator = Objects.requireNonNull(writeCumulator, "writeCumulator");
     }
 
     public final ByteBuf cumulation() {

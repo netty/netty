@@ -25,6 +25,7 @@ import javax.net.ssl.SSLSessionContext;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.concurrent.locks.Lock;
 
 /**
@@ -54,7 +55,7 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
 
     @Override
     public SSLSession getSession(byte[] bytes) {
-        ObjectUtil.checkNotNull(bytes, "bytes");
+        Objects.requireNonNull(bytes, "bytes");
         return null;
     }
 
@@ -96,7 +97,7 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
      * Sets the SSL session ticket keys of this context.
      */
     public void setTicketKeys(OpenSslSessionTicketKey... keys) {
-        ObjectUtil.checkNotNull(keys, "keys");
+        Objects.requireNonNull(keys, "keys");
         SessionTicketKey[] ticketKeys = new SessionTicketKey[keys.length];
         for (int i = 0; i < ticketKeys.length; i++) {
             ticketKeys[i] = keys[i].key;

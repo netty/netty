@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
 import java.util.Set;
 
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_MAX_NV_LENGTH;
@@ -30,7 +31,7 @@ public class SpdyHeaderBlockRawEncoder extends SpdyHeaderBlockEncoder {
     private final int version;
 
     public SpdyHeaderBlockRawEncoder(SpdyVersion version) {
-        ObjectUtil.checkNotNull(version, "version");
+        Objects.requireNonNull(version, "version");
         this.version = version.getVersion();
     }
 

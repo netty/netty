@@ -21,6 +21,8 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.util.Objects;
+
 /**
  * Wraps another {@link ByteBufAllocator} and use heapbuffers everywhere except when a direct buffer is explicit
  * requested.
@@ -30,7 +32,7 @@ public final class PreferHeapByteBufAllocator implements ByteBufAllocator {
     private final ByteBufAllocator allocator;
 
     public PreferHeapByteBufAllocator(ByteBufAllocator allocator) {
-        this.allocator = ObjectUtil.checkNotNull(allocator, "allocator");
+        this.allocator = Objects.requireNonNull(allocator, "allocator");
     }
 
     @Override

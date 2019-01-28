@@ -44,18 +44,7 @@ import io.netty.util.internal.ThrowableUtil;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.util.AbstractList;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Set;
+import java.util.*;
 
 import static io.netty.resolver.dns.DnsAddressDecoder.decodeAddress;
 import static java.lang.Math.min;
@@ -120,7 +109,7 @@ abstract class DnsResolveContext<T> {
         this.expectedTypes = expectedTypes;
         this.additionals = additionals;
 
-        this.nameServerAddrs = ObjectUtil.checkNotNull(nameServerAddrs, "nameServerAddrs");
+        this.nameServerAddrs = Objects.requireNonNull(nameServerAddrs, "nameServerAddrs");
         maxAllowedQueries = parent.maxQueriesPerResolve();
         allowedQueries = maxAllowedQueries;
     }

@@ -23,11 +23,11 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.protobuf.ProtobufEncoder;
 import io.netty.util.internal.StringUtil;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * An encoder that encodes the content in {@link AddressedEnvelope} to {@link DatagramPacket} using
@@ -54,7 +54,7 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
      * @param encoder the specified message encoder
      */
     public DatagramPacketEncoder(MessageToMessageEncoder<? super M> encoder) {
-        this.encoder = checkNotNull(encoder, "encoder");
+        this.encoder = Objects.requireNonNull(encoder, "encoder");
     }
 
     @Override

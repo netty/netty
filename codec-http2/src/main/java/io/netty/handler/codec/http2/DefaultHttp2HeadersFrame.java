@@ -18,8 +18,9 @@ package io.netty.handler.codec.http2;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.util.Objects;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.verifyPadding;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * The default {@link Http2HeadersFrame} implementation.
@@ -57,7 +58,7 @@ public final class DefaultHttp2HeadersFrame extends AbstractHttp2StreamFrame imp
      *                256 (inclusive).
      */
     public DefaultHttp2HeadersFrame(Http2Headers headers, boolean endStream, int padding) {
-        this.headers = checkNotNull(headers, "headers");
+        this.headers = Objects.requireNonNull(headers, "headers");
         this.endStream = endStream;
         verifyPadding(padding);
         this.padding = padding;

@@ -42,11 +42,7 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.Collections;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Special {@link KeyManagerFactory} that pre-compute the keymaterial used when {@link SslProvider#OPENSSL} or
@@ -107,7 +103,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
         private volatile ProviderFactory providerFactory;
 
         OpenSslKeyManagerFactorySpi(KeyManagerFactory kmf) {
-            this.kmf = ObjectUtil.checkNotNull(kmf, "kmf");
+            this.kmf = Objects.requireNonNull(kmf, "kmf");
         }
 
         @Override

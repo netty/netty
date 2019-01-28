@@ -17,11 +17,13 @@ package io.netty.util.concurrent;
 
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 final class FastThreadLocalRunnable implements Runnable {
     private final Runnable runnable;
 
     private FastThreadLocalRunnable(Runnable runnable) {
-        this.runnable = ObjectUtil.checkNotNull(runnable, "runnable");
+        this.runnable = Objects.requireNonNull(runnable, "runnable");
     }
 
     @Override

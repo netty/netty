@@ -23,8 +23,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
-
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import java.util.Objects;
 
 /**
  * {@link AuthoritativeDnsServerCache} implementation which delegates all operations to a wrapped {@link DnsCache}.
@@ -37,7 +36,7 @@ final class AuthoritativeDnsServerCacheAdapter implements AuthoritativeDnsServer
     private final DnsCache cache;
 
     AuthoritativeDnsServerCacheAdapter(DnsCache cache) {
-        this.cache = checkNotNull(cache, "cache");
+        this.cache = Objects.requireNonNull(cache, "cache");
     }
 
     @Override

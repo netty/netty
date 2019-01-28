@@ -20,6 +20,7 @@ import io.netty.util.ResourceLeakTracker;
 import io.netty.util.internal.ObjectUtil;
 
 import java.nio.ByteOrder;
+import java.util.Objects;
 
 class SimpleLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
 
@@ -27,7 +28,7 @@ class SimpleLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
 
     SimpleLeakAwareCompositeByteBuf(CompositeByteBuf wrapped, ResourceLeakTracker<ByteBuf> leak) {
         super(wrapped);
-        this.leak = ObjectUtil.checkNotNull(leak, "leak");
+        this.leak = Objects.requireNonNull(leak, "leak");
     }
 
     @Override

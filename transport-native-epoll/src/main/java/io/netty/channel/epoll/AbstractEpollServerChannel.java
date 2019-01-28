@@ -28,6 +28,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Objects;
 
 public abstract class AbstractEpollServerChannel extends AbstractEpollChannel implements ServerChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
@@ -45,7 +46,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                LinuxSocket fd, boolean active) {
         super(null, eventLoop, fd, active);
-        this.childEventLoopGroup = ObjectUtil.checkNotNull(childEventLoopGroup, "childEventLoopGroup");
+        this.childEventLoopGroup = Objects.requireNonNull(childEventLoopGroup, "childEventLoopGroup");
     }
 
     @Override

@@ -27,6 +27,7 @@ import io.netty.util.internal.UnstableApi;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import static io.netty.handler.codec.base64.Base64Dialect.URL_SAFE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME;
@@ -34,7 +35,6 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_SETTINGS_
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static io.netty.util.ReferenceCountUtil.release;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Client-side cleartext upgrade codec from HTTP to HTTP/2.
@@ -80,8 +80,8 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
     private Http2ClientUpgradeCodec(String handlerName, Http2ConnectionHandler connectionHandler, ChannelHandler
                                     upgradeToHandler) {
         this.handlerName = handlerName;
-        this.connectionHandler = checkNotNull(connectionHandler, "connectionHandler");
-        this.upgradeToHandler = checkNotNull(upgradeToHandler, "upgradeToHandler");
+        this.connectionHandler = Objects.requireNonNull(connectionHandler, "connectionHandler");
+        this.upgradeToHandler = Objects.requireNonNull(upgradeToHandler, "upgradeToHandler");
     }
 
     @Override

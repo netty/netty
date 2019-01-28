@@ -34,6 +34,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 
 /**
  * Encodes {@link HttpRequest}s, {@link HttpResponse}s, and {@link HttpContent}s
@@ -145,7 +146,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
      * @param validateHeaders    validate the header names and values when adding them to the {@link SpdyHeaders}
      */
     public SpdyHttpEncoder(SpdyVersion version, boolean headersToLowerCase, boolean validateHeaders) {
-        ObjectUtil.checkNotNull(version, "version");
+        Objects.requireNonNull(version, "version");
         this.headersToLowerCase = headersToLowerCase;
         this.validateHeaders = validateHeaders;
     }

@@ -18,6 +18,7 @@ package io.netty.channel;
 import io.netty.util.internal.ObjectUtil;
 
 import java.net.SocketAddress;
+import java.util.Objects;
 
 /**
  * A skeletal server-side {@link Channel} implementation.  A server-side
@@ -40,7 +41,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
      */
     protected AbstractServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
         super(null, eventLoop);
-        this.childEventLoopGroup = ObjectUtil.checkNotNull(childEventLoopGroup, "childEventLoopGroup");
+        this.childEventLoopGroup = Objects.requireNonNull(childEventLoopGroup, "childEventLoopGroup");
     }
 
     @Override

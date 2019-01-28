@@ -21,6 +21,7 @@ import io.netty.util.NetUtil;
 import io.netty.util.internal.ObjectUtil;
 
 import java.net.IDN;
+import java.util.Objects;
 
 /**
  * An socks cmd request.
@@ -36,9 +37,9 @@ public final class SocksCmdRequest extends SocksRequest {
 
     public SocksCmdRequest(SocksCmdType cmdType, SocksAddressType addressType, String host, int port) {
         super(SocksRequestType.CMD);
-        ObjectUtil.checkNotNull(cmdType, "cmdType");
-        ObjectUtil.checkNotNull(addressType, "addressType");
-        ObjectUtil.checkNotNull(host, "host");
+        Objects.requireNonNull(cmdType, "cmdType");
+        Objects.requireNonNull(addressType, "addressType");
+        Objects.requireNonNull(host, "host");
         switch (addressType) {
             case IPv4:
                 if (!NetUtil.isValidIpV4Address(host)) {

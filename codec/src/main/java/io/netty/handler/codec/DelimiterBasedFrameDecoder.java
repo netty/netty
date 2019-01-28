@@ -17,8 +17,10 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * A decoder that splits the received {@link ByteBuf}s by one or more
@@ -164,9 +166,7 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
     public DelimiterBasedFrameDecoder(
             int maxFrameLength, boolean stripDelimiter, boolean failFast, ByteBuf... delimiters) {
         validateMaxFrameLength(maxFrameLength);
-        if (delimiters == null) {
-            throw new NullPointerException("delimiters");
-        }
+        Objects.requireNonNull(delimiters, "delimiters");
         if (delimiters.length == 0) {
             throw new IllegalArgumentException("empty delimiters");
         }
@@ -337,9 +337,7 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
     }
 
     private static void validateDelimiter(ByteBuf delimiter) {
-        if (delimiter == null) {
-            throw new NullPointerException("delimiter");
-        }
+        Objects.requireNonNull(delimiter, "delimiter");
         if (!delimiter.isReadable()) {
             throw new IllegalArgumentException("empty delimiter");
         }

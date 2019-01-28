@@ -18,6 +18,8 @@ package io.netty.handler.timeout;
 import io.netty.channel.Channel;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 /**
  * A user event triggered by {@link IdleStateHandler} when a {@link Channel} is idle.
  */
@@ -39,7 +41,7 @@ public class IdleStateEvent {
      * @param first {@code true} if its the first idle event for the {@link IdleStateEvent}.
      */
     protected IdleStateEvent(IdleState state, boolean first) {
-        this.state = ObjectUtil.checkNotNull(state, "state");
+        this.state = Objects.requireNonNull(state, "state");
         this.first = first;
     }
 

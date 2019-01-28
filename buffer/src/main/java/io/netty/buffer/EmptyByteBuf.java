@@ -18,6 +18,7 @@ package io.netty.buffer;
 
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
@@ -30,6 +31,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
+import java.util.Objects;
 
 /**
  * An empty {@link ByteBuf} whose capacity and maximum capacity are all {@code 0}.
@@ -62,10 +64,7 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     private EmptyByteBuf(ByteBufAllocator alloc, ByteOrder order) {
-        if (alloc == null) {
-            throw new NullPointerException("alloc");
-        }
-
+        Objects.requireNonNull(alloc, "alloc");
         this.alloc = alloc;
         this.order = order;
         str = StringUtil.simpleClassName(this) + (order == ByteOrder.BIG_ENDIAN? "BE" : "LE");
@@ -118,9 +117,7 @@ public final class EmptyByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf order(ByteOrder endianness) {
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
+        Objects.requireNonNull(endianness, "endianness");
         if (endianness == order()) {
             return this;
         }

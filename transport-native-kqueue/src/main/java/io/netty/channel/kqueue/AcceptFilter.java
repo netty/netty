@@ -18,6 +18,8 @@ package io.netty.channel.kqueue;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.util.Objects;
+
 @UnstableApi
 public final class AcceptFilter {
     static final AcceptFilter PLATFORM_UNSUPPORTED = new AcceptFilter("", "");
@@ -25,8 +27,8 @@ public final class AcceptFilter {
     private final String filterArgs;
 
     public AcceptFilter(String filterName, String filterArgs) {
-        this.filterName = ObjectUtil.checkNotNull(filterName, "filterName");
-        this.filterArgs = ObjectUtil.checkNotNull(filterArgs, "filterArgs");
+        this.filterName = Objects.requireNonNull(filterName, "filterName");
+        this.filterArgs = Objects.requireNonNull(filterArgs, "filterArgs");
     }
 
     public String filterName() {

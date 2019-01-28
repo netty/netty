@@ -37,6 +37,7 @@ import io.netty.util.internal.ObjectUtil;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static io.netty.handler.codec.spdy.SpdyHeaders.HttpNames.*;
 
@@ -101,7 +102,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
      */
     protected SpdyHttpDecoder(SpdyVersion version, int maxContentLength, Map<Integer,
             FullHttpMessage> messageMap, boolean validateHeaders) {
-        ObjectUtil.checkNotNull(version, "version");
+        Objects.requireNonNull(version, "version");
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException(
                     "maxContentLength must be a positive integer: " + maxContentLength);

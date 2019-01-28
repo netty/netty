@@ -21,6 +21,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @UnstableApi
@@ -36,7 +37,7 @@ public final class VoidChannelPromise extends AbstractFuture<Void> implements Ch
      * @param channel the {@link Channel} associated with this future
      */
     public VoidChannelPromise(final Channel channel, boolean fireException) {
-        ObjectUtil.checkNotNull(channel, "channel");
+        Objects.requireNonNull(channel, "channel");
         this.channel = channel;
         if (fireException) {
             fireExceptionListener = future -> {

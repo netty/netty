@@ -16,13 +16,13 @@
 package io.netty.handler.ssl;
 
 import static io.netty.handler.ssl.SslUtils.toSSLHandshakeException;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -67,10 +67,9 @@ abstract class JettyAlpnSslEngine extends JdkSslEngine {
     private static final class ClientEngine extends JettyAlpnSslEngine {
         ClientEngine(SSLEngine engine, final JdkApplicationProtocolNegotiator applicationNegotiator) {
             super(engine);
-            checkNotNull(applicationNegotiator, "applicationNegotiator");
-            final ProtocolSelectionListener protocolListener = checkNotNull(applicationNegotiator
-                            .protocolListenerFactory().newListener(this, applicationNegotiator.protocols()),
-                    "protocolListener");
+            Objects.requireNonNull(applicationNegotiator, "applicationNegotiator");
+            final ProtocolSelectionListener protocolListener = Objects.requireNonNull(applicationNegotiator
+                    .protocolListenerFactory().newListener(this, applicationNegotiator.protocols()), "protocolListener");
             ALPN.put(engine, new ALPN.ClientProvider() {
                 @Override
                 public List<String> protocols() {
@@ -115,10 +114,9 @@ abstract class JettyAlpnSslEngine extends JdkSslEngine {
     private static final class ServerEngine extends JettyAlpnSslEngine {
         ServerEngine(SSLEngine engine, final JdkApplicationProtocolNegotiator applicationNegotiator) {
             super(engine);
-            checkNotNull(applicationNegotiator, "applicationNegotiator");
-            final ProtocolSelector protocolSelector = checkNotNull(applicationNegotiator.protocolSelectorFactory()
-                            .newSelector(this, new LinkedHashSet<>(applicationNegotiator.protocols())),
-                    "protocolSelector");
+            Objects.requireNonNull(applicationNegotiator, "applicationNegotiator");
+            final ProtocolSelector protocolSelector = Objects.requireNonNull(applicationNegotiator.protocolSelectorFactory()
+                    .newSelector(this, new LinkedHashSet<>(applicationNegotiator.protocols())), "protocolSelector");
             ALPN.put(engine, new ALPN.ServerProvider() {
                 @Override
                 public String select(List<String> protocols) throws SSLException {

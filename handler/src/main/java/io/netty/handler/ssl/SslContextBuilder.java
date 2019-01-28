@@ -16,8 +16,6 @@
 
 package io.netty.handler.ssl;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 import io.netty.util.internal.UnstableApi;
 
 import java.security.Provider;
@@ -29,6 +27,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.Objects;
 import javax.net.ssl.SSLEngine;
 
 /**
@@ -309,11 +308,11 @@ public final class SslContextBuilder {
      */
     public SslContextBuilder keyManager(PrivateKey key, String keyPassword, X509Certificate... keyCertChain) {
         if (forServer) {
-            checkNotNull(keyCertChain, "keyCertChain required for servers");
+            Objects.requireNonNull(keyCertChain, "keyCertChain required for servers");
             if (keyCertChain.length == 0) {
                 throw new IllegalArgumentException("keyCertChain must be non-empty");
             }
-            checkNotNull(key, "key required for servers");
+            Objects.requireNonNull(key, "key required for servers");
         }
         if (keyCertChain == null || keyCertChain.length == 0) {
             this.keyCertChain = null;
@@ -344,7 +343,7 @@ public final class SslContextBuilder {
      */
     public SslContextBuilder keyManager(KeyManagerFactory keyManagerFactory) {
         if (forServer) {
-            checkNotNull(keyManagerFactory, "keyManagerFactory required for servers");
+            Objects.requireNonNull(keyManagerFactory, "keyManagerFactory required for servers");
         }
         keyCertChain = null;
         key = null;
@@ -367,7 +366,7 @@ public final class SslContextBuilder {
      * cipher suites will be used.
      */
     public SslContextBuilder ciphers(Iterable<String> ciphers, CipherSuiteFilter cipherFilter) {
-        checkNotNull(cipherFilter, "cipherFilter");
+        Objects.requireNonNull(cipherFilter, "cipherFilter");
         this.ciphers = ciphers;
         this.cipherFilter = cipherFilter;
         return this;
@@ -403,7 +402,7 @@ public final class SslContextBuilder {
      * Sets the client authentication mode.
      */
     public SslContextBuilder clientAuth(ClientAuth clientAuth) {
-        this.clientAuth = checkNotNull(clientAuth, "clientAuth");
+        this.clientAuth = Objects.requireNonNull(clientAuth, "clientAuth");
         return this;
     }
 

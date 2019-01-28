@@ -21,6 +21,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
+import java.util.Objects;
+
 /**
  * A FIFO queue of bytes where producers add bytes by repeatedly adding {@link ByteBuf} and consumers take bytes in
  * arbitrary lengths. This allows producers to add lots of small buffers and the consumer to take all the bytes
@@ -46,7 +48,7 @@ public final class CoalescingBufferQueue extends AbstractCoalescingBufferQueue {
 
     public CoalescingBufferQueue(Channel channel, int initSize, boolean updateWritability) {
         super(updateWritability ? channel : null, initSize);
-        this.channel = ObjectUtil.checkNotNull(channel, "channel");
+        this.channel = Objects.requireNonNull(channel, "channel");
     }
 
     /**

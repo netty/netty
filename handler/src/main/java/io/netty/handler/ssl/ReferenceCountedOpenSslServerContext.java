@@ -28,14 +28,13 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.Objects;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
-
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * A server-side {@link SslContext} which uses OpenSSL's SSL/TLS implementation.
@@ -104,7 +103,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                         throw new IllegalArgumentException(
                                 "KeyManagerFactory not supported");
                     }
-                    checkNotNull(keyCertChain, "keyCertChain");
+                    Objects.requireNonNull(keyCertChain, "keyCertChain");
 
                     setKeyMaterial(ctx, keyCertChain, key, keyPassword);
                 } else {

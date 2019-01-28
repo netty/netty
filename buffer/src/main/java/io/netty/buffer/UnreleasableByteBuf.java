@@ -15,7 +15,10 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.ObjectUtil;
+
 import java.nio.ByteOrder;
+import java.util.Objects;
 
 /**
  * A {@link ByteBuf} implementation that wraps another buffer to prevent a user from increasing or decreasing the
@@ -31,9 +34,7 @@ final class UnreleasableByteBuf extends WrappedByteBuf {
 
     @Override
     public ByteBuf order(ByteOrder endianness) {
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
+        Objects.requireNonNull(endianness, "endianness");
         if (endianness == order()) {
             return this;
         }

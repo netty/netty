@@ -21,6 +21,8 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 /**
  * A skeletal {@link ChannelFuture} implementation which represents a
  * {@link ChannelFuture} which has been completed already.
@@ -36,7 +38,7 @@ abstract class CompleteChannelFuture extends CompleteFuture<Void> implements Cha
      */
     protected CompleteChannelFuture(Channel channel, EventExecutor executor) {
         super(executor);
-        ObjectUtil.checkNotNull(channel, "channel");
+        Objects.requireNonNull(channel, "channel");
         this.channel = channel;
     }
 

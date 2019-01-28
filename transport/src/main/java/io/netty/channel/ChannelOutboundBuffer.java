@@ -33,6 +33,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
@@ -745,7 +746,7 @@ public final class ChannelOutboundBuffer {
      * returns {@code false} or there are no more flushed messages to process.
      */
     public void forEachFlushedMessage(MessageProcessor processor) throws Exception {
-        ObjectUtil.checkNotNull(processor, "processor");
+        Objects.requireNonNull(processor, "processor");
 
         Entry entry = flushedEntry;
         if (entry == null) {

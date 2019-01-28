@@ -22,12 +22,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.Thread.State;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -147,10 +142,10 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
      * @param rejectedHandler   the {@link RejectedExecutionHandler} to use.
      */
     public SingleThreadEventExecutor(Executor executor, int maxPendingTasks, RejectedExecutionHandler rejectedHandler) {
-        this.executor = ObjectUtil.checkNotNull(executor, "executor");
+        this.executor = Objects.requireNonNull(executor, "executor");
         taskQueue = newTaskQueue(Math.max(16, maxPendingTasks));
         this.addTaskWakesUp = taskQueue instanceof BlockingQueue;
-        rejectedExecutionHandler = ObjectUtil.checkNotNull(rejectedHandler, "rejectedHandler");
+        rejectedExecutionHandler = Objects.requireNonNull(rejectedHandler, "rejectedHandler");
     }
 
     /**

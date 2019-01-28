@@ -20,6 +20,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
+import java.util.Objects;
 
 public final class ProxyConnectionEvent {
 
@@ -34,10 +35,10 @@ public final class ProxyConnectionEvent {
      */
     public ProxyConnectionEvent(
             String protocol, String authScheme, SocketAddress proxyAddress, SocketAddress destinationAddress) {
-        ObjectUtil.checkNotNull(protocol, "protocol");
-        ObjectUtil.checkNotNull(authScheme, "authScheme");
-        ObjectUtil.checkNotNull(proxyAddress, "proxyAddress");
-        ObjectUtil.checkNotNull(destinationAddress, "destinationAddress");
+        Objects.requireNonNull(protocol, "protocol");
+        Objects.requireNonNull(authScheme, "authScheme");
+        Objects.requireNonNull(proxyAddress, "proxyAddress");
+        Objects.requireNonNull(destinationAddress, "destinationAddress");
 
         this.protocol = protocol;
         this.authScheme = authScheme;

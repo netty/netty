@@ -22,6 +22,7 @@ import io.netty.util.internal.UnstableApi;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Provides utility methods to create {@link SmtpRequest}s.
@@ -104,7 +105,7 @@ public final class SmtpRequests {
      * Creates a {@code RCPT} request.
      */
     public static SmtpRequest rcpt(CharSequence recipient, CharSequence... rcptParameters) {
-        ObjectUtil.checkNotNull(recipient, "recipient");
+        Objects.requireNonNull(recipient, "recipient");
         if (rcptParameters == null || rcptParameters.length == 0) {
             return new DefaultSmtpRequest(SmtpCommand.RCPT, "TO:<" + recipient + '>');
         } else {
@@ -119,14 +120,14 @@ public final class SmtpRequests {
      * Creates a {@code EXPN} request.
      */
     public static SmtpRequest expn(CharSequence mailingList) {
-        return new DefaultSmtpRequest(SmtpCommand.EXPN, ObjectUtil.checkNotNull(mailingList, "mailingList"));
+        return new DefaultSmtpRequest(SmtpCommand.EXPN, Objects.requireNonNull(mailingList, "mailingList"));
     }
 
     /**
      * Creates a {@code VRFY} request.
      */
     public static SmtpRequest vrfy(CharSequence user) {
-        return new DefaultSmtpRequest(SmtpCommand.VRFY, ObjectUtil.checkNotNull(user, "user"));
+        return new DefaultSmtpRequest(SmtpCommand.VRFY, Objects.requireNonNull(user, "user"));
     }
 
     private SmtpRequests() { }

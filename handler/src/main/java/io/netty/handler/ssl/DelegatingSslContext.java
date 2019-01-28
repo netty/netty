@@ -21,6 +21,7 @@ import io.netty.util.internal.ObjectUtil;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLSessionContext;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Adapter class which allows to wrap another {@link SslContext} and init {@link SSLEngine} instances.
@@ -30,7 +31,7 @@ public abstract class DelegatingSslContext extends SslContext {
     private final SslContext ctx;
 
     protected DelegatingSslContext(SslContext ctx) {
-        this.ctx = ObjectUtil.checkNotNull(ctx, "ctx");
+        this.ctx = Objects.requireNonNull(ctx, "ctx");
     }
 
     @Override

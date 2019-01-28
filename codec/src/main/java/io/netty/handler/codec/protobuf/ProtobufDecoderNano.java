@@ -18,6 +18,7 @@ package io.netty.handler.codec.protobuf;
 import com.google.protobuf.nano.MessageNano;
 
 import java.util.List;
+import java.util.Objects;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -66,7 +67,7 @@ public class ProtobufDecoderNano extends MessageToMessageDecoder<ByteBuf> {
      * Creates a new instance.
      */
     public ProtobufDecoderNano(Class<? extends MessageNano> clazz) {
-        this.clazz = ObjectUtil.checkNotNull(clazz, "You must provide a Class");
+        this.clazz = Objects.requireNonNull(clazz, "You must provide a Class");
     }
 
     @Override

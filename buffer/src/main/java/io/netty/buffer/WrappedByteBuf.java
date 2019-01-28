@@ -17,6 +17,7 @@
 package io.netty.buffer;
 
 import io.netty.util.ByteProcessor;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -28,6 +29,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
+import java.util.Objects;
 
 /**
  * Wraps another {@link ByteBuf}.
@@ -41,10 +43,7 @@ class WrappedByteBuf extends ByteBuf {
     protected final ByteBuf buf;
 
     protected WrappedByteBuf(ByteBuf buf) {
-        if (buf == null) {
-            throw new NullPointerException("buf");
-        }
-        this.buf = buf;
+        this.buf = Objects.requireNonNull(buf, "buf");
     }
 
     @Override

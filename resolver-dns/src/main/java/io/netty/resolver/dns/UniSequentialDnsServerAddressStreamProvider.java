@@ -17,6 +17,8 @@ package io.netty.resolver.dns;
 
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 /**
  * A {@link DnsServerAddressStreamProvider} which is backed by a single {@link DnsServerAddresses}.
  */
@@ -24,7 +26,7 @@ abstract class UniSequentialDnsServerAddressStreamProvider implements DnsServerA
     private final DnsServerAddresses addresses;
 
     UniSequentialDnsServerAddressStreamProvider(DnsServerAddresses addresses) {
-        this.addresses = ObjectUtil.checkNotNull(addresses, "addresses");
+        this.addresses = Objects.requireNonNull(addresses, "addresses");
     }
 
     @Override

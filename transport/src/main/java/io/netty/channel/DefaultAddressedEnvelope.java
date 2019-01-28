@@ -22,6 +22,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
+import java.util.Objects;
 
 /**
  * The default {@link AddressedEnvelope} implementation.
@@ -40,14 +41,9 @@ public class DefaultAddressedEnvelope<M, A extends SocketAddress> implements Add
      * {@code sender} address.
      */
     public DefaultAddressedEnvelope(M message, A recipient, A sender) {
-        ObjectUtil.checkNotNull(message, "message");
-        if (recipient == null && sender == null) {
-            throw new NullPointerException("recipient and sender");
-        }
-
-        this.message = message;
-        this.sender = sender;
-        this.recipient = recipient;
+        this.message = Objects.requireNonNull(message, "message");
+        this.sender = Objects.requireNonNull(sender, "recipient and sender");
+        this.recipient = Objects.requireNonNull(recipient, "recipient and sender");
     }
 
     /**

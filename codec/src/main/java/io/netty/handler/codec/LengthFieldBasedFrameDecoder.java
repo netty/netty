@@ -17,6 +17,7 @@ package io.netty.handler.codec;
 
 import java.nio.ByteOrder;
 import java.util.List;
+import java.util.Objects;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -299,7 +300,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
     public LengthFieldBasedFrameDecoder(
             ByteOrder byteOrder, int maxFrameLength, int lengthFieldOffset, int lengthFieldLength,
             int lengthAdjustment, int initialBytesToStrip, boolean failFast) {
-        ObjectUtil.checkNotNull(byteOrder, "byteOrder");
+        Objects.requireNonNull(byteOrder, "byteOrder");
 
         if (maxFrameLength <= 0) {
             throw new IllegalArgumentException(

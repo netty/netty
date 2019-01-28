@@ -22,6 +22,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Special {@link Comparator} implementation to sort the nameservers to use when follow redirects.
@@ -39,7 +40,7 @@ public final class NameServerComparator implements Comparator<InetSocketAddress>
     private final Class<? extends InetAddress> preferredAddressType;
 
     public NameServerComparator(Class<? extends InetAddress> preferredAddressType) {
-        this.preferredAddressType = ObjectUtil.checkNotNull(preferredAddressType, "preferredAddressType");
+        this.preferredAddressType = Objects.requireNonNull(preferredAddressType, "preferredAddressType");
     }
 
     @Override

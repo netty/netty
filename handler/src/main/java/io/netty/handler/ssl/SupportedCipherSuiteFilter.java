@@ -20,6 +20,7 @@ import io.netty.util.internal.ObjectUtil;
 import javax.net.ssl.SSLEngine;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -33,8 +34,8 @@ public final class SupportedCipherSuiteFilter implements CipherSuiteFilter {
     @Override
     public String[] filterCipherSuites(Iterable<String> ciphers, List<String> defaultCiphers,
             Set<String> supportedCiphers) {
-        ObjectUtil.checkNotNull(defaultCiphers, "defaultCiphers");
-        ObjectUtil.checkNotNull(supportedCiphers, "supportedCiphers");
+        Objects.requireNonNull(defaultCiphers, "defaultCiphers");
+        Objects.requireNonNull(supportedCiphers, "supportedCiphers");
 
         final List<String> newCiphers;
         if (ciphers == null) {

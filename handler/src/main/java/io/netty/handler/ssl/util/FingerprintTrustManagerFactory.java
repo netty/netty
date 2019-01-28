@@ -36,6 +36,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
@@ -157,7 +158,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
      * @param fingerprints a list of SHA1 fingerprints
      */
     public FingerprintTrustManagerFactory(byte[]... fingerprints) {
-        ObjectUtil.checkNotNull(fingerprints, "fingerprints");
+        Objects.requireNonNull(fingerprints, "fingerprints");
 
         List<byte[]> list = new ArrayList<>(fingerprints.length);
         for (byte[] f: fingerprints) {
@@ -175,7 +176,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
     }
 
     private static byte[][] toFingerprintArray(Iterable<String> fingerprints) {
-        ObjectUtil.checkNotNull(fingerprints, "fingerprints");
+        Objects.requireNonNull(fingerprints, "fingerprints");
 
         List<byte[]> list = new ArrayList<>();
         for (String f: fingerprints) {

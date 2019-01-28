@@ -41,6 +41,7 @@ import io.netty.util.internal.ThrowableUtil;
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
 import java.util.Locale;
+import java.util.Objects;
 
 /**
  * Base class for web socket client handshake implementations
@@ -148,7 +149,7 @@ public abstract class WebSocketClientHandshaker {
      *            Channel
      */
     public ChannelFuture handshake(Channel channel) {
-        ObjectUtil.checkNotNull(channel, "channel");
+        Objects.requireNonNull(channel, "channel");
         return handshake(channel, channel.newPromise());
     }
 
@@ -410,7 +411,7 @@ public abstract class WebSocketClientHandshaker {
      *            Closing Frame that was received
      */
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame) {
-        ObjectUtil.checkNotNull(channel, "channel");
+        Objects.requireNonNull(channel, "channel");
         return close(channel, frame, channel.newPromise());
     }
 
@@ -425,7 +426,7 @@ public abstract class WebSocketClientHandshaker {
      *            the {@link ChannelPromise} to be notified when the closing handshake is done
      */
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
-        ObjectUtil.checkNotNull(channel, "channel");
+        Objects.requireNonNull(channel, "channel");
         return channel.writeAndFlush(frame, promise);
     }
 

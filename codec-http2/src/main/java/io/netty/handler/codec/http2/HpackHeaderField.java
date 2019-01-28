@@ -31,7 +31,7 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import java.util.Objects;
 
 class HpackHeaderField {
 
@@ -49,8 +49,8 @@ class HpackHeaderField {
 
     // This constructor can only be used if name and value are ISO-8859-1 encoded.
     HpackHeaderField(CharSequence name, CharSequence value) {
-        this.name = checkNotNull(name, "name");
-        this.value = checkNotNull(value, "value");
+        this.name = Objects.requireNonNull(name, "name");
+        this.value = Objects.requireNonNull(value, "value");
     }
 
     final int size() {

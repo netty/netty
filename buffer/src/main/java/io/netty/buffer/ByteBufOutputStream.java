@@ -22,6 +22,7 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Objects;
 
 /**
  * An {@link OutputStream} which writes data to a {@link ByteBuf}.
@@ -46,7 +47,7 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
      * Creates a new stream which writes data to the specified {@code buffer}.
      */
     public ByteBufOutputStream(ByteBuf buffer) {
-        ObjectUtil.checkNotNull(buffer, "buffer");
+        Objects.requireNonNull(buffer, "buffer");
         this.buffer = buffer;
         startIndex = buffer.writerIndex();
     }

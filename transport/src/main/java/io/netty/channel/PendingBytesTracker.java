@@ -17,11 +17,13 @@ package io.netty.channel;
 
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 abstract class PendingBytesTracker implements MessageSizeEstimator.Handle {
     private final MessageSizeEstimator.Handle estimatorHandle;
 
     private PendingBytesTracker(MessageSizeEstimator.Handle estimatorHandle) {
-        this.estimatorHandle = ObjectUtil.checkNotNull(estimatorHandle, "estimatorHandle");
+        this.estimatorHandle = Objects.requireNonNull(estimatorHandle, "estimatorHandle");
     }
 
     @Override

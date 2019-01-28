@@ -29,14 +29,7 @@ import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_RESERVED_STREAMS;
@@ -53,7 +46,6 @@ import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Integer.MAX_VALUE;
 
@@ -118,7 +110,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
     @Override
     public Future<Void> close(final Promise<Void> promise) {
-        checkNotNull(promise, "promise");
+        Objects.requireNonNull(promise, "promise");
         // Since we allow this method to be called multiple times, we must make sure that all the promises are notified
         // when all streams are removed and the close operation completes.
         if (closePromise != null) {
@@ -373,7 +365,7 @@ public class DefaultHttp2Connection implements Http2Connection {
      * @throws IllegalArgumentException if the key was not created by this connection.
      */
     final DefaultPropertyKey verifyKey(PropertyKey key) {
-        return checkNotNull((DefaultPropertyKey) key, "key").verifyConnection(this);
+        return Objects.requireNonNull((DefaultPropertyKey) key, "key").verifyConnection(this);
     }
 
     /**
@@ -856,7 +848,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public void flowController(F flowController) {
-            this.flowController = checkNotNull(flowController, "flowController");
+            this.flowController = Objects.requireNonNull(flowController, "flowController");
         }
 
         @Override

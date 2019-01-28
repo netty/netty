@@ -20,6 +20,7 @@ import io.netty.util.internal.StringUtil;
 
 import java.io.ObjectStreamException;
 import java.io.Serializable;
+import java.util.Objects;
 
 /**
  * A skeletal implementation of {@link InternalLogger}.  This class implements
@@ -38,7 +39,7 @@ public abstract class AbstractInternalLogger implements InternalLogger, Serializ
      * Creates a new instance.
      */
     protected AbstractInternalLogger(String name) {
-        ObjectUtil.checkNotNull(name, "name");
+        Objects.requireNonNull(name, "name");
         this.name = name;
     }
 

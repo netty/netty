@@ -19,6 +19,8 @@ package io.netty.handler.codec.haproxy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 
+import java.util.Objects;
+
 import static io.netty.util.internal.ObjectUtil.*;
 
 /**
@@ -85,7 +87,7 @@ public class HAProxyTLV extends DefaultByteBufHolder {
      */
     HAProxyTLV(final Type type, final byte typeByteValue, final ByteBuf content) {
         super(content);
-        checkNotNull(type, "type");
+        Objects.requireNonNull(type, "type");
 
         this.type = type;
         this.typeByteValue = typeByteValue;

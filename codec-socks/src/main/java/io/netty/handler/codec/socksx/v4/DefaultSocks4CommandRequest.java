@@ -20,6 +20,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.net.IDN;
+import java.util.Objects;
 
 /**
  * The default {@link Socks4CommandRequest}.
@@ -55,9 +56,9 @@ public class DefaultSocks4CommandRequest extends AbstractSocks4Message implement
             throw new IllegalArgumentException("dstPort: " + dstPort + " (expected: 1~65535)");
         }
 
-        this.userId = ObjectUtil.checkNotNull(userId, "userId");
-        this.type = ObjectUtil.checkNotNull(type, "type");
-        this.dstAddr = IDN.toASCII(ObjectUtil.checkNotNull(dstAddr, "dstAddr"));
+        this.userId = Objects.requireNonNull(userId, "userId");
+        this.type = Objects.requireNonNull(type, "type");
+        this.dstAddr = IDN.toASCII(Objects.requireNonNull(dstAddr, "dstAddr"));
         this.dstPort = dstPort;
     }
 

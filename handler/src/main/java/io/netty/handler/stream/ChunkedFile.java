@@ -24,6 +24,7 @@ import io.netty.util.internal.ObjectUtil;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.Objects;
 
 /**
  * A {@link ChunkedInput} that fetches data from a file chunk by chunk.
@@ -83,7 +84,7 @@ public class ChunkedFile implements ChunkedInput<ByteBuf> {
      *                  {@link #readChunk(ChannelHandlerContext)} call
      */
     public ChunkedFile(RandomAccessFile file, long offset, long length, int chunkSize) throws IOException {
-        ObjectUtil.checkNotNull(file, "file");
+        Objects.requireNonNull(file, "file");
         if (offset < 0) {
             throw new IllegalArgumentException(
                     "offset: " + offset + " (expected: 0 or greater)");

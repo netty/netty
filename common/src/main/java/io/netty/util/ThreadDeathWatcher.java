@@ -27,6 +27,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadFactory;
@@ -78,8 +79,8 @@ public final class ThreadDeathWatcher {
      * @throws IllegalArgumentException if the specified {@code thread} is not alive
      */
     public static void watch(Thread thread, Runnable task) {
-        ObjectUtil.checkNotNull(thread, "thread");
-        ObjectUtil.checkNotNull(task, "task");
+        Objects.requireNonNull(thread, "thread");
+        Objects.requireNonNull(task, "task");
         if (!thread.isAlive()) {
             throw new IllegalArgumentException("thread must be alive.");
         }
@@ -91,8 +92,8 @@ public final class ThreadDeathWatcher {
      * Cancels the task scheduled via {@link #watch(Thread, Runnable)}.
      */
     public static void unwatch(Thread thread, Runnable task) {
-        ObjectUtil.checkNotNull(thread, "thread");
-        ObjectUtil.checkNotNull(task, "task");
+        Objects.requireNonNull(thread, "thread");
+        Objects.requireNonNull(task, "task");
 
         schedule(thread, task, false);
     }
@@ -130,7 +131,7 @@ public final class ThreadDeathWatcher {
      * @return {@code true} if and only if the watcher thread has been terminated
      */
     public static boolean awaitInactivity(long timeout, TimeUnit unit) throws InterruptedException {
-        ObjectUtil.checkNotNull(unit, "unit");
+        Objects.requireNonNull(unit, "unit");
 
         Thread watcherThread = ThreadDeathWatcher.watcherThread;
         if (watcherThread != null) {

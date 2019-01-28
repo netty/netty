@@ -25,6 +25,7 @@ import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
 
 import javax.net.ssl.SSLHandshakeException;
+import java.util.Objects;
 
 /**
  * A handler for SSL clients to handle and act upon stapled OCSP responses.
@@ -41,7 +42,7 @@ public abstract class OcspClientHandler extends ChannelInboundHandlerAdapter {
     private final ReferenceCountedOpenSslEngine engine;
 
     protected OcspClientHandler(ReferenceCountedOpenSslEngine engine) {
-        this.engine = ObjectUtil.checkNotNull(engine, "engine");
+        this.engine = Objects.requireNonNull(engine, "engine");
     }
 
     /**

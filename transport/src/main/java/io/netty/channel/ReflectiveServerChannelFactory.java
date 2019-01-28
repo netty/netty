@@ -20,6 +20,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.lang.reflect.Constructor;
+import java.util.Objects;
 
 /**
  * A {@link ChannelFactory} that instantiates a new {@link ServerChannel} by invoking its default constructor
@@ -30,7 +31,7 @@ public final class ReflectiveServerChannelFactory<T extends ServerChannel> imple
     private final Constructor<? extends T> constructor;
 
     public ReflectiveServerChannelFactory(Class<? extends T> clazz) {
-        ObjectUtil.checkNotNull(clazz, "clazz");
+        Objects.requireNonNull(clazz, "clazz");
         try {
             this.constructor = clazz.getConstructor(EventLoop.class, EventLoopGroup.class);
         } catch (NoSuchMethodException e) {

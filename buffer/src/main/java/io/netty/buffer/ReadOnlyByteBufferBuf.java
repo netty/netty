@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.nio.ReadOnlyBufferException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.util.Objects;
 
 
 /**
@@ -209,9 +211,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuf getBytes(int index, ByteBuffer dst) {
         checkIndex(index);
-        if (dst == null) {
-            throw new NullPointerException("dst");
-        }
+        Objects.requireNonNull(dst, "dst");
 
         int bytesToCopy = Math.min(capacity() - index, dst.remaining());
         ByteBuffer tmpBuf = internalNioBuffer();

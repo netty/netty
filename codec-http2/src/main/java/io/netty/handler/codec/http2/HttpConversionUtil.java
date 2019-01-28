@@ -39,6 +39,7 @@ import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Objects;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.COOKIE;
@@ -58,7 +59,6 @@ import static io.netty.util.AsciiString.indexOf;
 import static io.netty.util.AsciiString.trim;
 import static io.netty.util.ByteProcessor.FIND_COMMA;
 import static io.netty.util.ByteProcessor.FIND_SEMI_COLON;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.isNullOrEmpty;
 import static io.netty.util.internal.StringUtil.length;
 import static io.netty.util.internal.StringUtil.unescapeCsvFields;
@@ -247,10 +247,8 @@ public final class HttpConversionUtil {
                                                 boolean validateHttpHeaders)
                     throws Http2Exception {
         // HTTP/2 does not define a way to carry the version identifier that is included in the HTTP/1.1 request line.
-        final CharSequence method = checkNotNull(http2Headers.method(),
-                "method header cannot be null in conversion to HTTP/1.x");
-        final CharSequence path = checkNotNull(http2Headers.path(),
-                "path header cannot be null in conversion to HTTP/1.x");
+        final CharSequence method = Objects.requireNonNull(http2Headers.method(), "method header cannot be null in conversion to HTTP/1.x");
+        final CharSequence path = Objects.requireNonNull(http2Headers.path(), "path header cannot be null in conversion to HTTP/1.x");
         FullHttpRequest msg = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method
                         .toString()), path.toString(), alloc.buffer(), validateHttpHeaders);
         try {
@@ -280,10 +278,8 @@ public final class HttpConversionUtil {
     public static HttpRequest toHttpRequest(int streamId, Http2Headers http2Headers, boolean validateHttpHeaders)
                     throws Http2Exception {
         // HTTP/2 does not define a way to carry the version identifier that is included in the HTTP/1.1 request line.
-        final CharSequence method = checkNotNull(http2Headers.method(),
-                "method header cannot be null in conversion to HTTP/1.x");
-        final CharSequence path = checkNotNull(http2Headers.path(),
-                "path header cannot be null in conversion to HTTP/1.x");
+        final CharSequence method = Objects.requireNonNull(http2Headers.method(), "method header cannot be null in conversion to HTTP/1.x");
+        final CharSequence path = Objects.requireNonNull(http2Headers.path(), "path header cannot be null in conversion to HTTP/1.x");
         HttpRequest msg = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method.toString()),
                 path.toString(), validateHttpHeaders);
         try {

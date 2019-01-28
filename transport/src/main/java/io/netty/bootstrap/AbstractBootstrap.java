@@ -36,6 +36,7 @@ import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * {@link AbstractBootstrap} is a helper class that makes it easy to bootstrap a {@link Channel}. It support
@@ -74,7 +75,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      * {@link Channel}
      */
     public B group(EventLoopGroup group) {
-        ObjectUtil.checkNotNull(group, "group");
+        Objects.requireNonNull(group, "group");
         if (this.group != null) {
             throw new IllegalStateException("group set already");
         }
@@ -121,7 +122,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.
      */
     public <T> B option(ChannelOption<T> option, T value) {
-        ObjectUtil.checkNotNull(option, "option");
+        Objects.requireNonNull(option, "option");
         if (value == null) {
             synchronized (options) {
                 options.remove(option);
@@ -139,7 +140,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      * {@code null}, the attribute of the specified {@code key} is removed.
      */
     public <T> B attr(AttributeKey<T> key, T value) {
-        ObjectUtil.checkNotNull(key, "key");
+        Objects.requireNonNull(key, "key");
         if (value == null) {
             synchronized (attrs) {
                 attrs.remove(key);
@@ -218,7 +219,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      */
     public ChannelFuture bind(SocketAddress localAddress) {
         validate();
-        ObjectUtil.checkNotNull(localAddress, "localAddress");
+        Objects.requireNonNull(localAddress, "localAddress");
         return doBind(localAddress);
     }
 
@@ -296,7 +297,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      * the {@link ChannelHandler} to use for serving the requests.
      */
     public B handler(ChannelHandler handler) {
-        ObjectUtil.checkNotNull(handler, "handler");
+        Objects.requireNonNull(handler, "handler");
         this.handler = handler;
         return self();
     }

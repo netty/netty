@@ -17,7 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.util.internal.ObjectUtil;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import java.util.Objects;
 
 /**
  * The default {@link HttpMessage} implementation.
@@ -47,8 +47,8 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
      * Creates a new instance.
      */
     protected DefaultHttpMessage(final HttpVersion version, HttpHeaders headers) {
-        this.version = checkNotNull(version, "version");
-        this.headers = checkNotNull(headers, "headers");
+        this.version = Objects.requireNonNull(version, "version");
+        this.headers = Objects.requireNonNull(headers, "headers");
     }
 
     @Override
@@ -91,7 +91,7 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
 
     @Override
     public HttpMessage setProtocolVersion(HttpVersion version) {
-        ObjectUtil.checkNotNull(version, "version");
+        Objects.requireNonNull(version, "version");
         this.version = version;
         return this;
     }

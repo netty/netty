@@ -27,13 +27,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.WeakHashMap;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
@@ -69,7 +63,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private volatile MessageSizeEstimator.Handle estimatorHandle;
 
     protected DefaultChannelPipeline(Channel channel) {
-        this.channel = ObjectUtil.checkNotNull(channel, "channel");
+        this.channel = Objects.requireNonNull(channel, "channel");
         succeededFuture = new SucceededChannelFuture(channel, null);
         voidPromise =  new VoidChannelPromise(channel, true);
 
@@ -267,7 +261,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addFirst(EventExecutor executor, ChannelHandler... handlers) {
-        ObjectUtil.checkNotNull(handlers, "handlers");
+        Objects.requireNonNull(handlers, "handlers");
         if (handlers.length == 0 || handlers[0] == null) {
             return this;
         }
@@ -298,7 +292,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addLast(EventExecutor executor, ChannelHandler... handlers) {
-        ObjectUtil.checkNotNull(handlers, "handlers");
+        Objects.requireNonNull(handlers, "handlers");
 
         for (ChannelHandler h: handlers) {
             if (h == null) {
@@ -598,14 +592,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelHandlerContext context(String name) {
-        ObjectUtil.checkNotNull(name, "name");
+        Objects.requireNonNull(name, "name");
 
         return context0(name);
     }
 
     @Override
     public final ChannelHandlerContext context(ChannelHandler handler) {
-        ObjectUtil.checkNotNull(handler, "handler");
+        Objects.requireNonNull(handler, "handler");
 
         AbstractChannelHandlerContext ctx = head.next;
         for (;;) {
@@ -624,7 +618,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelHandlerContext context(Class<? extends ChannelHandler> handlerType) {
-        ObjectUtil.checkNotNull(handlerType, "handlerType");
+        Objects.requireNonNull(handlerType, "handlerType");
 
         AbstractChannelHandlerContext ctx = head.next;
         for (;;) {

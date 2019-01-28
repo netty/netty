@@ -38,6 +38,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Objects;
 
 public final class HttpProxyHandler extends ProxyHandler {
 
@@ -86,8 +87,8 @@ public final class HttpProxyHandler extends ProxyHandler {
                             HttpHeaders headers,
                             boolean ignoreDefaultPortsInConnectHostHeader) {
         super(proxyAddress);
-        ObjectUtil.checkNotNull(username, "username");
-        ObjectUtil.checkNotNull(password, "password");
+        Objects.requireNonNull(username, "username");
+        Objects.requireNonNull(password, "password");
         this.username = username;
         this.password = password;
 

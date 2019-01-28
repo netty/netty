@@ -24,6 +24,7 @@ import java.nio.ByteOrder;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.Objects;
 
 
 /**
@@ -576,7 +577,7 @@ public final class Unpooled {
      * {@code 0} and the length of the encoded string respectively.
      */
     public static ByteBuf copiedBuffer(CharSequence string, Charset charset) {
-        ObjectUtil.checkNotNull(string, "string");
+        Objects.requireNonNull(string, "string");
 
         if (string instanceof CharBuffer) {
             return copiedBuffer((CharBuffer) string, charset);
@@ -593,7 +594,7 @@ public final class Unpooled {
      */
     public static ByteBuf copiedBuffer(
             CharSequence string, int offset, int length, Charset charset) {
-        ObjectUtil.checkNotNull(string, "string");
+        Objects.requireNonNull(string, "string");
         if (length == 0) {
             return EMPTY_BUFFER;
         }
@@ -623,7 +624,7 @@ public final class Unpooled {
      * {@code 0} and the length of the encoded string respectively.
      */
     public static ByteBuf copiedBuffer(char[] array, Charset charset) {
-        ObjectUtil.checkNotNull(array, "array");
+        Objects.requireNonNull(array, "array");
         return copiedBuffer(array, 0, array.length, charset);
     }
 
@@ -634,7 +635,7 @@ public final class Unpooled {
      * {@code 0} and the length of the encoded string respectively.
      */
     public static ByteBuf copiedBuffer(char[] array, int offset, int length, Charset charset) {
-        ObjectUtil.checkNotNull(array, "array");
+        Objects.requireNonNull(array, "array");
         if (length == 0) {
             return EMPTY_BUFFER;
         }

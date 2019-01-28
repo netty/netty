@@ -18,6 +18,8 @@ package io.netty.handler.codec.spdy;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 final class SpdyCodecUtil {
 
     static final int SPDY_SESSION_STREAM_ID = 0;
@@ -287,7 +289,7 @@ final class SpdyCodecUtil {
      * Validate a SPDY header name.
      */
     static void validateHeaderName(CharSequence name) {
-        ObjectUtil.checkNotNull(name, "name");
+        Objects.requireNonNull(name, "name");
         if (name.length() == 0) {
             throw new IllegalArgumentException(
                     "name cannot be length zero");
@@ -318,7 +320,7 @@ final class SpdyCodecUtil {
      * Validate a SPDY header value. Does not validate max length.
      */
     static void validateHeaderValue(CharSequence value) {
-        ObjectUtil.checkNotNull(value, "value");
+        Objects.requireNonNull(value, "value");
         for (int i = 0; i < value.length(); i ++) {
             char c = value.charAt(i);
             if (c == 0) {

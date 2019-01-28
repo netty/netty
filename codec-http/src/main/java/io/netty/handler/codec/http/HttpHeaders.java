@@ -25,18 +25,12 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ObjectUtil;
 
 import java.text.ParseException;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import static io.netty.util.AsciiString.contentEquals;
 import static io.netty.util.AsciiString.contentEqualsIgnoreCase;
 import static io.netty.util.AsciiString.trim;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Provides the constants for the standard HTTP header names and values and
@@ -1413,7 +1407,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @return {@code this}
      */
     public HttpHeaders add(HttpHeaders headers) {
-        ObjectUtil.checkNotNull(headers, "headers");
+        Objects.requireNonNull(headers, "headers");
         for (Map.Entry<String, String> e: headers) {
             add(e.getKey(), e.getValue());
         }
@@ -1492,7 +1486,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @return {@code this}
      */
     public HttpHeaders set(HttpHeaders headers) {
-        checkNotNull(headers, "headers");
+        Objects.requireNonNull(headers, "headers");
 
         clear();
 
@@ -1513,7 +1507,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @return {@code this}
      */
     public HttpHeaders setAll(HttpHeaders headers) {
-        checkNotNull(headers, "headers");
+        Objects.requireNonNull(headers, "headers");
 
         if (headers.isEmpty()) {
             return this;

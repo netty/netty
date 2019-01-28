@@ -19,10 +19,11 @@ package io.netty.handler.codec.http2;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty.util.internal.UnstableApi;
 
+import java.util.Objects;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_INITIAL_HUFFMAN_DECODE_CAPACITY;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_RESERVED_STREAMS;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -118,7 +119,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
      */
     protected B initialSettings(Http2Settings settings) {
-        initialSettings = checkNotNull(settings, "settings");
+        initialSettings = Objects.requireNonNull(settings, "settings");
         return self();
     }
 
@@ -136,7 +137,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * This listener will only be set if the decoder's listener is {@code null}.
      */
     protected B frameListener(Http2FrameListener frameListener) {
-        this.frameListener = checkNotNull(frameListener, "frameListener");
+        this.frameListener = Objects.requireNonNull(frameListener, "frameListener");
         return self();
     }
 
@@ -222,7 +223,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         enforceConstraint("connection", "codec", decoder);
         enforceConstraint("connection", "codec", encoder);
 
-        this.connection = checkNotNull(connection, "connection");
+        this.connection = Objects.requireNonNull(connection, "connection");
 
         return self();
     }
@@ -257,8 +258,8 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         enforceConstraint("codec", "headerSensitivityDetector", headerSensitivityDetector);
         enforceConstraint("codec", "encoderEnforceMaxConcurrentStreams", encoderEnforceMaxConcurrentStreams);
 
-        checkNotNull(decoder, "decoder");
-        checkNotNull(encoder, "encoder");
+        Objects.requireNonNull(decoder, "decoder");
+        Objects.requireNonNull(encoder, "encoder");
 
         if (decoder.connection() != encoder.connection()) {
             throw new IllegalArgumentException("The specified encoder and decoder have different connections.");
@@ -302,7 +303,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected B frameLogger(Http2FrameLogger frameLogger) {
         enforceNonCodecConstraints("frameLogger");
-        this.frameLogger = checkNotNull(frameLogger, "frameLogger");
+        this.frameLogger = Objects.requireNonNull(frameLogger, "frameLogger");
         return self();
     }
 
@@ -336,7 +337,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected B headerSensitivityDetector(SensitivityDetector headerSensitivityDetector) {
         enforceNonCodecConstraints("headerSensitivityDetector");
-        this.headerSensitivityDetector = checkNotNull(headerSensitivityDetector, "headerSensitivityDetector");
+        this.headerSensitivityDetector = Objects.requireNonNull(headerSensitivityDetector, "headerSensitivityDetector");
         return self();
     }
 

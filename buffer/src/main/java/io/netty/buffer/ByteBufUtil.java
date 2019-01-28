@@ -40,9 +40,9 @@ import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.Objects;
 
 import static io.netty.util.internal.MathUtil.isOutOfBounds;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.NEWLINE;
 import static io.netty.util.internal.StringUtil.isSurrogate;
 
@@ -883,7 +883,7 @@ public final class ByteBufUtil {
                             + length + ") <= srcLen(" + src.length() + ')');
         }
 
-        checkNotNull(dst, "dst").setBytes(dstIdx, src.array(), srcIdx + src.arrayOffset(), length);
+        Objects.requireNonNull(dst, "dst").setBytes(dstIdx, src.array(), srcIdx + src.arrayOffset(), length);
     }
 
     /**
@@ -900,7 +900,7 @@ public final class ByteBufUtil {
                             + length + ") <= srcLen(" + src.length() + ')');
         }
 
-        checkNotNull(dst, "dst").writeBytes(src.array(), srcIdx + src.arrayOffset(), length);
+        Objects.requireNonNull(dst, "dst").writeBytes(src.array(), srcIdx + src.arrayOffset(), length);
     }
 
     /**
@@ -1220,8 +1220,8 @@ public final class ByteBufUtil {
      * @throws IndexOutOfBoundsException if {@code index} + {@code length} is greater than {@code buf.readableBytes}
      */
     public static boolean isText(ByteBuf buf, int index, int length, Charset charset) {
-        checkNotNull(buf, "buf");
-        checkNotNull(charset, "charset");
+        Objects.requireNonNull(buf, "buf");
+        Objects.requireNonNull(charset, "charset");
         final int maxIndex = buf.readerIndex() + buf.readableBytes();
         if (index < 0 || length < 0 || index > maxIndex - length) {
             throw new IndexOutOfBoundsException("index: " + index + " length: " + length);

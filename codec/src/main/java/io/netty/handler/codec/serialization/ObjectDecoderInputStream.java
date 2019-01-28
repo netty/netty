@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInput;
 import java.io.StreamCorruptedException;
+import java.util.Objects;
 
 /**
  * An {@link ObjectInput} which is interoperable with {@link ObjectEncoder}
@@ -88,9 +89,7 @@ public class ObjectDecoderInputStream extends InputStream implements
      *        a {@link StreamCorruptedException} will be raised.
      */
     public ObjectDecoderInputStream(InputStream in, ClassLoader classLoader, int maxObjectSize) {
-        if (in == null) {
-            throw new NullPointerException("in");
-        }
+        Objects.requireNonNull(in, "in");
         if (maxObjectSize <= 0) {
             throw new IllegalArgumentException("maxObjectSize: " + maxObjectSize);
         }

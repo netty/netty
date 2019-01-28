@@ -23,6 +23,7 @@ import io.netty.util.internal.UnstableApi;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * The command part of a {@link SmtpRequest}.
@@ -60,7 +61,7 @@ public final class SmtpCommand {
      * Returns the {@link SmtpCommand} for the given command name.
      */
     public static SmtpCommand valueOf(CharSequence commandName) {
-        ObjectUtil.checkNotNull(commandName, "commandName");
+        Objects.requireNonNull(commandName, "commandName");
         SmtpCommand command = COMMANDS.get(commandName.toString());
         return command != null ? command : new SmtpCommand(AsciiString.of(commandName));
     }

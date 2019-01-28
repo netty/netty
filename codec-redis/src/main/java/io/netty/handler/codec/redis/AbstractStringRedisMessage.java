@@ -19,6 +19,8 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.util.Objects;
+
 /**
  * Abstract class for Simple Strings or Errors.
  */
@@ -28,7 +30,7 @@ public abstract class AbstractStringRedisMessage implements RedisMessage {
     private final String content;
 
     AbstractStringRedisMessage(String content) {
-        this.content = ObjectUtil.checkNotNull(content, "content");
+        this.content = Objects.requireNonNull(content, "content");
     }
 
     /**

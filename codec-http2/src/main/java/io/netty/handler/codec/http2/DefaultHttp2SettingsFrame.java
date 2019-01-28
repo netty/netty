@@ -20,6 +20,8 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.util.Objects;
+
 /**
  * The default {@link Http2SettingsFrame} implementation.
  */
@@ -29,7 +31,7 @@ public class DefaultHttp2SettingsFrame implements Http2SettingsFrame {
     private final Http2Settings settings;
 
     public DefaultHttp2SettingsFrame(Http2Settings settings) {
-        this.settings = ObjectUtil.checkNotNull(settings, "settings");
+        this.settings = Objects.requireNonNull(settings, "settings");
     }
 
     @Override

@@ -18,12 +18,12 @@ import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Objects;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MIN_ALLOCATION_CHUNK;
 import static io.netty.handler.codec.http2.Http2CodecUtil.streamableBytes;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -126,7 +126,7 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
     }
 
     private State state(Http2Stream stream) {
-        return checkNotNull(stream, "stream").getProperty(stateKey);
+        return Objects.requireNonNull(stream, "stream").getProperty(stateKey);
     }
 
     /**

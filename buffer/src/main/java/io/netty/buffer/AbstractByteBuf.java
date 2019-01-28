@@ -37,6 +37,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
+import java.util.Objects;
 
 import static io.netty.util.internal.MathUtil.isOutOfBounds;
 
@@ -290,7 +291,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (endianness == order()) {
             return this;
         }
-        ObjectUtil.checkNotNull(endianness, "endianness");
+        Objects.requireNonNull(endianness, "endianness");
         return newSwappedByteBuf();
     }
 
@@ -598,7 +599,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int length) {
         checkIndex(index, length);
-        ObjectUtil.checkNotNull(src, "src");
+        Objects.requireNonNull(src, "src");
         if (checkBounds) {
             checkReadableBounds(src, length);
         }

@@ -23,6 +23,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.List;
+import java.util.Objects;
 
 import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
@@ -34,7 +35,6 @@ import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.min;
 
@@ -68,10 +68,10 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                                          Http2ConnectionEncoder encoder,
                                          Http2FrameReader frameReader,
                                          Http2PromisedRequestVerifier requestVerifier) {
-        this.connection = checkNotNull(connection, "connection");
-        this.frameReader = checkNotNull(frameReader, "frameReader");
-        this.encoder = checkNotNull(encoder, "encoder");
-        this.requestVerifier = checkNotNull(requestVerifier, "requestVerifier");
+        this.connection = Objects.requireNonNull(connection, "connection");
+        this.frameReader = Objects.requireNonNull(frameReader, "frameReader");
+        this.encoder = Objects.requireNonNull(encoder, "encoder");
+        this.requestVerifier = Objects.requireNonNull(requestVerifier, "requestVerifier");
         if (connection.local().flowController() == null) {
             connection.local().flowController(new DefaultHttp2LocalFlowController(connection));
         }
@@ -80,7 +80,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
     @Override
     public void lifecycleManager(Http2LifecycleManager lifecycleManager) {
-        this.lifecycleManager = checkNotNull(lifecycleManager, "lifecycleManager");
+        this.lifecycleManager = Objects.requireNonNull(lifecycleManager, "lifecycleManager");
     }
 
     @Override
@@ -95,7 +95,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
     @Override
     public void frameListener(Http2FrameListener listener) {
-        this.listener = checkNotNull(listener, "listener");
+        this.listener = Objects.requireNonNull(listener, "listener");
     }
 
     @Override

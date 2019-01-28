@@ -21,6 +21,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
+import java.util.Objects;
 
 /**
  * A {@link RuntimeException} raised when {@link DnsNameResolver} failed to perform a successful query.
@@ -47,11 +48,11 @@ public class DnsNameResolverException extends RuntimeException {
     }
 
     private static InetSocketAddress validateRemoteAddress(InetSocketAddress remoteAddress) {
-        return ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
+        return Objects.requireNonNull(remoteAddress, "remoteAddress");
     }
 
     private static DnsQuestion validateQuestion(DnsQuestion question) {
-        return ObjectUtil.checkNotNull(question, "question");
+        return Objects.requireNonNull(question, "question");
     }
 
     /**

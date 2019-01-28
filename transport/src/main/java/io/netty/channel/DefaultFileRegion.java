@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
+import java.util.Objects;
 
 /**
  * Default {@link FileRegion} implementation which transfer data from a {@link FileChannel} or {@link File}.
@@ -50,7 +51,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
      * @param count     the number of bytes to transfer
      */
     public DefaultFileRegion(FileChannel file, long position, long count) {
-        ObjectUtil.checkNotNull(file, "file");
+        Objects.requireNonNull(file, "file");
         if (position < 0) {
             throw new IllegalArgumentException("position must be >= 0 but was " + position);
         }
@@ -72,7 +73,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
      * @param count     the number of bytes to transfer
      */
     public DefaultFileRegion(File f, long position, long count) {
-        ObjectUtil.checkNotNull(f, "f");
+        Objects.requireNonNull(f, "f");
         if (position < 0) {
             throw new IllegalArgumentException("position must be >= 0 but was " + position);
         }

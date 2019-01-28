@@ -30,16 +30,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.ConcurrentModificationException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
-
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import java.util.*;
 
 /**
  * A virtual buffer which shows multiple buffers as a single merged buffer.  It is recommended to use
@@ -62,7 +53,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     private CompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents, int initSize) {
         super(AbstractByteBufAllocator.DEFAULT_MAX_CAPACITY);
-        ObjectUtil.checkNotNull(alloc, "alloc");
+        Objects.requireNonNull(alloc, "alloc");
         if (maxNumComponents < 1) {
             throw new IllegalArgumentException(
                     "maxNumComponents: " + maxNumComponents + " (expected: >= 1)");
@@ -219,7 +210,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponent(boolean increaseWriterIndex, ByteBuf buffer) {
-        checkNotNull(buffer, "buffer");
+        Objects.requireNonNull(buffer, "buffer");
         addComponent0(increaseWriterIndex, componentCount, buffer);
         consolidateIfNeeded();
         return this;
@@ -235,7 +226,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * ownership of all {@link ByteBuf} objects is transferred to this {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponents(boolean increaseWriterIndex, ByteBuf... buffers) {
-        checkNotNull(buffers, "buffers");
+        Objects.requireNonNull(buffers, "buffers");
         addComponents0(increaseWriterIndex, componentCount, buffers, 0);
         consolidateIfNeeded();
         return this;
@@ -266,7 +257,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponent(boolean increaseWriterIndex, int cIndex, ByteBuf buffer) {
-        checkNotNull(buffer, "buffer");
+        Objects.requireNonNull(buffer, "buffer");
         addComponent0(increaseWriterIndex, cIndex, buffer);
         consolidateIfNeeded();
         return this;
@@ -338,7 +329,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * ownership of all {@link ByteBuf} objects is transferred to this {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponents(int cIndex, ByteBuf... buffers) {
-        checkNotNull(buffers, "buffers");
+        Objects.requireNonNull(buffers, "buffers");
         addComponents0(false, cIndex, buffers, 0);
         consolidateIfNeeded();
         return this;
@@ -378,7 +369,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     private <T> int addComponents0(boolean increaseWriterIndex, int cIndex,
             ByteWrapper<T> wrapper, T[] buffers, int offset) {
-        checkNotNull(buffers, "buffers");
+        Objects.requireNonNull(buffers, "buffers");
         checkComponentIndex(cIndex);
 
         // No need for consolidation
@@ -425,7 +416,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             // If buffers also implements ByteBuf (e.g. CompositeByteBuf), it has to go to addComponent(ByteBuf).
             return addComponent0(increaseIndex, cIndex, (ByteBuf) buffers);
         }
-        checkNotNull(buffers, "buffers");
+        Objects.requireNonNull(buffers, "buffers");
         Iterator<ByteBuf> it = buffers.iterator();
         try {
             checkComponentIndex(cIndex);

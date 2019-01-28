@@ -25,8 +25,7 @@ import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 import java.util.List;
-
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import java.util.Objects;
 
 /**
  * Encodes a {@link DatagramDnsQuery} (or an {@link AddressedEnvelope} of {@link DnsQuery}} into a
@@ -49,7 +48,7 @@ public class DatagramDnsQueryEncoder extends MessageToMessageEncoder<AddressedEn
      * Creates a new encoder with the specified {@code recordEncoder}.
      */
     public DatagramDnsQueryEncoder(DnsRecordEncoder recordEncoder) {
-        this.recordEncoder = checkNotNull(recordEncoder, "recordEncoder");
+        this.recordEncoder = Objects.requireNonNull(recordEncoder, "recordEncoder");
     }
 
     @Override

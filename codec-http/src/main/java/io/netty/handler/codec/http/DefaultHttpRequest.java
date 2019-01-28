@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import java.util.Objects;
 
 /**
  * The default {@link HttpRequest} implementation.
@@ -46,8 +46,8 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
         super(httpVersion, validateHeaders, false);
-        this.method = checkNotNull(method, "method");
-        this.uri = checkNotNull(uri, "uri");
+        this.method = Objects.requireNonNull(method, "method");
+        this.uri = Objects.requireNonNull(uri, "uri");
     }
 
     /**
@@ -60,8 +60,8 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, HttpHeaders headers) {
         super(httpVersion, headers);
-        this.method = checkNotNull(method, "method");
-        this.uri = checkNotNull(uri, "uri");
+        this.method = Objects.requireNonNull(method, "method");
+        this.uri = Objects.requireNonNull(uri, "uri");
     }
 
     @Override

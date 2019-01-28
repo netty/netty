@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.util.Objects;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.buffer;
@@ -48,7 +49,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
 
     @Override
     public void setContent(ByteBuf buffer) throws IOException {
-        ObjectUtil.checkNotNull(buffer, "buffer");
+        Objects.requireNonNull(buffer, "buffer");
         long localsize = buffer.readableBytes();
         checkSize(localsize);
         if (definedSize > 0 && definedSize < localsize) {
@@ -114,7 +115,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         if (last) {
             setCompleted();
         } else {
-            ObjectUtil.checkNotNull(buffer, "buffer");
+            Objects.requireNonNull(buffer, "buffer");
         }
     }
 

@@ -24,6 +24,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayDeque;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -104,7 +105,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      * Create the global TrafficCounter.
      */
     void createGlobalTrafficCounter(ScheduledExecutorService executor) {
-        ObjectUtil.checkNotNull(executor, "executor");
+        Objects.requireNonNull(executor, "executor");
         TrafficCounter tc = new TrafficCounter(this, executor, "GlobalTC", checkInterval);
         setTrafficCounter(tc);
         tc.start();

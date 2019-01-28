@@ -22,6 +22,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Objects;
 
 /**
  * This class allows one to filter new {@link Channel}s based on the
@@ -37,7 +38,7 @@ public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAdd
     private final IpFilterRule[] rules;
 
     public RuleBasedIpFilter(IpFilterRule... rules) {
-        ObjectUtil.checkNotNull(rules, "rules");
+        Objects.requireNonNull(rules, "rules");
         this.rules = rules;
     }
 

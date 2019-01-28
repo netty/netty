@@ -30,6 +30,7 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.Provider;
+import java.util.Objects;
 
 /**
  * Helps to implement a custom {@link TrustManagerFactory}.
@@ -73,7 +74,7 @@ public abstract class SimpleTrustManagerFactory extends TrustManagerFactory {
         CURRENT_SPI.get().init(this);
         CURRENT_SPI.remove();
 
-        ObjectUtil.checkNotNull(name, "name");
+        Objects.requireNonNull(name, "name");
     }
 
     /**

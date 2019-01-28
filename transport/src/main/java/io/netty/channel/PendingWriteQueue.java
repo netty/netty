@@ -23,6 +23,8 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.Objects;
+
 /**
  * A queue of write operations which are pending for later execution. It also updates the
  * {@linkplain Channel#isWritable() writability} of the associated {@link Channel}, so that
@@ -92,8 +94,8 @@ public final class PendingWriteQueue {
      */
     public void add(Object msg, ChannelPromise promise) {
         assert ctx.executor().inEventLoop();
-        ObjectUtil.checkNotNull(msg, "msg");
-        ObjectUtil.checkNotNull(promise, "promise");
+        Objects.requireNonNull(msg, "msg");
+        Objects.requireNonNull(promise, "promise");
         // It is possible for writes to be triggered from removeAndFailAll(). To preserve ordering,
         // we should add them to the queue and let removeAndFailAll() fail them later.
         int messageSize = size(msg);
@@ -161,7 +163,7 @@ public final class PendingWriteQueue {
      */
     public void removeAndFailAll(Throwable cause) {
         assert ctx.executor().inEventLoop();
-        ObjectUtil.checkNotNull(cause, "cause");
+        Objects.requireNonNull(cause, "cause");
         // It is possible for some of the failed promises to trigger more writes. The new writes
         // will "revive" the queue, so we need to clean them up until the queue is empty.
         for (PendingWrite write = head; write != null; write = head) {
@@ -186,7 +188,7 @@ public final class PendingWriteQueue {
      */
     public void removeAndFail(Throwable cause) {
         assert ctx.executor().inEventLoop();
-        ObjectUtil.checkNotNull(cause, "cause");
+        Objects.requireNonNull(cause, "cause");
         PendingWrite write = head;
 
         if (write == null) {

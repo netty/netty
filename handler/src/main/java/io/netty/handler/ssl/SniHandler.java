@@ -26,6 +26,8 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
+import java.util.Objects;
+
 /**
  * <p>Enables <a href="https://tools.ietf.org/html/rfc3546#section-3.1">SNI
  * (Server Name Indication)</a> extension for server side SSL. For clients
@@ -68,7 +70,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
      */
     @SuppressWarnings("unchecked")
     public SniHandler(AsyncMapping<? super String, ? extends SslContext> mapping) {
-        this.mapping = (AsyncMapping<String, SslContext>) ObjectUtil.checkNotNull(mapping, "mapping");
+        this.mapping = (AsyncMapping<String, SslContext>) Objects.requireNonNull(mapping, "mapping");
     }
 
     /**
@@ -146,7 +148,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
         private final Mapping<? super String, ? extends SslContext> mapping;
 
         private AsyncMappingAdapter(Mapping<? super String, ? extends SslContext> mapping) {
-            this.mapping = ObjectUtil.checkNotNull(mapping, "mapping");
+            this.mapping = Objects.requireNonNull(mapping, "mapping");
         }
 
         @Override

@@ -23,6 +23,8 @@ import io.netty.channel.unix.PreferredDirectByteBufAllocator;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -42,7 +44,7 @@ final class KQueueRecvByteAllocatorHandle implements RecvByteBufAllocator.Extend
     private long numberBytesPending;
 
     KQueueRecvByteAllocatorHandle(RecvByteBufAllocator.ExtendedHandle handle) {
-        delegate = ObjectUtil.checkNotNull(handle, "handle");
+        delegate = Objects.requireNonNull(handle, "handle");
     }
 
     @Override

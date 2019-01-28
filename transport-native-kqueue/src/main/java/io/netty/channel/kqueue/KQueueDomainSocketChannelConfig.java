@@ -26,6 +26,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.Map;
+import java.util.Objects;
 
 import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
@@ -141,7 +142,7 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
 
     @Override
     public KQueueDomainSocketChannelConfig setReadMode(DomainSocketReadMode mode) {
-        ObjectUtil.checkNotNull(mode, "mode");
+        Objects.requireNonNull(mode, "mode");
         this.mode = mode;
         return this;
     }

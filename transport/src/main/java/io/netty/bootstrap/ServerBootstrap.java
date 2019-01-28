@@ -39,6 +39,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -87,7 +88,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      */
     public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
         super.group(parentGroup);
-        ObjectUtil.checkNotNull(childGroup, "childGroup");
+        Objects.requireNonNull(childGroup, "childGroup");
         if (this.childGroup != null) {
             throw new IllegalStateException("childGroup set already");
         }
@@ -101,7 +102,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      * {@link ChannelOption}.
      */
     public <T> ServerBootstrap childOption(ChannelOption<T> childOption, T value) {
-        ObjectUtil.checkNotNull(childOption, "childOption");
+        Objects.requireNonNull(childOption, "childOption");
         if (value == null) {
             synchronized (childOptions) {
                 childOptions.remove(childOption);
@@ -119,7 +120,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      * {@code null} the {@link AttributeKey} is removed
      */
     public <T> ServerBootstrap childAttr(AttributeKey<T> childKey, T value) {
-        ObjectUtil.checkNotNull(childKey, "childKey");
+        Objects.requireNonNull(childKey, "childKey");
         if (value == null) {
             childAttrs.remove(childKey);
         } else {
@@ -132,7 +133,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      * Set the {@link ChannelHandler} which is used to serve the request for the {@link Channel}'s.
      */
     public ServerBootstrap childHandler(ChannelHandler childHandler) {
-        ObjectUtil.checkNotNull(childHandler, "childHandler");
+        Objects.requireNonNull(childHandler, "childHandler");
         this.childHandler = childHandler;
         return this;
     }
@@ -143,7 +144,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      * {@link Channel} implementation has no no-args constructor.
      */
     public ServerBootstrap channel(Class<? extends ServerChannel> channelClass) {
-        ObjectUtil.checkNotNull(channelClass, "channelClass");
+        Objects.requireNonNull(channelClass, "channelClass");
         return channelFactory(new ReflectiveServerChannelFactory<ServerChannel>(channelClass));
     }
 
@@ -155,7 +156,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      * simplify your code.
      */
     public ServerBootstrap channelFactory(ServerChannelFactory<? extends ServerChannel> channelFactory) {
-        ObjectUtil.checkNotNull(channelFactory, "channelFactory");
+        Objects.requireNonNull(channelFactory, "channelFactory");
         if (this.channelFactory != null) {
             throw new IllegalStateException("channelFactory set already");
         }

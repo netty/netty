@@ -22,6 +22,7 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Objects;
 import java.util.Set;
 
 import io.netty.buffer.ByteBuf;
@@ -175,7 +176,7 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
     private final ByteBuf content;
 
     private PemX509Certificate(ByteBuf content) {
-        this.content = ObjectUtil.checkNotNull(content, "content");
+        this.content = Objects.requireNonNull(content, "content");
     }
 
     @Override

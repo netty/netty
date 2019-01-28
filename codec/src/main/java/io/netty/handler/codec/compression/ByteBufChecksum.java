@@ -22,6 +22,7 @@ import io.netty.util.internal.PlatformDependent;
 
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 import java.util.zip.Adler32;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
@@ -62,7 +63,7 @@ abstract class ByteBufChecksum implements Checksum {
     }
 
     static ByteBufChecksum wrapChecksum(Checksum checksum) {
-        ObjectUtil.checkNotNull(checksum, "checksum");
+        Objects.requireNonNull(checksum, "checksum");
         if (checksum instanceof Adler32 && ADLER32_UPDATE_METHOD != null) {
             return new ReflectiveByteBufChecksum(checksum, ADLER32_UPDATE_METHOD);
         }

@@ -24,6 +24,8 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.Objects;
+
 /**
  * Configures a {@link ChannelPipeline} depending on the application-level protocol negotiation result of
  * {@link SslHandler}.  For example, you could configure your HTTP pipeline depending on the result of ALPN:
@@ -73,7 +75,7 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
      *                         ALPN/NPN negotiation fails or the client does not support ALPN/NPN
      */
     protected ApplicationProtocolNegotiationHandler(String fallbackProtocol) {
-        this.fallbackProtocol = ObjectUtil.checkNotNull(fallbackProtocol, "fallbackProtocol");
+        this.fallbackProtocol = Objects.requireNonNull(fallbackProtocol, "fallbackProtocol");
     }
 
     @Override

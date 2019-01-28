@@ -41,6 +41,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -309,7 +310,7 @@ public abstract class WebSocketServerHandshaker {
      *            Closing Frame that was received
      */
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame) {
-        ObjectUtil.checkNotNull(channel, "channel");
+        Objects.requireNonNull(channel, "channel");
         return close(channel, frame, channel.newPromise());
     }
 
@@ -324,7 +325,7 @@ public abstract class WebSocketServerHandshaker {
      *            the {@link ChannelPromise} to be notified when the closing handshake is done
      */
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
-        ObjectUtil.checkNotNull(channel, "channel");
+        Objects.requireNonNull(channel, "channel");
         return channel.writeAndFlush(frame, promise).addListener(ChannelFutureListener.CLOSE);
     }
 
