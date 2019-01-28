@@ -16,7 +16,6 @@
 package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.internal.PlatformDependent;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;

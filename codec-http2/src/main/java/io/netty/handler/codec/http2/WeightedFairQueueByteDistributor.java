@@ -19,7 +19,6 @@ import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.internal.DefaultPriorityQueue;
 import io.netty.util.internal.EmptyPriorityQueue;
-import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PriorityQueue;
 import io.netty.util.internal.PriorityQueueNode;
 import io.netty.util.internal.SystemPropertyUtil;

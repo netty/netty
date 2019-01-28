@@ -18,8 +18,6 @@ package io.netty.handler.ssl;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.Assume;
-import org.junit.Ignore;
-import org.junit.Rule;
 import org.junit.Test;
 
 import javax.net.ssl.SSLEngine;

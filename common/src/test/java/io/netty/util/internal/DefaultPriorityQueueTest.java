@@ -15,9 +15,7 @@
  */
 package io.netty.util.internal;
 
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.Serializable;
 import java.util.ArrayList;

@@ -26,7 +26,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.security.PrivateKey;
 
-import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import org.junit.Test;
 
