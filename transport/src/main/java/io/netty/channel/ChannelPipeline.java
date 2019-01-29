@@ -198,7 +198,7 @@ import java.util.NoSuchElementException;
  *
  * // If your business logic does block or take a lot of time you should offload the work to an extra
  * // {@link java.util.concurrent.Executor} to ensure you don't block the {@link EventLoop}.
- * pipeline.addLast(group, "handler",  new MyBusinessLogicHandler());
+ * pipeline.addLast("handler",  new MyBusinessLogicHandler());
  * </pre>
  *
  * <h3>Thread safety</h3>
