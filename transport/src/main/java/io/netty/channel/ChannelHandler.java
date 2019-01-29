@@ -210,7 +210,7 @@ public interface ChannelHandler {
      */
     @Inherited
     @Documented
-    @Target(ElementType.TYPE)
+    @Target({ElementType.TYPE, ElementType.TYPE_USE})
     @Retention(RetentionPolicy.RUNTIME)
     @interface Sharable {
         // no value
