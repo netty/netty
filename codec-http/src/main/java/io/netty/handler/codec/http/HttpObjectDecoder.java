@@ -671,13 +671,21 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     name = null;
                     value = null;
                 }
-
                 line = headerParser.parse(buffer);
                 if (line == null) {
                     return null;
                 }
             } while (line.length() > 0);
 
+            this.trailer = null;
+            return trailer;
+        }
+        // We have received the empty line which signals the trailer is complete. In this case we need to check if
+        // we have parsed the trailer before and if so return it.
+        //
+        // See https://github.com/netty/netty/issues/8736
+        LastHttpContent trailer = this.trailer;
+        if (trailer != null) {
             this.trailer = null;
             return trailer;
         }
