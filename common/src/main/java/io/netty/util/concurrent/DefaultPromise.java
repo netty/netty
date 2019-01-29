@@ -91,7 +91,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     @Override
     public Promise<V> setSuccess(V result) {
         if (setSuccess0(result)) {
-            notifyListeners();
             return this;
         }
         throw new IllegalStateException("complete already: " + this);
@@ -99,17 +98,12 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     public boolean trySuccess(V result) {
-        if (setSuccess0(result)) {
-            notifyListeners();
-            return true;
-        }
-        return false;
+        return setSuccess0(result);
     }
 
     @Override
     public Promise<V> setFailure(Throwable cause) {
         if (setFailure0(cause)) {
-            notifyListeners();
             return this;
         }
         throw new IllegalStateException("complete already: " + this, cause);
@@ -117,11 +111,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     public boolean tryFailure(Throwable cause) {
-        if (setFailure0(cause)) {
-            notifyListeners();
-            return true;
-        }
-        return false;
+        return setFailure0(cause);
     }
 
     @Override
@@ -315,8 +305,9 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
         if (RESULT_UPDATER.compareAndSet(this, null, CANCELLATION_CAUSE_HOLDER)) {
-            checkNotifyWaiters();
-            notifyListeners();
+            if (checkNotifyWaiters()) {
+                notifyListeners();
+            }
             return true;
         }
         return false;
@@ -545,16 +536,23 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private boolean setValue0(Object objResult) {
         if (RESULT_UPDATER.compareAndSet(this, null, objResult) ||
             RESULT_UPDATER.compareAndSet(this, UNCANCELLABLE, objResult)) {
-            checkNotifyWaiters();
+            if (checkNotifyWaiters()) {
+                notifyListeners();
+            }
             return true;
         }
         return false;
     }
 
-    private synchronized void checkNotifyWaiters() {
+    /**
+     * Check if there are any waiters and if so notify these.
+     * @return {@code true} if there are any listeners attached to the promise, {@code false} otherwise.
+     */
+    private synchronized boolean checkNotifyWaiters() {
         if (waiters > 0) {
             notifyAll();
         }
+        return listeners != null;
     }
 
     private void incWaiters() {
