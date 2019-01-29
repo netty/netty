@@ -640,57 +640,56 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         if (line == null) {
             return null;
         }
-        CharSequence lastHeader = null;
-        if (line.length() > 0) {
-            LastHttpContent trailer = this.trailer;
-            if (trailer == null) {
-                trailer = this.trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
+        LastHttpContent trailer = this.trailer;
+        if (line.length() == 0) {
+            // We have received the empty line which signals the trailer is complete. In this case we need to check if
+            // we have parsed the trailer before and if so return it, otherwise we just return an empty last content.
+            //
+            // See https://github.com/netty/netty/issues/8736
+            if (trailer != null) {
+                this.trailer = null;
+                return trailer;
             }
-            do {
-                char firstChar = line.charAt(0);
-                if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
-                    List<String> current = trailer.trailingHeaders().getAll(lastHeader);
-                    if (!current.isEmpty()) {
-                        int lastPos = current.size() - 1;
-                        //please do not make one line from below code
-                        //as it breaks +XX:OptimizeStringConcat optimization
-                        String lineTrimmed = line.toString().trim();
-                        String currentLastPos = current.get(lastPos);
-                        current.set(lastPos, currentLastPos + lineTrimmed);
-                    }
-                } else {
-                    splitHeader(line);
-                    CharSequence headerName = name;
-                    if (!HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(headerName) &&
+            return LastHttpContent.EMPTY_LAST_CONTENT;
+        }
+
+        CharSequence lastHeader = null;
+        if (trailer == null) {
+            trailer = this.trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
+        }
+        do {
+            char firstChar = line.charAt(0);
+            if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
+                List<String> current = trailer.trailingHeaders().getAll(lastHeader);
+                if (!current.isEmpty()) {
+                    int lastPos = current.size() - 1;
+                    //please do not make one line from below code
+                    //as it breaks +XX:OptimizeStringConcat optimization
+                    String lineTrimmed = line.toString().trim();
+                    String currentLastPos = current.get(lastPos);
+                    current.set(lastPos, currentLastPos + lineTrimmed);
+                }
+            } else {
+                splitHeader(line);
+                CharSequence headerName = name;
+                if (!HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(headerName) &&
                         !HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(headerName) &&
                         !HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(headerName)) {
-                        trailer.trailingHeaders().add(headerName, value);
-                    }
-                    lastHeader = name;
-                    // reset name and value fields
-                    name = null;
-                    value = null;
+                    trailer.trailingHeaders().add(headerName, value);
                 }
-                line = headerParser.parse(buffer);
-                if (line == null) {
-                    return null;
-                }
-            } while (line.length() > 0);
+                lastHeader = name;
+                // reset name and value fields
+                name = null;
+                value = null;
+            }
+            line = headerParser.parse(buffer);
+            if (line == null) {
+                return null;
+            }
+        } while (line.length() > 0);
 
-            this.trailer = null;
-            return trailer;
-        }
-        // We have received the empty line which signals the trailer is complete. In this case we need to check if
-        // we have parsed the trailer before and if so return it.
-        //
-        // See https://github.com/netty/netty/issues/8736
-        LastHttpContent trailer = this.trailer;
-        if (trailer != null) {
-            this.trailer = null;
-            return trailer;
-        }
-
-        return LastHttpContent.EMPTY_LAST_CONTENT;
+        this.trailer = null;
+        return trailer;
     }
 
     protected abstract boolean isDecodingRequest();
