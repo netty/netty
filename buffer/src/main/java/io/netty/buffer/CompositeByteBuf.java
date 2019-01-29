@@ -428,7 +428,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             checkComponentIndex(cIndex);
 
             // No need for consolidation
-            for (ByteBuf b; it.hasNext() && (b = it.next()) != null;) {
+            while (it.hasNext()) {
+                ByteBuf b = it.next();
+                if (b == null) {
+                    break;
+                }
                 cIndex = addComponent0(increaseIndex, cIndex, b) + 1;
                 cIndex = Math.min(cIndex, componentCount);
             }
