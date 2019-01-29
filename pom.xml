@@ -358,12 +358,6 @@
 
       <!-- SPDY and HTTP/2 - completely optional -->
       <dependency>
-        <groupId>org.eclipse.jetty.npn</groupId>
-        <artifactId>npn-api</artifactId>
-        <version>1.1.1.v20141010</version>
-        <scope>provided</scope> <!-- Provided by npn-boot -->
-      </dependency>
-      <dependency>
         <groupId>org.eclipse.jetty.alpn</groupId>
         <artifactId>alpn-api</artifactId>
         <version>1.1.2.v20150522</version>

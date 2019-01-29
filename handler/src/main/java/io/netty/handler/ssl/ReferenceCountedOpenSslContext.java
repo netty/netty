@@ -298,14 +298,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 int selectorBehavior = opensslSelectorFailureBehavior(apn.selectorFailureBehavior());
 
                 switch (apn.protocol()) {
-                    case NPN:
-                        SSLContext.setNpnProtos(ctx, appProtocols, selectorBehavior);
-                        break;
                     case ALPN:
-                        SSLContext.setAlpnProtos(ctx, appProtocols, selectorBehavior);
-                        break;
-                    case NPN_AND_ALPN:
-                        SSLContext.setNpnProtos(ctx, appProtocols, selectorBehavior);
                         SSLContext.setAlpnProtos(ctx, appProtocols, selectorBehavior);
                         break;
                     default:
@@ -561,8 +554,6 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             case NONE:
                 return NONE_PROTOCOL_NEGOTIATOR;
             case ALPN:
-            case NPN:
-            case NPN_AND_ALPN:
                 switch (config.selectedListenerFailureBehavior()) {
                     case CHOOSE_MY_LAST_PROTOCOL:
                     case ACCEPT:

@@ -186,15 +186,6 @@ public class OpenSslEngineTest extends SSLEngineTest {
         }
         return true;
     }
-    @Test
-    public void testNpn() throws Exception {
-        String versionString = OpenSsl.versionString();
-        assumeTrue("LibreSSL 2.6.1 removed NPN support, detected " + versionString, isNpnSupported(versionString));
-        ApplicationProtocolConfig apn = acceptingNegotiator(Protocol.NPN,
-                PREFERRED_APPLICATION_LEVEL_PROTOCOL);
-        setupHandlers(apn);
-        runTest(PREFERRED_APPLICATION_LEVEL_PROTOCOL);
-    }
 
     @Test
     public void testAlpn() throws Exception {

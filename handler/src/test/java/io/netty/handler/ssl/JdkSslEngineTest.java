@@ -46,22 +46,6 @@ import static org.junit.Assume.assumeNoException;
 @RunWith(Parameterized.class)
 public class JdkSslEngineTest extends SSLEngineTest {
     public enum ProviderType {
-        NPN_JETTY {
-            @Override
-            boolean isAvailable() {
-                return JettyNpnSslEngine.isAvailable();
-            }
-
-            @Override
-            Protocol protocol() {
-                return Protocol.NPN;
-            }
-
-            @Override
-            Provider provider() {
-                return null;
-            }
-        },
         ALPN_JETTY {
             @Override
             boolean isAvailable() {
@@ -201,6 +185,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
     public void testTlsExtensionNoCompatibleProtocolsClientHandshakeFailure() throws Exception {
         try {
             providerType.activate(this);
+<<<<<<< HEAD
             if (providerType == ProviderType.NPN_JETTY) {
                 ApplicationProtocolConfig clientApn = failingNegotiator(providerType.protocol(),
                     PREFERRED_APPLICATION_LEVEL_PROTOCOL);
@@ -216,6 +201,17 @@ public class JdkSslEngineTest extends SSLEngineTest {
                     PREFERRED_APPLICATION_LEVEL_PROTOCOL);
                 JdkApplicationProtocolNegotiator serverApn = new JdkAlpnApplicationProtocolNegotiator(
                         (engine, supportedProtocols) -> new ProtocolSelector() {
+=======
+            // ALPN
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            JdkApplicationProtocolNegotiator clientApn = new JdkAlpnApplicationProtocolNegotiator(true, true,
+                PREFERRED_APPLICATION_LEVEL_PROTOCOL);
+            JdkApplicationProtocolNegotiator serverApn = new JdkAlpnApplicationProtocolNegotiator(
+                new ProtocolSelectorFactory() {
+                    @Override
+                    public ProtocolSelector newSelector(SSLEngine engine, Set<String> supportedProtocols) {
+                        return new ProtocolSelector() {
+>>>>>>> a3b937c1a... Drop NPN and SPDY support
                             @Override
                             public void unsupported() {
                             }
@@ -224,6 +220,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
                             public String select(List<String> protocols) {
                                 return APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE;
                             }
+<<<<<<< HEAD
                         }, JdkBaseApplicationProtocolNegotiator.FAIL_SELECTION_LISTENER_FACTORY,
                     APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
 
@@ -240,6 +237,25 @@ public class JdkSslEngineTest extends SSLEngineTest {
                 // no exception reported in this case but just the channel will be closed.
                 assertTrue(clientException instanceof SSLHandshakeException || clientException == null);
             }
+=======
+                        };
+                    }
+                }, JdkBaseApplicationProtocolNegotiator.FAIL_SELECTION_LISTENER_FACTORY,
+                APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
+
+            SslContext serverSslCtx = new JdkSslServerContext(providerType.provider(),
+                ssc.certificate(), ssc.privateKey(), null, null,
+                IdentityCipherSuiteFilter.INSTANCE, serverApn, 0, 0);
+            SslContext clientSslCtx = new JdkSslClientContext(providerType.provider(), null,
+                InsecureTrustManagerFactory.INSTANCE, null,
+                IdentityCipherSuiteFilter.INSTANCE, clientApn, 0, 0);
+
+            setupHandlers(new TestDelegatingSslContext(serverSslCtx), new TestDelegatingSslContext(clientSslCtx));
+            assertTrue(clientLatch.await(2, TimeUnit.SECONDS));
+            // When using TLSv1.3 the handshake is NOT sent in an extra round trip which means there will be
+            // no exception reported in this case but just the channel will be closed.
+            assertTrue(clientException instanceof SSLHandshakeException || clientException == null);
+>>>>>>> a3b937c1a... Drop NPN and SPDY support
         } catch (SkipTestException e) {
             // ALPN availability is dependent on the java version. If ALPN is not available because of
             // java version incompatibility don't fail the test, but instead just skip the test
@@ -269,10 +285,6 @@ public class JdkSslEngineTest extends SSLEngineTest {
     public void testAlpnCompatibleProtocolsDifferentClientOrder() throws Exception {
         try {
             providerType.activate(this);
-            if (providerType == ProviderType.NPN_JETTY) {
-                // This test only applies to ALPN.
-                throw tlsExtensionNotFound(providerType.protocol());
-            }
             // Even the preferred application protocol appears second in the client's list, it will be picked
             // because it's the first one on server's list.
             ApplicationProtocolConfig clientApn = acceptingNegotiator(Protocol.ALPN,

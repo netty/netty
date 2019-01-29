@@ -794,7 +794,7 @@ public abstract class SslContext {
             apn = ApplicationProtocolConfig.DISABLED;
         } else {
             apn = new ApplicationProtocolConfig(
-                    Protocol.NPN_AND_ALPN, SelectorFailureBehavior.CHOOSE_MY_LAST_PROTOCOL,
+                    Protocol.ALPN, SelectorFailureBehavior.CHOOSE_MY_LAST_PROTOCOL,
                     SelectedListenerFailureBehavior.ACCEPT, nextProtocols);
         }
         return apn;

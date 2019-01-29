@@ -403,28 +403,6 @@ public class JdkSslContext extends SslContext {
                     .append(config.selectedListenerFailureBehavior()).append(" failure behavior").toString());
                 }
             }
-        case NPN:
-            if (isServer) {
-                switch(config.selectedListenerFailureBehavior()) {
-                case ACCEPT:
-                    return new JdkNpnApplicationProtocolNegotiator(false, config.supportedProtocols());
-                case FATAL_ALERT:
-                    return new JdkNpnApplicationProtocolNegotiator(true, config.supportedProtocols());
-                default:
-                    throw new UnsupportedOperationException(new StringBuilder("JDK provider does not support ")
-                    .append(config.selectedListenerFailureBehavior()).append(" failure behavior").toString());
-                }
-            } else {
-                switch(config.selectorFailureBehavior()) {
-                case FATAL_ALERT:
-                    return new JdkNpnApplicationProtocolNegotiator(true, config.supportedProtocols());
-                case NO_ADVERTISE:
-                    return new JdkNpnApplicationProtocolNegotiator(false, config.supportedProtocols());
-                default:
-                    throw new UnsupportedOperationException(new StringBuilder("JDK provider does not support ")
-                    .append(config.selectorFailureBehavior()).append(" failure behavior").toString());
-                }
-            }
         default:
             throw new UnsupportedOperationException(new StringBuilder("JDK provider does not support ")
             .append(config.protocol()).append(" protocol").toString());

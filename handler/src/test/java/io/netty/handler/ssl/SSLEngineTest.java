@@ -1550,12 +1550,6 @@ public abstract class SSLEngineTest {
                                                          .applicationProtocolConfig(serverApn)
                                                          .sessionCacheSize(0)
                                                          .sessionTimeout(0);
-            if (serverApn.protocol() == Protocol.NPN || serverApn.protocol() == Protocol.NPN_AND_ALPN) {
-                // NPN is not really well supported with TLSv1.3 so force to use TLSv1.2
-                // See https://github.com/openssl/openssl/issues/3665
-                serverCtxBuilder.protocols(PROTOCOL_TLS_V1_2);
-            }
-
             SslContextBuilder clientCtxBuilder = SslContextBuilder.forClient()
                              .sslProvider(sslClientProvider())
                              .sslContextProvider(clientSslContextProvider())
@@ -1564,12 +1558,6 @@ public abstract class SSLEngineTest {
                              .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
                              .sessionCacheSize(0)
                              .sessionTimeout(0);
-
-            if (clientApn.protocol() == Protocol.NPN || clientApn.protocol() == Protocol.NPN_AND_ALPN) {
-                // NPN is not really well supported with TLSv1.3 so force to use TLSv1.2
-                // See https://github.com/openssl/openssl/issues/3665
-                clientCtxBuilder.protocols(PROTOCOL_TLS_V1_2);
-            }
 
             setupHandlers(serverCtxBuilder.build(), clientCtxBuilder.build());
         } finally {

@@ -99,7 +99,7 @@ public final class ApplicationProtocolConfig {
      * Defines which application level protocol negotiation to use.
      */
     public enum Protocol {
-        NONE, NPN, ALPN, NPN_AND_ALPN
+        NONE, ALPN
     }
 
     /**

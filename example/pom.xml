@@ -111,10 +111,6 @@
       <classifier>${conscrypt.classifier}</classifier>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.jetty.npn</groupId>
-      <artifactId>npn-api</artifactId>
-    </dependency>
-    <dependency>
       <groupId>com.jcraft</groupId>
       <artifactId>jzlib</artifactId>
       <scope>runtime</scope>
