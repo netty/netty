@@ -40,13 +40,13 @@ public class ByteArrayDecoderTest {
         byte[] b = new byte[2048];
         new Random().nextBytes(b);
         ch.writeInbound(wrappedBuffer(b));
-        assertThat(ch.readInbound(), is(b));
+        assertThat((byte[]) ch.readInbound(), is(b));
     }
 
     @Test
     public void testDecodeEmpty() {
         ch.writeInbound(EMPTY_BUFFER);
-        assertThat(ch.readInbound(), is(EmptyArrays.EMPTY_BYTES));
+        assertThat((byte[]) ch.readInbound(), is(EmptyArrays.EMPTY_BYTES));
     }
 
     @Test
