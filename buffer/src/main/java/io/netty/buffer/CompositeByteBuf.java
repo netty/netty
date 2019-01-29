@@ -87,6 +87,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         this(alloc, direct, maxNumComponents, buffers.length - offset);
 
         addComponents0(false, 0, buffers, offset);
+        consolidateIfNeeded();
         setIndex0(0, capacity());
     }
 
@@ -132,6 +133,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         this(alloc, direct, maxNumComponents, buffers.length - offset);
 
         addComponents0(false, 0, wrapper, buffers, offset);
+        consolidateIfNeeded();
         setIndex(0, capacity());
     }
 
@@ -231,7 +233,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      */
     public CompositeByteBuf addComponents(boolean increaseWriterIndex, ByteBuf... buffers) {
         checkNotNull(buffers, "buffers");
-        return addComponents0(increaseWriterIndex, componentCount, buffers, 0);
+        addComponents0(increaseWriterIndex, componentCount, buffers, 0);
+        consolidateIfNeeded();
+        return this;
     }
 
     /**
@@ -330,7 +334,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      */
     public CompositeByteBuf addComponents(int cIndex, ByteBuf... buffers) {
         checkNotNull(buffers, "buffers");
-        return addComponents0(false, cIndex, buffers, 0);
+        addComponents0(false, cIndex, buffers, 0);
+        consolidateIfNeeded();
+        return this;
     }
 
     private CompositeByteBuf addComponents0(boolean increaseWriterIndex,
@@ -351,6 +357,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 components[ci] = c;
                 nextOffset = c.endOffset;
             }
+            return this;
         } finally {
             // ci is now the index following the last successfully added component
             if (ci < componentCount) {
@@ -367,13 +374,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 writerIndex(writerIndex() + components[ci - 1].endOffset - components[cIndex].offset);
             }
         }
-        consolidateIfNeeded();
-        return this;
     }
 
     private <T> int addComponents0(boolean increaseWriterIndex, int cIndex,
             ByteWrapper<T> wrapper, T[] buffers, int offset) {
-        checkNotNull(buffers, "buffers");
         checkComponentIndex(cIndex);
 
         // No need for consolidation
@@ -390,7 +394,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 }
             }
         }
-        consolidateIfNeeded();
         return cIndex;
     }
 
