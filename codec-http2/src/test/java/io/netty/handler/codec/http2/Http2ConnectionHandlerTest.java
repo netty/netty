@@ -44,7 +44,6 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -344,7 +343,7 @@ public class Http2ConnectionHandlerTest {
         ByteBuf prefacePlusSome = addSettingsHeader(Unpooled.buffer().writeBytes(connectionPrefaceBuf()));
         handler.channelRead(ctx, prefacePlusSome);
         verify(decoder, atLeastOnce()).decodeFrame(any(ChannelHandlerContext.class),
-                any(ByteBuf.class), ArgumentMatchers.<List<Object>>any());
+                any(ByteBuf.class), ArgumentMatchers.any());
     }
 
     @Test
@@ -356,7 +355,7 @@ public class Http2ConnectionHandlerTest {
         ByteBuf preface = connectionPrefaceBuf();
         handler.channelRead(ctx, preface);
         verify(decoder, never()).decodeFrame(any(ChannelHandlerContext.class),
-                any(ByteBuf.class), ArgumentMatchers.<List<Object>>any());
+                any(ByteBuf.class), ArgumentMatchers.any());
 
         // Now remove and add the handler...this is setting up the test condition.
         handler.handlerRemoved(ctx);
@@ -365,7 +364,7 @@ public class Http2ConnectionHandlerTest {
         // Now verify we can continue as normal, reading connection preface plus more.
         ByteBuf prefacePlusSome = addSettingsHeader(Unpooled.buffer().writeBytes(connectionPrefaceBuf()));
         handler.channelRead(ctx, prefacePlusSome);
-        verify(decoder, atLeastOnce()).decodeFrame(eq(ctx), any(ByteBuf.class), ArgumentMatchers.<List<Object>>any());
+        verify(decoder, atLeastOnce()).decodeFrame(eq(ctx), any(ByteBuf.class), ArgumentMatchers.any());
     }
 
     @SuppressWarnings("unchecked")

@@ -52,7 +52,6 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.CertificateRevokedException;
-import java.security.cert.Extension;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -85,7 +84,7 @@ public class SslErrorTest {
         exceptions.add(new CertificateNotYetValidException());
         exceptions.add(new CertificateRevokedException(
                 new Date(), CRLReason.AA_COMPROMISE, new X500Principal(""),
-                Collections.<String, Extension>emptyMap()));
+                Collections.emptyMap()));
 
         // Also use wrapped exceptions as this is what the JDK implementation of X509TrustManagerFactory is doing.
         exceptions.add(newCertificateException(CertPathValidatorException.BasicReason.EXPIRED));

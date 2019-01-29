@@ -79,7 +79,7 @@ public final class HAProxyMessage {
             String sourceAddress, String destinationAddress, int sourcePort, int destinationPort) {
 
         this(protocolVersion, command, proxiedProtocol,
-             sourceAddress, destinationAddress, sourcePort, destinationPort, Collections.<HAProxyTLV>emptyList());
+             sourceAddress, destinationAddress, sourcePort, destinationPort, Collections.emptyList());
     }
 
     /**
@@ -285,7 +285,7 @@ public final class HAProxyMessage {
 
                 return new HAProxySSLTLV(verify, client, encapsulatedTlvs, rawContent);
             }
-            return new HAProxySSLTLV(verify, client, Collections.<HAProxyTLV>emptyList(), rawContent);
+            return new HAProxySSLTLV(verify, client, Collections.emptyList(), rawContent);
         // If we're not dealing with a SSL Type, we can use the same mechanism
         case PP2_TYPE_ALPN:
         case PP2_TYPE_AUTHORITY:

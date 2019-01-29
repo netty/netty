@@ -147,7 +147,7 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
             try {
                 String protocol = Conscrypt.getApplicationProtocol(getWrappedEngine());
                 protocolSelector.select(protocol != null ? Collections.singletonList(protocol)
-                        : Collections.<String>emptyList());
+                        : Collections.emptyList());
             } catch (Throwable e) {
                 throw toSSLHandshakeException(e);
             }

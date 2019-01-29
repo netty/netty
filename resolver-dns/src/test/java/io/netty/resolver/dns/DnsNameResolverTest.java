@@ -41,7 +41,6 @@ import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -404,7 +403,7 @@ public class DnsNameResolverTest {
                     case A:
                         Map<String, Object> attr = new HashMap<>();
                         attr.put(DnsAttribute.IP_ADDRESS.toLowerCase(Locale.US), overriddenIP);
-                        return Collections.<ResourceRecord>singleton(
+                        return Collections.singleton(
                                 new TestDnsServer.TestResourceRecord(
                                         question.getDomainName(), question.getRecordType(), attr));
                     default:
@@ -1037,8 +1036,8 @@ public class DnsNameResolverTest {
 
         final List<DnsRecord> records = resolver.resolveAll(new DefaultDnsQuestion("foo.com.", A))
                 .syncUninterruptibly().getNow();
-        assertThat(records, Matchers.<DnsRecord>hasSize(1));
-        assertThat(records.get(0), Matchers.<DnsRecord>instanceOf(DnsRawRecord.class));
+        assertThat(records, Matchers.hasSize(1));
+        assertThat(records.get(0), Matchers.instanceOf(DnsRawRecord.class));
 
         final DnsRawRecord record = (DnsRawRecord) records.get(0);
         final ByteBuf content = record.content();
@@ -2098,7 +2097,7 @@ public class DnsNameResolverTest {
                 if (question.getDomainName().equals("cname.netty.io")) {
                     Map<String, Object> map1 = new HashMap<>();
                     map1.put(DnsAttribute.IP_ADDRESS.toLowerCase(), "10.0.0.99");
-                    return Collections.<ResourceRecord>singleton(
+                    return Collections.singleton(
                             new TestDnsServer.TestResourceRecord(question.getDomainName(), RecordType.A, map1));
                 } else {
                     Set<ResourceRecord> records = new LinkedHashSet<>(2);
@@ -2148,19 +2147,19 @@ public class DnsNameResolverTest {
                 Set<ResourceRecord> records = new LinkedHashSet<>(4);
 
                 records.add(new TestDnsServer.TestResourceRecord("x." + question.getDomainName(),
-                        RecordType.A, Collections.<String, Object>singletonMap(
+                        RecordType.A, Collections.singletonMap(
                                 DnsAttribute.IP_ADDRESS.toLowerCase(), "10.0.0.99")));
                 records.add(new TestDnsServer.TestResourceRecord(
                         "cname2.netty.io", RecordType.CNAME,
-                        Collections.<String, Object>singletonMap(
+                        Collections.singletonMap(
                                 DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname.netty.io")));
                 records.add(new TestDnsServer.TestResourceRecord(
                         "cname.netty.io", RecordType.CNAME,
-                        Collections.<String, Object>singletonMap(
+                        Collections.singletonMap(
                                 DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname2.netty.io")));
                 records.add(new TestDnsServer.TestResourceRecord(
                         question.getDomainName(), RecordType.CNAME,
-                        Collections.<String, Object>singletonMap(
+                        Collections.singletonMap(
                                 DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname.netty.io")));
                 return records;
             }
@@ -2351,25 +2350,25 @@ public class DnsNameResolverTest {
                 if ("cname.netty.io".equals(question.getDomainName())) {
                     aQueries.incrementAndGet();
 
-                    return Collections.<ResourceRecord>singleton(new TestDnsServer.TestResourceRecord(
+                    return Collections.singleton(new TestDnsServer.TestResourceRecord(
                             question.getDomainName(), RecordType.A,
-                            Collections.<String, Object>singletonMap(
+                            Collections.singletonMap(
                                     DnsAttribute.IP_ADDRESS.toLowerCase(), "10.0.0.99")));
                 }
                 if ("x.netty.io".equals(question.getDomainName())) {
                     cnameQueries.incrementAndGet();
 
-                    return Collections.<ResourceRecord>singleton(new TestDnsServer.TestResourceRecord(
+                    return Collections.singleton(new TestDnsServer.TestResourceRecord(
                             question.getDomainName(), RecordType.CNAME,
-                            Collections.<String, Object>singletonMap(
+                            Collections.singletonMap(
                                     DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname.netty.io")));
                 }
                 if ("y.netty.io".equals(question.getDomainName())) {
                     cnameQueries.incrementAndGet();
 
-                    return Collections.<ResourceRecord>singleton(new TestDnsServer.TestResourceRecord(
+                    return Collections.singleton(new TestDnsServer.TestResourceRecord(
                             question.getDomainName(), RecordType.CNAME,
-                            Collections.<String, Object>singletonMap(
+                            Collections.singletonMap(
                                     DnsAttribute.DOMAIN_NAME.toLowerCase(), "x.netty.io")));
                 }
                 return Collections.emptySet();

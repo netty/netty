@@ -51,7 +51,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -303,7 +302,7 @@ class TestDnsServer extends DnsServer {
                     default:
                         return null;
                 }
-                return Collections.<ResourceRecord>singleton(
+                return Collections.singleton(
                         new TestResourceRecord(name, questionRecord.getRecordType(), attr));
             }
             return null;

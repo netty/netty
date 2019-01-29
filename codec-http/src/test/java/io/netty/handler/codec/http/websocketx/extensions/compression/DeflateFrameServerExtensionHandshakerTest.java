@@ -37,7 +37,7 @@ public class DeflateFrameServerExtensionHandshakerTest {
 
         // execute
         WebSocketServerExtension extension = handshaker.handshakeExtension(
-                new WebSocketExtensionData(DEFLATE_FRAME_EXTENSION, Collections.<String, String>emptyMap()));
+                new WebSocketExtensionData(DEFLATE_FRAME_EXTENSION, Collections.emptyMap()));
 
         // test
         assertNotNull(extension);
@@ -54,7 +54,7 @@ public class DeflateFrameServerExtensionHandshakerTest {
 
         // execute
         WebSocketServerExtension extension = handshaker.handshakeExtension(
-                new WebSocketExtensionData(X_WEBKIT_DEFLATE_FRAME_EXTENSION, Collections.<String, String>emptyMap()));
+                new WebSocketExtensionData(X_WEBKIT_DEFLATE_FRAME_EXTENSION, Collections.emptyMap()));
 
         // test
         assertNotNull(extension);

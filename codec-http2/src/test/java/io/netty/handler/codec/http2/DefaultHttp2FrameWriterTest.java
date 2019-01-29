@@ -37,7 +37,6 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**

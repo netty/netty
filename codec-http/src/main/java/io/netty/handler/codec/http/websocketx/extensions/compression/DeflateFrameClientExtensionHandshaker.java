@@ -60,7 +60,7 @@ public final class DeflateFrameClientExtensionHandshaker implements WebSocketCli
     public WebSocketExtensionData newRequestData() {
         return new WebSocketExtensionData(
                 useWebkitExtensionName ? X_WEBKIT_DEFLATE_FRAME_EXTENSION : DEFLATE_FRAME_EXTENSION,
-                Collections.<String, String>emptyMap());
+                Collections.emptyMap());
     }
 
     @Override

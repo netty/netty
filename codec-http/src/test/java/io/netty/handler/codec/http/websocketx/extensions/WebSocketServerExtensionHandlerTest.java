@@ -55,7 +55,7 @@ public class WebSocketServerExtensionHandlerTest {
 
         when(mainExtensionMock.rsv()).thenReturn(WebSocketExtension.RSV1);
         when(mainExtensionMock.newReponseData()).thenReturn(
-                new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
+                new WebSocketExtensionData("main", Collections.emptyMap()));
         when(mainExtensionMock.newExtensionEncoder()).thenReturn(new DummyEncoder());
         when(mainExtensionMock.newExtensionDecoder()).thenReturn(new DummyDecoder());
 
@@ -108,13 +108,13 @@ public class WebSocketServerExtensionHandlerTest {
 
         when(mainExtensionMock.rsv()).thenReturn(WebSocketExtension.RSV1);
         when(mainExtensionMock.newReponseData()).thenReturn(
-                new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
+                new WebSocketExtensionData("main", Collections.emptyMap()));
         when(mainExtensionMock.newExtensionEncoder()).thenReturn(new DummyEncoder());
         when(mainExtensionMock.newExtensionDecoder()).thenReturn(new DummyDecoder());
 
         when(fallbackExtensionMock.rsv()).thenReturn(WebSocketExtension.RSV2);
         when(fallbackExtensionMock.newReponseData()).thenReturn(
-                new WebSocketExtensionData("fallback", Collections.<String, String>emptyMap()));
+                new WebSocketExtensionData("fallback", Collections.emptyMap()));
         when(fallbackExtensionMock.newExtensionEncoder()).thenReturn(new Dummy2Encoder());
         when(fallbackExtensionMock.newExtensionDecoder()).thenReturn(new Dummy2Decoder());
 

@@ -282,7 +282,7 @@ public class SearchDomainTest {
 
     @Test
     public void testExceptionMsgContainsSearchDomain() throws Exception {
-        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(Collections.<String>emptySet());
+        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(Collections.emptySet());
         dnsServer = new TestDnsServer(store);
         dnsServer.start();
 
@@ -299,7 +299,7 @@ public class SearchDomainTest {
 
     @Test
     public void testExceptionMsgDoesNotContainSearchDomainIfNdotsIsNotReached() throws Exception {
-        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(Collections.<String>emptySet());
+        TestDnsServer.MapRecordStoreA store = new TestDnsServer.MapRecordStoreA(Collections.emptySet());
         dnsServer = new TestDnsServer(store);
         dnsServer.start();
 

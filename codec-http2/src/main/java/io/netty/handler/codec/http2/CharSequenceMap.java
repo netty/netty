@@ -33,7 +33,7 @@ public final class CharSequenceMap<V> extends DefaultHeaders<CharSequence, V, Ch
     }
 
     public CharSequenceMap(boolean caseSensitive) {
-        this(caseSensitive, UnsupportedValueConverter.<V>instance());
+        this(caseSensitive, UnsupportedValueConverter.instance());
     }
 
     public CharSequenceMap(boolean caseSensitive, ValueConverter<V> valueConverter) {

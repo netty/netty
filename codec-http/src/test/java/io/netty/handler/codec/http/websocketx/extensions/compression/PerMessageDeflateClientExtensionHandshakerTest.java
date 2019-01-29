@@ -67,7 +67,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
                 new PerMessageDeflateClientExtensionHandshaker();
 
         WebSocketClientExtension extension = handshaker.handshakeExtension(
-                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, Collections.<String, String>emptyMap()));
+                new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, Collections.emptyMap()));
 
         assertNotNull(extension);
         assertEquals(RSV1, extension.rsv());

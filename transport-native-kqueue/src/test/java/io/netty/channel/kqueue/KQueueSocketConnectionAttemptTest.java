@@ -16,13 +16,9 @@
 package io.netty.channel.kqueue;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelInitializer;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketConnectionAttemptTest;
-import org.junit.Test;
 
-import java.net.InetSocketAddress;
 import java.util.List;
 
 public class KQueueSocketConnectionAttemptTest extends SocketConnectionAttemptTest {

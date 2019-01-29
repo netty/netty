@@ -24,7 +24,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
+
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
