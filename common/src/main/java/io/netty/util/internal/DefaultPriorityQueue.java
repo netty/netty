@@ -15,7 +15,12 @@
  */
 package io.netty.util.internal;
 
-import java.util.*;
+import java.util.AbstractQueue;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.Objects;
 
 import static io.netty.util.internal.PriorityQueueNode.INDEX_NOT_IN_QUEUE;
 

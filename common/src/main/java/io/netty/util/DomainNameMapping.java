@@ -19,7 +19,11 @@ package io.netty.util;
 import io.netty.util.internal.StringUtil;
 
 import java.net.IDN;
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 
 import static io.netty.util.internal.StringUtil.commonSuffixOfLength;
 
@@ -82,7 +86,8 @@ public class DomainNameMapping<V> implements Mapping<String, V> {
      */
     @Deprecated
     public DomainNameMapping<V> add(String hostname, V output) {
-        map.put(normalizeHostname(Objects.requireNonNull(hostname, "hostname")), Objects.requireNonNull(output, "output"));
+        map.put(normalizeHostname(Objects.requireNonNull(hostname, "hostname")),
+                Objects.requireNonNull(output, "output"));
         return this;
     }
 

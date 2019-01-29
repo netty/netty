@@ -36,7 +36,16 @@ import java.net.SocketException;
 import java.util.Map;
 import java.util.Objects;
 
-import static io.netty.channel.ChannelOption.*;
+import static io.netty.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION;
+import static io.netty.channel.ChannelOption.IP_MULTICAST_ADDR;
+import static io.netty.channel.ChannelOption.IP_MULTICAST_IF;
+import static io.netty.channel.ChannelOption.IP_MULTICAST_LOOP_DISABLED;
+import static io.netty.channel.ChannelOption.IP_MULTICAST_TTL;
+import static io.netty.channel.ChannelOption.IP_TOS;
+import static io.netty.channel.ChannelOption.SO_BROADCAST;
+import static io.netty.channel.ChannelOption.SO_RCVBUF;
+import static io.netty.channel.ChannelOption.SO_REUSEADDR;
+import static io.netty.channel.ChannelOption.SO_SNDBUF;
 
 /**
  * The default {@link DatagramChannelConfig} implementation.
