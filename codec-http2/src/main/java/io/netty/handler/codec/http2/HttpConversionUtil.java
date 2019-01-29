@@ -419,7 +419,7 @@ public final class HttpConversionUtil {
 
     private static CharSequenceMap<AsciiString> toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
                                                                int arraySizeHint) {
-        UnsupportedValueConverter<AsciiString> valueConverter = UnsupportedValueConverter.<AsciiString>instance();
+        UnsupportedValueConverter<AsciiString> valueConverter = UnsupportedValueConverter.instance();
         CharSequenceMap<AsciiString> result = new CharSequenceMap<>(true, valueConverter, arraySizeHint);
 
         while (valuesIter.hasNext()) {

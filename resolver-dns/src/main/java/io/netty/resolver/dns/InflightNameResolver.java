@@ -47,12 +47,12 @@ final class InflightNameResolver<T> implements NameResolver<T> {
 
     @Override
     public Future<T> resolve(String inetHost) {
-        return resolve(inetHost, executor.<T>newPromise());
+        return resolve(inetHost, executor.newPromise());
     }
 
     @Override
     public Future<List<T>> resolveAll(String inetHost) {
-        return resolveAll(inetHost, executor.<List<T>>newPromise());
+        return resolveAll(inetHost, executor.newPromise());
     }
 
     @Override

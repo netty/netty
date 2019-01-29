@@ -302,7 +302,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     }
                 }
                 return ocspResponse == null ?
-                        Collections.<byte[]>emptyList() : Collections.singletonList(ocspResponse);
+                        Collections.emptyList() : Collections.singletonList(ocspResponse);
             }
         };
         engineMap = context.engineMap;

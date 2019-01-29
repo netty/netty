@@ -162,8 +162,8 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
     @Override
     protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
         // This event loop never calls takeTask()
-        return maxPendingTasks == Integer.MAX_VALUE ? PlatformDependent.<Runnable>newMpscQueue()
-                : PlatformDependent.<Runnable>newMpscQueue(maxPendingTasks);
+        return maxPendingTasks == Integer.MAX_VALUE ? PlatformDependent.newMpscQueue()
+                : PlatformDependent.newMpscQueue(maxPendingTasks);
     }
 
     @Override

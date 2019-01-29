@@ -166,7 +166,7 @@ abstract class Cache<E> {
         volatile ScheduledFuture<?> expirationFuture;
 
         Entries(String hostname) {
-            super(Collections.<E>emptyList());
+            super(Collections.emptyList());
             this.hostname = hostname;
         }
 
@@ -260,7 +260,7 @@ abstract class Cache<E> {
         }
 
         boolean clearAndCancel() {
-            List<E> entries = getAndSet(Collections.<E>emptyList());
+            List<E> entries = getAndSet(Collections.emptyList());
             if (entries.isEmpty()) {
                 return false;
             }

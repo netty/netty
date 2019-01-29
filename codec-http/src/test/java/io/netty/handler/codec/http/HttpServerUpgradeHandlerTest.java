@@ -41,7 +41,7 @@ public class HttpServerUpgradeHandlerTest {
     private class TestUpgradeCodec implements UpgradeCodec {
         @Override
         public Collection<CharSequence> requiredUpgradeHeaders() {
-            return Collections.<CharSequence>emptyList();
+            return Collections.emptyList();
         }
 
         @Override

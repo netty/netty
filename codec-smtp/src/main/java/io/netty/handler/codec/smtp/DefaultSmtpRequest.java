@@ -57,7 +57,7 @@ public final class DefaultSmtpRequest implements SmtpRequest {
     DefaultSmtpRequest(SmtpCommand command, List<CharSequence> parameters) {
         this.command = Objects.requireNonNull(command, "command");
         this.parameters = parameters != null ?
-                Collections.unmodifiableList(parameters) : Collections.<CharSequence>emptyList();
+                Collections.unmodifiableList(parameters) : Collections.emptyList();
     }
 
     @Override

@@ -742,7 +742,7 @@ public class DnsNameResolver extends InetNameResolver {
                 if (content != null) {
                     // Our current implementation does not support reloading the hosts file,
                     // so use a fairly large TTL (1 day, i.e. 86400 seconds).
-                    trySuccess(promise, Collections.<DnsRecord>singletonList(
+                    trySuccess(promise, Collections.singletonList(
                             new DefaultDnsRawRecord(hostname, type, 86400, content)));
                     return promise;
                 }

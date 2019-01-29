@@ -22,6 +22,6 @@ public class JdkSslServerContextTest extends SslContextTest {
 
     @Override
     protected SslContext newServerContext(File crtFile, File keyFile, String pass) throws SSLException {
-        return new JdkSslServerContext(crtFile, keyFile, pass);
+        return SslContextBuilder.forServer(crtFile, keyFile, pass).sslProvider(SslProvider.JDK).build();
     }
 }

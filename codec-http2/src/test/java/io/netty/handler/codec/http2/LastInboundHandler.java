@@ -58,7 +58,7 @@ public class LastInboundHandler extends ChannelDuplexHandler {
     }
 
     public LastInboundHandler() {
-        this(LastInboundHandler.<ChannelHandlerContext>noopConsumer());
+        this(LastInboundHandler.noopConsumer());
     }
 
     public LastInboundHandler(Consumer<ChannelHandlerContext> channelReadCompleteConsumer) {

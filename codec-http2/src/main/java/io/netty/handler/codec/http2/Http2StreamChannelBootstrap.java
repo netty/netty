@@ -102,7 +102,7 @@ public final class Http2StreamChannelBootstrap {
     }
 
     public Future<Http2StreamChannel> open() {
-        return open(channel.eventLoop().<Http2StreamChannel>newPromise());
+        return open(channel.eventLoop().newPromise());
     }
 
     public Future<Http2StreamChannel> open(final Promise<Http2StreamChannel> promise) {
