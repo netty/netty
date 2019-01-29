@@ -364,19 +364,11 @@ public class SslHandlerTest {
                 final SslHandler sslHandler = sslCtx.newHandler(ch.alloc());
                 sslHandler.setHandshakeTimeoutMillis(1000);
                 ch.pipeline().addFirst(sslHandler);
-                sslHandler.handshakeFuture().addListener(new FutureListener<Channel>() {
-                    @Override
-                    public void operationComplete(final Future<Channel> future) {
-                        ch.pipeline().remove(sslHandler);
+                sslHandler.handshakeFuture().addListener((FutureListener<Channel>) future -> {
+                    ch.pipeline().remove(sslHandler);
 
-                        // Schedule the close so removal has time to propagate exception if any.
-                        ch.eventLoop().execute(new Runnable() {
-                            @Override
-                            public void run() {
-                                ch.close();
-                            }
-                        });
-                    }
+                    // Schedule the close so removal has time to propagate exception if any.
+                    ch.eventLoop().execute(ch::close);
                 });
 
                 ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
@@ -466,12 +458,9 @@ public class SslHandlerTest {
                           public void channelActive(ChannelHandlerContext ctx) {
                               ByteBuf buf = ctx.alloc().buffer(10);
                               buf.writeZero(buf.capacity());
-                              ctx.writeAndFlush(buf).addListener(new ChannelFutureListener() {
-                                  @Override
-                                  public void operationComplete(ChannelFuture future) {
-                                      events.add(future);
-                                      latch.countDown();
-                                  }
+                              ctx.writeAndFlush(buf).addListener((ChannelFutureListener) future -> {
+                                  events.add(future);
+                                  latch.countDown();
                               });
                           }
 
@@ -723,12 +712,9 @@ public class SslHandlerTest {
                                 }
                             });
                         }
-                    }).connect(sc.localAddress()).addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            // Write something to trigger the handshake before fireChannelActive is called.
-                            future.channel().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
-                        }
+                    }).connect(sc.localAddress()).addListener((ChannelFutureListener) future -> {
+                        // Write something to trigger the handshake before fireChannelActive is called.
+                        future.channel().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
                     }).syncUninterruptibly().channel();
 
             // Ensure there is no AssertionError thrown by having the handshake failed by the writeAndFlush(...) before
@@ -801,12 +787,9 @@ public class SslHandlerTest {
                         }
                     }).connect(sc.localAddress());
             if (!startTls) {
-                future.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        // Write something to trigger the handshake before fireChannelActive is called.
-                        future.channel().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
-                    }
+                future.addListener((ChannelFutureListener) future1 -> {
+                    // Write something to trigger the handshake before fireChannelActive is called.
+                    future1.channel().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
                 });
             }
             cc = future.syncUninterruptibly().channel();

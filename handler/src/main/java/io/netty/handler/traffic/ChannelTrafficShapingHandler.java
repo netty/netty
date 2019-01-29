@@ -192,12 +192,7 @@ public class ChannelTrafficShapingHandler extends AbstractTrafficShapingHandler 
             checkWriteSuspend(ctx, delay, queueSize);
         }
         final long futureNow = newToSend.relativeTimeAction;
-        ctx.executor().schedule(new Runnable() {
-            @Override
-            public void run() {
-                sendAllValid(ctx, futureNow);
-            }
-        }, delay, TimeUnit.MILLISECONDS);
+        ctx.executor().schedule(() -> sendAllValid(ctx, futureNow), delay, TimeUnit.MILLISECONDS);
     }
 
     private void sendAllValid(final ChannelHandlerContext ctx, final long now) {

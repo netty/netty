@@ -27,11 +27,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 public class AbstractScheduledEventExecutorTest {
-    private static final Runnable TEST_RUNNABLE = new Runnable() {
-
-        @Override
-        public void run() {
-        }
+    private static final Runnable TEST_RUNNABLE = () -> {
     };
 
     private static final Callable<?> TEST_CALLABLE = Executors.callable(TEST_RUNNABLE);

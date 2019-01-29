@@ -28,11 +28,8 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  */
 final class CodecOutputList extends AbstractList<Object> implements RandomAccess {
 
-    private static final CodecOutputListRecycler NOOP_RECYCLER = new CodecOutputListRecycler() {
-        @Override
-        public void recycle(CodecOutputList object) {
-            // drop on the floor and let the GC handle it.
-        }
+    private static final CodecOutputListRecycler NOOP_RECYCLER = object -> {
+        // drop on the floor and let the GC handle it.
     };
 
     private static final FastThreadLocal<CodecOutputLists> CODEC_OUTPUT_LISTS_POOL =

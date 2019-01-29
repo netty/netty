@@ -115,20 +115,17 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
                         extensionData.name(), extensionData.parameters());
             }
 
-            promise.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    if (future.isSuccess()) {
-                        for (WebSocketServerExtension extension : validExtensions) {
-                            WebSocketExtensionDecoder decoder = extension.newExtensionDecoder();
-                            WebSocketExtensionEncoder encoder = extension.newExtensionEncoder();
-                            ctx.pipeline().addAfter(ctx.name(), decoder.getClass().getName(), decoder);
-                            ctx.pipeline().addAfter(ctx.name(), encoder.getClass().getName(), encoder);
-                        }
+            promise.addListener((ChannelFutureListener) future -> {
+                if (future.isSuccess()) {
+                    for (WebSocketServerExtension extension : validExtensions) {
+                        WebSocketExtensionDecoder decoder = extension.newExtensionDecoder();
+                        WebSocketExtensionEncoder encoder = extension.newExtensionEncoder();
+                        ctx.pipeline().addAfter(ctx.name(), decoder.getClass().getName(), decoder);
+                        ctx.pipeline().addAfter(ctx.name(), encoder.getClass().getName(), encoder);
                     }
-
-                    ctx.pipeline().remove(ctx.name());
                 }
+
+                ctx.pipeline().remove(ctx.name());
             });
 
             if (headerValue != null) {

@@ -62,10 +62,7 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
      */
     private static final class SpinExecutorService implements ExecutorService {
 
-        private static final Runnable POISON_PILL = new Runnable() {
-            @Override
-            public void run() {
-            }
+        private static final Runnable POISON_PILL = () -> {
         };
         private final Queue<Runnable> tasks;
         private final AtomicBoolean poisoned = new AtomicBoolean();
@@ -73,15 +70,12 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
 
         SpinExecutorService(int maxTasks) {
             tasks = PlatformDependent.newFixedMpscQueue(maxTasks);
-            executorThread = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    final Queue<Runnable> tasks = SpinExecutorService.this.tasks;
-                    Runnable task;
-                    while ((task = tasks.poll()) != POISON_PILL) {
-                        if (task != null) {
-                            task.run();
-                        }
+            executorThread = new Thread(() -> {
+                final Queue<Runnable> tasks = SpinExecutorService.this.tasks;
+                Runnable task;
+                while ((task = tasks.poll()) != POISON_PILL) {
+                    if (task != null) {
+                        task.run();
                     }
                 }
             });
@@ -255,27 +249,21 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
         public void setup(BurstCostExecutorsBenchmark bench) {
             final int work = bench.work;
             if (work > 0) {
-                completeTask = new Runnable() {
-                    @Override
-                    public void run() {
-                        Blackhole.consumeCPU(work);
-                        //We can avoid the full barrier cost of a volatile set given that the
-                        //benchmark is focusing on executors with a single threaded consumer:
-                        //it would reduce the cost on consumer side while allowing to focus just
-                        //to the threads hand-off/wake-up cost
-                        DONE_UPDATER.lazySet(PerThreadState.this, completed + 1);
-                    }
+                completeTask = () -> {
+                    Blackhole.consumeCPU(work);
+                    //We can avoid the full barrier cost of a volatile set given that the
+                    //benchmark is focusing on executors with a single threaded consumer:
+                    //it would reduce the cost on consumer side while allowing to focus just
+                    //to the threads hand-off/wake-up cost
+                    DONE_UPDATER.lazySet(PerThreadState.this, completed + 1);
                 };
             } else {
-                completeTask = new Runnable() {
-                    @Override
-                    public void run() {
-                        //We can avoid the full barrier cost of a volatile set given that the
-                        //benchmark is focusing on executors with a single threaded consumer:
-                        //it would reduce the cost on consumer side while allowing to focus just
-                        //to the threads hand-off/wake-up cost
-                        DONE_UPDATER.lazySet(PerThreadState.this, completed + 1);
-                    }
+                completeTask = () -> {
+                    //We can avoid the full barrier cost of a volatile set given that the
+                    //benchmark is focusing on executors with a single threaded consumer:
+                    //it would reduce the cost on consumer side while allowing to focus just
+                    //to the threads hand-off/wake-up cost
+                    DONE_UPDATER.lazySet(PerThreadState.this, completed + 1);
                 };
             }
         }

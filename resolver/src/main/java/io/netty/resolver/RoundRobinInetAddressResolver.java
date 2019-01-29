@@ -54,45 +54,39 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
         // hijack the doResolve request, but do a doResolveAll request under the hood.
         // Note that InetSocketAddress.getHostName() will never incur a reverse lookup here,
         // because an unresolved address always has a host name.
-        nameResolver.resolveAll(inetHost).addListener(new FutureListener<List<InetAddress>>() {
-            @Override
-            public void operationComplete(Future<List<InetAddress>> future) throws Exception {
-                if (future.isSuccess()) {
-                    List<InetAddress> inetAddresses = future.getNow();
-                    int numAddresses = inetAddresses.size();
-                    if (numAddresses > 0) {
-                        // if there are multiple addresses: we shall pick one by one
-                        // to support the round robin distribution
-                        promise.setSuccess(inetAddresses.get(randomIndex(numAddresses)));
-                    } else {
-                        promise.setFailure(new UnknownHostException(inetHost));
-                    }
+        nameResolver.resolveAll(inetHost).addListener((FutureListener<List<InetAddress>>) future -> {
+            if (future.isSuccess()) {
+                List<InetAddress> inetAddresses = future.getNow();
+                int numAddresses = inetAddresses.size();
+                if (numAddresses > 0) {
+                    // if there are multiple addresses: we shall pick one by one
+                    // to support the round robin distribution
+                    promise.setSuccess(inetAddresses.get(randomIndex(numAddresses)));
                 } else {
-                    promise.setFailure(future.cause());
+                    promise.setFailure(new UnknownHostException(inetHost));
                 }
+            } else {
+                promise.setFailure(future.cause());
             }
         });
     }
 
     @Override
     protected void doResolveAll(String inetHost, final Promise<List<InetAddress>> promise) throws Exception {
-        nameResolver.resolveAll(inetHost).addListener(new FutureListener<List<InetAddress>>() {
-            @Override
-            public void operationComplete(Future<List<InetAddress>> future) throws Exception {
-                if (future.isSuccess()) {
-                    List<InetAddress> inetAddresses = future.getNow();
-                    if (!inetAddresses.isEmpty()) {
-                        // create a copy to make sure that it's modifiable random access collection
-                        List<InetAddress> result = new ArrayList<>(inetAddresses);
-                        // rotate by different distance each time to force round robin distribution
-                        Collections.rotate(result, randomIndex(inetAddresses.size()));
-                        promise.setSuccess(result);
-                    } else {
-                        promise.setSuccess(inetAddresses);
-                    }
+        nameResolver.resolveAll(inetHost).addListener((FutureListener<List<InetAddress>>) future -> {
+            if (future.isSuccess()) {
+                List<InetAddress> inetAddresses = future.getNow();
+                if (!inetAddresses.isEmpty()) {
+                    // create a copy to make sure that it's modifiable random access collection
+                    List<InetAddress> result = new ArrayList<>(inetAddresses);
+                    // rotate by different distance each time to force round robin distribution
+                    Collections.rotate(result, randomIndex(inetAddresses.size()));
+                    promise.setSuccess(result);
                 } else {
-                    promise.setFailure(future.cause());
+                    promise.setSuccess(inetAddresses);
                 }
+            } else {
+                promise.setFailure(future.cause());
             }
         });
     }

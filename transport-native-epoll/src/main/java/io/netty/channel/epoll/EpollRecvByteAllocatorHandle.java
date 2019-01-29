@@ -27,12 +27,7 @@ class EpollRecvByteAllocatorHandle implements RecvByteBufAllocator.ExtendedHandl
     private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
             new PreferredDirectByteBufAllocator();
     private final RecvByteBufAllocator.ExtendedHandle delegate;
-    private final UncheckedBooleanSupplier defaultMaybeMoreDataSupplier = new UncheckedBooleanSupplier() {
-        @Override
-        public boolean get() {
-            return maybeMoreDataToRead();
-        }
-    };
+    private final UncheckedBooleanSupplier defaultMaybeMoreDataSupplier = this::maybeMoreDataToRead;
     private boolean isEdgeTriggered;
     private boolean receivedRdHup;
 

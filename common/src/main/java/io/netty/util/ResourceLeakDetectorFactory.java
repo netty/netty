@@ -103,12 +103,8 @@ public abstract class ResourceLeakDetectorFactory {
         DefaultResourceLeakDetectorFactory() {
             String customLeakDetector;
             try {
-                customLeakDetector = AccessController.doPrivileged(new PrivilegedAction<String>() {
-                    @Override
-                    public String run() {
-                        return SystemPropertyUtil.get("io.netty.customResourceLeakDetector");
-                    }
-                });
+                customLeakDetector = AccessController.doPrivileged((PrivilegedAction<String>) () ->
+                        SystemPropertyUtil.get("io.netty.customResourceLeakDetector"));
             } catch (Throwable cause) {
                 logger.error("Could not access System property: io.netty.customResourceLeakDetector", cause);
                 customLeakDetector = null;

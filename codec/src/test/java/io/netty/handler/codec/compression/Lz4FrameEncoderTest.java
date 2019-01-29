@@ -270,24 +270,18 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
             clientChannel = bs.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
 
             final Channel finalClientChannel = clientChannel;
-            clientChannel.eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    finalClientChannel.close();
-                    final int size = 27;
-                    ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(size, size);
-                    finalClientChannel.writeAndFlush(buf.writerIndex(buf.writerIndex() + size))
-                            .addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+            clientChannel.eventLoop().execute(() -> {
+                finalClientChannel.close();
+                final int size = 27;
+                ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(size, size);
+                finalClientChannel.writeAndFlush(buf.writerIndex(buf.writerIndex() + size))
+                        .addListener((ChannelFutureListener) future -> {
                             try {
                                 writeFailCauseRef.set(future.cause());
                             } finally {
                                 latch.countDown();
                             }
-                        }
-                    });
-                }
+                        });
             });
             latch.await();
             Throwable writeFailCause = writeFailCauseRef.get();

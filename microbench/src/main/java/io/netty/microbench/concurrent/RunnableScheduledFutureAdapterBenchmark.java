@@ -42,12 +42,7 @@ public class RunnableScheduledFutureAdapterBenchmark extends AbstractMicrobenchm
     @State(Scope.Thread)
     public static class FuturesHolder {
 
-        private static final Callable<Void> NO_OP = new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                return null;
-            }
-        };
+        private static final Callable<Void> NO_OP = () -> null;
 
         @Param({ "100", "1000", "10000", "100000" })
         int num;
@@ -57,12 +52,9 @@ public class RunnableScheduledFutureAdapterBenchmark extends AbstractMicrobenchm
         @Setup(Level.Invocation)
         public void reset() {
             futures.clear();
-            executor.submit(new Runnable() {
-                @Override
-                public void run() {
-                    for (int i = 1; i <= num; i++) {
-                        futures.add(executor.schedule(NO_OP, i, TimeUnit.HOURS));
-                    }
+            executor.submit(() -> {
+                for (int i = 1; i <= num; i++) {
+                    futures.add(executor.schedule(NO_OP, i, TimeUnit.HOURS));
                 }
             }).syncUninterruptibly();
         }
@@ -75,24 +67,18 @@ public class RunnableScheduledFutureAdapterBenchmark extends AbstractMicrobenchm
 
     @Benchmark
     public Future<?> cancelInOrder(final FuturesHolder futuresHolder) {
-        return executor.submit(new Runnable() {
-            @Override
-            public void run() {
-                for (int i = 0; i < futuresHolder.num; i++) {
-                    futuresHolder.futures.get(i).cancel(false);
-                }
+        return executor.submit(() -> {
+            for (int i = 0; i < futuresHolder.num; i++) {
+                futuresHolder.futures.get(i).cancel(false);
             }
         }).syncUninterruptibly();
     }
 
     @Benchmark
     public Future<?> cancelInReverseOrder(final FuturesHolder futuresHolder) {
-        return executor.submit(new Runnable() {
-            @Override
-            public void run() {
-                for (int i = futuresHolder.num - 1; i >= 0; i--) {
-                    futuresHolder.futures.get(i).cancel(false);
-                }
+        return executor.submit(() -> {
+            for (int i = futuresHolder.num - 1; i >= 0; i--) {
+                futuresHolder.futures.get(i).cancel(false);
             }
         }).syncUninterruptibly();
     }

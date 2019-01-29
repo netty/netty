@@ -606,12 +606,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         if (future.isDone()) {
             checkCloseConnection(future);
         } else {
-            future.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    checkCloseConnection(future);
-                }
-            });
+            future.addListener((ChannelFutureListener) this::checkCloseConnection);
         }
     }
 
@@ -750,12 +745,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         if (future.isDone()) {
             closeConnectionOnError(ctx, future);
         } else {
-            future.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    closeConnectionOnError(ctx, future);
-                }
-            });
+            future.addListener((ChannelFutureListener) future1 -> closeConnectionOnError(ctx, future1));
         }
         return future;
     }
@@ -795,12 +785,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         if (future.isDone()) {
             processRstStreamWriteResult(ctx, stream, future);
         } else {
-            future.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    processRstStreamWriteResult(ctx, stream, future);
-                }
-            });
+            future.addListener((ChannelFutureListener) future1 -> processRstStreamWriteResult(ctx, stream, future1));
         }
 
         return future;
@@ -831,12 +816,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         if (future.isDone()) {
             processGoAwayWriteResult(ctx, lastStreamId, errorCode, debugData, future);
         } else {
-            future.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    processGoAwayWriteResult(ctx, lastStreamId, errorCode, debugData, future);
-                }
-            });
+            future.addListener((ChannelFutureListener) future1 ->
+                    processGoAwayWriteResult(ctx, lastStreamId, errorCode, debugData, future1));
         }
 
         return future;
@@ -938,11 +919,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                                      long timeout, TimeUnit unit) {
             this.ctx = ctx;
             this.promise = promise;
-            timeoutTask = ctx.executor().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    ctx.close(promise);
-                }
+            timeoutTask = ctx.executor().schedule(() -> {
+                ctx.close(promise);
             }, timeout, unit);
         }
 

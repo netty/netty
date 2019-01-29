@@ -186,12 +186,7 @@ public class CorsHandlerTest {
     @Test
     public void preflightRequestWithValueGenerator() {
         final CorsConfig config = forOrigin("http://localhost:8888")
-                .preflightResponseHeader("GenHeader", new Callable<String>() {
-                    @Override
-                    public String call() throws Exception {
-                        return "generatedValue";
-                    }
-                }).build();
+                .preflightResponseHeader("GenHeader", () -> "generatedValue").build();
         final HttpResponse response = preflightRequest(config, "http://localhost:8888", "content-type, xheader1");
         assertThat(response.headers().get(of("GenHeader")), equalTo("generatedValue"));
         assertThat(response.headers().get(VARY), equalTo(ORIGIN.toString()));

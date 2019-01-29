@@ -43,16 +43,13 @@ public class EpollTest {
             Native.epollCtlAdd(epoll.intValue(), eventfd.intValue(), Native.EPOLLIN);
 
             final AtomicReference<Throwable> ref = new AtomicReference<>();
-            Thread t = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        assertEquals(1, Native.epollWait(epoll, eventArray, timerFd, -1, -1));
-                        // This should have been woken up because of eventfd_write.
-                        assertEquals(eventfd.intValue(), eventArray.fd(0));
-                    } catch (Throwable cause) {
-                        ref.set(cause);
-                    }
+            Thread t = new Thread(() -> {
+                try {
+                    assertEquals(1, Native.epollWait(epoll, eventArray, timerFd, -1, -1));
+                    // This should have been woken up because of eventfd_write.
+                    assertEquals(eventfd.intValue(), eventArray.fd(0));
+                } catch (Throwable cause) {
+                    ref.set(cause);
                 }
             });
             t.start();

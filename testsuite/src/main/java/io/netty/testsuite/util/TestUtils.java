@@ -136,12 +136,7 @@ public final class TestUtils {
     }
 
     public static void compressHeapDumps() throws IOException {
-        final File[] files = new File(System.getProperty("user.dir")).listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(File dir, String name) {
-                return name.endsWith(".hprof");
-            }
-        });
+        final File[] files = new File(System.getProperty("user.dir")).listFiles((dir, name) -> name.endsWith(".hprof"));
 
         final byte[] buf = new byte[65536];
         final LZMA2Options options = new LZMA2Options(LZMA2Options.PRESET_DEFAULT);

@@ -45,20 +45,17 @@ final class CleanerJava6 implements Cleaner {
         Throwable error = null;
         final ByteBuffer direct = ByteBuffer.allocateDirect(1);
         try {
-            Object mayBeCleanerField = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    try {
-                        Field cleanerField =  direct.getClass().getDeclaredField("cleaner");
-                        if (!PlatformDependent.hasUnsafe()) {
-                            // We need to make it accessible if we do not use Unsafe as we will access it via
-                            // reflection.
-                            cleanerField.setAccessible(true);
-                        }
-                        return cleanerField;
-                    } catch (Throwable cause) {
-                        return cause;
+            Object mayBeCleanerField = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+                try {
+                    Field cleanerField1 =  direct.getClass().getDeclaredField("cleaner");
+                    if (!PlatformDependent.hasUnsafe()) {
+                        // We need to make it accessible if we do not use Unsafe as we will access it via
+                        // reflection.
+                        cleanerField1.setAccessible(true);
                     }
+                    return cleanerField1;
+                } catch (Throwable cause) {
+                    return cause;
                 }
             });
             if (mayBeCleanerField instanceof Throwable) {
@@ -119,15 +116,12 @@ final class CleanerJava6 implements Cleaner {
     }
 
     private static void freeDirectBufferPrivileged(final ByteBuffer buffer) {
-        Throwable cause = AccessController.doPrivileged(new PrivilegedAction<Throwable>() {
-            @Override
-            public Throwable run() {
-                try {
-                    freeDirectBuffer0(buffer);
-                    return null;
-                } catch (Throwable cause) {
-                    return cause;
-                }
+        Throwable cause = AccessController.doPrivileged((PrivilegedAction<Throwable>) () -> {
+            try {
+                freeDirectBuffer0(buffer);
+                return null;
+            } catch (Throwable cause1) {
+                return cause1;
             }
         });
         if (cause != null) {

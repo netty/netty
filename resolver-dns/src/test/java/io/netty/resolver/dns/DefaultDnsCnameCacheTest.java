@@ -38,15 +38,12 @@ public class DefaultDnsCnameCacheTest {
             final DefaultDnsCnameCache cache = new DefaultDnsCnameCache();
             cache.cache("netty.io", "mapping.netty.io", 1, loop);
 
-            Throwable error = loop.schedule(new Callable<Throwable>() {
-                @Override
-                public Throwable call() {
-                    try {
-                        assertNull(cache.get("netty.io"));
-                        return null;
-                    } catch (Throwable cause) {
-                        return cause;
-                    }
+            Throwable error = loop.schedule(() -> {
+                try {
+                    assertNull(cache.get("netty.io"));
+                    return null;
+                } catch (Throwable cause) {
+                    return cause;
                 }
             }, 1, TimeUnit.SECONDS).get();
             if (error != null) {

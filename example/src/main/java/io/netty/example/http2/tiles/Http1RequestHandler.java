@@ -47,15 +47,12 @@ public final class Http1RequestHandler extends Http2RequestHandler {
     protected void sendResponse(final ChannelHandlerContext ctx, String streamId, int latency,
             final FullHttpResponse response, final FullHttpRequest request) {
         HttpUtil.setContentLength(response, response.content().readableBytes());
-        ctx.executor().schedule(new Runnable() {
-            @Override
-            public void run() {
-                if (isKeepAlive(request)) {
-                    response.headers().set(CONNECTION, HttpHeaderValues.KEEP_ALIVE);
-                    ctx.writeAndFlush(response);
-                } else {
-                    ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
-                }
+        ctx.executor().schedule(() -> {
+            if (isKeepAlive(request)) {
+                response.headers().set(CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+                ctx.writeAndFlush(response);
+            } else {
+                ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
             }
         }, latency, TimeUnit.MILLISECONDS);
     }

@@ -191,16 +191,13 @@ public abstract class WebSocketServerHandshaker {
             encoderName = p.context(HttpResponseEncoder.class).name();
             p.addBefore(encoderName, "wsencoder", newWebSocketEncoder());
         }
-        channel.writeAndFlush(response).addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (future.isSuccess()) {
-                    ChannelPipeline p = future.channel().pipeline();
-                    p.remove(encoderName);
-                    promise.setSuccess();
-                } else {
-                    promise.setFailure(future.cause());
-                }
+        channel.writeAndFlush(response).addListener((ChannelFutureListener) future -> {
+            if (future.isSuccess()) {
+                ChannelPipeline p1 = future.channel().pipeline();
+                p1.remove(encoderName);
+                promise.setSuccess();
+            } else {
+                promise.setFailure(future.cause());
             }
         });
         return promise;

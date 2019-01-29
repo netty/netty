@@ -36,14 +36,11 @@ public class HexDumpProxyBackendHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) {
-        inboundChannel.writeAndFlush(msg).addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                if (future.isSuccess()) {
-                    ctx.channel().read();
-                } else {
-                    future.channel().close();
-                }
+        inboundChannel.writeAndFlush(msg).addListener((ChannelFutureListener) future -> {
+            if (future.isSuccess()) {
+                ctx.channel().read();
+            } else {
+                future.channel().close();
             }
         });
     }

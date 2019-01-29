@@ -81,15 +81,12 @@ public class PrivilegedSocketOperationsBenchmark extends AbstractMicrobenchmark 
     public ServerSocketChannel testWithSM(final SecurityManagerInstalled sm) throws IOException {
         try {
             final ServerSocketChannel ssc = AccessController.doPrivileged(
-                    new PrivilegedExceptionAction<ServerSocketChannel>() {
-                        @Override
-                        public ServerSocketChannel run() throws Exception {
-                            final ServerSocketChannel ssc = ServerSocketChannel.open();
-                            ssc.socket().bind(null);
-                            ssc.configureBlocking(false);
-                            ssc.accept();
-                            return ssc;
-                        }
+                    (PrivilegedExceptionAction<ServerSocketChannel>) () -> {
+                        final ServerSocketChannel ssc1 = ServerSocketChannel.open();
+                        ssc1.socket().bind(null);
+                        ssc1.configureBlocking(false);
+                        ssc1.accept();
+                        return ssc1;
                     });
             ssc.close();
             return ssc;
@@ -103,15 +100,12 @@ public class PrivilegedSocketOperationsBenchmark extends AbstractMicrobenchmark 
         if (System.getSecurityManager() != null) {
             try {
                 final ServerSocketChannel ssc = AccessController.doPrivileged(
-                        new PrivilegedExceptionAction<ServerSocketChannel>() {
-                            @Override
-                            public ServerSocketChannel run() throws Exception {
-                                final ServerSocketChannel ssc = ServerSocketChannel.open();
-                                ssc.socket().bind(null);
-                                ssc.configureBlocking(false);
-                                ssc.accept();
-                                return ssc;
-                            }
+                        (PrivilegedExceptionAction<ServerSocketChannel>) () -> {
+                            final ServerSocketChannel ssc1 = ServerSocketChannel.open();
+                            ssc1.socket().bind(null);
+                            ssc1.configureBlocking(false);
+                            ssc1.accept();
+                            return ssc1;
                         });
                 ssc.close();
                 return ssc;
@@ -143,15 +137,12 @@ public class PrivilegedSocketOperationsBenchmark extends AbstractMicrobenchmark 
     public ServerSocketChannel testWithoutSM(final SecurityManagerEmpty sm) throws IOException {
         try {
             final ServerSocketChannel ssc = AccessController.doPrivileged(
-                    new PrivilegedExceptionAction<ServerSocketChannel>() {
-                        @Override
-                        public ServerSocketChannel run() throws Exception {
-                            final ServerSocketChannel ssc = ServerSocketChannel.open();
-                            ssc.socket().bind(null);
-                            ssc.configureBlocking(false);
-                            ssc.accept();
-                            return ssc;
-                        }
+                    (PrivilegedExceptionAction<ServerSocketChannel>) () -> {
+                        final ServerSocketChannel ssc1 = ServerSocketChannel.open();
+                        ssc1.socket().bind(null);
+                        ssc1.configureBlocking(false);
+                        ssc1.accept();
+                        return ssc1;
                     });
             ssc.close();
             return ssc;
@@ -166,15 +157,12 @@ public class PrivilegedSocketOperationsBenchmark extends AbstractMicrobenchmark 
             // this should never happen during benchmarking, but we write the correct code here
             try {
                 final ServerSocketChannel ssc = AccessController.doPrivileged(
-                        new PrivilegedExceptionAction<ServerSocketChannel>() {
-                            @Override
-                            public ServerSocketChannel run() throws Exception {
-                                final ServerSocketChannel ssc = ServerSocketChannel.open();
-                                ssc.socket().bind(null);
-                                ssc.configureBlocking(false);
-                                ssc.accept();
-                                return ssc;
-                            }
+                        (PrivilegedExceptionAction<ServerSocketChannel>) () -> {
+                            final ServerSocketChannel ssc1 = ServerSocketChannel.open();
+                            ssc1.socket().bind(null);
+                            ssc1.configureBlocking(false);
+                            ssc1.accept();
+                            return ssc1;
                         });
                 ssc.close();
                 return ssc;

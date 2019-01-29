@@ -432,12 +432,7 @@ public class SniHandlerTest {
                             .sslProvider(provider)
                             .build();
 
-                    final Mapping<String, SslContext> mapping = new Mapping<String, SslContext>() {
-                        @Override
-                        public SslContext map(String input) {
-                            return sslServerContext;
-                        }
-                    };
+                    final Mapping<String, SslContext> mapping = input -> sslServerContext;
 
                     final Promise<Void> releasePromise = group.next().newPromise();
 

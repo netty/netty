@@ -73,31 +73,18 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
     @Override
     public List<BootstrapFactory<ServerBootstrap>> serverSocket() {
         List<BootstrapFactory<ServerBootstrap>> toReturn = new ArrayList<>();
-        toReturn.add(new BootstrapFactory<ServerBootstrap>() {
-            @Override
-            public ServerBootstrap newInstance() {
-                return new ServerBootstrap().group(EPOLL_BOSS_GROUP, EPOLL_WORKER_GROUP)
-                                            .channel(EpollServerSocketChannel.class);
-            }
-        });
+        toReturn.add(() -> new ServerBootstrap().group(EPOLL_BOSS_GROUP, EPOLL_WORKER_GROUP)
+                                    .channel(EpollServerSocketChannel.class));
         if (isServerFastOpen()) {
-            toReturn.add(new BootstrapFactory<ServerBootstrap>() {
-                @Override
-                public ServerBootstrap newInstance() {
-                    ServerBootstrap serverBootstrap = new ServerBootstrap().group(EPOLL_BOSS_GROUP, EPOLL_WORKER_GROUP)
-                                                                           .channel(EpollServerSocketChannel.class);
-                    serverBootstrap.option(EpollChannelOption.TCP_FASTOPEN, 5);
-                    return serverBootstrap;
-                }
+            toReturn.add(() -> {
+                ServerBootstrap serverBootstrap = new ServerBootstrap().group(EPOLL_BOSS_GROUP, EPOLL_WORKER_GROUP)
+                                                                       .channel(EpollServerSocketChannel.class);
+                serverBootstrap.option(EpollChannelOption.TCP_FASTOPEN, 5);
+                return serverBootstrap;
             });
         }
-        toReturn.add(new BootstrapFactory<ServerBootstrap>() {
-            @Override
-            public ServerBootstrap newInstance() {
-                return new ServerBootstrap().group(nioBossGroup, nioWorkerGroup)
-                                            .channel(NioServerSocketChannel.class);
-            }
-        });
+        toReturn.add(() -> new ServerBootstrap().group(nioBossGroup, nioWorkerGroup)
+                                    .channel(NioServerSocketChannel.class));
 
         return toReturn;
     }
@@ -106,18 +93,8 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
     @Override
     public List<BootstrapFactory<Bootstrap>> clientSocket() {
         return Arrays.asList(
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollSocketChannel.class);
-                    }
-                },
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class);
-                    }
-                }
+                () -> new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollSocketChannel.class),
+                () -> new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class)
         );
     }
 
@@ -126,28 +103,18 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
         // Make the list of Bootstrap factories.
         @SuppressWarnings("unchecked")
         List<BootstrapFactory<Bootstrap>> bfs = Arrays.asList(
-                new BootstrapFactory<Bootstrap>() {
+                () -> new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
                     @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
-                            @Override
-                            public Channel newChannel(EventLoop eventLoop) {
-                                return new NioDatagramChannel(eventLoop, InternetProtocolFamily.IPv4);
-                            }
+                    public Channel newChannel(EventLoop eventLoop) {
+                        return new NioDatagramChannel(eventLoop, InternetProtocolFamily.IPv4);
+                    }
 
-                            @Override
-                            public String toString() {
-                                return NioDatagramChannel.class.getSimpleName() + ".class";
-                            }
-                        });
-                    }
-                },
-                new BootstrapFactory<Bootstrap>() {
                     @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollDatagramChannel.class);
+                    public String toString() {
+                        return NioDatagramChannel.class.getSimpleName() + ".class";
                     }
-                }
+                }),
+                () -> new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollDatagramChannel.class)
         );
         return combo(bfs, bfs);
     }
@@ -161,71 +128,53 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
 
     public List<BootstrapFactory<ServerBootstrap>> serverDomainSocket() {
         return Collections.singletonList(
-                new BootstrapFactory<ServerBootstrap>() {
-                    @Override
-                    public ServerBootstrap newInstance() {
-                        return new ServerBootstrap().group(EPOLL_BOSS_GROUP, EPOLL_WORKER_GROUP)
-                                .channel(EpollServerDomainSocketChannel.class);
-                    }
-                }
+                () -> new ServerBootstrap().group(EPOLL_BOSS_GROUP, EPOLL_WORKER_GROUP)
+                        .channel(EpollServerDomainSocketChannel.class)
         );
     }
 
     public List<BootstrapFactory<Bootstrap>> clientDomainSocket() {
         return Collections.singletonList(
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollDomainSocketChannel.class);
-                    }
-                }
+                () -> new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollDomainSocketChannel.class)
         );
     }
 
     @Override
     public List<BootstrapFactory<Bootstrap>> datagramSocket() {
         return Collections.singletonList(
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollDatagramChannel.class);
-                    }
-                }
+                () -> new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollDatagramChannel.class)
         );
     }
 
     public boolean isServerFastOpen() {
-        return AccessController.doPrivileged(new PrivilegedAction<Integer>() {
-            @Override
-            public Integer run() {
-                int fastopen = 0;
-                File file = new File("/proc/sys/net/ipv4/tcp_fastopen");
-                if (file.exists()) {
-                    BufferedReader in = null;
-                    try {
-                        in = new BufferedReader(new FileReader(file));
-                        fastopen = Integer.parseInt(in.readLine());
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("{}: {}", file, fastopen);
-                        }
-                    } catch (Exception e) {
-                        logger.debug("Failed to get TCP_FASTOPEN from: {}", file, e);
-                    } finally {
-                        if (in != null) {
-                            try {
-                                in.close();
-                            } catch (Exception e) {
-                                // Ignored.
-                            }
-                        }
-                    }
-                } else {
+        return AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
+            int fastopen = 0;
+            File file = new File("/proc/sys/net/ipv4/tcp_fastopen");
+            if (file.exists()) {
+                BufferedReader in = null;
+                try {
+                    in = new BufferedReader(new FileReader(file));
+                    fastopen = Integer.parseInt(in.readLine());
                     if (logger.isDebugEnabled()) {
-                        logger.debug("{}: {} (non-existent)", file, fastopen);
+                        logger.debug("{}: {}", file, fastopen);
+                    }
+                } catch (Exception e) {
+                    logger.debug("Failed to get TCP_FASTOPEN from: {}", file, e);
+                } finally {
+                    if (in != null) {
+                        try {
+                            in.close();
+                        } catch (Exception e) {
+                            // Ignored.
+                        }
                     }
                 }
-                return fastopen;
+            } else {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("{}: {} (non-existent)", file, fastopen);
+                }
             }
+            return fastopen;
         }) == 3;
     }
 

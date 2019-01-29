@@ -29,19 +29,9 @@ public class UnorderedThreadPoolEventExecutorTest {
 
         try {
             final CountDownLatch latch = new CountDownLatch(3);
-            Runnable task = new Runnable() {
-                @Override
-                public void run() {
-                    latch.countDown();
-                }
-            };
+            Runnable task = latch::countDown;
             executor.execute(task);
-            Future<?> future = executor.submit(task).addListener(new FutureListener<Object>() {
-                @Override
-                public void operationComplete(Future<Object> future) throws Exception {
-                    latch.countDown();
-                }
-            });
+            Future<?> future = executor.submit(task).addListener((FutureListener<Object>) future1 -> latch.countDown());
             latch.await();
             future.syncUninterruptibly();
 

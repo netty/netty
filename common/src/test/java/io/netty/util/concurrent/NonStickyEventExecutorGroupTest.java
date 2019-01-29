@@ -68,14 +68,11 @@ public class NonStickyEventExecutorGroupTest {
             final AtomicReference<Throwable> error = new AtomicReference<>();
             List<Thread> threadList = new ArrayList<>(threads);
             for (int i = 0 ; i < threads; i++) {
-                Thread thread = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            execute(nonStickyGroup, startLatch);
-                        } catch (Throwable cause) {
-                            error.compareAndSet(null, cause);
-                        }
+                Thread thread = new Thread(() -> {
+                    try {
+                        execute(nonStickyGroup, startLatch);
+                    } catch (Throwable cause) {
+                        error.compareAndSet(null, cause);
                     }
                 });
                 threadList.add(thread);
@@ -106,12 +103,9 @@ public class NonStickyEventExecutorGroupTest {
                 final CountDownLatch firstCompleted = new CountDownLatch(1);
                 final CountDownLatch latch = new CountDownLatch(2);
                 for (int i = 0; i < 2; i++) {
-                    executor.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            firstCompleted.countDown();
-                            latch.countDown();
-                        }
+                    executor.execute(() -> {
+                        firstCompleted.countDown();
+                        latch.countDown();
                     });
                     Assert.assertTrue(firstCompleted.await(1, TimeUnit.SECONDS));
                 }
@@ -135,23 +129,20 @@ public class NonStickyEventExecutorGroupTest {
 
         for (int i = 1 ; i <= tasks; i++) {
             final int id = i;
-            futures.add(executor.submit(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        if (cause.get() == null) {
-                            int lastId = last.get();
-                            if (lastId >= id) {
-                                cause.compareAndSet(null, new AssertionError(
-                                        "Out of order execution id(" + id + ") >= lastId(" + lastId + ')'));
-                            }
-                            if (!last.compareAndSet(lastId, id)) {
-                                cause.compareAndSet(null, new AssertionError("Concurrent execution of tasks"));
-                            }
+            futures.add(executor.submit(() -> {
+                try {
+                    if (cause.get() == null) {
+                        int lastId = last.get();
+                        if (lastId >= id) {
+                            cause.compareAndSet(null, new AssertionError(
+                                    "Out of order execution id(" + id + ") >= lastId(" + lastId + ')'));
                         }
-                    } finally {
-                        latch.countDown();
+                        if (!last.compareAndSet(lastId, id)) {
+                            cause.compareAndSet(null, new AssertionError("Concurrent execution of tasks"));
+                        }
                     }
+                } finally {
+                    latch.countDown();
                 }
             }));
         }

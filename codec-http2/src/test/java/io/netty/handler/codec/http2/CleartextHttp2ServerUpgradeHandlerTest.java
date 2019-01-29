@@ -63,12 +63,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
         http2ConnectionHandler = new Http2ConnectionHandlerBuilder()
                 .frameListener(frameListener).build();
 
-        UpgradeCodecFactory upgradeCodecFactory = new UpgradeCodecFactory() {
-            @Override
-            public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
-                return new Http2ServerUpgradeCodec(http2ConnectionHandler);
-            }
-        };
+        UpgradeCodecFactory upgradeCodecFactory = protocol -> new Http2ServerUpgradeCodec(http2ConnectionHandler);
 
         userEvents = new ArrayList<>();
 
@@ -205,12 +200,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
             protected void initChannel(Channel ch) throws Exception {
             }
         }).build();
-        UpgradeCodecFactory upgradeCodecFactory = new UpgradeCodecFactory() {
-            @Override
-            public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
-                return new Http2ServerUpgradeCodec(http2Codec);
-            }
-        };
+        UpgradeCodecFactory upgradeCodecFactory = protocol -> new Http2ServerUpgradeCodec(http2Codec);
         http2ConnectionHandler = http2Codec;
 
         userEvents = new ArrayList<>();

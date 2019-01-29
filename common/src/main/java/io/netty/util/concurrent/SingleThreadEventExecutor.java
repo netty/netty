@@ -59,17 +59,11 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
     private static final int ST_SHUTDOWN = 4;
     private static final int ST_TERMINATED = 5;
 
-    private static final Runnable WAKEUP_TASK = new Runnable() {
-        @Override
-        public void run() {
-            // Do nothing.
-        }
+    private static final Runnable WAKEUP_TASK = () -> {
+        // Do nothing.
     };
-    private static final Runnable NOOP_TASK = new Runnable() {
-        @Override
-        public void run() {
-            // Do nothing.
-        }
+    private static final Runnable NOOP_TASK = () -> {
+        // Do nothing.
     };
 
     private static final AtomicIntegerFieldUpdater<SingleThreadEventExecutor> STATE_UPDATER =
@@ -467,12 +461,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
         if (inEventLoop()) {
             shutdownHooks.add(task);
         } else {
-            execute(new Runnable() {
-                @Override
-                public void run() {
-                    shutdownHooks.add(task);
-                }
-            });
+            execute(() -> shutdownHooks.add(task));
         }
     }
 
@@ -483,12 +472,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
         if (inEventLoop()) {
             shutdownHooks.remove(task);
         } else {
-            execute(new Runnable() {
-                @Override
-                public void run() {
-                    shutdownHooks.remove(task);
-                }
-            });
+            execute(() -> shutdownHooks.remove(task));
         }
     }
 
@@ -854,66 +838,63 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
 
     private void doStartThread() {
         assert thread == null;
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                thread = Thread.currentThread();
-                if (interrupted) {
-                    thread.interrupt();
+        executor.execute(() -> {
+            thread = Thread.currentThread();
+            if (interrupted) {
+                thread.interrupt();
+            }
+
+            boolean success = false;
+            updateLastExecutionTime();
+            try {
+                SingleThreadEventExecutor.this.run();
+                success = true;
+            } catch (Throwable t) {
+                logger.warn("Unexpected exception from an event executor: ", t);
+            } finally {
+                for (;;) {
+                    int oldState = state;
+                    if (oldState >= ST_SHUTTING_DOWN || STATE_UPDATER.compareAndSet(
+                            SingleThreadEventExecutor.this, oldState, ST_SHUTTING_DOWN)) {
+                        break;
+                    }
                 }
 
-                boolean success = false;
-                updateLastExecutionTime();
+                // Check if confirmShutdown() was called at the end of the loop.
+                if (success && gracefulShutdownStartTime == 0) {
+                    if (logger.isErrorEnabled()) {
+                        logger.error("Buggy " + EventExecutor.class.getSimpleName() + " implementation; " +
+                                SingleThreadEventExecutor.class.getSimpleName() + ".confirmShutdown() must " +
+                                "be called before run() implementation terminates.");
+                    }
+                }
+
                 try {
-                    SingleThreadEventExecutor.this.run();
-                    success = true;
-                } catch (Throwable t) {
-                    logger.warn("Unexpected exception from an event executor: ", t);
-                } finally {
+                    // Run all remaining tasks and shutdown hooks.
                     for (;;) {
-                        int oldState = state;
-                        if (oldState >= ST_SHUTTING_DOWN || STATE_UPDATER.compareAndSet(
-                                SingleThreadEventExecutor.this, oldState, ST_SHUTTING_DOWN)) {
+                        if (confirmShutdown()) {
                             break;
                         }
                     }
-
-                    // Check if confirmShutdown() was called at the end of the loop.
-                    if (success && gracefulShutdownStartTime == 0) {
-                        if (logger.isErrorEnabled()) {
-                            logger.error("Buggy " + EventExecutor.class.getSimpleName() + " implementation; " +
-                                    SingleThreadEventExecutor.class.getSimpleName() + ".confirmShutdown() must " +
-                                    "be called before run() implementation terminates.");
-                        }
-                    }
-
+                } finally {
                     try {
-                        // Run all remaining tasks and shutdown hooks.
-                        for (;;) {
-                            if (confirmShutdown()) {
-                                break;
-                            }
-                        }
+                        cleanup();
                     } finally {
-                        try {
-                            cleanup();
-                        } finally {
-                            // Lets remove all FastThreadLocals for the Thread as we are about to terminate and notify
-                            // the future. The user may block on the future and once it unblocks the JVM may terminate
-                            // and start unloading classes.
-                            // See https://github.com/netty/netty/issues/6596.
-                            FastThreadLocal.removeAll();
+                        // Lets remove all FastThreadLocals for the Thread as we are about to terminate and notify
+                        // the future. The user may block on the future and once it unblocks the JVM may terminate
+                        // and start unloading classes.
+                        // See https://github.com/netty/netty/issues/6596.
+                        FastThreadLocal.removeAll();
 
-                            STATE_UPDATER.set(SingleThreadEventExecutor.this, ST_TERMINATED);
-                            threadLock.release();
-                            if (!taskQueue.isEmpty()) {
-                                if (logger.isWarnEnabled()) {
-                                    logger.warn("An event executor terminated with " +
-                                            "non-empty task queue (" + taskQueue.size() + ')');
-                                }
+                        STATE_UPDATER.set(SingleThreadEventExecutor.this, ST_TERMINATED);
+                        threadLock.release();
+                        if (!taskQueue.isEmpty()) {
+                            if (logger.isWarnEnabled()) {
+                                logger.warn("An event executor terminated with " +
+                                        "non-empty task queue (" + taskQueue.size() + ')');
                             }
-                            terminationFuture.setSuccess(null);
                         }
+                        terminationFuture.setSuccess(null);
                     }
                 }
             }

@@ -47,15 +47,12 @@ public class DefaultAuthoritativeDnsServerCacheTest {
             cache.cache("netty.io", resolved1, 1, loop);
             cache.cache("netty.io", resolved2, 10000, loop);
 
-            Throwable error = loop.schedule(new Callable<Throwable>() {
-                @Override
-                public Throwable call() {
-                    try {
-                        assertNull(cache.get("netty.io"));
-                        return null;
-                    } catch (Throwable cause) {
-                        return cause;
-                    }
+            Throwable error = loop.schedule(() -> {
+                try {
+                    assertNull(cache.get("netty.io"));
+                    return null;
+                } catch (Throwable cause) {
+                    return cause;
                 }
             }, 1, TimeUnit.SECONDS).get();
             if (error != null) {
@@ -163,19 +160,16 @@ public class DefaultAuthoritativeDnsServerCacheTest {
                 cache = new DefaultAuthoritativeDnsServerCache(10000, 10000, null);
             }  else {
                 cache = new DefaultAuthoritativeDnsServerCache(10000, 10000,
-                                                               new Comparator<InetSocketAddress>() {
-                    @Override
-                    public int compare(InetSocketAddress o1, InetSocketAddress o2) {
-                        if (o1.equals(o2)) {
-                            return 0;
-                        }
-                        if (o1.isUnresolved()) {
-                            return 1;
-                        } else {
-                            return -1;
-                        }
-                    }
-                });
+                        (o1, o2) -> {
+                            if (o1.equals(o2)) {
+                                return 0;
+                            }
+                            if (o1.isUnresolved()) {
+                                return 1;
+                            } else {
+                                return -1;
+                            }
+                        });
             }
             cache.cache("netty.io", unresolved, 100, loop);
             cache.cache("netty.io", resolved, 10000, loop);

@@ -35,21 +35,18 @@ abstract class AbstractWeightedFairQueueByteDistributorDependencyTest {
     }
 
     Answer<Void> writeAnswer(final boolean closeIfNoFrame) {
-        return new Answer<Void>() {
-            @Override
-            public Void answer(InvocationOnMock in) throws Throwable {
-                Http2Stream stream = in.getArgument(0);
-                int numBytes = in.getArgument(1);
-                TestStreamByteDistributorStreamState state = stateMap.get(stream.id());
-                state.pendingBytes -= numBytes;
-                state.hasFrame = state.pendingBytes > 0;
-                state.isWriteAllowed = state.hasFrame;
-                if (closeIfNoFrame && !state.hasFrame) {
-                    stream.close();
-                }
-                distributor.updateStreamableBytes(state);
-                return null;
+        return in -> {
+            Http2Stream stream = in.getArgument(0);
+            int numBytes = in.getArgument(1);
+            TestStreamByteDistributorStreamState state = stateMap.get(stream.id());
+            state.pendingBytes -= numBytes;
+            state.hasFrame = state.pendingBytes > 0;
+            state.isWriteAllowed = state.hasFrame;
+            if (closeIfNoFrame && !state.hasFrame) {
+                stream.close();
             }
+            distributor.updateStreamableBytes(state);
+            return null;
         };
     }
 

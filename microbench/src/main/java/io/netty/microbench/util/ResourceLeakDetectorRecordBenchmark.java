@@ -26,12 +26,7 @@ import org.openjdk.jmh.annotations.TearDown;
 
 public class ResourceLeakDetectorRecordBenchmark extends AbstractMicrobenchmark {
     private static final Object TRACKED = new Object();
-    private static final ResourceLeakHint HINT = new ResourceLeakHint() {
-        @Override
-        public String toHintString() {
-            return "BenchmarkHint";
-        }
-    };
+    private static final ResourceLeakHint HINT = () -> "BenchmarkHint";
 
     @Param({ "8", "16" })
     private int recordTimes;

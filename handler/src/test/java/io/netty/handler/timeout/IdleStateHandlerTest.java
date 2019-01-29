@@ -105,12 +105,7 @@ public class IdleStateHandlerTest {
         TestableIdleStateHandler idleStateHandler = new TestableIdleStateHandler(
                 false, 1L, 0L, 0L, TimeUnit.SECONDS);
 
-        Action action = new Action() {
-            @Override
-            public void run(EmbeddedChannel channel) throws Exception {
-                channel.writeInbound("Hello, World!");
-            }
-        };
+        Action action = channel -> channel.writeInbound("Hello, World!");
 
         anyNotIdle(idleStateHandler, action, IdleStateEvent.FIRST_READER_IDLE_STATE_EVENT);
     }
@@ -120,12 +115,7 @@ public class IdleStateHandlerTest {
         TestableIdleStateHandler idleStateHandler = new TestableIdleStateHandler(
                 false, 0L, 1L, 0L, TimeUnit.SECONDS);
 
-        Action action = new Action() {
-            @Override
-            public void run(EmbeddedChannel channel) throws Exception {
-                channel.writeAndFlush("Hello, World!");
-            }
-        };
+        Action action = channel -> channel.writeAndFlush("Hello, World!");
 
         anyNotIdle(idleStateHandler, action, IdleStateEvent.FIRST_WRITER_IDLE_STATE_EVENT);
     }
@@ -136,12 +126,7 @@ public class IdleStateHandlerTest {
         TestableIdleStateHandler idleStateHandler = new TestableIdleStateHandler(
                 false, 0L, 0L, 1L, TimeUnit.SECONDS);
 
-        Action reader = new Action() {
-            @Override
-            public void run(EmbeddedChannel channel) throws Exception {
-                channel.writeInbound("Hello, World!");
-            }
-        };
+        Action reader = channel -> channel.writeInbound("Hello, World!");
 
         anyNotIdle(idleStateHandler, reader, IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT);
 
@@ -149,12 +134,7 @@ public class IdleStateHandlerTest {
         idleStateHandler = new TestableIdleStateHandler(
                 false, 0L, 0L, 1L, TimeUnit.SECONDS);
 
-        Action writer = new Action() {
-            @Override
-            public void run(EmbeddedChannel channel) throws Exception {
-                channel.writeAndFlush("Hello, World!");
-            }
-        };
+        Action writer = channel -> channel.writeAndFlush("Hello, World!");
 
         anyNotIdle(idleStateHandler, writer, IdleStateEvent.FIRST_ALL_IDLE_STATE_EVENT);
     }

@@ -154,12 +154,9 @@ public class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
             }
         }
 
-        final FutureListener<Object> terminationListener = new FutureListener<Object>() {
-            @Override
-            public void operationComplete(Future<Object> future) throws Exception {
-                if (terminatedChildren.incrementAndGet() == children.length) {
-                    terminationFuture.setSuccess(null);
-                }
+        final FutureListener<Object> terminationListener = future -> {
+            if (terminatedChildren.incrementAndGet() == children.length) {
+                terminationFuture.setSuccess(null);
             }
         };
 

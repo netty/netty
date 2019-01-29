@@ -98,19 +98,16 @@ public class AbstractReferenceCountedTest {
 
                 for (int a = 0; a < threads; a++) {
                     final int retainCnt = ThreadLocalRandom.current().nextInt(1, Integer.MAX_VALUE);
-                    futures.add(service.submit(new Runnable() {
-                        @Override
-                        public void run() {
+                    futures.add(service.submit(() -> {
+                        try {
+                            retainLatch.await();
                             try {
-                                retainLatch.await();
-                                try {
-                                    referenceCounted.retain(retainCnt);
-                                } catch (IllegalReferenceCountException e) {
-                                    refCountExceptions.incrementAndGet();
-                                }
-                            } catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
+                                referenceCounted.retain(retainCnt);
+                            } catch (IllegalReferenceCountException e) {
+                                refCountExceptions.incrementAndGet();
                             }
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
                         }
                     }));
                 }
@@ -147,21 +144,18 @@ public class AbstractReferenceCountedTest {
                 for (int a = 0; a < threads; a++) {
                     final AtomicInteger releaseCnt = new AtomicInteger(0);
 
-                    futures.add(service.submit(new Runnable() {
-                        @Override
-                        public void run() {
+                    futures.add(service.submit(() -> {
+                        try {
+                            releaseLatch.await();
                             try {
-                                releaseLatch.await();
-                                try {
-                                    if (referenceCounted.release(releaseCnt.incrementAndGet())) {
-                                        releasedCount.incrementAndGet();
-                                    }
-                                } catch (IllegalReferenceCountException e) {
-                                    refCountExceptions.incrementAndGet();
+                                if (referenceCounted.release(releaseCnt.incrementAndGet())) {
+                                    releasedCount.incrementAndGet();
                                 }
-                            } catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
+                            } catch (IllegalReferenceCountException e) {
+                                refCountExceptions.incrementAndGet();
                             }
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
                         }
                     }));
                 }

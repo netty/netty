@@ -115,15 +115,12 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
     }
 
     private static final class TrailingHttpHeaders extends DefaultHttpHeaders {
-        private static final NameValidator<CharSequence> TrailerNameValidator = new NameValidator<CharSequence>() {
-            @Override
-            public void validateName(CharSequence name) {
-                DefaultHttpHeaders.HttpNameValidator.validateName(name);
-                if (HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(name)
-                        || HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(name)
-                        || HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(name)) {
-                    throw new IllegalArgumentException("prohibited trailing header: " + name);
-                }
+        private static final NameValidator<CharSequence> TrailerNameValidator = name -> {
+            DefaultHttpHeaders.HttpNameValidator.validateName(name);
+            if (HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(name)
+                    || HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(name)
+                    || HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(name)) {
+                throw new IllegalArgumentException("prohibited trailing header: " + name);
             }
         };
 

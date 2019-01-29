@@ -77,14 +77,9 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             InternalLoggerFactory.getInstance(ReferenceCountedOpenSslContext.class);
 
     private static final int DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE =
-            AccessController.doPrivileged(new PrivilegedAction<Integer>() {
-                @Override
-                public Integer run() {
-                    return Math.max(1,
-                            SystemPropertyUtil.getInt("io.netty.handler.ssl.openssl.bioNonApplicationBufferSize",
-                                                      2048));
-                }
-            });
+            AccessController.doPrivileged((PrivilegedAction<Integer>) () -> Math.max(1,
+                    SystemPropertyUtil.getInt("io.netty.handler.ssl.openssl.bioNonApplicationBufferSize",
+                                              2048)));
 
     private static final Integer DH_KEY_LENGTH;
     private static final ResourceLeakDetector<ReferenceCountedOpenSslContext> leakDetector =
@@ -164,12 +159,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         Integer dhLen = null;
 
         try {
-            String dhKeySize = AccessController.doPrivileged(new PrivilegedAction<String>() {
-                @Override
-                public String run() {
-                    return SystemPropertyUtil.get("jdk.tls.ephemeralDHKeySize");
-                }
-            });
+            String dhKeySize = AccessController.doPrivileged((PrivilegedAction<String>) () ->
+                    SystemPropertyUtil.get("jdk.tls.ephemeralDHKeySize"));
             if (dhKeySize != null) {
                 try {
                     dhLen = Integer.valueOf(dhKeySize);

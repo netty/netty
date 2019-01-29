@@ -31,42 +31,34 @@ import static io.netty.util.AsciiString.isUpperCase;
 @UnstableApi
 public class DefaultHttp2Headers
         extends DefaultHeaders<CharSequence, CharSequence, Http2Headers> implements Http2Headers {
-    private static final ByteProcessor HTTP2_NAME_VALIDATOR_PROCESSOR = new ByteProcessor() {
-        @Override
-        public boolean process(byte value) {
-            return !isUpperCase(value);
+    private static final ByteProcessor HTTP2_NAME_VALIDATOR_PROCESSOR = value -> !isUpperCase(value);
+    static final NameValidator<CharSequence> HTTP2_NAME_VALIDATOR = name -> {
+        if (name == null || name.length() == 0) {
+            PlatformDependent.throwException(connectionError(PROTOCOL_ERROR,
+                    "empty headers are not allowed [%s]", name));
         }
-    };
-    static final NameValidator<CharSequence> HTTP2_NAME_VALIDATOR = new NameValidator<CharSequence>() {
-        @Override
-        public void validateName(CharSequence name) {
-            if (name == null || name.length() == 0) {
-                PlatformDependent.throwException(connectionError(PROTOCOL_ERROR,
-                        "empty headers are not allowed [%s]", name));
+        if (name instanceof AsciiString) {
+            final int index;
+            try {
+                index = ((AsciiString) name).forEachByte(HTTP2_NAME_VALIDATOR_PROCESSOR);
+            } catch (Http2Exception e) {
+                PlatformDependent.throwException(e);
+                return;
+            } catch (Throwable t) {
+                PlatformDependent.throwException(connectionError(PROTOCOL_ERROR, t,
+                        "unexpected error. invalid header name [%s]", name));
+                return;
             }
-            if (name instanceof AsciiString) {
-                final int index;
-                try {
-                    index = ((AsciiString) name).forEachByte(HTTP2_NAME_VALIDATOR_PROCESSOR);
-                } catch (Http2Exception e) {
-                    PlatformDependent.throwException(e);
-                    return;
-                } catch (Throwable t) {
-                    PlatformDependent.throwException(connectionError(PROTOCOL_ERROR, t,
-                            "unexpected error. invalid header name [%s]", name));
-                    return;
-                }
 
-                if (index != -1) {
+            if (index != -1) {
+                PlatformDependent.throwException(connectionError(PROTOCOL_ERROR,
+                        "invalid header name [%s]", name));
+            }
+        } else {
+            for (int i = 0; i < name.length(); ++i) {
+                if (isUpperCase(name.charAt(i))) {
                     PlatformDependent.throwException(connectionError(PROTOCOL_ERROR,
                             "invalid header name [%s]", name));
-                }
-            } else {
-                for (int i = 0; i < name.length(); ++i) {
-                    if (isUpperCase(name.charAt(i))) {
-                        PlatformDependent.throwException(connectionError(PROTOCOL_ERROR,
-                                "invalid header name [%s]", name));
-                    }
                 }
             }
         }

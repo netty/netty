@@ -66,12 +66,9 @@ public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteg
         receivedMessages ++;
         if (receivedMessages == FactorialClient.COUNT) {
             // Offer the answer after closing the connection.
-            ctx.channel().close().addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) {
-                    boolean offered = answer.offer(msg);
-                    assert offered;
-                }
+            ctx.channel().close().addListener((ChannelFutureListener) future -> {
+                boolean offered = answer.offer(msg);
+                assert offered;
             });
         }
     }
@@ -96,15 +93,12 @@ public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteg
         ctx.flush();
     }
 
-    private final ChannelFutureListener numberSender = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-            if (future.isSuccess()) {
-                sendNumbers();
-            } else {
-                future.cause().printStackTrace();
-                future.channel().close();
-            }
+    private final ChannelFutureListener numberSender = future -> {
+        if (future.isSuccess()) {
+            sendNumbers();
+        } else {
+            future.cause().printStackTrace();
+            future.channel().close();
         }
     };
 }

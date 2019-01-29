@@ -154,13 +154,7 @@ public class ChunkedWriteHandlerTest {
         };
 
         final AtomicBoolean listenerNotified = new AtomicBoolean(false);
-        final ChannelFutureListener listener = new ChannelFutureListener() {
-
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                listenerNotified.set(true);
-            }
-        };
+        final ChannelFutureListener listener = future -> listenerNotified.set(true);
 
         EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
         ch.writeAndFlush(input).addListener(listener).syncUninterruptibly();

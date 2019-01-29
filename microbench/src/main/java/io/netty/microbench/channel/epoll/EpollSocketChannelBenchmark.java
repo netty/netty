@@ -48,11 +48,8 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
         group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
 
         // add an arbitrary timeout to make the timer reschedule
-        future = group.schedule(new Runnable() {
-            @Override
-            public void run() {
-                throw new AssertionError();
-            }
+        future = group.schedule((Runnable) () -> {
+            throw new AssertionError();
         }, 5, TimeUnit.MINUTES);
         serverChan = new ServerBootstrap()
             .channel(EpollServerSocketChannel.class)

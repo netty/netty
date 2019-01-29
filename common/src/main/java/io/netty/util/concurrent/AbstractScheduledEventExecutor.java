@@ -36,12 +36,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     static final long START_TIME = System.nanoTime();
 
     private static final Comparator<RunnableScheduledFutureNode<?>> SCHEDULED_FUTURE_TASK_COMPARATOR =
-            new Comparator<RunnableScheduledFutureNode<?>>() {
-                @Override
-                public int compare(RunnableScheduledFutureNode<?> o1, RunnableScheduledFutureNode<?> o2) {
-                    return o1.compareTo(o2);
-                }
-            };
+            Comparable::compareTo;
 
     private PriorityQueue<RunnableScheduledFutureNode<?>> scheduledTaskQueue;
 
@@ -234,12 +229,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         if (inEventLoop()) {
             add0(task);
         } else {
-            execute(new Runnable() {
-                @Override
-                public void run() {
-                    add0(task);
-                }
-            });
+            execute(() -> add0(task));
         }
         return task;
     }
@@ -258,12 +248,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         if (inEventLoop()) {
             scheduledTaskQueue().removeTyped(task);
         } else {
-            execute(new Runnable() {
-                @Override
-                public void run() {
-                    removeScheduled(task);
-                }
-            });
+            execute(() -> removeScheduled(task));
         }
     }
 

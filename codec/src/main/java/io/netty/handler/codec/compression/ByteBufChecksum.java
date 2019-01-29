@@ -42,12 +42,9 @@ abstract class ByteBufChecksum implements Checksum {
         CRC32_UPDATE_METHOD = updateByteBuffer(new CRC32());
     }
 
-    private final ByteProcessor updateProcessor = new ByteProcessor() {
-        @Override
-        public boolean process(byte value) throws Exception {
-            update(value);
-            return true;
-        }
+    private final ByteProcessor updateProcessor = value -> {
+        update(value);
+        return true;
     };
 
     private static Method updateByteBuffer(Checksum checksum) {

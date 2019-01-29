@@ -51,28 +51,20 @@ public final class HashCollisionTest {
         // More "english words" can be found here:
         // https://gist.github.com/Scottmitch/de2f03912778016ecee3c140478f07e0#file-englishwords-txt
 
-        Map<Integer, List<CharSequence>> dups = calculateDuplicates(strings, new Function<CharSequence, Integer>() {
-            @Override
-            public Integer apply(CharSequence string) {
-                int h = 0;
-                for (int i = 0; i < string.length(); ++i) {
-                    // masking with 0x1F reduces the number of overall bits that impact the hash code but makes the hash
-                    // code the same regardless of character case (upper case or lower case hash is the same).
-                    h = h * 31 + (string.charAt(i) & 0x1F);
-                }
-                return h;
+        Map<Integer, List<CharSequence>> dups = calculateDuplicates(strings, string -> {
+            int h = 0;
+            for (int i = 0; i < string.length(); ++i) {
+                // masking with 0x1F reduces the number of overall bits that impact the hash code but makes the hash
+                // code the same regardless of character case (upper case or lower case hash is the same).
+                h = h * 31 + (string.charAt(i) & 0x1F);
             }
+            return h;
         });
         PrintStream writer = System.out;
         writer.println("==Old Duplicates==");
         printResults(writer, dups);
 
-        dups = calculateDuplicates(strings, new Function<CharSequence, Integer>() {
-            @Override
-            public Integer apply(CharSequence string) {
-                return PlatformDependent.hashCodeAscii(string);
-            }
-        });
+        dups = calculateDuplicates(strings, PlatformDependent::hashCodeAscii);
         writer.println();
         writer.println("==New Duplicates==");
         printResults(writer, dups);

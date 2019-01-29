@@ -277,14 +277,11 @@ public class DefaultHttp2Connection implements Http2Connection {
 
     private void closeStreamsGreaterThanLastKnownStreamId(final int lastKnownStream,
                                                           final DefaultEndpoint<?> endpoint) throws Http2Exception {
-        forEachActiveStream(new Http2StreamVisitor() {
-            @Override
-            public boolean visit(Http2Stream stream) {
-                if (stream.id() > lastKnownStream && endpoint.isValidStreamId(stream.id())) {
-                    stream.close();
-                }
-                return true;
+        forEachActiveStream(stream -> {
+            if (stream.id() > lastKnownStream && endpoint.isValidStreamId(stream.id())) {
+                stream.close();
             }
+            return true;
         });
     }
 
@@ -942,12 +939,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (allowModifications()) {
                 addToActiveStreams(stream);
             } else {
-                pendingEvents.add(new Event() {
-                    @Override
-                    public void process() {
-                        addToActiveStreams(stream);
-                    }
-                });
+                pendingEvents.add(() -> addToActiveStreams(stream));
             }
         }
 
@@ -955,12 +947,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (allowModifications() || itr != null) {
                 removeFromActiveStreams(stream, itr);
             } else {
-                pendingEvents.add(new Event() {
-                    @Override
-                    public void process() {
-                        removeFromActiveStreams(stream, itr);
-                    }
-                });
+                pendingEvents.add(() -> removeFromActiveStreams(stream, itr));
             }
         }
 

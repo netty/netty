@@ -29,20 +29,10 @@ public interface UncheckedBooleanSupplier extends BooleanSupplier {
     /**
      * A supplier which always returns {@code false} and never throws.
      */
-    UncheckedBooleanSupplier FALSE_SUPPLIER = new UncheckedBooleanSupplier() {
-        @Override
-        public boolean get() {
-            return false;
-        }
-    };
+    UncheckedBooleanSupplier FALSE_SUPPLIER = () -> false;
 
     /**
      * A supplier which always returns {@code true} and never throws.
      */
-    UncheckedBooleanSupplier TRUE_SUPPLIER = new UncheckedBooleanSupplier() {
-        @Override
-        public boolean get() {
-            return true;
-        }
-    };
+    UncheckedBooleanSupplier TRUE_SUPPLIER = () -> true;
 }

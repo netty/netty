@@ -1254,12 +1254,7 @@ public final class ByteBufUtil {
     /**
      * Aborts on a byte which is not a valid ASCII character.
      */
-    private static final ByteProcessor FIND_NON_ASCII = new ByteProcessor() {
-        @Override
-        public boolean process(byte value) {
-            return value >= 0;
-        }
-    };
+    private static final ByteProcessor FIND_NON_ASCII = value -> value >= 0;
 
     /**
      * Returns {@code true} if the specified {@link ByteBuf} starting at {@code index} with {@code length} is valid

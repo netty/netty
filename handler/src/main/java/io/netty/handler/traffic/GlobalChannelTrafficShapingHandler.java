@@ -734,12 +734,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
         }
         final long futureNow = newToSend.relativeTimeAction;
         final PerChannel forSchedule = perChannel;
-        ctx.executor().schedule(new Runnable() {
-            @Override
-            public void run() {
-                sendAllValid(ctx, forSchedule, futureNow);
-            }
-        }, delay, TimeUnit.MILLISECONDS);
+        ctx.executor().schedule(() -> sendAllValid(ctx, forSchedule, futureNow), delay, TimeUnit.MILLISECONDS);
     }
 
     private void sendAllValid(final ChannelHandlerContext ctx, final PerChannel perChannel, final long now) {

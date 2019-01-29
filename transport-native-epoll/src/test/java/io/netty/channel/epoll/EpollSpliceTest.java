@@ -81,12 +81,9 @@ public class EpollSpliceTest {
                         // the data transfer only in kernel space!
 
                         // Integer.MAX_VALUE will splice infinitly.
-                        ch.spliceTo(ch2, Integer.MAX_VALUE).addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
-                                if (!future.isSuccess()) {
-                                    future.channel().close();
-                                }
+                        ch.spliceTo(ch2, Integer.MAX_VALUE).addListener((ChannelFutureListener) future -> {
+                            if (!future.isSuccess()) {
+                                future.channel().close();
                             }
                         });
                         // Trigger multiple splices to see if partial splicing works as well.
@@ -108,19 +105,11 @@ public class EpollSpliceTest {
                         context.close();
                     }
                 });
-                bs.connect(sc.localAddress()).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            ctx.close();
-                        } else {
-                            future.channel().closeFuture().addListener(new ChannelFutureListener() {
-                                @Override
-                                public void operationComplete(ChannelFuture future) throws Exception {
-                                    ctx.close();
-                                }
-                            });
-                        }
+                bs.connect(sc.localAddress()).addListener((ChannelFutureListener) future -> {
+                    if (!future.isSuccess()) {
+                        ctx.close();
+                    } else {
+                        future.channel().closeFuture().addListener((ChannelFutureListener) future1 -> ctx.close());
                     }
                 });
             }

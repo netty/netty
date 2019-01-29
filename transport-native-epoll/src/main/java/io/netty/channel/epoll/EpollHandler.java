@@ -69,12 +69,7 @@ public class EpollHandler implements IoHandler {
     private NativeDatagramPacketArray datagramPacketArray;
 
     private final SelectStrategy selectStrategy;
-    private final IntSupplier selectNowSupplier = new IntSupplier() {
-        @Override
-        public int get() throws Exception {
-            return epollWaitNow();
-        }
-    };
+    private final IntSupplier selectNowSupplier = this::epollWaitNow;
     @SuppressWarnings("unused") // AtomicIntegerFieldUpdater
     private volatile int wakenUp;
 
@@ -152,12 +147,7 @@ public class EpollHandler implements IoHandler {
      * Returns a new {@link IoHandlerFactory} that creates {@link EpollHandler} instances.
      */
     public static IoHandlerFactory newFactory() {
-        return new IoHandlerFactory() {
-            @Override
-            public IoHandler newHandler() {
-                return new EpollHandler();
-            }
-        };
+        return EpollHandler::new;
     }
 
     /**
@@ -167,12 +157,7 @@ public class EpollHandler implements IoHandler {
                                               final SelectStrategyFactory selectStrategyFactory) {
         ObjectUtil.checkPositiveOrZero(maxEvents, "maxEvents");
         ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
-        return new IoHandlerFactory() {
-            @Override
-            public IoHandler newHandler() {
-                return new EpollHandler(maxEvents, selectStrategyFactory.newSelectStrategy());
-            }
-        };
+        return () -> new EpollHandler(maxEvents, selectStrategyFactory.newSelectStrategy());
     }
 
     private IovArray cleanIovArray() {

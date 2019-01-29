@@ -118,12 +118,7 @@ public final class Http2StreamChannelBootstrap {
             if (executor.inEventLoop()) {
                 open0(ctx, promise);
             } else {
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        open0(ctx, promise);
-                    }
-                });
+                executor.execute(() -> open0(ctx, promise));
             }
         }
         return promise;
@@ -141,22 +136,19 @@ public final class Http2StreamChannelBootstrap {
         }
 
         ChannelFuture future = streamChannel.register();
-        future.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (future.isSuccess()) {
-                    promise.setSuccess(streamChannel);
-                } else if (future.isCancelled()) {
-                    promise.cancel(false);
+        future.addListener((ChannelFutureListener) future1 -> {
+            if (future1.isSuccess()) {
+                promise.setSuccess(streamChannel);
+            } else if (future1.isCancelled()) {
+                promise.cancel(false);
+            } else {
+                if (streamChannel.isRegistered()) {
+                    streamChannel.close();
                 } else {
-                    if (streamChannel.isRegistered()) {
-                        streamChannel.close();
-                    } else {
-                        streamChannel.unsafe().closeForcibly();
-                    }
-
-                    promise.setFailure(future.cause());
+                    streamChannel.unsafe().closeForcibly();
                 }
+
+                promise.setFailure(future1.cause());
             }
         });
     }

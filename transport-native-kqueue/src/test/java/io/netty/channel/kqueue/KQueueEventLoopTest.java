@@ -33,11 +33,8 @@ public class KQueueEventLoopTest {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, KQueueHandler.newFactory());
 
         final EventLoop el = group.next();
-        Future<?> future = el.schedule(new Runnable() {
-            @Override
-            public void run() {
-                // NOOP
-            }
+        Future<?> future = el.schedule(() -> {
+            // NOOP
         }, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
 
         assertFalse(future.awaitUninterruptibly(1000));

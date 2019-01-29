@@ -41,11 +41,8 @@ public abstract class Recycler<T> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Recycler.class);
 
     @SuppressWarnings("rawtypes")
-    private static final Handle NOOP_HANDLE = new Handle() {
-        @Override
-        public void recycle(Object object) {
-            // NOOP
-        }
+    private static final Handle NOOP_HANDLE = object -> {
+        // NOOP
     };
     private static final AtomicInteger ID_GENERATOR = new AtomicInteger(Integer.MIN_VALUE);
     private static final int OWN_THREAD_ID = ID_GENERATOR.getAndIncrement();

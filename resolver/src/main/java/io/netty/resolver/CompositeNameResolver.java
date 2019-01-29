@@ -69,14 +69,11 @@ public final class CompositeNameResolver<T> extends SimpleNameResolver<T> {
             promise.setFailure(lastFailure);
         } else {
             NameResolver<T> resolver = resolvers[resolverIndex];
-            resolver.resolve(inetHost).addListener(new FutureListener<T>() {
-                @Override
-                public void operationComplete(Future<T> future) throws Exception {
-                    if (future.isSuccess()) {
-                        promise.setSuccess(future.getNow());
-                    } else {
-                        doResolveRec(inetHost, promise, resolverIndex + 1, future.cause());
-                    }
+            resolver.resolve(inetHost).addListener((FutureListener<T>) future -> {
+                if (future.isSuccess()) {
+                    promise.setSuccess(future.getNow());
+                } else {
+                    doResolveRec(inetHost, promise, resolverIndex + 1, future.cause());
                 }
             });
         }
@@ -95,14 +92,11 @@ public final class CompositeNameResolver<T> extends SimpleNameResolver<T> {
             promise.setFailure(lastFailure);
         } else {
             NameResolver<T> resolver = resolvers[resolverIndex];
-            resolver.resolveAll(inetHost).addListener(new FutureListener<List<T>>() {
-                @Override
-                public void operationComplete(Future<List<T>> future) throws Exception {
-                    if (future.isSuccess()) {
-                        promise.setSuccess(future.getNow());
-                    } else {
-                        doResolveAllRec(inetHost, promise, resolverIndex + 1, future.cause());
-                    }
+            resolver.resolveAll(inetHost).addListener((FutureListener<List<T>>) future -> {
+                if (future.isSuccess()) {
+                    promise.setSuccess(future.getNow());
+                } else {
+                    doResolveAllRec(inetHost, promise, resolverIndex + 1, future.cause());
                 }
             });
         }

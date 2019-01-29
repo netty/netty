@@ -79,12 +79,7 @@ public class ConstantPoolTest {
         assertThat(array.length, is(5));
 
         // Sort by name
-        Arrays.sort(array, new Comparator<TestConstant>() {
-            @Override
-            public int compare(TestConstant o1, TestConstant o2) {
-                return o1.name().compareTo(o2.name());
-            }
-        });
+        Arrays.sort(array, (o1, o2) -> o1.name().compareTo(o2.name()));
 
         assertThat(array[0], is(sameInstance(a)));
         assertThat(array[1], is(sameInstance(b)));

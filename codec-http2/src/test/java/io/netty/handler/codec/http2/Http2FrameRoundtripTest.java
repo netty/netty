@@ -97,24 +97,10 @@ public class Http2FrameRoundtripTest {
         when(ctx.alloc()).thenReturn(alloc);
         when(ctx.executor()).thenReturn(executor);
         when(ctx.channel()).thenReturn(channel);
-        doAnswer(new Answer<ByteBuf>() {
-            @Override
-            public ByteBuf answer(InvocationOnMock in) throws Throwable {
-                return Unpooled.buffer();
-            }
-        }).when(alloc).buffer();
-        doAnswer(new Answer<ByteBuf>() {
-            @Override
-            public ByteBuf answer(InvocationOnMock in) throws Throwable {
-                return Unpooled.buffer((Integer) in.getArguments()[0]);
-            }
-        }).when(alloc).buffer(anyInt());
-        doAnswer(new Answer<ChannelPromise>() {
-            @Override
-            public ChannelPromise answer(InvocationOnMock invocation) throws Throwable {
-                return new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE);
-            }
-        }).when(ctx).newPromise();
+        doAnswer((Answer<ByteBuf>) in -> Unpooled.buffer()).when(alloc).buffer();
+        doAnswer((Answer<ByteBuf>) in -> Unpooled.buffer((Integer) in.getArguments()[0])).when(alloc).buffer(anyInt());
+        doAnswer((Answer<ChannelPromise>) invocation ->
+                new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE)).when(ctx).newPromise();
 
         writer = new DefaultHttp2FrameWriter(new DefaultHttp2HeadersEncoder(NEVER_SENSITIVE, newTestEncoder()));
         reader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(false, newTestDecoder()));

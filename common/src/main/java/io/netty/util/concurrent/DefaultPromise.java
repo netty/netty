@@ -429,12 +429,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             }
         }
 
-        safeExecute(executor, new Runnable() {
-            @Override
-            public void run() {
-                notifyListenersNow();
-            }
-        });
+        safeExecute(executor, this::notifyListenersNow);
     }
 
     /**
@@ -459,12 +454,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             }
         }
 
-        safeExecute(executor, new Runnable() {
-            @Override
-            public void run() {
-                notifyListener0(future, listener);
-            }
-        });
+        safeExecute(executor, () -> notifyListener0(future, listener));
     }
 
     private void notifyListenersNow() {
@@ -662,21 +652,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             if (listeners instanceof GenericProgressiveFutureListener[]) {
                 final GenericProgressiveFutureListener<?>[] array =
                         (GenericProgressiveFutureListener<?>[]) listeners;
-                safeExecute(executor, new Runnable() {
-                    @Override
-                    public void run() {
-                        notifyProgressiveListeners0(self, array, progress, total);
-                    }
-                });
+                safeExecute(executor, () -> notifyProgressiveListeners0(self, array, progress, total));
             } else {
                 final GenericProgressiveFutureListener<ProgressiveFuture<V>> l =
                         (GenericProgressiveFutureListener<ProgressiveFuture<V>>) listeners;
-                safeExecute(executor, new Runnable() {
-                    @Override
-                    public void run() {
-                        notifyProgressiveListener0(self, l, progress, total);
-                    }
-                });
+                safeExecute(executor, () -> notifyProgressiveListener0(self, l, progress, total));
             }
         }
     }

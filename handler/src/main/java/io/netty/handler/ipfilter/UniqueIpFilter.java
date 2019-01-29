@@ -41,12 +41,7 @@ public class UniqueIpFilter extends AbstractRemoteAddressFilter<InetSocketAddres
         if (!connected.add(remoteIp)) {
             return false;
         } else {
-            ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) {
-                    connected.remove(remoteIp);
-                }
-            });
+            ctx.channel().closeFuture().addListener((ChannelFutureListener) future -> connected.remove(remoteIp));
             return true;
         }
     }

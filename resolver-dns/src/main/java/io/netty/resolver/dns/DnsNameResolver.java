@@ -406,13 +406,10 @@ public class DnsNameResolver extends InetNameResolver {
         ch = future.channel();
         ch.config().setRecvByteBufAllocator(new FixedRecvByteBufAllocator(maxPayloadSize));
 
-        ch.closeFuture().addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                resolveCache.clear();
-                cnameCache.clear();
-                authoritativeDnsServerCache.clear();
-            }
+        ch.closeFuture().addListener((ChannelFutureListener) future1 -> {
+            resolveCache.clear();
+            cnameCache.clear();
+            authoritativeDnsServerCache.clear();
         });
     }
 
@@ -877,14 +874,11 @@ public class DnsNameResolver extends InetNameResolver {
                                    DnsCache resolveCache) {
         final Promise<List<InetAddress>> allPromise = executor().newPromise();
         doResolveAllUncached(hostname, additionals, allPromise, resolveCache);
-        allPromise.addListener(new FutureListener<List<InetAddress>>() {
-            @Override
-            public void operationComplete(Future<List<InetAddress>> future) {
-                if (future.isSuccess()) {
-                    trySuccess(promise, future.getNow().get(0));
-                } else {
-                    tryFailure(promise, future.cause());
-                }
+        allPromise.addListener((FutureListener<List<InetAddress>>) future -> {
+            if (future.isSuccess()) {
+                trySuccess(promise, future.getNow().get(0));
+            } else {
+                tryFailure(promise, future.cause());
             }
         });
     }
@@ -973,12 +967,7 @@ public class DnsNameResolver extends InetNameResolver {
         if (executor.inEventLoop()) {
             doResolveAllUncached0(hostname, additionals, promise, resolveCache);
         } else {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    doResolveAllUncached0(hostname, additionals, promise, resolveCache);
-                }
-            });
+            executor.execute(() -> doResolveAllUncached0(hostname, additionals, promise, resolveCache));
         }
     }
 

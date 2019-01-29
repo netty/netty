@@ -157,12 +157,7 @@ public class DefaultPromiseTest {
                     }
                 };
 
-                GlobalEventExecutor.INSTANCE.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        promise.setSuccess(null);
-                    }
-                });
+                GlobalEventExecutor.INSTANCE.execute(() -> promise.setSuccess(null));
 
                 promise.addListener(listener1).addListener(listener2).addListener(listener3);
 
@@ -217,12 +212,7 @@ public class DefaultPromiseTest {
             final Map<Thread, DefaultPromise<Void>> promises = new HashMap<>();
             for (int i = 0; i < numberOfAttempts; i++) {
                 final DefaultPromise<Void> promise = new DefaultPromise<>(executor);
-                final Thread thread = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        promise.setSuccess(null);
-                    }
-                });
+                final Thread thread = new Thread(() -> promise.setSuccess(null));
                 promises.put(thread, promise);
             }
 
@@ -278,12 +268,7 @@ public class DefaultPromiseTest {
         final CountDownLatch latch = new CountDownLatch(promiseChainLength);
 
         if (runTestInExecutorThread) {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    testStackOverFlowChainedFuturesA(executor, p, latch);
-                }
-            });
+            executor.execute(() -> testStackOverFlowChainedFuturesA(executor, p, latch));
         } else {
             testStackOverFlowChainedFuturesA(executor, p, latch);
         }
@@ -299,14 +284,11 @@ public class DefaultPromiseTest {
         for (int i = 0; i < p.length; i ++) {
             final int finalI = i;
             p[i] = new DefaultPromise<>(executor);
-            p[i].addListener(new FutureListener<Void>() {
-                @Override
-                public void operationComplete(Future<Void> future) throws Exception {
-                    if (finalI + 1 < p.length) {
-                        p[finalI + 1].setSuccess(null);
-                    }
-                    latch.countDown();
+            p[i].addListener((FutureListener<Void>) future -> {
+                if (finalI + 1 < p.length) {
+                    p[finalI + 1].setSuccess(null);
                 }
+                latch.countDown();
             });
         }
 
@@ -320,12 +302,7 @@ public class DefaultPromiseTest {
         final CountDownLatch latch = new CountDownLatch(promiseChainLength);
 
         if (runTestInExecutorThread) {
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    testStackOverFlowChainedFuturesA(executor, p, latch);
-                }
-            });
+            executor.execute(() -> testStackOverFlowChainedFuturesA(executor, p, latch));
         } else {
             testStackOverFlowChainedFuturesA(executor, p, latch);
         }
@@ -341,20 +318,12 @@ public class DefaultPromiseTest {
         for (int i = 0; i < p.length; i ++) {
             final int finalI = i;
             p[i] = new DefaultPromise<>(executor);
-            p[i].addListener(new FutureListener<Void>() {
-                @Override
-                public void operationComplete(Future<Void> future) throws Exception {
-                    future.addListener(new FutureListener<Void>() {
-                        @Override
-                        public void operationComplete(Future<Void> future) throws Exception {
-                            if (finalI + 1 < p.length) {
-                                p[finalI + 1].setSuccess(null);
-                            }
-                            latch.countDown();
-                        }
-                    });
+            p[i].addListener((FutureListener<Void>) future -> future.addListener((FutureListener<Void>) future1 -> {
+                if (finalI + 1 < p.length) {
+                    p[finalI + 1].setSuccess(null);
                 }
-            });
+                latch.countDown();
+            }));
         }
 
         p[0].setSuccess(null);
@@ -379,12 +348,7 @@ public class DefaultPromiseTest {
             final Promise<Void> promise = new DefaultPromise<>(executor);
 
             // Add a listener before completion so "lateListener" is used next time we add a listener.
-            promise.addListener(new FutureListener<Void>() {
-                @Override
-                public void operationComplete(Future<Void> future) throws Exception {
-                    assertTrue(state.compareAndSet(0, 1));
-                }
-            });
+            promise.addListener((FutureListener<Void>) future -> assertTrue(state.compareAndSet(0, 1)));
 
             // Simulate write operation completing, which will execute listeners in another thread.
             if (cause == null) {
@@ -394,12 +358,9 @@ public class DefaultPromiseTest {
             }
 
             // Add a "late listener"
-            promise.addListener(new FutureListener<Void>() {
-                @Override
-                public void operationComplete(Future<Void> future) throws Exception {
-                    assertTrue(state.compareAndSet(1, 2));
-                    latch1.countDown();
-                }
+            promise.addListener((FutureListener<Void>) future -> {
+                assertTrue(state.compareAndSet(1, 2));
+                latch1.countDown();
             });
 
             // Wait for the listeners and late listeners to be completed.
@@ -408,27 +369,16 @@ public class DefaultPromiseTest {
 
             // This is the important listener. A late listener that is added after all late listeners
             // have completed, and needs to update state before a read operation (on the same executor).
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    promise.addListener(new FutureListener<Void>() {
-                        @Override
-                        public void operationComplete(Future<Void> future) throws Exception {
-                            assertTrue(state.compareAndSet(2, 3));
-                            latch2.countDown();
-                        }
-                    });
-                }
-            });
+            executor.execute(() -> promise.addListener((FutureListener<Void>) future -> {
+                assertTrue(state.compareAndSet(2, 3));
+                latch2.countDown();
+            }));
 
             // Simulate a read operation being queued up in the executor.
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    // This is the key, we depend upon the state being set in the next listener.
-                    assertEquals(3, state.get());
-                    latch2.countDown();
-                }
+            executor.execute(() -> {
+                // This is the key, we depend upon the state being set in the next listener.
+                assertEquals(3, state.get());
+                latch2.countDown();
             });
 
             latch2.await();
@@ -440,17 +390,8 @@ public class DefaultPromiseTest {
     private static void testPromiseListenerAddWhenComplete(Throwable cause) throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final Promise<Void> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
-        promise.addListener(new FutureListener<Void>() {
-            @Override
-            public void operationComplete(Future<Void> future) throws Exception {
-                promise.addListener(new FutureListener<Void>() {
-                    @Override
-                    public void operationComplete(Future<Void> future) throws Exception {
-                        latch.countDown();
-                    }
-                });
-            }
-        });
+        promise.addListener((FutureListener<Void>) future ->
+                promise.addListener((FutureListener<Void>) future1 -> latch.countDown()));
         if (cause == null) {
             promise.setSuccess(null);
         } else {
@@ -463,29 +404,16 @@ public class DefaultPromiseTest {
         EventExecutor executor = new TestEventExecutor();
         int expectedCount = numListenersBefore + 2;
         final CountDownLatch latch = new CountDownLatch(expectedCount);
-        final FutureListener<Void> listener = new FutureListener<Void>() {
-            @Override
-            public void operationComplete(Future<Void> future) throws Exception {
-                latch.countDown();
-            }
-        };
+        final FutureListener<Void> listener = future -> latch.countDown();
         final Promise<Void> promise = new DefaultPromise<>(executor);
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                for (int i = 0; i < numListenersBefore; i++) {
-                    promise.addListener(listener);
-                }
-                promise.setSuccess(null);
-
-                GlobalEventExecutor.INSTANCE.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        promise.addListener(listener);
-                    }
-                });
+        executor.execute(() -> {
+            for (int i = 0; i < numListenersBefore; i++) {
                 promise.addListener(listener);
             }
+            promise.setSuccess(null);
+
+            GlobalEventExecutor.INSTANCE.execute(() -> promise.addListener(listener));
+            promise.addListener(listener);
         });
 
         assertTrue("Should have notified " + expectedCount + " listeners",

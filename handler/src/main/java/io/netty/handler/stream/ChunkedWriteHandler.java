@@ -105,13 +105,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
             resumeTransfer0(ctx);
         } else {
             // let the transfer resume on the next event loop round
-            ctx.executor().execute(new Runnable() {
-
-                @Override
-                public void run() {
-                    resumeTransfer0(ctx);
-                }
-            });
+            ctx.executor().execute(() -> resumeTransfer0(ctx));
         }
     }
 
@@ -276,42 +270,33 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                     // be closed before its not written.
                     //
                     // See https://github.com/netty/netty/issues/303
-                    f.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            if (!future.isSuccess()) {
-                                closeInput(chunks);
-                                currentWrite.fail(future.cause());
-                            } else {
-                                currentWrite.progress(chunks.progress(), chunks.length());
-                                currentWrite.success(chunks.length());
-                            }
+                    f.addListener((ChannelFutureListener) future -> {
+                        if (!future.isSuccess()) {
+                            closeInput(chunks);
+                            currentWrite.fail(future.cause());
+                        } else {
+                            currentWrite.progress(chunks.progress(), chunks.length());
+                            currentWrite.success(chunks.length());
                         }
                     });
                 } else if (channel.isWritable()) {
-                    f.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            if (!future.isSuccess()) {
-                                closeInput((ChunkedInput<?>) pendingMessage);
-                                currentWrite.fail(future.cause());
-                            } else {
-                                currentWrite.progress(chunks.progress(), chunks.length());
-                            }
+                    f.addListener((ChannelFutureListener) future -> {
+                        if (!future.isSuccess()) {
+                            closeInput((ChunkedInput<?>) pendingMessage);
+                            currentWrite.fail(future.cause());
+                        } else {
+                            currentWrite.progress(chunks.progress(), chunks.length());
                         }
                     });
                 } else {
-                    f.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            if (!future.isSuccess()) {
-                                closeInput((ChunkedInput<?>) pendingMessage);
-                                currentWrite.fail(future.cause());
-                            } else {
-                                currentWrite.progress(chunks.progress(), chunks.length());
-                                if (channel.isWritable()) {
-                                    resumeTransfer();
-                                }
+                    f.addListener((ChannelFutureListener) future -> {
+                        if (!future.isSuccess()) {
+                            closeInput((ChunkedInput<?>) pendingMessage);
+                            currentWrite.fail(future.cause());
+                        } else {
+                            currentWrite.progress(chunks.progress(), chunks.length());
+                            if (channel.isWritable()) {
+                                resumeTransfer();
                             }
                         }
                     });
