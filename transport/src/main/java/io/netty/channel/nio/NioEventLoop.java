@@ -121,6 +121,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
      * break out of its selection process. In our case we use a timeout for
      * the select method and the select method will block for that time unless
      * waken up.
+     *
+     * // 目的：当有任务时控制唤醒selector.select(timeout)方法调用。防止阻塞执行。
+     * // 实现技巧：同时避免重复调用selector.wakeup()方法
      */
     private final AtomicBoolean wakenUp = new AtomicBoolean();
 
@@ -418,6 +421,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    // 当有任务时为了保证任务及时执行采用不阻塞的selectNow获取准备好I/O的连接
+    // 当无任务时采用阻塞等待的方式获取连接
+
     @Override
     protected void run() {
         for (;;) {
@@ -433,14 +439,28 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     case SelectStrategy.SELECT:
                         select(wakenUp.getAndSet(false));
 
+                        // 'wakenUp.compareAndSet(false, true)' 总是在调用 'selector.wakeup()' 之前进行评估，以减少唤醒的开销
+                        // (Selector.wakeup() 是非常耗性能的操作.)
                         // 'wakenUp.compareAndSet(false, true)' is always evaluated
                         // before calling 'selector.wakeup()' to reduce the wake-up
                         // overhead. (Selector.wakeup() is an expensive operation.)
                         //
+                        // 但是，这种方法存在竞争条件。当「wakeup」太早设置为true时触发竞争条件
+
                         // However, there is a race condition in this approach.
                         // The race condition is triggered when 'wakenUp' is set to
                         // true too early.
-                        //
+
+                        // 在下面两种情况下，「wakenUp」会过早设置为true：
+                        // 1）Selector 在 'wakenUp.set(false)' 与 'selector.select(...)' 之间被唤醒。(BAD)
+                        // 2）Selector 在 'selector.select(...)' 与 'if (wakenUp.get()) { ... }' 之间被唤醒。(OK)
+                        // 在第一种情况下，'wakenUp'设置为true，后面的'selector.select（...）'将立即唤醒。
+                        // 直到'wakenUp'在下一轮中再次设置为false，'wakenUp.compareAndSet（false，true）'将失败，
+                        // 因此任何唤醒选择器的尝试也将失败，从而导致以下'selector.select（。 ..）'呼吁阻止不必要的。
+
+                        // 要解决这个问题，如果在selector.select（...）操作之后wakenUp立即为true，我们会再次唤醒selector。
+                        // 它是低效率的，因为它唤醒了第一种情况（BAD - 需要唤醒）和第二种情况（OK - 不需要唤醒）的选择器。
+
                         // 'wakenUp' is set to true too early if:
                         // 1) Selector is waken up between 'wakenUp.set(false)' and
                         //    'selector.select(...)'. (BAD)
@@ -756,15 +776,32 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    /**
+     * 当一个非EventLoop线程提交了一个任务到EventLoop的taskQueue后，在什么情况下会去触发Selector.wakeup()
+     * 当满足下面4个条件时，在有任务提交至EventLoop后会触发Selector的wakeup()方法：
+     * a) 成员变量addTaskWakesUp为false。
+     * 这里，在构造NioEventLoop对象时，通过构造方法传进的参数’addTaskWakesUp’正是false，它会赋值给成员变量addTaskWakesUp。因此该条件满足。
+     * b）当提交上来的任务不是一个NonWakeupRunnable任务
+     * c) 执行提交任务的线程不是EventLoop所在线程
+     * d) 当wakenUp成员变量当前的值为false
+     * @param oldWakenUp
+     * @throws IOException
+     */
     private void select(boolean oldWakenUp) throws IOException {
         Selector selector = this.selector;
         try {
             int selectCnt = 0;
             long currentTimeNanos = System.nanoTime();
+//            selectDeadLineNanos就表示最近一个待执行的定时/周期性任务的可执行时间
             long selectDeadLineNanos = currentTimeNanos + delayNanos(currentTimeNanos);
 
             for (;;) {
+//                当有定时/周期性任务即将到达执行时间(<0.5ms)
+//                scheduledTaskDelayNanos = ‘selectDeadLineNanos - currentTimeNanos’就表示：最近一个待执行的定时/周期性任务还差多少纳秒就可以执行的时间差
                 long timeoutMillis = (selectDeadLineNanos - currentTimeNanos + 500000L) / 1000000L;
+                // (scheduledTaskDelayNanos + 0.5ms)/1ms <= 0;
+                // 如果timeoutMillis该结果大于0，则说明scheduledTaskDelayNanos >= 0.5ms
+                // 否则scheduledTaskDelayNanos < 0.5ms
                 if (timeoutMillis <= 0) {
                     if (selectCnt == 0) {
                         selector.selectNow();
@@ -772,6 +809,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     }
                     break;
                 }
+
+                // 线程收到了新提交的任务上来等待着被处理
+                // 假设我们的ChannelPipeline中存在一个IdleStateHandler，
+                // 那么就可能导致因为Selector.select(long timeout)操作的timeout比IdleStateHandler设置的idle timeout长，
+                // 而导致IdleStateHandler不能对空闲超时做出即使的处理。
 
                 // If a task was submitted when wakenUp value was true, the task didn't get a chance to call
                 // Selector#wakeup. So we need to check task queue again before executing select operation.
@@ -786,6 +828,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 int selectedKeys = selector.select(timeoutMillis);
                 selectCnt ++;
 
+                //有定时/周期性任务到达了可处理状态等待被处理
                 if (selectedKeys != 0 || oldWakenUp || wakenUp.get() || hasTasks() || hasScheduledTasks()) {
                     // - Selected something,
                     // - waken up by user, or
@@ -814,6 +857,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     selectCnt = 1;
                 } else if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&
                         selectCnt >= SELECTOR_AUTO_REBUILD_THRESHOLD) {
+                    //在timeoutMillis时间到期前就返回了
+                    //是Selector不管有无感兴趣的事件发生，select总是不阻塞就返回。
+                    // 这会导致select方法总是无效的被调用然后立即返回，依次不断的进行空轮询，导致CPU的利用率达到了100%
                     // The code exists in an extra method to ensure the method is not too big to inline as this
                     // branch is not very likely to get hit very frequently.
                     selector = selectRebuildSelector(selectCnt);
