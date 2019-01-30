@@ -35,13 +35,9 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -66,7 +62,6 @@ public class SocketStartTlsTest extends AbstractSocketTest {
     private static final LogLevel LOG_LEVEL = LogLevel.TRACE;
     private static final File CERT_FILE;
     private static final File KEY_FILE;
-    private static EventExecutorGroup executor;
 
     static {
         SelfSignedCertificate ssc;
@@ -106,16 +101,6 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         return params;
     }
 
-    @BeforeClass
-    public static void createExecutor() {
-        executor = new DefaultEventExecutorGroup(2);
-    }
-
-    @AfterClass
-    public static void shutdownExecutor() throws Exception {
-        executor.shutdownGracefully().sync();
-    }
-
     private final SslContext serverCtx;
     private final SslContext clientCtx;
 
@@ -146,7 +131,6 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         cb.option(ChannelOption.AUTO_READ, autoRead);
 
-        final EventExecutorGroup executor = SocketStartTlsTest.executor;
         SSLEngine sse = serverCtx.newEngine(PooledByteBufAllocator.DEFAULT);
         SSLEngine cse = clientCtx.newEngine(PooledByteBufAllocator.DEFAULT);
 
@@ -159,7 +143,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
                 p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
-                p.addLast(executor.next(), sh);
+                p.addLast(sh);
             }
         });
 
@@ -169,7 +153,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
                 ChannelPipeline p = sch.pipeline();
                 p.addLast("logger", new LoggingHandler(LOG_LEVEL));
                 p.addLast(new LineBasedFrameDecoder(64), new StringDecoder(), new StringEncoder());
-                p.addLast(executor.next(), ch);
+                p.addLast(ch);
             }
         });
 

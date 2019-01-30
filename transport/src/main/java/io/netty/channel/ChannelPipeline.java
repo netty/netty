@@ -16,22 +16,19 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.EventExecutorGroup;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 
 
 /**
  * A list of {@link ChannelHandler}s which handles or intercepts inbound events and outbound operations of a
- * {@link Channel}.  {@link ChannelPipeline} implements an advanced form of the
+ * {@link Channel}. {@link ChannelPipeline} implements an advanced form of the
  * <a href="http://www.oracle.com/technetwork/java/interceptingfilter-142169.html">Intercepting Filter</a> pattern
  * to give a user full control over how an event is handled and how the {@link ChannelHandler}s in a pipeline
  * interact with each other.
@@ -179,7 +176,7 @@ import java.util.NoSuchElementException;
  * <h3>Building a pipeline</h3>
  * <p>
  * A user is supposed to have one or more {@link ChannelHandler}s in a pipeline to receive I/O events (e.g. read) and
- * to request I/O operations (e.g. write and close).  For example, a typical server will have the following handlers
+ * to request I/O operations (e.g. write and close). For example, a typical server will have the following handlers
  * in each channel's pipeline, but your mileage may vary depending on the complexity and characteristics of the
  * protocol and business logic:
  *
@@ -192,7 +189,6 @@ import java.util.NoSuchElementException;
  * and it could be represented as shown in the following example:
  *
  * <pre>
- * static final {@link EventExecutorGroup} group = new {@link DefaultEventExecutorGroup}(16);
  * ...
  *
  * {@link ChannelPipeline} pipeline = ch.pipeline();
@@ -200,12 +196,9 @@ import java.util.NoSuchElementException;
  * pipeline.addLast("decoder", new MyProtocolDecoder());
  * pipeline.addLast("encoder", new MyProtocolEncoder());
  *
- * // Tell the pipeline to run MyBusinessLogicHandler's event handler methods
- * // in a different thread than an I/O thread so that the I/O thread is not blocked by
- * // a time-consuming task.
- * // If your business logic is fully asynchronous or finished very quickly, you don't
- * // need to specify a group.
- * pipeline.addLast(group.next(), "handler", new MyBusinessLogicHandler());
+ * // If your business logic does block or take a lot of time you should offload the work to an extra
+ * // {@link java.util.concurrent.Executor} to ensure you don't block the {@link EventLoop}.
+ * pipeline.addLast("handler",  new MyBusinessLogicHandler());
  * </pre>
  *
  * <h3>Thread safety</h3>
@@ -215,7 +208,7 @@ import java.util.NoSuchElementException;
  * after the exchange.
  */
 public interface ChannelPipeline
-        extends ChannelInboundInvoker, ChannelOutboundInvoker, Iterable<Entry<String, ChannelHandler>> {
+        extends ChannelInboundInvoker, ChannelOutboundInvoker, Iterable<Map.Entry<String, ChannelHandler>> {
 
     /**
      * Inserts a {@link ChannelHandler} at the first position of this pipeline.
@@ -231,21 +224,6 @@ public interface ChannelPipeline
     ChannelPipeline addFirst(String name, ChannelHandler handler);
 
     /**
-     * Inserts a {@link ChannelHandler} at the first position of this pipeline.
-     *
-     * @param executor the {@link EventExecutor} which will be used to execute the {@link ChannelHandler}
-     *                 methods
-     * @param name     the name of the handler to insert first
-     * @param handler  the handler to insert first
-     *
-     * @throws IllegalArgumentException
-     *         if there's an entry with the same name already in the pipeline
-     * @throws NullPointerException
-     *         if the specified handler is {@code null}
-     */
-    ChannelPipeline addFirst(EventExecutor executor, String name, ChannelHandler handler);
-
-    /**
      * Appends a {@link ChannelHandler} at the last position of this pipeline.
      *
      * @param name     the name of the handler to append
@@ -257,21 +235,6 @@ public interface ChannelPipeline
      *         if the specified handler is {@code null}
      */
     ChannelPipeline addLast(String name, ChannelHandler handler);
-
-    /**
-     * Appends a {@link ChannelHandler} at the last position of this pipeline.
-     *
-     * @param executor the {@link EventExecutor} which will be used to execute the {@link ChannelHandler}
-     *                 methods
-     * @param name     the name of the handler to append
-     * @param handler  the handler to append
-     *
-     * @throws IllegalArgumentException
-     *         if there's an entry with the same name already in the pipeline
-     * @throws NullPointerException
-     *         if the specified handler is {@code null}
-     */
-    ChannelPipeline addLast(EventExecutor executor, String name, ChannelHandler handler);
 
     /**
      * Inserts a {@link ChannelHandler} before an existing handler of this
@@ -291,25 +254,6 @@ public interface ChannelPipeline
     ChannelPipeline addBefore(String baseName, String name, ChannelHandler handler);
 
     /**
-     * Inserts a {@link ChannelHandler} before an existing handler of this
-     * pipeline.
-     *
-     * @param executor  the {@link EventExecutor} which will be used to execute the {@link ChannelHandler}
-     *                  methods
-     * @param baseName  the name of the existing handler
-     * @param name      the name of the handler to insert before
-     * @param handler   the handler to insert before
-     *
-     * @throws NoSuchElementException
-     *         if there's no such entry with the specified {@code baseName}
-     * @throws IllegalArgumentException
-     *         if there's an entry with the same name already in the pipeline
-     * @throws NullPointerException
-     *         if the specified baseName or handler is {@code null}
-     */
-    ChannelPipeline addBefore(EventExecutor executor, String baseName, String name, ChannelHandler handler);
-
-    /**
      * Inserts a {@link ChannelHandler} after an existing handler of this
      * pipeline.
      *
@@ -327,25 +271,6 @@ public interface ChannelPipeline
     ChannelPipeline addAfter(String baseName, String name, ChannelHandler handler);
 
     /**
-     * Inserts a {@link ChannelHandler} after an existing handler of this
-     * pipeline.
-     *
-     * @param executor  the {@link EventExecutor} which will be used to execute the {@link ChannelHandler}
-     *                  methods
-     * @param baseName  the name of the existing handler
-     * @param name      the name of the handler to insert after
-     * @param handler   the handler to insert after
-     *
-     * @throws NoSuchElementException
-     *         if there's no such entry with the specified {@code baseName}
-     * @throws IllegalArgumentException
-     *         if there's an entry with the same name already in the pipeline
-     * @throws NullPointerException
-     *         if the specified baseName or handler is {@code null}
-     */
-    ChannelPipeline addAfter(EventExecutor executor, String baseName, String name, ChannelHandler handler);
-
-    /**
      * Inserts {@link ChannelHandler}s at the first position of this pipeline.
      *
      * @param handlers  the handlers to insert first
@@ -354,32 +279,12 @@ public interface ChannelPipeline
     ChannelPipeline addFirst(ChannelHandler... handlers);
 
     /**
-     * Inserts {@link ChannelHandler}s at the first position of this pipeline.
-     *
-     * @param executor  the {@link EventExecutor} which will be used to execute the {@link ChannelHandler}s
-     *                  methods.
-     * @param handlers  the handlers to insert first
-     *
-     */
-    ChannelPipeline addFirst(EventExecutor executor, ChannelHandler... handlers);
-
-    /**
      * Inserts {@link ChannelHandler}s at the last position of this pipeline.
      *
      * @param handlers  the handlers to insert last
      *
      */
     ChannelPipeline addLast(ChannelHandler... handlers);
-
-    /**
-     * Inserts {@link ChannelHandler}s at the last position of this pipeline.
-     *
-     * @param executor  the {@link EventExecutor} which will be used to execute the {@link ChannelHandler}s
-     *                  methods.
-     * @param handlers  the handlers to insert last
-     *
-     */
-    ChannelPipeline addLast(EventExecutor executor, ChannelHandler... handlers);
 
     /**
      * Removes the specified {@link ChannelHandler} from this pipeline.
@@ -624,4 +529,9 @@ public interface ChannelPipeline
 
     @Override
     ChannelPipeline flush();
+
+    /**
+     * Returns the {@link EventExecutor} which is used by all {@link ChannelHandler}s in the pipeline.
+     */
+    EventExecutor executor();
 }

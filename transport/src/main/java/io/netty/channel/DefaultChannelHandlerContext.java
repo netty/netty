@@ -23,13 +23,18 @@ final class DefaultChannelHandlerContext extends AbstractChannelHandlerContext {
     private final ChannelHandler handler;
 
     DefaultChannelHandlerContext(
-            DefaultChannelPipeline pipeline, EventExecutor executor, String name, ChannelHandler handler) {
-        super(pipeline, executor, name, ObjectUtil.checkNotNull(handler, "handler").getClass());
+            DefaultChannelPipeline pipeline, String name, ChannelHandler handler) {
+        super(pipeline, name, ObjectUtil.checkNotNull(handler, "handler").getClass());
         this.handler = handler;
     }
 
     @Override
     public ChannelHandler handler() {
         return handler;
+    }
+
+    @Override
+    public EventExecutor executor() {
+        return pipeline().executor();
     }
 }
