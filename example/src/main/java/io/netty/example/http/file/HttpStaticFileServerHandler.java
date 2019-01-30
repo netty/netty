@@ -117,7 +117,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             return;
         }
 
-        if (request.method() != GET) {
+        if (!GET.equals(request.method())) {
             sendError(ctx, METHOD_NOT_ALLOWED);
             return;
         }
