@@ -105,8 +105,12 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
     // There is no need to make this volatile as at worse it will just create a few more instances then needed.
     private Tasks invokeTasks;
 
+    private DefaultChannelHandlerContext nextChannelRead;
+    private DefaultChannelHandlerContext prevWrite;
+
     DefaultChannelHandlerContext next;
     DefaultChannelHandlerContext prev;
+
     private volatile int handlerState = INIT;
 
     DefaultChannelHandlerContext(DefaultChannelPipeline pipeline, String name,
@@ -133,6 +137,15 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
     @Override
     public ChannelHandler handler() {
         return handler;
+    }
+
+    void calculateCachedContexts() {
+        if (next != null) {
+            nextChannelRead = findContextInbound(MASK_CHANNEL_READ);
+        }
+        if (prev != null) {
+            prevWrite = findContextOutbound(MASK_WRITE);
+        }
     }
 
     /**
@@ -434,7 +447,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void findAndInvokeChannelRead(Object msg) {
-        findContextInbound(MASK_CHANNEL_READ).invokeChannelRead(msg);
+        nextChannelRead.invokeChannelRead(msg);
     }
 
     void invokeChannelRead(Object msg) {
@@ -820,8 +833,8 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
 
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            final DefaultChannelHandlerContext next = findContextOutbound(flush ?
-                    (MASK_WRITE | MASK_FLUSH) : MASK_WRITE);
+            final DefaultChannelHandlerContext next = flush ?
+                    findContextOutbound(MASK_WRITE | MASK_FLUSH) : prevWrite;
             if (flush) {
                 next.invokeWriteAndFlush(msg, promise);
             } else {

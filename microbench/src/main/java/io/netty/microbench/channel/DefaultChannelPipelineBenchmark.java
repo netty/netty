@@ -32,11 +32,11 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-@Warmup(iterations = 5)
-@Measurement(iterations = 5)
+@Warmup(iterations = 5,  time = 5)
+@Measurement(iterations = 5, time = 5)
 @State(Scope.Benchmark)
 public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
-
+    private static final Object MSG = new Object();
     private static final ChannelInboundHandler NOOP_HANDLER = new ChannelInboundHandlerAdapter() {
         @Override
         public boolean isSharable() {
@@ -47,6 +47,11 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
     private static final ChannelInboundHandler CONSUMING_HANDLER = new ChannelInboundHandlerAdapter() {
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) {
+            // NOOP
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
             // NOOP
         }
 
@@ -76,9 +81,16 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public void propagateEvent(Blackhole hole) {
+    public void propagateChannelReadComplete(Blackhole hole) {
         for (int i = 0; i < 100; i++) {
             hole.consume(pipeline.fireChannelReadComplete());
+        }
+    }
+
+    @Benchmark
+    public void propagateChannelRead(Blackhole hole) {
+        for (int i = 0; i < 100; i++) {
+            hole.consume(pipeline.fireChannelRead(MSG));
         }
     }
 }

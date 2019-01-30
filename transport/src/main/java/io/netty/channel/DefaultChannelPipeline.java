@@ -83,6 +83,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         tail.prev = head;
         head.setAddComplete();
         tail.setAddComplete();
+        head.calculateCachedContexts();
+        tail.calculateCachedContexts();
     }
 
     final MessageSizeEstimator.Handle estimatorHandle() {
@@ -150,6 +152,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         newCtx.next = nextCtx;
         head.next = newCtx;
         nextCtx.prev = newCtx;
+
         callHandlerAdded0(newCtx);
     }
 
@@ -588,6 +591,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         // update the reference to the replacement so forward of buffered content will work correctly
         oldCtx.prev = newCtx;
         oldCtx.next = newCtx;
+        oldCtx.calculateCachedContexts();
 
         // Invoke newHandler.handlerAdded() first (i.e. before oldHandler.handlerRemoved() is invoked)
         // because callHandlerRemoved() will trigger channelRead() or flush() on newHandler and those
@@ -608,7 +612,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
+    private void calculateCachedContexts() {
+        DefaultChannelHandlerContext ctx = head;
+        do {
+            ctx.calculateCachedContexts();
+            ctx = ctx.next;
+        } while (ctx != null);
+    }
+
     private void callHandlerAdded0(final DefaultChannelHandlerContext ctx) {
+        calculateCachedContexts();
         try {
             ctx.callHandlerAdded();
         } catch (Throwable t) {
@@ -619,6 +632,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 }
 
                 unlink(ctx);
+
+                calculateCachedContexts();
+
                 ctx.callHandlerRemoved();
 
                 removed = true;
@@ -641,6 +657,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private void callHandlerRemoved0(final DefaultChannelHandlerContext ctx) {
+        calculateCachedContexts();
+
         // Notify the complete removal.
         try {
             ctx.callHandlerRemoved();
