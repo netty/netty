@@ -38,6 +38,7 @@ import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
 import static io.netty.util.internal.MathUtil.isOutOfBounds;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * A skeletal implementation of a buffer.
@@ -71,9 +72,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     private int maxCapacity;
 
     protected AbstractByteBuf(int maxCapacity) {
-        if (maxCapacity < 0) {
-            throw new IllegalArgumentException("maxCapacity: " + maxCapacity + " (expected: >= 0)");
-        }
+        checkPositiveOrZero(maxCapacity, "maxCapacity");
         this.maxCapacity = maxCapacity;
     }
 
@@ -225,10 +224,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf ensureWritable(int minWritableBytes) {
-        if (minWritableBytes < 0) {
-            throw new IllegalArgumentException(String.format(
-                    "minWritableBytes: %d (expected: >= 0)", minWritableBytes));
-        }
+        checkPositiveOrZero(minWritableBytes, "minWritableBytes");
         ensureWritable0(minWritableBytes);
         return this;
     }
@@ -256,10 +252,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     @Override
     public int ensureWritable(int minWritableBytes, boolean force) {
         ensureAccessible();
-        if (minWritableBytes < 0) {
-            throw new IllegalArgumentException(String.format(
-                    "minWritableBytes: %d (expected: >= 0)", minWritableBytes));
-        }
+        checkPositiveOrZero(minWritableBytes, "minWritableBytes");
 
         if (minWritableBytes <= writableBytes()) {
             return 0;
@@ -1368,9 +1361,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
      * than the specified value.
      */
     protected final void checkReadableBytes(int minimumReadableBytes) {
-        if (minimumReadableBytes < 0) {
-            throw new IllegalArgumentException("minimumReadableBytes: " + minimumReadableBytes + " (expected: >= 0)");
-        }
+        checkPositiveOrZero(minimumReadableBytes, "minimumReadableBytes");
         checkReadableBytes0(minimumReadableBytes);
     }
 
