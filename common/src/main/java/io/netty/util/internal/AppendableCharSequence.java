@@ -63,6 +63,12 @@ public final class AppendableCharSequence implements CharSequence, Appendable {
 
     @Override
     public AppendableCharSequence subSequence(int start, int end) {
+        if (start == end) {
+            // If start and end index is the same we need to return an empty sequence to conform to the interface.
+            // As our expanding logic depends on the fact that we have a char[] with length > 0 we need to construct
+            // an instance for which this is true.
+            return new AppendableCharSequence(Math.min(16, chars.length));
+        }
         return new AppendableCharSequence(Arrays.copyOfRange(chars, start, end));
     }
 
