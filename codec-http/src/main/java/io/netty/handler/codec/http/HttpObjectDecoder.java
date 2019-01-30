@@ -641,15 +641,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             return null;
         }
         LastHttpContent trailer = this.trailer;
-        if (line.length() == 0) {
-            // We have received the empty line which signals the trailer is complete. In this case we need to check if
-            // we have parsed the trailer before and if so return it, otherwise we just return an empty last content.
-            //
-            // See https://github.com/netty/netty/issues/8736
-            if (trailer != null) {
-                this.trailer = null;
-                return trailer;
-            }
+        if (line.length() == 0 && trailer == null) {
+            // We have received the empty line which signals the trailer is complete and did not parse any trailers
+            // before. Just return an empty last content to reduce allocations.
             return LastHttpContent.EMPTY_LAST_CONTENT;
         }
 
@@ -657,7 +651,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         if (trailer == null) {
             trailer = this.trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
         }
-        do {
+        while (line.length() > 0) {
             char firstChar = line.charAt(0);
             if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
                 List<String> current = trailer.trailingHeaders().getAll(lastHeader);
@@ -686,7 +680,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             if (line == null) {
                 return null;
             }
-        } while (line.length() > 0);
+        }
 
         this.trailer = null;
         return trailer;
