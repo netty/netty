@@ -25,7 +25,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
  * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
  */
-public class HttpMethod implements Comparable<HttpMethod> {
+public final class HttpMethod implements Comparable<HttpMethod> {
     /**
      * The OPTIONS method represents a request for information about the communication options
      * available on the request/response chain identified by the Request-URI. This method allows
@@ -119,7 +119,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
      * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
      * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>
      */
-    public HttpMethod(String name) {
+    private HttpMethod(String name) {
         name = checkNotNull(name, "name").trim();
         if (name.isEmpty()) {
             throw new IllegalArgumentException("empty name");
@@ -156,6 +156,9 @@ public class HttpMethod implements Comparable<HttpMethod> {
 
     @Override
     public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
         if (!(o instanceof HttpMethod)) {
             return false;
         }
@@ -171,6 +174,9 @@ public class HttpMethod implements Comparable<HttpMethod> {
 
     @Override
     public int compareTo(HttpMethod o) {
+        if (o == this) {
+            return 0;
+        }
         return name().compareTo(o.name());
     }
 

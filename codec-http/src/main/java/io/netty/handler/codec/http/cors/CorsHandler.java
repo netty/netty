@@ -191,7 +191,7 @@ public class CorsHandler extends ChannelDuplexHandler {
 
     private static boolean isPreflightRequest(final HttpRequest request) {
         final HttpHeaders headers = request.headers();
-        return request.method().equals(OPTIONS) &&
+        return OPTIONS.equals(request.method()) &&
                 headers.contains(HttpHeaderNames.ORIGIN) &&
                 headers.contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
     }

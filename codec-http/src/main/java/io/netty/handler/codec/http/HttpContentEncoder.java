@@ -78,10 +78,10 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             acceptedEncoding = HttpContentDecoder.IDENTITY;
         }
 
-        HttpMethod meth = msg.method();
-        if (meth == HttpMethod.HEAD) {
+        HttpMethod method = msg.method();
+        if (HttpMethod.HEAD.equals(method)) {
             acceptedEncoding = ZERO_LENGTH_HEAD;
-        } else if (meth == HttpMethod.CONNECT) {
+        } else if (HttpMethod.CONNECT.equals(method)) {
             acceptedEncoding = ZERO_LENGTH_CONNECT;
         }
 
