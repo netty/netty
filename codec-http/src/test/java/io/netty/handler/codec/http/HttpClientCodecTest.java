@@ -136,7 +136,7 @@ public class HttpClientCodecTest {
                     ch.pipeline().addLast(new HttpObjectAggregator(4096));
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<FullHttpRequest>() {
                         @Override
-                        protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) {
+                        protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest msg) {
                             // This is just a simple demo...don't block in IO
                             assertTrue(ctx.channel() instanceof SocketChannel);
                             final SocketChannel sChannel = (SocketChannel) ctx.channel();
@@ -174,7 +174,7 @@ public class HttpClientCodecTest {
                     ch.pipeline().addLast(new HttpObjectAggregator(4096));
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<FullHttpResponse>() {
                         @Override
-                        protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) {
+                        protected void messageReceived(ChannelHandlerContext ctx, FullHttpResponse msg) {
                             responseReceivedLatch.countDown();
                         }
                     });

@@ -39,7 +39,7 @@ public final class SocksServerHandler extends SimpleChannelInboundHandler<SocksM
     private SocksServerHandler() { }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, SocksMessage socksRequest) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, SocksMessage socksRequest) throws Exception {
         switch (socksRequest.version()) {
             case SOCKS4a:
                 Socks4CommandRequest socksV4CmdRequest = (Socks4CommandRequest) socksRequest;

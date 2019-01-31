@@ -793,7 +793,7 @@ public class InboundHttp2ToHttpAdapterTest {
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
+        protected void messageReceived(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
             listener.messageReceived(msg);
             latch.countDown();
             latch2.countDown();
@@ -811,7 +811,7 @@ public class InboundHttp2ToHttpAdapterTest {
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, Http2Settings settings) throws Exception {
+        protected void messageReceived(ChannelHandlerContext ctx, Http2Settings settings) throws Exception {
             listener.messageReceived(settings);
             latch.countDown();
         }

@@ -26,7 +26,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 public class TelnetClientHandler extends SimpleChannelInboundHandler<String> {
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+    protected void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
         System.err.println(msg);
     }
 

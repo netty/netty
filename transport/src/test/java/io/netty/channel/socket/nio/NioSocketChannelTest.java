@@ -179,7 +179,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                      ChannelPipeline pipeline = ch.pipeline();
                      pipeline.addLast(new SimpleChannelInboundHandler<ByteBuf>() {
                          @Override
-                         protected void channelRead0(ChannelHandlerContext ctx, ByteBuf byteBuf) {
+                         protected void messageReceived(ChannelHandlerContext ctx, ByteBuf byteBuf) {
                              // We was able to read something from the Channel after reregister.
                              latch.countDown();
                          }

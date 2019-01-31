@@ -406,7 +406,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             long lastTimestamp = 0;
             loggerClient.debug("Step: " + step + " Read: " + in.readableBytes() / 8 + " blocks");
             while (in.isReadable()) {
@@ -469,7 +469,7 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
         }
 
         @Override
-        public void channelRead0(final ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void messageReceived(final ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             int nb = actual.length / messageSize;
             loggerServer.info("Step: " + step + " Read: " + nb + " blocks");

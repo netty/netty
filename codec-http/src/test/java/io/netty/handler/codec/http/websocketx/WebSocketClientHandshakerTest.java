@@ -294,7 +294,7 @@ public abstract class WebSocketClientHandshakerTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpObjectAggregator(Integer.MAX_VALUE),
                 new SimpleChannelInboundHandler<FullHttpResponse>() {
                     @Override
-                    protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
+                    protected void messageReceived(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
                         handshaker.finishHandshake(ctx.channel(), msg);
                         ctx.pipeline().remove(this);
                     }

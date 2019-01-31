@@ -24,7 +24,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 public class SecureChatClientHandler extends SimpleChannelInboundHandler<String> {
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
         System.err.println(msg);
     }
 

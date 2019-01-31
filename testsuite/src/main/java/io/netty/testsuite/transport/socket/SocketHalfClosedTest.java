@@ -311,7 +311,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        protected void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
             bytesRead += msg.readableBytes();
             if (bytesRead >= expectedBytes) {
                 // We write a reply and immediately close our end of the socket.
@@ -373,7 +373,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        protected void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
             bytesRead += msg.readableBytes();
             if (bytesRead >= expectedBytes) {
                 if (!seenOutputShutdown) {

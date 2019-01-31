@@ -98,7 +98,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
         try {
             cb.handler(new SimpleChannelInboundHandler<Object>() {
                 @Override
-                public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
+                public void messageReceived(ChannelHandlerContext ctx, Object msgs) throws Exception {
                     // Nothing will be sent.
                 }
             });
@@ -120,7 +120,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
                 }
 
                 @Override
-                protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) {
+                protected void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) {
                     assertEquals(ccAddress, msg.sender());
 
                     assertEquals(bytes.length, msg.content().readableBytes());

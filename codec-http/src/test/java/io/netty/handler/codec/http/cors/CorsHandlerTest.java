@@ -542,7 +542,7 @@ public class CorsHandlerTest {
 
     private static class EchoHandler extends SimpleChannelInboundHandler<Object> {
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             ctx.writeAndFlush(new DefaultFullHttpResponse(HTTP_1_1, OK, true, true));
         }
     }
