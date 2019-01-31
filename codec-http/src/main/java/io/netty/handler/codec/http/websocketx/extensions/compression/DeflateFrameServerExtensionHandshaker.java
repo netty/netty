@@ -95,7 +95,7 @@ public final class DeflateFrameServerExtensionHandshaker implements WebSocketSer
         }
 
         @Override
-        public WebSocketExtensionData newReponseData() {
+        public WebSocketExtensionData newResponseData() {
             return new WebSocketExtensionData(extensionName, Collections.emptyMap());
         }
     }

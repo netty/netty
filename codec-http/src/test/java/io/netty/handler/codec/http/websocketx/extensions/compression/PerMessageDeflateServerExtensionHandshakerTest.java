@@ -50,7 +50,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
 
         // execute
-        data = extension.newReponseData();
+        data = extension.newResponseData();
 
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());
         assertTrue(data.parameters().isEmpty());
@@ -71,7 +71,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
 
         // execute
-        data = extension.newReponseData();
+        data = extension.newResponseData();
 
         // test
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());
@@ -117,7 +117,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
 
         // execute
-        data = extension.newReponseData();
+        data = extension.newResponseData();
 
         // test
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());
@@ -144,7 +144,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
 
         // execute
-        data = extension.newReponseData();
+        data = extension.newResponseData();
 
         // test
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());
@@ -163,7 +163,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
         assertNotNull(extension);
 
         // execute
-        data = extension.newReponseData();
+        data = extension.newResponseData();
 
         // test
         assertEquals(PERMESSAGE_DEFLATE_EXTENSION, data.name());

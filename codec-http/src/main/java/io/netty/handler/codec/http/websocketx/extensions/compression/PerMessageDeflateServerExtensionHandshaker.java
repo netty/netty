@@ -176,7 +176,7 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
         }
 
         @Override
-        public WebSocketExtensionData newReponseData() {
+        public WebSocketExtensionData newResponseData() {
             HashMap<String, String> parameters = new HashMap<>(4);
             if (serverNoContext) {
                 parameters.put(SERVER_NO_CONTEXT, null);

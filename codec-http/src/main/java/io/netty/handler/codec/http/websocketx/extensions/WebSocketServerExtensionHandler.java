@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http.websocketx.extensions;
 
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -110,7 +109,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
             String headerValue = response.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
 
             for (WebSocketServerExtension extension : validExtensions) {
-                WebSocketExtensionData extensionData = extension.newReponseData();
+                WebSocketExtensionData extensionData = extension.newResponseData();
                 headerValue = WebSocketExtensionUtil.appendExtension(headerValue,
                         extensionData.name(), extensionData.parameters());
             }
