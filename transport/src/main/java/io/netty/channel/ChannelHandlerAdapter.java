@@ -18,6 +18,7 @@ package io.netty.channel;
 
 import io.netty.util.internal.InternalThreadLocalMap;
 
+import java.lang.reflect.AnnotatedType;
 import java.util.Map;
 
 /**
@@ -55,6 +56,10 @@ public abstract class ChannelHandlerAdapter implements ChannelHandler {
         Boolean sharable = cache.get(clazz);
         if (sharable == null) {
             sharable = clazz.isAnnotationPresent(Sharable.class);
+            if (!sharable) {
+                AnnotatedType annotatedType = clazz.getAnnotatedSuperclass();
+                sharable = annotatedType.isAnnotationPresent(Sharable.class);
+            }
             cache.put(clazz, sharable);
         }
         return sharable;
