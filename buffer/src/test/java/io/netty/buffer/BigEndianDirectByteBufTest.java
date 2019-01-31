@@ -17,8 +17,6 @@ package io.netty.buffer;
 
 import static org.junit.Assert.*;
 
-import java.nio.ByteOrder;
-
 /**
  * Tests big-endian direct channel buffers
  */
@@ -27,7 +25,6 @@ public class BigEndianDirectByteBufTest extends AbstractByteBufTest {
     @Override
     protected ByteBuf newBuffer(int length, int maxCapacity) {
         ByteBuf buffer = newDirectBuffer(length, maxCapacity);
-        assertSame(ByteOrder.BIG_ENDIAN, buffer.order());
         assertEquals(0, buffer.writerIndex());
         return buffer;
     }

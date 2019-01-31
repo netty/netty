@@ -26,11 +26,9 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
 import static io.netty.buffer.ByteBufUtil.ensureWritableSuccess;
-import static io.netty.buffer.Unpooled.BIG_ENDIAN;
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.buffer.Unpooled.LITTLE_ENDIAN;
 import static io.netty.buffer.Unpooled.buffer;
-import static io.netty.buffer.Unpooled.unmodifiableBuffer;
+import static io.netty.buffer.Unpooled.wrappedUnmodifiableBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
@@ -51,26 +49,18 @@ public class ReadOnlyByteBufTest {
 
     @Test
     public void testUnmodifiableBuffer() {
-        assertTrue(unmodifiableBuffer(buffer(1)) instanceof ReadOnlyByteBuf);
+        assertTrue(wrappedUnmodifiableBuffer(buffer(1)) instanceof ReadOnlyByteBuf);
     }
 
     @Test
     public void testUnwrap() {
         ByteBuf buf = buffer(1);
-        assertSame(buf, unmodifiableBuffer(buf).unwrap());
-    }
-
-    @Test
-    public void shouldHaveSameByteOrder() {
-        ByteBuf buf = buffer(1);
-        assertSame(BIG_ENDIAN, unmodifiableBuffer(buf).order());
-        buf = buf.order(LITTLE_ENDIAN);
-        assertSame(LITTLE_ENDIAN, unmodifiableBuffer(buf).order());
+        assertSame(buf, wrappedUnmodifiableBuffer(buf).unwrap());
     }
 
     @Test
     public void shouldReturnReadOnlyDerivedBuffer() {
-        ByteBuf buf = unmodifiableBuffer(buffer(1));
+        ByteBuf buf = wrappedUnmodifiableBuffer(buffer(1));
         assertTrue(buf.duplicate() instanceof ReadOnlyByteBuf);
         assertTrue(buf.slice() instanceof ReadOnlyByteBuf);
         assertTrue(buf.slice(0, 1) instanceof ReadOnlyByteBuf);
@@ -79,14 +69,13 @@ public class ReadOnlyByteBufTest {
 
     @Test
     public void shouldReturnWritableCopy() {
-        ByteBuf buf = unmodifiableBuffer(buffer(1));
+        ByteBuf buf = wrappedUnmodifiableBuffer(buffer(1));
         assertFalse(buf.copy() instanceof ReadOnlyByteBuf);
     }
 
     @Test
     public void shouldForwardReadCallsBlindly() throws Exception {
         ByteBuf buf = mock(ByteBuf.class);
-        when(buf.order()).thenReturn(BIG_ENDIAN);
         when(buf.maxCapacity()).thenReturn(65536);
         when(buf.readerIndex()).thenReturn(0);
         when(buf.writerIndex()).thenReturn(0);
@@ -108,7 +97,7 @@ public class ReadOnlyByteBufTest {
         when(buf.nioBuffer(23, 24)).thenReturn(bb);
         when(buf.capacity()).thenReturn(27);
 
-        ByteBuf roBuf = unmodifiableBuffer(buf);
+        ByteBuf roBuf = new ReadOnlyByteBuf(buf);
         assertEquals(3, roBuf.getBytes(1, (GatheringByteChannel) null, 2));
         roBuf.getBytes(4, (OutputStream) null, 5);
         roBuf.getBytes(6, (byte[]) null, 7, 8);
@@ -129,67 +118,67 @@ public class ReadOnlyByteBufTest {
 
     @Test(expected = UnsupportedOperationException.class)
     public void shouldRejectDiscardReadBytes() {
-        unmodifiableBuffer(EMPTY_BUFFER).discardReadBytes();
+        wrappedUnmodifiableBuffer(EMPTY_BUFFER).discardReadBytes();
     }
 
     @Test(expected = UnsupportedOperationException.class)
     public void shouldRejectSetByte() {
-        unmodifiableBuffer(EMPTY_BUFFER).setByte(0, (byte) 0);
+        wrappedUnmodifiableBuffer(EMPTY_BUFFER).setByte(0, (byte) 0);
     }
 
     @Test(expected = UnsupportedOperationException.class)
     public void shouldRejectSetShort() {
-        unmodifiableBuffer(EMPTY_BUFFER).setShort(0, (short) 0);
+        wrappedUnmodifiableBuffer(EMPTY_BUFFER).setShort(0, (short) 0);
     }
 
     @Test(expected = UnsupportedOperationException.class)
     public void shouldRejectSetMedium() {
-        unmodifiableBuffer(EMPTY_BUFFER).setMedium(0, 0);
+        wrappedUnmodifiableBuffer(EMPTY_BUFFER).setMedium(0, 0);
     }
 
     @Test(expected = UnsupportedOperationException.class)
     public void shouldRejectSetInt() {
-        unmodifiableBuffer(EMPTY_BUFFER).setInt(0, 0);
+        wrappedUnmodifiableBuffer(EMPTY_BUFFER).setInt(0, 0);
     }
 
     @Test(expected = UnsupportedOperationException.class)
     public void shouldRejectSetLong() {
-        unmodifiableBuffer(EMPTY_BUFFER).setLong(0, 0);
+        wrappedUnmodifiableBuffer(EMPTY_BUFFER).setLong(0, 0);
     }
 
     @Test(expected = UnsupportedOperationException.class)
     public void shouldRejectSetBytes1() throws IOException {
-        unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (InputStream) null, 0);
+        wrappedUnmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (InputStream) null, 0);
     }
 
     @Test(expected = UnsupportedOperationException.class)
     public void shouldRejectSetBytes2() throws IOException {
-        unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (ScatteringByteChannel) null, 0);
+        wrappedUnmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (ScatteringByteChannel) null, 0);
     }
 
     @Test(expected = UnsupportedOperationException.class)
     public void shouldRejectSetBytes3() {
-        unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (byte[]) null, 0, 0);
+        wrappedUnmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (byte[]) null, 0, 0);
     }
 
     @Test(expected = UnsupportedOperationException.class)
     public void shouldRejectSetBytes4() {
-        unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (ByteBuf) null, 0, 0);
+        wrappedUnmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (ByteBuf) null, 0, 0);
     }
 
     @Test(expected = UnsupportedOperationException.class)
     public void shouldRejectSetBytes5() {
-        unmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (ByteBuffer) null);
+        wrappedUnmodifiableBuffer(EMPTY_BUFFER).setBytes(0, (ByteBuffer) null);
     }
 
     @Test
     public void shouldIndicateNotWritable() {
-        assertFalse(unmodifiableBuffer(buffer(1)).isWritable());
+        assertFalse(wrappedUnmodifiableBuffer(buffer(1)).isWritable());
     }
 
     @Test
     public void shouldIndicateNotWritableAnyNumber() {
-        assertFalse(unmodifiableBuffer(buffer(1)).isWritable(1));
+        assertFalse(wrappedUnmodifiableBuffer(buffer(1)).isWritable(1));
     }
 
     @Test

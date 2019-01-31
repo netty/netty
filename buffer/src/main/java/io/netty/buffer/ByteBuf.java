@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -264,30 +263,6 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      * Returns the {@link ByteBufAllocator} which created this buffer.
      */
     public abstract ByteBufAllocator alloc();
-
-    /**
-     * Returns the <a href="http://en.wikipedia.org/wiki/Endianness">endianness</a>
-     * of this buffer.
-     *
-     * @deprecated use the Little Endian accessors, e.g. {@code getShortLE}, {@code getIntLE}
-     * instead of creating a buffer with swapped {@code endianness}.
-     */
-    @Deprecated
-    public abstract ByteOrder order();
-
-    /**
-     * Returns a buffer with the specified {@code endianness} which shares the whole region,
-     * indexes of this buffer.  Modifying the content, the indexes of the
-     * returned buffer or this buffer affects each other's content, and indexes. If the
-     * specified {@code endianness} is identical to this buffer's byte order, this method can
-     * return {@code this}.  This method does not modify {@code readerIndex} or {@code writerIndex}
-     * of this buffer.
-     *
-     * @deprecated use the Little Endian accessors, e.g. {@code getShortLE}, {@code getIntLE}
-     * instead of creating a buffer with swapped {@code endianness}.
-     */
-    @Deprecated
-    public abstract ByteBuf order(ByteOrder endianness);
 
     /**
      * Return the underlying buffer instance if this buffer is a wrapper of another buffer.

@@ -364,15 +364,6 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
-    protected SwappedByteBuf newSwappedByteBuf() {
-        if (PlatformDependent.isUnaligned()) {
-            // Only use if unaligned access is supported otherwise there is no gain.
-            return new UnsafeDirectSwappedByteBuf(this);
-        }
-        return super.newSwappedByteBuf();
-    }
-
-    @Override
     public ByteBuf setZero(int index, int length) {
         checkIndex(index, length);
         UnsafeByteBufUtil.setZero(addr(index), length);

@@ -94,8 +94,8 @@ public class PoolArenaTest {
         Assert.assertTrue(b2.release());
         Assert.assertTrue(b3.release());
 
-        Assert.assertTrue(allocator.directArenas().size() >= 1);
-        final PoolArenaMetric metric = allocator.directArenas().get(0);
+        Assert.assertTrue(allocator.metric().directArenas().size() >= 1);
+        final PoolArenaMetric metric = allocator.metric().directArenas().get(0);
 
         Assert.assertEquals(3, metric.numDeallocations());
         Assert.assertEquals(3, metric.numAllocations());

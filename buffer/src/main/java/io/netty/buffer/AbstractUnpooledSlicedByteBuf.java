@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -71,12 +70,6 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
     @Override
     public ByteBufAllocator alloc() {
         return unwrap().alloc();
-    }
-
-    @Override
-    @Deprecated
-    public ByteOrder order() {
-        return unwrap().order();
     }
 
     @Override

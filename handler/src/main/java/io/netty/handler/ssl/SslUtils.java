@@ -204,7 +204,7 @@ final class SslUtils {
             int majorVersion = buffer.getUnsignedByte(offset + 1);
             if (majorVersion == 3) {
                 // SSLv3 or TLS
-                packetLength = unsignedShortBE(buffer, offset + 3) + SSL_RECORD_HEADER_LENGTH;
+                packetLength = buffer.getUnsignedShort(offset + 3) + SSL_RECORD_HEADER_LENGTH;
                 if (packetLength <= SSL_RECORD_HEADER_LENGTH) {
                     // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
                     tls = false;
@@ -222,7 +222,7 @@ final class SslUtils {
             if (majorVersion == 2 || majorVersion == 3) {
                 // SSLv2
                 packetLength = headerLength == 2 ?
-                        (shortBE(buffer, offset) & 0x7FFF) + 2 : (shortBE(buffer, offset) & 0x3FFF) + 3;
+                        (buffer.getShort(offset) & 0x7FFF) + 2 : (buffer.getShort(offset) & 0x3FFF) + 3;
                 if (packetLength <= headerLength) {
                     return NOT_ENOUGH_DATA;
                 }
@@ -231,20 +231,6 @@ final class SslUtils {
             }
         }
         return packetLength;
-    }
-
-    // Reads a big-endian unsigned short integer from the buffer
-    @SuppressWarnings("deprecation")
-    private static int unsignedShortBE(ByteBuf buffer, int offset) {
-        return buffer.order() == ByteOrder.BIG_ENDIAN ?
-                buffer.getUnsignedShort(offset) : buffer.getUnsignedShortLE(offset);
-    }
-
-    // Reads a big-endian short integer from the buffer
-    @SuppressWarnings("deprecation")
-    private static short shortBE(ByteBuf buffer, int offset) {
-        return buffer.order() == ByteOrder.BIG_ENDIAN ?
-                buffer.getShort(offset) : buffer.getShortLE(offset);
     }
 
     private static short unsignedByte(byte b) {

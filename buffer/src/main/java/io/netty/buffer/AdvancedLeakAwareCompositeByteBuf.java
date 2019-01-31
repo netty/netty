@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -37,12 +36,6 @@ final class AdvancedLeakAwareCompositeByteBuf extends SimpleLeakAwareCompositeBy
 
     AdvancedLeakAwareCompositeByteBuf(CompositeByteBuf wrapped, ResourceLeakTracker<ByteBuf> leak) {
         super(wrapped, leak);
-    }
-
-    @Override
-    public ByteBuf order(ByteOrder endianness) {
-        recordLeakNonRefCountingOperation(leak);
-        return super.order(endianness);
     }
 
     @Override

@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
@@ -38,7 +37,6 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
     private final int nioBufferCount;
     private final int capacity;
     private final ByteBufAllocator allocator;
-    private final ByteOrder order;
     private final ByteBuf[] buffers;
     private final boolean direct;
 
@@ -46,7 +44,6 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
         super(AbstractByteBufAllocator.DEFAULT_MAX_CAPACITY);
         if (buffers.length == 0) {
             this.buffers = EMPTY;
-            order = ByteOrder.BIG_ENDIAN;
             nioBufferCount = 1;
             capacity = 0;
             direct = false;
@@ -56,12 +53,8 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
             boolean direct = true;
             int nioBufferCount = b.nioBufferCount();
             int capacity = b.readableBytes();
-            order = b.order();
             for (int i = 1; i < buffers.length; i++) {
                 b = buffers[i];
-                if (buffers[i].order() != order) {
-                    throw new IllegalArgumentException("All ByteBufs need to have same ByteOrder");
-                }
                 nioBufferCount += b.nioBufferCount();
                 capacity += b.readableBytes();
                 if (!b.isDirect()) {
@@ -212,11 +205,6 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
-    public ByteOrder order() {
-        return order;
-    }
-
-    @Override
     public ByteBuf unwrap() {
         return null;
     }
@@ -271,97 +259,57 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     protected short _getShort(int index) {
         Component c = findComponent(index);
-        if (index + 2 <= c.endOffset) {
-            return c.buf.getShort(index - c.offset);
-        } else if (order() == ByteOrder.BIG_ENDIAN) {
-            return (short) ((_getByte(index) & 0xff) << 8 | _getByte(index + 1) & 0xff);
-        } else {
-            return (short) (_getByte(index) & 0xff | (_getByte(index + 1) & 0xff) << 8);
-        }
+        return index + 2 <= c.endOffset ? c.buf.getShort(index - c.offset)
+                : (short) ((_getByte(index) & 0xff) << 8 | _getByte(index + 1) & 0xff);
     }
 
     @Override
     protected short _getShortLE(int index) {
         Component c = findComponent(index);
-        if (index + 2 <= c.endOffset) {
-            return c.buf.getShortLE(index - c.offset);
-        } else if (order() == ByteOrder.BIG_ENDIAN) {
-            return (short) (_getByte(index) & 0xff | (_getByte(index + 1) & 0xff) << 8);
-        } else {
-            return (short) ((_getByte(index) & 0xff) << 8 | _getByte(index + 1) & 0xff);
-        }
+        return index + 2 <= c.endOffset ? c.buf.getShortLE(index - c.offset)
+                : (short) (_getByte(index) & 0xff | (_getByte(index + 1) & 0xff) << 8);
     }
 
     @Override
     protected int _getUnsignedMedium(int index) {
         Component c = findComponent(index);
-        if (index + 3 <= c.endOffset) {
-            return c.buf.getUnsignedMedium(index - c.offset);
-        } else if (order() == ByteOrder.BIG_ENDIAN) {
-            return (_getShort(index) & 0xffff) << 8 | _getByte(index + 2) & 0xff;
-        } else {
-            return _getShort(index) & 0xFFFF | (_getByte(index + 2) & 0xFF) << 16;
-        }
+        return index + 3 <= c.endOffset ? c.buf.getUnsignedMedium(index - c.offset)
+                : (_getShort(index) & 0xffff) << 8 | _getByte(index + 2) & 0xff;
     }
 
     @Override
     protected int _getUnsignedMediumLE(int index) {
         Component c = findComponent(index);
-        if (index + 3 <= c.endOffset) {
-            return c.buf.getUnsignedMediumLE(index - c.offset);
-        } else if (order() == ByteOrder.BIG_ENDIAN) {
-            return _getShortLE(index) & 0xffff | (_getByte(index + 2) & 0xff) << 16;
-        } else {
-            return (_getShortLE(index) & 0xffff) << 8 | _getByte(index + 2) & 0xff;
-        }
+        return index + 3 <= c.endOffset ? c.buf.getUnsignedMediumLE(index - c.offset)
+                : _getShortLE(index) & 0xffff | (_getByte(index + 2) & 0xff) << 16;
     }
 
     @Override
     protected int _getInt(int index) {
         Component c = findComponent(index);
-        if (index + 4 <= c.endOffset) {
-            return c.buf.getInt(index - c.offset);
-        } else if (order() == ByteOrder.BIG_ENDIAN) {
-            return (_getShort(index) & 0xffff) << 16 | _getShort(index + 2) & 0xffff;
-        } else {
-            return _getShort(index) & 0xFFFF | (_getShort(index + 2) & 0xFFFF) << 16;
-        }
+        return index + 4 <= c.endOffset ? c.buf.getInt(index - c.offset)
+                : (_getShort(index) & 0xffff) << 16 | _getShort(index + 2) & 0xffff;
     }
 
     @Override
     protected int _getIntLE(int index) {
         Component c = findComponent(index);
-        if (index + 4 <= c.endOffset) {
-            return c.buf.getIntLE(index - c.offset);
-        } else if (order() == ByteOrder.BIG_ENDIAN) {
-            return _getShortLE(index) & 0xFFFF | (_getShortLE(index + 2) & 0xFFFF) << 16;
-        } else {
-            return (_getShortLE(index) & 0xffff) << 16 | _getShortLE(index + 2) & 0xffff;
-        }
+        return index + 4 <= c.endOffset ? c.buf.getIntLE(index - c.offset)
+                : _getShortLE(index) & 0xFFFF | (_getShortLE(index + 2) & 0xFFFF) << 16;
     }
 
     @Override
     protected long _getLong(int index) {
         Component c = findComponent(index);
-        if (index + 8 <= c.endOffset) {
-            return c.buf.getLong(index - c.offset);
-        } else if (order() == ByteOrder.BIG_ENDIAN) {
-            return (_getInt(index) & 0xffffffffL) << 32 | _getInt(index + 4) & 0xffffffffL;
-        } else {
-            return _getInt(index) & 0xFFFFFFFFL | (_getInt(index + 4) & 0xFFFFFFFFL) << 32;
-        }
+        return index + 8 <= c.endOffset ? c.buf.getLong(index - c.offset)
+                : (_getInt(index) & 0xffffffffL) << 32 | _getInt(index + 4) & 0xffffffffL;
     }
 
     @Override
     protected long _getLongLE(int index) {
         Component c = findComponent(index);
-        if (index + 8 <= c.endOffset) {
-            return c.buf.getLongLE(index - c.offset);
-        } else if (order() == ByteOrder.BIG_ENDIAN) {
-            return _getIntLE(index) & 0xffffffffL | (_getIntLE(index + 4) & 0xffffffffL) << 32;
-        } else {
-            return (_getIntLE(index) & 0xffffffffL) << 32 | _getIntLE(index + 4) & 0xffffffffL;
-        }
+        return index + 8 <= c.endOffset ? c.buf.getLongLE(index - c.offset)
+                : _getIntLE(index) & 0xffffffffL | (_getIntLE(index + 4) & 0xffffffffL) << 32;
     }
 
     @Override
@@ -539,7 +487,7 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
                 return buf.nioBuffer(index, length);
             }
         }
-        ByteBuffer merged = ByteBuffer.allocate(length).order(order());
+        ByteBuffer merged = ByteBuffer.allocate(length);
         ByteBuffer[] buffers = nioBuffers(index, length);
 
         //noinspection ForLoopReplaceableByForEach

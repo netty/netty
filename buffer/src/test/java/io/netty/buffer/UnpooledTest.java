@@ -233,7 +233,7 @@ public class UnpooledTest {
     public void shouldAllowEmptyBufferToCreateCompositeBuffer() {
         ByteBuf buf = wrappedBuffer(
                 EMPTY_BUFFER,
-                wrappedBuffer(new byte[16]).order(LITTLE_ENDIAN),
+                wrappedBuffer(new byte[16]),
                 EMPTY_BUFFER);
         try {
             assertEquals(16, buf.capacity());
@@ -371,7 +371,7 @@ public class UnpooledTest {
 
     @Test
     public void testUnmodifiableBuffer() throws Exception {
-        ByteBuf buf = unmodifiableBuffer(buffer(16));
+        ByteBuf buf = buffer(16).asReadOnly();
 
         try {
             buf.discardReadBytes();

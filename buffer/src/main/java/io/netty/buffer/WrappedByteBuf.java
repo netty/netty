@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -76,16 +75,6 @@ class WrappedByteBuf extends ByteBuf {
     @Override
     public final ByteBufAllocator alloc() {
         return buf.alloc();
-    }
-
-    @Override
-    public final ByteOrder order() {
-        return buf.order();
-    }
-
-    @Override
-    public ByteBuf order(ByteOrder endianness) {
-        return buf.order(endianness);
     }
 
     @Override

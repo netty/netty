@@ -86,8 +86,8 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
         byteBufToSimpleStrings = new HashMap<>(DEFAULT_SIMPLE_STRINGS.length, 1.0f);
         stringToSimpleStrings = new HashMap<>(DEFAULT_SIMPLE_STRINGS.length, 1.0f);
         for (String message : DEFAULT_SIMPLE_STRINGS) {
-            ByteBuf key = Unpooled.unmodifiableBuffer(
-                    Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(message.getBytes(CharsetUtil.UTF_8))));
+            ByteBuf key = Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(
+                    message.getBytes(CharsetUtil.UTF_8))).asReadOnly();
             SimpleStringRedisMessage cached = new SimpleStringRedisMessage(message);
             byteBufToSimpleStrings.put(key, cached);
             stringToSimpleStrings.put(message, cached);
@@ -96,8 +96,8 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
         byteBufToErrors = new HashMap<>(DEFAULT_ERRORS.length, 1.0f);
         stringToErrors = new HashMap<>(DEFAULT_ERRORS.length, 1.0f);
         for (String message : DEFAULT_ERRORS) {
-            ByteBuf key = Unpooled.unmodifiableBuffer(
-                    Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(message.getBytes(CharsetUtil.UTF_8))));
+            ByteBuf key = Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(
+                    message.getBytes(CharsetUtil.UTF_8))).asReadOnly();
             ErrorRedisMessage cached = new ErrorRedisMessage(message);
             byteBufToErrors.put(key, cached);
             stringToErrors.put(message, cached);
@@ -108,8 +108,8 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
         longToByteBufs = new LongObjectHashMap<byte[]>(SIZE_CACHED_INTEGER_NUMBER, 1.0f);
         for (long value = MIN_CACHED_INTEGER_NUMBER; value < MAX_CACHED_INTEGER_NUMBER; value++) {
             byte[] keyBytes = RedisCodecUtil.longToAsciiBytes(value);
-            ByteBuf keyByteBuf = Unpooled.unmodifiableBuffer(Unpooled.unreleasableBuffer(
-                    Unpooled.wrappedBuffer(keyBytes)));
+            ByteBuf keyByteBuf = Unpooled.unreleasableBuffer(
+                    Unpooled.wrappedBuffer(keyBytes)).asReadOnly();
             IntegerRedisMessage cached = new IntegerRedisMessage(value);
             byteBufToIntegers.put(keyByteBuf, cached);
             longToIntegers.put(value, cached);

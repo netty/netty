@@ -19,7 +19,6 @@ import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
-import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -134,86 +133,12 @@ public class ByteBufUtilTest {
                 -1));
     }
 
-    @SuppressWarnings("deprecation")
-    @Test
-    public void writeShortBE() {
-        int expected = 0x1234;
-
-        ByteBuf buf = Unpooled.buffer(2).order(ByteOrder.BIG_ENDIAN);
-        ByteBufUtil.writeShortBE(buf, expected);
-        assertEquals(expected, buf.readShort());
-        buf.readerIndex(0);
-        assertEquals(ByteBufUtil.swapShort((short) expected), buf.readShortLE());
-        buf.release();
-
-        buf = Unpooled.buffer(2).order(ByteOrder.LITTLE_ENDIAN);
-        ByteBufUtil.writeShortBE(buf, expected);
-        assertEquals((short) expected, buf.readShortLE());
-        buf.readerIndex(0);
-        assertEquals(ByteBufUtil.swapShort((short) expected), buf.readShort());
-        buf.release();
-    }
-
-    @SuppressWarnings("deprecation")
-    @Test
-    public void setShortBE() {
-        int shortValue = 0x1234;
-
-        ByteBuf buf = Unpooled.wrappedBuffer(new byte[2]).order(ByteOrder.BIG_ENDIAN);
-        ByteBufUtil.setShortBE(buf, 0, shortValue);
-        assertEquals(shortValue, buf.readShort());
-        buf.readerIndex(0);
-        assertEquals(ByteBufUtil.swapShort((short) shortValue), buf.readShortLE());
-        buf.release();
-
-        buf = Unpooled.wrappedBuffer(new byte[2]).order(ByteOrder.LITTLE_ENDIAN);
-        ByteBufUtil.setShortBE(buf, 0, shortValue);
-        assertEquals((short) shortValue, buf.readShortLE());
-        buf.readerIndex(0);
-        assertEquals(ByteBufUtil.swapShort((short) shortValue), buf.readShort());
-        buf.release();
-    }
-
-    @SuppressWarnings("deprecation")
-    @Test
-    public void writeMediumBE() {
-        int mediumValue = 0x123456;
-
-        ByteBuf buf = Unpooled.buffer(4).order(ByteOrder.BIG_ENDIAN);
-        ByteBufUtil.writeMediumBE(buf, mediumValue);
-        assertEquals(mediumValue, buf.readMedium());
-        buf.readerIndex(0);
-        assertEquals(ByteBufUtil.swapMedium(mediumValue), buf.readMediumLE());
-        buf.release();
-
-        buf = Unpooled.buffer(4).order(ByteOrder.LITTLE_ENDIAN);
-        ByteBufUtil.writeMediumBE(buf, mediumValue);
-        assertEquals(mediumValue, buf.readMediumLE());
-        buf.readerIndex(0);
-        assertEquals(ByteBufUtil.swapMedium(mediumValue), buf.readMedium());
-        buf.release();
-    }
-
     @Test
     public void testWriteUsAscii() {
         String usAscii = "NettyRocks";
         ByteBuf buf = Unpooled.buffer(16);
         buf.writeBytes(usAscii.getBytes(CharsetUtil.US_ASCII));
         ByteBuf buf2 = Unpooled.buffer(16);
-        ByteBufUtil.writeAscii(buf2, usAscii);
-
-        assertEquals(buf, buf2);
-
-        buf.release();
-        buf2.release();
-    }
-
-    @Test
-    public void testWriteUsAsciiSwapped() {
-        String usAscii = "NettyRocks";
-        ByteBuf buf = Unpooled.buffer(16);
-        buf.writeBytes(usAscii.getBytes(CharsetUtil.US_ASCII));
-        SwappedByteBuf buf2 = new SwappedByteBuf(Unpooled.buffer(16));
         ByteBufUtil.writeAscii(buf2, usAscii);
 
         assertEquals(buf, buf2);

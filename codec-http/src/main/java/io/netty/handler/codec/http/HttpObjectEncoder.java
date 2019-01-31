@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
@@ -99,7 +98,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             sanitizeHeadersBeforeEncode(m, state == ST_CONTENT_ALWAYS_EMPTY);
 
             encodeHeaders(m.headers(), buf);
-            ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+            buf.writeShort(CRLF_SHORT);
 
             headersEncodedSizeAccumulator = HEADERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
                                             HEADERS_WEIGHT_HISTORICAL * headersEncodedSizeAccumulator;
@@ -197,7 +196,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             String lengthHex = Long.toHexString(contentLength);
             ByteBuf buf = ctx.alloc().buffer(lengthHex.length() + 2);
             buf.writeCharSequence(lengthHex, CharsetUtil.US_ASCII);
-            ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+            buf.writeShort(CRLF_SHORT);
             out.add(buf);
             out.add(encodeAndRetain(msg));
             out.add(CRLF_BUF.duplicate());
@@ -209,9 +208,9 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                 out.add(ZERO_CRLF_CRLF_BUF.duplicate());
             } else {
                 ByteBuf buf = ctx.alloc().buffer((int) trailersEncodedSizeAccumulator);
-                ByteBufUtil.writeMediumBE(buf, ZERO_CRLF_MEDIUM);
+                buf.writeMedium(ZERO_CRLF_MEDIUM);
                 encodeHeaders(headers, buf);
-                ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+                buf.writeShort(CRLF_SHORT);
                 trailersEncodedSizeAccumulator = TRAILERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
                                                  TRAILERS_WEIGHT_HISTORICAL * trailersEncodedSizeAccumulator;
                 out.add(buf);

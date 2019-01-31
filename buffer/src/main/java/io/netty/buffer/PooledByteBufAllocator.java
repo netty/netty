@@ -167,38 +167,26 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         this(false);
     }
 
-    @SuppressWarnings("deprecation")
     public PooledByteBufAllocator(boolean preferDirect) {
         this(preferDirect, DEFAULT_NUM_HEAP_ARENA, DEFAULT_NUM_DIRECT_ARENA, DEFAULT_PAGE_SIZE, DEFAULT_MAX_ORDER);
     }
 
-    @SuppressWarnings("deprecation")
     public PooledByteBufAllocator(int nHeapArena, int nDirectArena, int pageSize, int maxOrder) {
         this(false, nHeapArena, nDirectArena, pageSize, maxOrder);
     }
 
-    /**
-     * @deprecated use
-     * {@link PooledByteBufAllocator#PooledByteBufAllocator(boolean, int, int, int, int, int, int, int, boolean)}
-     */
-    @Deprecated
-    public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder) {
+    PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder) {
         this(preferDirect, nHeapArena, nDirectArena, pageSize, maxOrder,
                 DEFAULT_TINY_CACHE_SIZE, DEFAULT_SMALL_CACHE_SIZE, DEFAULT_NORMAL_CACHE_SIZE);
     }
 
-    /**
-     * @deprecated use
-     * {@link PooledByteBufAllocator#PooledByteBufAllocator(boolean, int, int, int, int, int, int, int, boolean)}
-     */
-    @Deprecated
-    public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
+    PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
                                   int tinyCacheSize, int smallCacheSize, int normalCacheSize) {
         this(preferDirect, nHeapArena, nDirectArena, pageSize, maxOrder, tinyCacheSize, smallCacheSize,
                 normalCacheSize, DEFAULT_USE_CACHE_FOR_ALL_THREADS, DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT);
     }
 
-    public PooledByteBufAllocator(boolean preferDirect, int nHeapArena,
+    PooledByteBufAllocator(boolean preferDirect, int nHeapArena,
                                   int nDirectArena, int pageSize, int maxOrder, int tinyCacheSize,
                                   int smallCacheSize, int normalCacheSize,
                                   boolean useCacheForAllThreads) {
@@ -409,23 +397,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         return directArenas != null;
     }
 
-    /**
-     * Returns {@code true} if the calling {@link Thread} has a {@link ThreadLocal} cache for the allocated
-     * buffers.
-     */
-    @Deprecated
-    public boolean hasThreadLocalCache() {
-        return threadCache.isSet();
-    }
-
-    /**
-     * Free all cached buffers for the calling {@link Thread}.
-     */
-    @Deprecated
-    public void freeThreadLocalCache() {
-        threadCache.remove();
-    }
-
     final class PoolThreadLocalCache extends FastThreadLocal<PoolThreadCache> {
         private final boolean useCacheForAllThreads;
 
@@ -477,51 +448,36 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 
     /**
      * Return the number of heap arenas.
-     *
-     * @deprecated use {@link PooledByteBufAllocatorMetric#numHeapArenas()}.
      */
-    @Deprecated
-    public int numHeapArenas() {
+    int numHeapArenas() {
         return heapArenaMetrics.size();
     }
 
     /**
      * Return the number of direct arenas.
-     *
-     * @deprecated use {@link PooledByteBufAllocatorMetric#numDirectArenas()}.
      */
-    @Deprecated
-    public int numDirectArenas() {
+    int numDirectArenas() {
         return directArenaMetrics.size();
     }
 
     /**
      * Return a {@link List} of all heap {@link PoolArenaMetric}s that are provided by this pool.
-     *
-     * @deprecated use {@link PooledByteBufAllocatorMetric#heapArenas()}.
      */
-    @Deprecated
-    public List<PoolArenaMetric> heapArenas() {
+    List<PoolArenaMetric> heapArenas() {
         return heapArenaMetrics;
     }
 
     /**
      * Return a {@link List} of all direct {@link PoolArenaMetric}s that are provided by this pool.
-     *
-     * @deprecated use {@link PooledByteBufAllocatorMetric#directArenas()}.
      */
-    @Deprecated
-    public List<PoolArenaMetric> directArenas() {
+    List<PoolArenaMetric> directArenas() {
         return directArenaMetrics;
     }
 
     /**
      * Return the number of thread local caches used by this {@link PooledByteBufAllocator}.
-     *
-     * @deprecated use {@link PooledByteBufAllocatorMetric#numThreadLocalCaches()}.
      */
-    @Deprecated
-    public int numThreadLocalCaches() {
+    int numThreadLocalCaches() {
         PoolArena<?>[] arenas = heapArenas != null ? heapArenas : directArenas;
         if (arenas == null) {
             return 0;
@@ -537,41 +493,29 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 
     /**
      * Return the size of the tiny cache.
-     *
-     * @deprecated use {@link PooledByteBufAllocatorMetric#tinyCacheSize()}.
      */
-    @Deprecated
-    public int tinyCacheSize() {
+    int tinyCacheSize() {
         return tinyCacheSize;
     }
 
     /**
      * Return the size of the small cache.
-     *
-     * @deprecated use {@link PooledByteBufAllocatorMetric#smallCacheSize()}.
      */
-    @Deprecated
-    public int smallCacheSize() {
+    int smallCacheSize() {
         return smallCacheSize;
     }
 
     /**
      * Return the size of the normal cache.
-     *
-     * @deprecated use {@link PooledByteBufAllocatorMetric#normalCacheSize()}.
      */
-    @Deprecated
-    public int normalCacheSize() {
+    int normalCacheSize() {
         return normalCacheSize;
     }
 
     /**
      * Return the chunk size for an arena.
-     *
-     * @deprecated use {@link PooledByteBufAllocatorMetric#chunkSize()}.
      */
-    @Deprecated
-    public final int chunkSize() {
+    final int chunkSize() {
         return chunkSize;
     }
 

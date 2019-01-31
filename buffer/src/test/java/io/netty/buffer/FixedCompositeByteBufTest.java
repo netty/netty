@@ -313,7 +313,7 @@ public class FixedCompositeByteBufTest {
         buf1.writeBytes("a".getBytes(Charset.defaultCharset()));
         buf2.writeBytes("b".getBytes(Charset.defaultCharset()));
         buf3.writeBytes("c".getBytes(Charset.defaultCharset()));
-        ByteBuf composite = unmodifiableBuffer(buf1, buf2, buf3);
+        ByteBuf composite = wrappedUnmodifiableBuffer(buf1, buf2, buf3);
         ByteBuf copy = directBuffer(3);
         ByteBuf copy2 = buffer(3);
         copy.setBytes(0, composite, 0, 3);
@@ -336,7 +336,7 @@ public class FixedCompositeByteBufTest {
         buf1.writeBytes("a".getBytes(Charset.defaultCharset()));
         buf2.writeBytes("b".getBytes(Charset.defaultCharset()));
         buf3.writeBytes("c".getBytes(Charset.defaultCharset()));
-        ByteBuf composite = unmodifiableBuffer(buf1, buf2, buf3);
+        ByteBuf composite = wrappedUnmodifiableBuffer(buf1, buf2, buf3);
         ByteBuf copy = directBuffer(3);
         ByteBuf copy2 = buffer(3);
         OutputStream copyStream = new ByteBufOutputStream(copy);
@@ -364,7 +364,7 @@ public class FixedCompositeByteBufTest {
         buf1.writeBytes("a".getBytes(Charset.defaultCharset()));
         buf2.writeBytes("b".getBytes(Charset.defaultCharset()));
         buf3.writeBytes("c".getBytes(Charset.defaultCharset()));
-        ByteBuf composite = unmodifiableBuffer(buf1, buf2, buf3);
+        ByteBuf composite = wrappedUnmodifiableBuffer(buf1, buf2, buf3);
         ByteBuffer[] byteBuffers = composite.nioBuffers(0, 3);
         assertEquals(3, byteBuffers.length);
         assertEquals(1, byteBuffers[0].limit());

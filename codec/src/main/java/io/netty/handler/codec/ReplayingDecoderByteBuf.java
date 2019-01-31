@@ -19,7 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ByteProcessor;
 import io.netty.util.Signal;
@@ -43,7 +42,6 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
 
     private ByteBuf buffer;
     private boolean terminated;
-    private SwappedByteBuf swapped;
 
     static final ReplayingDecoderByteBuf EMPTY_BUFFER = new ReplayingDecoderByteBuf(Unpooled.EMPTY_BUFFER);
 
@@ -97,7 +95,7 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     @SuppressWarnings("deprecation")
     @Override
     public ByteBuf asReadOnly() {
-        return Unpooled.unmodifiableBuffer(this);
+        return Unpooled.unmodifiableBuffer(this); //TODO TBD
     }
 
     @Override
@@ -454,25 +452,6 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
         }
 
         return buffer.forEachByteDesc(index, length, processor);
-    }
-
-    @Override
-    public ByteOrder order() {
-        return buffer.order();
-    }
-
-    @Override
-    public ByteBuf order(ByteOrder endianness) {
-        requireNonNull(endianness, "endianness");
-        if (endianness == order()) {
-            return this;
-        }
-
-        SwappedByteBuf swapped = this.swapped;
-        if (swapped == null) {
-            this.swapped = swapped = new SwappedByteBuf(this);
-        }
-        return swapped;
     }
 
     @Override

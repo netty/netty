@@ -479,7 +479,7 @@ final class PoolThreadCache {
             }
         }
 
-        @SuppressWarnings("rawtypes")
+        @SuppressWarnings({ "rawtypes", "unchecked" })
         private static Entry newEntry(PoolChunk<?> chunk, ByteBuffer nioBuffer, long handle) {
             Entry entry = RECYCLER.get();
             entry.chunk = chunk;

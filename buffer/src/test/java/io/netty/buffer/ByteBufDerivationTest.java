@@ -18,7 +18,6 @@ package io.netty.buffer;
 
 import org.junit.Test;
 
-import java.nio.ByteOrder;
 import java.util.Random;
 
 import static org.hamcrest.Matchers.*;
@@ -94,7 +93,7 @@ public class ByteBufDerivationTest {
     @Test
     public void testReadOnly() throws Exception {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
-        ByteBuf ro = Unpooled.unmodifiableBuffer(buf);
+        ByteBuf ro = buf.asReadOnly();
 
         assertThat(ro, instanceOf(ReadOnlyByteBuf.class));
         assertThat(ro.unwrap(), sameInstance(buf));
@@ -110,10 +109,9 @@ public class ByteBufDerivationTest {
     @Test
     public void testReadOnlyOfReadOnly() throws Exception {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
-        ByteBuf ro = Unpooled.unmodifiableBuffer(buf).setIndex(2, 6);
-        ByteBuf ro2 = Unpooled.unmodifiableBuffer(ro);
+        ByteBuf ro = buf.asReadOnly().setIndex(2, 6);
+        ByteBuf ro2 = ro.asReadOnly();
 
-        assertThat(ro2, not(sameInstance(ro)));
         assertThat(ro2, instanceOf(ReadOnlyByteBuf.class));
         assertThat(ro2.unwrap(), sameInstance(buf));
         assertThat(ro2.readerIndex(), is(ro.readerIndex()));
@@ -126,7 +124,7 @@ public class ByteBufDerivationTest {
     public void testReadOnlyOfDuplicate() throws Exception {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
         ByteBuf dup = buf.duplicate().setIndex(2, 6);
-        ByteBuf ro = Unpooled.unmodifiableBuffer(dup);
+        ByteBuf ro = dup.asReadOnly();
 
         assertThat(ro, instanceOf(ReadOnlyByteBuf.class));
         assertThat(ro.unwrap(), sameInstance(buf));
@@ -139,7 +137,7 @@ public class ByteBufDerivationTest {
     @Test
     public void testDuplicateOfReadOnly() throws Exception {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
-        ByteBuf ro = Unpooled.unmodifiableBuffer(buf).setIndex(2, 6);
+        ByteBuf ro = buf.asReadOnly().setIndex(2, 6);
         ByteBuf dup = ro.duplicate();
 
         assertThat(dup, instanceOf(ReadOnlyByteBuf.class));
@@ -148,21 +146,6 @@ public class ByteBufDerivationTest {
         assertThat(dup.writerIndex(), is(ro.writerIndex()));
         assertThat(dup.capacity(), is(ro.capacity()));
         assertThat(dup.maxCapacity(), is(ro.maxCapacity()));
-    }
-
-    @Test
-    public void testSwap() throws Exception {
-        ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
-        ByteBuf swapped = buf.order(ByteOrder.LITTLE_ENDIAN);
-
-        assertThat(swapped, instanceOf(SwappedByteBuf.class));
-        assertThat(swapped.unwrap(), sameInstance(buf));
-        assertThat(swapped.order(ByteOrder.LITTLE_ENDIAN), sameInstance(swapped));
-        assertThat(swapped.order(ByteOrder.BIG_ENDIAN), sameInstance(buf));
-
-        buf.setIndex(2, 6);
-        assertThat(swapped.readerIndex(), is(2));
-        assertThat(swapped.writerIndex(), is(6));
     }
 
     @Test
@@ -180,20 +163,17 @@ public class ByteBufDerivationTest {
                 newDerived = derived.duplicate();
                 break;
             case 2:
-                newDerived = derived.order(
-                        derived.order() == ByteOrder.BIG_ENDIAN ? ByteOrder.LITTLE_ENDIAN : ByteOrder.BIG_ENDIAN);
+                newDerived = derived;
                 break;
             case 3:
-                newDerived = Unpooled.unmodifiableBuffer(derived);
+                newDerived = derived.asReadOnly();
                 break;
             default:
                 throw new Error();
             }
 
             assertThat("nest level of " + newDerived, nestLevel(newDerived), is(lessThanOrEqualTo(3)));
-            assertThat(
-                    "nest level of " + newDerived.order(ByteOrder.BIG_ENDIAN),
-                    nestLevel(newDerived.order(ByteOrder.BIG_ENDIAN)), is(lessThanOrEqualTo(2)));
+            assertThat("nest level of " + newDerived, nestLevel(newDerived), is(lessThanOrEqualTo(2)));
 
             derived = newDerived;
         }
@@ -201,16 +181,8 @@ public class ByteBufDerivationTest {
 
     private static int nestLevel(ByteBuf buf) {
         int depth = 0;
-        for (ByteBuf b = buf.order(ByteOrder.BIG_ENDIAN);;) {
-            if (b.unwrap() == null && !(b instanceof SwappedByteBuf)) {
-                break;
-            }
+        for (ByteBuf b = buf; b.unwrap() != null; b = b.unwrap()) {
             depth ++;
-            if (b instanceof SwappedByteBuf) {
-                b = b.order(ByteOrder.BIG_ENDIAN);
-            } else {
-                b = b.unwrap();
-            }
         }
         return depth;
     }

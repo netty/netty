@@ -22,7 +22,6 @@ import java.util.List;
 /**
  * Exposed metric for {@link PooledByteBufAllocator}.
  */
-@SuppressWarnings("deprecation")
 public final class PooledByteBufAllocatorMetric implements ByteBufAllocatorMetric {
 
     private final PooledByteBufAllocator allocator;

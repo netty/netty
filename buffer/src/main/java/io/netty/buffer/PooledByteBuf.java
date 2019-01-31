@@ -20,7 +20,6 @@ import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
@@ -123,11 +122,6 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     @Override
     public final ByteBufAllocator alloc() {
         return allocator;
-    }
-
-    @Override
-    public final ByteOrder order() {
-        return ByteOrder.BIG_ENDIAN;
     }
 
     @Override

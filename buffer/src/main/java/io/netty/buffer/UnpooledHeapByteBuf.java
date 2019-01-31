@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
@@ -100,11 +99,6 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBufAllocator alloc() {
         return alloc;
-    }
-
-    @Override
-    public ByteOrder order() {
-        return ByteOrder.BIG_ENDIAN;
     }
 
     @Override

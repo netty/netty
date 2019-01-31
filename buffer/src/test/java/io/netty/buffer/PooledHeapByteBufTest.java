@@ -15,21 +15,13 @@
  */
 package io.netty.buffer;
 
-
-import org.junit.Test;
-
 /**
- * Tests big-endian composite channel buffers
+ * Tests big-endian heap channel buffers
  */
-public class BigEndianCompositeByteBufTest extends AbstractCompositeByteBufTest {
-    public BigEndianCompositeByteBufTest() {
-        super(Unpooled.BIG_ENDIAN);
-    }
+public class PooledHeapByteBufTest extends AbstractPooledByteBufTest {
 
     @Override
-    @Test(expected = UnsupportedOperationException.class)
-    public void testInternalNioBufferAfterRelease() {
-        super.testInternalNioBufferAfterRelease();
+    protected ByteBuf alloc(int length, int maxCapacity) {
+        return PooledByteBufAllocator.DEFAULT.heapBuffer(length, maxCapacity);
     }
-
 }

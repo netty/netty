@@ -36,11 +36,9 @@ import static org.junit.Assert.*;
  */
 public class HttpRequestEncoderTest {
 
-    @SuppressWarnings("deprecation")
     private static ByteBuf[] getBuffers() {
         return new ByteBuf[]{
-                Unpooled.buffer(128).order(ByteOrder.BIG_ENDIAN),
-                Unpooled.buffer(128).order(ByteOrder.LITTLE_ENDIAN),
+                Unpooled.buffer(128),
                 Unpooled.wrappedBuffer(ByteBuffer.allocate(128).order(ByteOrder.BIG_ENDIAN)).writerIndex(0),
                 Unpooled.wrappedBuffer(ByteBuffer.allocate(128).order(ByteOrder.LITTLE_ENDIAN)).writerIndex(0)
         };

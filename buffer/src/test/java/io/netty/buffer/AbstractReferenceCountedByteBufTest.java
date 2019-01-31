@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -189,11 +188,6 @@ public class AbstractReferenceCountedByteBufTest {
 
             @Override
             public ByteBufAllocator alloc() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public ByteOrder order() {
                 throw new UnsupportedOperationException();
             }
 

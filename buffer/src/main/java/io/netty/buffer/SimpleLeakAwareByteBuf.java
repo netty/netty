@@ -21,8 +21,6 @@ import static java.util.Objects.requireNonNull;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakTracker;
 
-import java.nio.ByteOrder;
-
 class SimpleLeakAwareByteBuf extends WrappedByteBuf {
 
     /**
@@ -123,23 +121,10 @@ class SimpleLeakAwareByteBuf extends WrappedByteBuf {
         assert closed;
     }
 
-    @Override
-    public ByteBuf order(ByteOrder endianness) {
-        if (order() == endianness) {
-            return this;
-        } else {
-            return newSharedLeakAwareByteBuf(super.order(endianness));
-        }
-    }
-
     private ByteBuf unwrappedDerived(ByteBuf derived) {
-        // We only need to unwrap SwappedByteBuf implementations as these will be the only ones that may end up in
-        // the AbstractLeakAwareByteBuf implementations beside slices / duplicates and "real" buffers.
-        ByteBuf unwrappedDerived = unwrapSwapped(derived);
-
-        if (unwrappedDerived instanceof AbstractPooledDerivedByteBuf) {
+        if (derived instanceof AbstractPooledDerivedByteBuf) {
             // Update the parent to point to this buffer so we correctly close the ResourceLeakTracker.
-            ((AbstractPooledDerivedByteBuf) unwrappedDerived).parent(this);
+            ((AbstractPooledDerivedByteBuf) derived).parent(this);
 
             ResourceLeakTracker<ByteBuf> newLeak = AbstractByteBuf.leakDetector.track(derived);
             if (newLeak == null) {
@@ -149,18 +134,6 @@ class SimpleLeakAwareByteBuf extends WrappedByteBuf {
             return newLeakAwareByteBuf(derived, newLeak);
         }
         return newSharedLeakAwareByteBuf(derived);
-    }
-
-    @SuppressWarnings("deprecation")
-    private static ByteBuf unwrapSwapped(ByteBuf buf) {
-        if (buf instanceof SwappedByteBuf) {
-            do {
-                buf = buf.unwrap();
-            } while (buf instanceof SwappedByteBuf);
-
-            return buf;
-        }
-        return buf;
     }
 
     private SimpleLeakAwareByteBuf newSharedLeakAwareByteBuf(

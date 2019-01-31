@@ -31,7 +31,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -77,13 +76,9 @@ public abstract class AbstractByteBuf extends ByteBuf {
         return false;
     }
 
-    @SuppressWarnings("deprecation")
     @Override
     public ByteBuf asReadOnly() {
-        if (isReadOnly()) {
-            return this;
-        }
-        return Unpooled.unmodifiableBuffer(this);
+        return isReadOnly() ? this : new ReadOnlyByteBuf(this);
     }
 
     @Override
@@ -271,22 +266,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
         // Adjust to the new capacity.
         capacity(newCapacity);
         return 2;
-    }
-
-    @Override
-    public ByteBuf order(ByteOrder endianness) {
-        if (endianness == order()) {
-            return this;
-        }
-        requireNonNull(endianness, "endianness");
-        return newSwappedByteBuf();
-    }
-
-    /**
-     * Creates a new {@link SwappedByteBuf} for this {@link ByteBuf} instance.
-     */
-    protected SwappedByteBuf newSwappedByteBuf() {
-        return new SwappedByteBuf(this);
     }
 
     @Override

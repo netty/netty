@@ -27,7 +27,6 @@ import io.netty.util.internal.StringUtil;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
@@ -37,11 +36,13 @@ import java.nio.charset.Charset;
 /**
  * An empty {@link ByteBuf} whose capacity and maximum capacity are all {@code 0}.
  */
-public final class EmptyByteBuf extends ByteBuf {
+final class EmptyByteBuf extends ByteBuf {
 
     static final int EMPTY_BYTE_BUF_HASH_CODE = 1;
     private static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocateDirect(0);
     private static final long EMPTY_BYTE_BUFFER_ADDRESS;
+
+    private static final String STR = StringUtil.simpleClassName(EmptyByteBuf.class);
 
     static {
         long emptyByteBufferAddress = 0;
@@ -56,20 +57,11 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     private final ByteBufAllocator alloc;
-    private final ByteOrder order;
-    private final String str;
-    private EmptyByteBuf swapped;
 
-    public EmptyByteBuf(ByteBufAllocator alloc) {
-        this(alloc, ByteOrder.BIG_ENDIAN);
-    }
-
-    private EmptyByteBuf(ByteBufAllocator alloc, ByteOrder order) {
+    EmptyByteBuf(ByteBufAllocator alloc) {
         requireNonNull(alloc, "alloc");
 
         this.alloc = alloc;
-        this.order = order;
-        str = StringUtil.simpleClassName(this) + (order == ByteOrder.BIG_ENDIAN? "BE" : "LE");
     }
 
     @Override
@@ -88,18 +80,13 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
-    public ByteOrder order() {
-        return order;
-    }
-
-    @Override
     public ByteBuf unwrap() {
         return null;
     }
 
     @Override
     public ByteBuf asReadOnly() {
-        return Unpooled.unmodifiableBuffer(this);
+        return new ReadOnlyByteBuf(this);
     }
 
     @Override
@@ -115,22 +102,6 @@ public final class EmptyByteBuf extends ByteBuf {
     @Override
     public int maxCapacity() {
         return 0;
-    }
-
-    @Override
-    public ByteBuf order(ByteOrder endianness) {
-        requireNonNull(endianness, "endianness");
-        if (endianness == order()) {
-            return this;
-        }
-
-        EmptyByteBuf swapped = this.swapped;
-        if (swapped != null) {
-            return swapped;
-        }
-
-        this.swapped = swapped = new EmptyByteBuf(alloc(), endianness);
-        return swapped;
     }
 
     @Override
@@ -967,7 +938,7 @@ public final class EmptyByteBuf extends ByteBuf {
 
     @Override
     public String toString() {
-        return str;
+        return STR;
     }
 
     @Override

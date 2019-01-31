@@ -188,11 +188,6 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
     }
 
     @Override
-    public ByteOrder order() {
-        return ByteOrder.BIG_ENDIAN;
-    }
-
-    @Override
     public boolean hasArray() {
         return false;
     }
@@ -497,15 +492,6 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
     long addr(int index) {
         return memoryAddress + index;
-    }
-
-    @Override
-    protected SwappedByteBuf newSwappedByteBuf() {
-        if (PlatformDependent.isUnaligned()) {
-            // Only use if unaligned access is supported otherwise there is no gain.
-            return new UnsafeDirectSwappedByteBuf(this);
-        }
-        return super.newSwappedByteBuf();
     }
 
     @Override

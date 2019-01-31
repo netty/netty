@@ -30,7 +30,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
@@ -181,16 +180,9 @@ public final class ByteBufUtil {
 
         int hashCode = EmptyByteBuf.EMPTY_BYTE_BUF_HASH_CODE;
         int arrayIndex = buffer.readerIndex();
-        if (buffer.order() == ByteOrder.BIG_ENDIAN) {
-            for (int i = intCount; i > 0; i --) {
-                hashCode = 31 * hashCode + buffer.getInt(arrayIndex);
-                arrayIndex += 4;
-            }
-        } else {
-            for (int i = intCount; i > 0; i --) {
-                hashCode = 31 * hashCode + swapInt(buffer.getInt(arrayIndex));
-                arrayIndex += 4;
-            }
+        for (int i = intCount; i > 0; i --) {
+            hashCode = 31 * hashCode + buffer.getInt(arrayIndex);
+            arrayIndex += 4;
         }
 
         for (int i = byteCount; i > 0; i --) {
@@ -239,22 +231,12 @@ public final class ByteBufUtil {
         final int longCount = length >>> 3;
         final int byteCount = length & 7;
 
-        if (a.order() == b.order()) {
-            for (int i = longCount; i > 0; i --) {
-                if (a.getLong(aStartIndex) != b.getLong(bStartIndex)) {
-                    return false;
-                }
-                aStartIndex += 8;
-                bStartIndex += 8;
+        for (int i = longCount; i > 0; i --) {
+            if (a.getLong(aStartIndex) != b.getLong(bStartIndex)) {
+                return false;
             }
-        } else {
-            for (int i = longCount; i > 0; i --) {
-                if (a.getLong(aStartIndex) != swapLong(b.getLong(bStartIndex))) {
-                    return false;
-                }
-                aStartIndex += 8;
-                bStartIndex += 8;
-            }
+            aStartIndex += 8;
+            bStartIndex += 8;
         }
 
         for (int i = byteCount; i > 0; i --) {
@@ -295,17 +277,9 @@ public final class ByteBufUtil {
         int bIndex = bufferB.readerIndex();
 
         if (uintCount > 0) {
-            boolean bufferAIsBigEndian = bufferA.order() == ByteOrder.BIG_ENDIAN;
-            final long res;
             int uintCountIncrement = uintCount << 2;
+            final long res = compareUint(bufferA, bufferB, aIndex, bIndex, uintCountIncrement);
 
-            if (bufferA.order() == bufferB.order()) {
-                res = bufferAIsBigEndian ? compareUintBigEndian(bufferA, bufferB, aIndex, bIndex, uintCountIncrement) :
-                        compareUintLittleEndian(bufferA, bufferB, aIndex, bIndex, uintCountIncrement);
-            } else {
-                res = bufferAIsBigEndian ? compareUintBigEndianA(bufferA, bufferB, aIndex, bIndex, uintCountIncrement) :
-                        compareUintBigEndianB(bufferA, bufferB, aIndex, bIndex, uintCountIncrement);
-            }
             if (res != 0) {
                 // Ensure we not overflow when cast
                 return (int) Math.min(Integer.MAX_VALUE, Math.max(Integer.MIN_VALUE, res));
@@ -324,43 +298,10 @@ public final class ByteBufUtil {
         return aLen - bLen;
     }
 
-    private static long compareUintBigEndian(
+    private static long compareUint(
             ByteBuf bufferA, ByteBuf bufferB, int aIndex, int bIndex, int uintCountIncrement) {
         for (int aEnd = aIndex + uintCountIncrement; aIndex < aEnd; aIndex += 4, bIndex += 4) {
             long comp = bufferA.getUnsignedInt(aIndex) - bufferB.getUnsignedInt(bIndex);
-            if (comp != 0) {
-                return comp;
-            }
-        }
-        return 0;
-    }
-
-    private static long compareUintLittleEndian(
-            ByteBuf bufferA, ByteBuf bufferB, int aIndex, int bIndex, int uintCountIncrement) {
-        for (int aEnd = aIndex + uintCountIncrement; aIndex < aEnd; aIndex += 4, bIndex += 4) {
-            long comp = bufferA.getUnsignedIntLE(aIndex) - bufferB.getUnsignedIntLE(bIndex);
-            if (comp != 0) {
-                return comp;
-            }
-        }
-        return 0;
-    }
-
-    private static long compareUintBigEndianA(
-            ByteBuf bufferA, ByteBuf bufferB, int aIndex, int bIndex, int uintCountIncrement) {
-        for (int aEnd = aIndex + uintCountIncrement; aIndex < aEnd; aIndex += 4, bIndex += 4) {
-            long comp =  bufferA.getUnsignedInt(aIndex) - bufferB.getUnsignedIntLE(bIndex);
-            if (comp != 0) {
-                return comp;
-            }
-        }
-        return 0;
-    }
-
-    private static long compareUintBigEndianB(
-            ByteBuf bufferA, ByteBuf bufferB, int aIndex, int bIndex, int uintCountIncrement) {
-        for (int aEnd = aIndex + uintCountIncrement; aIndex < aEnd; aIndex += 4, bIndex += 4) {
-            long comp =  bufferA.getUnsignedIntLE(aIndex) - bufferB.getUnsignedInt(bIndex);
             if (comp != 0) {
                 return comp;
             }
@@ -410,30 +351,6 @@ public final class ByteBufUtil {
      */
     public static long swapLong(long value) {
         return Long.reverseBytes(value);
-    }
-
-    /**
-     * Writes a big-endian 16-bit short integer to the buffer.
-     */
-    @SuppressWarnings("deprecation")
-    public static ByteBuf writeShortBE(ByteBuf buf, int shortValue) {
-        return buf.order() == ByteOrder.BIG_ENDIAN? buf.writeShort(shortValue) : buf.writeShortLE(shortValue);
-    }
-
-    /**
-     * Sets a big-endian 16-bit short integer to the buffer.
-     */
-    @SuppressWarnings("deprecation")
-    public static ByteBuf setShortBE(ByteBuf buf, int index, int shortValue) {
-        return buf.order() == ByteOrder.BIG_ENDIAN? buf.setShort(index, shortValue) : buf.setShortLE(index, shortValue);
-    }
-
-    /**
-     * Writes a big-endian 24-bit medium integer to the buffer.
-     */
-    @SuppressWarnings("deprecation")
-    public static ByteBuf writeMediumBE(ByteBuf buf, int mediumValue) {
-        return buf.order() == ByteOrder.BIG_ENDIAN? buf.writeMedium(mediumValue) : buf.writeMediumLE(mediumValue);
     }
 
     /**

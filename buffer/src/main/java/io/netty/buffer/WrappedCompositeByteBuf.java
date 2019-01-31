@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -101,11 +100,6 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     @Override
     public int ensureWritable(int minWritableBytes, boolean force) {
         return wrapped.ensureWritable(minWritableBytes, force);
-    }
-
-    @Override
-    public ByteBuf order(ByteOrder endianness) {
-        return wrapped.order(endianness);
     }
 
     @Override
@@ -617,11 +611,6 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     }
 
     @Override
-    public final ByteOrder order() {
-        return wrapped.order();
-    }
-
-    @Override
     public final int numComponents() {
         return wrapped.numComponents();
     }
@@ -1053,11 +1042,6 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     @Override
     public ByteBuf asReadOnly() {
         return wrapped.asReadOnly();
-    }
-
-    @Override
-    protected SwappedByteBuf newSwappedByteBuf() {
-        return wrapped.newSwappedByteBuf();
     }
 
     @Override

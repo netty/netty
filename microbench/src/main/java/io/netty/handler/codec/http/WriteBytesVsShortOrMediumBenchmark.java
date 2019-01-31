@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -43,12 +42,12 @@ public class WriteBytesVsShortOrMediumBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public ByteBuf shortInt() {
-        return ByteBufUtil.writeShortBE(buf, CRLF_SHORT).writerIndex(0);
+        return buf.writeShort(CRLF_SHORT).writerIndex(0);
     }
 
     @Benchmark
     public ByteBuf mediumInt() {
-        return ByteBufUtil.writeMediumBE(buf, ZERO_CRLF_MEDIUM).writerIndex(0);
+        return buf.writeMedium(ZERO_CRLF_MEDIUM).writerIndex(0);
     }
 
     @Benchmark

@@ -20,7 +20,6 @@ import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCounted;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 /**
  * Abstract base class for derived {@link ByteBuf} implementations.
@@ -90,12 +89,6 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
     @Override
     public final ByteBufAllocator alloc() {
         return unwrap().alloc();
-    }
-
-    @Override
-    @Deprecated
-    public final ByteOrder order() {
-        return unwrap().order();
     }
 
     @Override

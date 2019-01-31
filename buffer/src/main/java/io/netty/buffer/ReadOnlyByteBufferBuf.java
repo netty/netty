@@ -325,11 +325,6 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
-    public ByteOrder order() {
-        return ByteOrder.BIG_ENDIAN;
-    }
-
-    @Override
     public ByteBuf unwrap() {
         return null;
     }

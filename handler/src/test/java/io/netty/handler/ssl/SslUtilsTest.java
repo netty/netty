@@ -15,47 +15,28 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import org.junit.Test;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.nio.ByteBuffer;
+import java.security.NoSuchAlgorithmException;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.security.NoSuchAlgorithmException;
 
-import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import org.junit.Test;
 
 public class SslUtilsTest {
 
-    @SuppressWarnings("deprecation")
     @Test
     public void testPacketLength() throws SSLException, NoSuchAlgorithmException {
-        SSLEngine engineLE = newEngine();
         SSLEngine engineBE = newEngine();
 
         ByteBuffer empty = ByteBuffer.allocate(0);
-        ByteBuffer cTOsLE = ByteBuffer.allocate(17 * 1024).order(ByteOrder.LITTLE_ENDIAN);
         ByteBuffer cTOsBE = ByteBuffer.allocate(17 * 1024);
 
-        assertTrue(engineLE.wrap(empty, cTOsLE).bytesProduced() > 0);
-        cTOsLE.flip();
-
         assertTrue(engineBE.wrap(empty, cTOsBE).bytesProduced() > 0);
-        cTOsBE.flip();
-
-        ByteBuf bufferLE = Unpooled.buffer().order(ByteOrder.LITTLE_ENDIAN).writeBytes(cTOsLE);
-        ByteBuf bufferBE = Unpooled.buffer().writeBytes(cTOsBE);
-
-        // Test that the packet-length for BE and LE is the same
-        assertEquals(getEncryptedPacketLength(bufferBE, 0), getEncryptedPacketLength(bufferLE, 0));
-        assertEquals(getEncryptedPacketLength(new ByteBuffer[] { bufferBE.nioBuffer() }, 0),
-                getEncryptedPacketLength(new ByteBuffer[] { bufferLE.nioBuffer().order(ByteOrder.LITTLE_ENDIAN) }, 0));
     }
 
     private static SSLEngine newEngine() throws SSLException, NoSuchAlgorithmException  {

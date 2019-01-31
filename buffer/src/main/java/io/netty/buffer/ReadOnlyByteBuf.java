@@ -21,25 +21,20 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
 /**
- * A derived buffer which forbids any write requests to its parent.  It is
- * recommended to use {@link Unpooled#unmodifiableBuffer(ByteBuf)}
- * instead of calling the constructor explicitly.
+ * A derived buffer which forbids any write requests to its parent.
  *
- * @deprecated Do not use.
  */
-@Deprecated
-public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
+class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
 
     private final ByteBuf buffer;
 
-    public ReadOnlyByteBuf(ByteBuf buffer) {
+    ReadOnlyByteBuf(ByteBuf buffer) {
         super(buffer.maxCapacity());
 
         if (buffer instanceof ReadOnlyByteBuf || buffer instanceof DuplicatedByteBuf) {
@@ -83,12 +78,6 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     @Override
     public ByteBufAllocator alloc() {
         return unwrap().alloc();
-    }
-
-    @Override
-    @Deprecated
-    public ByteOrder order() {
-        return unwrap().order();
     }
 
     @Override
@@ -295,7 +284,7 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public ByteBuf slice(int index, int length) {
-        return Unpooled.unmodifiableBuffer(unwrap().slice(index, length));
+        return unwrap().slice(index, length).asReadOnly();
     }
 
     @Override

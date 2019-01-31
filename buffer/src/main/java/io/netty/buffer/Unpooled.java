@@ -189,7 +189,7 @@ public final class Unpooled {
             return wrappedBuffer(
                     buffer.array(),
                     buffer.arrayOffset() + buffer.position(),
-                    buffer.remaining()).order(buffer.order());
+                    buffer.remaining());
         } else if (PlatformDependent.hasUnsafe()) {
             if (buffer.isReadOnly()) {
                 if (buffer.isDirect()) {
@@ -312,7 +312,7 @@ public final class Unpooled {
         case 1:
             ByteBuf buffer = buffers[0];
             if (buffer.isReadable()) {
-                return wrappedBuffer(buffer.order(BIG_ENDIAN));
+                return wrappedBuffer(buffer);
             } else {
                 buffer.release();
             }
@@ -396,7 +396,7 @@ public final class Unpooled {
         // See https://github.com/netty/netty/issues/3896
         ByteBuffer duplicate = buffer.duplicate();
         duplicate.get(copy);
-        return wrappedBuffer(copy).order(duplicate.order());
+        return wrappedBuffer(copy);
     }
 
     /**
@@ -465,8 +465,7 @@ public final class Unpooled {
      * {@code readableBytes} respectively.
      *
      * @throws IllegalArgumentException
-     *         if the specified buffers' endianness are different from each
-     *         other
+     *         if the total length of the specified buffers is too big
      */
     public static ByteBuf copiedBuffer(ByteBuf... buffers) {
         switch (buffers.length) {
@@ -477,7 +476,6 @@ public final class Unpooled {
         }
 
         // Merge the specified buffers into one buffer.
-        ByteOrder order = null;
         int length = 0;
         for (ByteBuf b: buffers) {
             int bLen = b.readableBytes();
@@ -489,13 +487,6 @@ public final class Unpooled {
                         "The total length of the specified buffers is too big.");
             }
             length += bLen;
-            if (order != null) {
-                if (!order.equals(b.order())) {
-                    throw new IllegalArgumentException("inconsistent byte order");
-                }
-            } else {
-                order = b.order();
-            }
         }
 
         if (length == 0) {
@@ -510,7 +501,7 @@ public final class Unpooled {
             j += bLen;
         }
 
-        return wrappedBuffer(mergedArray).order(order);
+        return wrappedBuffer(mergedArray);
     }
 
     /**
@@ -567,7 +558,7 @@ public final class Unpooled {
             j += bLen;
         }
 
-        return wrappedBuffer(mergedArray).order(order);
+        return wrappedBuffer(mergedArray);
     }
 
     /**
@@ -656,12 +647,7 @@ public final class Unpooled {
      */
     @Deprecated
     public static ByteBuf unmodifiableBuffer(ByteBuf buffer) {
-        ByteOrder endianness = buffer.order();
-        if (endianness == BIG_ENDIAN) {
-            return new ReadOnlyByteBuf(buffer);
-        }
-
-        return new ReadOnlyByteBuf(buffer.order(BIG_ENDIAN)).order(LITTLE_ENDIAN);
+        return new ReadOnlyByteBuf(buffer);
     }
 
     /**
@@ -844,17 +830,6 @@ public final class Unpooled {
      */
     public static ByteBuf unreleasableBuffer(ByteBuf buf) {
         return new UnreleasableByteBuf(buf);
-    }
-
-    /**
-     * Wrap the given {@link ByteBuf}s in an unmodifiable {@link ByteBuf}. Be aware the returned {@link ByteBuf} will
-     * not try to slice the given {@link ByteBuf}s to reduce GC-Pressure.
-     *
-     * @deprecated Use {@link #wrappedUnmodifiableBuffer(ByteBuf...)}.
-     */
-    @Deprecated
-    public static ByteBuf unmodifiableBuffer(ByteBuf... buffers) {
-        return wrappedUnmodifiableBuffer(true, buffers);
     }
 
     /**

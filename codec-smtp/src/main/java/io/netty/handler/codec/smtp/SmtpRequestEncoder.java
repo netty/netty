@@ -59,7 +59,7 @@ public final class SmtpRequestEncoder extends MessageToMessageEncoder<Object> {
             try {
                 req.command().encode(buffer);
                 writeParameters(req.parameters(), buffer);
-                ByteBufUtil.writeShortBE(buffer, CRLF_SHORT);
+                buffer.writeShort(CRLF_SHORT);
                 out.add(buffer);
                 release = false;
                 if (req.command().isContentExpected()) {

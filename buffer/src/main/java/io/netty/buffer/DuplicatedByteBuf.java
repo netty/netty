@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -30,15 +29,12 @@ import java.nio.channels.ScatteringByteChannel;
  * A derived buffer which simply forwards all data access requests to its
  * parent.  It is recommended to use {@link ByteBuf#duplicate()} instead
  * of calling the constructor explicitly.
- *
- * @deprecated Do not use.
  */
-@Deprecated
-public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
+class DuplicatedByteBuf extends AbstractDerivedByteBuf {
 
     private final ByteBuf buffer;
 
-    public DuplicatedByteBuf(ByteBuf buffer) {
+    DuplicatedByteBuf(ByteBuf buffer) {
         this(buffer, buffer.readerIndex(), buffer.writerIndex());
     }
 
@@ -64,12 +60,6 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
     @Override
     public ByteBufAllocator alloc() {
         return unwrap().alloc();
-    }
-
-    @Override
-    @Deprecated
-    public ByteOrder order() {
-        return unwrap().order();
     }
 
     @Override

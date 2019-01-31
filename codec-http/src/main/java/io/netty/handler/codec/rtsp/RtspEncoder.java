@@ -51,7 +51,7 @@ public class RtspEncoder extends HttpObjectEncoder<HttpMessage> {
             buf.writeCharSequence(request.uri(), CharsetUtil.UTF_8);
             buf.writeByte(SP);
             buf.writeCharSequence(request.protocolVersion().toString(), CharsetUtil.US_ASCII);
-            ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+            buf.writeShort(CRLF_SHORT);
         } else if (message instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) message;
             buf.writeCharSequence(response.protocolVersion().toString(), CharsetUtil.US_ASCII);
@@ -59,7 +59,7 @@ public class RtspEncoder extends HttpObjectEncoder<HttpMessage> {
             ByteBufUtil.copy(response.status().codeAsText(), buf);
             buf.writeByte(SP);
             buf.writeCharSequence(response.status().reasonPhrase(), CharsetUtil.US_ASCII);
-            ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+            buf.writeShort(CRLF_SHORT);
         } else {
             throw new UnsupportedMessageTypeException("Unsupported type "
                                 + StringUtil.simpleClassName(message));

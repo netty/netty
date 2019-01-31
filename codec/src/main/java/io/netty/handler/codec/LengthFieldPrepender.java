@@ -173,31 +173,47 @@ public class LengthFieldPrepender extends MessageToMessageEncoder<ByteBuf> {
                 throw new IllegalArgumentException(
                         "length does not fit into a byte: " + length);
             }
-            out.add(ctx.alloc().buffer(1).order(byteOrder).writeByte((byte) length));
+            out.add(ctx.alloc().buffer(1).writeByte((byte) length));
             break;
         case 2:
             if (length >= 65536) {
                 throw new IllegalArgumentException(
                         "length does not fit into a short integer: " + length);
             }
-            out.add(ctx.alloc().buffer(2).order(byteOrder).writeShort((short) length));
+            out.add(writeShort(ctx.alloc().buffer(2), byteOrder, (short) length));
             break;
         case 3:
             if (length >= 16777216) {
                 throw new IllegalArgumentException(
                         "length does not fit into a medium integer: " + length);
             }
-            out.add(ctx.alloc().buffer(3).order(byteOrder).writeMedium(length));
+            out.add(writeMedium(ctx.alloc().buffer(3), byteOrder, length));
             break;
         case 4:
-            out.add(ctx.alloc().buffer(4).order(byteOrder).writeInt(length));
+            out.add(writeInt(ctx.alloc().buffer(4), byteOrder, length));
             break;
         case 8:
-            out.add(ctx.alloc().buffer(8).order(byteOrder).writeLong(length));
+            out.add(writeLong(ctx.alloc().buffer(8), byteOrder, length));
             break;
         default:
             throw new Error("should not reach here");
         }
         out.add(msg.retain());
+    }
+
+    private ByteBuf writeShort(ByteBuf buf, ByteOrder order, int value) {
+        return order == ByteOrder.BIG_ENDIAN ? buf.writeShort(value) : buf.writeShortLE(value);
+    }
+
+    private ByteBuf writeMedium(ByteBuf buf, ByteOrder order, int value) {
+        return order == ByteOrder.BIG_ENDIAN ? buf.writeMedium(value) : buf.writeMediumLE(value);
+    }
+
+    private ByteBuf writeInt(ByteBuf buf, ByteOrder order, int value) {
+        return order == ByteOrder.BIG_ENDIAN ? buf.writeInt(value) : buf.writeIntLE(value);
+    }
+
+    private ByteBuf writeLong(ByteBuf buf, ByteOrder order, int value) {
+        return order == ByteOrder.BIG_ENDIAN ? buf.writeLong(value) : buf.writeLongLE(value);
     }
 }

@@ -118,12 +118,6 @@ public class WrappedUnpooledUnsafeByteBufTest extends BigEndianUnsafeDirectByteB
 
     @Test(expected = IndexOutOfBoundsException.class)
     @Override
-    public void testLittleEndianWithExpand() {
-        super.testLittleEndianWithExpand();
-    }
-
-    @Test(expected = IndexOutOfBoundsException.class)
-    @Override
     public void testWriteUsAsciiCharSequenceExpand() {
         super.testWriteUsAsciiCharSequenceExpand();
     }

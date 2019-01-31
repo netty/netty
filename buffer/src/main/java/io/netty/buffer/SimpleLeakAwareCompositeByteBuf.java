@@ -19,8 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import io.netty.util.ResourceLeakTracker;
 
-import java.nio.ByteOrder;
-
 class SimpleLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
 
     final ResourceLeakTracker<ByteBuf> leak;
@@ -59,15 +57,6 @@ class SimpleLeakAwareCompositeByteBuf extends WrappedCompositeByteBuf {
         // calling DefaultResourceLeak.track(...).
         boolean closed = leak.close(trackedByteBuf);
         assert closed;
-    }
-
-    @Override
-    public ByteBuf order(ByteOrder endianness) {
-        if (order() == endianness) {
-            return this;
-        } else {
-            return newLeakAwareByteBuf(super.order(endianness));
-        }
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,21 +15,13 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.internal.PlatformDependent;
-import org.junit.Assume;
-import org.junit.Before;
-
-public class LittleEndianUnsafeDirectByteBufTest extends LittleEndianDirectByteBufTest {
-
-    @Before
-    @Override
-    public void init() {
-        Assume.assumeTrue("sun.misc.Unsafe not found, skip tests", PlatformDependent.hasUnsafe());
-        super.init();
-    }
+/**
+ * Tests big-endian direct channel buffers
+ */
+public class PooledDirectByteBufTest extends AbstractPooledByteBufTest {
 
     @Override
-    protected ByteBuf newBuffer(int length, int maxCapacity) {
-        return new UnpooledUnsafeDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, length, maxCapacity);
+    protected ByteBuf alloc(int length, int maxCapacity) {
+        return PooledByteBufAllocator.DEFAULT.directBuffer(length, maxCapacity);
     }
 }

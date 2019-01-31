@@ -47,11 +47,6 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
         return buffer.slice(offset, length);
     }
 
-    @Test(expected = NullPointerException.class)
-    public void shouldNotAllowNullInConstructor() {
-        new SlicedByteBuf(null, 0, 0);
-    }
-
     @Test(expected = IndexOutOfBoundsException.class)
     @Override
     public void testInternalNioBuffer() {
@@ -110,12 +105,6 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
     @Override
     public void testGetReadOnlyHeapDst() {
         super.testGetReadOnlyHeapDst();
-    }
-
-    @Test
-    @Override
-    public void testLittleEndianWithExpand() {
-        // ignore for SlicedByteBuf
     }
 
     @Test

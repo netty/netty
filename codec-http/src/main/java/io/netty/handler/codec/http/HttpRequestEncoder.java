@@ -45,7 +45,7 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
         if (uri.isEmpty()) {
             // Add " / " as absolute path if uri is not present.
             // See http://tools.ietf.org/html/rfc2616#section-5.1.2
-            ByteBufUtil.writeMediumBE(buf, SPACE_SLASH_AND_SPACE_MEDIUM);
+            buf.writeMedium(SPACE_SLASH_AND_SPACE_MEDIUM);
         } else {
             CharSequence uriCharSequence = uri;
             boolean needSlash = false;
@@ -68,13 +68,13 @@ public class HttpRequestEncoder extends HttpObjectEncoder<HttpRequest> {
             buf.writeByte(SP).writeCharSequence(uriCharSequence, CharsetUtil.UTF_8);
             if (needSlash) {
                 // write "/ " after uri
-                ByteBufUtil.writeShortBE(buf, SLASH_AND_SPACE_SHORT);
+                buf.writeShort(SLASH_AND_SPACE_SHORT);
             } else {
                 buf.writeByte(SP);
             }
         }
 
         request.protocolVersion().encode(buf);
-        ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
+        buf.writeShort(CRLF_SHORT);
     }
 }

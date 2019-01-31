@@ -15,7 +15,7 @@
  */
 package io.netty.buffer;
 
-public class WrappedCompositeByteBufTest extends BigEndianCompositeByteBufTest {
+public class WrappedCompositeByteBufTest extends CompositeByteBufTest {
 
     @Override
     protected final ByteBuf newBuffer(int length, int maxCapacity) {

@@ -18,7 +18,6 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.EmptyByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -33,7 +32,6 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.LinkedList;
@@ -116,7 +114,7 @@ public class Http2FrameRoundtripTest {
             // Now verify that all of the reference counts are zero.
             for (ByteBuf buf : needReleasing) {
                 int expectedFinalRefCount = 0;
-                if (buf.isReadOnly() || buf instanceof EmptyByteBuf) {
+                if (buf.isReadOnly() || buf == EMPTY_BUFFER) {
                     // Special case for when we're writing slices of the padding buffer.
                     expectedFinalRefCount = 1;
                 }

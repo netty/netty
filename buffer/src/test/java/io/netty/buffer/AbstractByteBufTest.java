@@ -50,7 +50,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static io.netty.buffer.Unpooled.LITTLE_ENDIAN;
 import static io.netty.buffer.Unpooled.buffer;
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty.buffer.Unpooled.directBuffer;
@@ -1727,7 +1726,6 @@ public abstract class AbstractByteBufTest {
             assertEquals(i, buffer.readerIndex());
             assertEquals(CAPACITY, buffer.writerIndex());
             ByteBuf actualValue = buffer.readSlice(BLOCK_SIZE);
-            assertEquals(buffer.order(), actualValue.order());
             assertEquals(wrappedBuffer(expectedValue), actualValue);
 
             // Make sure if it is a sliced buffer.
@@ -1890,7 +1888,6 @@ public abstract class AbstractByteBufTest {
         assertEquals(0, copy.readerIndex());
         assertEquals(buffer.readableBytes(), copy.writerIndex());
         assertEquals(buffer.readableBytes(), copy.capacity());
-        assertSame(buffer.order(), copy.order());
         for (int i = 0; i < copy.capacity(); i ++) {
             assertEquals(buffer.getByte(i + readerIndex), copy.getByte(i));
         }
@@ -1916,7 +1913,6 @@ public abstract class AbstractByteBufTest {
 
         // Make sure all properties are copied.
         ByteBuf duplicate = buffer.duplicate();
-        assertSame(buffer.order(), duplicate.order());
         assertEquals(buffer.readableBytes(), duplicate.readableBytes());
         assertEquals(0, buffer.compareTo(duplicate));
 
@@ -1925,14 +1921,6 @@ public abstract class AbstractByteBufTest {
         assertEquals(buffer.getByte(readerIndex), duplicate.getByte(duplicate.readerIndex()));
         duplicate.setByte(duplicate.readerIndex(), (byte) (duplicate.getByte(duplicate.readerIndex()) + 1));
         assertEquals(buffer.getByte(readerIndex), duplicate.getByte(duplicate.readerIndex()));
-    }
-
-    @Test
-    public void testSliceEndianness() throws Exception {
-        assertEquals(buffer.order(), buffer.slice(0, buffer.capacity()).order());
-        assertEquals(buffer.order(), buffer.slice(0, buffer.capacity() - 1).order());
-        assertEquals(buffer.order(), buffer.slice(1, buffer.capacity() - 1).order());
-        assertEquals(buffer.order(), buffer.slice(1, buffer.capacity() - 2).order());
     }
 
     @Test
@@ -1995,11 +1983,9 @@ public abstract class AbstractByteBufTest {
         buffer.setBytes(0, value);
 
         assertEquals(buffer, wrappedBuffer(value));
-        assertEquals(buffer, wrappedBuffer(value).order(LITTLE_ENDIAN));
 
         value[0] ++;
         assertFalse(buffer.equals(wrappedBuffer(value)));
-        assertFalse(buffer.equals(wrappedBuffer(value).order(LITTLE_ENDIAN)));
     }
 
     @Test
@@ -2025,50 +2011,23 @@ public abstract class AbstractByteBufTest {
         buffer.setBytes(0, value);
 
         assertEquals(0, buffer.compareTo(wrappedBuffer(value)));
-        assertEquals(0, buffer.compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)));
 
         value[0] ++;
         assertTrue(buffer.compareTo(wrappedBuffer(value)) < 0);
-        assertTrue(buffer.compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)) < 0);
         value[0] -= 2;
         assertTrue(buffer.compareTo(wrappedBuffer(value)) > 0);
-        assertTrue(buffer.compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)) > 0);
         value[0] ++;
 
         assertTrue(buffer.compareTo(wrappedBuffer(value, 0, 31)) > 0);
-        assertTrue(buffer.compareTo(wrappedBuffer(value, 0, 31).order(LITTLE_ENDIAN)) > 0);
         assertTrue(buffer.slice(0, 31).compareTo(wrappedBuffer(value)) < 0);
-        assertTrue(buffer.slice(0, 31).compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)) < 0);
 
         ByteBuf retainedSlice = buffer.retainedSlice(0, 31);
         assertTrue(retainedSlice.compareTo(wrappedBuffer(value)) < 0);
         retainedSlice.release();
 
         retainedSlice = buffer.retainedSlice(0, 31);
-        assertTrue(retainedSlice.compareTo(wrappedBuffer(value).order(LITTLE_ENDIAN)) < 0);
+        assertTrue(retainedSlice.compareTo(wrappedBuffer(value)) < 0);
         retainedSlice.release();
-    }
-
-    @Test
-    public void testCompareTo2() {
-        byte[] bytes = {1, 2, 3, 4};
-        byte[] bytesReversed = {4, 3, 2, 1};
-
-        ByteBuf buf1 = newBuffer(4).clear().writeBytes(bytes).order(ByteOrder.LITTLE_ENDIAN);
-        ByteBuf buf2 = newBuffer(4).clear().writeBytes(bytesReversed).order(ByteOrder.LITTLE_ENDIAN);
-        ByteBuf buf3 = newBuffer(4).clear().writeBytes(bytes).order(ByteOrder.BIG_ENDIAN);
-        ByteBuf buf4 = newBuffer(4).clear().writeBytes(bytesReversed).order(ByteOrder.BIG_ENDIAN);
-        try {
-            assertEquals(buf1.compareTo(buf2), buf3.compareTo(buf4));
-            assertEquals(buf2.compareTo(buf1), buf4.compareTo(buf3));
-            assertEquals(buf1.compareTo(buf3), buf2.compareTo(buf4));
-            assertEquals(buf3.compareTo(buf1), buf4.compareTo(buf2));
-        } finally {
-            buf1.release();
-            buf2.release();
-            buf3.release();
-            buf4.release();
-        }
     }
 
     @Test
@@ -2171,7 +2130,7 @@ public abstract class AbstractByteBufTest {
     public void testToByteBuffer3() {
         assumeTrue(buffer.nioBufferCount() == 1);
 
-        assertEquals(buffer.order(), buffer.nioBuffer().order());
+        assertEquals(ByteOrder.BIG_ENDIAN, buffer.nioBuffer().order());
     }
 
     @Test
@@ -2537,17 +2496,6 @@ public abstract class AbstractByteBufTest {
         final ByteBuf buffer = newBuffer(8);
         buffer.writerIndex(buffer.capacity());
         buffer.ensureWritable(8, force);
-        buffer.release();
-    }
-
-    // See:
-    // - https://github.com/netty/netty/issues/2587
-    // - https://github.com/netty/netty/issues/2580
-    @Test
-    public void testLittleEndianWithExpand() {
-        ByteBuf buffer = newBuffer(0).order(LITTLE_ENDIAN);
-        buffer.writeInt(0x12345678);
-        assertEquals("78563412", ByteBufUtil.hexDump(buffer));
         buffer.release();
     }
 

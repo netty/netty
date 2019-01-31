@@ -17,32 +17,14 @@ package io.netty.buffer;
 
 import static java.util.Objects.requireNonNull;
 
-import java.nio.ByteOrder;
-
 /**
  * A {@link ByteBuf} implementation that wraps another buffer to prevent a user from increasing or decreasing the
  * wrapped buffer's reference count.
  */
 final class UnreleasableByteBuf extends WrappedByteBuf {
 
-    private SwappedByteBuf swappedBuf;
-
     UnreleasableByteBuf(ByteBuf buf) {
         super(buf instanceof UnreleasableByteBuf ? buf.unwrap() : buf);
-    }
-
-    @Override
-    public ByteBuf order(ByteOrder endianness) {
-        requireNonNull(endianness, "endianness");
-        if (endianness == order()) {
-            return this;
-        }
-
-        SwappedByteBuf swappedBuf = this.swappedBuf;
-        if (swappedBuf == null) {
-            this.swappedBuf = swappedBuf = new SwappedByteBuf(this);
-        }
-        return swappedBuf;
     }
 
     @Override

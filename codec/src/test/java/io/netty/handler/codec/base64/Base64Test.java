@@ -23,7 +23,6 @@ import io.netty.util.internal.StringUtil;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
-import java.nio.ByteOrder;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.ThreadLocalRandom;
@@ -121,30 +120,21 @@ public class Base64Test {
     }
 
     @Test
-    public void testEncodeDecodeBE() {
-        testEncodeDecode(ByteOrder.BIG_ENDIAN);
+    public void testEncodeDecode() {
+        testEncodeDecode(64);
+        testEncodeDecode(128);
+        testEncodeDecode(512);
+        testEncodeDecode(1024);
+        testEncodeDecode(4096);
+        testEncodeDecode(8192);
+        testEncodeDecode(16384);
     }
 
-    @Test
-    public void testEncodeDecodeLE() {
-        testEncodeDecode(ByteOrder.LITTLE_ENDIAN);
-    }
-
-    private static void testEncodeDecode(ByteOrder order) {
-        testEncodeDecode(64, order);
-        testEncodeDecode(128, order);
-        testEncodeDecode(512, order);
-        testEncodeDecode(1024, order);
-        testEncodeDecode(4096, order);
-        testEncodeDecode(8192, order);
-        testEncodeDecode(16384, order);
-    }
-
-    private static void testEncodeDecode(int size, ByteOrder order) {
+    private static void testEncodeDecode(int size) {
         byte[] bytes = new byte[size];
         ThreadLocalRandom.current().nextBytes(bytes);
 
-        ByteBuf src = Unpooled.wrappedBuffer(bytes).order(order);
+        ByteBuf src = Unpooled.wrappedBuffer(bytes);
         ByteBuf encoded = Base64.encode(src);
         ByteBuf decoded = Base64.decode(encoded);
         ByteBuf expectedBuf = Unpooled.wrappedBuffer(bytes);

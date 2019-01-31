@@ -256,14 +256,4 @@ class UnpooledUnsafeHeapByteBuf extends UnpooledHeapByteBuf {
         writerIndex = wIndex + length;
         return this;
     }
-
-    @Override
-    @Deprecated
-    protected SwappedByteBuf newSwappedByteBuf() {
-        if (PlatformDependent.isUnaligned()) {
-            // Only use if unaligned access is supported otherwise there is no gain.
-            return new UnsafeHeapSwappedByteBuf(this);
-        }
-        return super.newSwappedByteBuf();
-    }
 }

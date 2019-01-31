@@ -38,11 +38,12 @@ final class HttpHeadersEncoder {
         int offset = buf.writerIndex();
         writeAscii(buf, offset, name);
         offset += nameLen;
-        ByteBufUtil.setShortBE(buf, offset, COLON_AND_SPACE_SHORT);
+        buf.setShort(offset, COLON_AND_SPACE_SHORT);
+        buf.setShort(offset, COLON_AND_SPACE_SHORT);
         offset += 2;
         writeAscii(buf, offset, value);
         offset += valueLen;
-        ByteBufUtil.setShortBE(buf, offset, CRLF_SHORT);
+        buf.setShort(offset, CRLF_SHORT);
         offset += 2;
         buf.writerIndex(offset);
     }

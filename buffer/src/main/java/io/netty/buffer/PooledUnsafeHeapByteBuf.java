@@ -17,7 +17,6 @@ package io.netty.buffer;
 
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
-import io.netty.util.internal.PlatformDependent;
 
 final class PooledUnsafeHeapByteBuf extends PooledHeapByteBuf {
 
@@ -142,15 +141,5 @@ final class PooledUnsafeHeapByteBuf extends PooledHeapByteBuf {
         UnsafeByteBufUtil.setZero(memory, idx(wIndex), length);
         writerIndex = wIndex + length;
         return this;
-    }
-
-    @Override
-    @Deprecated
-    protected SwappedByteBuf newSwappedByteBuf() {
-        if (PlatformDependent.isUnaligned()) {
-            // Only use if unaligned access is supported otherwise there is no gain.
-            return new UnsafeHeapSwappedByteBuf(this);
-        }
-        return super.newSwappedByteBuf();
     }
 }

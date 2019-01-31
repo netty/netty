@@ -449,23 +449,23 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
      * @throws DecoderException if failed to decode the specified region
      */
     protected long getUnadjustedFrameLength(ByteBuf buf, int offset, int length, ByteOrder order) {
-        buf = buf.order(order);
+        boolean be = order == ByteOrder.BIG_ENDIAN;
         long frameLength;
         switch (length) {
         case 1:
             frameLength = buf.getUnsignedByte(offset);
             break;
         case 2:
-            frameLength = buf.getUnsignedShort(offset);
+            frameLength = be ? buf.getUnsignedShort(offset) : buf.getUnsignedShortLE(offset);
             break;
         case 3:
-            frameLength = buf.getUnsignedMedium(offset);
+            frameLength = be ? buf.getUnsignedMedium(offset) : buf.getUnsignedMediumLE(offset);
             break;
         case 4:
-            frameLength = buf.getUnsignedInt(offset);
+            frameLength = be ? buf.getUnsignedInt(offset) : buf.getUnsignedIntLE(offset);
             break;
         case 8:
-            frameLength = buf.getLong(offset);
+            frameLength = be ? buf.getLong(offset) : buf.getLongLE(offset);
             break;
         default:
             throw new DecoderException(
