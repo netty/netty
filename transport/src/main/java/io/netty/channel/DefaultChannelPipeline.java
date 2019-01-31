@@ -1019,7 +1019,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     /**
      * Called once a {@link Throwable} hit the end of the {@link ChannelPipeline} without been handled by the user
-     * in {@link ChannelHandler#exceptionCaught(ChannelHandlerContext, Throwable)}.
+     * in {@link ChannelInboundHandler#exceptionCaught(ChannelHandlerContext, Throwable)}.
      */
     protected void onUnhandledInboundException(Throwable cause) {
         try {

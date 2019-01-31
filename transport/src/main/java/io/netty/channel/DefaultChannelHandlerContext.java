@@ -82,7 +82,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
     private static final int MASK_WRITE = 1 << 16;
     private static final int MASK_FLUSH = 1 << 17;
 
-    private static final int MASK_ALL_INBOUND = MASK_CHANNEL_REGISTERED |
+    private static final int MASK_ALL_INBOUND = MASK_EXCEPTION_CAUGHT | MASK_CHANNEL_REGISTERED |
             MASK_CHANNEL_UNREGISTERED | MASK_CHANNEL_ACTIVE | MASK_CHANNEL_INACTIVE | MASK_CHANNEL_READ |
             MASK_CHANNEL_READ_COMPLETE | MASK_USER_EVENT_TRIGGERED | MASK_CHANNEL_WRITABILITY_CHANGED;
     private static final int MASK_ALL_OUTBOUND = MASK_BIND | MASK_CONNECT | MASK_DISCONNECT |
@@ -154,14 +154,14 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
      * Calculate the {@code executionMask}.
      */
     private static int mask0(Class<? extends ChannelHandler> handlerType) {
-        int mask = MASK_EXCEPTION_CAUGHT;
+        int mask = 0;
         try {
-            if (isSkippable(handlerType, "exceptionCaught", ChannelHandlerContext.class, Throwable.class)) {
-                mask &= ~MASK_EXCEPTION_CAUGHT;
-            }
-
             if (ChannelInboundHandler.class.isAssignableFrom(handlerType)) {
                 mask |= MASK_ALL_INBOUND;
+
+                if (isSkippable(handlerType, "exceptionCaught", ChannelHandlerContext.class, Throwable.class)) {
+                    mask &= ~MASK_EXCEPTION_CAUGHT;
+                }
 
                 if (isSkippable(handlerType, "channelRegistered", ChannelHandlerContext.class)) {
                     mask &= ~MASK_CHANNEL_REGISTERED;
@@ -375,7 +375,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
 
     void invokeExceptionCaught(final Throwable cause) {
         try {
-            handler().exceptionCaught(this, cause);
+            ((ChannelInboundHandler) handler()).exceptionCaught(this, cause);
         } catch (Throwable error) {
             if (logger.isDebugEnabled()) {
                 logger.debug(
@@ -744,7 +744,15 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
         try {
             ((ChannelOutboundHandler) handler()).read(this);
         } catch (Throwable t) {
+            invokeExceptionCaughtFromOutbound(t);
+        }
+    }
+
+    private void invokeExceptionCaughtFromOutbound(Throwable t) {
+        if ((executionMask & MASK_EXCEPTION_CAUGHT) != 0) {
             notifyHandlerException(t);
+        } else {
+            findContextInbound(MASK_EXCEPTION_CAUGHT).notifyHandlerException(t);
         }
     }
 
@@ -790,7 +798,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
         try {
             ((ChannelOutboundHandler) handler()).flush(this);
         } catch (Throwable t) {
-            notifyHandlerException(t);
+            invokeExceptionCaughtFromOutbound(t);
         }
     }
 

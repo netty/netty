@@ -258,8 +258,9 @@ public class ReentrantChannelTest extends BaseChannelTest {
                 throw new Exception("intentional failure");
             }
 
+        }, new ChannelInboundHandlerAdapter() {
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 ctx.close();
             }
         });

@@ -89,19 +89,11 @@ public class CombinedChannelDuplexHandlerTest {
     }
 
     @Test
-    public void testExceptionCaughtBothCombinedHandlers() {
+    public void testExceptionCaught() {
         final Exception exception = new Exception();
         final Queue<ChannelHandler> queue = new ArrayDeque<>();
 
         ChannelInboundHandler inboundHandler = new ChannelInboundHandlerAdapter() {
-            @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                assertSame(exception, cause);
-                queue.add(this);
-                ctx.fireExceptionCaught(cause);
-            }
-        };
-        ChannelOutboundHandler outboundHandler = new ChannelOutboundHandlerAdapter() {
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                 assertSame(exception, cause);
@@ -118,11 +110,10 @@ public class CombinedChannelDuplexHandlerTest {
         };
         EmbeddedChannel channel = new EmbeddedChannel(
                 new CombinedChannelDuplexHandler<>(
-                        inboundHandler, outboundHandler), lastHandler);
+                        inboundHandler, new ChannelOutboundHandlerAdapter()), lastHandler);
         channel.pipeline().fireExceptionCaught(exception);
         assertFalse(channel.finish());
         assertSame(inboundHandler, queue.poll());
-        assertSame(outboundHandler, queue.poll());
         assertSame(lastHandler, queue.poll());
         assertTrue(queue.isEmpty());
     }

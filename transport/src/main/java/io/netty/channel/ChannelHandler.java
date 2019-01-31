@@ -189,14 +189,6 @@ public interface ChannelHandler {
     void handlerRemoved(ChannelHandlerContext ctx) throws Exception;
 
     /**
-     * Gets called if a {@link Throwable} was thrown.
-     *
-     * @deprecated is part of {@link ChannelInboundHandler}
-     */
-    @Deprecated
-    void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception;
-
-    /**
      * Indicates that the same instance of the annotated {@link ChannelHandler}
      * can be added to one or more {@link ChannelPipeline}s multiple times
      * without a race condition.
