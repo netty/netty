@@ -28,6 +28,7 @@ import io.netty.util.ReferenceCountUtil;
 import java.util.List;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * An abstract {@link ChannelHandler} that aggregates a series of message objects into a single aggregated message.
@@ -81,9 +82,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     }
 
     private static void validateMaxContentLength(int maxContentLength) {
-        if (maxContentLength < 0) {
-            throw new IllegalArgumentException("maxContentLength: " + maxContentLength + " (expected: >= 0)");
-        }
+        checkPositiveOrZero(maxContentLength, "maxContentLength");
     }
 
     @Override
