@@ -19,6 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
@@ -107,12 +108,15 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
 
     @Override
     public final ChannelHandlerContext fireExceptionCaught(Throwable cause) {
+        ChannelHandler handler = handler();
         try {
-            handler().exceptionCaught(this, cause);
+            if (handler instanceof ChannelInboundHandler) {
+                ((ChannelInboundHandler) handler).exceptionCaught(this, cause);
+            }
         } catch (Exception e) {
             handleException(e);
         }
-        return null;
+        return this;
     }
 
     @Override

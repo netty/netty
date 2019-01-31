@@ -80,16 +80,4 @@ public abstract class ChannelHandlerAdapter implements ChannelHandler {
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         // NOOP
     }
-
-    /**
-     * Calls {@link ChannelHandlerContext#fireExceptionCaught(Throwable)} to forward
-     * to the next {@link ChannelHandler} in the {@link ChannelPipeline}.
-     *
-     * Sub-classes may override this method to change behavior.
-     */
-    @Skip
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        ctx.fireExceptionCaught(cause);
-    }
 }

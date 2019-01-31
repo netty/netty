@@ -19,9 +19,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.internal.ThrowableUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 
@@ -30,8 +27,6 @@ import java.net.SocketAddress;
  */
 public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O extends ChannelOutboundHandler>
         extends ChannelDuplexHandler {
-
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(CombinedChannelDuplexHandler.class);
 
     private DelegatingChannelHandlerContext inboundCtx;
     private DelegatingChannelHandlerContext outboundCtx;
@@ -136,35 +131,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
 
         outboundCtx = new DelegatingChannelHandlerContext(ctx, outboundHandler);
-        inboundCtx = new DelegatingChannelHandlerContext(ctx, inboundHandler) {
-            @SuppressWarnings("deprecation")
-            @Override
-            public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
-                if (!outboundCtx.removed) {
-                    try {
-                        // We directly delegate to the ChannelOutboundHandler as this may override exceptionCaught(...)
-                        // as well
-                        outboundHandler.exceptionCaught(outboundCtx, cause);
-                    } catch (Throwable error) {
-                        if (logger.isDebugEnabled()) {
-                            logger.debug(
-                                    "An exception {}" +
-                                    "was thrown by a user handler's exceptionCaught() " +
-                                    "method while handling the following exception:",
-                                    ThrowableUtil.stackTraceToString(error), cause);
-                        } else if (logger.isWarnEnabled()) {
-                            logger.warn(
-                                    "An exception '{}' [enable DEBUG level for full stacktrace] " +
-                                    "was thrown by a user handler's exceptionCaught() " +
-                                    "method while handling the following exception:", error, cause);
-                        }
-                    }
-                } else {
-                    super.fireExceptionCaught(cause);
-                }
-                return this;
-            }
-        };
+        inboundCtx = new DelegatingChannelHandlerContext(ctx, inboundHandler);
 
         // The inboundCtx and outboundCtx were created and set now it's safe to call removeInboundHandler() and
         // removeOutboundHandler().
@@ -371,7 +338,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
     }
 
-    private static class DelegatingChannelHandlerContext implements ChannelHandlerContext {
+    private static final class DelegatingChannelHandlerContext implements ChannelHandlerContext {
 
         private final ChannelHandlerContext ctx;
         private final ChannelHandler handler;
@@ -609,7 +576,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
             return ctx.channel().hasAttr(key);
         }
 
-        final void remove() {
+        void remove() {
             EventExecutor executor = executor();
             if (executor.inEventLoop()) {
                 remove0();

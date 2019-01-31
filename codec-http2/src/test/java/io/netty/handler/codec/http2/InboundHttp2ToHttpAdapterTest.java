@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -43,7 +42,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
@@ -667,7 +665,7 @@ public class InboundHttp2ToHttpAdapterTest {
 
                 clientDelegator = new HttpResponseDelegator(clientListener, clientLatch, clientLatch2);
                 p.addLast(clientDelegator);
-                p.addLast(new ChannelHandlerAdapter() {
+                p.addLast(new ChannelInboundHandlerAdapter() {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                         Http2Exception e = getEmbeddedHttp2Exception(cause);

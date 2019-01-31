@@ -1488,7 +1488,7 @@ public class DefaultChannelPipelineTest {
         fail("handler was not one of the expected handlers");
     }
 
-    private static final class CheckOrderHandler extends ChannelHandlerAdapter {
+    private static final class CheckOrderHandler extends ChannelInboundHandlerAdapter {
         private final Queue<CheckOrderHandler> addedQueue;
         private final Queue<CheckOrderHandler> removedQueue;
         private final AtomicReference<Throwable> error = new AtomicReference<>();
