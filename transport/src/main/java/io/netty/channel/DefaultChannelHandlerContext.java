@@ -750,9 +750,9 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
 
     private void invokeExceptionCaughtFromOutbound(Throwable t) {
         if ((executionMask & MASK_EXCEPTION_CAUGHT) != 0) {
-            invokeExceptionCaught(t);
+            notifyHandlerException(t);
         } else {
-            findContextInbound(MASK_EXCEPTION_CAUGHT).invokeExceptionCaught(t);
+            findContextInbound(MASK_EXCEPTION_CAUGHT).notifyHandlerException(t);
         }
     }
 
