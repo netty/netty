@@ -194,19 +194,6 @@ public class DefaultCookie implements Cookie {
         return 0;
     }
 
-    /**
-     * Validate a cookie attribute value, throws a {@link IllegalArgumentException} otherwise.
-     * Only intended to be used by {@link io.netty.handler.codec.http.DefaultCookie}.
-     * @param name attribute name
-     * @param value attribute value
-     * @return the trimmed, validated attribute value
-     * @deprecated CookieUtil is package private, will be removed once old Cookie API is dropped
-     */
-    @Deprecated
-    protected String validateValue(String name, String value) {
-        return validateAttributeValue(name, value);
-    }
-
     @Override
     public String toString() {
         StringBuilder buf = stringBuilder()
