@@ -105,10 +105,10 @@ public final class ServerCookieEncoder extends CookieEncoder {
             add(buf, CookieHeaderNames.MAX_AGE, cookie.maxAge());
             Date expires = new Date(cookie.maxAge() * 1000 + System.currentTimeMillis());
             buf.append(CookieHeaderNames.EXPIRES);
-            buf.append((char) HttpConstants.EQUALS);
+            buf.append('=');
             DateFormatter.append(expires, buf);
-            buf.append((char) HttpConstants.SEMICOLON);
-            buf.append((char) HttpConstants.SP);
+            buf.append(';');
+            buf.append(HttpConstants.SP_CHAR);
         }
 
         if (cookie.path() != null) {
