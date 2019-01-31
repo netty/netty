@@ -30,6 +30,7 @@ import io.netty.util.AsciiString;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * <p>
@@ -88,14 +89,14 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
     @Override
     protected FullHttpRequest newHandshakeRequest() {
         // Make keys
-        int spaces1 = WebSocketUtil.randomNumber(1, 12);
-        int spaces2 = WebSocketUtil.randomNumber(1, 12);
+        int spaces1 = ThreadLocalRandom.current().nextInt(1, 13);
+        int spaces2 = ThreadLocalRandom.current().nextInt(1, 13);
 
         int max1 = Integer.MAX_VALUE / spaces1;
         int max2 = Integer.MAX_VALUE / spaces2;
 
-        int number1 = WebSocketUtil.randomNumber(0, max1);
-        int number2 = WebSocketUtil.randomNumber(0, max2);
+        int number1 = ThreadLocalRandom.current().nextInt(0, max1);
+        int number2 = ThreadLocalRandom.current().nextInt(0, max2);
 
         int product1 = number1 * spaces1;
         int product2 = number2 * spaces2;
@@ -201,12 +202,12 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
     }
 
     private static String insertRandomCharacters(String key) {
-        int count = WebSocketUtil.randomNumber(1, 12);
+        int count = ThreadLocalRandom.current().nextInt(1, 13);
 
         char[] randomChars = new char[count];
         int randCount = 0;
         while (randCount < count) {
-            int rand = (int) (Math.random() * 0x7e + 0x21);
+            int rand = ThreadLocalRandom.current().nextInt(0x21, 0x7e + 0x21);
             if (0x21 < rand && rand < 0x2f || 0x3a < rand && rand < 0x7e) {
                 randomChars[randCount] = (char) rand;
                 randCount += 1;
@@ -214,7 +215,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         }
 
         for (int i = 0; i < count; i++) {
-            int split = WebSocketUtil.randomNumber(0, key.length());
+            int split = ThreadLocalRandom.current().nextInt(0, key.length() + 1);
             String part1 = key.substring(0, split);
             String part2 = key.substring(split);
             key = part1 + randomChars[i] + part2;
@@ -225,7 +226,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
 
     private static String insertSpaces(String key, int spaces) {
         for (int i = 0; i < spaces; i++) {
-            int split = WebSocketUtil.randomNumber(1, key.length() - 1);
+            int split = ThreadLocalRandom.current().nextInt(1, key.length());
             String part1 = key.substring(0, split);
             String part2 = key.substring(split);
             key = part1 + ' ' + part2;

@@ -63,6 +63,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * <p>
@@ -178,7 +179,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
 
             // Write payload
             if (maskPayload) {
-                int random = (int) (Math.random() * Integer.MAX_VALUE);
+                int random = ThreadLocalRandom.current().nextInt();
                 mask = ByteBuffer.allocate(4).putInt(random).array();
                 buf.writeBytes(mask);
 
