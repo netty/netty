@@ -70,6 +70,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     /**
      * The {@link EventLoopGroup} which is used to handle all the events for the to-be-created {@link Channel}
      */
+    /**
+     * 用户设置工作IO线程，执行和调度网络事件的读写
+     * @param group
+     * @return
+     */
     @SuppressWarnings("unchecked")
     public B group(EventLoopGroup group) {
         if (group == null) {
@@ -231,6 +236,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     private ChannelFuture doBind(final SocketAddress localAddress) {
+        //1.创建Channel
         final ChannelFuture regFuture = initAndRegister();
         final Channel channel = regFuture.channel();
         if (regFuture.cause() != null) {
@@ -260,12 +266,14 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     final ChannelFuture initAndRegister() {
         Channel channel;
         try {
+            // 创建新的NioServerSocketChannel
             channel = createChannel();
         } catch (Throwable t) {
             return VoidChannel.INSTANCE.newFailedFuture(t);
         }
 
         try {
+            // 设置Socket参数和NioServer，模板方法
             init(channel);
         } catch (Throwable t) {
             channel.unsafe().closeForcibly();

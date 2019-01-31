@@ -391,6 +391,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return remoteAddress0();
         }
 
+        /**
+         * 将NioServerSocketChannel注册到 Reactor线程的多路复用器上监听新客户端的接入
+         * @param promise
+         */
         @Override
         public final void register(final ChannelPromise promise) {
             if (eventLoop.inEventLoop()) {

@@ -103,6 +103,8 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
     @Override
     Channel createChannel() {
         EventLoop eventLoop = group().next();
+        // 参数1 是从父类的NIO线程池中顺序获取一个NioEventLoop,用于监听和接收客户端连接的Reactor线程
+        // 参数2 是所谓的workerGroup线程池，他就是处理I/O读写的Reactor线程组
         return channelFactory().newChannel(eventLoop, childGroup);
     }
 
@@ -122,6 +124,12 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
      * Set the {@link EventExecutorGroup} for the parent (acceptor) and the child (client). These
      * {@link EventExecutorGroup}'s are used to handle all the events and IO for {@link SocketChannel} and
      * {@link Channel}'s.
+     */
+    /**
+     * reactor 线程池，负责调度和客户端的介入，网络读写事件的处理，用户自定义任务和定时任务的执行
+     * @param parentGroup
+     * @param childGroup
+     * @return
      */
     public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
         super.group(parentGroup);
@@ -193,11 +201,12 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
 
     @Override
     void init(Channel channel) throws Exception {
+        //ServerBootstrap.option设置的参数
         final Map<ChannelOption<?>, Object> options = options();
         synchronized (options) {
             channel.config().setOptions(options);
         }
-
+        //ServerBootstrap.attr设置的参数
         final Map<AttributeKey<?>, Object> attrs = attrs();
         synchronized (attrs) {
             for (Entry<AttributeKey<?>, Object> e: attrs.entrySet()) {
@@ -206,12 +215,12 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
                 channel.attr(key).set(e.getValue());
             }
         }
-
+        // 将父类Handler添加到 当前类的管道中
         ChannelPipeline p = channel.pipeline();
         if (handler() != null) {
             p.addLast(handler());
         }
-
+        // 子类的参数设置
         final ChannelHandler currentChildHandler = childHandler;
         final Entry<ChannelOption<?>, Object>[] currentChildOptions;
         final Entry<AttributeKey<?>, Object>[] currentChildAttrs;
@@ -222,6 +231,7 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
             currentChildAttrs = childAttrs.entrySet().toArray(newAttrArray(childAttrs.size()));
         }
 
+        // 添加用于服务端注册的Handler到管道中
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(Channel ch) throws Exception {
@@ -356,6 +366,10 @@ public final class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Se
         return buf.toString();
     }
 
+    /**
+     * 根据Channel 的类型通过反射创建Channel的实例，工厂模式
+     * @param <T>
+     */
     private static final class ServerBootstrapChannelFactory<T extends ServerChannel>
             implements ServerChannelFactory<T> {
 
