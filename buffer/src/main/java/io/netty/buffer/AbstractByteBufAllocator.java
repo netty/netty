@@ -16,6 +16,8 @@
 
 package io.netty.buffer;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakTracker;
 import io.netty.util.internal.PlatformDependent;
@@ -222,9 +224,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     }
 
     private static void validate(int initialCapacity, int maxCapacity) {
-        if (initialCapacity < 0) {
-            throw new IllegalArgumentException("initialCapacity: " + initialCapacity + " (expected: 0+)");
-        }
+        checkPositiveOrZero(initialCapacity, "initialCapacity");
         if (initialCapacity > maxCapacity) {
             throw new IllegalArgumentException(String.format(
                     "initialCapacity: %d (expected: not greater than maxCapacity(%d)",
@@ -249,9 +249,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     @Override
     public int calculateNewCapacity(int minNewCapacity, int maxCapacity) {
-        if (minNewCapacity < 0) {
-            throw new IllegalArgumentException("minNewCapacity: " + minNewCapacity + " (expected: 0+)");
-        }
+        checkPositiveOrZero(minNewCapacity, "minNewCapacity");
         if (minNewCapacity > maxCapacity) {
             throw new IllegalArgumentException(String.format(
                     "minNewCapacity: %d (expected: not greater than maxCapacity(%d)",

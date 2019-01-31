@@ -15,6 +15,9 @@
  */
 package io.netty.handler.codec;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import java.nio.ByteOrder;
 import java.util.List;
 
@@ -302,23 +305,11 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
             throw new NullPointerException("byteOrder");
         }
 
-        if (maxFrameLength <= 0) {
-            throw new IllegalArgumentException(
-                    "maxFrameLength must be a positive integer: " +
-                    maxFrameLength);
-        }
+        checkPositive(maxFrameLength, "maxFrameLength");
 
-        if (lengthFieldOffset < 0) {
-            throw new IllegalArgumentException(
-                    "lengthFieldOffset must be a non-negative integer: " +
-                    lengthFieldOffset);
-        }
+        checkPositiveOrZero(lengthFieldOffset, "lengthFieldOffset");
 
-        if (initialBytesToStrip < 0) {
-            throw new IllegalArgumentException(
-                    "initialBytesToStrip must be a non-negative integer: " +
-                    initialBytesToStrip);
-        }
+        checkPositiveOrZero(initialBytesToStrip, "initialBytesToStrip");
 
         if (lengthFieldOffset > maxFrameLength - lengthFieldLength) {
             throw new IllegalArgumentException(

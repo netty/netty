@@ -17,6 +17,8 @@
 package io.netty.buffer;
 
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.buffer.PoolArena.SizeClass;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
@@ -65,10 +67,7 @@ final class PoolThreadCache {
     PoolThreadCache(PoolArena<byte[]> heapArena, PoolArena<ByteBuffer> directArena,
                     int tinyCacheSize, int smallCacheSize, int normalCacheSize,
                     int maxCachedBufferCapacity, int freeSweepAllocationThreshold) {
-        if (maxCachedBufferCapacity < 0) {
-            throw new IllegalArgumentException("maxCachedBufferCapacity: "
-                    + maxCachedBufferCapacity + " (expected: >= 0)");
-        }
+        checkPositiveOrZero(maxCachedBufferCapacity, "maxCachedBufferCapacity");
         this.freeSweepAllocationThreshold = freeSweepAllocationThreshold;
         this.heapArena = heapArena;
         this.directArena = directArena;

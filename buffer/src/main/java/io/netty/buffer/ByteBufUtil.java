@@ -43,6 +43,7 @@ import java.util.Locale;
 
 import static io.netty.util.internal.MathUtil.isOutOfBounds;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty.util.internal.StringUtil.NEWLINE;
 import static io.netty.util.internal.StringUtil.isSurrogate;
 
@@ -1000,9 +1001,7 @@ public final class ByteBufUtil {
         }
 
         private static String hexDump(ByteBuf buffer, int fromIndex, int length) {
-            if (length < 0) {
-              throw new IllegalArgumentException("length: " + length);
-            }
+            checkPositiveOrZero(length, "length");
             if (length == 0) {
               return "";
             }
@@ -1022,9 +1021,7 @@ public final class ByteBufUtil {
         }
 
         private static String hexDump(byte[] array, int fromIndex, int length) {
-            if (length < 0) {
-              throw new IllegalArgumentException("length: " + length);
-            }
+            checkPositiveOrZero(length, "length");
             if (length == 0) {
                 return "";
             }

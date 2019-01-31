@@ -36,6 +36,8 @@ import static io.netty.channel.ChannelOption.WRITE_BUFFER_LOW_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_SPIN_COUNT;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * The default {@link ChannelConfig} implementation.
@@ -209,10 +211,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        if (connectTimeoutMillis < 0) {
-            throw new IllegalArgumentException(String.format(
-                    "connectTimeoutMillis: %d (expected: >= 0)", connectTimeoutMillis));
-        }
+        checkPositiveOrZero(connectTimeoutMillis, "connectTimeoutMillis");
         this.connectTimeoutMillis = connectTimeoutMillis;
         return this;
     }
@@ -261,10 +260,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setWriteSpinCount(int writeSpinCount) {
-        if (writeSpinCount <= 0) {
-            throw new IllegalArgumentException(
-                    "writeSpinCount must be a positive integer.");
-        }
+        checkPositive(writeSpinCount, "writeSpinCount");
         // Integer.MAX_VALUE is used as a special value in the channel implementations to indicate the channel cannot
         // accept any more data, and results in the writeOp being set on the selector (or execute a runnable which tries
         // to flush later because the writeSpinCount quantum has been exhausted). This strategy prevents additional
@@ -357,10 +353,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        if (writeBufferHighWaterMark < 0) {
-            throw new IllegalArgumentException(
-                    "writeBufferHighWaterMark must be >= 0");
-        }
+        checkPositiveOrZero(writeBufferHighWaterMark, "writeBufferHighWaterMark");
         for (;;) {
             WriteBufferWaterMark waterMark = writeBufferWaterMark;
             if (writeBufferHighWaterMark < waterMark.low()) {
@@ -383,10 +376,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        if (writeBufferLowWaterMark < 0) {
-            throw new IllegalArgumentException(
-                    "writeBufferLowWaterMark must be >= 0");
-        }
+        checkPositiveOrZero(writeBufferLowWaterMark, "writeBufferLowWaterMark");
         for (;;) {
             WriteBufferWaterMark waterMark = writeBufferWaterMark;
             if (writeBufferLowWaterMark > waterMark.high()) {

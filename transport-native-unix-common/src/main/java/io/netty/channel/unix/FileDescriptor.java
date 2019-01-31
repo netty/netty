@@ -27,6 +27,7 @@ import static io.netty.channel.unix.Errors.ioResult;
 import static io.netty.channel.unix.Errors.newIOException;
 import static io.netty.channel.unix.Limits.IOV_MAX;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.min;
 
 /**
@@ -82,9 +83,7 @@ public class FileDescriptor {
     final int fd;
 
     public FileDescriptor(int fd) {
-        if (fd < 0) {
-            throw new IllegalArgumentException("fd must be >= 0");
-        }
+        checkPositiveOrZero(fd, "fd");
         this.fd = fd;
     }
 

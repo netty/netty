@@ -16,6 +16,8 @@
 
 package io.netty.buffer;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
@@ -215,17 +217,10 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         this.normalCacheSize = normalCacheSize;
         chunkSize = validateAndCalculateChunkSize(pageSize, maxOrder);
 
-        if (nHeapArena < 0) {
-            throw new IllegalArgumentException("nHeapArena: " + nHeapArena + " (expected: >= 0)");
-        }
-        if (nDirectArena < 0) {
-            throw new IllegalArgumentException("nDirectArea: " + nDirectArena + " (expected: >= 0)");
-        }
+        checkPositiveOrZero(nHeapArena, "nHeapArena");
+        checkPositiveOrZero(nDirectArena, "nDirectArena");
 
-        if (directMemoryCacheAlignment < 0) {
-            throw new IllegalArgumentException("directMemoryCacheAlignment: "
-                    + directMemoryCacheAlignment + " (expected: >= 0)");
-        }
+        checkPositiveOrZero(directMemoryCacheAlignment, "directMemoryCacheAlignment");
         if (directMemoryCacheAlignment > 0 && !isDirectMemoryCacheAlignmentSupported()) {
             throw new IllegalArgumentException("directMemoryCacheAlignment is not supported");
         }

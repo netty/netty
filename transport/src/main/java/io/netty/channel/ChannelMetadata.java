@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 import java.net.SocketAddress;
 
 /**
@@ -46,10 +48,7 @@ public final class ChannelMetadata {
      * set for {@link MaxMessagesRecvByteBufAllocator#maxMessagesPerRead()}. Must be {@code > 0}.
      */
     public ChannelMetadata(boolean hasDisconnect, int defaultMaxMessagesPerRead) {
-        if (defaultMaxMessagesPerRead <= 0) {
-            throw new IllegalArgumentException("defaultMaxMessagesPerRead: " + defaultMaxMessagesPerRead +
-                                               " (expected > 0)");
-        }
+        checkPositive(defaultMaxMessagesPerRead, "defaultMaxMessagesPerRead");
         this.hasDisconnect = hasDisconnect;
         this.defaultMaxMessagesPerRead = defaultMaxMessagesPerRead;
     }

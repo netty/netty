@@ -31,6 +31,7 @@ import java.util.Map;
 import static io.netty.channel.ChannelOption.SO_BACKLOG;
 import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_REUSEADDR;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 @UnstableApi
 public class KQueueServerChannelConfig extends KQueueChannelConfig implements ServerSocketChannelConfig {
@@ -116,9 +117,7 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
     }
 
     public KQueueServerChannelConfig setBacklog(int backlog) {
-        if (backlog < 0) {
-            throw new IllegalArgumentException("backlog: " + backlog);
-        }
+        checkPositiveOrZero(backlog, "backlog");
         this.backlog = backlog;
         return this;
     }

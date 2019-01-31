@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.max;
 
 abstract class PoolArena<T> implements PoolArenaMetric {
@@ -330,9 +331,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     int normalizeCapacity(int reqCapacity) {
-        if (reqCapacity < 0) {
-            throw new IllegalArgumentException("capacity: " + reqCapacity + " (expected: 0+)");
-        }
+        checkPositiveOrZero(reqCapacity, "reqCapacity");
 
         if (reqCapacity >= chunkSize) {
             return directMemoryCacheAlignment == 0 ? reqCapacity : alignCapacity(reqCapacity);
