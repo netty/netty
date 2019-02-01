@@ -15,7 +15,7 @@
 package io.netty.microbench.concurrent;
 
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollHandler;
 import io.netty.channel.kqueue.KQueue;
@@ -203,24 +203,24 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
             executorToShutdown = executor;
             break;
         case nioEventLoop:
-            EventLoopGroup nioEventLoopGroup = new MultithreadEventLoopGroup(1,
-                    new DefaultThreadFactory(MultithreadEventLoopGroup.class), NioHandler.newFactory(),
+            EventLoopGroup nioEventLoopGroup = new MultiThreadEventLoopGroup(1,
+                    new DefaultThreadFactory(MultiThreadEventLoopGroup.class), NioHandler.newFactory(),
                     Integer.MAX_VALUE, RejectedExecutionHandlers.reject(), Integer.MAX_VALUE);
             executor = nioEventLoopGroup.next();
             executorToShutdown = nioEventLoopGroup;
             break;
         case epollEventLoop:
             Epoll.ensureAvailability();
-            EventLoopGroup epollEventLoopGroup = new MultithreadEventLoopGroup(1,
-                    new DefaultThreadFactory(MultithreadEventLoopGroup.class), EpollHandler.newFactory(),
+            EventLoopGroup epollEventLoopGroup = new MultiThreadEventLoopGroup(1,
+                    new DefaultThreadFactory(MultiThreadEventLoopGroup.class), EpollHandler.newFactory(),
                     Integer.MAX_VALUE, RejectedExecutionHandlers.reject(), Integer.MAX_VALUE);
             executor = epollEventLoopGroup.next();
             executorToShutdown = epollEventLoopGroup;
             break;
         case kqueueEventLoop:
             KQueue.ensureAvailability();
-            EventLoopGroup kqueueEventLoopGroup = new MultithreadEventLoopGroup(1,
-                    new DefaultThreadFactory(MultithreadEventLoopGroup.class), KQueueHandler.newFactory(),
+            EventLoopGroup kqueueEventLoopGroup = new MultiThreadEventLoopGroup(1,
+                    new DefaultThreadFactory(MultiThreadEventLoopGroup.class), KQueueHandler.newFactory(),
                     Integer.MAX_VALUE, RejectedExecutionHandlers.reject(), Integer.MAX_VALUE);
             executor = kqueueEventLoopGroup.next();
             executorToShutdown = kqueueEventLoopGroup;

@@ -18,7 +18,7 @@ package io.netty.example.http.snoop;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
@@ -47,8 +47,8 @@ public final class HttpSnoopServer {
         }
 
         // Configure the server.
-        EventLoopGroup bossGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
-        EventLoopGroup workerGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup bossGroup = new MultiThreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup workerGroup = new MultiThreadEventLoopGroup(NioHandler.newFactory());
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)

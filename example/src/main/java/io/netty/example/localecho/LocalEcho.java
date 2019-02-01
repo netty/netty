@@ -20,7 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
@@ -40,8 +40,8 @@ public final class LocalEcho {
         // Address to bind on / connect to.
         final LocalAddress addr = new LocalAddress(PORT);
 
-        EventLoopGroup serverGroup = new MultithreadEventLoopGroup(LocalHandler.newFactory());
-        EventLoopGroup clientGroup = new MultithreadEventLoopGroup(LocalHandler.newFactory());
+        EventLoopGroup serverGroup = new MultiThreadEventLoopGroup(LocalHandler.newFactory());
+        EventLoopGroup clientGroup = new MultiThreadEventLoopGroup(LocalHandler.newFactory());
         try {
             // Note that we can use any event loop to ensure certain local channels
             // are handled by the same event loop thread which drives a certain socket channel

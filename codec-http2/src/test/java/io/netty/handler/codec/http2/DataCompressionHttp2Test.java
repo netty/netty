@@ -25,13 +25,12 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
@@ -41,8 +40,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -275,8 +272,8 @@ public class DataCompressionHttp2Test {
                 any(ByteBuf.class), anyInt(), anyBoolean());
 
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
-        sb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()),
-                new MultithreadEventLoopGroup(NioHandler.newFactory()));
+        sb.group(new MultiThreadEventLoopGroup(NioHandler.newFactory()),
+                new MultiThreadEventLoopGroup(NioHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -300,7 +297,7 @@ public class DataCompressionHttp2Test {
             }
         });
 
-        cb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()));
+        cb.group(new MultiThreadEventLoopGroup(NioHandler.newFactory()));
         cb.channel(NioSocketChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override

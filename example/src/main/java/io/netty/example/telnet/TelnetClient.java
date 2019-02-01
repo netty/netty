@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.SslContext;
@@ -48,7 +48,7 @@ public final class TelnetClient {
             sslCtx = null;
         }
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(NioHandler.newFactory());
         try {
             Bootstrap b = new Bootstrap();
             b.group(group)

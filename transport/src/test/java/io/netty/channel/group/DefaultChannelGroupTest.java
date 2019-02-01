@@ -20,7 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -31,8 +31,8 @@ public class DefaultChannelGroupTest {
     // Test for #1183
     @Test
     public void testNotThrowBlockingOperationException() throws Exception {
-        EventLoopGroup bossGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
-        EventLoopGroup workerGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup bossGroup = new MultiThreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup workerGroup = new MultiThreadEventLoopGroup(NioHandler.newFactory());
 
         final ChannelGroup allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 

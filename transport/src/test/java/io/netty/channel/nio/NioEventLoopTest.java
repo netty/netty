@@ -19,7 +19,7 @@ import io.netty.channel.AbstractEventLoopTest;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.SingleThreadEventLoop;
@@ -48,7 +48,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
 
     @Override
     protected EventLoopGroup newEventLoopGroup() {
-        return new MultithreadEventLoopGroup(NioHandler.newFactory());
+        return new MultiThreadEventLoopGroup(NioHandler.newFactory());
     }
 
     @Override
@@ -85,7 +85,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
 
     @Test
     public void testScheduleBigDelayNotOverflow() {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(1, NioHandler.newFactory());
 
         final EventLoop el = group.next();
         Future<?> future = el.schedule(() -> {
@@ -172,7 +172,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         };
         // Just run often enough to trigger it normally.
         for (int i = 0; i < 1000; i++) {
-            EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+            EventLoopGroup group = new MultiThreadEventLoopGroup(1, NioHandler.newFactory());
             final EventLoop loop = group.next();
 
             Thread t = new Thread(() -> {

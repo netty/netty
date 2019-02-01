@@ -22,7 +22,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
@@ -80,7 +80,7 @@ final class SniClientJava8TestUtil {
         final String sniHost = "sni.netty.io";
         SelfSignedCertificate cert = new SelfSignedCertificate();
         LocalAddress address = new LocalAddress("test");
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(1, LocalHandler.newFactory());
         SslContext sslServerContext = null;
         SslContext sslClientContext = null;
 

@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -70,7 +70,7 @@ public final class SpdyClient {
             .build();
 
         HttpResponseClientHandler httpResponseHandler = new HttpResponseClientHandler();
-        EventLoopGroup workerGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup workerGroup = new MultiThreadEventLoopGroup(NioHandler.newFactory());
 
         try {
             Bootstrap b = new Bootstrap();

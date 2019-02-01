@@ -17,7 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import org.junit.Test;
 
 import static org.junit.Assert.fail;
@@ -27,7 +27,7 @@ public class EpollChannelConfigTest {
     @Test
     public void testOptionGetThrowsChannelException() throws Exception {
         Epoll.ensureAvailability();
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(1, EpollHandler.newFactory());
         try {
             EpollSocketChannel channel = new EpollSocketChannel(group.next());
             channel.config().getSoLinger();
@@ -46,7 +46,7 @@ public class EpollChannelConfigTest {
     @Test
     public void testOptionSetThrowsChannelException() throws Exception {
         Epoll.ensureAvailability();
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(1, EpollHandler.newFactory());
         try {
             EpollSocketChannel channel = new EpollSocketChannel(group.next());
             channel.config().setKeepAlive(true);

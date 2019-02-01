@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -42,7 +42,7 @@ public final class StompClient {
     static final String TOPIC = System.getProperty("topic", "jms.topic.exampleTopic");
 
     public static void main(String[] args) throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(NioHandler.newFactory());
         try {
             Bootstrap b = new Bootstrap();
             b.group(group).channel(NioSocketChannel.class);

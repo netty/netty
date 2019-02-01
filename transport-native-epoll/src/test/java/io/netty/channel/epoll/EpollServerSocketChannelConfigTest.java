@@ -19,7 +19,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -36,7 +36,7 @@ public class EpollServerSocketChannelConfigTest {
 
     @BeforeClass
     public static void before() {
-        group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        group = new MultiThreadEventLoopGroup(1, EpollHandler.newFactory());
         ServerBootstrap bootstrap = new ServerBootstrap();
         ch = (EpollServerSocketChannel) bootstrap.group(group)
                 .channel(EpollServerSocketChannel.class)

@@ -15,19 +15,19 @@
  */
 package io.netty.channel.local;
 
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * {@link MultithreadEventLoopGroup} which must be used for the local transport.
+ * {@link MultiThreadEventLoopGroup} which must be used for the local transport.
  *
- * @deprecated use {@link MultithreadEventLoopGroup} together with {@link LocalHandler}.
+ * @deprecated use {@link MultiThreadEventLoopGroup} together with {@link LocalHandler}.
  */
 @Deprecated
-public class LocalEventLoopGroup extends MultithreadEventLoopGroup {
+public class LocalEventLoopGroup extends MultiThreadEventLoopGroup {
 
     /**
      * Create a new instance with the default number of threads.

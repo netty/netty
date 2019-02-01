@@ -18,7 +18,7 @@ package io.netty.example.qotm;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 
@@ -33,7 +33,7 @@ public final class QuoteOfTheMomentServer {
     private static final int PORT = Integer.parseInt(System.getProperty("port", "7686"));
 
     public static void main(String[] args) throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(NioHandler.newFactory());
         try {
             Bootstrap b = new Bootstrap();
             b.group(group)

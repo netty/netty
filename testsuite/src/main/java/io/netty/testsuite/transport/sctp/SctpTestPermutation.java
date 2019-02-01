@@ -18,7 +18,7 @@ package io.netty.testsuite.transport.sctp;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.sctp.nio.NioSctpChannel;
 import io.netty.channel.sctp.nio.NioSctpServerChannel;
@@ -36,10 +36,10 @@ public final class SctpTestPermutation {
     private static final int BOSSES = 2;
     private static final int WORKERS = 3;
     private static final EventLoopGroup nioBossGroup =
-            new MultithreadEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-sctp-nio-boss", true),
+            new MultiThreadEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-sctp-nio-boss", true),
                     NioHandler.newFactory());
     private static final EventLoopGroup nioWorkerGroup =
-            new MultithreadEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-sctp-nio-worker", true),
+            new MultiThreadEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-sctp-nio-worker", true),
                     NioHandler.newFactory());
 
     static List<BootstrapFactory<ServerBootstrap>> sctpServerChannel() {

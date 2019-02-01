@@ -20,13 +20,12 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -35,7 +34,6 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ResourcesUtil;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
@@ -127,7 +125,7 @@ public class ParameterizedSslHandlerTest {
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(clientProvider).build();
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(NioHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         try {
@@ -304,7 +302,7 @@ public class ParameterizedSslHandlerTest {
                         ResourcesUtil.getFile(getClass(), "test_unencrypted.pem"))
                 .sslProvider(clientProvider).build();
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(NioHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         try {
@@ -395,7 +393,7 @@ public class ParameterizedSslHandlerTest {
                                                          .protocols(SslUtils.PROTOCOL_TLS_V1_2)
                                                          .build();
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(NioHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         try {

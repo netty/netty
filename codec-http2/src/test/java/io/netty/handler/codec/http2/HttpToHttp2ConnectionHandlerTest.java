@@ -25,7 +25,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalHandler;
@@ -47,7 +47,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.ArrayList;
@@ -500,7 +499,7 @@ public class HttpToHttp2ConnectionHandlerTest {
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
-        sb.group(new MultithreadEventLoopGroup(LocalHandler.newFactory()));
+        sb.group(new MultiThreadEventLoopGroup(LocalHandler.newFactory()));
         sb.channel(LocalServerChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -517,7 +516,7 @@ public class HttpToHttp2ConnectionHandlerTest {
             }
         });
 
-        cb.group(new MultithreadEventLoopGroup(LocalHandler.newFactory()));
+        cb.group(new MultiThreadEventLoopGroup(LocalHandler.newFactory()));
         cb.channel(LocalChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override

@@ -17,7 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.DefaultSelectStrategyFactory;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
 
 import java.util.concurrent.Executor;
@@ -27,10 +27,10 @@ import java.util.concurrent.ThreadFactory;
  * {@link EventLoopGroup} which uses epoll under the covers. Because of this
  * it only works on linux.
  *
- * @deprecated use {@link MultithreadEventLoopGroup} together with {@link EpollHandler}.
+ * @deprecated use {@link MultiThreadEventLoopGroup} together with {@link EpollHandler}.
  */
 @Deprecated
-public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
+public final class EpollEventLoopGroup extends MultiThreadEventLoopGroup {
     {
         // Ensure JNI is initialized by the time this class is loaded.
         Epoll.ensureAvailability();

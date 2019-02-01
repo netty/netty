@@ -24,7 +24,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.epoll.EpollHandler;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.epoll.EpollSocketChannel;
@@ -45,7 +45,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
 
     @Setup
     public void setup() throws Exception {
-        group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        group = new MultiThreadEventLoopGroup(1, EpollHandler.newFactory());
 
         // add an arbitrary timeout to make the timer reschedule
         future = group.schedule((Runnable) () -> {

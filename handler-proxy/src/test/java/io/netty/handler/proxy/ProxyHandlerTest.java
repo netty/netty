@@ -29,7 +29,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.SocketChannel;
@@ -83,7 +83,7 @@ public class ProxyHandlerTest {
     private static final String BAD_USERNAME = "badUser";
     private static final String BAD_PASSWORD = "badPassword";
 
-    static final EventLoopGroup group = new MultithreadEventLoopGroup(3,
+    static final EventLoopGroup group = new MultiThreadEventLoopGroup(3,
             new DefaultThreadFactory("proxy", true), NioHandler.newFactory());
 
     static final SslContext serverSslCtx;

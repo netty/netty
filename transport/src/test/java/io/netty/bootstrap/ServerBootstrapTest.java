@@ -21,7 +21,7 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
@@ -42,7 +42,7 @@ public class ServerBootstrapTest {
     public void testHandlerRegister() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<Throwable> error = new AtomicReference<>();
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(1, LocalHandler.newFactory());
         try {
             ServerBootstrap sb = new ServerBootstrap();
             sb.channel(LocalServerChannel.class)
@@ -97,7 +97,7 @@ public class ServerBootstrapTest {
             }
         };
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(1, LocalHandler.newFactory());
         Channel sch = null;
         Channel cch = null;
         try {

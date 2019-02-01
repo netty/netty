@@ -16,7 +16,7 @@
 package io.netty.channel.kqueue;
 
 import io.netty.channel.DefaultSelectStrategyFactory;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.UnstableApi;
@@ -25,11 +25,11 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * @deprecated use {@link MultithreadEventLoopGroup} together with {@link KQueueHandler}.
+ * @deprecated use {@link MultiThreadEventLoopGroup} together with {@link KQueueHandler}.
  */
 @Deprecated
 @UnstableApi
-public final class KQueueEventLoopGroup extends MultithreadEventLoopGroup {
+public final class KQueueEventLoopGroup extends MultiThreadEventLoopGroup {
     {
         // Ensure JNI is initialized by the time this class is loaded by this time!
         KQueue.ensureAvailability();

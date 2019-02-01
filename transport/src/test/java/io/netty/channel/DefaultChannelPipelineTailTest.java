@@ -35,7 +35,7 @@ public class DefaultChannelPipelineTailTest {
 
     @BeforeClass
     public static void init() {
-        GROUP = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        GROUP = new MultiThreadEventLoopGroup(1, LocalHandler.newFactory());
     }
 
     @AfterClass

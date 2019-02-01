@@ -21,7 +21,7 @@ import java.math.BigInteger;
 import javax.net.ssl.SSLSession;
 import javax.security.cert.X509Certificate;
 
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import org.bouncycastle.asn1.ocsp.OCSPResponseStatus;
 import org.bouncycastle.cert.ocsp.BasicOCSPResp;
@@ -88,7 +88,7 @@ public class OcspClientExample {
                 .build();
 
         try {
-            EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+            EventLoopGroup group = new MultiThreadEventLoopGroup(NioHandler.newFactory());
             try {
                 Promise<FullHttpResponse> promise = group.next().newPromise();
 

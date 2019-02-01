@@ -66,7 +66,7 @@ import static org.junit.Assert.fail;
 
 public class DefaultChannelPipelineTest {
 
-    private static final EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+    private static final EventLoopGroup group = new MultiThreadEventLoopGroup(1, LocalHandler.newFactory());
 
     private Channel self;
     private Channel peer;
@@ -755,7 +755,7 @@ public class DefaultChannelPipelineTest {
 
     @Test(timeout = 3000)
     public void testAddBefore() throws Throwable {
-        EventLoopGroup defaultGroup = new MultithreadEventLoopGroup(2, LocalHandler.newFactory());
+        EventLoopGroup defaultGroup = new MultiThreadEventLoopGroup(2, LocalHandler.newFactory());
         try {
             EventLoop eventLoop1 = defaultGroup.next();
             EventLoop eventLoop2 = defaultGroup.next();
@@ -781,7 +781,7 @@ public class DefaultChannelPipelineTest {
 
     @Test(timeout = 3000)
     public void testAddInListenerNio() throws Throwable {
-        EventLoopGroup nioEventLoopGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup nioEventLoopGroup = new MultiThreadEventLoopGroup(1, NioHandler.newFactory());
         try {
             testAddInListener(new NioSocketChannel(nioEventLoopGroup.next()));
         } finally {
@@ -847,7 +847,7 @@ public class DefaultChannelPipelineTest {
 
     @Test(timeout = 3000)
     public void testVoidPromiseNotify() throws Throwable {
-        EventLoopGroup defaultGroup = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup defaultGroup = new MultiThreadEventLoopGroup(1, LocalHandler.newFactory());
         EventLoop eventLoop1 = defaultGroup.next();
         ChannelPipeline pipeline1 = new LocalChannel(eventLoop1).pipeline();
 
@@ -877,7 +877,7 @@ public class DefaultChannelPipelineTest {
     // Test for https://github.com/netty/netty/issues/8676.
     @Test
     public void testHandlerRemovedOnlyCalledWhenHandlerAddedCalled() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(1, LocalHandler.newFactory());
         try {
             final AtomicReference<Error> errorRef = new AtomicReference<>();
 

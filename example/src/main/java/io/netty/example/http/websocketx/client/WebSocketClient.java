@@ -21,7 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -91,7 +91,7 @@ public final class WebSocketClient {
             sslCtx = null;
         }
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(NioHandler.newFactory());
         try {
             // Connect with V13 (RFC 6455 aka HyBi-17). You can change it to V08 or V00.
             // If you change it to V00, ping is not supported and remember to change

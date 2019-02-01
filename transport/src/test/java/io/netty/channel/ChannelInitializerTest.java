@@ -49,7 +49,7 @@ public class ChannelInitializerTest {
 
     @Before
     public void setUp() {
-        group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        group = new MultiThreadEventLoopGroup(1, LocalHandler.newFactory());
         server = new ServerBootstrap()
                 .group(group)
                 .channel(LocalServerChannel.class)

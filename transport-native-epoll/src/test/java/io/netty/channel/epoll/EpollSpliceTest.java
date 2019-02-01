@@ -25,7 +25,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.NetUtil;
@@ -55,7 +55,7 @@ public class EpollSpliceTest {
         final EchoHandler sh = new EchoHandler();
         final EchoHandler ch = new EchoHandler();
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(1, EpollHandler.newFactory());
         ServerBootstrap bs = new ServerBootstrap();
         bs.channel(EpollServerSocketChannel.class);
         bs.group(group).childHandler(sh);
@@ -181,7 +181,7 @@ public class EpollSpliceTest {
 
     @Test
     public void spliceToFile() throws Throwable {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(1, EpollHandler.newFactory());
         File file = File.createTempFile("netty-splice", null);
         file.deleteOnExit();
 

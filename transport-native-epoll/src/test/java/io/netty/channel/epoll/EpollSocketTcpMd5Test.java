@@ -21,7 +21,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.util.CharsetUtil;
 
 import java.net.InetSocketAddress;
@@ -42,7 +42,7 @@ public class EpollSocketTcpMd5Test {
 
     @BeforeClass
     public static void beforeClass() {
-        GROUP = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        GROUP = new MultiThreadEventLoopGroup(1, EpollHandler.newFactory());
     }
 
     @AfterClass

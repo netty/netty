@@ -15,14 +15,13 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalHandler;
 import io.netty.channel.nio.NioHandler;
 import org.junit.Test;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
@@ -31,7 +30,7 @@ public class DefaultDnsCnameCacheTest {
 
     @Test
     public void testExpire() throws Throwable {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(1, LocalHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -62,7 +61,7 @@ public class DefaultDnsCnameCacheTest {
     }
 
     private static void testExpireWithTTL0(int days) {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(1, LocalHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -76,7 +75,7 @@ public class DefaultDnsCnameCacheTest {
 
     @Test
     public void testMultipleCnamesForSameHostname() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(1, NioHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -92,7 +91,7 @@ public class DefaultDnsCnameCacheTest {
 
     @Test
     public void testAddSameCnameForSameHostname() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(1, LocalHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -108,7 +107,7 @@ public class DefaultDnsCnameCacheTest {
 
     @Test
     public void testClear() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(1, LocalHandler.newFactory());
 
         try {
             EventLoop loop = group.next();

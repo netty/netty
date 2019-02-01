@@ -18,7 +18,7 @@ package io.netty.example.proxy;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
@@ -34,8 +34,8 @@ public final class HexDumpProxy {
         System.err.println("Proxying *:" + LOCAL_PORT + " to " + REMOTE_HOST + ':' + REMOTE_PORT + " ...");
 
         // Configure the bootstrap.
-        EventLoopGroup bossGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
-        EventLoopGroup workerGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup bossGroup = new MultiThreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup workerGroup = new MultiThreadEventLoopGroup(NioHandler.newFactory());
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)

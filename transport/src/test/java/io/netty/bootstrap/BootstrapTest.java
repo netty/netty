@@ -25,7 +25,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalHandler;
@@ -61,8 +61,8 @@ import static org.junit.Assert.assertTrue;
 
 public class BootstrapTest {
 
-    private static final EventLoopGroup groupA = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
-    private static final EventLoopGroup groupB = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+    private static final EventLoopGroup groupA = new MultiThreadEventLoopGroup(1, LocalHandler.newFactory());
+    private static final EventLoopGroup groupB = new MultiThreadEventLoopGroup(1, LocalHandler.newFactory());
     private static final ChannelInboundHandler dummyHandler = new DummyHandler();
 
     @AfterClass
@@ -135,7 +135,7 @@ public class BootstrapTest {
 
     @Test
     public void testLateRegisterSuccess() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(1, LocalHandler.newFactory());
         try {
             LateRegisterHandler registerHandler = new LateRegisterHandler();
             ServerBootstrap bootstrap = new ServerBootstrap();
@@ -162,7 +162,7 @@ public class BootstrapTest {
 
     @Test
     public void testLateRegisterSuccessBindFailed() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(1, LocalHandler.newFactory());
         LateRegisterHandler registerHandler = new LateRegisterHandler();
         try {
             ServerBootstrap bootstrap = new ServerBootstrap();
@@ -206,7 +206,7 @@ public class BootstrapTest {
 
     @Test(expected = ConnectException.class, timeout = 10000)
     public void testLateRegistrationConnect() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultiThreadEventLoopGroup(1, LocalHandler.newFactory());
         LateRegisterHandler registerHandler = new LateRegisterHandler();
         try {
             final Bootstrap bootstrapA = new Bootstrap();

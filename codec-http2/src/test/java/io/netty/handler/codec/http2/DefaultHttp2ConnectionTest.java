@@ -18,11 +18,10 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.local.LocalHandler;
 import io.netty.handler.codec.http2.Http2Connection.Endpoint;
 import io.netty.handler.codec.http2.Http2Stream.State;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import org.junit.AfterClass;
@@ -73,7 +72,7 @@ public class DefaultHttp2ConnectionTest {
 
     @BeforeClass
     public static void beforeClass() {
-        group = new MultithreadEventLoopGroup(2, LocalHandler.newFactory());
+        group = new MultiThreadEventLoopGroup(2, LocalHandler.newFactory());
     }
 
     @AfterClass

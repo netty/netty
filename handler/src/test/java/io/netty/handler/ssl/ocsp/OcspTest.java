@@ -26,7 +26,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
@@ -342,7 +342,7 @@ public class OcspTest {
                         .build();
 
                 try {
-                    EventLoopGroup group = new MultithreadEventLoopGroup(LocalHandler.newFactory());
+                    EventLoopGroup group = new MultiThreadEventLoopGroup(LocalHandler.newFactory());
                     try {
                         LocalAddress address = new LocalAddress("handshake-" + Math.random());
                         Channel server = newServer(group, address, serverSslContext, response, serverHandler);

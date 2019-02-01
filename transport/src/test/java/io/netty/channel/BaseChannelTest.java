@@ -35,7 +35,7 @@ class BaseChannelTest {
     }
 
     ServerBootstrap getLocalServerBootstrap() {
-        EventLoopGroup serverGroup = new MultithreadEventLoopGroup(LocalHandler.newFactory());
+        EventLoopGroup serverGroup = new MultiThreadEventLoopGroup(LocalHandler.newFactory());
         ServerBootstrap sb = new ServerBootstrap();
         sb.group(serverGroup);
         sb.channel(LocalServerChannel.class);
@@ -49,7 +49,7 @@ class BaseChannelTest {
     }
 
     Bootstrap getLocalClientBootstrap() {
-        EventLoopGroup clientGroup = new MultithreadEventLoopGroup(LocalHandler.newFactory());
+        EventLoopGroup clientGroup = new MultiThreadEventLoopGroup(LocalHandler.newFactory());
         Bootstrap cb = new Bootstrap();
         cb.channel(LocalChannel.class);
         cb.group(clientGroup);

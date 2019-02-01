@@ -17,7 +17,7 @@ package io.netty.channel.nio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultSelectStrategyFactory;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 
@@ -27,12 +27,12 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * {@link MultithreadEventLoopGroup} implementations which is used for NIO {@link Selector} based {@link Channel}s.
+ * {@link MultiThreadEventLoopGroup} implementations which is used for NIO {@link Selector} based {@link Channel}s.
  *
- * @deprecated use {@link MultithreadEventLoopGroup} together with {@link NioHandler}.
+ * @deprecated use {@link MultiThreadEventLoopGroup} together with {@link NioHandler}.
  */
 @Deprecated
-public class NioEventLoopGroup extends MultithreadEventLoopGroup {
+public class NioEventLoopGroup extends MultiThreadEventLoopGroup {
 
     /**
      * Create a new instance using the default number of threads, the default {@link ThreadFactory} and

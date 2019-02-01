@@ -18,7 +18,7 @@ package io.netty.channel.epoll;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -26,12 +26,10 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SelectStrategy;
-import io.netty.channel.SelectStrategyFactory;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapComboFactory;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty.testsuite.transport.socket.SocketStringEchoTest;
-import io.netty.util.IntSupplier;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
 public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
@@ -40,7 +38,7 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
 
     @BeforeClass
     public static void setup() throws Exception {
-        EPOLL_LOOP = new MultithreadEventLoopGroup(2, new DefaultThreadFactory("testsuite-epoll-busy-wait", true),
+        EPOLL_LOOP = new MultiThreadEventLoopGroup(2, new DefaultThreadFactory("testsuite-epoll-busy-wait", true),
                 EpollHandler.newFactory(0, () -> (selectSupplier, hasTasks) -> SelectStrategy.BUSY_WAIT));
     }
 

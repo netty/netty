@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -46,7 +46,7 @@ public class KQueueSocketChannelConfigTest {
     @BeforeClass
     public static void beforeClass() {
         rand = new Random();
-        group = new MultithreadEventLoopGroup(1, KQueueHandler.newFactory());
+        group = new MultiThreadEventLoopGroup(1, KQueueHandler.newFactory());
     }
 
     @AfterClass

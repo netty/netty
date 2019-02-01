@@ -21,7 +21,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -50,8 +50,8 @@ public final class EchoServer {
         }
 
         // Configure the server.
-        EventLoopGroup bossGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
-        EventLoopGroup workerGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup bossGroup = new MultiThreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup workerGroup = new MultiThreadEventLoopGroup(NioHandler.newFactory());
         final EchoServerHandler serverHandler = new EchoServerHandler();
         try {
             ServerBootstrap b = new ServerBootstrap();

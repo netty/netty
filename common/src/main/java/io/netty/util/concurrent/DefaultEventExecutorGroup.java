@@ -18,10 +18,10 @@ package io.netty.util.concurrent;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * Default implementation of {@link MultithreadEventExecutorGroup} which will use {@link SingleThreadEventExecutor}
+ * Default implementation of {@link MultiThreadEventExecutorGroup} which will use {@link SingleThreadEventExecutor}
  * instances to handle the tasks.
  */
-public class DefaultEventExecutorGroup extends MultithreadEventExecutorGroup {
+public class DefaultEventExecutorGroup extends MultiThreadEventExecutorGroup {
     /**
      * @see #DefaultEventExecutorGroup(int, ThreadFactory)
      */

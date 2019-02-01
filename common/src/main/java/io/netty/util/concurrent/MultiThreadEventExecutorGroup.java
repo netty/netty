@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * {@link EventExecutorGroup} implementation that handles their tasks with multiple threads at
  * the same time.
  */
-public class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
+public class MultiThreadEventExecutorGroup extends AbstractEventExecutorGroup {
 
     private final EventExecutor[] children;
     private final List<EventExecutor> readonlyChildren;
@@ -44,7 +44,7 @@ public class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
      * @param nThreads          the number of threads that will be used by this instance.
      * @param threadFactory     the ThreadFactory to use, or {@code null} if the default should be used.
      */
-    public MultithreadEventExecutorGroup(int nThreads, ThreadFactory threadFactory) {
+    public MultiThreadEventExecutorGroup(int nThreads, ThreadFactory threadFactory) {
         this(nThreads, threadFactory, SingleThreadEventExecutor.DEFAULT_MAX_PENDING_EXECUTOR_TASKS,
                 RejectedExecutionHandlers.reject());
     }
@@ -55,7 +55,7 @@ public class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
      * @param nThreads          the number of threads that will be used by this instance.
      * @param executor          the {@link Executor} to use, or {@code null} if the default should be used.
      */
-    public MultithreadEventExecutorGroup(int nThreads, Executor executor) {
+    public MultiThreadEventExecutorGroup(int nThreads, Executor executor) {
         this(nThreads, executor, SingleThreadEventExecutor.DEFAULT_MAX_PENDING_EXECUTOR_TASKS,
                 RejectedExecutionHandlers.reject());
     }
@@ -68,7 +68,7 @@ public class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
      * @param maxPendingTasks   the maximum number of pending tasks before new tasks will be rejected.
      * @param rejectedHandler   the {@link RejectedExecutionHandler} to use.
      */
-    public MultithreadEventExecutorGroup(int nThreads, ThreadFactory threadFactory,
+    public MultiThreadEventExecutorGroup(int nThreads, ThreadFactory threadFactory,
                                          int maxPendingTasks, RejectedExecutionHandler rejectedHandler) {
         this(nThreads, threadFactory, maxPendingTasks, rejectedHandler, EmptyArrays.EMPTY_OBJECTS);
     }
@@ -81,7 +81,7 @@ public class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
      * @param maxPendingTasks   the maximum number of pending tasks before new tasks will be rejected.
      * @param rejectedHandler   the {@link RejectedExecutionHandler} to use.
      */
-    public MultithreadEventExecutorGroup(int nThreads, Executor executor,
+    public MultiThreadEventExecutorGroup(int nThreads, Executor executor,
                                          int maxPendingTasks, RejectedExecutionHandler rejectedHandler) {
         this(nThreads, executor, maxPendingTasks, rejectedHandler, EmptyArrays.EMPTY_OBJECTS);
     }
@@ -96,7 +96,7 @@ public class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
      * @param args              arguments which will passed to each {@link #newChild(Executor, int,
      * RejectedExecutionHandler, Object...)} call
      */
-    protected MultithreadEventExecutorGroup(int nThreads, ThreadFactory threadFactory, int maxPendingTasks,
+    protected MultiThreadEventExecutorGroup(int nThreads, ThreadFactory threadFactory, int maxPendingTasks,
                                             RejectedExecutionHandler rejectedHandler, Object... args) {
         this(nThreads, threadFactory == null ? null : new ThreadPerTaskExecutor(threadFactory),
                 maxPendingTasks, rejectedHandler, args);
@@ -112,7 +112,7 @@ public class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
      * @param args              arguments which will passed to each {@link #newChild(Executor, int,
      * RejectedExecutionHandler, Object...)} call
      */
-    protected MultithreadEventExecutorGroup(int nThreads, Executor executor, int maxPendingTasks,
+    protected MultiThreadEventExecutorGroup(int nThreads, Executor executor, int maxPendingTasks,
                                             RejectedExecutionHandler rejectedHandler, Object... args) {
         if (nThreads <= 0) {
             throw new IllegalArgumentException(String.format("nThreads: %d (expected: > 0)", nThreads));
@@ -169,7 +169,7 @@ public class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
     private final AtomicInteger idx = new AtomicInteger();
 
     /**
-     * The {@link EventExecutor}s that are used by this {@link MultithreadEventExecutorGroup}.
+     * The {@link EventExecutor}s that are used by this {@link MultiThreadEventExecutorGroup}.
      */
     protected final List<EventExecutor> executors() {
         return readonlyChildren;
@@ -206,7 +206,7 @@ public class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
 
     /**
      * Create a new EventExecutor which will later then accessible via the {@link #next()} method. This method will be
-     * called for each thread that will serve this {@link MultithreadEventExecutorGroup}.
+     * called for each thread that will serve this {@link MultiThreadEventExecutorGroup}.
      *
      * As this method is called from within the constructor you can only use the parameters passed into the method when
      * overriding this method.

@@ -17,14 +17,14 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.MultiThreadEventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.unix.tests.DetectPeerCloseWithoutReadTest;
 
 public class EpollDetectPeerCloseWithoutReadTest extends DetectPeerCloseWithoutReadTest {
     @Override
     protected EventLoopGroup newGroup() {
-        return new MultithreadEventLoopGroup(2, EpollHandler.newFactory());
+        return new MultiThreadEventLoopGroup(2, EpollHandler.newFactory());
     }
 
     @Override
