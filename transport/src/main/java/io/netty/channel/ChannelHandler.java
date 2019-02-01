@@ -72,7 +72,7 @@ import java.lang.annotation.Target;
  *     <b>private boolean loggedIn;</b>
  *
  *     {@code @Override}
- *     public void channelRead0({@link ChannelHandlerContext} ctx, Message message) {
+ *     public void messageReceived({@link ChannelHandlerContext} ctx, Message message) {
  *         if (message instanceof LoginMessage) {
  *             authenticate((LoginMessage) message);
  *             <b>loggedIn = true;</b>

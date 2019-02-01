@@ -28,7 +28,7 @@ import io.netty.util.internal.TypeParameterMatcher;
  *             {@link SimpleChannelInboundHandler}&lt;{@link String}&gt; {
  *
  *         {@code @Override}
- *         protected void channelRead0({@link ChannelHandlerContext} ctx, {@link String} message)
+ *         protected void messageReceived({@link ChannelHandlerContext} ctx, {@link String} message)
  *                 throws {@link Exception} {
  *             System.out.println(message);
  *         }
@@ -41,8 +41,8 @@ import io.netty.util.internal.TypeParameterMatcher;
  *
  * <h3>Forward compatibility notice</h3>
  * <p>
- * Please keep in mind that {@link #channelRead0(ChannelHandlerContext, I)} will be renamed to
- * {@code messageReceived(ChannelHandlerContext, I)} in 5.0.
+ * Please keep in mind that {@link #channelRead0(ChannelHandlerContext, I)} will be removed in favour of
+ * {@link messageReceived(ChannelHandlerContext, I)} in 5.0.
  * </p>
  */
 public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandlerAdapter {
@@ -102,7 +102,7 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
             if (acceptInboundMessage(msg)) {
                 @SuppressWarnings("unchecked")
                 I imsg = (I) msg;
-                channelRead0(ctx, imsg);
+                messageReceived(ctx, imsg);
             } else {
                 release = false;
                 ctx.fireChannelRead(msg);
@@ -115,9 +115,6 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
     }
 
     /**
-     * <strong>Please keep in mind that this method will be renamed to
-     * {@code messageReceived(ChannelHandlerContext, I)} in 5.0.</strong>
-     *
      * Is called for each message of type {@link I}.
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link SimpleChannelInboundHandler}
@@ -125,5 +122,16 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
      * @param msg           the message to handle
      * @throws Exception    is thrown if an error occurred
      */
-    protected abstract void channelRead0(ChannelHandlerContext ctx, I msg) throws Exception;
+    protected void messageReceived(ChannelHandlerContext ctx, I msg) throws Exception {
+        channelRead0(ctx, msg);
+    }
+
+    /**
+     * @deprecated override {@link messageReceived(ChannelHandlerContext, I)} instead of this method,
+     *     it will be removed in Netty 5.x
+     */
+    @Deprecated
+    protected void channelRead0(ChannelHandlerContext ctx, I msg) throws Exception {
+        throw new IllegalStateException(getClass().getName() + " must override messageReceived(...)");
+    }
 }
