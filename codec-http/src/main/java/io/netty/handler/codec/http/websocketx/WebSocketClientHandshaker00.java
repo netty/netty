@@ -207,8 +207,8 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         char[] randomChars = new char[count];
         int randCount = 0;
         while (randCount < count) {
-            int rand = ThreadLocalRandom.current().nextInt(0x21, 0x7e + 0x21);
-            if (0x21 < rand && rand < 0x2f || 0x3a < rand && rand < 0x7e) {
+            int rand = ThreadLocalRandom.current().nextInt(0x22, 0x7e);
+            if (rand < 0x2f || 0x3a < rand) {
                 randomChars[randCount] = (char) rand;
                 randCount += 1;
             }
