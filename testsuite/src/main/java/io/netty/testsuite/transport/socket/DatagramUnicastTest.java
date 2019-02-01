@@ -158,7 +158,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
             });
 
             final CountDownLatch latch = new CountDownLatch(count);
-            sc = setupServerChannel(sb, bytes, latch);
+            sc = setupServerChannel(sb, bytes, latch, false);
             if (bindClient) {
                 cc = cb.bind(newSocketAddress()).sync().channel();
             } else {
@@ -209,10 +209,21 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
     private void testSimpleSendWithConnect0(Bootstrap sb, Bootstrap cb, ByteBuf buf, final byte[] bytes, int count,
                                             WrapType wrapType) throws Throwable {
-        cb.handler(new SimpleChannelInboundHandler<Object>() {
+        final CountDownLatch clientLatch = new CountDownLatch(count);
+
+        cb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
             @Override
-            public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
-                // Nothing will be sent.
+            public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+                ByteBuf buf = msg.content();
+                assertEquals(bytes.length, buf.readableBytes());
+                for (int i = 0; i < bytes.length; i++) {
+                    assertEquals(bytes[i], buf.getByte(buf.readerIndex() + i));
+                }
+
+                // Test that the channel's localAddress is equal to the message's recipient
+                assertEquals(ctx.channel().localAddress(), msg.recipient());
+
+                clientLatch.countDown();
             }
         });
 
@@ -220,7 +231,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         DatagramChannel cc = null;
         try {
             final CountDownLatch latch = new CountDownLatch(count);
-            sc = setupServerChannel(sb, bytes, latch);
+            sc = setupServerChannel(sb, bytes, latch, true);
             cc = (DatagramChannel) cb.connect(sc.localAddress()).sync().channel();
 
             for (int i = 0; i < count; i++) {
@@ -243,7 +254,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
             }
             cc.flush();
             assertTrue(latch.await(10, TimeUnit.SECONDS));
-
+            assertTrue(clientLatch.await(10, TimeUnit.SECONDS));
             assertTrue(cc.isConnected());
 
             // Test what happens when we call disconnect()
@@ -264,7 +275,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
     }
 
     @SuppressWarnings("deprecation")
-    private Channel setupServerChannel(Bootstrap sb, final byte[] bytes, final CountDownLatch latch)
+    private Channel setupServerChannel(Bootstrap sb, final byte[] bytes, final CountDownLatch latch, final boolean echo)
             throws Throwable {
         sb.handler(new ChannelInitializer<Channel>() {
             @Override
@@ -274,13 +285,16 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
                     public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
                         ByteBuf buf = msg.content();
                         assertEquals(bytes.length, buf.readableBytes());
-                        for (byte b : bytes) {
-                            assertEquals(b, buf.readByte());
+                        for (int i = 0; i < bytes.length; i++) {
+                            assertEquals(bytes[i], buf.getByte(buf.readerIndex() + i));
                         }
 
                         // Test that the channel's localAddress is equal to the message's recipient
                         assertEquals(ctx.channel().localAddress(), msg.recipient());
 
+                        if (echo) {
+                            ctx.writeAndFlush(new DatagramPacket(buf.retainedDuplicate(), msg.sender()));
+                        }
                         latch.countDown();
                     }
                 });
