@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
 
 import static io.netty.buffer.Unpooled.*;
 
@@ -411,21 +412,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
      * @return the array of bytes
      */
     private static byte[] readFrom(File src) throws IOException {
-        long srcsize = src.length();
-        if (srcsize > Integer.MAX_VALUE) {
-            throw new IllegalArgumentException(
-                    "File too big to be loaded in memory");
-        }
-        byte[] array = new byte[(int) srcsize];
-        try (FileInputStream inputStream = new FileInputStream(src)) {
-            FileChannel fileChannel = inputStream.getChannel();
-            ByteBuffer byteBuffer = ByteBuffer.wrap(array);
-            int read = 0;
-            while (read < srcsize) {
-                read += fileChannel.read(byteBuffer);
-            }
-        }
-        return array;
+        return Files.readAllBytes(src.toPath());
     }
 
     @Override
