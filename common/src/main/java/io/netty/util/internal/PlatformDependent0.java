@@ -354,16 +354,10 @@ final class PlatformDependent0 {
             return new UnsupportedOperationException("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
         }
 
-        // Legacy properties
-        String unsafePropName;
-        if (SystemPropertyUtil.contains("io.netty.tryUnsafe")) {
-            unsafePropName = "io.netty.tryUnsafe";
-        } else {
-            unsafePropName = "org.jboss.netty.tryUnsafe";
-        }
+        boolean tryUnsafe = SystemPropertyUtil.getBoolean("io.netty.tryUnsafe", true);
 
-        if (!SystemPropertyUtil.getBoolean(unsafePropName, true)) {
-            String msg = "sun.misc.Unsafe: unavailable (" + unsafePropName + ")";
+        if (!tryUnsafe) {
+            String msg = "sun.misc.Unsafe: unavailable (io.netty.tryUnsafe)";
             logger.debug(msg);
             return new UnsupportedOperationException(msg);
         }
