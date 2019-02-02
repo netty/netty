@@ -128,8 +128,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         }
         long newsize = file.length();
         if (newsize > Integer.MAX_VALUE) {
-            throw new IllegalArgumentException(
-                    "File too big to be loaded in memory");
+            throw new IllegalArgumentException("File too big to be loaded in memory");
         }
         checkSize(newsize);
         FileInputStream inputStream = new FileInputStream(file);

@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.spdy;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 /**
  * The default {@link SpdyStreamFrame} implementation.
  */
@@ -39,10 +41,7 @@ public abstract class DefaultSpdyStreamFrame implements SpdyStreamFrame {
 
     @Override
     public SpdyStreamFrame setStreamId(int streamId) {
-        if (streamId <= 0) {
-            throw new IllegalArgumentException(
-                    "Stream-ID must be positive: " + streamId);
-        }
+        checkPositive(streamId, "streamId");
         this.streamId = streamId;
         return this;
     }

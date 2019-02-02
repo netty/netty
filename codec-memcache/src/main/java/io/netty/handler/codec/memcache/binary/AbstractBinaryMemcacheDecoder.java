@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.memcache.binary;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -59,9 +61,7 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
      * @param chunkSize the maximum chunk size of the payload.
      */
     protected AbstractBinaryMemcacheDecoder(int chunkSize) {
-        if (chunkSize < 0) {
-            throw new IllegalArgumentException("chunkSize must be a positive integer: " + chunkSize);
-        }
+        checkPositiveOrZero(chunkSize, "chunkSize");
 
         this.chunkSize = chunkSize;
     }
