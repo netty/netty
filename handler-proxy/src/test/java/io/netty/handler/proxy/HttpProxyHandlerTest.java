@@ -15,20 +15,36 @@
  */
 package io.netty.handler.proxy;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.local.LocalAddress;
+import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalServerChannel;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.proxy.HttpProxyHandler.HttpProxyConnectException;
 import io.netty.util.NetUtil;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 public class HttpProxyHandlerTest {
@@ -151,6 +167,65 @@ public class HttpProxyHandlerTest {
                         .add("CUSTOM_HEADER", "CUSTOM_VALUE1")
                         .add("CUSTOM_HEADER", "CUSTOM_VALUE2"),
                 true);
+    }
+
+    @Test
+    public void testExceptionDuringConnect() throws Exception {
+        EventLoopGroup group = null;
+        Channel serverChannel = null;
+        Channel clientChannel = null;
+        try {
+            group = new DefaultEventLoopGroup(1);
+            final LocalAddress addr = new LocalAddress("a");
+            final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
+            ChannelFuture sf =
+                new ServerBootstrap().channel(LocalServerChannel.class).group(group).childHandler(
+                    new ChannelInitializer<Channel>() {
+
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ch.pipeline().addFirst(new HttpResponseEncoder());
+                            DefaultFullHttpResponse response = new DefaultFullHttpResponse(
+                                HttpVersion.HTTP_1_1,
+                                HttpResponseStatus.BAD_GATEWAY);
+                            response.headers().add("name", "value");
+                            response.headers().add(HttpHeaderNames.CONTENT_LENGTH, "0");
+                            ch.writeAndFlush(response);
+                        }
+                    }).bind(addr);
+            serverChannel = sf.sync().channel();
+            ChannelFuture cf = new Bootstrap().channel(LocalChannel.class).group(group).handler(
+                new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) {
+                        ch.pipeline().addFirst(new HttpProxyHandler(addr));
+                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            @Override
+                            public void exceptionCaught(ChannelHandlerContext ctx,
+                                Throwable cause) {
+                                exception.set(cause);
+                            }
+                        });
+                    }
+                }).connect(new InetSocketAddress("localhost", 1234));
+            clientChannel = cf.sync().channel();
+            clientChannel.close().sync();
+
+            assertTrue(exception.get() instanceof HttpProxyConnectException);
+            HttpProxyConnectException actual = (HttpProxyConnectException) exception.get();
+            assertNotNull(actual.headers());
+            assertEquals("value", actual.headers().get("name"));
+        } finally {
+            if (clientChannel != null) {
+                clientChannel.close();
+            }
+            if (serverChannel != null) {
+                serverChannel.close();
+            }
+            if (group != null) {
+                group.shutdownGracefully();
+            }
+        }
     }
 
     private static void testInitialMessage(InetSocketAddress socketAddress,
