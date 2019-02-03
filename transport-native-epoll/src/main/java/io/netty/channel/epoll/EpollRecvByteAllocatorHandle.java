@@ -15,13 +15,14 @@
  */
 package io.netty.channel.epoll;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.unix.PreferredDirectByteBufAllocator;
 import io.netty.util.UncheckedBooleanSupplier;
-import io.netty.util.internal.ObjectUtil;
 
 class EpollRecvByteAllocatorHandle implements RecvByteBufAllocator.ExtendedHandle {
     private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
@@ -32,7 +33,7 @@ class EpollRecvByteAllocatorHandle implements RecvByteBufAllocator.ExtendedHandl
     private boolean receivedRdHup;
 
     EpollRecvByteAllocatorHandle(RecvByteBufAllocator.ExtendedHandle handle) {
-        delegate = ObjectUtil.checkNotNull(handle, "handle");
+        delegate = requireNonNull(handle, "handle");
     }
 
     final void receivedRdHup() {

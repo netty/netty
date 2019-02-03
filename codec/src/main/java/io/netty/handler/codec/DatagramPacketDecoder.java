@@ -15,12 +15,13 @@
  */
 package io.netty.handler.codec;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.protobuf.ProtobufDecoder;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import java.util.List;
 
@@ -43,7 +44,7 @@ public class DatagramPacketDecoder extends MessageToMessageDecoder<DatagramPacke
      * @param decoder the specified {@link ByteBuf} decoder
      */
     public DatagramPacketDecoder(MessageToMessageDecoder<ByteBuf> decoder) {
-        this.decoder = checkNotNull(decoder, "decoder");
+        this.decoder = requireNonNull(decoder, "decoder");
     }
 
     @Override

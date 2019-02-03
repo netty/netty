@@ -33,6 +33,7 @@ import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.sctp.SctpChannelOption.SCTP_INIT_MAXSTREAMS;
 import static io.netty.channel.sctp.SctpChannelOption.SCTP_NODELAY;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link SctpChannelConfig} implementation for SCTP.
@@ -43,9 +44,7 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
 
     public DefaultSctpChannelConfig(io.netty.channel.sctp.SctpChannel channel, SctpChannel javaChannel) {
         super(channel);
-        if (javaChannel == null) {
-            throw new NullPointerException("javaChannel");
-        }
+        requireNonNull(javaChannel, "javaChannel");
         this.javaChannel = javaChannel;
 
         // Enable TCP_NODELAY by default if possible.

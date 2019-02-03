@@ -23,6 +23,7 @@ import io.netty.util.CharsetUtil;
 import static io.netty.handler.codec.http.HttpConstants.SP;
 import static io.netty.util.ByteProcessor.FIND_ASCII_SPACE;
 import static java.lang.Integer.parseInt;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The response code and its description of HTTP or its derived protocols, such as
@@ -543,9 +544,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
                     "code: " + code + " (expected: 0+)");
         }
 
-        if (reasonPhrase == null) {
-            throw new NullPointerException("reasonPhrase");
-        }
+        requireNonNull(reasonPhrase, "reasonPhrase");
 
         for (int i = 0; i < reasonPhrase.length(); i ++) {
             char c = reasonPhrase.charAt(i);

@@ -18,7 +18,7 @@ package io.netty.handler.codec.http2;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link Http2ResetFrame} implementation.
@@ -34,7 +34,7 @@ public final class DefaultHttp2ResetFrame extends AbstractHttp2StreamFrame imple
      * @param error the non-{@code null} reason for reset
      */
     public DefaultHttp2ResetFrame(Http2Error error) {
-        errorCode = checkNotNull(error, "error").code();
+        errorCode = requireNonNull(error, "error").code();
     }
 
     /**

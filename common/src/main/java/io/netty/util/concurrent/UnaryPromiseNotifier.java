@@ -15,7 +15,8 @@
  */
 package io.netty.util.concurrent;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -24,7 +25,7 @@ public final class UnaryPromiseNotifier<T> implements FutureListener<T> {
     private final Promise<? super T> promise;
 
     public UnaryPromiseNotifier(Promise<? super T> promise) {
-        this.promise = ObjectUtil.checkNotNull(promise, "promise");
+        this.promise = requireNonNull(promise, "promise");
     }
 
     @Override

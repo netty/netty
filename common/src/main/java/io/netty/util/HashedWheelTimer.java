@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static io.netty.util.internal.StringUtil.simpleClassName;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link Timer} optimized for approximated I/O timeout scheduling.
@@ -241,13 +242,8 @@ public class HashedWheelTimer implements Timer {
             ThreadFactory threadFactory,
             long tickDuration, TimeUnit unit, int ticksPerWheel, boolean leakDetection,
             long maxPendingTimeouts) {
-
-        if (threadFactory == null) {
-            throw new NullPointerException("threadFactory");
-        }
-        if (unit == null) {
-            throw new NullPointerException("unit");
-        }
+        requireNonNull(threadFactory, "threadFactory");
+        requireNonNull(unit, "unit");
         if (tickDuration <= 0) {
             throw new IllegalArgumentException("tickDuration must be greater than 0: " + tickDuration);
         }
@@ -410,12 +406,8 @@ public class HashedWheelTimer implements Timer {
 
     @Override
     public Timeout newTimeout(TimerTask task, long delay, TimeUnit unit) {
-        if (task == null) {
-            throw new NullPointerException("task");
-        }
-        if (unit == null) {
-            throw new NullPointerException("unit");
-        }
+        requireNonNull(task, "taks");
+        requireNonNull(unit, "unit");
 
         long pendingTimeoutsCount = pendingTimeouts.incrementAndGet();
 

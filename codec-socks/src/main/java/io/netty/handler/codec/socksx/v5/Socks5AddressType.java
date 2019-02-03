@@ -16,6 +16,8 @@
 
 package io.netty.handler.codec.socksx.v5;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * The type of address in {@link Socks5CommandRequest} and {@link Socks5CommandResponse}.
  */
@@ -47,9 +49,7 @@ public class Socks5AddressType implements Comparable<Socks5AddressType> {
     }
 
     public Socks5AddressType(int byteValue, String name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
+        requireNonNull(name, "name");
 
         this.byteValue = (byte) byteValue;
         this.name = name;

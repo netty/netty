@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ipfilter;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.SocketUtils;
 
 import java.math.BigInteger;
@@ -45,13 +47,8 @@ public final class IpSubnetFilterRule implements IpFilterRule {
     }
 
     private static IpFilterRule selectFilterRule(InetAddress ipAddress, int cidrPrefix, IpFilterRuleType ruleType) {
-        if (ipAddress == null) {
-            throw new NullPointerException("ipAddress");
-        }
-
-        if (ruleType == null) {
-            throw new NullPointerException("ruleType");
-        }
+        requireNonNull(ipAddress, "ipAddress");
+        requireNonNull(ruleType, "ruleType");
 
         if (ipAddress instanceof Inet4Address) {
             return new Ip4SubnetFilterRule((Inet4Address) ipAddress, cidrPrefix, ruleType);

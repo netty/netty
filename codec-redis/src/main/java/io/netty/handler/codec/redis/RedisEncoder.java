@@ -15,13 +15,14 @@
 
 package io.netty.handler.codec.redis;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.MessageToMessageEncoder;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
@@ -47,7 +48,7 @@ public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
      * @param messagePool the predefined message pool.
      */
     public RedisEncoder(RedisMessagePool messagePool) {
-        this.messagePool = ObjectUtil.checkNotNull(messagePool, "messagePool");
+        this.messagePool = requireNonNull(messagePool, "messagePool");
     }
 
     @Override

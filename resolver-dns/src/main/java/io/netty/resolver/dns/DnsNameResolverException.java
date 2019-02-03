@@ -15,9 +15,10 @@
  */
 package io.netty.resolver.dns;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
@@ -47,11 +48,11 @@ public class DnsNameResolverException extends RuntimeException {
     }
 
     private static InetSocketAddress validateRemoteAddress(InetSocketAddress remoteAddress) {
-        return ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
+        return requireNonNull(remoteAddress, "remoteAddress");
     }
 
     private static DnsQuestion validateQuestion(DnsQuestion question) {
-        return ObjectUtil.checkNotNull(question, "question");
+        return requireNonNull(question, "question");
     }
 
     /**

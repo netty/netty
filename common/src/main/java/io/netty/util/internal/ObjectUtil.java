@@ -14,6 +14,8 @@
  */
 package io.netty.util.internal;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Collection;
 
 /**
@@ -28,6 +30,7 @@ public final class ObjectUtil {
      * Checks that the given argument is not null. If it is, throws {@link NullPointerException}.
      * Otherwise, returns the argument.
      */
+    @Deprecated
     public static <T> T checkNotNull(T arg, String text) {
         if (arg == null) {
             throw new NullPointerException(text);
@@ -85,7 +88,7 @@ public final class ObjectUtil {
      * Otherwise, returns the argument.
      */
     public static <T> T[] checkNonEmpty(T[] array, String name) {
-        checkNotNull(array, name);
+        requireNonNull(array, name);
         checkPositive(array.length, name + ".length");
         return array;
     }
@@ -96,7 +99,7 @@ public final class ObjectUtil {
      * Otherwise, returns the argument.
      */
     public static <T extends Collection<?>> T checkNonEmpty(T collection, String name) {
-        checkNotNull(collection, name);
+        requireNonNull(collection, name);
         checkPositive(collection.size(), name + ".size");
         return collection;
     }

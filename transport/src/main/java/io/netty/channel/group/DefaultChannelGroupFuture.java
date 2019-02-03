@@ -15,6 +15,8 @@
  */
 package io.netty.channel.group;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -82,12 +84,8 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
      */
     DefaultChannelGroupFuture(ChannelGroup group, Collection<ChannelFuture> futures,  EventExecutor executor) {
         super(executor);
-        if (group == null) {
-            throw new NullPointerException("group");
-        }
-        if (futures == null) {
-            throw new NullPointerException("futures");
-        }
+        requireNonNull(group, "group");
+        requireNonNull(futures, "futures");
 
         this.group = group;
 

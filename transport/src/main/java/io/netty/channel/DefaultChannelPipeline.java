@@ -15,11 +15,12 @@
  */
 package io.netty.channel;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -72,7 +73,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private volatile MessageSizeEstimator.Handle estimatorHandle;
 
     public DefaultChannelPipeline(Channel channel) {
-        this.channel = ObjectUtil.checkNotNull(channel, "channel");
+        this.channel = requireNonNull(channel, "channel");
         succeededFuture = new SucceededChannelFuture(channel, channel.eventLoop());
         voidPromise =  new VoidChannelPromise(channel, true);
 
@@ -292,9 +293,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addFirst(ChannelHandler... handlers) {
-        if (handlers == null) {
-            throw new NullPointerException("handlers");
-        }
+        requireNonNull(handlers, "handlers");
         if (handlers.length == 0 || handlers[0] == null) {
             return this;
         }
@@ -320,9 +319,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addLast(ChannelHandler... handlers) {
-        if (handlers == null) {
-            throw new NullPointerException("handlers");
-        }
+        requireNonNull(handlers, "handlers");
 
         for (ChannelHandler h: handlers) {
             if (h == null) {
@@ -675,9 +672,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelHandlerContext context(String name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
+        requireNonNull(name, "name");
+
         synchronized (handlers) {
             return findCtx(ctx -> ctx.name().equals(name));
         }
@@ -685,9 +681,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelHandlerContext context(ChannelHandler handler) {
-        if (handler == null) {
-            throw new NullPointerException("handler");
-        }
+        requireNonNull(handler, "handler");
 
         synchronized (handlers) {
             return findCtx(ctx -> ctx.handler() == handler);
@@ -696,9 +690,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelHandlerContext context(Class<? extends ChannelHandler> handlerType) {
-        if (handlerType == null) {
-            throw new NullPointerException("handlerType");
-        }
+        requireNonNull(handlerType, "handlerType");
 
         synchronized (handlers) {
             return findCtx(ctx -> handlerType.isAssignableFrom(ctx.handler().getClass()));

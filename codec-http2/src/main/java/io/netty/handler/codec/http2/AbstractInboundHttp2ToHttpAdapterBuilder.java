@@ -17,7 +17,7 @@ package io.netty.handler.codec.http2;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A skeletal builder implementation of {@link InboundHttp2ToHttpAdapter} and its subtypes.
@@ -38,7 +38,7 @@ public abstract class AbstractInboundHttp2ToHttpAdapterBuilder<
      *                   for the current connection
      */
     protected AbstractInboundHttp2ToHttpAdapterBuilder(Http2Connection connection) {
-        this.connection = checkNotNull(connection, "connection");
+        this.connection = requireNonNull(connection, "connection");
     }
 
     @SuppressWarnings("unchecked")

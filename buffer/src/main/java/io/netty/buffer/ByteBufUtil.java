@@ -42,10 +42,10 @@ import java.util.Arrays;
 import java.util.Locale;
 
 import static io.netty.util.internal.MathUtil.isOutOfBounds;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty.util.internal.StringUtil.NEWLINE;
 import static io.netty.util.internal.StringUtil.isSurrogate;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A collection of utility methods that is related with handling {@link ByteBuf},
@@ -884,7 +884,7 @@ public final class ByteBufUtil {
                             + length + ") <= srcLen(" + src.length() + ')');
         }
 
-        checkNotNull(dst, "dst").setBytes(dstIdx, src.array(), srcIdx + src.arrayOffset(), length);
+        requireNonNull(dst, "dst").setBytes(dstIdx, src.array(), srcIdx + src.arrayOffset(), length);
     }
 
     /**
@@ -901,7 +901,7 @@ public final class ByteBufUtil {
                             + length + ") <= srcLen(" + src.length() + ')');
         }
 
-        checkNotNull(dst, "dst").writeBytes(src.array(), srcIdx + src.arrayOffset(), length);
+        requireNonNull(dst, "dst").writeBytes(src.array(), srcIdx + src.arrayOffset(), length);
     }
 
     /**
@@ -1217,8 +1217,8 @@ public final class ByteBufUtil {
      * @throws IndexOutOfBoundsException if {@code index} + {@code length} is greater than {@code buf.readableBytes}
      */
     public static boolean isText(ByteBuf buf, int index, int length, Charset charset) {
-        checkNotNull(buf, "buf");
-        checkNotNull(charset, "charset");
+        requireNonNull(buf, "buf");
+        requireNonNull(charset, "charset");
         final int maxIndex = buf.readerIndex() + buf.readableBytes();
         if (index < 0 || length < 0 || index > maxIndex - length) {
             throw new IndexOutOfBoundsException("index: " + index + " length: " + length);

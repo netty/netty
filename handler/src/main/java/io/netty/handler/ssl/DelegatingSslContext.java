@@ -15,8 +15,9 @@
  */
 package io.netty.handler.ssl;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.internal.ObjectUtil;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLSessionContext;
@@ -30,7 +31,7 @@ public abstract class DelegatingSslContext extends SslContext {
     private final SslContext ctx;
 
     protected DelegatingSslContext(SslContext ctx) {
-        this.ctx = ObjectUtil.checkNotNull(ctx, "ctx");
+        this.ctx = requireNonNull(ctx, "ctx");
     }
 
     @Override

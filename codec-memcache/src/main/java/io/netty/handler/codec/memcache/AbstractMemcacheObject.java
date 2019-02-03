@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.memcache;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.internal.UnstableApi;
@@ -38,9 +40,7 @@ public abstract class AbstractMemcacheObject extends AbstractReferenceCounted im
 
     @Override
     public void setDecoderResult(DecoderResult result) {
-        if (result == null) {
-            throw new NullPointerException("DecoderResult should not be null.");
-        }
+        requireNonNull(result, "result");
 
         decoderResult = result;
     }

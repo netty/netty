@@ -32,6 +32,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 
 import static io.netty.buffer.Unpooled.*;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Abstract Disk HttpData implementation
@@ -101,9 +102,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
 
     @Override
     public void setContent(ByteBuf buffer) throws IOException {
-        if (buffer == null) {
-            throw new NullPointerException("buffer");
-        }
+        requireNonNull(buffer, "buffer");
         try {
             size = buffer.readableBytes();
             checkSize(size);
@@ -188,9 +187,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             fileChannel = null;
             setCompleted();
         } else {
-            if (buffer == null) {
-                throw new NullPointerException("buffer");
-            }
+            requireNonNull(buffer, "buffer");
         }
     }
 
@@ -208,9 +205,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
 
     @Override
     public void setContent(InputStream inputStream) throws IOException {
-        if (inputStream == null) {
-            throw new NullPointerException("inputStream");
-        }
+        requireNonNull(inputStream, "inputStream");
         if (file != null) {
             delete();
         }
@@ -335,9 +330,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
 
     @Override
     public boolean renameTo(File dest) throws IOException {
-        if (dest == null) {
-            throw new NullPointerException("dest");
-        }
+        requireNonNull(dest, "dest");
         if (file == null) {
             throw new IOException("No file defined so cannot be renamed");
         }

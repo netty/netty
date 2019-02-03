@@ -17,7 +17,7 @@ package io.netty.handler.ssl;
 
 import java.util.List;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * OpenSSL {@link ApplicationProtocolNegotiator} for ALPN and NPN.
@@ -28,7 +28,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 public final class OpenSslDefaultApplicationProtocolNegotiator implements OpenSslApplicationProtocolNegotiator {
     private final ApplicationProtocolConfig config;
     public OpenSslDefaultApplicationProtocolNegotiator(ApplicationProtocolConfig config) {
-        this.config = checkNotNull(config, "config");
+        this.config = requireNonNull(config, "config");
     }
 
     @Override

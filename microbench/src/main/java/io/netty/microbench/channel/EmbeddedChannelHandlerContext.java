@@ -32,7 +32,7 @@ import io.netty.util.concurrent.EventExecutor;
 
 import java.net.SocketAddress;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerContext {
     private static final String HANDLER_NAME = "microbench-delegator-ctx";
@@ -43,10 +43,10 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     private SocketAddress localAddress;
 
     protected EmbeddedChannelHandlerContext(ByteBufAllocator alloc, ChannelHandler handler, EmbeddedChannel channel) {
-        this.alloc = checkNotNull(alloc, "alloc");
-        this.channel = checkNotNull(channel, "channel");
-        this.handler = checkNotNull(handler, "handler");
-        eventLoop = checkNotNull(channel.eventLoop(), "eventLoop");
+        this.alloc = requireNonNull(alloc, "alloc");
+        this.channel = requireNonNull(channel, "channel");
+        this.handler = requireNonNull(handler, "handler");
+        eventLoop = requireNonNull(channel.eventLoop(), "eventLoop");
     }
 
     protected abstract void handleException(Throwable t);

@@ -34,7 +34,7 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A server-side {@link SslContext} which uses OpenSSL's SSL/TLS implementation.
@@ -103,7 +103,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                         throw new IllegalArgumentException(
                                 "KeyManagerFactory not supported");
                     }
-                    checkNotNull(keyCertChain, "keyCertChain");
+                    requireNonNull(keyCertChain, "keyCertChain");
 
                     setKeyMaterial(ctx, keyCertChain, key, keyPassword);
                 } else {

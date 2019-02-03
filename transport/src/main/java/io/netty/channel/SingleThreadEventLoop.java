@@ -15,10 +15,12 @@
  */
 package io.netty.channel;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 
@@ -136,8 +138,8 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
                                  IoHandler ioHandler, int maxPendingTasks,
                                  RejectedExecutionHandler rejectedHandler, int maxTasksPerRun) {
         super(threadFactory, maxPendingTasks, rejectedHandler);
-        this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
-        this.maxTasksPerRun = ObjectUtil.checkPositive(maxTasksPerRun, "maxTasksPerRun");
+        this.ioHandler = requireNonNull(ioHandler, "ioHandler");
+        this.maxTasksPerRun = checkPositive(maxTasksPerRun, "maxTasksPerRun");
     }
 
     /**
@@ -154,8 +156,8 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
                                  IoHandler ioHandler, int maxPendingTasks,
                                  RejectedExecutionHandler rejectedHandler, int maxTasksPerRun) {
         super(executor, maxPendingTasks, rejectedHandler);
-        this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
-        this.maxTasksPerRun = ObjectUtil.checkPositive(maxTasksPerRun, "maxTasksPerRun");
+        this.ioHandler = requireNonNull(ioHandler, "ioHandler");
+        this.maxTasksPerRun = checkPositive(maxTasksPerRun, "maxTasksPerRun");
     }
 
     @Override

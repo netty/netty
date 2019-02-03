@@ -15,12 +15,13 @@
  */
 package io.netty.handler.ssl.ocsp;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.ssl.ReferenceCountedOpenSslContext;
 import io.netty.handler.ssl.ReferenceCountedOpenSslEngine;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -41,7 +42,7 @@ public abstract class OcspClientHandler extends ChannelInboundHandlerAdapter {
     private final ReferenceCountedOpenSslEngine engine;
 
     protected OcspClientHandler(ReferenceCountedOpenSslEngine engine) {
-        this.engine = ObjectUtil.checkNotNull(engine, "engine");
+        this.engine = requireNonNull(engine, "engine");
     }
 
     /**

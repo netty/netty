@@ -15,6 +15,8 @@
  */
 package io.netty.util.concurrent;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.Executor;
 
 /**
@@ -29,9 +31,7 @@ public final class ImmediateExecutor implements Executor {
 
     @Override
     public void execute(Runnable command) {
-        if (command == null) {
-            throw new NullPointerException("command");
-        }
+        requireNonNull(command, "command");
         command.run();
     }
 }

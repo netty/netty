@@ -35,7 +35,7 @@ import java.util.Set;
 import static io.netty.util.AsciiString.contentEquals;
 import static io.netty.util.AsciiString.contentEqualsIgnoreCase;
 import static io.netty.util.AsciiString.trim;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Provides the constants for the standard HTTP header names and values and
@@ -950,9 +950,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @return {@code this}
      */
     public HttpHeaders add(HttpHeaders headers) {
-        if (headers == null) {
-            throw new NullPointerException("headers");
-        }
+        requireNonNull(headers, "headers");
         for (Map.Entry<String, String> e: headers) {
             add(e.getKey(), e.getValue());
         }
@@ -1031,7 +1029,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @return {@code this}
      */
     public HttpHeaders set(HttpHeaders headers) {
-        checkNotNull(headers, "headers");
+        requireNonNull(headers, "headers");
 
         clear();
 
@@ -1052,7 +1050,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * @return {@code this}
      */
     public HttpHeaders setAll(HttpHeaders headers) {
-        checkNotNull(headers, "headers");
+        requireNonNull(headers, "headers");
 
         if (headers.isEmpty()) {
             return this;

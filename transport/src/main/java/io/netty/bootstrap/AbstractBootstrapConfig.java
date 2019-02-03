@@ -15,6 +15,8 @@
  */
 package io.netty.bootstrap;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelHandler;
@@ -22,7 +24,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannelFactory;
 import io.netty.util.AttributeKey;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
@@ -36,7 +37,7 @@ public abstract class AbstractBootstrapConfig<B extends AbstractBootstrap<B, C, 
     protected final B bootstrap;
 
     AbstractBootstrapConfig(B bootstrap) {
-        this.bootstrap = ObjectUtil.checkNotNull(bootstrap, "bootstrap");
+        this.bootstrap = requireNonNull(bootstrap, "bootstrap");
     }
 
     /**

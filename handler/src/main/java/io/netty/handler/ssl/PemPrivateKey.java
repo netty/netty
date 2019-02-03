@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ssl;
 
+import static java.util.Objects.requireNonNull;
+
 import java.security.PrivateKey;
 
 import javax.security.auth.Destroyable;
@@ -25,7 +27,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
-import io.netty.util.internal.ObjectUtil;
 
 /**
  * This is a special purpose implementation of a {@link PrivateKey} which allows the
@@ -118,7 +119,7 @@ public final class PemPrivateKey extends AbstractReferenceCounted implements Pri
     private final ByteBuf content;
 
     private PemPrivateKey(ByteBuf content) {
-        this.content = ObjectUtil.checkNotNull(content, "content");
+        this.content = requireNonNull(content, "content");
     }
 
     @Override

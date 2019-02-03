@@ -16,6 +16,8 @@
 
 package io.netty.handler.proxy;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
@@ -33,18 +35,10 @@ public final class ProxyConnectionEvent {
      */
     public ProxyConnectionEvent(
             String protocol, String authScheme, SocketAddress proxyAddress, SocketAddress destinationAddress) {
-        if (protocol == null) {
-            throw new NullPointerException("protocol");
-        }
-        if (authScheme == null) {
-            throw new NullPointerException("authScheme");
-        }
-        if (proxyAddress == null) {
-            throw new NullPointerException("proxyAddress");
-        }
-        if (destinationAddress == null) {
-            throw new NullPointerException("destinationAddress");
-        }
+        requireNonNull(protocol, "protocol");
+        requireNonNull(authScheme, "authScheme");
+        requireNonNull(proxyAddress, "proxyAddress");
+        requireNonNull(destinationAddress, "destinationAddress");
 
         this.protocol = protocol;
         this.authScheme = authScheme;

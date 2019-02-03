@@ -16,7 +16,7 @@
 package io.netty.handler.ssl;
 
 import static io.netty.handler.ssl.ApplicationProtocolUtil.toList;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 
@@ -30,11 +30,11 @@ public final class OpenSslNpnApplicationProtocolNegotiator implements OpenSslApp
     private final List<String> protocols;
 
     public OpenSslNpnApplicationProtocolNegotiator(Iterable<String> protocols) {
-        this.protocols = checkNotNull(toList(protocols), "protocols");
+        this.protocols = requireNonNull(toList(protocols), "protocols");
     }
 
     public OpenSslNpnApplicationProtocolNegotiator(String... protocols) {
-        this.protocols = checkNotNull(toList(protocols), "protocols");
+        this.protocols = requireNonNull(toList(protocols), "protocols");
     }
 
     @Override

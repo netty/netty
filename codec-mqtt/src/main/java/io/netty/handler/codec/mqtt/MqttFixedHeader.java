@@ -16,7 +16,8 @@
 
 package io.netty.handler.codec.mqtt;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -37,9 +38,9 @@ public final class MqttFixedHeader {
             MqttQoS qosLevel,
             boolean isRetain,
             int remainingLength) {
-        this.messageType = ObjectUtil.checkNotNull(messageType, "messageType");
+        this.messageType = requireNonNull(messageType, "messageType");
         this.isDup = isDup;
-        this.qosLevel = ObjectUtil.checkNotNull(qosLevel, "qosLevel");
+        this.qosLevel = requireNonNull(qosLevel, "qosLevel");
         this.isRetain = isRetain;
         this.remainingLength = remainingLength;
     }

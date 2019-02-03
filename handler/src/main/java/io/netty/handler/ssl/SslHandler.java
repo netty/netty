@@ -72,6 +72,7 @@ import javax.net.ssl.SSLSession;
 
 import static io.netty.buffer.ByteBufUtil.ensureWritableSuccess;
 import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Adds <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">SSL
@@ -450,12 +451,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     @Deprecated
     public SslHandler(SSLEngine engine, boolean startTls, Executor delegatedTaskExecutor) {
-        if (engine == null) {
-            throw new NullPointerException("engine");
-        }
-        if (delegatedTaskExecutor == null) {
-            throw new NullPointerException("delegatedTaskExecutor");
-        }
+        requireNonNull(engine, "engine");
+        requireNonNull(delegatedTaskExecutor, "delegatedTaskExecutor");
         this.engine = engine;
         engineType = SslEngineType.forEngine(engine);
         this.delegatedTaskExecutor = delegatedTaskExecutor;
@@ -469,9 +466,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     public void setHandshakeTimeout(long handshakeTimeout, TimeUnit unit) {
-        if (unit == null) {
-            throw new NullPointerException("unit");
-        }
+        requireNonNull(unit, "unit");
 
         setHandshakeTimeoutMillis(unit.toMillis(handshakeTimeout));
     }
@@ -1685,9 +1680,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Performs TLS renegotiation.
      */
     public Future<Channel> renegotiate(final Promise<Channel> promise) {
-        if (promise == null) {
-            throw new NullPointerException("promise");
-        }
+        requireNonNull(promise, "promise");
 
         ChannelHandlerContext ctx = this.ctx;
         if (ctx == null) {

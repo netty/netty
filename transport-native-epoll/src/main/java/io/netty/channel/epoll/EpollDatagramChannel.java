@@ -44,6 +44,7 @@ import java.net.SocketException;
 import java.nio.ByteBuffer;
 
 import static io.netty.channel.epoll.LinuxSocket.newSocketDgram;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link DatagramChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
@@ -141,14 +142,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     public ChannelFuture joinGroup(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
             final InetAddress source, final ChannelPromise promise) {
-
-        if (multicastAddress == null) {
-            throw new NullPointerException("multicastAddress");
-        }
-
-        if (networkInterface == null) {
-            throw new NullPointerException("networkInterface");
-        }
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(networkInterface, "networkInterface");
 
         promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
         return promise;
@@ -193,12 +188,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     public ChannelFuture leaveGroup(
             final InetAddress multicastAddress, final NetworkInterface networkInterface, final InetAddress source,
             final ChannelPromise promise) {
-        if (multicastAddress == null) {
-            throw new NullPointerException("multicastAddress");
-        }
-        if (networkInterface == null) {
-            throw new NullPointerException("networkInterface");
-        }
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(networkInterface, "networkInterface");
 
         promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
 
@@ -216,16 +207,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     public ChannelFuture block(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
             final InetAddress sourceToBlock, final ChannelPromise promise) {
-        if (multicastAddress == null) {
-            throw new NullPointerException("multicastAddress");
-        }
-        if (sourceToBlock == null) {
-            throw new NullPointerException("sourceToBlock");
-        }
-
-        if (networkInterface == null) {
-            throw new NullPointerException("networkInterface");
-        }
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(sourceToBlock, "sourceToBlock");
+        requireNonNull(networkInterface, "networkInterface");
         promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
         return promise;
     }

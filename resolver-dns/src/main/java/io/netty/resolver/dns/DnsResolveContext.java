@@ -59,6 +59,7 @@ import java.util.Set;
 
 import static io.netty.resolver.dns.DnsAddressDecoder.decodeAddress;
 import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
 
 abstract class DnsResolveContext<T> {
 
@@ -117,7 +118,7 @@ abstract class DnsResolveContext<T> {
         this.expectedTypes = expectedTypes;
         this.additionals = additionals;
 
-        this.nameServerAddrs = ObjectUtil.checkNotNull(nameServerAddrs, "nameServerAddrs");
+        this.nameServerAddrs = requireNonNull(nameServerAddrs, "nameServerAddrs");
         maxAllowedQueries = parent.maxQueriesPerResolve();
         allowedQueries = maxAllowedQueries;
     }

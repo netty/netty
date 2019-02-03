@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.internal.StringUtil;
 
@@ -27,9 +29,7 @@ public class DefaultByteBufHolder implements ByteBufHolder {
     private final ByteBuf data;
 
     public DefaultByteBufHolder(ByteBuf data) {
-        if (data == null) {
-            throw new NullPointerException("data");
-        }
+        requireNonNull(data, "data");
         this.data = data;
     }
 

@@ -15,7 +15,8 @@
  */
 package io.netty.util.concurrent;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -141,10 +142,10 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
      * @param rejectedHandler   the {@link RejectedExecutionHandler} to use.
      */
     public SingleThreadEventExecutor(Executor executor, int maxPendingTasks, RejectedExecutionHandler rejectedHandler) {
-        this.executor = ObjectUtil.checkNotNull(executor, "executor");
+        this.executor = requireNonNull(executor, "executor");
         taskQueue = newTaskQueue(Math.max(16, maxPendingTasks));
         this.addTaskWakesUp = taskQueue instanceof BlockingQueue;
-        rejectedExecutionHandler = ObjectUtil.checkNotNull(rejectedHandler, "rejectedHandler");
+        rejectedExecutionHandler = requireNonNull(rejectedHandler, "rejectedHandler");
     }
 
     /**
@@ -292,9 +293,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
      * @see Queue#offer(Object)
      */
     protected final boolean offerTask(Runnable task) {
-        if (task == null) {
-            throw new NullPointerException("task");
-        }
+        requireNonNull(task, "task");
         if (isShutdown()) {
             reject();
         }
@@ -509,9 +508,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
             throw new IllegalArgumentException(
                     "timeout: " + timeout + " (expected >= quietPeriod (" + quietPeriod + "))");
         }
-        if (unit == null) {
-            throw new NullPointerException("unit");
-        }
+        requireNonNull(unit, "unit");
 
         if (isShuttingDown()) {
             return terminationFuture();
@@ -684,9 +681,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
 
     @Override
     public final boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-        if (unit == null) {
-            throw new NullPointerException("unit");
-        }
+        requireNonNull(unit, "unit");
 
         if (inEventLoop()) {
             throw new IllegalStateException("cannot await termination of the current thread");
@@ -701,9 +696,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
 
     @Override
     public void execute(Runnable task) {
-        if (task == null) {
-            throw new NullPointerException("task");
-        }
+        requireNonNull(task, "task");
 
         boolean inEventLoop = inEventLoop();
         addTask(task);

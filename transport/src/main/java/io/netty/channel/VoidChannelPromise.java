@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.concurrent.AbstractFuture;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -35,9 +37,7 @@ public final class VoidChannelPromise extends AbstractFuture<Void> implements Ch
      * @param channel the {@link Channel} associated with this future
      */
     public VoidChannelPromise(final Channel channel, boolean fireException) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
+        requireNonNull(channel, "channel");
         this.channel = channel;
         if (fireException) {
             fireExceptionListener = future -> {

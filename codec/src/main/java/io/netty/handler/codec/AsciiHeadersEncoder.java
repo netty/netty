@@ -16,6 +16,7 @@
 
 package io.netty.handler.codec;
 
+import static java.util.Objects.requireNonNull;
 
 import java.util.Map.Entry;
 
@@ -63,15 +64,9 @@ public final class AsciiHeadersEncoder {
     }
 
     public AsciiHeadersEncoder(ByteBuf buf, SeparatorType separatorType, NewlineType newlineType) {
-        if (buf == null) {
-            throw new NullPointerException("buf");
-        }
-        if (separatorType == null) {
-            throw new NullPointerException("separatorType");
-        }
-        if (newlineType == null) {
-            throw new NullPointerException("newlineType");
-        }
+        requireNonNull(buf, "buf");
+        requireNonNull(separatorType, "separatorType");
+        requireNonNull(newlineType, "newlineType");
 
         this.buf = buf;
         this.separatorType = separatorType;
