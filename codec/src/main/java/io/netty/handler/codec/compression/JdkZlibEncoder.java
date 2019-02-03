@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.compression;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -91,10 +93,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
      * @throws CompressionException if failed to initialize zlib
      */
     public JdkZlibEncoder(ZlibWrapper wrapper, int compressionLevel) {
-        if (compressionLevel < 0 || compressionLevel > 9) {
-            throw new IllegalArgumentException(
-                    "compressionLevel: " + compressionLevel + " (expected: 0-9)");
-        }
+        checkClosedInterval(compressionLevel, 0, 9, "compressionLevel");
         if (wrapper == null) {
             throw new NullPointerException("wrapper");
         }
@@ -137,10 +136,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
      * @throws CompressionException if failed to initialize zlib
      */
     public JdkZlibEncoder(int compressionLevel, byte[] dictionary) {
-        if (compressionLevel < 0 || compressionLevel > 9) {
-            throw new IllegalArgumentException(
-                    "compressionLevel: " + compressionLevel + " (expected: 0-9)");
-        }
+        checkClosedInterval(compressionLevel, 0, 9, "compressionLevel");
         if (dictionary == null) {
             throw new NullPointerException("dictionary");
         }

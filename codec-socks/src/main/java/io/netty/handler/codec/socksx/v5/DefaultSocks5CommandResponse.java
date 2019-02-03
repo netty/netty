@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.socksx.v5;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.StringUtil;
@@ -51,9 +53,7 @@ public final class DefaultSocks5CommandResponse extends AbstractSocks5Message im
                 }
             } else if (bndAddrType == Socks5AddressType.DOMAIN) {
                 bndAddr = IDN.toASCII(bndAddr);
-                if (bndAddr.length() > 255) {
-                    throw new IllegalArgumentException("bndAddr: " + bndAddr + " (expected: less than 256 chars)");
-                }
+                checkClosedInterval(bndAddr.length(), 0, 255, "bndAddr");
             } else if (bndAddrType == Socks5AddressType.IPv6) {
                 if (!NetUtil.isValidIpV6Address(bndAddr)) {
                     throw new IllegalArgumentException("bndAddr: " + bndAddr + " (expected: a valid IPv6 address)");
@@ -61,9 +61,7 @@ public final class DefaultSocks5CommandResponse extends AbstractSocks5Message im
             }
         }
 
-        if (bndPort < 0 || bndPort > 65535) {
-            throw new IllegalArgumentException("bndPort: " + bndPort + " (expected: 0~65535)");
-        }
+        checkClosedInterval(bndPort, 0, 65535, "bndPort");
         this.status = status;
         this.bndAddrType = bndAddrType;
         this.bndAddr = bndAddr;

@@ -72,6 +72,7 @@ import javax.net.ssl.SSLSession;
 
 import static io.netty.buffer.ByteBufUtil.ensureWritableSuccess;
 import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Adds <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">SSL
@@ -477,10 +478,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     public void setHandshakeTimeoutMillis(long handshakeTimeoutMillis) {
-        if (handshakeTimeoutMillis < 0) {
-            throw new IllegalArgumentException(
-                    "handshakeTimeoutMillis: " + handshakeTimeoutMillis + " (expected: >= 0)");
-        }
+        checkPositiveOrZero(handshakeTimeoutMillis, "handshakeTimeoutMillis");
         this.handshakeTimeoutMillis = handshakeTimeoutMillis;
     }
 
@@ -555,10 +553,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * See {@link #setCloseNotifyFlushTimeout(long, TimeUnit)}.
      */
     public final void setCloseNotifyFlushTimeoutMillis(long closeNotifyFlushTimeoutMillis) {
-        if (closeNotifyFlushTimeoutMillis < 0) {
-            throw new IllegalArgumentException(
-                    "closeNotifyFlushTimeoutMillis: " + closeNotifyFlushTimeoutMillis + " (expected: >= 0)");
-        }
+        checkPositiveOrZero(closeNotifyFlushTimeoutMillis, "closeNotifyFlushTimeoutMillis");
         this.closeNotifyFlushTimeoutMillis = closeNotifyFlushTimeoutMillis;
     }
 
@@ -584,10 +579,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * See {@link #setCloseNotifyReadTimeout(long, TimeUnit)}.
      */
     public final void setCloseNotifyReadTimeoutMillis(long closeNotifyReadTimeoutMillis) {
-        if (closeNotifyReadTimeoutMillis < 0) {
-            throw new IllegalArgumentException(
-                    "closeNotifyReadTimeoutMillis: " + closeNotifyReadTimeoutMillis + " (expected: >= 0)");
-        }
+        checkPositiveOrZero(closeNotifyReadTimeoutMillis, "closeNotifyReadTimeoutMillis");
         this.closeNotifyReadTimeoutMillis = closeNotifyReadTimeoutMillis;
     }
 

@@ -28,6 +28,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -52,10 +53,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
         checkNotNull(alloc, "alloc");
 
-        if (initialCapacity > maxCapacity) {
-            throw new IllegalArgumentException(String.format(
-                    "initialCapacity(%d) > maxCapacity(%d)", initialCapacity, maxCapacity));
-        }
+        checkClosedInterval(initialCapacity, 0, maxCapacity, "initialCapacity");
 
         this.alloc = alloc;
         setArray(allocateArray(initialCapacity));
@@ -74,10 +72,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         checkNotNull(alloc, "alloc");
         checkNotNull(initialArray, "initialArray");
 
-        if (initialArray.length > maxCapacity) {
-            throw new IllegalArgumentException(String.format(
-                    "initialCapacity(%d) > maxCapacity(%d)", initialArray.length, maxCapacity));
-        }
+        checkClosedInterval(initialArray.length, 0, maxCapacity, "initialCapacity");
 
         this.alloc = alloc;
         setArray(initialArray);

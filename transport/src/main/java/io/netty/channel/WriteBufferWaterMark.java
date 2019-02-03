@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
@@ -56,13 +57,7 @@ public final class WriteBufferWaterMark {
      */
     WriteBufferWaterMark(int low, int high, boolean validate) {
         if (validate) {
-            checkPositiveOrZero(low, "low");
-            if (high < low) {
-                throw new IllegalArgumentException(
-                        "write buffer's high water mark cannot be less than " +
-                                " low water mark (" + low + "): " +
-                                high);
-            }
+            checkClosedInterval(low, 0, high, "write buffer's low water mark");
         }
         this.low = low;
         this.high = high;

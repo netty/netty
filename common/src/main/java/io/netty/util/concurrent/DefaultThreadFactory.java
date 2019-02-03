@@ -16,6 +16,8 @@
 
 package io.netty.util.concurrent;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+
 import io.netty.util.internal.StringUtil;
 
 import java.util.Locale;
@@ -87,10 +89,7 @@ public class DefaultThreadFactory implements ThreadFactory {
         if (poolName == null) {
             throw new NullPointerException("poolName");
         }
-        if (priority < Thread.MIN_PRIORITY || priority > Thread.MAX_PRIORITY) {
-            throw new IllegalArgumentException(
-                    "priority: " + priority + " (expected: Thread.MIN_PRIORITY <= priority <= Thread.MAX_PRIORITY)");
-        }
+        checkClosedInterval(priority, Thread.MIN_PRIORITY, Thread.MAX_PRIORITY, "priority");
 
         prefix = poolName + '-' + poolId.incrementAndGet() + '-';
         this.daemon = daemon;

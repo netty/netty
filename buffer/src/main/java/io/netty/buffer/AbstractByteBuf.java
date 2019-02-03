@@ -38,6 +38,7 @@ import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 
 import static io.netty.util.internal.MathUtil.isOutOfBounds;
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
@@ -1368,10 +1369,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     protected final void checkNewCapacity(int newCapacity) {
         ensureAccessible();
         if (checkBounds) {
-            if (newCapacity < 0 || newCapacity > maxCapacity()) {
-                throw new IllegalArgumentException("newCapacity: " + newCapacity +
-                        " (expected: 0-" + maxCapacity() + ')');
-            }
+            checkClosedInterval(newCapacity, 0, maxCapacity(), "newCapacity");
         }
     }
 

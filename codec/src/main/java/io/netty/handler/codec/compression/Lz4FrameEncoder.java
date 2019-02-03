@@ -50,6 +50,7 @@ import static io.netty.handler.codec.compression.Lz4Constants.MAGIC_NUMBER;
 import static io.netty.handler.codec.compression.Lz4Constants.MAX_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.Lz4Constants.MIN_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.Lz4Constants.TOKEN_OFFSET;
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
 
 /**
@@ -184,10 +185,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
      * Calculates compression level on the basis of block size.
      */
     private static int compressionLevel(int blockSize) {
-        if (blockSize < MIN_BLOCK_SIZE || blockSize > MAX_BLOCK_SIZE) {
-            throw new IllegalArgumentException(String.format(
-                    "blockSize: %d (expected: %d-%d)", blockSize, MIN_BLOCK_SIZE, MAX_BLOCK_SIZE));
-        }
+        checkClosedInterval(blockSize, MIN_BLOCK_SIZE, MAX_BLOCK_SIZE, "blockSize");
         int compressionLevel = 32 - Integer.numberOfLeadingZeros(blockSize - 1); // ceil of log2
         compressionLevel = Math.max(0, compressionLevel - COMPRESSION_LEVEL_BASE);
         return compressionLevel;

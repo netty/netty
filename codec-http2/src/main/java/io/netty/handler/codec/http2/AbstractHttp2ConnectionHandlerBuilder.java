@@ -150,10 +150,8 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * Sets the graceful shutdown timeout of the {@link Http2Connection} in milliseconds.
      */
     protected B gracefulShutdownTimeoutMillis(long gracefulShutdownTimeoutMillis) {
-        if (gracefulShutdownTimeoutMillis < -1) {
-            throw new IllegalArgumentException("gracefulShutdownTimeoutMillis: " + gracefulShutdownTimeoutMillis +
-                                               " (expected: -1 for indefinite or >= 0)");
-        }
+        // gracefulShutdownTimeoutMillis expected -1 for indefinite or >= 0.
+        checkPositiveOrZero(gracefulShutdownTimeoutMillis + 1, "gracefulShutdownTimeoutMillis");
         this.gracefulShutdownTimeoutMillis = gracefulShutdownTimeoutMillis;
         return self();
     }

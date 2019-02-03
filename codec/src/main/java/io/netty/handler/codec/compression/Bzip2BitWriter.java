@@ -15,6 +15,9 @@
  */
 package io.netty.handler.codec.compression;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.buffer.ByteBuf;
 
 /**
@@ -39,9 +42,7 @@ final class Bzip2BitWriter {
      * @param value The bits to write
      */
     void writeBits(ByteBuf out, final int count, final long value) {
-        if (count < 0 || count > 32) {
-            throw new IllegalArgumentException("count: " + count + " (expected: 0-32)");
-        }
+        checkClosedInterval(count, 0, 32, "count");
         int bitCount = this.bitCount;
         long bitBuffer = this.bitBuffer | value << 64 - count >>> bitCount;
         bitCount += count;
@@ -78,9 +79,7 @@ final class Bzip2BitWriter {
      * @param value The number of {@code 1} to write
      */
     void writeUnary(ByteBuf out, int value) {
-        if (value < 0) {
-            throw new IllegalArgumentException("value: " + value + " (expected 0 or more)");
-        }
+        checkPositiveOrZero(value, "value");
         while (value-- > 0) {
             writeBoolean(out, true);
         }

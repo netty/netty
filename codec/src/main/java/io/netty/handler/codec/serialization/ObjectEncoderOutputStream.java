@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.serialization;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
@@ -66,9 +68,7 @@ public class ObjectEncoderOutputStream extends OutputStream implements
         if (out == null) {
             throw new NullPointerException("out");
         }
-        if (estimatedLength < 0) {
-            throw new IllegalArgumentException("estimatedLength: " + estimatedLength);
-        }
+        checkPositiveOrZero(estimatedLength, "estimatedLength");
 
         if (out instanceof DataOutputStream) {
             this.out = (DataOutputStream) out;

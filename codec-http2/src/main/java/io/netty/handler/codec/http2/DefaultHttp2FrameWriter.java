@@ -60,7 +60,10 @@ import static io.netty.handler.codec.http2.Http2FrameTypes.PUSH_PROMISE;
 import static io.netty.handler.codec.http2.Http2FrameTypes.RST_STREAM;
 import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import static io.netty.handler.codec.http2.Http2FrameTypes.WINDOW_UPDATE;
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -614,33 +617,23 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     }
 
     private static void verifyStreamId(int streamId, String argumentName) {
-        if (streamId <= 0) {
-            throw new IllegalArgumentException(argumentName + " must be > 0");
-        }
+        checkPositive(streamId, "streamId");
     }
 
     private static void verifyStreamOrConnectionId(int streamId, String argumentName) {
-        if (streamId < 0) {
-            throw new IllegalArgumentException(argumentName + " must be >= 0");
-        }
+        checkPositiveOrZero(streamId, "streamId");
     }
 
     private static void verifyWeight(short weight) {
-        if (weight < MIN_WEIGHT || weight > MAX_WEIGHT) {
-            throw new IllegalArgumentException("Invalid weight: " + weight);
-        }
+        checkClosedInterval(weight, MIN_WEIGHT, MAX_WEIGHT, "weight");
     }
 
     private static void verifyErrorCode(long errorCode) {
-        if (errorCode < 0 || errorCode > MAX_UNSIGNED_INT) {
-            throw new IllegalArgumentException("Invalid errorCode: " + errorCode);
-        }
+        checkClosedInterval(errorCode, 0, MAX_UNSIGNED_INT, "errorCode");
     }
 
     private static void verifyWindowSizeIncrement(int windowSizeIncrement) {
-        if (windowSizeIncrement < 0) {
-            throw new IllegalArgumentException("WindowSizeIncrement must be >= 0");
-        }
+        checkPositiveOrZero(windowSizeIncrement, "windowSizeIncrement");
     }
 
     private static void verifyPingPayload(ByteBuf data) {

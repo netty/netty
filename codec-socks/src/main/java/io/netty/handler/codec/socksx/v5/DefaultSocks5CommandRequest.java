@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.socksx.v5;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.StringUtil;
@@ -50,18 +52,14 @@ public final class DefaultSocks5CommandRequest extends AbstractSocks5Message imp
             }
         } else if (dstAddrType == Socks5AddressType.DOMAIN) {
             dstAddr = IDN.toASCII(dstAddr);
-            if (dstAddr.length() > 255) {
-                throw new IllegalArgumentException("dstAddr: " + dstAddr + " (expected: less than 256 chars)");
-            }
+            checkClosedInterval(dstAddr.length(), 0, 255, "dstAddr");
         } else if (dstAddrType == Socks5AddressType.IPv6) {
             if (!NetUtil.isValidIpV6Address(dstAddr)) {
                 throw new IllegalArgumentException("dstAddr: " + dstAddr + " (expected: a valid IPv6 address");
             }
         }
 
-        if (dstPort < 0 || dstPort > 65535) {
-            throw new IllegalArgumentException("dstPort: " + dstPort + " (expected: 0~65535)");
-        }
+        checkClosedInterval(dstPort, 0, 65535, "dstPort");
 
         this.type = type;
         this.dstAddrType = dstAddrType;

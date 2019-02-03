@@ -15,7 +15,6 @@
  */
 package io.netty.util.internal;
 
-
 import java.util.Arrays;
 
 public final class AppendableCharSequence implements CharSequence, Appendable {

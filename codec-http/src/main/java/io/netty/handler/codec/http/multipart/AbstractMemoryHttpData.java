@@ -32,6 +32,7 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.buffer;
 import static io.netty.buffer.Unpooled.compositeBuffer;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 
 /**
  * Abstract Memory HttpData implementation
@@ -127,10 +128,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
             throw new NullPointerException("file");
         }
         long newsize = file.length();
-        if (newsize > Integer.MAX_VALUE) {
-            throw new IllegalArgumentException(
-                    "File too big to be loaded in memory");
-        }
+        checkClosedInterval(newsize, 0, Integer.MAX_VALUE, "file size");
         checkSize(newsize);
         FileInputStream inputStream = new FileInputStream(file);
         FileChannel fileChannel = inputStream.getChannel();

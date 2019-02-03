@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
@@ -307,17 +308,10 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
 
         checkPositive(maxFrameLength, "maxFrameLength");
 
-        checkPositiveOrZero(lengthFieldOffset, "lengthFieldOffset");
+        // maxFrameLength must be equal to or greater than lengthFieldOffset + lengthFieldLength.
+        checkClosedInterval(lengthFieldOffset, 0, maxFrameLength - lengthFieldLength, "lengthFieldOffset");
 
         checkPositiveOrZero(initialBytesToStrip, "initialBytesToStrip");
-
-        if (lengthFieldOffset > maxFrameLength - lengthFieldLength) {
-            throw new IllegalArgumentException(
-                    "maxFrameLength (" + maxFrameLength + ") " +
-                    "must be equal to or greater than " +
-                    "lengthFieldOffset (" + lengthFieldOffset + ") + " +
-                    "lengthFieldLength (" + lengthFieldLength + ").");
-        }
 
         this.byteOrder = byteOrder;
         this.maxFrameLength = maxFrameLength;

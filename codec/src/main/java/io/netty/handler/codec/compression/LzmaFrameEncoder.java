@@ -27,6 +27,8 @@ import lzma.sdk.lzma.Encoder;
 
 import java.io.InputStream;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static lzma.sdk.lzma.Encoder.*;
 
 /**
@@ -135,15 +137,9 @@ public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      *        available values [{@value #MIN_FAST_BYTES}, {@value #MAX_FAST_BYTES}].
      */
     public LzmaFrameEncoder(int lc, int lp, int pb, int dictionarySize, boolean endMarkerMode, int numFastBytes) {
-        if (lc < 0 || lc > 8) {
-            throw new IllegalArgumentException("lc: " + lc + " (expected: 0-8)");
-        }
-        if (lp < 0 || lp > 4) {
-            throw new IllegalArgumentException("lp: " + lp + " (expected: 0-4)");
-        }
-        if (pb < 0 || pb > 4) {
-            throw new IllegalArgumentException("pb: " + pb + " (expected: 0-4)");
-        }
+        checkClosedInterval(lc, 0, 8, "lc");
+        checkClosedInterval(lp, 0, 4, "lp");
+        checkClosedInterval(pb, 0, 4, "pb");
         if (lc + lp > 4) {
             if (!warningLogged) {
                 logger.warn("The latest versions of LZMA libraries (for example, XZ Utils) " +
@@ -152,14 +148,8 @@ public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
                 warningLogged = true;
             }
         }
-        if (dictionarySize < 0) {
-            throw new IllegalArgumentException("dictionarySize: " + dictionarySize + " (expected: 0+)");
-        }
-        if (numFastBytes < MIN_FAST_BYTES || numFastBytes > MAX_FAST_BYTES) {
-            throw new IllegalArgumentException(String.format(
-                    "numFastBytes: %d (expected: %d-%d)", numFastBytes, MIN_FAST_BYTES, MAX_FAST_BYTES
-            ));
-        }
+        checkPositiveOrZero(dictionarySize, "dictionarySize");
+        checkClosedInterval(numFastBytes, MIN_FAST_BYTES, MAX_FAST_BYTES, "numFastBytes");
 
         encoder = new Encoder();
         encoder.setDictionarySize(dictionarySize);

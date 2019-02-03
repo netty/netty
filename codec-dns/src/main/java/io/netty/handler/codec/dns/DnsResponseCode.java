@@ -17,6 +17,7 @@ package io.netty.handler.codec.dns;
 
 import io.netty.util.internal.UnstableApi;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -168,9 +169,7 @@ public class DnsResponseCode implements Comparable<DnsResponseCode> {
     }
 
     public DnsResponseCode(int code, String name) {
-        if (code < 0 || code > 65535) {
-            throw new IllegalArgumentException("code: " + code + " (expected: 0 ~ 65535)");
-        }
+        checkClosedInterval(code, 0, 65535, "code");
 
         this.code = code;
         this.name = checkNotNull(name, "name");

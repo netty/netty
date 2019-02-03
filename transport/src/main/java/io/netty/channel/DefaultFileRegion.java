@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import io.netty.util.AbstractReferenceCounted;
@@ -121,12 +122,8 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
 
     @Override
     public long transferTo(WritableByteChannel target, long position) throws IOException {
+        checkClosedInterval(position, 0, this.count - 1, "position");
         long count = this.count - position;
-        if (count < 0 || position < 0) {
-            throw new IllegalArgumentException(
-                    "position out of range: " + position +
-                    " (expected: 0 - " + (this.count - 1) + ')');
-        }
         if (count == 0) {
             return 0L;
         }

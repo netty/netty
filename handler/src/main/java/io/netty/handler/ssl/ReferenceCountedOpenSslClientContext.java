@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ssl;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.internal.tcnative.CertificateCallback;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -180,9 +182,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
 
         @Override
         public void setSessionTimeout(int seconds) {
-            if (seconds < 0) {
-                throw new IllegalArgumentException();
-            }
+            checkPositiveOrZero(seconds, "seconds");
         }
 
         @Override
@@ -192,9 +192,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
 
         @Override
         public void setSessionCacheSize(int size)  {
-            if (size < 0) {
-                throw new IllegalArgumentException();
-            }
+            checkPositiveOrZero(size, "size");
         }
 
         @Override

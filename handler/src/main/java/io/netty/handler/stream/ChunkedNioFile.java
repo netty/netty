@@ -15,6 +15,9 @@
  */
 package io.netty.handler.stream;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
@@ -88,19 +91,9 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
         if (in == null) {
             throw new NullPointerException("in");
         }
-        if (offset < 0) {
-            throw new IllegalArgumentException(
-                    "offset: " + offset + " (expected: 0 or greater)");
-        }
-        if (length < 0) {
-            throw new IllegalArgumentException(
-                    "length: " + length + " (expected: 0 or greater)");
-        }
-        if (chunkSize <= 0) {
-            throw new IllegalArgumentException(
-                    "chunkSize: " + chunkSize +
-                    " (expected: a positive integer)");
-        }
+        checkPositiveOrZero(offset, "offset");
+        checkPositiveOrZero(length, "length");
+        checkPositive(chunkSize, "chunkSize");
 
         if (offset != 0) {
             in.position(offset);

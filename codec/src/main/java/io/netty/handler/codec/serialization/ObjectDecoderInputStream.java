@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.serialization;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -91,9 +93,7 @@ public class ObjectDecoderInputStream extends InputStream implements
         if (in == null) {
             throw new NullPointerException("in");
         }
-        if (maxObjectSize <= 0) {
-            throw new IllegalArgumentException("maxObjectSize: " + maxObjectSize);
-        }
+        checkPositive(maxObjectSize, "maxObjectSize");
         if (in instanceof DataInputStream) {
             this.in = (DataInputStream) in;
         } else {

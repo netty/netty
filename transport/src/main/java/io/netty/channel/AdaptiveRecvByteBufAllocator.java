@@ -18,6 +18,7 @@ package io.netty.channel;
 import java.util.ArrayList;
 import java.util.List;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -164,13 +165,9 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
      * @param maximum  the inclusive upper bound of the expected buffer size
      */
     public AdaptiveRecvByteBufAllocator(int minimum, int initial, int maximum) {
-        checkPositive(minimum, "minimum");
-        if (initial < minimum) {
-            throw new IllegalArgumentException("initial: " + initial);
-        }
-        if (maximum < initial) {
-            throw new IllegalArgumentException("maximum: " + maximum);
-        }
+        // 1 <= minimum <= initial <= maximum.
+        checkClosedInterval(minimum, 1, initial, "minimum");
+        checkClosedInterval(initial, minimum, maximum, "initial");
 
         int minIndex = getSizeTableIndex(minimum);
         if (SIZE_TABLE[minIndex] < minimum) {

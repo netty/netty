@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import io.netty.util.NettyRuntime;
@@ -284,9 +285,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     }
 
     private static int validateAndCalculateChunkSize(int pageSize, int maxOrder) {
-        if (maxOrder > 14) {
-            throw new IllegalArgumentException("maxOrder: " + maxOrder + " (expected: 0-14)");
-        }
+        checkClosedInterval(maxOrder, 0, 14, "maxOrder");
 
         // Ensure the resulting chunkSize does not overflow.
         int chunkSize = pageSize;

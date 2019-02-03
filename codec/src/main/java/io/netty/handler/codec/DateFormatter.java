@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import io.netty.util.AsciiString;
@@ -96,12 +97,8 @@ public final class DateFormatter {
         int length = end - start;
         if (length == 0) {
             return null;
-        } else if (length < 0) {
-            throw new IllegalArgumentException("Can't have end < start");
-        } else if (length > 64) {
-            throw new IllegalArgumentException("Can't parse more than 64 chars," +
-                    "looks like a user error or a malformed header");
         }
+        checkClosedInterval(length, 1, 64, "length");
         return formatter().parse0(checkNotNull(txt, "txt"), start, end);
     }
 

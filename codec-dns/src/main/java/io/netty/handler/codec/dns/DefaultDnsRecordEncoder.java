@@ -23,6 +23,7 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.dns.DefaultDnsRecordDecoder.ROOT;
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 
 /**
  * The default {@link DnsRecordEncoder} implementation.
@@ -88,10 +89,7 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
 
         byte[] bytes = record.address();
         int addressBits = bytes.length << 3;
-        if (addressBits < sourcePrefixLength || sourcePrefixLength < 0) {
-            throw new IllegalArgumentException(sourcePrefixLength + ": " +
-                    sourcePrefixLength + " (expected: 0 >= " + addressBits + ')');
-        }
+        checkClosedInterval(sourcePrefixLength, 0, addressBits, "sourcePrefixLength");
 
         // See http://www.iana.org/assignments/address-family-numbers/address-family-numbers.xhtml
         final short addressNumber = (short) (bytes.length == 4 ?

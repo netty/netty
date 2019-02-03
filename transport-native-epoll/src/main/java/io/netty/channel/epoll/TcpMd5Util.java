@@ -15,6 +15,8 @@
  */
 package io.netty.channel.epoll;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+
 import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
@@ -42,14 +44,7 @@ final class TcpMd5Util {
             if (key == null) {
                 throw new NullPointerException("newKeys[" + e.getKey() + ']');
             }
-            if (key.length == 0) {
-                throw new IllegalArgumentException("newKeys[" + e.getKey() + "] has an empty key.");
-            }
-            if (key.length > Native.TCP_MD5SIG_MAXKEYLEN) {
-                throw new IllegalArgumentException("newKeys[" + e.getKey() +
-                    "] has a key with invalid length; should not exceed the maximum length (" +
-                        Native.TCP_MD5SIG_MAXKEYLEN + ')');
-            }
+            checkClosedInterval(key.length, 1, Native.TCP_MD5SIG_MAXKEYLEN, "newKeys[" + e.getKey() + "]");
         }
 
         // Remove mappings not present in the new set.

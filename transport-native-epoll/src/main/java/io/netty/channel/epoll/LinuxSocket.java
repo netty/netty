@@ -29,6 +29,7 @@ import java.nio.channels.ClosedChannelException;
 import static io.netty.channel.unix.Errors.ERRNO_EPIPE_NEGATIVE;
 import static io.netty.channel.unix.Errors.ioResult;
 import static io.netty.channel.unix.Errors.newConnectionResetException;
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 
 /**
  * A socket which provides access Linux native methods.
@@ -61,9 +62,7 @@ final class LinuxSocket extends Socket {
     }
 
     void setTcpNotSentLowAt(long tcpNotSentLowAt) throws IOException {
-        if (tcpNotSentLowAt < 0 || tcpNotSentLowAt > MAX_UINT32_T) {
-            throw new IllegalArgumentException("tcpNotSentLowAt must be a uint32_t");
-        }
+        checkClosedInterval(tcpNotSentLowAt, 0, MAX_UINT32_T, "tcpNotSentLowAt");
         setTcpNotSentLowAt(intValue(), (int) tcpNotSentLowAt);
     }
 

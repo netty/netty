@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import io.netty.buffer.ByteBuf;
@@ -169,24 +170,15 @@ public class LengthFieldPrepender extends MessageToMessageEncoder<ByteBuf> {
 
         switch (lengthFieldLength) {
         case 1:
-            if (length >= 256) {
-                throw new IllegalArgumentException(
-                        "length does not fit into a byte: " + length);
-            }
+            checkClosedInterval(length, 0, 256, "length does not fit into a byte");
             out.add(ctx.alloc().buffer(1).order(byteOrder).writeByte((byte) length));
             break;
         case 2:
-            if (length >= 65536) {
-                throw new IllegalArgumentException(
-                        "length does not fit into a short integer: " + length);
-            }
+            checkClosedInterval(length, 0, 65536, "length does not fit into a short integer");
             out.add(ctx.alloc().buffer(2).order(byteOrder).writeShort((short) length));
             break;
         case 3:
-            if (length >= 16777216) {
-                throw new IllegalArgumentException(
-                        "length does not fit into a medium integer: " + length);
-            }
+            checkClosedInterval(length, 0, 16777216, "length does not fit into a medium integer");
             out.add(ctx.alloc().buffer(3).order(byteOrder).writeMedium(length));
             break;
         case 4:

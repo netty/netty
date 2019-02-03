@@ -33,6 +33,7 @@ import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
 import static io.netty.handler.codec.http.HttpHeaderValues.IDENTITY;
 import static io.netty.handler.codec.http.HttpHeaderValues.X_DEFLATE;
 import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 
 /**
  * A decorating HTTP2 encoder that will compress data frames according to the {@code content-encoding} header for each
@@ -56,15 +57,9 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate, int compressionLevel, int windowBits,
                                             int memLevel) {
         super(delegate);
-        if (compressionLevel < 0 || compressionLevel > 9) {
-            throw new IllegalArgumentException("compressionLevel: " + compressionLevel + " (expected: 0-9)");
-        }
-        if (windowBits < 9 || windowBits > 15) {
-            throw new IllegalArgumentException("windowBits: " + windowBits + " (expected: 9-15)");
-        }
-        if (memLevel < 1 || memLevel > 9) {
-            throw new IllegalArgumentException("memLevel: " + memLevel + " (expected: 1-9)");
-        }
+        checkClosedInterval(compressionLevel, 0, 9, "compressionLevel");
+        checkClosedInterval(windowBits, 9, 15, "windowBits");
+        checkClosedInterval(memLevel, 1, 9, "memLevel");
         this.compressionLevel = compressionLevel;
         this.windowBits = windowBits;
         this.memLevel = memLevel;

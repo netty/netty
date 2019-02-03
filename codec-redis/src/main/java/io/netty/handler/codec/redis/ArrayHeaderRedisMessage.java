@@ -15,6 +15,8 @@
 
 package io.netty.handler.codec.redis;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -30,9 +32,7 @@ public class ArrayHeaderRedisMessage implements RedisMessage {
      * Creates a {@link ArrayHeaderRedisMessage} for the given {@code length}.
      */
     public ArrayHeaderRedisMessage(long length) {
-        if (length < RedisConstants.NULL_VALUE) {
-            throw new RedisCodecException("length: " + length + " (expected: >= " + RedisConstants.NULL_VALUE + ")");
-        }
+        checkPositiveOrZero(length - RedisConstants.NULL_VALUE, "(length - RedisConstants.NULL_VALUE)");
         this.length = length;
     }
 

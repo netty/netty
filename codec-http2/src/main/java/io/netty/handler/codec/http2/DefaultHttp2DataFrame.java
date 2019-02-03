@@ -22,6 +22,7 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.verifyPadding;
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -75,9 +76,7 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
         this.endStream = endStream;
         verifyPadding(padding);
         this.padding = padding;
-        if (content().readableBytes() + (long) padding > Integer.MAX_VALUE) {
-            throw new IllegalArgumentException("content + padding must be <= Integer.MAX_VALUE");
-        }
+        checkClosedInterval(content().readableBytes() + (long) padding, 0, Integer.MAX_VALUE, "content + padding");
         initialFlowControlledBytes = content().readableBytes() + padding;
     }
 

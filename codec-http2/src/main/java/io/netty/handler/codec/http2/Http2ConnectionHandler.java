@@ -50,6 +50,8 @@ import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.min;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -125,10 +127,8 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
      * streams to be closed before closing the connection during the graceful shutdown process.
      */
     public void gracefulShutdownTimeoutMillis(long gracefulShutdownTimeoutMillis) {
-        if (gracefulShutdownTimeoutMillis < -1) {
-            throw new IllegalArgumentException("gracefulShutdownTimeoutMillis: " + gracefulShutdownTimeoutMillis +
-                                               " (expected: -1 for indefinite or >= 0)");
-        }
+        // gracefulShutdownTimeoutMillis expected -1 for indefinite or >= 0.
+        checkPositiveOrZero(gracefulShutdownTimeoutMillis + 1, "gracefulShutdownTimeoutMillis");
         this.gracefulShutdownTimeoutMillis = gracefulShutdownTimeoutMillis;
     }
 

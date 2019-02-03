@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.max;
 
@@ -375,9 +376,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     void reallocate(PooledByteBuf<T> buf, int newCapacity, boolean freeOldMemory) {
-        if (newCapacity < 0 || newCapacity > buf.maxCapacity()) {
-            throw new IllegalArgumentException("newCapacity: " + newCapacity);
-        }
+        checkClosedInterval(newCapacity, 0, buf.maxCapacity(), "newCapacity");
 
         int oldCapacity = buf.length;
         if (oldCapacity == newCapacity) {
@@ -395,9 +394,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         allocate(parent.threadCache(), buf, newCapacity);
         if (newCapacity > oldCapacity) {
-            memoryCopy(
-                    oldMemory, oldOffset,
-                    buf.memory, buf.offset, oldCapacity);
+            memoryCopy(oldMemory, oldOffset, buf.memory, buf.offset, oldCapacity);
         } else if (newCapacity < oldCapacity) {
             if (readerIndex < newCapacity) {
                 if (writerIndex > newCapacity) {

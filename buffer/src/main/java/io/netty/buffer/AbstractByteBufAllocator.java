@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import io.netty.util.ResourceLeakDetector;
@@ -224,12 +225,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     }
 
     private static void validate(int initialCapacity, int maxCapacity) {
-        checkPositiveOrZero(initialCapacity, "initialCapacity");
-        if (initialCapacity > maxCapacity) {
-            throw new IllegalArgumentException(String.format(
-                    "initialCapacity: %d (expected: not greater than maxCapacity(%d)",
-                    initialCapacity, maxCapacity));
-        }
+        checkClosedInterval(initialCapacity, 0, maxCapacity, "initialCapacity");
     }
 
     /**
@@ -249,12 +245,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     @Override
     public int calculateNewCapacity(int minNewCapacity, int maxCapacity) {
-        checkPositiveOrZero(minNewCapacity, "minNewCapacity");
-        if (minNewCapacity > maxCapacity) {
-            throw new IllegalArgumentException(String.format(
-                    "minNewCapacity: %d (expected: not greater than maxCapacity(%d)",
-                    minNewCapacity, maxCapacity));
-        }
+        checkClosedInterval(minNewCapacity, 0, maxCapacity, "minNewCapacity");
         final int threshold = CALCULATE_THRESHOLD; // 4 MiB page
 
         if (minNewCapacity == threshold) {

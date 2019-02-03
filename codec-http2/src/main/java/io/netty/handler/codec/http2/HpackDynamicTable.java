@@ -33,6 +33,7 @@ package io.netty.handler.codec.http2;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_HEADER_TABLE_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MIN_HEADER_TABLE_SIZE;
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 
 final class HpackDynamicTable {
 
@@ -151,9 +152,7 @@ final class HpackDynamicTable {
      * the size of the table is less than or equal to the maximum size.
      */
     public void setCapacity(long capacity) {
-        if (capacity < MIN_HEADER_TABLE_SIZE || capacity > MAX_HEADER_TABLE_SIZE) {
-            throw new IllegalArgumentException("capacity is invalid: " + capacity);
-        }
+        checkClosedInterval(capacity, MIN_HEADER_TABLE_SIZE, MAX_HEADER_TABLE_SIZE, "capacity");
         // initially capacity will be -1 so init won't return here
         if (this.capacity == capacity) {
             return;

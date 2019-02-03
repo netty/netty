@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static java.lang.Math.min;
 
 /**
@@ -565,9 +566,7 @@ public final class ChannelOutboundBuffer {
     }
 
     private static int writabilityMask(int index) {
-        if (index < 1 || index > 31) {
-            throw new IllegalArgumentException("index: " + index + " (expected: 1~31)");
-        }
+        checkClosedInterval(index, 1, 31, "index");
         return 1 << index;
     }
 

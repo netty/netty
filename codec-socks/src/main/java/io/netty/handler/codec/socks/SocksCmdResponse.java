@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.socks;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
@@ -76,9 +78,7 @@ public final class SocksCmdResponse extends SocksResponse {
                     break;
                 case DOMAIN:
                     String asciiHost = IDN.toASCII(host);
-                    if (asciiHost.length() > 255) {
-                        throw new IllegalArgumentException(host + " IDN: " + asciiHost + " exceeds 255 char limit");
-                    }
+                    checkClosedInterval(asciiHost.length(), 0, 255, "IDN");
                     host = asciiHost;
                     break;
                 case IPv6:
@@ -90,9 +90,7 @@ public final class SocksCmdResponse extends SocksResponse {
                     break;
             }
         }
-        if (port < 0 || port > 65535) {
-            throw new IllegalArgumentException(port + " is not in bounds 0 <= x <= 65535");
-        }
+        checkClosedInterval(port, 0, 65535, "port");
         this.cmdStatus = cmdStatus;
         this.addressType = addressType;
         this.host = host;

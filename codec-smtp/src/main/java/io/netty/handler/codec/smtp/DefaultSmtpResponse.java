@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.smtp;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+
 import io.netty.util.internal.UnstableApi;
 
 import java.util.Collections;
@@ -44,9 +46,7 @@ public final class DefaultSmtpResponse implements SmtpResponse {
     }
 
     DefaultSmtpResponse(int code, List<CharSequence> details) {
-        if (code < 100 || code > 599) {
-            throw new IllegalArgumentException("code must be 100 <= code <= 599");
-        }
+        checkClosedInterval(code, 100, 599, "code");
         this.code = code;
         if (details == null) {
             this.details = Collections.emptyList();

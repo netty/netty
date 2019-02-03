@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.socks;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 
@@ -44,12 +46,8 @@ public final class SocksAuthRequest extends SocksRequest {
             throw new IllegalArgumentException(
                     "username: " + username + " or password: **** values should be in pure ascii");
         }
-        if (username.length() > 255) {
-            throw new IllegalArgumentException("username: " + username + " exceeds 255 char limit");
-        }
-        if (password.length() > 255) {
-            throw new IllegalArgumentException("password: **** exceeds 255 char limit");
-        }
+        checkClosedInterval(username.length(), 0, 255, "username");
+        checkClosedInterval(password.length(), 0, 255, "password");
         this.username = username;
         this.password = password;
     }

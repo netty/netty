@@ -15,6 +15,9 @@
  */
 package io.netty.util.concurrent;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -502,13 +505,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
 
     @Override
     public final Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
-        if (quietPeriod < 0) {
-            throw new IllegalArgumentException("quietPeriod: " + quietPeriod + " (expected >= 0)");
-        }
-        if (timeout < quietPeriod) {
-            throw new IllegalArgumentException(
-                    "timeout: " + timeout + " (expected >= quietPeriod (" + quietPeriod + "))");
-        }
+        checkClosedInterval(quietPeriod, 0, timeout, "quietPeriod");
         if (unit == null) {
             throw new NullPointerException("unit");
         }

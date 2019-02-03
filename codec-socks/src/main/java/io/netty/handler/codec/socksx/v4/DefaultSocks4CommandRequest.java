@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.socksx.v4;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.internal.StringUtil;
 
@@ -56,9 +58,7 @@ public class DefaultSocks4CommandRequest extends AbstractSocks4Message implement
         if (dstAddr == null) {
             throw new NullPointerException("dstAddr");
         }
-        if (dstPort <= 0 || dstPort >= 65536) {
-            throw new IllegalArgumentException("dstPort: " + dstPort + " (expected: 1~65535)");
-        }
+        checkClosedInterval(dstPort, 1, 65535, "dstPort");
         if (userId == null) {
             throw new NullPointerException("userId");
         }

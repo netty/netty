@@ -15,6 +15,9 @@
  */
 package io.netty.handler.codec.compression;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.buffer.ByteBuf;
 
 /**
@@ -56,9 +59,7 @@ class Bzip2BitReader {
      * @return The bits requested, right-aligned within the integer
      */
     int readBits(final int count) {
-        if (count < 0 || count > 32) {
-            throw new IllegalArgumentException("count: " + count + " (expected: 0-32 )");
-        }
+        checkClosedInterval(count, 0, 32, "count");
         int bitCount = this.bitCount;
         long bitBuffer = this.bitBuffer;
 
@@ -136,9 +137,7 @@ class Bzip2BitReader {
      * @return {@code true} if {@code count} bits are available for reading, otherwise {@code false}
      */
     boolean hasReadableBits(int count) {
-        if (count < 0) {
-            throw new IllegalArgumentException("count: " + count + " (expected value greater than 0)");
-        }
+        checkPositiveOrZero(count, "count");
         return bitCount >= count || (in.readableBytes() << 3 & Integer.MAX_VALUE) >= count - bitCount;
     }
 
@@ -148,10 +147,7 @@ class Bzip2BitReader {
      * @return {@code true} if {@code count} bytes are available for reading, otherwise {@code false}
      */
     boolean hasReadableBytes(int count) {
-        if (count < 0 || count > MAX_COUNT_OF_READABLE_BYTES) {
-            throw new IllegalArgumentException("count: " + count
-                    + " (expected: 0-" + MAX_COUNT_OF_READABLE_BYTES + ')');
-        }
+        checkClosedInterval(count, 0, MAX_COUNT_OF_READABLE_BYTES, "count");
         return hasReadableBits(count << 3);
     }
 }

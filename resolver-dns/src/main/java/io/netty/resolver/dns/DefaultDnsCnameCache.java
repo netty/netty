@@ -60,10 +60,7 @@ public final class DefaultDnsCnameCache implements DnsCnameCache {
     public DefaultDnsCnameCache(int minTtl, int maxTtl) {
         this.minTtl = Math.min(Cache.MAX_SUPPORTED_TTL_SECS, checkPositiveOrZero(minTtl, "minTtl"));
         this.maxTtl = Math.min(Cache.MAX_SUPPORTED_TTL_SECS, checkPositive(maxTtl, "maxTtl"));
-        if (minTtl > maxTtl) {
-            throw new IllegalArgumentException(
-                    "minTtl: " + minTtl + ", maxTtl: " + maxTtl + " (expected: 0 <= minTtl <= maxTtl)");
-        }
+        checkClosedInterval(minTtl, 0, maxTtl, "minTtl");
     }
 
     @SuppressWarnings("unchecked")

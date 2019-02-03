@@ -28,6 +28,7 @@ import io.netty.util.concurrent.EventExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 
 /**
  * Compresses a {@link ByteBuf} using the Bzip2 algorithm.
@@ -92,10 +93,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
      *        but give better compression ratios. {@code 9} will usually be the best value to use.
      */
     public Bzip2Encoder(final int blockSizeMultiplier) {
-        if (blockSizeMultiplier < MIN_BLOCK_SIZE || blockSizeMultiplier > MAX_BLOCK_SIZE) {
-            throw new IllegalArgumentException(
-                    "blockSizeMultiplier: " + blockSizeMultiplier + " (expected: 1-9)");
-        }
+        checkClosedInterval(blockSizeMultiplier, MIN_BLOCK_SIZE, MAX_BLOCK_SIZE, "blockSizeMultiplier");
         streamBlockSize = blockSizeMultiplier * BASE_BLOCK_SIZE;
     }
 

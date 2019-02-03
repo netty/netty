@@ -33,6 +33,7 @@ import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http2.Http2Exception.headerListSizeError;
 import static io.netty.util.CharsetUtil.UTF_8;
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -384,10 +385,8 @@ public final class Http2CodecUtil {
     }
 
     public static void verifyPadding(int padding) {
-        if (padding < 0 || padding > MAX_PADDING) {
-            throw new IllegalArgumentException(String.format("Invalid padding '%d'. Padding must be between 0 and " +
-                                                             "%d (inclusive).", padding, MAX_PADDING));
-        }
+        checkClosedInterval(padding, 0, MAX_PADDING, "padding");
     }
+
     private Http2CodecUtil() { }
 }

@@ -17,6 +17,8 @@ package io.netty.handler.codec.http.websocketx.extensions.compression;
 
 import static io.netty.handler.codec.http.websocketx.extensions.compression.
         DeflateFrameServerExtensionHandshaker.*;
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensionHandshaker;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
@@ -48,10 +50,7 @@ public final class DeflateFrameClientExtensionHandshaker implements WebSocketCli
      *            Compression level between 0 and 9 (default is 6).
      */
     public DeflateFrameClientExtensionHandshaker(int compressionLevel, boolean useWebkitExtensionName) {
-        if (compressionLevel < 0 || compressionLevel > 9) {
-            throw new IllegalArgumentException(
-                    "compressionLevel: " + compressionLevel + " (expected: 0-9)");
-        }
+        checkClosedInterval(compressionLevel, 0, 9, "compressionLevel");
         this.compressionLevel = compressionLevel;
         this.useWebkitExtensionName = useWebkitExtensionName;
     }

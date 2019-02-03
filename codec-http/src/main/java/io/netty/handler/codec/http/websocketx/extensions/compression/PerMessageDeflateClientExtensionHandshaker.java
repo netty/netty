@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx.extensions.compression;
 
 import static io.netty.handler.codec.http.websocketx.extensions.compression.
         PerMessageDeflateServerExtensionHandshaker.*;
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtension;
@@ -68,14 +69,8 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
     public PerMessageDeflateClientExtensionHandshaker(int compressionLevel,
             boolean allowClientWindowSize, int requestedServerWindowSize,
             boolean allowClientNoContext, boolean requestedServerNoContext) {
-        if (requestedServerWindowSize > MAX_WINDOW_SIZE || requestedServerWindowSize < MIN_WINDOW_SIZE) {
-            throw new IllegalArgumentException(
-                    "requestedServerWindowSize: " + requestedServerWindowSize + " (expected: 8-15)");
-        }
-        if (compressionLevel < 0 || compressionLevel > 9) {
-            throw new IllegalArgumentException(
-                    "compressionLevel: " + compressionLevel + " (expected: 0-9)");
-        }
+        checkClosedInterval(requestedServerWindowSize, MIN_WINDOW_SIZE, MAX_WINDOW_SIZE, "requestedServerWindowSize");
+        checkClosedInterval(compressionLevel, 0, 9, "compressionLevel");
         this.compressionLevel = compressionLevel;
         this.allowClientWindowSize = allowClientWindowSize;
         this.requestedServerWindowSize = requestedServerWindowSize;

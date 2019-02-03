@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ssl;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
 
@@ -31,9 +33,7 @@ public final class OpenSslServerSessionContext extends OpenSslSessionContext {
 
     @Override
     public void setSessionTimeout(int seconds) {
-        if (seconds < 0) {
-            throw new IllegalArgumentException();
-        }
+        checkPositiveOrZero(seconds, "seconds");
         Lock writerLock = context.ctxLock.writeLock();
         writerLock.lock();
         try {
@@ -56,9 +56,7 @@ public final class OpenSslServerSessionContext extends OpenSslSessionContext {
 
     @Override
     public void setSessionCacheSize(int size) {
-        if (size < 0) {
-            throw new IllegalArgumentException();
-        }
+        checkPositiveOrZero(size, "size");
         Lock writerLock = context.ctxLock.writeLock();
         writerLock.lock();
         try {

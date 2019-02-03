@@ -15,6 +15,8 @@
  */
 package io.netty.handler.flush;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
@@ -95,10 +97,7 @@ public class FlushConsolidationHandler extends ChannelDuplexHandler {
      *                                        ongoing.
      */
     public FlushConsolidationHandler(int explicitFlushAfterFlushes, boolean consolidateWhenNoReadInProgress) {
-        if (explicitFlushAfterFlushes <= 0) {
-            throw new IllegalArgumentException("explicitFlushAfterFlushes: "
-                    + explicitFlushAfterFlushes + " (expected: > 0)");
-        }
+        checkPositive(explicitFlushAfterFlushes, "explicitFlushAfterFlushes");
         this.explicitFlushAfterFlushes = explicitFlushAfterFlushes;
         this.consolidateWhenNoReadInProgress = consolidateWhenNoReadInProgress;
         flushTask = consolidateWhenNoReadInProgress ?

@@ -24,6 +24,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
 import static com.ning.compress.lzf.LZFChunk.*;
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 
 /**
  * Compresses a {@link ByteBuf} using the LZF format.
@@ -97,10 +98,7 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
      */
     public LzfEncoder(boolean safeInstance, int totalLength) {
         super(false);
-        if (totalLength < MIN_BLOCK_TO_COMPRESS || totalLength > MAX_CHUNK_LEN) {
-            throw new IllegalArgumentException("totalLength: " + totalLength +
-                    " (expected: " + MIN_BLOCK_TO_COMPRESS + '-' + MAX_CHUNK_LEN + ')');
-        }
+        checkClosedInterval(totalLength, MIN_BLOCK_TO_COMPRESS, MAX_CHUNK_LEN, "totalLength");
 
         encoder = safeInstance ?
                 ChunkEncoderFactory.safeNonAllocatingInstance(totalLength)

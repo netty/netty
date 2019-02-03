@@ -15,6 +15,9 @@
  */
 package io.netty.util.concurrent;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.util.internal.DefaultPriorityQueue;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PriorityQueue;
@@ -190,14 +193,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
         ObjectUtil.checkNotNull(command, "command");
         ObjectUtil.checkNotNull(unit, "unit");
-        if (initialDelay < 0) {
-            throw new IllegalArgumentException(
-                    String.format("initialDelay: %d (expected: >= 0)", initialDelay));
-        }
-        if (period <= 0) {
-            throw new IllegalArgumentException(
-                    String.format("period: %d (expected: > 0)", period));
-        }
+        checkPositiveOrZero(initialDelay, "initialDelay");
+        checkPositive(period, "period");
 
         RunnableScheduledFuture<?> task = newScheduledTaskFor(Executors.<Void>callable(command, null),
                 deadlineNanos(unit.toNanos(initialDelay)), unit.toNanos(period));
@@ -208,14 +205,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
         ObjectUtil.checkNotNull(command, "command");
         ObjectUtil.checkNotNull(unit, "unit");
-        if (initialDelay < 0) {
-            throw new IllegalArgumentException(
-                    String.format("initialDelay: %d (expected: >= 0)", initialDelay));
-        }
-        if (delay <= 0) {
-            throw new IllegalArgumentException(
-                    String.format("delay: %d (expected: > 0)", delay));
-        }
+        checkPositiveOrZero(initialDelay, "initialDelay");
+        checkPositive(delay, "delay");
 
         RunnableScheduledFuture<?> task = newScheduledTaskFor(Executors.<Void>callable(command, null),
                 deadlineNanos(unit.toNanos(initialDelay)), -unit.toNanos(delay));

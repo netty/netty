@@ -15,6 +15,8 @@
  */
 package io.netty.handler.traffic;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
@@ -163,9 +165,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      *            Must be positive.
      */
     protected AbstractTrafficShapingHandler(long writeLimit, long readLimit, long checkInterval, long maxTime) {
-        if (maxTime <= 0) {
-            throw new IllegalArgumentException("maxTime must be positive");
-        }
+        checkPositive(maxTime, "maxTime");
 
         userDefinedWritabilityIndex = userDefinedWritabilityIndex();
         this.writeLimit = writeLimit;
@@ -345,9 +345,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      *            Must be positive.
      */
     public void setMaxTimeWait(long maxTime) {
-        if (maxTime <= 0) {
-            throw new IllegalArgumentException("maxTime must be positive");
-        }
+        checkPositive(maxTime, "maxTime");
         this.maxTime = maxTime;
     }
 
@@ -376,9 +374,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
      *              Must be positive.
      */
     public void setMaxWriteDelay(long maxWriteDelay) {
-        if (maxWriteDelay <= 0) {
-            throw new IllegalArgumentException("maxWriteDelay must be positive");
-        }
+        checkPositive(maxWriteDelay, "maxWriteDelay");
         this.maxWriteDelay = maxWriteDelay;
     }
 

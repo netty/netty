@@ -35,6 +35,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_CONCURREN
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SETTINGS_MAX_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -206,9 +207,7 @@ public final class Http2Settings extends CharObjectHashMap<Long> {
         checkNotNull(value, "value");
         switch (key) {
             case SETTINGS_HEADER_TABLE_SIZE:
-                if (value < MIN_HEADER_TABLE_SIZE || value > MAX_HEADER_TABLE_SIZE) {
-                    throw new IllegalArgumentException("Setting HEADER_TABLE_SIZE is invalid: " + value);
-                }
+                checkClosedInterval(value, MIN_HEADER_TABLE_SIZE, MAX_HEADER_TABLE_SIZE, "Setting HEADER_TABLE_SIZE");
                 break;
             case SETTINGS_ENABLE_PUSH:
                 if (value != 0L && value != 1L) {
@@ -216,16 +215,12 @@ public final class Http2Settings extends CharObjectHashMap<Long> {
                 }
                 break;
             case SETTINGS_MAX_CONCURRENT_STREAMS:
-                if (value < MIN_CONCURRENT_STREAMS || value > MAX_CONCURRENT_STREAMS) {
-                    throw new IllegalArgumentException(
-                            "Setting MAX_CONCURRENT_STREAMS is invalid: " + value);
-                }
+                checkClosedInterval(value, MIN_CONCURRENT_STREAMS, MAX_CONCURRENT_STREAMS,
+                        "Setting MAX_CONCURRENT_STREAMS");
                 break;
             case SETTINGS_INITIAL_WINDOW_SIZE:
-                if (value < MIN_INITIAL_WINDOW_SIZE || value > MAX_INITIAL_WINDOW_SIZE) {
-                    throw new IllegalArgumentException("Setting INITIAL_WINDOW_SIZE is invalid: "
-                            + value);
-                }
+               checkClosedInterval(value, MIN_INITIAL_WINDOW_SIZE, MAX_INITIAL_WINDOW_SIZE,
+                       "Setting INITIAL_WINDOW_SIZE");
                 break;
             case SETTINGS_MAX_FRAME_SIZE:
                 if (!isMaxFrameSizeValid(value.intValue())) {
@@ -233,9 +228,8 @@ public final class Http2Settings extends CharObjectHashMap<Long> {
                 }
                 break;
             case SETTINGS_MAX_HEADER_LIST_SIZE:
-                if (value < MIN_HEADER_LIST_SIZE || value > MAX_HEADER_LIST_SIZE) {
-                    throw new IllegalArgumentException("Setting MAX_HEADER_LIST_SIZE is invalid: " + value);
-                }
+                checkClosedInterval(value, MIN_HEADER_LIST_SIZE, MAX_HEADER_LIST_SIZE,
+                        "Setting MAX_HEADER_LIST_SIZE");
                 break;
             default:
                 // Non-standard HTTP/2 setting - don't do validation.

@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.socksx.v5;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.internal.StringUtil;
 
@@ -34,12 +36,8 @@ public class DefaultSocks5PasswordAuthRequest extends AbstractSocks5Message impl
             throw new NullPointerException("password");
         }
 
-        if (username.length() > 255) {
-            throw new IllegalArgumentException("username: **** (expected: less than 256 chars)");
-        }
-        if (password.length() > 255) {
-            throw new IllegalArgumentException("password: **** (expected: less than 256 chars)");
-        }
+        checkClosedInterval(username.length(), 0, 255, "username");
+        checkClosedInterval(password.length(), 0, 255, "password");
 
         this.username = username;
         this.password = password;

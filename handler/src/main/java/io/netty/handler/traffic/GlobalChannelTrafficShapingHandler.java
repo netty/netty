@@ -15,6 +15,8 @@
  */
 package io.netty.handler.traffic;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler.Sharable;
@@ -385,9 +387,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      *            globally for all channels before write suspended is set.
      */
     public void setMaxGlobalWriteSize(long maxGlobalWriteSize) {
-        if (maxGlobalWriteSize <= 0) {
-            throw new IllegalArgumentException("maxGlobalWriteSize must be positive");
-        }
+        checkPositive(maxGlobalWriteSize, "maxGlobalWriteSize");
         this.maxGlobalWriteSize = maxGlobalWriteSize;
     }
 

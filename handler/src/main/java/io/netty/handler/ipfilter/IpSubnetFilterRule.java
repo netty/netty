@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ipfilter;
 
+import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+
 import io.netty.util.internal.SocketUtils;
 
 import java.math.BigInteger;
@@ -79,10 +81,7 @@ public final class IpSubnetFilterRule implements IpFilterRule {
         private final IpFilterRuleType ruleType;
 
         private Ip4SubnetFilterRule(Inet4Address ipAddress, int cidrPrefix, IpFilterRuleType ruleType) {
-            if (cidrPrefix < 0 || cidrPrefix > 32) {
-                throw new IllegalArgumentException(String.format("IPv4 requires the subnet prefix to be in range of " +
-                                                                    "[0,32]. The prefix was: %d", cidrPrefix));
-            }
+            checkClosedInterval(cidrPrefix, 0, 32, "cidrPrefix");
 
             subnetMask = prefixToSubnetMask(cidrPrefix);
             networkAddress = ipToInt(ipAddress) & subnetMask;
@@ -138,10 +137,7 @@ public final class IpSubnetFilterRule implements IpFilterRule {
         private final IpFilterRuleType ruleType;
 
         private Ip6SubnetFilterRule(Inet6Address ipAddress, int cidrPrefix, IpFilterRuleType ruleType) {
-            if (cidrPrefix < 0 || cidrPrefix > 128) {
-                throw new IllegalArgumentException(String.format("IPv6 requires the subnet prefix to be in range of " +
-                                                                    "[0,128]. The prefix was: %d", cidrPrefix));
-            }
+            checkClosedInterval(cidrPrefix, 0, 128, "cidrPrefix");
 
             subnetMask = prefixToSubnetMask(cidrPrefix);
             networkAddress = ipToInt(ipAddress).and(subnetMask);

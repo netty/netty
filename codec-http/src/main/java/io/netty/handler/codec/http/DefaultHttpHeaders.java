@@ -38,6 +38,7 @@ import java.util.Set;
 
 import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
 import static io.netty.util.AsciiString.CASE_SENSITIVE_HASHER;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Default implementation of {@link HttpHeaders}.
@@ -361,14 +362,10 @@ public class DefaultHttpHeaders extends HttpHeaders {
         case ';':
         case '=':
             throw new IllegalArgumentException(
-               "a header name cannot contain the following prohibited characters: =,;: \\t\\r\\n\\v\\f: " +
-                       value);
+               "a header name cannot contain the following prohibited characters: =,;: \\t\\r\\n\\v\\f: " + value);
         default:
             // Check to see if the character is not an ASCII character, or invalid
-            if (value < 0) {
-                throw new IllegalArgumentException("a header name cannot contain non-ASCII character: " +
-                        value);
-            }
+            checkPositiveOrZero(value, "a header name cannot contain non-ASCII character");
         }
     }
 
