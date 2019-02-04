@@ -39,6 +39,7 @@ import java.nio.charset.Charset;
 
 import static io.netty.util.internal.MathUtil.isOutOfBounds;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A skeletal implementation of a buffer.
@@ -282,9 +283,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (endianness == order()) {
             return this;
         }
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
+        requireNonNull(endianness, "endianness");
         return newSwappedByteBuf();
     }
 
@@ -592,9 +591,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int length) {
         checkIndex(index, length);
-        if (src == null) {
-            throw new NullPointerException("src");
-        }
+        requireNonNull(src, "src");
         if (checkBounds) {
             checkReadableBounds(src, length);
         }

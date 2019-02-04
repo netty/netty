@@ -26,7 +26,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 @UnstableApi
 public final class DelegatingChannelPromiseNotifier implements ChannelPromise, ChannelFutureListener {
@@ -40,7 +40,7 @@ public final class DelegatingChannelPromiseNotifier implements ChannelPromise, C
     }
 
     public DelegatingChannelPromiseNotifier(ChannelPromise delegate, boolean logNotifyFailure) {
-        this.delegate = checkNotNull(delegate, "delegate");
+        this.delegate = requireNonNull(delegate, "delegate");
         this.logNotifyFailure = logNotifyFailure;
     }
 

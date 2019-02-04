@@ -16,6 +16,8 @@
 
 package io.netty.handler.codec.socksx.v5;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * The type of {@link Socks5CommandRequest}.
  */
@@ -47,9 +49,7 @@ public class Socks5CommandType implements Comparable<Socks5CommandType> {
     }
 
     public Socks5CommandType(int byteValue, String name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
+        requireNonNull(name, "name");
 
         this.byteValue = (byte) byteValue;
         this.name = name;

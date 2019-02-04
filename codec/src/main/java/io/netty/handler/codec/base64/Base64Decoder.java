@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.base64;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -53,9 +55,7 @@ public class Base64Decoder extends MessageToMessageDecoder<ByteBuf> {
     }
 
     public Base64Decoder(Base64Dialect dialect) {
-        if (dialect == null) {
-            throw new NullPointerException("dialect");
-        }
+        requireNonNull(dialect, "dialect");
         this.dialect = dialect;
     }
 

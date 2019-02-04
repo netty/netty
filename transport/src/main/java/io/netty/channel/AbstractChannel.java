@@ -15,12 +15,13 @@
  */
 package io.netty.channel;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.channel.socket.ChannelOutputShutdownException;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
@@ -105,7 +106,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     private EventLoop validateEventLoop(EventLoop eventLoop) {
-        return ObjectUtil.checkNotNull(eventLoop, "eventLoop");
+        return requireNonNull(eventLoop, "eventLoop");
     }
 
     @Override

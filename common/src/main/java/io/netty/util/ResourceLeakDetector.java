@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import static io.netty.util.internal.StringUtil.EMPTY_STRING;
 import static io.netty.util.internal.StringUtil.NEWLINE;
 import static io.netty.util.internal.StringUtil.simpleClassName;
+import static java.util.Objects.requireNonNull;
 
 public class ResourceLeakDetector<T> {
 
@@ -149,9 +150,7 @@ public class ResourceLeakDetector<T> {
      * Sets the resource leak detection level.
      */
     public static void setLevel(Level level) {
-        if (level == null) {
-            throw new NullPointerException("level");
-        }
+        requireNonNull(level, "level");
         ResourceLeakDetector.level = level;
     }
 
@@ -218,9 +217,7 @@ public class ResourceLeakDetector<T> {
      */
     @Deprecated
     public ResourceLeakDetector(String resourceType, int samplingInterval, long maxActive) {
-        if (resourceType == null) {
-            throw new NullPointerException("resourceType");
-        }
+        requireNonNull(resourceType, "resourceType");
 
         this.resourceType = resourceType;
         this.samplingInterval = samplingInterval;

@@ -17,7 +17,7 @@ package io.netty.handler.codec.dns;
 
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The DNS {@code OpCode} as defined in <a href="https://tools.ietf.org/html/rfc2929">RFC2929</a>.
@@ -80,7 +80,7 @@ public class DnsOpCode implements Comparable<DnsOpCode> {
 
     public DnsOpCode(int byteValue, String name) {
         this.byteValue = (byte) byteValue;
-        this.name = checkNotNull(name, "name");
+        this.name = requireNonNull(name, "name");
     }
 
     public byte byteValue() {

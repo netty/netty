@@ -26,9 +26,9 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import static io.netty.channel.unix.Errors.ioResult;
 import static io.netty.channel.unix.Errors.newIOException;
 import static io.netty.channel.unix.Limits.IOV_MAX;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Native {@link FileDescriptor} implementation which allows to wrap an {@code int} and provide a
@@ -206,7 +206,7 @@ public class FileDescriptor {
      * Open a new {@link FileDescriptor} for the given path.
      */
     public static FileDescriptor from(String path) throws IOException {
-        checkNotNull(path, "path");
+        requireNonNull(path, "path");
         int res = open(path);
         if (res < 0) {
             throw newIOException("open", res);
@@ -218,7 +218,7 @@ public class FileDescriptor {
      * Open a new {@link FileDescriptor} for the given {@link File}.
      */
     public static FileDescriptor from(File file) throws IOException {
-        return from(checkNotNull(file, "file").getPath());
+        return from(requireNonNull(file, "file").getPath());
     }
 
     /**

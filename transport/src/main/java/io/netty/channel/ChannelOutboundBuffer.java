@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
 
 /**
  * (Transport implementors only) an internal data structure used by {@link AbstractChannel} to store its pending
@@ -744,9 +745,7 @@ public final class ChannelOutboundBuffer {
      * returns {@code false} or there are no more flushed messages to process.
      */
     public void forEachFlushedMessage(MessageProcessor processor) throws Exception {
-        if (processor == null) {
-            throw new NullPointerException("processor");
-        }
+        requireNonNull(processor, "processor");
 
         Entry entry = flushedEntry;
         if (entry == null) {

@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ssl;
 
+import static java.util.Objects.requireNonNull;
+
 import java.math.BigInteger;
 import java.security.Principal;
 import java.security.PublicKey;
@@ -29,7 +31,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
-import io.netty.util.internal.ObjectUtil;
 
 /**
  * This is a special purpose implementation of a {@link X509Certificate} which allows
@@ -175,7 +176,7 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
     private final ByteBuf content;
 
     private PemX509Certificate(ByteBuf content) {
-        this.content = ObjectUtil.checkNotNull(content, "content");
+        this.content = requireNonNull(content, "content");
     }
 
     @Override

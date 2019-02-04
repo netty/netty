@@ -16,7 +16,6 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.AddressedEnvelope;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
@@ -29,7 +28,6 @@ import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsSection;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.logging.InternalLogger;
@@ -38,7 +36,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 final class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>> {
 
@@ -61,11 +59,11 @@ final class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRespo
                     DnsRecord[] additionals,
                     Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
 
-        this.parent = checkNotNull(parent, "parent");
-        this.nameServerAddr = checkNotNull(nameServerAddr, "nameServerAddr");
-        this.question = checkNotNull(question, "question");
-        this.additionals = checkNotNull(additionals, "additionals");
-        this.promise = checkNotNull(promise, "promise");
+        this.parent = requireNonNull(parent, "parent");
+        this.nameServerAddr = requireNonNull(nameServerAddr, "nameServerAddr");
+        this.question = requireNonNull(question, "question");
+        this.additionals = requireNonNull(additionals, "additionals");
+        this.promise = requireNonNull(promise, "promise");
         recursionDesired = parent.isRecursionDesired();
         id = parent.queryContextManager.add(this);
 

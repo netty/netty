@@ -15,15 +15,16 @@
  */
 package io.netty.channel.unix;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.internal.ObjectUtil;
 import java.nio.channels.WritableByteChannel;
 
 public abstract class SocketWritableByteChannel implements WritableByteChannel {
     private final FileDescriptor fd;
 
     protected SocketWritableByteChannel(FileDescriptor fd) {
-        this.fd = ObjectUtil.checkNotNull(fd, "fd");
+        this.fd = requireNonNull(fd, "fd");
     }
 
     @Override

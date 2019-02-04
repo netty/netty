@@ -60,8 +60,8 @@ import javax.net.ssl.X509TrustManager;
 
 import static io.netty.handler.ssl.OpenSsl.DEFAULT_CIPHERS;
 import static io.netty.handler.ssl.OpenSsl.availableJavaCipherSuites;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 /**
  * An implementation of {@link SslContext} which works with libraries that support the
@@ -201,16 +201,16 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
         leak = leakDetection ? leakDetector.track(this) : null;
         this.mode = mode;
-        this.clientAuth = isServer() ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
+        this.clientAuth = isServer() ? requireNonNull(clientAuth, "clientAuth") : ClientAuth.NONE;
         this.protocols = protocols;
         this.enableOcsp = enableOcsp;
 
         this.keyCertChain = keyCertChain == null ? null : keyCertChain.clone();
 
-        unmodifiableCiphers = Arrays.asList(checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
+        unmodifiableCiphers = Arrays.asList(requireNonNull(cipherFilter, "cipherFilter").filterCipherSuites(
                 ciphers, DEFAULT_CIPHERS, availableJavaCipherSuites()));
 
-        this.apn = checkNotNull(apn, "apn");
+        this.apn = requireNonNull(apn, "apn");
 
         // Create a new SSL_CTX and configure it.
         boolean success = false;

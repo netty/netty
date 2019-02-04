@@ -15,6 +15,8 @@
  */
 package io.netty.testsuite.util;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -26,7 +28,6 @@ import javax.management.MBeanServer;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -111,10 +112,7 @@ public final class TestUtils {
     }
 
     public static void dump(String filenamePrefix) throws IOException {
-
-        if (filenamePrefix == null) {
-            throw new NullPointerException("filenamePrefix");
-        }
+        requireNonNull(filenamePrefix, "filenamePrefix");
 
         final String timestamp = timestamp();
         final File heapDumpFile = new File(filenamePrefix + '.' + timestamp + ".hprof");

@@ -32,7 +32,7 @@ import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * HTTP handler that responds with a "Hello World"
@@ -41,7 +41,7 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
     private final String establishApproach;
 
     HelloWorldHttp1Handler(String establishApproach) {
-        this.establishApproach = checkNotNull(establishApproach, "establishApproach");
+        this.establishApproach = requireNonNull(establishApproach, "establishApproach");
     }
 
     @Override

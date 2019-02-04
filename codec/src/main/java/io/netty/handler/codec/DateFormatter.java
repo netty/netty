@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.FastThreadLocal;
@@ -102,7 +102,7 @@ public final class DateFormatter {
             throw new IllegalArgumentException("Can't parse more than 64 chars," +
                     "looks like a user error or a malformed header");
         }
-        return formatter().parse0(checkNotNull(txt, "txt"), start, end);
+        return formatter().parse0(requireNonNull(txt, "txt"), start, end);
     }
 
     /**
@@ -111,7 +111,7 @@ public final class DateFormatter {
      * @return a RFC1123 string
      */
     public static String format(Date date) {
-        return formatter().format0(checkNotNull(date, "date"));
+        return formatter().format0(requireNonNull(date, "date"));
     }
 
     /**
@@ -121,7 +121,7 @@ public final class DateFormatter {
      * @return the same StringBuilder
      */
     public static StringBuilder append(Date date, StringBuilder sb) {
-        return formatter().append0(checkNotNull(date, "date"), checkNotNull(sb, "sb"));
+        return formatter().append0(requireNonNull(date, "date"), requireNonNull(sb, "sb"));
     }
 
     private static DateFormatter formatter() {

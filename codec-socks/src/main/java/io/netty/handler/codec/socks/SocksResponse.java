@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.socks;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * An abstract class that defines a SocksResponse, providing common properties for
  * {@link SocksInitResponse}, {@link SocksAuthResponse}, {@link SocksCmdResponse} and {@link UnknownSocksResponse}.
@@ -29,9 +31,7 @@ public abstract class SocksResponse extends SocksMessage {
 
     protected SocksResponse(SocksResponseType responseType) {
         super(SocksMessageType.RESPONSE);
-        if (responseType == null) {
-            throw new NullPointerException("responseType");
-        }
+        requireNonNull(responseType, "responseType");
         this.responseType = responseType;
     }
 

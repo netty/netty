@@ -16,6 +16,8 @@
 
 package io.netty.handler.codec.socksx.v5;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -44,9 +46,7 @@ public class Socks5ServerEncoder extends MessageToByteEncoder<Socks5Message> {
      * Creates a new instance with the specified {@link Socks5AddressEncoder}.
      */
     public Socks5ServerEncoder(Socks5AddressEncoder addressEncoder) {
-        if (addressEncoder == null) {
-            throw new NullPointerException("addressEncoder");
-        }
+        requireNonNull(addressEncoder, "addressEncoder");
 
         this.addressEncoder = addressEncoder;
     }

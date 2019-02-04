@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.string;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -68,9 +70,7 @@ public class StringDecoder extends MessageToMessageDecoder<ByteBuf> {
      * Creates a new instance with the specified character set.
      */
     public StringDecoder(Charset charset) {
-        if (charset == null) {
-            throw new NullPointerException("charset");
-        }
+        requireNonNull(charset, "charset");
         this.charset = charset;
     }
 

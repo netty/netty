@@ -21,7 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Builder for immutable {@link DomainNameMapping} instances.
@@ -51,7 +51,7 @@ public final class DomainNameMappingBuilder<V> {
      *                        when nothing matches the input
      */
     public DomainNameMappingBuilder(int initialCapacity, V defaultValue) {
-        this.defaultValue = checkNotNull(defaultValue, "defaultValue");
+        this.defaultValue = requireNonNull(defaultValue, "defaultValue");
         map = new LinkedHashMap<>(initialCapacity);
     }
 
@@ -68,7 +68,7 @@ public final class DomainNameMappingBuilder<V> {
      *                 when the specified host name matches the specified input host name
      */
     public DomainNameMappingBuilder<V> add(String hostname, V output) {
-        map.put(checkNotNull(hostname, "hostname"), checkNotNull(output, "output"));
+        map.put(requireNonNull(hostname, "hostname"), requireNonNull(output, "output"));
         return this;
     }
 

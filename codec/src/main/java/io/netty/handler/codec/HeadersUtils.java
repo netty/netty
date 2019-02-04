@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.AbstractCollection;
 import java.util.AbstractList;
 import java.util.Collection;
@@ -22,8 +24,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
-
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Provides utility methods related to {@link Headers}.
@@ -212,7 +212,7 @@ public final class HeadersUtils {
         protected final Set<T> allNames;
 
         DelegatingStringSet(Set<T> allNames) {
-            this.allNames = checkNotNull(allNames, "allNames");
+            this.allNames = requireNonNull(allNames, "allNames");
         }
 
         @Override

@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.socksx.v4;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.StringUtil;
@@ -45,9 +47,7 @@ public class DefaultSocks4CommandResponse extends AbstractSocks4Message implemen
      * @param dstPort the {@code DSTPORT} field of the response
      */
     public DefaultSocks4CommandResponse(Socks4CommandStatus status, String dstAddr, int dstPort) {
-        if (status == null) {
-            throw new NullPointerException("cmdStatus");
-        }
+        requireNonNull(status, "status");
         if (dstAddr != null) {
             if (!NetUtil.isValidIpV4Address(dstAddr)) {
                 throw new IllegalArgumentException(

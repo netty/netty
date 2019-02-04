@@ -16,7 +16,8 @@
 
 package io.netty.util;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -51,7 +52,7 @@ public abstract class ResourceLeakDetectorFactory {
      * @param factory the instance that will become the current {@link ResourceLeakDetectorFactory}'s singleton
      */
     public static void setResourceLeakDetectorFactory(ResourceLeakDetectorFactory factory) {
-        factoryInstance = ObjectUtil.checkNotNull(factory, "factory");
+        factoryInstance = requireNonNull(factory, "factory");
     }
 
     /**

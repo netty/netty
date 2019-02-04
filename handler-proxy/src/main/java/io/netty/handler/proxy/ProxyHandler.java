@@ -16,9 +16,10 @@
 
 package io.netty.handler.proxy;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -67,9 +68,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     };
 
     protected ProxyHandler(SocketAddress proxyAddress) {
-        if (proxyAddress == null) {
-            throw new NullPointerException("proxyAddress");
-        }
+        requireNonNull(proxyAddress, "proxyAddress");
         this.proxyAddress = proxyAddress;
     }
 

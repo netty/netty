@@ -27,7 +27,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
@@ -77,7 +77,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      *
      */
     public DefaultPromise(EventExecutor executor) {
-        this.executor = checkNotNull(executor, "executor");
+        this.executor = requireNonNull(executor, "executor");
     }
 
     /**
@@ -142,7 +142,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     public Promise<V> addListener(GenericFutureListener<? extends Future<? super V>> listener) {
-        checkNotNull(listener, "listener");
+        requireNonNull(listener, "listener");
 
         synchronized (this) {
             addListener0(listener);
@@ -157,7 +157,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     public Promise<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
-        checkNotNull(listeners, "listeners");
+        requireNonNull(listeners, "listeners");
 
         synchronized (this) {
             for (GenericFutureListener<? extends Future<? super V>> listener : listeners) {
@@ -177,7 +177,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     public Promise<V> removeListener(final GenericFutureListener<? extends Future<? super V>> listener) {
-        checkNotNull(listener, "listener");
+        requireNonNull(listener, "listener");
 
         synchronized (this) {
             removeListener0(listener);
@@ -188,7 +188,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     public Promise<V> removeListeners(final GenericFutureListener<? extends Future<? super V>>... listeners) {
-        checkNotNull(listeners, "listeners");
+        requireNonNull(listeners, "listeners");
 
         synchronized (this) {
             for (GenericFutureListener<? extends Future<? super V>> listener : listeners) {
@@ -398,9 +398,9 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      */
     protected static void notifyListener(
             EventExecutor eventExecutor, final Future<?> future, final GenericFutureListener<?> listener) {
-        checkNotNull(eventExecutor, "eventExecutor");
-        checkNotNull(future, "future");
-        checkNotNull(listener, "listener");
+        requireNonNull(eventExecutor, "eventExecutor");
+        requireNonNull(future, "future");
+        requireNonNull(listener, "listener");
         notifyListenerWithStackOverFlowProtection(eventExecutor, future, listener);
     }
 
@@ -520,7 +520,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private boolean setFailure0(Throwable cause) {
-        return setValue0(new CauseHolder(checkNotNull(cause, "cause")));
+        return setValue0(new CauseHolder(requireNonNull(cause, "cause")));
     }
 
     private boolean setValue0(Object objResult) {

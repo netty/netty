@@ -15,6 +15,8 @@
  */
 package io.netty.channel.embedded;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.AbstractScheduledEventExecutor;
@@ -61,9 +63,7 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
 
     @Override
     public void execute(Runnable command) {
-        if (command == null) {
-            throw new NullPointerException("command");
-        }
+        requireNonNull(command, "command");
         tasks.add(command);
     }
 

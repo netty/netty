@@ -60,9 +60,9 @@ import static io.netty.handler.codec.http2.Http2FrameTypes.PUSH_PROMISE;
 import static io.netty.handler.codec.http2.Http2FrameTypes.RST_STREAM;
 import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import static io.netty.handler.codec.http2.Http2FrameTypes.WINDOW_UPDATE;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link Http2FrameWriter} that supports all frame types defined by the HTTP/2 specification.
@@ -306,7 +306,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     public ChannelFuture writeSettings(ChannelHandlerContext ctx, Http2Settings settings,
             ChannelPromise promise) {
         try {
-            checkNotNull(settings, "settings");
+            requireNonNull(settings, "settings");
             int payloadLength = SETTING_ENTRY_LENGTH * settings.size();
             ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH + settings.size() * SETTING_ENTRY_LENGTH);
             writeFrameHeaderInternal(buf, payloadLength, SETTINGS, new Http2Flags(), 0);

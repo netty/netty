@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -62,7 +62,7 @@ public class QueryStringEncoder {
      * Adds a parameter with the specified name and value to this encoder.
      */
     public void addParam(String name, String value) {
-        ObjectUtil.checkNotNull(name, "name");
+        requireNonNull(name, "name");
         if (hasParams) {
             uriBuilder.append('&');
         } else {

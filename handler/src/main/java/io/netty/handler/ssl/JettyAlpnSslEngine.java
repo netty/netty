@@ -16,7 +16,7 @@
 package io.netty.handler.ssl;
 
 import static io.netty.handler.ssl.SslUtils.toSSLHandshakeException;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
@@ -67,8 +67,8 @@ abstract class JettyAlpnSslEngine extends JdkSslEngine {
     private static final class ClientEngine extends JettyAlpnSslEngine {
         ClientEngine(SSLEngine engine, final JdkApplicationProtocolNegotiator applicationNegotiator) {
             super(engine);
-            checkNotNull(applicationNegotiator, "applicationNegotiator");
-            final ProtocolSelectionListener protocolListener = checkNotNull(applicationNegotiator
+            requireNonNull(applicationNegotiator, "applicationNegotiator");
+            final ProtocolSelectionListener protocolListener = requireNonNull(applicationNegotiator
                             .protocolListenerFactory().newListener(this, applicationNegotiator.protocols()),
                     "protocolListener");
             ALPN.put(engine, new ALPN.ClientProvider() {
@@ -115,8 +115,8 @@ abstract class JettyAlpnSslEngine extends JdkSslEngine {
     private static final class ServerEngine extends JettyAlpnSslEngine {
         ServerEngine(SSLEngine engine, final JdkApplicationProtocolNegotiator applicationNegotiator) {
             super(engine);
-            checkNotNull(applicationNegotiator, "applicationNegotiator");
-            final ProtocolSelector protocolSelector = checkNotNull(applicationNegotiator.protocolSelectorFactory()
+            requireNonNull(applicationNegotiator, "applicationNegotiator");
+            final ProtocolSelector protocolSelector = requireNonNull(applicationNegotiator.protocolSelectorFactory()
                             .newSelector(this, new LinkedHashSet<>(applicationNegotiator.protocols())),
                     "protocolSelector");
             ALPN.put(engine, new ALPN.ServerProvider() {

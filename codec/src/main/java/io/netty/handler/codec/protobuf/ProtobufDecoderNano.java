@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.protobuf;
 
+import static java.util.Objects.requireNonNull;
+
 import com.google.protobuf.nano.MessageNano;
 
 import java.util.List;
@@ -27,7 +29,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.MessageToMessageDecoder;
-import io.netty.util.internal.ObjectUtil;
 
 /**
  * Decodes a received {@link ByteBuf} into a
@@ -66,7 +67,7 @@ public class ProtobufDecoderNano extends MessageToMessageDecoder<ByteBuf> {
      * Creates a new instance.
      */
     public ProtobufDecoderNano(Class<? extends MessageNano> clazz) {
-        this.clazz = ObjectUtil.checkNotNull(clazz, "You must provide a Class");
+        this.clazz = requireNonNull(clazz, "You must provide a Class");
     }
 
     @Override

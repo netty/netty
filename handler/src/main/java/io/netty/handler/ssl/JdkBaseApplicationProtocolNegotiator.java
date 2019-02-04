@@ -16,13 +16,12 @@
 package io.netty.handler.ssl;
 
 import static io.netty.handler.ssl.ApplicationProtocolUtil.toList;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
 
 /**
@@ -70,10 +69,10 @@ class JdkBaseApplicationProtocolNegotiator implements JdkApplicationProtocolNego
     private JdkBaseApplicationProtocolNegotiator(SslEngineWrapperFactory wrapperFactory,
             ProtocolSelectorFactory selectorFactory, ProtocolSelectionListenerFactory listenerFactory,
             List<String> protocols) {
-        this.wrapperFactory = checkNotNull(wrapperFactory, "wrapperFactory");
-        this.selectorFactory = checkNotNull(selectorFactory, "selectorFactory");
-        this.listenerFactory = checkNotNull(listenerFactory, "listenerFactory");
-        this.protocols = Collections.unmodifiableList(checkNotNull(protocols, "protocols"));
+        this.wrapperFactory = requireNonNull(wrapperFactory, "wrapperFactory");
+        this.selectorFactory = requireNonNull(selectorFactory, "selectorFactory");
+        this.listenerFactory = requireNonNull(listenerFactory, "listenerFactory");
+        this.protocols = Collections.unmodifiableList(requireNonNull(protocols, "protocols"));
     }
 
     @Override

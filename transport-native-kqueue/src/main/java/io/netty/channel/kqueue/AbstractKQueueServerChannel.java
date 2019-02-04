@@ -15,6 +15,8 @@
  */
 package io.netty.channel.kqueue;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
@@ -23,7 +25,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
@@ -40,7 +41,7 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
 
     AbstractKQueueServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket fd, boolean active) {
         super(null, eventLoop, fd, active);
-        this.childEventLoopGroup = ObjectUtil.checkNotNull(childEventLoopGroup, "childEventLoopGroup");
+        this.childEventLoopGroup = requireNonNull(childEventLoopGroup, "childEventLoopGroup");
     }
 
     @Override

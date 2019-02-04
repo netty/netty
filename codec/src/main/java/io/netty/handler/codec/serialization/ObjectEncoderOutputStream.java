@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.serialization;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
@@ -63,9 +65,7 @@ public class ObjectEncoderOutputStream extends OutputStream implements
      *        cost, please specify the properly estimated value.
      */
     public ObjectEncoderOutputStream(OutputStream out, int estimatedLength) {
-        if (out == null) {
-            throw new NullPointerException("out");
-        }
+        requireNonNull(out, "out");
         if (estimatedLength < 0) {
             throw new IllegalArgumentException("estimatedLength: " + estimatedLength);
         }

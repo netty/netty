@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.SwappedByteBuf;
@@ -461,9 +463,7 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf order(ByteOrder endianness) {
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
+        requireNonNull(endianness, "endianness");
         if (endianness == order()) {
             return this;
         }

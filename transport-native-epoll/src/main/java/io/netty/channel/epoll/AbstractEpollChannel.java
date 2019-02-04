@@ -23,7 +23,6 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
@@ -54,7 +53,7 @@ import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.UnixChannelUtil.computeRemoteAddr;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel {
     private static final ClosedChannelException DO_CLOSE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
@@ -85,7 +84,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     AbstractEpollChannel(Channel parent, EventLoop eventLoop, LinuxSocket fd, boolean active) {
         super(parent, eventLoop);
-        socket = checkNotNull(fd, "fd");
+        socket = requireNonNull(fd, "fd");
         this.active = active;
         if (active) {
             // Directly cache the remote and local addresses
@@ -97,7 +96,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     AbstractEpollChannel(Channel parent, EventLoop eventLoop, LinuxSocket fd, SocketAddress remote) {
         super(parent, eventLoop);
-        socket = checkNotNull(fd, "fd");
+        socket = requireNonNull(fd, "fd");
         active = true;
         // Directly cache the remote and local addresses
         // See https://github.com/netty/netty/issues/2359

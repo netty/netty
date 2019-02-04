@@ -29,7 +29,6 @@ import io.netty.channel.unix.IovArray;
 import io.netty.util.IntSupplier;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -38,7 +37,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link IoHandler} which uses kqueue under the covers. Only works on BSD!
@@ -79,7 +80,7 @@ public final class KQueueHandler implements IoHandler {
     }
 
     private KQueueHandler(int maxEvents, SelectStrategy strategy) {
-        selectStrategy = ObjectUtil.checkNotNull(strategy, "strategy");
+        selectStrategy = requireNonNull(strategy, "strategy");
         this.kqueueFd = Native.newKQueue();
         if (maxEvents == 0) {
             allowGrowing = true;
@@ -108,8 +109,8 @@ public final class KQueueHandler implements IoHandler {
      */
     public static IoHandlerFactory newFactory(final int maxEvents,
                                               final SelectStrategyFactory selectStrategyFactory) {
-        ObjectUtil.checkPositiveOrZero(maxEvents, "maxEvents");
-        ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
+        checkPositiveOrZero(maxEvents, "maxEvents");
+        requireNonNull(selectStrategyFactory, "selectStrategyFactory");
         return () -> new KQueueHandler(maxEvents, selectStrategyFactory.newSelectStrategy());
     }
 

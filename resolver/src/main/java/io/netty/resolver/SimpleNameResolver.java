@@ -16,14 +16,14 @@
 
 package io.netty.resolver;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
-
-import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * A skeletal {@link NameResolver} implementation.
@@ -38,7 +38,7 @@ public abstract class SimpleNameResolver<T> implements NameResolver<T> {
      *                 by {@link #resolve(String)}
      */
     protected SimpleNameResolver(EventExecutor executor) {
-        this.executor = checkNotNull(executor, "executor");
+        this.executor = requireNonNull(executor, "executor");
     }
 
     /**
@@ -57,7 +57,7 @@ public abstract class SimpleNameResolver<T> implements NameResolver<T> {
 
     @Override
     public Future<T> resolve(String inetHost, Promise<T> promise) {
-        checkNotNull(promise, "promise");
+        requireNonNull(promise, "promise");
 
         try {
             doResolve(inetHost, promise);
@@ -75,7 +75,7 @@ public abstract class SimpleNameResolver<T> implements NameResolver<T> {
 
     @Override
     public Future<List<T>> resolveAll(String inetHost, Promise<List<T>> promise) {
-        checkNotNull(promise, "promise");
+        requireNonNull(promise, "promise");
 
         try {
             doResolveAll(inetHost, promise);

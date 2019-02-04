@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.concurrent.CompleteFuture;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
@@ -35,9 +37,7 @@ abstract class CompleteChannelFuture extends CompleteFuture<Void> implements Cha
      */
     protected CompleteChannelFuture(Channel channel, EventExecutor executor) {
         super(executor);
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
+        requireNonNull(channel, "channel");
         this.channel = channel;
     }
 

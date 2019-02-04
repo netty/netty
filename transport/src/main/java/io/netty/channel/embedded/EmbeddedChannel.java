@@ -15,6 +15,8 @@
  */
 package io.netty.channel.embedded;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
@@ -37,7 +39,6 @@ import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
@@ -175,7 +176,7 @@ public class EmbeddedChannel extends AbstractChannel {
                            final ChannelHandler... handlers) {
         super(null, new EmbeddedEventLoop(), channelId);
         metadata = metadata(hasDisconnect);
-        this.config = ObjectUtil.checkNotNull(config, "config");
+        this.config = requireNonNull(config, "config");
         setup(true, handlers);
     }
 
@@ -184,7 +185,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     private void setup(boolean register, final ChannelHandler... handlers) {
-        ObjectUtil.checkNotNull(handlers, "handlers");
+        requireNonNull(handlers, "handlers");
         ChannelPipeline p = pipeline();
         p.addLast(new ChannelInitializer<Channel>() {
             @Override

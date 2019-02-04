@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -56,9 +58,7 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
 
     @Override
     public void setFilename(String filename) {
-        if (filename == null) {
-            throw new NullPointerException("filename");
-        }
+        requireNonNull(filename, "filename");
         this.filename = filename;
     }
 
@@ -87,9 +87,7 @@ public class MemoryFileUpload extends AbstractMemoryHttpData implements FileUplo
 
     @Override
     public void setContentType(String contentType) {
-        if (contentType == null) {
-            throw new NullPointerException("contentType");
-        }
+        requireNonNull(contentType, "contentType");
         this.contentType = contentType;
     }
 

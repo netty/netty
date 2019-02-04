@@ -15,7 +15,7 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
 
 public abstract class SslCompletionEvent {
 
@@ -26,7 +26,7 @@ public abstract class SslCompletionEvent {
     }
 
     SslCompletionEvent(Throwable cause) {
-        this.cause = ObjectUtil.checkNotNull(cause, "cause");
+        this.cause = requireNonNull(cause, "cause");
     }
 
     /**

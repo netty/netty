@@ -21,7 +21,7 @@ import java.util.List;
 import javax.net.ssl.SSLEngine;
 
 import static io.netty.handler.ssl.ApplicationProtocolUtil.toList;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Provides an {@link SSLEngine} agnostic way to configure a {@link ApplicationProtocolNegotiator}.
@@ -72,10 +72,11 @@ public final class ApplicationProtocolConfig {
     private ApplicationProtocolConfig(
             Protocol protocol, SelectorFailureBehavior selectorBehavior,
             SelectedListenerFailureBehavior selectedBehavior, List<String> supportedProtocols) {
-        this.supportedProtocols = Collections.unmodifiableList(checkNotNull(supportedProtocols, "supportedProtocols"));
-        this.protocol = checkNotNull(protocol, "protocol");
-        this.selectorBehavior = checkNotNull(selectorBehavior, "selectorBehavior");
-        this.selectedBehavior = checkNotNull(selectedBehavior, "selectedBehavior");
+        this.supportedProtocols = Collections.unmodifiableList(
+                requireNonNull(supportedProtocols, "supportedProtocols"));
+        this.protocol = requireNonNull(protocol, "protocol");
+        this.selectorBehavior = requireNonNull(selectorBehavior, "selectorBehavior");
+        this.selectedBehavior = requireNonNull(selectedBehavior, "selectedBehavior");
 
         if (protocol == Protocol.NONE) {
             throw new IllegalArgumentException("protocol (" + Protocol.NONE + ") must not be " + Protocol.NONE + '.');

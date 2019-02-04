@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.StringUtil;
 
@@ -104,9 +106,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
      *            {@code writerIndex}
      */
     public ByteBufInputStream(ByteBuf buffer, int length, boolean releaseOnClose) {
-        if (buffer == null) {
-            throw new NullPointerException("buffer");
-        }
+        requireNonNull(buffer, "buffer");
         if (length < 0) {
             if (releaseOnClose) {
                 buffer.release();

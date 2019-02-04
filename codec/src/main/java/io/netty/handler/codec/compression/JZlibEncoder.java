@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.compression;
 
+import static java.util.Objects.requireNonNull;
+
 import com.jcraft.jzlib.Deflater;
 import com.jcraft.jzlib.JZlib;
 import io.netty.buffer.ByteBuf;
@@ -130,9 +132,7 @@ public class JZlibEncoder extends ZlibEncoder {
             throw new IllegalArgumentException(
                     "memLevel: " + memLevel + " (expected: 1-9)");
         }
-        if (wrapper == null) {
-            throw new NullPointerException("wrapper");
-        }
+        requireNonNull(wrapper, "wrapper");
         if (wrapper == ZlibWrapper.ZLIB_OR_NONE) {
             throw new IllegalArgumentException(
                     "wrapper '" + ZlibWrapper.ZLIB_OR_NONE + "' is not " +
@@ -220,9 +220,7 @@ public class JZlibEncoder extends ZlibEncoder {
             throw new IllegalArgumentException(
                     "memLevel: " + memLevel + " (expected: 1-9)");
         }
-        if (dictionary == null) {
-            throw new NullPointerException("dictionary");
-        }
+        requireNonNull(dictionary, "dictionary");
         int resultCode;
         resultCode = z.deflateInit(
                 compressionLevel, windowBits, memLevel,

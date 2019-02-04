@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
@@ -27,7 +29,6 @@ import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.ThrowableUtil;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -111,7 +112,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
 
     DefaultChannelHandlerContext(DefaultChannelPipeline pipeline, String name,
                                  ChannelHandler handler) {
-        this.name = ObjectUtil.checkNotNull(name, "name");
+        this.name = requireNonNull(name, "name");
         this.pipeline = pipeline;
         this.executionMask = mask(handler.getClass());
         this.handler = handler;
@@ -352,7 +353,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
-        ObjectUtil.checkNotNull(cause, "cause");
+        requireNonNull(cause, "cause");
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
             findAndInvokeExceptionCaught(cause);
@@ -394,7 +395,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireUserEventTriggered(Object event) {
-        ObjectUtil.checkNotNull(event, "event");
+        requireNonNull(event, "event");
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
             findAndInvokeUserEventTriggered(event);
@@ -418,7 +419,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelHandlerContext fireChannelRead(final Object msg) {
-        ObjectUtil.checkNotNull(msg, "msg");
+        requireNonNull(msg, "msg");
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
             findAndInvokeChannelRead(msg);
@@ -438,7 +439,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
     }
 
     void invokeChannelRead(Object msg) {
-        final Object m = pipeline.touch(ObjectUtil.checkNotNull(msg, "msg"), this);
+        final Object m = pipeline.touch(requireNonNull(msg, "msg"), this);
         try {
             ((ChannelInboundHandler) handler()).channelRead(this, m);
         } catch (Throwable t) {
@@ -531,9 +532,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
 
     @Override
     public ChannelFuture bind(final SocketAddress localAddress, final ChannelPromise promise) {
-        if (localAddress == null) {
-            throw new NullPointerException("localAddress");
-        }
+        requireNonNull(localAddress, "localAddress");
         if (isNotValidPromise(promise, false)) {
             // cancelled
             return promise;
@@ -568,10 +567,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
     @Override
     public ChannelFuture connect(
             final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
-
-        if (remoteAddress == null) {
-            throw new NullPointerException("remoteAddress");
-        }
+        requireNonNull(remoteAddress, "remoteAddress");
         if (isNotValidPromise(promise, false)) {
             // cancelled
             return promise;
@@ -814,7 +810,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
     }
 
     private void write(Object msg, boolean flush, ChannelPromise promise) {
-        ObjectUtil.checkNotNull(msg, "msg");
+        requireNonNull(msg, "msg");
         try {
             if (isNotValidPromise(promise, true)) {
                 ReferenceCountUtil.release(msg);
@@ -917,9 +913,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
     }
 
     private boolean isNotValidPromise(ChannelPromise promise, boolean allowVoidPromise) {
-        if (promise == null) {
-            throw new NullPointerException("promise");
-        }
+        requireNonNull(promise, "promise");
 
         if (promise.isDone()) {
             // Check if the promise was cancelled and if so signal that the processing of the operation

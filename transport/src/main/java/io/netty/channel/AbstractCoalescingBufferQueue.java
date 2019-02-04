@@ -24,9 +24,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.ArrayDeque;
 
 import static io.netty.util.ReferenceCountUtil.safeRelease;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty.util.internal.PlatformDependent.throwException;
+import static java.util.Objects.requireNonNull;
 
 @UnstableApi
 public abstract class AbstractCoalescingBufferQueue {
@@ -136,7 +136,7 @@ public abstract class AbstractCoalescingBufferQueue {
      */
     public final ByteBuf remove(ByteBufAllocator alloc, int bytes, ChannelPromise aggregatePromise) {
         checkPositiveOrZero(bytes, "bytes");
-        checkNotNull(aggregatePromise, "aggregatePromise");
+        requireNonNull(aggregatePromise, "aggregatePromise");
 
         // Use isEmpty rather than readableBytes==0 as we may have a promise associated with an empty buffer.
         if (bufAndListenerPairs.isEmpty()) {

@@ -25,7 +25,7 @@ import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Decodes a {@link DatagramPacket} into a {@link DatagramDnsResponse}.
@@ -47,7 +47,7 @@ public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<Datagram
      * Creates a new decoder with the specified {@code recordDecoder}.
      */
     public DatagramDnsResponseDecoder(DnsRecordDecoder recordDecoder) {
-        this.recordDecoder = checkNotNull(recordDecoder, "recordDecoder");
+        this.recordDecoder = requireNonNull(recordDecoder, "recordDecoder");
     }
 
     @Override

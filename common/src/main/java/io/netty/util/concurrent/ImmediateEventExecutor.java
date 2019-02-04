@@ -15,6 +15,8 @@
  */
 package io.netty.util.concurrent;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -98,9 +100,7 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
 
     @Override
     public void execute(Runnable command) {
-        if (command == null) {
-            throw new NullPointerException("command");
-        }
+        requireNonNull(command, "command");
         if (!RUNNING.get()) {
             RUNNING.set(true);
             try {

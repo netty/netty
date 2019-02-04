@@ -15,13 +15,14 @@
  */
 package io.netty.channel.socket.nio;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SocketUtils;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
@@ -90,7 +91,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     public NioServerSocketChannel(
             EventLoop eventLoop, EventLoopGroup childEventLoopGroup, ServerSocketChannel channel) {
         super(null, eventLoop, channel, SelectionKey.OP_ACCEPT);
-        this.childEventLoopGroup = ObjectUtil.checkNotNull(childEventLoopGroup, "childEventLoopGroup");
+        this.childEventLoopGroup = requireNonNull(childEventLoopGroup, "childEventLoopGroup");
         config = new NioServerSocketChannelConfig(this, javaChannel().socket());
     }
 

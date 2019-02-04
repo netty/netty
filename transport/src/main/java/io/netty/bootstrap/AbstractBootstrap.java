@@ -16,6 +16,8 @@
 
 package io.netty.bootstrap;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -73,9 +75,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      * {@link Channel}
      */
     public B group(EventLoopGroup group) {
-        if (group == null) {
-            throw new NullPointerException("group");
-        }
+        requireNonNull(group, "group");
         if (this.group != null) {
             throw new IllegalStateException("group set already");
         }
@@ -122,9 +122,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.
      */
     public <T> B option(ChannelOption<T> option, T value) {
-        if (option == null) {
-            throw new NullPointerException("option");
-        }
+        requireNonNull(option, "option");
         if (value == null) {
             synchronized (options) {
                 options.remove(option);
@@ -142,9 +140,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      * {@code null}, the attribute of the specified {@code key} is removed.
      */
     public <T> B attr(AttributeKey<T> key, T value) {
-        if (key == null) {
-            throw new NullPointerException("key");
-        }
+        requireNonNull(key, "key");
         if (value == null) {
             synchronized (attrs) {
                 attrs.remove(key);
@@ -223,9 +219,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      */
     public ChannelFuture bind(SocketAddress localAddress) {
         validate();
-        if (localAddress == null) {
-            throw new NullPointerException("localAddress");
-        }
+        requireNonNull(localAddress, "localAddress");
         return doBind(localAddress);
     }
 
@@ -303,9 +297,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      * the {@link ChannelHandler} to use for serving the requests.
      */
     public B handler(ChannelHandler handler) {
-        if (handler == null) {
-            throw new NullPointerException("handler");
-        }
+        requireNonNull(handler, "handler");
         this.handler = handler;
         return self();
     }

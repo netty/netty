@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.memcache.binary;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.UnstableApi;
@@ -48,9 +50,7 @@ public class DefaultFullBinaryMemcacheResponse extends DefaultBinaryMemcacheResp
     public DefaultFullBinaryMemcacheResponse(ByteBuf key, ByteBuf extras,
         ByteBuf content) {
         super(key, extras);
-        if (content == null) {
-            throw new NullPointerException("Supplied content is null.");
-        }
+        requireNonNull(content, "content");
 
         this.content = content;
         setTotalBodyLength(keyLength() + extrasLength() + content.readableBytes());

@@ -45,8 +45,8 @@ import static io.netty.buffer.Unpooled.buffer;
 import static io.netty.handler.codec.http.multipart.HttpPostBodyUtil.BINARY_STRING;
 import static io.netty.handler.codec.http.multipart.HttpPostBodyUtil.BIT_7_STRING;
 import static io.netty.handler.codec.http.multipart.HttpPostBodyUtil.BIT_8_STRING;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 /**
  * This decoder will decode Body and can handle POST BODY.
@@ -177,9 +177,9 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *             errors
      */
     public HttpPostMultipartRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset) {
-        this.request = checkNotNull(request, "request");
-        this.charset = checkNotNull(charset, "charset");
-        this.factory = checkNotNull(factory, "factory");
+        this.request = requireNonNull(request, "request");
+        this.charset = requireNonNull(charset, "charset");
+        this.factory = requireNonNull(factory, "factory");
         // Fill default values
 
         setMultipart(this.request.headers().get(HttpHeaderNames.CONTENT_TYPE));

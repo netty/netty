@@ -15,6 +15,8 @@
  */
 package io.netty.channel.sctp;
 
+import static java.util.Objects.requireNonNull;
+
 import com.sun.nio.sctp.AbstractNotificationHandler;
 import com.sun.nio.sctp.AssociationChangeNotification;
 import com.sun.nio.sctp.HandlerResult;
@@ -35,9 +37,7 @@ public final class SctpNotificationHandler extends AbstractNotificationHandler<O
     private final SctpChannel sctpChannel;
 
     public SctpNotificationHandler(SctpChannel sctpChannel) {
-        if (sctpChannel == null) {
-            throw new NullPointerException("sctpChannel");
-        }
+        requireNonNull(sctpChannel, "sctpChannel");
         this.sctpChannel = sctpChannel;
     }
 

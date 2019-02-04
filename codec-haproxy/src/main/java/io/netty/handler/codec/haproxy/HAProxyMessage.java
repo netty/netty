@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.haproxy;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
 import io.netty.util.ByteProcessor;
@@ -89,10 +91,7 @@ public final class HAProxyMessage {
             HAProxyProtocolVersion protocolVersion, HAProxyCommand command, HAProxyProxiedProtocol proxiedProtocol,
             String sourceAddress, String destinationAddress, int sourcePort, int destinationPort,
             List<HAProxyTLV> tlvs) {
-
-        if (proxiedProtocol == null) {
-            throw new NullPointerException("proxiedProtocol");
-        }
+        requireNonNull(proxiedProtocol, "proxiedProtocol");
         AddressFamily addrFamily = proxiedProtocol.addressFamily();
 
         checkAddress(sourceAddress, addrFamily);
@@ -118,9 +117,7 @@ public final class HAProxyMessage {
      * @throws HAProxyProtocolException  if any portion of the header is invalid
      */
     static HAProxyMessage decodeHeader(ByteBuf header) {
-        if (header == null) {
-            throw new NullPointerException("header");
-        }
+        requireNonNull(header, "header");
 
         if (header.readableBytes() < 16) {
             throw new HAProxyProtocolException(
@@ -416,9 +413,7 @@ public final class HAProxyMessage {
      * @throws HAProxyProtocolException  if the address is invalid
      */
     private static void checkAddress(String address, AddressFamily addrFamily) {
-        if (addrFamily == null) {
-            throw new NullPointerException("addrFamily");
-        }
+        requireNonNull(addrFamily, "addrFamily");
 
         switch (addrFamily) {
             case AF_UNSPEC:
@@ -430,9 +425,7 @@ public final class HAProxyMessage {
                 return;
         }
 
-        if (address == null) {
-            throw new NullPointerException("address");
-        }
+        requireNonNull(address, "address");
 
         switch (addrFamily) {
             case AF_IPv4:

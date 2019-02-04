@@ -17,7 +17,7 @@ package io.netty.handler.codec.dns;
 
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link DnsResponse} implementation.
@@ -102,7 +102,7 @@ public class DefaultDnsResponse extends AbstractDnsMessage implements DnsRespons
 
     @Override
     public DnsResponse setCode(DnsResponseCode code) {
-        this.code = checkNotNull(code, "code");
+        this.code = requireNonNull(code, "code");
         return this;
     }
 
