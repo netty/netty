@@ -38,6 +38,8 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.getSignedInt;
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.getUnsignedInt;
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.getUnsignedMedium;
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.getUnsignedShort;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
@@ -95,10 +97,7 @@ public class SpdyFrameDecoder {
         if (delegate == null) {
             throw new NullPointerException("delegate");
         }
-        if (maxChunkSize <= 0) {
-            throw new IllegalArgumentException(
-                    "maxChunkSize must be a positive integer: " + maxChunkSize);
-        }
+        checkPositive(maxChunkSize, "maxChunkSize");
         this.spdyVersion = spdyVersion.getVersion();
         this.delegate = delegate;
         this.maxChunkSize = maxChunkSize;

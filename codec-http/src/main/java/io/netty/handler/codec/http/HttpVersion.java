@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 
@@ -165,12 +167,8 @@ public class HttpVersion implements Comparable<HttpVersion> {
             }
         }
 
-        if (majorVersion < 0) {
-            throw new IllegalArgumentException("negative majorVersion");
-        }
-        if (minorVersion < 0) {
-            throw new IllegalArgumentException("negative minorVersion");
-        }
+        checkPositiveOrZero(majorVersion, "majorVersion");
+        checkPositiveOrZero(minorVersion, "minorVersion");
 
         this.protocolName = protocolName;
         this.majorVersion = majorVersion;
