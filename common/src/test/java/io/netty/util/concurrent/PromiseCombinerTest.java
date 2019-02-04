@@ -15,6 +15,7 @@
  */
 package io.netty.util.concurrent;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -56,6 +57,18 @@ public class PromiseCombinerTest {
     public void setup() {
         MockitoAnnotations.initMocks(this);
         combiner = new PromiseCombiner();
+    }
+
+    @Test
+    public void testNullArgument() {
+        try {
+            combiner.finish(null);
+            Assert.fail();
+        } catch (NullPointerException expected) {
+            // expected
+        }
+        combiner.finish(p1);
+        verify(p1).trySuccess(null);
     }
 
     @Test
