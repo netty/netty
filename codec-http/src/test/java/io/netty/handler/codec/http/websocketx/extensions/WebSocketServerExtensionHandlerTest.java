@@ -54,7 +54,7 @@ public class WebSocketServerExtensionHandlerTest {
                 thenReturn(null);
 
         when(mainExtensionMock.rsv()).thenReturn(WebSocketExtension.RSV1);
-        when(mainExtensionMock.newReponseData()).thenReturn(
+        when(mainExtensionMock.newResponseData()).thenReturn(
                 new WebSocketExtensionData("main", Collections.emptyMap()));
         when(mainExtensionMock.newExtensionEncoder()).thenReturn(new DummyEncoder());
         when(mainExtensionMock.newExtensionDecoder()).thenReturn(new DummyDecoder());
@@ -87,7 +87,7 @@ public class WebSocketServerExtensionHandlerTest {
         verify(fallbackHandshakerMock, atLeastOnce()).handshakeExtension(webSocketExtensionDataMatcher("fallback"));
 
         verify(mainExtensionMock, atLeastOnce()).rsv();
-        verify(mainExtensionMock).newReponseData();
+        verify(mainExtensionMock).newResponseData();
         verify(mainExtensionMock).newExtensionEncoder();
         verify(mainExtensionMock).newExtensionDecoder();
         verify(fallbackExtensionMock, atLeastOnce()).rsv();
@@ -107,13 +107,13 @@ public class WebSocketServerExtensionHandlerTest {
                 thenReturn(null);
 
         when(mainExtensionMock.rsv()).thenReturn(WebSocketExtension.RSV1);
-        when(mainExtensionMock.newReponseData()).thenReturn(
+        when(mainExtensionMock.newResponseData()).thenReturn(
                 new WebSocketExtensionData("main", Collections.emptyMap()));
         when(mainExtensionMock.newExtensionEncoder()).thenReturn(new DummyEncoder());
         when(mainExtensionMock.newExtensionDecoder()).thenReturn(new DummyDecoder());
 
         when(fallbackExtensionMock.rsv()).thenReturn(WebSocketExtension.RSV2);
-        when(fallbackExtensionMock.newReponseData()).thenReturn(
+        when(fallbackExtensionMock.newResponseData()).thenReturn(
                 new WebSocketExtensionData("fallback", Collections.emptyMap()));
         when(fallbackExtensionMock.newExtensionEncoder()).thenReturn(new Dummy2Encoder());
         when(fallbackExtensionMock.newExtensionDecoder()).thenReturn(new Dummy2Decoder());
@@ -145,13 +145,13 @@ public class WebSocketServerExtensionHandlerTest {
         verify(mainHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("fallback"));
         verify(fallbackHandshakerMock).handshakeExtension(webSocketExtensionDataMatcher("fallback"));
         verify(mainExtensionMock, times(2)).rsv();
-        verify(mainExtensionMock).newReponseData();
+        verify(mainExtensionMock).newResponseData();
         verify(mainExtensionMock).newExtensionEncoder();
         verify(mainExtensionMock).newExtensionDecoder();
 
         verify(fallbackExtensionMock, times(2)).rsv();
 
-        verify(fallbackExtensionMock).newReponseData();
+        verify(fallbackExtensionMock).newResponseData();
         verify(fallbackExtensionMock).newExtensionEncoder();
         verify(fallbackExtensionMock).newExtensionDecoder();
     }

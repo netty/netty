@@ -109,7 +109,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
             String headerValue = response.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
 
             for (WebSocketServerExtension extension : validExtensions) {
-                WebSocketExtensionData extensionData = extension.newReponseData();
+                WebSocketExtensionData extensionData = extension.newResponseData();
                 headerValue = WebSocketExtensionUtil.appendExtension(headerValue,
                         extensionData.name(), extensionData.parameters());
             }
