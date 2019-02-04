@@ -20,8 +20,7 @@ import io.netty.util.internal.StringUtil;
 /**
  * The default {@link SpdySynReplyFrame} implementation.
  */
-public class DefaultSpdySynReplyFrame extends DefaultSpdyHeadersFrame
-        implements SpdySynReplyFrame {
+public class DefaultSpdySynReplyFrame extends DefaultSpdyHeadersFrame implements SpdySynReplyFrame {
 
     /**
      * Creates a new instance.

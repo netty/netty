@@ -30,6 +30,7 @@ import io.netty.util.internal.AppendableCharSequence;
 
 import static io.netty.buffer.ByteBufUtil.indexOf;
 import static io.netty.buffer.ByteBufUtil.readBytes;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 /**
  * Decodes {@link ByteBuf}s into {@link StompHeadersSubframe}s and
@@ -90,16 +91,8 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
 
     public StompSubframeDecoder(int maxLineLength, int maxChunkSize, boolean validateHeaders) {
         super(State.SKIP_CONTROL_CHARACTERS);
-        if (maxLineLength <= 0) {
-            throw new IllegalArgumentException(
-                    "maxLineLength must be a positive integer: " +
-                            maxLineLength);
-        }
-        if (maxChunkSize <= 0) {
-            throw new IllegalArgumentException(
-                    "maxChunkSize must be a positive integer: " +
-                            maxChunkSize);
-        }
+        checkPositive(maxLineLength, "maxLineLength");
+        checkPositive(maxChunkSize, "maxChunkSize");
         this.maxChunkSize = maxChunkSize;
         this.maxLineLength = maxLineLength;
         this.validateHeaders = validateHeaders;
