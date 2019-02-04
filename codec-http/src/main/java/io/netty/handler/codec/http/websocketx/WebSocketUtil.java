@@ -111,39 +111,6 @@ final class WebSocketUtil {
     }
 
     /**
-     * Generates a pseudo-random number
-     *
-     * @param minimum The minimum allowable value
-     * @param maximum The maximum allowable value
-     * @return A pseudo-random number
-     */
-    static int randomNumber(int minimum, int maximum) {
-        assert minimum < maximum;
-        double fraction = ThreadLocalRandom.current().nextDouble();
-
-        // the idea here is that nextDouble gives us a random value
-        //
-        //              0 <= fraction <= 1
-        //
-        // the distance from min to max declared as
-        //
-        //              dist = max - min
-        //
-        // satisfies the following
-        //
-        //              min + dist = max
-        //
-        // taking into account
-        //
-        //         0 <= fraction * dist <= dist
-        //
-        // we've got
-        //
-        //       min <= min + fraction * dist <= max
-        return (int) (minimum + fraction * (maximum - minimum));
-    }
-
-    /**
      * A private constructor to ensure that instances of this class cannot be made
      */
     private WebSocketUtil() {
