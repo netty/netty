@@ -27,7 +27,6 @@ import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.AppendableCharSequence;
-import sun.net.www.HeaderParser;
 
 import java.util.List;
 
