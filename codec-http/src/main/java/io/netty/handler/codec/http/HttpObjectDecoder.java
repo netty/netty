@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -168,21 +170,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders, int initialBufferSize) {
-        if (maxInitialLineLength <= 0) {
-            throw new IllegalArgumentException(
-                    "maxInitialLineLength must be a positive integer: " +
-                     maxInitialLineLength);
-        }
-        if (maxHeaderSize <= 0) {
-            throw new IllegalArgumentException(
-                    "maxHeaderSize must be a positive integer: " +
-                    maxHeaderSize);
-        }
-        if (maxChunkSize <= 0) {
-            throw new IllegalArgumentException(
-                    "maxChunkSize must be a positive integer: " +
-                    maxChunkSize);
-        }
+        checkPositive(maxInitialLineLength, "maxInitialLineLength");
+        checkPositive(maxHeaderSize, "maxHeaderSize");
+        checkPositive(maxChunkSize, "maxChunkSize");
+
         AppendableCharSequence seq = new AppendableCharSequence(initialBufferSize);
         lineParser = new LineParser(seq, maxInitialLineLength);
         headerParser = new HeaderParser(seq, maxHeaderSize);

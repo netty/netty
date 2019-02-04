@@ -372,8 +372,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
         default:
             // Check to see if the character is not an ASCII character, or invalid
             if (value < 0) {
-                throw new IllegalArgumentException("a header name cannot contain non-ASCII character: " +
-                        value);
+                throw new IllegalArgumentException("a header name cannot contain non-ASCII character: " + value);
             }
         }
     }

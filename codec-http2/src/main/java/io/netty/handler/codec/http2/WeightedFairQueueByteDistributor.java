@@ -37,6 +37,8 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGH
 import static io.netty.handler.codec.http2.Http2CodecUtil.streamableBytes;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -96,9 +98,8 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
     }
 
     public WeightedFairQueueByteDistributor(Http2Connection connection, int maxStateOnlySize) {
-        if (maxStateOnlySize < 0) {
-            throw new IllegalArgumentException("maxStateOnlySize: " + maxStateOnlySize + " (expected: >0)");
-        } else if (maxStateOnlySize == 0) {
+        checkPositiveOrZero(maxStateOnlySize, "maxStateOnlySize");
+        if (maxStateOnlySize == 0) {
             stateOnlyMap = IntCollections.emptyMap();
             stateOnlyRemovalQueue = EmptyPriorityQueue.instance();
         } else {
@@ -281,9 +282,7 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
      * @param allocationQuantum the amount of bytes that will be allocated to each stream. Must be &gt; 0.
      */
     public void allocationQuantum(int allocationQuantum) {
-        if (allocationQuantum <= 0) {
-            throw new IllegalArgumentException("allocationQuantum must be > 0");
-        }
+        checkPositive(allocationQuantum, "allocationQuantum");
         this.allocationQuantum = allocationQuantum;
     }
 
