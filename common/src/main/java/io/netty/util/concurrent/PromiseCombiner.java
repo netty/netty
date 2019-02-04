@@ -112,11 +112,12 @@ public final class PromiseCombiner {
      * @param aggregatePromise the promise to notify when all combined futures have finished
      */
     public void finish(Promise<Void> aggregatePromise) {
+        ObjectUtil.checkNotNull(aggregatePromise, "aggregatePromise");
         if (doneAdding) {
             throw new IllegalStateException("Already finished");
         }
         doneAdding = true;
-        this.aggregatePromise = ObjectUtil.checkNotNull(aggregatePromise, "aggregatePromise");
+        this.aggregatePromise = aggregatePromise;
         if (doneCount == expectedCount) {
             tryPromise();
         }
