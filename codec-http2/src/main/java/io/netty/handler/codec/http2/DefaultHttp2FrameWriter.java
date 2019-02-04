@@ -630,8 +630,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     }
 
     private static void verifyErrorCode(long errorCode) {
-        checkPositiveOrZero(errorCode, "errorCode");
-        if (errorCode > MAX_UNSIGNED_INT) {
+        if (errorCode < 0 || errorCode > MAX_UNSIGNED_INT) {
             throw new IllegalArgumentException("Invalid errorCode: " + errorCode);
         }
     }

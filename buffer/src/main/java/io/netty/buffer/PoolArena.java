@@ -375,8 +375,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     void reallocate(PooledByteBuf<T> buf, int newCapacity, boolean freeOldMemory) {
-        checkPositiveOrZero(newCapacity, "newCapacity");
-        if (newCapacity > buf.maxCapacity()) {
+        if (newCapacity < 0 || newCapacity > buf.maxCapacity()) {
             throw new IllegalArgumentException("newCapacity: " + newCapacity);
         }
 
