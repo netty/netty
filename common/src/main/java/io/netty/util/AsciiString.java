@@ -1827,7 +1827,13 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         return isUpperCase(b) ? (byte) (b + 32) : b;
     }
 
-    private static char toLowerCase(char c) {
+    /**
+     * If the character is uppercase - converts the character to lowercase,
+     * otherwise returns the character as it is. Only for ASCII characters.
+     *
+     * @return lowercase ASCII character equivalent
+     */
+    public static char toLowerCase(char c) {
         return isUpperCase(c) ? (char) (c + 32) : c;
     }
 
