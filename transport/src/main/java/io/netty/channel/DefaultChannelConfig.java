@@ -34,9 +34,9 @@ import static io.netty.channel.ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_LOW_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_SPIN_COUNT;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link ChannelConfig} implementation.
@@ -99,9 +99,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     @SuppressWarnings("unchecked")
     @Override
     public boolean setOptions(Map<ChannelOption<?>, ?> options) {
-        if (options == null) {
-            throw new NullPointerException("options");
-        }
+        requireNonNull(options, "options");
 
         boolean setAllOptions = true;
         for (Entry<ChannelOption<?>, ?> e: options.entrySet()) {
@@ -116,9 +114,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     @Override
     @SuppressWarnings({ "unchecked", "deprecation" })
     public <T> T getOption(ChannelOption<T> option) {
-        if (option == null) {
-            throw new NullPointerException("option");
-        }
+        requireNonNull(option, "option");
 
         if (option == CONNECT_TIMEOUT_MILLIS) {
             return (T) Integer.valueOf(getConnectTimeoutMillis());
@@ -191,9 +187,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     protected <T> void validate(ChannelOption<T> option, T value) {
-        if (option == null) {
-            throw new NullPointerException("option");
-        }
+        requireNonNull(option, "option");
         option.validate(value);
     }
 
@@ -272,9 +266,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setAllocator(ByteBufAllocator allocator) {
-        if (allocator == null) {
-            throw new NullPointerException("allocator");
-        }
+        requireNonNull(allocator, "allocator");
         this.allocator = allocator;
         return this;
     }
@@ -287,7 +279,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        rcvBufAllocator = checkNotNull(allocator, "allocator");
+        rcvBufAllocator = requireNonNull(allocator, "allocator");
         return this;
     }
 
@@ -300,9 +292,8 @@ public class DefaultChannelConfig implements ChannelConfig {
     private void setRecvByteBufAllocator(RecvByteBufAllocator allocator, ChannelMetadata metadata) {
         if (allocator instanceof MaxMessagesRecvByteBufAllocator) {
             ((MaxMessagesRecvByteBufAllocator) allocator).maxMessagesPerRead(metadata.defaultMaxMessagesPerRead());
-        } else if (allocator == null) {
-            throw new NullPointerException("allocator");
         }
+        requireNonNull(allocator, "allocator");
         setRecvByteBufAllocator(allocator);
     }
 
@@ -387,7 +378,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-        this.writeBufferWaterMark = checkNotNull(writeBufferWaterMark, "writeBufferWaterMark");
+        this.writeBufferWaterMark = requireNonNull(writeBufferWaterMark, "writeBufferWaterMark");
         return this;
     }
 
@@ -403,9 +394,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        if (estimator == null) {
-            throw new NullPointerException("estimator");
-        }
+        requireNonNull(estimator, "estimator");
         msgSizeEstimator = estimator;
         return this;
     }

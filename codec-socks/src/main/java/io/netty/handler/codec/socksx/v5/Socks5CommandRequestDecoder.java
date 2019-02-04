@@ -16,6 +16,8 @@
 
 package io.netty.handler.codec.socksx.v5;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
@@ -48,9 +50,7 @@ public class Socks5CommandRequestDecoder extends ReplayingDecoder<State> {
 
     public Socks5CommandRequestDecoder(Socks5AddressDecoder addressDecoder) {
         super(State.INIT);
-        if (addressDecoder == null) {
-            throw new NullPointerException("addressDecoder");
-        }
+        requireNonNull(addressDecoder, "addressDecoder");
 
         this.addressDecoder = addressDecoder;
     }

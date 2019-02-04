@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.socks;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 
 /**
@@ -30,9 +32,7 @@ public abstract class SocksMessage {
     private final SocksProtocolVersion protocolVersion = SocksProtocolVersion.SOCKS5;
 
     protected SocksMessage(SocksMessageType type) {
-        if (type == null) {
-            throw new NullPointerException("type");
-        }
+        requireNonNull(type, "type");
         this.type = type;
     }
 

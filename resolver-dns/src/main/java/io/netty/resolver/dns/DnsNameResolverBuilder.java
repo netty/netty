@@ -29,8 +29,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import static io.netty.resolver.dns.DnsServerAddressStreamProviders.platformDefault;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.intValue;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link DnsNameResolver} builder.
@@ -142,7 +142,7 @@ public final class DnsNameResolverBuilder {
      */
     public DnsNameResolverBuilder dnsQueryLifecycleObserverFactory(DnsQueryLifecycleObserverFactory
                                                                            lifecycleObserverFactory) {
-        this.dnsQueryLifecycleObserverFactory = checkNotNull(lifecycleObserverFactory, "lifecycleObserverFactory");
+        this.dnsQueryLifecycleObserverFactory = requireNonNull(lifecycleObserverFactory, "lifecycleObserverFactory");
         return this;
     }
 
@@ -332,7 +332,7 @@ public final class DnsNameResolverBuilder {
      */
     public DnsNameResolverBuilder nameServerProvider(DnsServerAddressStreamProvider dnsServerAddressStreamProvider) {
         this.dnsServerAddressStreamProvider =
-                checkNotNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
+                requireNonNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
         return this;
     }
 
@@ -343,7 +343,7 @@ public final class DnsNameResolverBuilder {
      * @return {@code this}
      */
     public DnsNameResolverBuilder searchDomains(Iterable<String> searchDomains) {
-        checkNotNull(searchDomains, "searchDomains");
+        requireNonNull(searchDomains, "searchDomains");
 
         final List<String> list = new ArrayList<>(4);
 

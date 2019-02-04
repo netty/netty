@@ -53,8 +53,8 @@ import java.util.concurrent.Executor;
 import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.FileDescriptor.pipe;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel implements DuplexChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
@@ -166,7 +166,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 || config().getEpollMode() != EpollMode.LEVEL_TRIGGERED) {
             throw new IllegalStateException("spliceTo() supported only when using " + EpollMode.LEVEL_TRIGGERED);
         }
-        checkNotNull(promise, "promise");
+        requireNonNull(promise, "promise");
         if (!isOpen()) {
             promise.tryFailure(SPLICE_TO_CLOSED_CHANNEL_EXCEPTION);
         } else {
@@ -215,7 +215,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         if (config().getEpollMode() != EpollMode.LEVEL_TRIGGERED) {
             throw new IllegalStateException("spliceTo() supported only when using " + EpollMode.LEVEL_TRIGGERED);
         }
-        checkNotNull(promise, "promise");
+        requireNonNull(promise, "promise");
         if (!isOpen()) {
             promise.tryFailure(SPLICE_TO_CLOSED_CHANNEL_EXCEPTION);
         } else {

@@ -16,6 +16,8 @@
 
 package io.netty.handler.proxy;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -86,12 +88,8 @@ public final class HttpProxyHandler extends ProxyHandler {
                             HttpHeaders headers,
                             boolean ignoreDefaultPortsInConnectHostHeader) {
         super(proxyAddress);
-        if (username == null) {
-            throw new NullPointerException("username");
-        }
-        if (password == null) {
-            throw new NullPointerException("password");
-        }
+        requireNonNull(username, "username");
+        requireNonNull(password, "password");
         this.username = username;
         this.password = password;
 

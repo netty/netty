@@ -15,7 +15,8 @@
 
 package io.netty.handler.codec.redis;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -28,7 +29,7 @@ public abstract class AbstractStringRedisMessage implements RedisMessage {
     private final String content;
 
     AbstractStringRedisMessage(String content) {
-        this.content = ObjectUtil.checkNotNull(content, "content");
+        this.content = requireNonNull(content, "content");
     }
 
     /**

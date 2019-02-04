@@ -26,8 +26,8 @@ import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.util.internal.ObjectUtil.*;
 import static io.netty.util.internal.StringUtil.*;
+import static java.util.Objects.requireNonNull;
 
 @Threads(1)
 @Warmup(iterations = 3)
@@ -59,7 +59,7 @@ public class EscapeCsvBenchmark extends AbstractMicrobenchmark {
     }
 
     private static CharSequence escapeCsvOld(CharSequence value, boolean trimWhiteSpace) {
-        int length = checkNotNull(value, "value").length();
+        int length = requireNonNull(value, "value").length();
         if (length == 0) {
             return value;
         }

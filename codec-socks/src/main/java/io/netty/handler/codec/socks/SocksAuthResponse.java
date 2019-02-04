@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.socks;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 
 /**
@@ -29,9 +31,7 @@ public final class SocksAuthResponse extends SocksResponse {
 
     public SocksAuthResponse(SocksAuthStatus authStatus) {
         super(SocksResponseType.AUTH);
-        if (authStatus == null) {
-            throw new NullPointerException("authStatus");
-        }
+        requireNonNull(authStatus, "authStatus");
         this.authStatus = authStatus;
     }
 

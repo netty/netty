@@ -15,6 +15,8 @@
  */
 package io.netty.channel.epoll;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
@@ -24,7 +26,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
-import io.netty.util.internal.ObjectUtil;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -45,7 +46,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                LinuxSocket fd, boolean active) {
         super(null, eventLoop, fd, active);
-        this.childEventLoopGroup = ObjectUtil.checkNotNull(childEventLoopGroup, "childEventLoopGroup");
+        this.childEventLoopGroup = requireNonNull(childEventLoopGroup, "childEventLoopGroup");
     }
 
     @Override

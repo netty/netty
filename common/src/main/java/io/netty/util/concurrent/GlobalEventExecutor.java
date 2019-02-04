@@ -15,6 +15,8 @@
  */
 package io.netty.util.concurrent;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -137,9 +139,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
      * before.
      */
     private void addTask(Runnable task) {
-        if (task == null) {
-            throw new NullPointerException("task");
-        }
+        requireNonNull(task, "task");
         taskQueue.add(task);
     }
 
@@ -193,9 +193,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
      * @return {@code true} if and only if the worker thread has been terminated
      */
     public boolean awaitInactivity(long timeout, TimeUnit unit) throws InterruptedException {
-        if (unit == null) {
-            throw new NullPointerException("unit");
-        }
+        requireNonNull(unit, "unit");
 
         final Thread thread = this.thread;
         if (thread == null) {
@@ -207,9 +205,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
 
     @Override
     public void execute(Runnable task) {
-        if (task == null) {
-            throw new NullPointerException("task");
-        }
+        requireNonNull(task, "task");
 
         addTask(task);
         if (!inEventLoop()) {

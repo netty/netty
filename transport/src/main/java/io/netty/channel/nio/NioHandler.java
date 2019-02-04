@@ -15,6 +15,8 @@
  */
 package io.netty.channel.nio;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.DefaultSelectStrategyFactory;
@@ -25,7 +27,6 @@ import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.util.IntSupplier;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReflectionUtil;
 import io.netty.util.internal.StringUtil;
@@ -147,8 +148,8 @@ public final class NioHandler implements IoHandler {
      */
     public static IoHandlerFactory newFactory(final SelectorProvider selectorProvider,
                                               final SelectStrategyFactory selectStrategyFactory) {
-        ObjectUtil.checkNotNull(selectorProvider, "selectorProvider");
-        ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
+        requireNonNull(selectorProvider, "selectorProvider");
+        requireNonNull(selectStrategyFactory, "selectStrategyFactory");
         return () -> new NioHandler(selectorProvider, selectStrategyFactory.newSelectStrategy());
     }
 
@@ -267,9 +268,7 @@ public final class NioHandler implements IoHandler {
      * be executed by this event loop when the {@link SelectableChannel} is ready.
      */
     public void register(final SelectableChannel ch, final int interestOps, final NioTask<?> task) {
-        if (ch == null) {
-            throw new NullPointerException("ch");
-        }
+        requireNonNull(ch, "ch");
         if (interestOps == 0) {
             throw new IllegalArgumentException("interestOps must be non-zero.");
         }
@@ -277,9 +276,7 @@ public final class NioHandler implements IoHandler {
             throw new IllegalArgumentException(
                     "invalid interestOps: " + interestOps + "(validOps: " + ch.validOps() + ')');
         }
-        if (task == null) {
-            throw new NullPointerException("task");
-        }
+        requireNonNull(task, "task");
 
         register0(ch, interestOps, task);
     }

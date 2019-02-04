@@ -15,13 +15,14 @@
  */
 package io.netty.handler.ssl;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ObjectUtil;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
@@ -36,7 +37,7 @@ public class OptionalSslHandler extends ByteToMessageDecoder {
     private final SslContext sslContext;
 
     public OptionalSslHandler(SslContext sslContext) {
-        this.sslContext = ObjectUtil.checkNotNull(sslContext, "sslContext");
+        this.sslContext = requireNonNull(sslContext, "sslContext");
     }
 
     @Override

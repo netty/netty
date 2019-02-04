@@ -16,8 +16,9 @@
 
 package io.netty.handler.codec.mqtt;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.ObjectUtil;
 
 /**
  * Mqtt version specific constant values used by multiple classes in mqtt-codec.
@@ -30,7 +31,7 @@ public enum MqttVersion {
     private final byte level;
 
     MqttVersion(String protocolName, byte protocolLevel) {
-        name = ObjectUtil.checkNotNull(protocolName, "protocolName");
+        name = requireNonNull(protocolName, "protocolName");
         level = protocolLevel;
     }
 

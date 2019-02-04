@@ -30,7 +30,7 @@ import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * This adapter provides just header/data events from the HTTP message flow defined
@@ -73,7 +73,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     protected InboundHttp2ToHttpAdapter(Http2Connection connection, int maxContentLength,
                                         boolean validateHttpHeaders, boolean propagateSettings) {
 
-        checkNotNull(connection, "connection");
+        requireNonNull(connection, "connection");
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException("maxContentLength: " + maxContentLength + " (expected: > 0)");
         }

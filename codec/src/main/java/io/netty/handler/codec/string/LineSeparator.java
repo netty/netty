@@ -15,9 +15,10 @@
  */
 package io.netty.handler.codec.string;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -46,7 +47,7 @@ public final class LineSeparator {
      * Create {@link LineSeparator} with the specified {@code lineSeparator} string.
      */
     public LineSeparator(String lineSeparator) {
-        this.value = ObjectUtil.checkNotNull(lineSeparator, "lineSeparator");
+        this.value = requireNonNull(lineSeparator, "lineSeparator");
     }
 
     /**

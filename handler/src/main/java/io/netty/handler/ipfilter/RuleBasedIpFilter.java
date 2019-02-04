@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ipfilter;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -36,9 +38,7 @@ public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAdd
     private final IpFilterRule[] rules;
 
     public RuleBasedIpFilter(IpFilterRule... rules) {
-        if (rules == null) {
-            throw new NullPointerException("rules");
-        }
+        requireNonNull(rules, "rules");
 
         this.rules = rules;
     }

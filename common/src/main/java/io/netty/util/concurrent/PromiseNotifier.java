@@ -19,7 +19,7 @@ import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link GenericFutureListener} implementation which takes other {@link Promise}s
@@ -52,7 +52,7 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
      */
     @SafeVarargs
     public PromiseNotifier(boolean logNotifyFailure, Promise<? super V>... promises) {
-        checkNotNull(promises, "promises");
+        requireNonNull(promises, "promises");
         for (Promise<? super V> promise: promises) {
             if (promise == null) {
                 throw new IllegalArgumentException("promises contains null Promise");

@@ -74,8 +74,8 @@ import java.util.List;
 
 import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
 import static io.netty.resolver.dns.UnixResolverDnsServerAddressStreamProvider.parseEtcResolverFirstNdots;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A DNS-based {@link InetNameResolver}.
@@ -332,17 +332,17 @@ public class DnsNameResolver extends InetNameResolver {
         this.maxQueriesPerResolve = checkPositive(maxQueriesPerResolve, "maxQueriesPerResolve");
         this.maxPayloadSize = checkPositive(maxPayloadSize, "maxPayloadSize");
         this.optResourceEnabled = optResourceEnabled;
-        this.hostsFileEntriesResolver = checkNotNull(hostsFileEntriesResolver, "hostsFileEntriesResolver");
+        this.hostsFileEntriesResolver = requireNonNull(hostsFileEntriesResolver, "hostsFileEntriesResolver");
         this.dnsServerAddressStreamProvider =
-                checkNotNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
-        this.resolveCache = checkNotNull(resolveCache, "resolveCache");
-        this.cnameCache = checkNotNull(cnameCache, "cnameCache");
+                requireNonNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
+        this.resolveCache = requireNonNull(resolveCache, "resolveCache");
+        this.cnameCache = requireNonNull(cnameCache, "cnameCache");
         this.dnsQueryLifecycleObserverFactory = traceEnabled ?
                 dnsQueryLifecycleObserverFactory instanceof NoopDnsQueryLifecycleObserverFactory ?
                         new TraceDnsQueryLifeCycleObserverFactory() :
                         new BiDnsQueryLifecycleObserverFactory(new TraceDnsQueryLifeCycleObserverFactory(),
                                                                dnsQueryLifecycleObserverFactory) :
-                checkNotNull(dnsQueryLifecycleObserverFactory, "dnsQueryLifecycleObserverFactory");
+                requireNonNull(dnsQueryLifecycleObserverFactory, "dnsQueryLifecycleObserverFactory");
         this.searchDomains = searchDomains != null ? searchDomains.clone() : DEFAULT_SEARCH_DOMAINS;
         this.ndots = ndots >= 0 ? ndots : DEFAULT_NDOTS;
         this.decodeIdn = decodeIdn;
@@ -376,7 +376,7 @@ public class DnsNameResolver extends InetNameResolver {
                 throw new IllegalArgumentException("Unknown ResolvedAddressTypes " + resolvedAddressTypes);
         }
         preferredAddressType = preferredAddressType(this.resolvedAddressTypes);
-        this.authoritativeDnsServerCache = checkNotNull(authoritativeDnsServerCache, "authoritativeDnsServerCache");
+        this.authoritativeDnsServerCache = requireNonNull(authoritativeDnsServerCache, "authoritativeDnsServerCache");
         nameServerComparator = new NameServerComparator(preferredAddressType.addressType());
 
         Bootstrap b = new Bootstrap();
@@ -621,7 +621,7 @@ public class DnsNameResolver extends InetNameResolver {
      */
     public final Future<InetAddress> resolve(String inetHost, Iterable<DnsRecord> additionals,
                                              Promise<InetAddress> promise) {
-        checkNotNull(promise, "promise");
+        requireNonNull(promise, "promise");
         DnsRecord[] additionalsArray = toArray(additionals, true);
         try {
             doResolve(inetHost, additionalsArray, promise, resolveCache);
@@ -654,7 +654,7 @@ public class DnsNameResolver extends InetNameResolver {
      */
     public final Future<List<InetAddress>> resolveAll(String inetHost, Iterable<DnsRecord> additionals,
                                                 Promise<List<InetAddress>> promise) {
-        checkNotNull(promise, "promise");
+        requireNonNull(promise, "promise");
         DnsRecord[] additionalsArray = toArray(additionals, true);
         try {
             doResolveAll(inetHost, additionalsArray, promise, resolveCache);
@@ -721,8 +721,8 @@ public class DnsNameResolver extends InetNameResolver {
 
     private Future<List<DnsRecord>> resolveAll(DnsQuestion question, DnsRecord[] additionals,
                                                Promise<List<DnsRecord>> promise) {
-        checkNotNull(question, "question");
-        checkNotNull(promise, "promise");
+        requireNonNull(question, "question");
+        requireNonNull(promise, "promise");
 
         // Respect /etc/hosts as well if the record type is A or AAAA.
         final DnsRecordType type = question.type();
@@ -760,7 +760,7 @@ public class DnsNameResolver extends InetNameResolver {
     }
 
     private static DnsRecord[] toArray(Iterable<DnsRecord> additionals, boolean validateType) {
-        checkNotNull(additionals, "additionals");
+        requireNonNull(additionals, "additionals");
         if (additionals instanceof Collection) {
             Collection<DnsRecord> records = (Collection<DnsRecord>) additionals;
             for (DnsRecord r: additionals) {
@@ -784,7 +784,7 @@ public class DnsNameResolver extends InetNameResolver {
     }
 
     private static void validateAdditional(DnsRecord record, boolean validateType) {
-        checkNotNull(record, "record");
+        requireNonNull(record, "record");
         if (validateType && record instanceof DnsRawRecord) {
             throw new IllegalArgumentException("DnsRawRecord implementations not allowed: " + record);
         }
@@ -1092,7 +1092,7 @@ public class DnsNameResolver extends InetNameResolver {
         assert !writePromise.isVoid();
 
         final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> castPromise = cast(
-                checkNotNull(promise, "promise"));
+                requireNonNull(promise, "promise"));
         try {
             new DnsQueryContext(this, nameServerAddr, question, additionals, castPromise)
                     .query(flush, writePromise);

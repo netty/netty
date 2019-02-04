@@ -15,7 +15,7 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
 
 import java.io.Serializable;
 import java.net.InetAddress;
@@ -39,7 +39,7 @@ public final class NameServerComparator implements Comparator<InetSocketAddress>
     private final Class<? extends InetAddress> preferredAddressType;
 
     public NameServerComparator(Class<? extends InetAddress> preferredAddressType) {
-        this.preferredAddressType = ObjectUtil.checkNotNull(preferredAddressType, "preferredAddressType");
+        this.preferredAddressType = requireNonNull(preferredAddressType, "preferredAddressType");
     }
 
     @Override

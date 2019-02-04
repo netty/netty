@@ -31,8 +31,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static io.netty.util.internal.ObjectUtil.*;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.StringUtil.*;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Splits an HTTP query string into a path string and key-value parameter pairs.
@@ -109,8 +110,8 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(String uri, Charset charset, boolean hasPath, int maxParams) {
-        this.uri = checkNotNull(uri, "uri");
-        this.charset = checkNotNull(charset, "charset");
+        this.uri = requireNonNull(uri, "uri");
+        this.charset = requireNonNull(charset, "charset");
         this.maxParams = checkPositive(maxParams, "maxParams");
 
         // `-1` means that path end index will be initialized lazily
@@ -145,7 +146,7 @@ public class QueryStringDecoder {
         String rawQuery = uri.getRawQuery();
         // Also take care of cut of things like "http://localhost"
         this.uri = rawQuery == null? rawPath : rawPath + '?' + rawQuery;
-        this.charset = checkNotNull(charset, "charset");
+        this.charset = requireNonNull(charset, "charset");
         this.maxParams = checkPositive(maxParams, "maxParams");
         pathEndIdx = rawPath.length();
     }

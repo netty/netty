@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.dns;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
@@ -44,7 +44,7 @@ public class DefaultDnsPtrRecord extends AbstractDnsRecord implements DnsPtrReco
     public DefaultDnsPtrRecord(
             String name, int dnsClass, long timeToLive, String hostname) {
         super(name, DnsRecordType.PTR, dnsClass, timeToLive);
-        this.hostname = checkNotNull(hostname, "hostname");
+        this.hostname = requireNonNull(hostname, "hostname");
     }
 
     @Override

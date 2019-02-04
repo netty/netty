@@ -16,6 +16,8 @@
 
 package io.netty.channel;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.StringUtil;
@@ -39,9 +41,7 @@ public class DefaultAddressedEnvelope<M, A extends SocketAddress> implements Add
      * {@code sender} address.
      */
     public DefaultAddressedEnvelope(M message, A recipient, A sender) {
-        if (message == null) {
-            throw new NullPointerException("message");
-        }
+        requireNonNull(message, "message");
 
         if (recipient == null && sender == null) {
             throw new NullPointerException("recipient and sender");

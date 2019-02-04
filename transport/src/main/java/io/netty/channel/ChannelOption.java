@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.AbstractConstant;
 import io.netty.util.ConstantPool;
@@ -143,8 +145,6 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
      * may override this for special checks.
      */
     public void validate(T value) {
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
+        requireNonNull(value, "value");
     }
 }

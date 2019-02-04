@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.rtsp;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.handler.codec.http.HttpVersion;
 
 /**
@@ -34,9 +36,7 @@ public final class RtspVersions {
      * Otherwise, a new {@link HttpVersion} instance will be returned.
      */
     public static HttpVersion valueOf(String text) {
-        if (text == null) {
-            throw new NullPointerException("text");
-        }
+        requireNonNull(text, "text");
 
         text = text.trim().toUpperCase();
         if ("RTSP/1.0".equals(text)) {

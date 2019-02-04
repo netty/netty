@@ -35,8 +35,8 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.indexOfNonWhiteSpace;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Able to parse files such as <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a> and
@@ -91,7 +91,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
      * @throws IOException If an error occurs while parsing the input files.
      */
     public UnixResolverDnsServerAddressStreamProvider(File etcResolvConf, File... etcResolverFiles) throws IOException {
-        Map<String, DnsServerAddresses> etcResolvConfMap = parse(checkNotNull(etcResolvConf, "etcResolvConf"));
+        Map<String, DnsServerAddresses> etcResolvConfMap = parse(requireNonNull(etcResolvConf, "etcResolvConf"));
         final boolean useEtcResolverFiles = etcResolverFiles != null && etcResolverFiles.length != 0;
         domainToNameServerStreamMap = useEtcResolverFiles ? parse(etcResolverFiles) : etcResolvConfMap;
 

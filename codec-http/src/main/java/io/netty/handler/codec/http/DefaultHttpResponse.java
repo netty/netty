@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link HttpResponse} implementation.
@@ -60,7 +60,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders,
                                boolean singleFieldHeaders) {
         super(version, validateHeaders, singleFieldHeaders);
-        this.status = checkNotNull(status, "status");
+        this.status = requireNonNull(status, "status");
     }
 
     /**
@@ -72,7 +72,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, HttpHeaders headers) {
         super(version, headers);
-        this.status = checkNotNull(status, "status");
+        this.status = requireNonNull(status, "status");
     }
 
     @Override
@@ -88,9 +88,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
 
     @Override
     public HttpResponse setStatus(HttpResponseStatus status) {
-        if (status == null) {
-            throw new NullPointerException("status");
-        }
+        requireNonNull(status, "status");
         this.status = status;
         return this;
     }

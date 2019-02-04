@@ -19,7 +19,7 @@ import io.netty.handler.codec.DateFormatter;
 
 import java.util.Date;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A <a href="http://tools.ietf.org/html/rfc6265">RFC6265</a> compliant cookie decoder to be used client side.
@@ -52,7 +52,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
      * @return the decoded {@link Cookie}
      */
     public Cookie decode(String header) {
-        final int headerLen = checkNotNull(header, "header").length();
+        final int headerLen = requireNonNull(header, "header").length();
 
         if (headerLen == 0) {
             return null;

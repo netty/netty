@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 
 import static io.netty.buffer.Unpooled.*;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Memory implementation of Attributes
@@ -66,9 +67,7 @@ public class MemoryAttribute extends AbstractMemoryHttpData implements Attribute
 
     @Override
     public void setValue(String value) throws IOException {
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
+        requireNonNull(value, "value");
         byte [] bytes = value.getBytes(getCharset());
         checkSize(bytes.length);
         ByteBuf buffer = wrappedBuffer(bytes);

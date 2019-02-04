@@ -18,7 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.IllegalReferenceCountException;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Default implementation of {@link FullHttpRequest}.
@@ -47,15 +47,15 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
                                   ByteBuf content, boolean validateHeaders) {
         super(httpVersion, method, uri, validateHeaders);
-        this.content = checkNotNull(content, "content");
+        this.content = requireNonNull(content, "content");
         trailingHeader = new DefaultHttpHeaders(validateHeaders);
     }
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
             ByteBuf content, HttpHeaders headers, HttpHeaders trailingHeader) {
         super(httpVersion, method, uri, headers);
-        this.content = checkNotNull(content, "content");
-        this.trailingHeader = checkNotNull(trailingHeader, "trailingHeader");
+        this.content = requireNonNull(content, "content");
+        this.trailingHeader = requireNonNull(trailingHeader, "trailingHeader");
     }
 
     @Override

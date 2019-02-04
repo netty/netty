@@ -29,10 +29,10 @@ import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Default implementation of {@link Http2ConnectionEncoder}.
@@ -47,8 +47,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     private final ArrayDeque<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<>(4);
 
     public DefaultHttp2ConnectionEncoder(Http2Connection connection, Http2FrameWriter frameWriter) {
-        this.connection = checkNotNull(connection, "connection");
-        this.frameWriter = checkNotNull(frameWriter, "frameWriter");
+        this.connection = requireNonNull(connection, "connection");
+        this.frameWriter = requireNonNull(frameWriter, "frameWriter");
         if (connection.remote().flowController() == null) {
             connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection));
         }
@@ -56,7 +56,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
     @Override
     public void lifecycleManager(Http2LifecycleManager lifecycleManager) {
-        this.lifecycleManager = checkNotNull(lifecycleManager, "lifecycleManager");
+        this.lifecycleManager = requireNonNull(lifecycleManager, "lifecycleManager");
     }
 
     @Override

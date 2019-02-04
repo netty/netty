@@ -16,7 +16,8 @@
 
 package io.netty.handler.ssl;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 import io.netty.util.internal.PlatformDependent;
@@ -54,10 +55,10 @@ final class JettyNpnSslEngine extends JdkSslEngine {
 
     JettyNpnSslEngine(SSLEngine engine, final JdkApplicationProtocolNegotiator applicationNegotiator, boolean server) {
         super(engine);
-        checkNotNull(applicationNegotiator, "applicationNegotiator");
+        requireNonNull(applicationNegotiator, "applicationNegotiator");
 
         if (server) {
-            final ProtocolSelectionListener protocolListener = checkNotNull(applicationNegotiator
+            final ProtocolSelectionListener protocolListener = requireNonNull(applicationNegotiator
                     .protocolListenerFactory().newListener(this, applicationNegotiator.protocols()),
                     "protocolListener");
             NextProtoNego.put(engine, new ServerProvider() {
@@ -81,7 +82,7 @@ final class JettyNpnSslEngine extends JdkSslEngine {
                 }
             });
         } else {
-            final ProtocolSelector protocolSelector = checkNotNull(applicationNegotiator.protocolSelectorFactory()
+            final ProtocolSelector protocolSelector = requireNonNull(applicationNegotiator.protocolSelectorFactory()
                     .newSelector(this, new LinkedHashSet<>(applicationNegotiator.protocols())),
                     "protocolSelector");
             NextProtoNego.put(engine, new ClientProvider() {

@@ -15,6 +15,8 @@
  */
 package io.netty.channel.socket.nio;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
@@ -395,13 +397,8 @@ public final class NioDatagramChannel
 
         checkJavaVersion();
 
-        if (multicastAddress == null) {
-            throw new NullPointerException("multicastAddress");
-        }
-
-        if (networkInterface == null) {
-            throw new NullPointerException("networkInterface");
-        }
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(networkInterface, "networkInterface");
 
         try {
             MembershipKey key;
@@ -474,12 +471,8 @@ public final class NioDatagramChannel
             ChannelPromise promise) {
         checkJavaVersion();
 
-        if (multicastAddress == null) {
-            throw new NullPointerException("multicastAddress");
-        }
-        if (networkInterface == null) {
-            throw new NullPointerException("networkInterface");
-        }
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(networkInterface, "networkInterface");
 
         synchronized (this) {
             if (memberships != null) {
@@ -527,16 +520,10 @@ public final class NioDatagramChannel
             InetAddress sourceToBlock, ChannelPromise promise) {
         checkJavaVersion();
 
-        if (multicastAddress == null) {
-            throw new NullPointerException("multicastAddress");
-        }
-        if (sourceToBlock == null) {
-            throw new NullPointerException("sourceToBlock");
-        }
+        requireNonNull(multicastAddress, "multicastAddress");
+        requireNonNull(sourceToBlock, "sourceToBlock");
+        requireNonNull(networkInterface, "networkInterface");
 
-        if (networkInterface == null) {
-            throw new NullPointerException("networkInterface");
-        }
         synchronized (this) {
             if (memberships != null) {
                 List<MembershipKey> keys = memberships.get(multicastAddress);

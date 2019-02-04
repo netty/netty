@@ -15,8 +15,9 @@
  */
 package io.netty.util.concurrent;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.DefaultPriorityQueue;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PriorityQueue;
 import io.netty.util.internal.PriorityQueueNode;
 
@@ -165,8 +166,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     @Override
     public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        ObjectUtil.checkNotNull(command, "command");
-        ObjectUtil.checkNotNull(unit, "unit");
+        requireNonNull(command, "command");
+        requireNonNull(unit, "unit");
         if (delay < 0) {
             delay = 0;
         }
@@ -177,8 +178,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     @Override
     public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        ObjectUtil.checkNotNull(callable, "callable");
-        ObjectUtil.checkNotNull(unit, "unit");
+        requireNonNull(callable, "callable");
+        requireNonNull(unit, "unit");
         if (delay < 0) {
             delay = 0;
         }
@@ -188,8 +189,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     @Override
     public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
-        ObjectUtil.checkNotNull(command, "command");
-        ObjectUtil.checkNotNull(unit, "unit");
+        requireNonNull(command, "command");
+        requireNonNull(unit, "unit");
         if (initialDelay < 0) {
             throw new IllegalArgumentException(
                     String.format("initialDelay: %d (expected: >= 0)", initialDelay));
@@ -206,8 +207,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     @Override
     public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
-        ObjectUtil.checkNotNull(command, "command");
-        ObjectUtil.checkNotNull(unit, "unit");
+        requireNonNull(command, "command");
+        requireNonNull(unit, "unit");
         if (initialDelay < 0) {
             throw new IllegalArgumentException(
                     String.format("initialDelay: %d (expected: >= 0)", initialDelay));

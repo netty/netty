@@ -23,9 +23,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Default implementation of {@link AuthoritativeDnsServerCache}, backed by a {@link ConcurrentMap}.
@@ -82,7 +82,7 @@ public class DefaultAuthoritativeDnsServerCache implements AuthoritativeDnsServe
 
     @Override
     public DnsServerAddressStream get(String hostname) {
-        checkNotNull(hostname, "hostname");
+        requireNonNull(hostname, "hostname");
 
         List<? extends InetSocketAddress> addresses = resolveCache.get(hostname);
         if (addresses == null || addresses.isEmpty()) {
@@ -93,9 +93,9 @@ public class DefaultAuthoritativeDnsServerCache implements AuthoritativeDnsServe
 
     @Override
     public void cache(String hostname, InetSocketAddress address, long originalTtl, EventLoop loop) {
-        checkNotNull(hostname, "hostname");
-        checkNotNull(address, "address");
-        checkNotNull(loop, "loop");
+        requireNonNull(hostname, "hostname");
+        requireNonNull(address, "address");
+        requireNonNull(loop, "loop");
 
         if (address.getHostString() == null) {
             // We only cache addresses that have also a host string as we will need it later when trying to replace
@@ -113,7 +113,7 @@ public class DefaultAuthoritativeDnsServerCache implements AuthoritativeDnsServe
 
     @Override
     public boolean clear(String hostname) {
-        checkNotNull(hostname, "hostname");
+        requireNonNull(hostname, "hostname");
 
         return resolveCache.clear(hostname);
     }

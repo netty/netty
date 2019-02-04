@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Allocates a new receive buffer whose capacity is probably large enough to read all inbound data and small enough
@@ -124,7 +124,7 @@ public interface RecvByteBufAllocator {
         private final Handle delegate;
 
         public DelegatingHandle(Handle delegate) {
-            this.delegate = checkNotNull(delegate, "delegate");
+            this.delegate = requireNonNull(delegate, "delegate");
         }
 
         /**

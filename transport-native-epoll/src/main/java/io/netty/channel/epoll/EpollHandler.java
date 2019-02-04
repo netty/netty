@@ -31,7 +31,6 @@ import io.netty.channel.unix.IovArray;
 import io.netty.util.IntSupplier;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -39,7 +38,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link IoHandler} which uses epoll under the covers. Only works on Linux!
@@ -155,8 +156,8 @@ public class EpollHandler implements IoHandler {
      */
     public static IoHandlerFactory newFactory(final int maxEvents,
                                               final SelectStrategyFactory selectStrategyFactory) {
-        ObjectUtil.checkPositiveOrZero(maxEvents, "maxEvents");
-        ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
+        checkPositiveOrZero(maxEvents, "maxEvents");
+        requireNonNull(selectStrategyFactory, "selectStrategyFactory");
         return () -> new EpollHandler(maxEvents, selectStrategyFactory.newSelectStrategy());
     }
 

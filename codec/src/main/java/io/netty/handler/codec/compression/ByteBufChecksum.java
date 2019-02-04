@@ -15,9 +15,10 @@
  */
 package io.netty.handler.codec.compression;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ByteProcessor;
-import io.netty.util.internal.ObjectUtil;
 
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
@@ -58,7 +59,7 @@ abstract class ByteBufChecksum implements Checksum {
     }
 
     static ByteBufChecksum wrapChecksum(Checksum checksum) {
-        ObjectUtil.checkNotNull(checksum, "checksum");
+        requireNonNull(checksum, "checksum");
         if (checksum instanceof Adler32 && ADLER32_UPDATE_METHOD != null) {
             return new ReflectiveByteBufChecksum(checksum, ADLER32_UPDATE_METHOD);
         }

@@ -16,7 +16,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A decorator around another {@link Http2ConnectionEncoder} instance.
@@ -27,7 +27,7 @@ public class DecoratingHttp2ConnectionEncoder extends DecoratingHttp2FrameWriter
 
     public DecoratingHttp2ConnectionEncoder(Http2ConnectionEncoder delegate) {
         super(delegate);
-        this.delegate = checkNotNull(delegate, "delegate");
+        this.delegate = requireNonNull(delegate, "delegate");
     }
 
     @Override

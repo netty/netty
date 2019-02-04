@@ -15,6 +15,8 @@
  */
 package io.netty.channel.unix;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.File;
 import java.net.SocketAddress;
 
@@ -27,9 +29,7 @@ public final class DomainSocketAddress extends SocketAddress {
     private final String socketPath;
 
     public DomainSocketAddress(String socketPath) {
-        if (socketPath == null) {
-            throw new NullPointerException("socketPath");
-        }
+        requireNonNull(socketPath, "socketPath");
         this.socketPath = socketPath;
     }
 

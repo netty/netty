@@ -27,6 +27,7 @@ import java.util.Set;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
 import static io.netty.util.ReferenceCountUtil.release;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Client-side handler for handling an HTTP upgrade handshake to another protocol. When the first
@@ -115,12 +116,8 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
     public HttpClientUpgradeHandler(SourceCodec sourceCodec, UpgradeCodec upgradeCodec,
                                     int maxContentLength) {
         super(maxContentLength);
-        if (sourceCodec == null) {
-            throw new NullPointerException("sourceCodec");
-        }
-        if (upgradeCodec == null) {
-            throw new NullPointerException("upgradeCodec");
-        }
+        requireNonNull(sourceCodec, "sourceCodec");
+        requireNonNull(upgradeCodec, "upgradeCodec");
         this.sourceCodec = sourceCodec;
         this.upgradeCodec = upgradeCodec;
     }

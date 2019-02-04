@@ -15,10 +15,11 @@
  */
 package io.netty.channel;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -30,7 +31,7 @@ public final class PreferHeapByteBufAllocator implements ByteBufAllocator {
     private final ByteBufAllocator allocator;
 
     public PreferHeapByteBufAllocator(ByteBufAllocator allocator) {
-        this.allocator = ObjectUtil.checkNotNull(allocator, "allocator");
+        this.allocator = requireNonNull(allocator, "allocator");
     }
 
     @Override

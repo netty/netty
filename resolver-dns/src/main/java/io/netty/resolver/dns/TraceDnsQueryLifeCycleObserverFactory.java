@@ -20,7 +20,7 @@ import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 final class TraceDnsQueryLifeCycleObserverFactory implements DnsQueryLifecycleObserverFactory {
     private static final InternalLogger DEFAULT_LOGGER =
@@ -34,8 +34,8 @@ final class TraceDnsQueryLifeCycleObserverFactory implements DnsQueryLifecycleOb
     }
 
     TraceDnsQueryLifeCycleObserverFactory(InternalLogger logger, InternalLogLevel level) {
-        this.logger = checkNotNull(logger, "logger");
-        this.level = checkNotNull(level, "level");
+        this.logger = requireNonNull(logger, "logger");
+        this.level = requireNonNull(level, "level");
     }
 
     @Override

@@ -16,9 +16,10 @@
 
 package io.netty.buffer;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakTracker;
-import io.netty.util.internal.ObjectUtil;
 
 import java.nio.ByteOrder;
 
@@ -34,8 +35,8 @@ class SimpleLeakAwareByteBuf extends WrappedByteBuf {
 
     SimpleLeakAwareByteBuf(ByteBuf wrapped, ByteBuf trackedByteBuf, ResourceLeakTracker<ByteBuf> leak) {
         super(wrapped);
-        this.trackedByteBuf = ObjectUtil.checkNotNull(trackedByteBuf, "trackedByteBuf");
-        this.leak = ObjectUtil.checkNotNull(leak, "leak");
+        this.trackedByteBuf = requireNonNull(trackedByteBuf, "trackedByteBuf");
+        this.leak = requireNonNull(leak, "leak");
     }
 
     SimpleLeakAwareByteBuf(ByteBuf wrapped, ResourceLeakTracker<ByteBuf> leak) {

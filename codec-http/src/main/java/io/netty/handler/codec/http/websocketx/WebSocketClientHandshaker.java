@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -147,9 +149,7 @@ public abstract class WebSocketClientHandshaker {
      *            Channel
      */
     public ChannelFuture handshake(Channel channel) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
+        requireNonNull(channel, "channel");
         return handshake(channel, channel.newPromise());
     }
 
@@ -398,9 +398,7 @@ public abstract class WebSocketClientHandshaker {
      *            Closing Frame that was received
      */
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
+        requireNonNull(channel, "channel");
         return close(channel, frame, channel.newPromise());
     }
 
@@ -415,9 +413,7 @@ public abstract class WebSocketClientHandshaker {
      *            the {@link ChannelPromise} to be notified when the closing handshake is done
      */
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
+        requireNonNull(channel, "channel");
         return channel.writeAndFlush(frame, promise);
     }
 

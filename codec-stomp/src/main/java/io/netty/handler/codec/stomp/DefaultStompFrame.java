@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.stomp;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
@@ -36,10 +38,7 @@ public class DefaultStompFrame extends DefaultStompHeadersSubframe implements St
 
     DefaultStompFrame(StompCommand command, ByteBuf content, DefaultStompHeaders headers) {
         super(command, headers);
-
-        if (content == null) {
-            throw new NullPointerException("content");
-        }
+        requireNonNull(content, "content");
 
         this.content = content;
     }

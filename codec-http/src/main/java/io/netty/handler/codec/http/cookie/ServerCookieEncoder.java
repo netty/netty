@@ -19,7 +19,7 @@ import static io.netty.handler.codec.http.cookie.CookieUtil.add;
 import static io.netty.handler.codec.http.cookie.CookieUtil.addQuoted;
 import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
 import static io.netty.handler.codec.http.cookie.CookieUtil.stripTrailingSeparator;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.http.HttpConstants;
@@ -88,7 +88,7 @@ public final class ServerCookieEncoder extends CookieEncoder {
      * @return a single Set-Cookie header value
      */
     public String encode(Cookie cookie) {
-        final String name = checkNotNull(cookie, "cookie").name();
+        final String name = requireNonNull(cookie, "cookie").name();
         final String value = cookie.value() != null ? cookie.value() : "";
 
         validateCookie(name, value);
@@ -155,7 +155,7 @@ public final class ServerCookieEncoder extends CookieEncoder {
      * @return the corresponding bunch of Set-Cookie headers
      */
     public List<String> encode(Cookie... cookies) {
-        if (checkNotNull(cookies, "cookies").length == 0) {
+        if (requireNonNull(cookies, "cookies").length == 0) {
             return Collections.emptyList();
         }
 
@@ -179,7 +179,7 @@ public final class ServerCookieEncoder extends CookieEncoder {
      * @return the corresponding bunch of Set-Cookie headers
      */
     public List<String> encode(Collection<? extends Cookie> cookies) {
-        if (checkNotNull(cookies, "cookies").isEmpty()) {
+        if (requireNonNull(cookies, "cookies").isEmpty()) {
             return Collections.emptyList();
         }
 
@@ -203,7 +203,7 @@ public final class ServerCookieEncoder extends CookieEncoder {
      * @return the corresponding bunch of Set-Cookie headers
      */
     public List<String> encode(Iterable<? extends Cookie> cookies) {
-        Iterator<? extends Cookie> cookiesIt = checkNotNull(cookies, "cookies").iterator();
+        Iterator<? extends Cookie> cookiesIt = requireNonNull(cookies, "cookies").iterator();
         if (!cookiesIt.hasNext()) {
             return Collections.emptyList();
         }

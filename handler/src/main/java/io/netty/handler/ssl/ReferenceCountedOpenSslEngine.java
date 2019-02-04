@@ -72,9 +72,9 @@ import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_3;
 import static io.netty.handler.ssl.SslUtils.SSL_RECORD_HEADER_LENGTH;
 import static io.netty.util.internal.EmptyArrays.EMPTY_CERTIFICATES;
 import static io.netty.util.internal.EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_UNWRAP;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_WRAP;
@@ -243,7 +243,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                   int peerPort, boolean jdkCompatibilityMode, boolean leakDetection) {
         super(peerHost, peerPort);
         OpenSsl.ensureAvailability();
-        this.alloc = checkNotNull(alloc, "alloc");
+        this.alloc = requireNonNull(alloc, "alloc");
         apn = (OpenSslApplicationProtocolNegotiator) context.applicationProtocolNegotiator();
         clientMode = context.isClient();
         session = new ExtendedOpenSslSession(new DefaultOpenSslSession(context.sessionContext())) {
@@ -962,9 +962,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             final ByteBuffer[] dsts, int dstsOffset, final int dstsLength) throws SSLException {
 
         // Throw required runtime exceptions
-        if (srcs == null) {
-            throw new NullPointerException("srcs");
-        }
+        requireNonNull(srcs, "srcs");
         if (srcsOffset >= srcs.length
                 || srcsOffset + srcsLength > srcs.length) {
             throw new IndexOutOfBoundsException(
@@ -1410,7 +1408,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     @Override
     public final void setEnabledCipherSuites(String[] cipherSuites) {
-        checkNotNull(cipherSuites, "cipherSuites");
+        requireNonNull(cipherSuites, "cipherSuites");
 
         final StringBuilder buf = new StringBuilder();
         final StringBuilder bufTLSv13 = new StringBuilder();
@@ -2013,12 +2011,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public void putValue(String name, Object value) {
-            if (name == null) {
-                throw new NullPointerException("name");
-            }
-            if (value == null) {
-                throw new NullPointerException("value");
-            }
+            requireNonNull(name, "name");
+            requireNonNull(value, "value");
             final Object old;
             synchronized (this) {
                 Map<String, Object> values = this.values;
@@ -2038,9 +2032,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public Object getValue(String name) {
-            if (name == null) {
-                throw new NullPointerException("name");
-            }
+            requireNonNull(name, "name");
             synchronized (this) {
                 if (values == null) {
                     return null;
@@ -2051,9 +2043,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public void removeValue(String name) {
-            if (name == null) {
-                throw new NullPointerException("name");
-            }
+            requireNonNull(name, "name");
 
             final Object old;
             synchronized (this) {

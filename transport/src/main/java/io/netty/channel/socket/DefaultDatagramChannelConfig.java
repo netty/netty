@@ -36,6 +36,7 @@ import java.net.SocketException;
 import java.util.Map;
 
 import static io.netty.channel.ChannelOption.*;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link DatagramChannelConfig} implementation.
@@ -52,9 +53,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
      */
     public DefaultDatagramChannelConfig(DatagramChannel channel, DatagramSocket javaSocket) {
         super(channel, new FixedRecvByteBufAllocator(2048));
-        if (javaSocket == null) {
-            throw new NullPointerException("javaSocket");
-        }
+        requireNonNull(javaSocket, "javaSocket");
         this.javaSocket = javaSocket;
     }
 
