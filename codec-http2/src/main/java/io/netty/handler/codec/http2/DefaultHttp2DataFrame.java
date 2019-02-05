@@ -23,7 +23,7 @@ import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.verifyPadding;
 import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link Http2DataFrame} implementation.
@@ -72,7 +72,7 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
      *                256 (inclusive).
      */
     public DefaultHttp2DataFrame(ByteBuf content, boolean endStream, int padding) {
-        this.content = checkNotNull(content, "content");
+        this.content = requireNonNull(content, "content");
         this.endStream = endStream;
         verifyPadding(padding);
         this.padding = padding;

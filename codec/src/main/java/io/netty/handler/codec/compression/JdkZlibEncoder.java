@@ -16,6 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
@@ -94,9 +95,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
      */
     public JdkZlibEncoder(ZlibWrapper wrapper, int compressionLevel) {
         checkClosedInterval(compressionLevel, 0, 9, "compressionLevel");
-        if (wrapper == null) {
-            throw new NullPointerException("wrapper");
-        }
+        requireNonNull(wrapper, "wrapper");
         if (wrapper == ZlibWrapper.ZLIB_OR_NONE) {
             throw new IllegalArgumentException(
                     "wrapper '" + ZlibWrapper.ZLIB_OR_NONE + "' is not " +
@@ -137,9 +136,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
      */
     public JdkZlibEncoder(int compressionLevel, byte[] dictionary) {
         checkClosedInterval(compressionLevel, 0, 9, "compressionLevel");
-        if (dictionary == null) {
-            throw new NullPointerException("dictionary");
-        }
+        requireNonNull(dictionary, "dictionary");
 
         wrapper = ZlibWrapper.ZLIB;
         deflater = new Deflater(compressionLevel);

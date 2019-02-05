@@ -16,6 +16,7 @@
 package io.netty.handler.codec.socks;
 
 import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
@@ -37,15 +38,9 @@ public final class SocksCmdRequest extends SocksRequest {
 
     public SocksCmdRequest(SocksCmdType cmdType, SocksAddressType addressType, String host, int port) {
         super(SocksRequestType.CMD);
-        if (cmdType == null) {
-            throw new NullPointerException("cmdType");
-        }
-        if (addressType == null) {
-            throw new NullPointerException("addressType");
-        }
-        if (host == null) {
-            throw new NullPointerException("host");
-        }
+        requireNonNull(cmdType, "cmdType");
+        requireNonNull(addressType, "addressType");
+        requireNonNull(host, "host");
         switch (addressType) {
             case IPv4:
                 if (!NetUtil.isValidIpV4Address(host)) {

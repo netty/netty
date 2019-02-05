@@ -15,6 +15,8 @@
  */
 package io.netty.handler.traffic;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.Channel;
@@ -103,9 +105,7 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      * Create the global TrafficCounter.
      */
     void createGlobalTrafficCounter(ScheduledExecutorService executor) {
-        if (executor == null) {
-            throw new NullPointerException("executor");
-        }
+        requireNonNull(executor, "executor");
         TrafficCounter tc = new TrafficCounter(this, executor, "GlobalTC", checkInterval);
         setTrafficCounter(tc);
         tc.start();

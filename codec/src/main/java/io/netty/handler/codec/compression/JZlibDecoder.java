@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.compression;
 
+import static java.util.Objects.requireNonNull;
+
 import com.jcraft.jzlib.Inflater;
 import com.jcraft.jzlib.JZlib;
 import io.netty.buffer.ByteBuf;
@@ -43,9 +45,7 @@ public class JZlibDecoder extends ZlibDecoder {
      * @throws DecompressionException if failed to initialize zlib
      */
     public JZlibDecoder(ZlibWrapper wrapper) {
-        if (wrapper == null) {
-            throw new NullPointerException("wrapper");
-        }
+        requireNonNull(wrapper, "wrapper");
 
         int resultCode = z.init(ZlibUtil.convertWrapperType(wrapper));
         if (resultCode != JZlib.Z_OK) {
@@ -61,9 +61,7 @@ public class JZlibDecoder extends ZlibDecoder {
      * @throws DecompressionException if failed to initialize zlib
      */
     public JZlibDecoder(byte[] dictionary) {
-        if (dictionary == null) {
-            throw new NullPointerException("dictionary");
-        }
+        requireNonNull(dictionary, "dictionary");
         this.dictionary = dictionary;
 
         int resultCode;

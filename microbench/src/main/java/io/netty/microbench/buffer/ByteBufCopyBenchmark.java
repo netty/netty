@@ -29,7 +29,7 @@ import java.nio.ByteOrder;
 
 public class ByteBufCopyBenchmark extends AbstractMicrobenchmark {
     static {
-        System.setProperty("io.netty.buffer.bytebuf.checkAccessible", "false");
+        System.setProperty("io.netty.buffer.checkAccessible", "false");
     }
 
     @Param({"7", "36", "128", "512" })

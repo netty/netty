@@ -26,8 +26,8 @@ import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
 import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Default implementation of {@link DnsCache}, backed by a {@link ConcurrentMap}.
@@ -113,7 +113,7 @@ public class DefaultDnsCache implements DnsCache {
 
     @Override
     public boolean clear(String hostname) {
-        checkNotNull(hostname, "hostname");
+        requireNonNull(hostname, "hostname");
         return resolveCache.clear(appendDot(hostname));
     }
 
@@ -123,7 +123,7 @@ public class DefaultDnsCache implements DnsCache {
 
     @Override
     public List<? extends DnsCacheEntry> get(String hostname, DnsRecord[] additionals) {
-        checkNotNull(hostname, "hostname");
+        requireNonNull(hostname, "hostname");
         if (!emptyAdditionals(additionals)) {
             return Collections.emptyList();
         }
@@ -134,9 +134,9 @@ public class DefaultDnsCache implements DnsCache {
     @Override
     public DnsCacheEntry cache(String hostname, DnsRecord[] additionals,
                                InetAddress address, long originalTtl, EventLoop loop) {
-        checkNotNull(hostname, "hostname");
-        checkNotNull(address, "address");
-        checkNotNull(loop, "loop");
+        requireNonNull(hostname, "hostname");
+        requireNonNull(address, "address");
+        requireNonNull(loop, "loop");
         DefaultDnsCacheEntry e = new DefaultDnsCacheEntry(hostname, address);
         if (maxTtl == 0 || !emptyAdditionals(additionals)) {
             return e;
@@ -147,9 +147,9 @@ public class DefaultDnsCache implements DnsCache {
 
     @Override
     public DnsCacheEntry cache(String hostname, DnsRecord[] additionals, Throwable cause, EventLoop loop) {
-        checkNotNull(hostname, "hostname");
-        checkNotNull(cause, "cause");
-        checkNotNull(loop, "loop");
+        requireNonNull(hostname, "hostname");
+        requireNonNull(cause, "cause");
+        requireNonNull(loop, "loop");
 
         DefaultDnsCacheEntry e = new DefaultDnsCacheEntry(hostname, cause);
         if (negativeTtl == 0 || !emptyAdditionals(additionals)) {

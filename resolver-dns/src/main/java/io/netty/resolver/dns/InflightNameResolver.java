@@ -26,7 +26,7 @@ import io.netty.util.internal.StringUtil;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 // FIXME(trustin): Find a better name and move it to the 'resolver' module.
 final class InflightNameResolver<T> implements NameResolver<T> {
@@ -40,10 +40,10 @@ final class InflightNameResolver<T> implements NameResolver<T> {
                          ConcurrentMap<String, Promise<T>> resolvesInProgress,
                          ConcurrentMap<String, Promise<List<T>>> resolveAllsInProgress) {
 
-        this.executor = checkNotNull(executor, "executor");
-        this.delegate = checkNotNull(delegate, "delegate");
-        this.resolvesInProgress = checkNotNull(resolvesInProgress, "resolvesInProgress");
-        this.resolveAllsInProgress = checkNotNull(resolveAllsInProgress, "resolveAllsInProgress");
+        this.executor = requireNonNull(executor, "executor");
+        this.delegate = requireNonNull(delegate, "delegate");
+        this.resolvesInProgress = requireNonNull(resolvesInProgress, "resolvesInProgress");
+        this.resolveAllsInProgress = requireNonNull(resolveAllsInProgress, "resolveAllsInProgress");
     }
 
     @Override

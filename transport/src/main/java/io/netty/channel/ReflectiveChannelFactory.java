@@ -16,7 +16,8 @@
 
 package io.netty.channel;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.StringUtil;
 
 import java.lang.reflect.Constructor;
@@ -29,7 +30,7 @@ public class ReflectiveChannelFactory<T extends Channel> implements ChannelFacto
     private final Constructor<? extends T> constructor;
 
     public ReflectiveChannelFactory(Class<? extends T> clazz) {
-        ObjectUtil.checkNotNull(clazz, "clazz");
+        requireNonNull(clazz, "clazz");
         try {
             this.constructor = clazz.getConstructor(EventLoop.class);
         } catch (NoSuchMethodException e) {

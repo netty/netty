@@ -16,6 +16,7 @@
 package io.netty.handler.codec.socksx.v5;
 
 import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.internal.StringUtil;
@@ -29,12 +30,8 @@ public class DefaultSocks5PasswordAuthRequest extends AbstractSocks5Message impl
     private final String password;
 
     public DefaultSocks5PasswordAuthRequest(String username, String password) {
-        if (username == null) {
-            throw new NullPointerException("username");
-        }
-        if (password == null) {
-            throw new NullPointerException("password");
-        }
+        requireNonNull(username, "username");
+        requireNonNull(password, "password");
 
         checkClosedInterval(username.length(), 0, 255, "username");
         checkClosedInterval(password.length(), 0, 255, "password");

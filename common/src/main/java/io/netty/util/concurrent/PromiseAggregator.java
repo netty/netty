@@ -16,6 +16,8 @@
 
 package io.netty.util.concurrent;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -43,9 +45,7 @@ public class PromiseAggregator<V, F extends Future<V>> implements GenericFutureL
      * @param failPending  {@code true} to fail pending promises, false to leave them unaffected
      */
     public PromiseAggregator(Promise<Void> aggregatePromise, boolean failPending) {
-        if (aggregatePromise == null) {
-            throw new NullPointerException("aggregatePromise");
-        }
+        requireNonNull(aggregatePromise, "aggregatePromise");
         this.aggregatePromise = aggregatePromise;
         this.failPending = failPending;
     }
@@ -63,9 +63,7 @@ public class PromiseAggregator<V, F extends Future<V>> implements GenericFutureL
      */
     @SafeVarargs
     public final PromiseAggregator<V, F> add(Promise<V>... promises) {
-        if (promises == null) {
-            throw new NullPointerException("promises");
-        }
+        requireNonNull(promises, "promises");
         if (promises.length == 0) {
             return this;
         }

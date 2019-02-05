@@ -16,6 +16,7 @@
 package io.netty.handler.codec.socks;
 
 import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
@@ -36,12 +37,8 @@ public final class SocksAuthRequest extends SocksRequest {
 
     public SocksAuthRequest(String username, String password) {
         super(SocksRequestType.AUTH);
-        if (username == null) {
-            throw new NullPointerException("username");
-        }
-        if (password == null) {
-            throw new NullPointerException("username");
-        }
+        requireNonNull(username, "username");
+        requireNonNull(password, "password");
         if (!asciiEncoder.canEncode(username) || !asciiEncoder.canEncode(password)) {
             throw new IllegalArgumentException(
                     "username: " + username + " or password: **** values should be in pure ascii");

@@ -17,6 +17,8 @@ package io.netty.handler.codec.http.websocketx;
 
 import org.junit.Test;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 import static org.junit.Assert.assertTrue;
 
 public class WebSocketUtilTest {
@@ -25,7 +27,7 @@ public class WebSocketUtilTest {
     private static final int NUM_ITERATIONS = 1000;
 
     private static void assertRandomWithinBoundaries(int min, int max) {
-        int r = WebSocketUtil.randomNumber(min, max);
+        int r = ThreadLocalRandom.current().nextInt(min, max + 1);
         assertTrue(min <= r && r <= max);
     }
 

@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
@@ -73,12 +75,8 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
                             " was constructed with non-default constructor.");
         }
 
-        if (inboundHandler == null) {
-            throw new NullPointerException("inboundHandler");
-        }
-        if (outboundHandler == null) {
-            throw new NullPointerException("outboundHandler");
-        }
+        requireNonNull(inboundHandler, "inboundHandler");
+        requireNonNull(outboundHandler, "outboundHandler");
         if (inboundHandler instanceof ChannelOutboundHandler) {
             throw new IllegalArgumentException(
                     "inboundHandler must not implement " +

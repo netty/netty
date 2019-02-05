@@ -16,6 +16,7 @@
 package io.netty.handler.codec.serialization;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static java.util.Objects.requireNonNull;
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
@@ -90,9 +91,7 @@ public class ObjectDecoderInputStream extends InputStream implements
      *        a {@link StreamCorruptedException} will be raised.
      */
     public ObjectDecoderInputStream(InputStream in, ClassLoader classLoader, int maxObjectSize) {
-        if (in == null) {
-            throw new NullPointerException("in");
-        }
+        requireNonNull(in, "in");
         checkPositive(maxObjectSize, "maxObjectSize");
         if (in instanceof DataInputStream) {
             this.in = (DataInputStream) in;

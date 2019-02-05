@@ -16,6 +16,7 @@
 package io.netty.handler.codec.socksx.v5;
 
 import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.NetUtil;
@@ -35,16 +36,9 @@ public final class DefaultSocks5CommandRequest extends AbstractSocks5Message imp
 
     public DefaultSocks5CommandRequest(
             Socks5CommandType type, Socks5AddressType dstAddrType, String dstAddr, int dstPort) {
-
-        if (type == null) {
-            throw new NullPointerException("type");
-        }
-        if (dstAddrType == null) {
-            throw new NullPointerException("dstAddrType");
-        }
-        if (dstAddr == null) {
-            throw new NullPointerException("dstAddr");
-        }
+        requireNonNull(type, "type");
+        requireNonNull(dstAddrType, "dstAddrType");
+        requireNonNull(dstAddr, "dstAddr");
 
         if (dstAddrType == Socks5AddressType.IPv4) {
             if (!NetUtil.isValidIpV4Address(dstAddr)) {

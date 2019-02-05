@@ -17,6 +17,7 @@ package io.netty.buffer;
 
 import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.util.internal.PlatformDependent;
 
@@ -53,9 +54,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
      */
     public UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
         super(maxCapacity);
-        if (alloc == null) {
-            throw new NullPointerException("alloc");
-        }
+        requireNonNull(alloc, "alloc");
         checkClosedInterval(initialCapacity, 0, maxCapacity, "initialCapacity");
         checkPositiveOrZero(maxCapacity, "maxCapacity");
 
@@ -83,12 +82,8 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
 
     UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity, boolean doFree) {
         super(maxCapacity);
-        if (alloc == null) {
-            throw new NullPointerException("alloc");
-        }
-        if (initialBuffer == null) {
-            throw new NullPointerException("initialBuffer");
-        }
+        requireNonNull(alloc, "alloc");
+        requireNonNull(initialBuffer, "initialBuffer");
         if (!initialBuffer.isDirect()) {
             throw new IllegalArgumentException("initialBuffer is not a direct buffer.");
         }

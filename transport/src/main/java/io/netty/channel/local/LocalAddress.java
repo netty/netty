@@ -15,6 +15,8 @@
  */
 package io.netty.channel.local;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.channel.Channel;
 
 import java.net.SocketAddress;
@@ -50,9 +52,7 @@ public final class LocalAddress extends SocketAddress implements Comparable<Loca
      * Creates a new instance with the specified ID.
      */
     public LocalAddress(String id) {
-        if (id == null) {
-            throw new NullPointerException("id");
-        }
+        requireNonNull(id, "id");
         id = id.trim().toLowerCase();
         if (id.isEmpty()) {
             throw new IllegalArgumentException("empty id");

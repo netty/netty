@@ -17,6 +17,7 @@ package io.netty.handler.stream;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -86,11 +87,8 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
      * @param chunkSize the number of bytes to fetch on each
      *                  {@link #readChunk(ChannelHandlerContext)} call
      */
-    public ChunkedNioFile(FileChannel in, long offset, long length, int chunkSize)
-            throws IOException {
-        if (in == null) {
-            throw new NullPointerException("in");
-        }
+    public ChunkedNioFile(FileChannel in, long offset, long length, int chunkSize) throws IOException {
+        requireNonNull(in, "in");
         checkPositiveOrZero(offset, "offset");
         checkPositiveOrZero(length, "length");
         checkPositive(chunkSize, "chunkSize");

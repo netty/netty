@@ -15,6 +15,8 @@
  */
 package io.netty.bootstrap;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
@@ -116,9 +118,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
      * {@link Channel} implementation has no no-args constructor.
      */
     public Bootstrap channel(Class<? extends Channel> channelClass) {
-        if (channelClass == null) {
-            throw new NullPointerException("channelClass");
-        }
+        requireNonNull(channelClass, "channelClass");
         return channelFactory(new ReflectiveChannelFactory<Channel>(channelClass));
     }
 
@@ -130,9 +130,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
      * simplify your code.
      */
     public Bootstrap channelFactory(ChannelFactory<? extends Channel> channelFactory) {
-        if (channelFactory == null) {
-            throw new NullPointerException("channelFactory");
-        }
+        requireNonNull(channelFactory, "channelFactory");
         if (this.channelFactory != null) {
             throw new IllegalStateException("channelFactory set already");
         }
@@ -172,9 +170,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
      * Connect a {@link Channel} to the remote peer.
      */
     public ChannelFuture connect(SocketAddress remoteAddress) {
-        if (remoteAddress == null) {
-            throw new NullPointerException("remoteAddress");
-        }
+        requireNonNull(remoteAddress, "remoteAddress");
 
         validate();
         return doResolveAndConnect(remoteAddress, config.localAddress());
@@ -184,9 +180,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
      * Connect a {@link Channel} to the remote peer.
      */
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        if (remoteAddress == null) {
-            throw new NullPointerException("remoteAddress");
-        }
+        requireNonNull(remoteAddress, "remoteAddress");
         validate();
         return doResolveAndConnect(remoteAddress, localAddress);
     }

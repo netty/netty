@@ -16,6 +16,8 @@
 
 package io.netty.handler.codec.socksx;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.handler.codec.DecoderResult;
 
 /**
@@ -32,9 +34,7 @@ public abstract class AbstractSocksMessage implements SocksMessage {
 
     @Override
     public void setDecoderResult(DecoderResult decoderResult) {
-        if (decoderResult == null) {
-            throw new NullPointerException("decoderResult");
-        }
+        requireNonNull(decoderResult, "decoderResult");
         this.decoderResult = decoderResult;
     }
 }

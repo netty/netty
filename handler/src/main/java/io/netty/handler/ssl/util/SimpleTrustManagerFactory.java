@@ -16,6 +16,8 @@
 
 package io.netty.handler.ssl.util;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.concurrent.FastThreadLocal;
 
 import javax.net.ssl.ManagerFactoryParameters;
@@ -71,9 +73,7 @@ public abstract class SimpleTrustManagerFactory extends TrustManagerFactory {
         CURRENT_SPI.get().init(this);
         CURRENT_SPI.remove();
 
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
+        requireNonNull(name, "name");
     }
 
     /**

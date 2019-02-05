@@ -33,6 +33,7 @@ import static io.netty.buffer.Unpooled.buffer;
 import static io.netty.buffer.Unpooled.compositeBuffer;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Abstract Memory HttpData implementation
@@ -48,9 +49,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
 
     @Override
     public void setContent(ByteBuf buffer) throws IOException {
-        if (buffer == null) {
-            throw new NullPointerException("buffer");
-        }
+        requireNonNull(buffer, "buffer");
         long localsize = buffer.readableBytes();
         checkSize(localsize);
         if (definedSize > 0 && definedSize < localsize) {
@@ -67,9 +66,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
 
     @Override
     public void setContent(InputStream inputStream) throws IOException {
-        if (inputStream == null) {
-            throw new NullPointerException("inputStream");
-        }
+        requireNonNull(inputStream, "inputStream");
         ByteBuf buffer = buffer();
         byte[] bytes = new byte[4096 * 4];
         int read = inputStream.read(bytes);
@@ -116,17 +113,13 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         if (last) {
             setCompleted();
         } else {
-            if (buffer == null) {
-                throw new NullPointerException("buffer");
-            }
+            requireNonNull(buffer, "buffer");
         }
     }
 
     @Override
     public void setContent(File file) throws IOException {
-        if (file == null) {
-            throw new NullPointerException("file");
-        }
+        requireNonNull(file, "file");
         long newsize = file.length();
         checkClosedInterval(newsize, 0, Integer.MAX_VALUE, "file size");
         checkSize(newsize);
@@ -220,9 +213,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
 
     @Override
     public boolean renameTo(File dest) throws IOException {
-        if (dest == null) {
-            throw new NullPointerException("dest");
-        }
+        requireNonNull(dest, "dest");
         if (byteBuf == null) {
             // empty file
             if (!dest.createNewFile()) {

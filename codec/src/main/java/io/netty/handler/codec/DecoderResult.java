@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.Signal;
 
 public class DecoderResult {
@@ -26,18 +28,14 @@ public class DecoderResult {
     public static final DecoderResult SUCCESS = new DecoderResult(SIGNAL_SUCCESS);
 
     public static DecoderResult failure(Throwable cause) {
-        if (cause == null) {
-            throw new NullPointerException("cause");
-        }
+        requireNonNull(cause, "cause");
         return new DecoderResult(cause);
     }
 
     private final Throwable cause;
 
     protected DecoderResult(Throwable cause) {
-        if (cause == null) {
-            throw new NullPointerException("cause");
-        }
+        requireNonNull(cause, "cause");
         this.cause = cause;
     }
 

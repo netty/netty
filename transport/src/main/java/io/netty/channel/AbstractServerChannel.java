@@ -15,7 +15,7 @@
  */
 package io.netty.channel;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
 
@@ -40,7 +40,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
      */
     protected AbstractServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
         super(null, eventLoop);
-        this.childEventLoopGroup = ObjectUtil.checkNotNull(childEventLoopGroup, "childEventLoopGroup");
+        this.childEventLoopGroup = requireNonNull(childEventLoopGroup, "childEventLoopGroup");
     }
 
     @Override

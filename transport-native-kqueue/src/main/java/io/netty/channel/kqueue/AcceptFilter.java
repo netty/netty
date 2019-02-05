@@ -15,7 +15,8 @@
  */
 package io.netty.channel.kqueue;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.UnstableApi;
 
 @UnstableApi
@@ -25,8 +26,8 @@ public final class AcceptFilter {
     private final String filterArgs;
 
     public AcceptFilter(String filterName, String filterArgs) {
-        this.filterName = ObjectUtil.checkNotNull(filterName, "filterName");
-        this.filterArgs = ObjectUtil.checkNotNull(filterArgs, "filterArgs");
+        this.filterName = requireNonNull(filterName, "filterName");
+        this.filterArgs = requireNonNull(filterArgs, "filterArgs");
     }
 
     public String filterName() {

@@ -27,6 +27,7 @@ import io.netty.util.internal.UnstableApi;
 import java.util.Map;
 
 import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
+import static java.util.Objects.requireNonNull;
 
 @UnstableApi
 public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig implements DomainSocketChannelConfig {
@@ -140,9 +141,7 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
 
     @Override
     public KQueueDomainSocketChannelConfig setReadMode(DomainSocketReadMode mode) {
-        if (mode == null) {
-            throw new NullPointerException("mode");
-        }
+        requireNonNull(mode, "mode");
         this.mode = mode;
         return this;
     }

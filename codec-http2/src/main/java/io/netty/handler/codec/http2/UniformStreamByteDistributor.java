@@ -23,10 +23,10 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MIN_ALLOCATION
 import static io.netty.handler.codec.http2.Http2CodecUtil.streamableBytes;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link StreamByteDistributor} that ignores stream priority and uniformly allocates bytes to all
@@ -125,7 +125,7 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
     }
 
     private State state(Http2Stream stream) {
-        return checkNotNull(stream, "stream").getProperty(stateKey);
+        return requireNonNull(stream, "stream").getProperty(stateKey);
     }
 
     /**

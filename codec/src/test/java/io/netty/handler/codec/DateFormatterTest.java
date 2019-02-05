@@ -17,6 +17,7 @@ package io.netty.handler.codec;
 
 import org.junit.Test;
 
+import java.util.Calendar;
 import java.util.Date;
 
 import static org.junit.Assert.*;
@@ -110,5 +111,27 @@ public class DateFormatterTest {
     @Test
     public void testFormat() {
         assertEquals("Sun, 6 Nov 1994 08:49:37 GMT", format(DATE));
+    }
+
+    @Test
+    public void testParseAllMonths() {
+        assertEquals(Calendar.JANUARY, getMonth(parseHttpDate("Sun, 6 Jan 1994 08:49:37 GMT")));
+        assertEquals(Calendar.FEBRUARY, getMonth(parseHttpDate("Sun, 6 Feb 1994 08:49:37 GMT")));
+        assertEquals(Calendar.MARCH, getMonth(parseHttpDate("Sun, 6 Mar 1994 08:49:37 GMT")));
+        assertEquals(Calendar.APRIL, getMonth(parseHttpDate("Sun, 6 Apr 1994 08:49:37 GMT")));
+        assertEquals(Calendar.MAY, getMonth(parseHttpDate("Sun, 6 May 1994 08:49:37 GMT")));
+        assertEquals(Calendar.JUNE, getMonth(parseHttpDate("Sun, 6 Jun 1994 08:49:37 GMT")));
+        assertEquals(Calendar.JULY, getMonth(parseHttpDate("Sun, 6 Jul 1994 08:49:37 GMT")));
+        assertEquals(Calendar.AUGUST, getMonth(parseHttpDate("Sun, 6 Aug 1994 08:49:37 GMT")));
+        assertEquals(Calendar.SEPTEMBER, getMonth(parseHttpDate("Sun, 6 Sep 1994 08:49:37 GMT")));
+        assertEquals(Calendar.OCTOBER, getMonth(parseHttpDate("Sun Oct 6 08:49:37 1994")));
+        assertEquals(Calendar.NOVEMBER, getMonth(parseHttpDate("Sun Nov 6 08:49:37 1994")));
+        assertEquals(Calendar.DECEMBER, getMonth(parseHttpDate("Sun Dec 6 08:49:37 1994")));
+    }
+
+    private static int getMonth(Date referenceDate) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(referenceDate);
+        return cal.get(Calendar.MONTH);
     }
 }

@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelHandlerContext;
@@ -23,7 +25,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.protobuf.ProtobufEncoder;
 import io.netty.util.internal.StringUtil;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -54,7 +55,7 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
      * @param encoder the specified message encoder
      */
     public DatagramPacketEncoder(MessageToMessageEncoder<? super M> encoder) {
-        this.encoder = checkNotNull(encoder, "encoder");
+        this.encoder = requireNonNull(encoder, "encoder");
     }
 
     @Override

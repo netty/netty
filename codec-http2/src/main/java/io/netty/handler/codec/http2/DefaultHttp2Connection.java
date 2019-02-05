@@ -53,9 +53,9 @@ import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Integer.MAX_VALUE;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Simple implementation of {@link Http2Connection}.
@@ -118,7 +118,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
     @Override
     public Future<Void> close(final Promise<Void> promise) {
-        checkNotNull(promise, "promise");
+        requireNonNull(promise, "promise");
         // Since we allow this method to be called multiple times, we must make sure that all the promises are notified
         // when all streams are removed and the close operation completes.
         if (closePromise != null) {
@@ -370,7 +370,7 @@ public class DefaultHttp2Connection implements Http2Connection {
      * @throws IllegalArgumentException if the key was not created by this connection.
      */
     final DefaultPropertyKey verifyKey(PropertyKey key) {
-        return checkNotNull((DefaultPropertyKey) key, "key").verifyConnection(this);
+        return requireNonNull((DefaultPropertyKey) key, "key").verifyConnection(this);
     }
 
     /**
@@ -853,7 +853,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public void flowController(F flowController) {
-            this.flowController = checkNotNull(flowController, "flowController");
+            this.flowController = requireNonNull(flowController, "flowController");
         }
 
         @Override

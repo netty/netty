@@ -18,7 +18,7 @@ package io.netty.handler.codec.dns;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The DNS {@code RCODE}, as defined in <a href="https://tools.ietf.org/html/rfc2929">RFC2929</a>.
@@ -172,7 +172,7 @@ public class DnsResponseCode implements Comparable<DnsResponseCode> {
         checkClosedInterval(code, 0, 65535, "code");
 
         this.code = code;
-        this.name = checkNotNull(name, "name");
+        this.name = requireNonNull(name, "name");
     }
 
     /**

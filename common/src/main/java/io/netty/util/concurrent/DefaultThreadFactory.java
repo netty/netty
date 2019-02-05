@@ -17,6 +17,7 @@
 package io.netty.util.concurrent;
 
 import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.util.internal.StringUtil;
 
@@ -66,9 +67,7 @@ public class DefaultThreadFactory implements ThreadFactory {
     }
 
     public static String toPoolName(Class<?> poolType) {
-        if (poolType == null) {
-            throw new NullPointerException("poolType");
-        }
+        requireNonNull(poolType, "poolType");
 
         String poolName = StringUtil.simpleClassName(poolType);
         switch (poolName.length()) {
@@ -86,9 +85,7 @@ public class DefaultThreadFactory implements ThreadFactory {
     }
 
     public DefaultThreadFactory(String poolName, boolean daemon, int priority, ThreadGroup threadGroup) {
-        if (poolName == null) {
-            throw new NullPointerException("poolName");
-        }
+        requireNonNull(poolName, "poolName");
         checkClosedInterval(priority, Thread.MIN_PRIORITY, Thread.MAX_PRIORITY, "priority");
 
         prefix = poolName + '-' + poolId.incrementAndGet() + '-';

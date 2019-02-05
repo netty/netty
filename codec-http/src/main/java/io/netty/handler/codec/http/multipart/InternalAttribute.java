@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.AbstractReferenceCounted;
@@ -42,27 +44,21 @@ final class InternalAttribute extends AbstractReferenceCounted implements Interf
     }
 
     public void addValue(String value) {
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
+        requireNonNull(value, "value");
         ByteBuf buf = Unpooled.copiedBuffer(value, charset);
         this.value.add(buf);
         size += buf.readableBytes();
     }
 
     public void addValue(String value, int rank) {
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
+        requireNonNull(value, "value");
         ByteBuf buf = Unpooled.copiedBuffer(value, charset);
         this.value.add(rank, buf);
         size += buf.readableBytes();
     }
 
     public void setValue(String value, int rank) {
-        if (value == null) {
-            throw new NullPointerException("value");
-        }
+        requireNonNull(value, "value");
         ByteBuf buf = Unpooled.copiedBuffer(value, charset);
         ByteBuf old = this.value.set(rank, buf);
         if (old != null) {

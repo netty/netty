@@ -47,7 +47,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.ResourcesUtil;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -63,6 +62,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.SSLEngine;
 
+import static java.util.Objects.requireNonNull;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.*;
@@ -540,7 +540,7 @@ public class SniHandlerTest {
 
         CustomSslHandler(SslContext sslContext, SSLEngine sslEngine) {
             super(sslEngine);
-            this.sslContext = ObjectUtil.checkNotNull(sslContext, "sslContext");
+            this.sslContext = requireNonNull(sslContext, "sslContext");
         }
 
         @Override

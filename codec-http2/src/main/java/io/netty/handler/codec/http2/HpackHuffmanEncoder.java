@@ -31,10 +31,11 @@
  */
 package io.netty.handler.codec.http2;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
 final class HpackHuffmanEncoder {
@@ -66,7 +67,7 @@ final class HpackHuffmanEncoder {
      * @param data the string literal to be Huffman encoded
      */
     public void encode(ByteBuf out, CharSequence data) {
-        ObjectUtil.checkNotNull(out, "out");
+        requireNonNull(out, "out");
         if (data instanceof AsciiString) {
             AsciiString string = (AsciiString) data;
             try {

@@ -15,6 +15,8 @@
  */
 package io.netty.handler.timeout;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.Channel.Unsafe;
@@ -189,9 +191,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     public IdleStateHandler(boolean observeOutput,
             long readerIdleTime, long writerIdleTime, long allIdleTime,
             TimeUnit unit) {
-        if (unit == null) {
-            throw new NullPointerException("unit");
-        }
+        requireNonNull(unit, "unit");
 
         this.observeOutput = observeOutput;
 

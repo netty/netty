@@ -16,6 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+import static java.util.Objects.requireNonNull;
 
 import com.jcraft.jzlib.Deflater;
 import com.jcraft.jzlib.JZlib;
@@ -121,9 +122,7 @@ public class JZlibEncoder extends ZlibEncoder {
         checkClosedInterval(compressionLevel, 0, 9, "compressionLevel");
         checkClosedInterval(windowBits, 9, 15, "windowBits");
         checkClosedInterval(memLevel, 1, 9, "memLevel");
-        if (wrapper == null) {
-            throw new NullPointerException("wrapper");
-        }
+        requireNonNull(wrapper, "wrapper");
         if (wrapper == ZlibWrapper.ZLIB_OR_NONE) {
             throw new IllegalArgumentException(
                     "wrapper '" + ZlibWrapper.ZLIB_OR_NONE + "' is not " +
@@ -203,9 +202,7 @@ public class JZlibEncoder extends ZlibEncoder {
         checkClosedInterval(compressionLevel, 0, 9, "compressionLevel");
         checkClosedInterval(windowBits, 9, 15, "windowBits");
         checkClosedInterval(memLevel, 1, 9, "memLevel");
-        if (dictionary == null) {
-            throw new NullPointerException("dictionary");
-        }
+        requireNonNull(dictionary, "dictionary");
         int resultCode;
         resultCode = z.deflateInit(
                 compressionLevel, windowBits, memLevel,

@@ -15,7 +15,8 @@
  */
 package io.netty.util.concurrent;
 
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * <p>A promise combiner monitors the outcome of a number of discrete futures, then notifies a final, aggregate promise
@@ -112,11 +113,12 @@ public final class PromiseCombiner {
      * @param aggregatePromise the promise to notify when all combined futures have finished
      */
     public void finish(Promise<Void> aggregatePromise) {
+        requireNonNull(aggregatePromise, "aggregatePromise");
         if (doneAdding) {
             throw new IllegalStateException("Already finished");
         }
         doneAdding = true;
-        this.aggregatePromise = ObjectUtil.checkNotNull(aggregatePromise, "aggregatePromise");
+        this.aggregatePromise = aggregatePromise;
         if (doneCount == expectedCount) {
             tryPromise();
         }

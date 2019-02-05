@@ -16,6 +16,8 @@
 
 package io.netty.handler.ssl.util;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.EmptyArrays;
@@ -156,9 +158,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
      * @param fingerprints a list of SHA1 fingerprints
      */
     public FingerprintTrustManagerFactory(byte[]... fingerprints) {
-        if (fingerprints == null) {
-            throw new NullPointerException("fingerprints");
-        }
+        requireNonNull(fingerprints, "fingerprints");
 
         List<byte[]> list = new ArrayList<>(fingerprints.length);
         for (byte[] f: fingerprints) {
@@ -176,9 +176,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
     }
 
     private static byte[][] toFingerprintArray(Iterable<String> fingerprints) {
-        if (fingerprints == null) {
-            throw new NullPointerException("fingerprints");
-        }
+        requireNonNull(fingerprints, "fingerprints");
 
         List<byte[]> list = new ArrayList<>();
         for (String f: fingerprints) {

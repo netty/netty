@@ -28,7 +28,7 @@ import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The {@link PlatformDependent} operations which requires access to {@code sun.misc.*}.
@@ -354,16 +354,10 @@ final class PlatformDependent0 {
             return new UnsupportedOperationException("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
         }
 
-        // Legacy properties
-        String unsafePropName;
-        if (SystemPropertyUtil.contains("io.netty.tryUnsafe")) {
-            unsafePropName = "io.netty.tryUnsafe";
-        } else {
-            unsafePropName = "org.jboss.netty.tryUnsafe";
-        }
+        boolean tryUnsafe = SystemPropertyUtil.getBoolean("io.netty.tryUnsafe", true);
 
-        if (!SystemPropertyUtil.getBoolean(unsafePropName, true)) {
-            String msg = "sun.misc.Unsafe: unavailable (" + unsafePropName + ")";
+        if (!tryUnsafe) {
+            String msg = "sun.misc.Unsafe: unavailable (io.netty.tryUnsafe)";
             logger.debug(msg);
             return new UnsupportedOperationException(msg);
         }
@@ -389,7 +383,7 @@ final class PlatformDependent0 {
 
     static void throwException(Throwable cause) {
         // JVM has been observed to crash when passing a null argument. See https://github.com/netty/netty/issues/4131.
-        UNSAFE.throwException(checkNotNull(cause, "cause"));
+        UNSAFE.throwException(requireNonNull(cause, "cause"));
     }
 
     static boolean hasDirectBufferNoCleanerConstructor() {

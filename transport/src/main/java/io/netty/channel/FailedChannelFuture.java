@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.PlatformDependent;
 
@@ -35,9 +37,7 @@ final class FailedChannelFuture extends CompleteChannelFuture {
      */
     FailedChannelFuture(Channel channel, EventExecutor executor, Throwable cause) {
         super(channel, executor);
-        if (cause == null) {
-            throw new NullPointerException("cause");
-        }
+        requireNonNull(cause, "cause");
         this.cause = cause;
     }
 

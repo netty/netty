@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import static io.netty.channel.unix.Limits.SSIZE_MAX;
+import static java.util.Objects.requireNonNull;
 
 public class EpollChannelConfig extends DefaultChannelConfig {
     private volatile long maxBytesPerGatheringWrite = SSIZE_MAX;
@@ -147,9 +148,7 @@ public class EpollChannelConfig extends DefaultChannelConfig {
      * <strong>Be aware this config setting can only be adjusted before the channel was registered.</strong>
      */
     public EpollChannelConfig setEpollMode(EpollMode mode) {
-        if (mode == null) {
-            throw new NullPointerException("mode");
-        }
+        requireNonNull(mode, "mode");
         try {
             switch (mode) {
             case EDGE_TRIGGERED:

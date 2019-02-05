@@ -52,6 +52,7 @@ import static io.netty.handler.codec.compression.Lz4Constants.MIN_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.Lz4Constants.TOKEN_OFFSET;
 import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
 import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Compresses a {@link ByteBuf} using the LZ4 format.
@@ -165,12 +166,8 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
          */
     public Lz4FrameEncoder(LZ4Factory factory, boolean highCompressor, int blockSize,
                            Checksum checksum, int maxEncodeSize) {
-        if (factory == null) {
-            throw new NullPointerException("factory");
-        }
-        if (checksum == null) {
-            throw new NullPointerException("checksum");
-        }
+        requireNonNull(factory, "factory");
+        requireNonNull(checksum, "checksum");
 
         compressor = highCompressor ? factory.highCompressor() : factory.fastCompressor();
         this.checksum = ByteBufChecksum.wrapChecksum(checksum);

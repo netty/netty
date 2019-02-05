@@ -16,8 +16,7 @@
 package io.netty.channel.epoll;
 
 import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
-
-import io.netty.util.internal.ObjectUtil;
+import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -31,9 +30,9 @@ final class TcpMd5Util {
 
     static Collection<InetAddress> newTcpMd5Sigs(AbstractEpollChannel channel, Collection<InetAddress> current,
                                          Map<InetAddress, byte[]> newKeys) throws IOException {
-        ObjectUtil.checkNotNull(channel, "channel");
-        ObjectUtil.checkNotNull(current, "current");
-        ObjectUtil.checkNotNull(newKeys, "newKeys");
+        requireNonNull(channel, "channel");
+        requireNonNull(current, "current");
+        requireNonNull(newKeys, "newKeys");
 
         // Validate incoming values
         for (Entry<InetAddress, byte[]> e : newKeys.entrySet()) {
@@ -41,9 +40,7 @@ final class TcpMd5Util {
             if (e.getKey() == null) {
                 throw new IllegalArgumentException("newKeys contains an entry with null address: " + newKeys);
             }
-            if (key == null) {
-                throw new NullPointerException("newKeys[" + e.getKey() + ']');
-            }
+            requireNonNull(key, "newKeys[" + e.getKey() + "]");
             checkClosedInterval(key.length, 1, Native.TCP_MD5SIG_MAXKEYLEN, "newKeys[" + e.getKey() + "]");
         }
 

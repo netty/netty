@@ -14,7 +14,7 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -30,7 +30,7 @@ public class DecoratingHttp2ConnectionDecoder implements Http2ConnectionDecoder 
     private final Http2ConnectionDecoder delegate;
 
     public DecoratingHttp2ConnectionDecoder(Http2ConnectionDecoder delegate) {
-        this.delegate = checkNotNull(delegate, "delegate");
+        this.delegate = requireNonNull(delegate, "delegate");
     }
 
     @Override

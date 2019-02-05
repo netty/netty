@@ -15,11 +15,12 @@
  */
 package io.netty.handler.ssl;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ObjectUtil;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -107,7 +108,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
         private volatile ProviderFactory providerFactory;
 
         OpenSslKeyManagerFactorySpi(KeyManagerFactory kmf) {
-            this.kmf = ObjectUtil.checkNotNull(kmf, "kmf");
+            this.kmf = requireNonNull(kmf, "kmf");
         }
 
         @Override

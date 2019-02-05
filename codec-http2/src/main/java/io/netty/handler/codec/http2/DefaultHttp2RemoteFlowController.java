@@ -30,10 +30,10 @@ import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Basic implementation of {@link Http2RemoteFlowController}.
@@ -70,8 +70,8 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     public DefaultHttp2RemoteFlowController(Http2Connection connection,
                                             StreamByteDistributor streamByteDistributor,
                                             final Listener listener) {
-        this.connection = checkNotNull(connection, "connection");
-        this.streamByteDistributor = checkNotNull(streamByteDistributor, "streamWriteDistributor");
+        this.connection = requireNonNull(connection, "connection");
+        this.streamByteDistributor = requireNonNull(streamByteDistributor, "streamWriteDistributor");
 
         // Add a flow state for the connection.
         stateKey = connection.newKey();
@@ -132,7 +132,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
      */
     @Override
     public void channelHandlerContext(ChannelHandlerContext ctx) throws Http2Exception {
-        this.ctx = checkNotNull(ctx, "ctx");
+        this.ctx = requireNonNull(ctx, "ctx");
 
         // Writing the pending bytes will not check writability change and instead a writability change notification
         // to be provided by an explicit call.
@@ -211,7 +211,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
     public void addFlowControlled(Http2Stream stream, FlowControlled frame) {
         // The context can be null assuming the frame will be queued and send later when the context is set.
         assert ctx == null || ctx.executor().inEventLoop();
-        checkNotNull(frame, "frame");
+        requireNonNull(frame, "frame");
         try {
             monitor.enqueueFrame(state(stream), frame);
         } catch (Throwable t) {
@@ -636,7 +636,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         }
 
         void initialWindowSize(int newWindowSize) throws Http2Exception {
-            checkPositiveOrZero(newWindowSize, "Invalid initial window size ");
+            checkPositiveOrZero(newWindowSize, "newWindowSize");
 
             final int delta = newWindowSize - initialWindowSize;
             initialWindowSize = newWindowSize;

@@ -16,6 +16,8 @@
 
 package io.netty.handler.codec.socksx.v5;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * The status of {@link Socks5PasswordAuthResponse}.
  */
@@ -44,9 +46,7 @@ public class Socks5PasswordAuthStatus implements Comparable<Socks5PasswordAuthSt
     }
 
     public Socks5PasswordAuthStatus(int byteValue, String name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
+        requireNonNull(name, "name");
 
         this.byteValue = (byte) byteValue;
         this.name = name;

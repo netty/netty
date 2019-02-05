@@ -49,10 +49,9 @@ import static io.netty.handler.codec.http2.Http2Exception.isStreamError;
 import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.util.CharsetUtil.UTF_8;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
@@ -84,9 +83,9 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     protected Http2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                      Http2Settings initialSettings) {
-        this.initialSettings = checkNotNull(initialSettings, "initialSettings");
-        this.decoder = checkNotNull(decoder, "decoder");
-        this.encoder = checkNotNull(encoder, "encoder");
+        this.initialSettings = requireNonNull(initialSettings, "initialSettings");
+        this.decoder = requireNonNull(decoder, "decoder");
+        this.encoder = requireNonNull(encoder, "encoder");
         if (encoder.connection() != decoder.connection()) {
             throw new IllegalArgumentException("Encoder and Decoder do not share the same connection object");
         }
@@ -94,7 +93,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     Http2ConnectionHandler(boolean server, Http2FrameWriter frameWriter, Http2FrameLogger frameLogger,
                     Http2Settings initialSettings) {
-        this.initialSettings = checkNotNull(initialSettings, "initialSettings");
+        this.initialSettings = requireNonNull(initialSettings, "initialSettings");
 
         Http2Connection connection = new DefaultHttp2Connection(server);
 

@@ -38,7 +38,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import static io.netty.util.internal.ObjectUtil.*;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A parser for hosts files.
@@ -125,8 +125,8 @@ public final class HostsFileParser {
      * @throws IOException file could not be read
      */
     public static HostsFileEntries parse(File file, Charset... charsets) throws IOException {
-        checkNotNull(file, "file");
-        checkNotNull(charsets, "charsets");
+        requireNonNull(file, "file");
+        requireNonNull(charsets, "charsets");
         if (file.exists() && file.isFile()) {
             for (Charset charset: charsets) {
                 HostsFileEntries entries = parse(new BufferedReader(new InputStreamReader(
@@ -147,7 +147,7 @@ public final class HostsFileParser {
      * @throws IOException file could not be read
      */
     public static HostsFileEntries parse(Reader reader) throws IOException {
-        checkNotNull(reader, "reader");
+        requireNonNull(reader, "reader");
         BufferedReader buff = new BufferedReader(reader);
         try {
             Map<String, Inet4Address> ipv4Entries = new HashMap<>();

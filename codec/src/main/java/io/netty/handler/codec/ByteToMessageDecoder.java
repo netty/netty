@@ -16,6 +16,7 @@
 package io.netty.handler.codec;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -187,9 +188,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * Set the {@link Cumulator} to use for cumulate the received {@link ByteBuf}s.
      */
     public void setCumulator(Cumulator cumulator) {
-        if (cumulator == null) {
-            throw new NullPointerException("cumulator");
-        }
+        requireNonNull(cumulator, "cumulator");
         this.cumulator = cumulator;
     }
 

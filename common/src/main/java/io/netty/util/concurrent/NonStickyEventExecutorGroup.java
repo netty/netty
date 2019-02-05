@@ -15,7 +15,9 @@
  */
 package io.netty.util.concurrent;
 
-import io.netty.util.internal.ObjectUtil;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
@@ -56,11 +58,11 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
      */
     public NonStickyEventExecutorGroup(EventExecutorGroup group, int maxTaskExecutePerRun) {
         this.group = verify(group);
-        this.maxTaskExecutePerRun = ObjectUtil.checkPositive(maxTaskExecutePerRun, "maxTaskExecutePerRun");
+        this.maxTaskExecutePerRun = checkPositive(maxTaskExecutePerRun, "maxTaskExecutePerRun");
     }
 
     private static EventExecutorGroup verify(EventExecutorGroup group) {
-        Iterator<EventExecutor> executors = ObjectUtil.checkNotNull(group, "group").iterator();
+        Iterator<EventExecutor> executors = requireNonNull(group, "group").iterator();
         while (executors.hasNext()) {
             EventExecutor executor = executors.next();
             if (executor instanceof OrderedEventExecutor) {

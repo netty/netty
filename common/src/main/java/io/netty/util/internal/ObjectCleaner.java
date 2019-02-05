@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.util.internal.SystemPropertyUtil.getInt;
 import static java.lang.Math.max;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Allows a way to register some {@link Runnable} that will executed once there are no references to an {@link Object}
@@ -91,7 +92,7 @@ public final class ObjectCleaner {
      */
     public static void register(Object object, Runnable cleanupTask) {
         AutomaticCleanerReference reference = new AutomaticCleanerReference(object,
-                ObjectUtil.checkNotNull(cleanupTask, "cleanupTask"));
+                requireNonNull(cleanupTask, "cleanupTask"));
         // Its important to add the reference to the LIVE_SET before we access CLEANER_RUNNING to ensure correct
         // behavior in multi-threaded environments.
         LIVE_SET.add(reference);

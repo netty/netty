@@ -16,6 +16,8 @@
 
 package io.netty.util.internal.logging;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Creates an {@link InternalLogger} or changes the default factory
  * implementation.  This factory allows you to choose what logging framework
@@ -73,9 +75,7 @@ public abstract class InternalLoggerFactory {
      * Changes the default factory.
      */
     public static void setDefaultFactory(InternalLoggerFactory defaultFactory) {
-        if (defaultFactory == null) {
-            throw new NullPointerException("defaultFactory");
-        }
+        requireNonNull(defaultFactory, "defaultFactory");
         InternalLoggerFactory.defaultFactory = defaultFactory;
     }
 

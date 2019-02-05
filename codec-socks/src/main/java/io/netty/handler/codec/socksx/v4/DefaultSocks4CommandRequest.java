@@ -16,6 +16,7 @@
 package io.netty.handler.codec.socksx.v4;
 
 import static io.netty.util.internal.ObjectUtil.checkClosedInterval;
+import static java.util.Objects.requireNonNull;
 
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.internal.StringUtil;
@@ -52,16 +53,10 @@ public class DefaultSocks4CommandRequest extends AbstractSocks4Message implement
      * @param userId the {@code USERID} field of the request
      */
     public DefaultSocks4CommandRequest(Socks4CommandType type, String dstAddr, int dstPort, String userId) {
-        if (type == null) {
-            throw new NullPointerException("type");
-        }
-        if (dstAddr == null) {
-            throw new NullPointerException("dstAddr");
-        }
+        requireNonNull(type, "type");
+        requireNonNull(dstAddr, "dstAddr");
         checkClosedInterval(dstPort, 1, 65535, "dstPort");
-        if (userId == null) {
-            throw new NullPointerException("userId");
-        }
+        requireNonNull(userId, "userId");
 
         this.userId = userId;
         this.type = type;
