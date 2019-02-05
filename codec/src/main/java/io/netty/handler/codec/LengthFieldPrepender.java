@@ -174,11 +174,11 @@ public class LengthFieldPrepender extends MessageToMessageEncoder<ByteBuf> {
             out.add(ctx.alloc().buffer(1).order(byteOrder).writeByte((byte) length));
             break;
         case 2:
-            checkClosedInterval(length, 0, 65536, "length does not fit into a short integer");
+            checkClosedInterval(length, 0, 65535, "length does not fit into a short integer");
             out.add(ctx.alloc().buffer(2).order(byteOrder).writeShort((short) length));
             break;
         case 3:
-            checkClosedInterval(length, 0, 16777216, "length does not fit into a medium integer");
+            checkClosedInterval(length, 0, 16777215, "length does not fit into a medium integer");
             out.add(ctx.alloc().buffer(3).order(byteOrder).writeMedium(length));
             break;
         case 4:
