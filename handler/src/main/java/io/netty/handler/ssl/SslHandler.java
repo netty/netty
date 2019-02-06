@@ -1397,6 +1397,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         if (!runDelegatedTasks(true)) {
                             // We scheduled a task on the delegatingTaskExecutor, so stop processing as we will
                             // resume once the task completes.
+                            //
+                            // We break out of the loop only and do NOT return here as we still may need to notify
+                            // about the closure of the SSLEngine.
+                            //
+                            wrapLater = false;
                             break unwrapLoop;
                         }
                         break;
@@ -1479,16 +1484,19 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 out.nioBuffer(index, len);
     }
 
+    private static boolean inEventLoop(Executor executor) {
+        return executor instanceof EventExecutor && ((EventExecutor) executor).inEventLoop();
+    }
+
     /**
      * Will either run the delegating task directly calling {@link Runnable#run()} and return {@code true} or will
      * offload the delegating task using {@link Executor#execute(Runnable)} and return {@code false}.
      *
-     * If the task is offloaded it will take care to resume its work on the {@link EventExecutor} once there is
-     * no more task to process.
+     * If the task is offloaded it will take care to resume its work on the {@link EventExecutor} once there are no
+     * more tasks to process.
      */
     private boolean runDelegatedTasks(boolean inUnwrap) {
-        if (delegatedTaskExecutor == ImmediateExecutor.INSTANCE || (delegatedTaskExecutor instanceof EventExecutor
-                && ((EventExecutor) delegatedTaskExecutor).inEventLoop())) {
+        if (delegatedTaskExecutor == ImmediateExecutor.INSTANCE || inEventLoop(delegatedTaskExecutor)) {
             // We should run the task directly in the EventExecutor thread and not offload at all.
             for (;;) {
                 Runnable task = engine.getDelegatedTask();

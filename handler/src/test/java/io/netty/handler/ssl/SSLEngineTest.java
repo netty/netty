@@ -538,7 +538,7 @@ public abstract class SSLEngineTest {
         mySetupMutualAuth(clientCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
                           serverCrtFile, clientKeyFile, clientCrtFile, clientKeyPassword);
         runTest(null);
-        assertTrue(serverLatch.await(2, TimeUnit.MINUTES));
+        assertTrue(serverLatch.await(2, TimeUnit.SECONDS));
     }
 
     @Test
@@ -552,7 +552,7 @@ public abstract class SSLEngineTest {
         // Client trusts server but server only trusts itself
         mySetupMutualAuth(serverCrtFile, serverKeyFile, serverCrtFile, serverKeyPassword,
                           serverCrtFile, clientKeyFile, clientCrtFile, clientKeyPassword);
-        assertTrue(serverLatch.await(200, TimeUnit.SECONDS));
+        assertTrue(serverLatch.await(2, TimeUnit.SECONDS));
         assertTrue(serverException instanceof SSLHandshakeException);
     }
 
