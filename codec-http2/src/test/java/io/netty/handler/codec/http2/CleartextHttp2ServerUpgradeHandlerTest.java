@@ -156,6 +156,52 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     }
 
     @Test
+    public void upgradeWithMultipleConnectionHeaders() {
+        setUpServerChannel();
+
+        String upgradeString = "GET / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Connection: keep-alive\r\n" +
+                "Connection: Upgrade, HTTP2-Settings\r\n" +
+                "Upgrade: h2c\r\n" +
+                "HTTP2-Settings: AAMAAABkAAQAAP__\r\n\r\n";
+        ByteBuf upgrade = Unpooled.copiedBuffer(upgradeString, CharsetUtil.US_ASCII);
+
+        assertFalse(channel.writeInbound(upgrade));
+
+        assertEquals(1, userEvents.size());
+
+        Object userEvent = userEvents.get(0);
+        assertTrue(userEvent instanceof UpgradeEvent);
+        assertEquals("h2c", ((UpgradeEvent) userEvent).protocol());
+        ReferenceCountUtil.release(userEvent);
+
+        assertEquals(100, http2ConnectionHandler.connection().local().maxActiveStreams());
+        assertEquals(65535, http2ConnectionHandler.connection().local().flowController().initialWindowSize());
+
+        assertEquals(1, http2ConnectionHandler.connection().numActiveStreams());
+        assertNotNull(http2ConnectionHandler.connection().stream(1));
+
+        Http2Stream stream = http2ConnectionHandler.connection().stream(1);
+        assertEquals(State.HALF_CLOSED_REMOTE, stream.state());
+        assertFalse(stream.isHeadersSent());
+
+        String expectedHttpResponse = "HTTP/1.1 101 Switching Protocols\r\n" +
+                "connection: upgrade\r\n" +
+                "upgrade: h2c\r\n\r\n";
+        ByteBuf responseBuffer = channel.readOutbound();
+        assertEquals(expectedHttpResponse, responseBuffer.toString(CharsetUtil.UTF_8));
+        responseBuffer.release();
+
+        // Check that the preface was send (a.k.a the settings frame)
+        ByteBuf settingsBuffer = channel.readOutbound();
+        assertNotNull(settingsBuffer);
+        settingsBuffer.release();
+
+        assertNull(channel.readOutbound());
+    }
+
+    @Test
     public void priorKnowledgeInFragments() throws Exception {
         setUpServerChannel();
 
