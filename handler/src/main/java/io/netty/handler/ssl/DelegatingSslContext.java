@@ -21,6 +21,7 @@ import io.netty.util.internal.ObjectUtil;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLSessionContext;
 import java.util.List;
+import java.util.concurrent.Executor;
 
 /**
  * Adapter class which allows to wrap another {@link SslContext} and init {@link SSLEngine} instances.
@@ -82,6 +83,21 @@ public abstract class DelegatingSslContext extends SslContext {
     @Override
     protected final SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls) {
         SslHandler handler = ctx.newHandler(alloc, peerHost, peerPort, startTls);
+        initHandler(handler);
+        return handler;
+    }
+
+    @Override
+    protected SslHandler newHandler(ByteBufAllocator alloc, boolean startTls, Executor executor) {
+        SslHandler handler = ctx.newHandler(alloc, startTls, executor);
+        initHandler(handler);
+        return handler;
+    }
+
+    @Override
+    protected SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort,
+                                    boolean startTls, Executor executor) {
+        SslHandler handler = ctx.newHandler(alloc, peerHost, peerPort, startTls, executor);
         initHandler(handler);
         return handler;
     }
