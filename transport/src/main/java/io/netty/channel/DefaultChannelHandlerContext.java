@@ -106,8 +106,10 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
     // There is no need to make this volatile as at worse it will just create a few more instances then needed.
     private Tasks invokeTasks;
 
-    DefaultChannelHandlerContext next;
-    DefaultChannelHandlerContext prev;
+    // Points the next contexts that will handle inbound / outbound events.
+    private DefaultChannelHandlerContext nextInbound;
+    private DefaultChannelHandlerContext nextOutbound;
+
     private volatile int handlerState = INIT;
 
     DefaultChannelHandlerContext(DefaultChannelPipeline pipeline, String name,
@@ -124,6 +126,52 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
             invokeTasks = tasks = new Tasks(this);
         }
         return tasks;
+    }
+
+    /**
+     * Returns {@code true} if the context should handle any inbound events, {@code false} otherwise.
+     */
+    boolean isInbound() {
+        return (executionMask & MASK_ALL_INBOUND) != 0;
+    }
+
+    /**
+     * Returns {@code true} if the context should handle any outbound events, {@code false} otherwise.
+     */
+    boolean isOutbound() {
+        return (executionMask & MASK_ALL_OUTBOUND) != 0;
+    }
+
+    /**
+     * Set the next {@link DefaultChannelHandlerContext} to which inbound events should be forwarded.
+     */
+    void setNextInbound(DefaultChannelHandlerContext next) {
+        assert next.isInbound();
+        nextInbound = next;
+    }
+
+    /**
+     * Set the next {@link DefaultChannelHandlerContext} to which outbound events should be forwarded.
+     */
+    void setNextOutbound(DefaultChannelHandlerContext next) {
+        assert next.isOutbound();
+        nextOutbound = next;
+    }
+
+    /**
+     * Returns the next {@link DefaultChannelHandlerContext} to which inbound events will be forwarded or {@code null}
+     * if its the last context to process inbound events.
+     */
+    DefaultChannelHandlerContext nextInbound() {
+        return nextInbound;
+    }
+
+    /**
+     * Returns the next {@link DefaultChannelHandlerContext} to which outbound events will be forwarded or {@code null}
+     * if its the last context to process outbound events.
+     */
+    DefaultChannelHandlerContext nextOutbound() {
+        return nextOutbound;
     }
 
     @Override
@@ -950,7 +998,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
     private DefaultChannelHandlerContext findContextInbound(int mask) {
         DefaultChannelHandlerContext ctx = this;
         do {
-            ctx = ctx.next;
+            ctx = ctx.nextInbound;
         } while ((ctx.executionMask & mask) == 0);
         return ctx;
     }
@@ -958,7 +1006,7 @@ final class DefaultChannelHandlerContext extends DefaultAttributeMap
     private DefaultChannelHandlerContext findContextOutbound(int mask) {
         DefaultChannelHandlerContext ctx = this;
         do {
-            ctx = ctx.prev;
+            ctx = ctx.nextOutbound;
         } while ((ctx.executionMask & mask) == 0);
         return ctx;
     }

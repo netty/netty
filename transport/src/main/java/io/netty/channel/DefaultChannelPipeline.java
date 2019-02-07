@@ -31,9 +31,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.RandomAccess;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.IntSupplier;
@@ -54,7 +56,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private static final FastThreadLocal<Map<Class<?>, String>> nameCaches =
             new FastThreadLocal<Map<Class<?>, String>>() {
         @Override
-        protected Map<Class<?>, String> initialValue() throws Exception {
+        protected Map<Class<?>, String> initialValue() {
             return new WeakHashMap<>();
         }
     };
@@ -80,8 +82,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         tail = new DefaultChannelHandlerContext(this, TAIL_NAME, TAIL_HANDLER);
         head = new DefaultChannelHandlerContext(this, HEAD_NAME, HEAD_HANDLER);
 
-        head.next = tail;
-        tail.prev = head;
+        head.setNextInbound(tail);
+        tail.setNextOutbound(head);
         head.setAddComplete();
         tail.setAddComplete();
     }
@@ -125,14 +127,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         DefaultChannelHandlerContext newCtx = newContext(name, handler);
         EventExecutor executor = executor();
         boolean inEventLoop = executor.inEventLoop();
+        final List<DefaultChannelHandlerContext> allContexts;
         synchronized (handlers) {
             if (context(name) != null) {
                 throw new IllegalArgumentException("Duplicate handler name: " + name);
             }
             handlers.add(0, newCtx);
+            allContexts = allContexts(handlers);
             if (!inEventLoop) {
                 try {
-                    executor.execute(() -> addFirst0(newCtx));
+                    executor.execute(() -> addFirst0(allContexts, newCtx));
                     return this;
                 } catch (Throwable cause) {
                     handlers.remove(0);
@@ -141,17 +145,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
         }
 
-        addFirst0(newCtx);
+        addFirst0(allContexts, newCtx);
         return this;
     }
 
-    private void addFirst0(DefaultChannelHandlerContext newCtx) {
-        DefaultChannelHandlerContext nextCtx = head.next;
-        newCtx.prev = head;
-        newCtx.next = nextCtx;
-        head.next = newCtx;
-        nextCtx.prev = newCtx;
-        callHandlerAdded0(newCtx);
+    private void addFirst0(List<DefaultChannelHandlerContext> allContexts, DefaultChannelHandlerContext newCtx) {
+        updateContextLinksAddFirst(allContexts, newCtx);
+        callHandlerAdded0(allContexts, newCtx);
     }
 
     @Override
@@ -164,14 +164,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         DefaultChannelHandlerContext newCtx = newContext(name, handler);
         EventExecutor executor = executor();
         boolean inEventLoop = executor.inEventLoop();
+        final List<DefaultChannelHandlerContext> allContexts;
         synchronized (this) {
             if (context(name) != null) {
                 throw new IllegalArgumentException("Duplicate handler name: " + name);
             }
             handlers.add(newCtx);
+            allContexts = allContexts(handlers);
             if (!inEventLoop) {
                 try {
-                    executor.execute(() -> addLast0(newCtx));
+                    executor.execute(() -> addLast0(allContexts, newCtx));
                     return this;
                 } catch (Throwable cause) {
                     handlers.remove(handlers.size() - 1);
@@ -180,23 +182,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
         }
 
-        addLast0(newCtx);
+        addLast0(allContexts, newCtx);
         return this;
     }
 
-    private void addLast0(DefaultChannelHandlerContext newCtx) {
-        DefaultChannelHandlerContext prev = tail.prev;
-        newCtx.prev = prev;
-        newCtx.next = tail;
-        prev.next = newCtx;
-        tail.prev = newCtx;
-        callHandlerAdded0(newCtx);
+    private void addLast0(List<DefaultChannelHandlerContext> allContexts, DefaultChannelHandlerContext newCtx) {
+        updateContextLinksAddLast(allContexts, newCtx);
+        callHandlerAdded0(allContexts, newCtx);
     }
 
     @Override
     public final ChannelPipeline addBefore(String baseName, String name, ChannelHandler handler) {
-        final DefaultChannelHandlerContext ctx;
-
         checkMultiplicity(handler);
         if (name == null) {
             name = generateName(handler);
@@ -205,6 +201,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         DefaultChannelHandlerContext newCtx = newContext(name, handler);
         EventExecutor executor = executor();
         boolean inEventLoop = executor.inEventLoop();
+        final List<DefaultChannelHandlerContext> allContexts;
         synchronized (handlers) {
             int i = findCtxIdx(context -> context.name().equals(baseName));
 
@@ -215,11 +212,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (context(name) != null) {
                 throw new IllegalArgumentException("Duplicate handler name: " + name);
             }
-            ctx = handlers.get(i);
             handlers.add(i, newCtx);
+            allContexts = allContexts(handlers);
             if (!inEventLoop) {
                 try {
-                    executor.execute(() -> addBefore0(ctx, newCtx));
+                    executor.execute(() -> add0(allContexts, newCtx));
                     return this;
                 } catch (Throwable cause) {
                     handlers.remove(i);
@@ -228,22 +225,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
         }
 
-        addBefore0(ctx, newCtx);
+        add0(allContexts, newCtx);
         return this;
-    }
-
-    private void addBefore0(DefaultChannelHandlerContext ctx, DefaultChannelHandlerContext newCtx) {
-        newCtx.prev = ctx.prev;
-        newCtx.next = ctx;
-        ctx.prev.next = newCtx;
-        ctx.prev = newCtx;
-        callHandlerAdded0(newCtx);
     }
 
     @Override
     public final ChannelPipeline addAfter(String baseName, String name, ChannelHandler handler) {
-        final DefaultChannelHandlerContext ctx;
-
         checkMultiplicity(handler);
         if (name == null) {
             name = generateName(handler);
@@ -252,6 +239,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         DefaultChannelHandlerContext newCtx = newContext(name, handler);
         EventExecutor executor = executor();
         boolean inEventLoop = executor.inEventLoop();
+        final List<DefaultChannelHandlerContext> allContexts;
         synchronized (handlers) {
             int i = findCtxIdx(context -> context.name().equals(baseName));
 
@@ -262,11 +250,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (context(name) != null) {
                 throw new IllegalArgumentException("Duplicate handler name: " + name);
             }
-            ctx = handlers.get(i);
             handlers.add(i + 1, newCtx);
+            allContexts = allContexts(handlers);
             if (!inEventLoop) {
                 try {
-                    executor.execute(() -> addAfter0(ctx, newCtx));
+                    executor.execute(() -> add0(allContexts, newCtx));
                     return this;
                 } catch (Throwable cause) {
                     handlers.remove(i + 1);
@@ -275,16 +263,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
         }
 
-        addAfter0(ctx, newCtx);
+        add0(allContexts, newCtx);
         return this;
     }
 
-    private void addAfter0(DefaultChannelHandlerContext ctx, DefaultChannelHandlerContext newCtx) {
-        newCtx.prev = ctx;
-        newCtx.next = ctx.next;
-        ctx.next.prev = newCtx;
-        ctx.next = newCtx;
-        callHandlerAdded0(newCtx);
+    private void add0(List<DefaultChannelHandlerContext> allContexts, DefaultChannelHandlerContext newCtx) {
+        // TODO: Slow-path for now, we could most likely improve this by adding a fast-path implementation.
+        updateContextLinksAll(allContexts);
+        callHandlerAdded0(allContexts, newCtx);
     }
 
     public final ChannelPipeline addFirst(ChannelHandler handler) {
@@ -376,6 +362,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         final DefaultChannelHandlerContext ctx;
         EventExecutor executor = executor();
         boolean inEventLoop = executor.inEventLoop();
+        final List<DefaultChannelHandlerContext> allContexts;
         synchronized (handlers) {
             int idx = findCtxIdx(context -> context.handler() == handler);
             if (idx == -1) {
@@ -384,9 +371,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             ctx = handlers.remove(idx);
             assert ctx != null;
 
+            allContexts = allContexts(handlers);
             if (!inEventLoop) {
                 try {
-                    executor.execute(() -> remove0(ctx));
+                    executor.execute(() -> remove0(allContexts, ctx));
                     return this;
                 } catch (Throwable cause) {
                     handlers.add(idx, ctx);
@@ -395,7 +383,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
         }
 
-        remove0(ctx);
+        remove0(allContexts, ctx);
         return this;
     }
 
@@ -404,6 +392,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         final DefaultChannelHandlerContext ctx;
         EventExecutor executor = executor();
         boolean inEventLoop = executor.inEventLoop();
+        final List<DefaultChannelHandlerContext> allContexts;
         synchronized (handlers) {
             int idx = findCtxIdx(context -> context.name().equals(name));
             if (idx == -1) {
@@ -412,9 +401,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             ctx = handlers.remove(idx);
             assert ctx != null;
 
+            allContexts = allContexts(handlers);
             if (!inEventLoop) {
                 try {
-                    executor.execute(() -> remove0(ctx));
+                    executor.execute(() -> remove0(allContexts, ctx));
                     return ctx.handler();
                 } catch (Throwable cause) {
                     handlers.add(idx, ctx);
@@ -423,7 +413,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
         }
 
-        remove0(ctx);
+        remove0(allContexts, ctx);
         return ctx.handler();
     }
 
@@ -433,6 +423,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         final DefaultChannelHandlerContext ctx;
         EventExecutor executor = executor();
         boolean inEventLoop = executor.inEventLoop();
+        final List<DefaultChannelHandlerContext> allContexts;
         synchronized (handlers) {
             int idx = findCtxIdx(context -> handlerType.isAssignableFrom(context.handler().getClass()));
             if (idx == -1) {
@@ -441,9 +432,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             ctx = handlers.remove(idx);
             assert ctx != null;
 
+            allContexts = allContexts(handlers);
             if (!inEventLoop) {
                 try {
-                    executor.execute(() -> remove0(ctx));
+                    executor.execute(() -> remove0(allContexts, ctx));
                     return (T) ctx.handler();
                 } catch (Throwable cause) {
                     handlers.add(idx, ctx);
@@ -452,7 +444,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
         }
 
-        remove0(ctx);
+        remove0(allContexts, ctx);
         return (T) ctx.handler();
     }
 
@@ -474,6 +466,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         final DefaultChannelHandlerContext ctx;
         EventExecutor executor = executor();
         boolean inEventLoop = executor.inEventLoop();
+        final List<DefaultChannelHandlerContext> allContexts;
         synchronized (handlers) {
             int idx = idxSupplier.getAsInt();
             if (idx == -1) {
@@ -482,9 +475,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             ctx = handlers.remove(idx);
             assert ctx != null;
 
+            allContexts = allContexts(handlers);
             if (!inEventLoop) {
                 try {
-                    executor.execute(() -> remove0(ctx));
+                    executor.execute(() -> remove0(allContexts, ctx));
                     return (T) ctx.handler();
                 } catch (Throwable cause) {
                     handlers.add(idx, ctx);
@@ -492,20 +486,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 }
             }
         }
-        remove0(ctx);
+        remove0(allContexts, ctx);
         return (T) ctx.handler();
     }
 
-    private void unlink(DefaultChannelHandlerContext ctx) {
-        assert ctx != head && ctx != tail;
-        DefaultChannelHandlerContext prev = ctx.prev;
-        DefaultChannelHandlerContext next = ctx.next;
-        prev.next = next;
-        next.prev = prev;
-    }
-
-    private void remove0(DefaultChannelHandlerContext ctx) {
-        unlink(ctx);
+    private void remove0(List<DefaultChannelHandlerContext> allContexts, DefaultChannelHandlerContext ctx) {
+        updateContextLinksRemove(allContexts, ctx);
         callHandlerRemoved0(ctx);
     }
 
@@ -538,6 +524,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         DefaultChannelHandlerContext newCtx = newContext(newName, newHandler);
         EventExecutor executor = executor();
         boolean inEventLoop = executor.inEventLoop();
+        final List<DefaultChannelHandlerContext> allContexts;
         synchronized (handlers) {
             int idx = findCtxIdx(predicate);
             if (idx == -1) {
@@ -552,11 +539,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 }
             }
             DefaultChannelHandlerContext removed = handlers.set(idx, newCtx);
-            assert removed != null;
+            assert removed == oldCtx;
 
+            allContexts = allContexts(handlers);
             if (!inEventLoop) {
                 try {
-                    executor.execute(() -> replace0(oldCtx, newCtx));
+                    executor.execute(() -> replace0(allContexts, oldCtx, newCtx));
                     return oldCtx.handler();
                 } catch (Throwable cause) {
                     handlers.set(idx, oldCtx);
@@ -565,31 +553,32 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
         }
 
-        replace0(oldCtx, newCtx);
+        replace0(allContexts, oldCtx, newCtx);
         return oldCtx.handler();
     }
 
-    private void replace0(DefaultChannelHandlerContext oldCtx, DefaultChannelHandlerContext newCtx) {
-        DefaultChannelHandlerContext prev = oldCtx.prev;
-        DefaultChannelHandlerContext next = oldCtx.next;
-        newCtx.prev = prev;
-        newCtx.next = next;
+    private void replace0(List<DefaultChannelHandlerContext> allContexts, DefaultChannelHandlerContext oldCtx,
+                          DefaultChannelHandlerContext newCtx) {
 
-        // Finish the replacement of oldCtx with newCtx in the linked list.
-        // Note that this doesn't mean events will be sent to the new handler immediately
-        // because we are currently at the event handler thread and no more than one handler methods can be invoked
-        // at the same time (we ensured that in replace().)
-        prev.next = newCtx;
-        next.prev = newCtx;
+        // TODO: Slow-path for now, we could most likely improve this by adding a fast-path implementation.
+        updateContextLinksAll(allContexts);
 
         // update the reference to the replacement so forward of buffered content will work correctly
-        oldCtx.prev = newCtx;
-        oldCtx.next = newCtx;
+        if (newCtx.isOutbound()) {
+            oldCtx.setNextOutbound(newCtx);
+        } else {
+            oldCtx.setNextOutbound(newCtx.nextOutbound());
+        }
+        if (newCtx.isInbound()) {
+            oldCtx.setNextInbound(newCtx);
+        } else {
+            oldCtx.setNextInbound(newCtx.nextInbound());
+        }
 
         // Invoke newHandler.handlerAdded() first (i.e. before oldHandler.handlerRemoved() is invoked)
         // because callHandlerRemoved() will trigger channelRead() or flush() on newHandler and those
         // event handlers must be called after handlerAdded().
-        callHandlerAdded0(newCtx);
+        callHandlerAdded0(allContexts, newCtx);
         callHandlerRemoved0(oldCtx);
     }
 
@@ -605,7 +594,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callHandlerAdded0(final DefaultChannelHandlerContext ctx) {
+    private void callHandlerAdded0(List<DefaultChannelHandlerContext> allContexts, DefaultChannelHandlerContext ctx) {
         try {
             ctx.callHandlerAdded();
         } catch (Throwable t) {
@@ -615,7 +604,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     handlers.remove(ctx);
                 }
 
-                unlink(ctx);
+                allContexts.remove(ctx);
+                updateContextLinksRemove(allContexts, ctx);
+
                 ctx.callHandlerRemoved();
 
                 removed = true;
@@ -828,14 +819,174 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private void destroy0() {
         assert executor().inEventLoop();
-        DefaultChannelHandlerContext ctx = this.tail.prev;
-        while (ctx != head) {
+
+        final LinkedList<DefaultChannelHandlerContext> allContexts;
+        synchronized (handlers) {
+            // Lets use a LinkedList as we remove in the middle of the List.
+            allContexts = new LinkedList<>(allContexts(handlers));
+        }
+
+        // teardown from the tail to the head.
+        Iterator<DefaultChannelHandlerContext> allContextIt = allContexts.descendingIterator();
+
+        // Skip tail
+        DefaultChannelHandlerContext ctx = allContextIt.next();
+        assert ctx == tail;
+
+        while (allContextIt.hasNext()) {
+            ctx = allContextIt.next();
+            if (ctx == head) {
+                assert !allContextIt.hasNext();
+                break;
+            }
             synchronized (handlers) {
                 handlers.remove(ctx);
             }
-            remove0(ctx);
+            remove0(allContexts, ctx);
+        }
+    }
 
-            ctx = ctx.prev;
+    /**
+     * Returns a new {@link List} that contains all contexts (including head and tail) in the correct order.
+     */
+    private List<DefaultChannelHandlerContext> allContexts(List<DefaultChannelHandlerContext> contexts) {
+        List<DefaultChannelHandlerContext> allContexts = new ArrayList<>(contexts.size() + 2);
+        allContexts.add(head);
+        allContexts.addAll(contexts);
+        allContexts.add(tail);
+        return allContexts;
+    }
+
+    /**
+     * Update {@link DefaultChannelHandlerContext#nextInbound()} and {@link DefaultChannelHandlerContext#nextOutbound()}
+     * to match the given ordered contexts.
+     */
+    private void updateContextLinksAddFirst(List<DefaultChannelHandlerContext> allContexts,
+                                         DefaultChannelHandlerContext newCtx) {
+        assert executor().inEventLoop();
+
+        newCtx.setNextInbound(head.nextInbound());
+        newCtx.setNextOutbound(head);
+
+        if (newCtx.isInbound()) {
+            head.setNextInbound(newCtx);
+        }
+
+        if (newCtx.isOutbound()) {
+            assert allContexts.get(1) == newCtx;
+            // skip head and newCtx
+            for (int i = 2; i < allContexts.size(); i++) {
+                DefaultChannelHandlerContext ctx = allContexts.get(i);
+                if (ctx.nextOutbound() != head) {
+                    // the next outbound did not point to the head so we can stop here.
+                    break;
+                }
+                ctx.setNextOutbound(newCtx);
+            }
+        }
+    }
+
+    private void updateContextLinksAddLast(List<DefaultChannelHandlerContext> allContexts,
+                                        DefaultChannelHandlerContext newCtx) {
+        assert executor().inEventLoop();
+
+        newCtx.setNextOutbound(tail.nextOutbound());
+        newCtx.setNextInbound(tail);
+
+        if (newCtx.isOutbound()) {
+            tail.setNextOutbound(newCtx);
+        }
+
+        if (newCtx.isInbound()) {
+            assert allContexts.get(allContexts.size() - 2) == newCtx;
+
+            // skip tail and newCtx
+            for (int i = allContexts.size() - 3; i >= 0; i--) {
+                DefaultChannelHandlerContext ctx = allContexts.get(i);
+                if (ctx.nextInbound() != tail) {
+                    // the next inbound did not point to the tail so we can stop here.
+                    break;
+                }
+                ctx.setNextInbound(newCtx);
+            }
+        }
+    }
+
+    /**
+     * Update {@link DefaultChannelHandlerContext#nextInbound()} and {@link DefaultChannelHandlerContext#nextOutbound()}
+     * to match the given ordered contexts.
+     */
+    private void updateContextLinksAll(List<DefaultChannelHandlerContext> allContexts) {
+        assert executor().inEventLoop();
+
+        DefaultChannelHandlerContext last = allContexts.get(allContexts.size() - 1);
+
+        assert last == tail;
+
+        // Update outbound chain
+        for (int i = allContexts.size() - 2; i >= 0; --i) {
+            DefaultChannelHandlerContext ctx = allContexts.get(i);
+            if (ctx.isOutbound()) {
+                last.setNextOutbound(ctx);
+
+                for (int a = i + 1; a < allContexts.size(); a++) {
+                    DefaultChannelHandlerContext next = allContexts.get(a);
+                    if (next == last) {
+                        break;
+                    }
+                    next.setNextOutbound(ctx);
+                }
+                last = ctx;
+            }
+        }
+
+        last = allContexts.get(0);
+
+        assert last == head;
+
+        // Update inbound chain
+        for (int i = 1; i < allContexts.size(); i++) {
+            DefaultChannelHandlerContext ctx = allContexts.get(i);
+            if (ctx.isInbound()) {
+                last.setNextInbound(ctx);
+
+                for (int a = i - 1; a >= 0; a--) {
+                    DefaultChannelHandlerContext next = allContexts.get(a);
+                    if (next == last) {
+                        break;
+                    }
+                    next.setNextInbound(ctx);
+                }
+                last = ctx;
+            }
+        }
+    }
+
+    private static void updateContextLinksRemove(List<DefaultChannelHandlerContext> allContexts,
+                                    DefaultChannelHandlerContext removed) {
+        assert removed.executor().inEventLoop();
+
+        // This may be called either with a ArrayList or LinkedList so take the fast-path and the path that
+        // produce less GC depending on the implementation.
+        if (allContexts instanceof RandomAccess) {
+            // Update chain to reflect removal.
+            for (int i = 0; i < allContexts.size(); i++) {
+                DefaultChannelHandlerContext ctx = allContexts.get(i);
+                updateContext(ctx, removed);
+            }
+        } else {
+            for (DefaultChannelHandlerContext ctx : allContexts) {
+                updateContext(ctx, removed);
+            }
+        }
+    }
+
+    private static void updateContext(DefaultChannelHandlerContext ctx, DefaultChannelHandlerContext removed) {
+        if (ctx.nextInbound() == removed) {
+            ctx.setNextInbound(removed.nextInbound());
+        }
+        if (ctx.nextOutbound() == removed) {
+            ctx.setNextOutbound(removed.nextOutbound());
         }
     }
 

@@ -339,9 +339,9 @@ public class DefaultChannelPipelineTest {
             if (j != -1) {
                 assertTrue(i < j);
             } else {
-                assertNull(ctx.next.next);
+                assertNull(ctx.nextInbound().nextInbound());
             }
-            ctx = ctx.next;
+            ctx = ctx.nextInbound();
         }
 
         verifyContextNumber(pipeline, 8);
@@ -1584,7 +1584,7 @@ public class DefaultChannelPipelineTest {
     }
 
     private static int next(DefaultChannelHandlerContext ctx) {
-        DefaultChannelHandlerContext next = ctx.next;
+        DefaultChannelHandlerContext next = ctx.nextInbound();
         if (next == null) {
             return Integer.MAX_VALUE;
         }
@@ -1615,7 +1615,10 @@ public class DefaultChannelPipelineTest {
                         if (ctx == pipeline.lastContext()) {
                             break;
                         }
-                        ctx = ctx.next;
+                        ctx = ctx.nextInbound();
+                        if (ctx == null) {
+                            break;
+                        }
                     }
                 }
                 assertEquals(expectedNumber, handlerNumber);
@@ -1639,7 +1642,18 @@ public class DefaultChannelPipelineTest {
     }
 
     @Sharable
-    private static class TestHandler extends ChannelDuplexHandler { }
+    private static class TestHandler extends ChannelDuplexHandler {
+        // Override an inbound and an outbound method and do NOT annotate these with @Skip.
+        @Override
+        public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+            ctx.bind(localAddress, promise);
+        }
+
+        @Override
+        public void channelRegistered(ChannelHandlerContext ctx) {
+            ctx.fireChannelRegistered();
+        }
+    }
 
     private static class BufferedTestHandler extends ChannelDuplexHandler {
         final Queue<Object> inboundBuffer = new ArrayDeque<>();
