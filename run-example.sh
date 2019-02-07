@@ -20,8 +20,6 @@ EXAMPLE_MAP=(
   'http2-server:io.netty.example.http2.helloworld.server.Http2Server'
   'http2-tiles:io.netty.example.http2.tiles.Launcher'
   'http2-multiplex-server:io.netty.example.http2.helloworld.multiplex.server.Http2Server'
-  'spdy-client:io.netty.example.spdy.client.SpdyClient'
-  'spdy-server:io.netty.example.spdy.server.SpdyServer'
   'worldclock-client:io.netty.example.worldclock.WorldClockClient'
   'worldclock-server:io.netty.example.worldclock.WorldClockServer'
   'objectecho-client:io.netty.example.objectecho.ObjectEchoClient'
@@ -42,11 +40,6 @@ EXAMPLE_MAP=(
   'sctpecho-client:io.netty.example.sctp.SctpEchoClient'
   'sctpecho-server:io.netty.example.sctp.SctpEchoServer'
   'localecho:io.netty.example.localecho.LocalEcho'
-)
-
-NEEDS_NPN_MAP=(
-  'spdy-client'
-  'spdy-server'
 )
 
 EXAMPLE=''
@@ -102,13 +95,6 @@ if [[ -z "$EXAMPLE" ]] || [[ -z "$EXAMPLE_CLASS" ]] || [[ $# -ne 0 ]]; then
   echo >&2
   exit 1
 fi
-
-for E in "${NEEDS_NPN_MAP[@]}"; do
-  if [[ "$EXAMPLE" = "$E" ]]; then
-    FORCE_NPN='true'
-    break
-  fi
-done
 
 cd "`dirname "$0"`"/example
 echo "[INFO] Running: $EXAMPLE ($EXAMPLE_CLASS $EXAMPLE_ARGS)"
