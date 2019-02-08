@@ -41,6 +41,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
 
     private final WebSocketClientHandshaker handshaker;
     private final boolean handleCloseFrames;
+    private volatile long handshakeTimeoutMillis = 10000;
 
     /**
      * Returns the used handshaker
@@ -53,6 +54,11 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      * Events that are fired to notify about handshake status
      */
     public enum ClientHandshakeStateEvent {
+        /**
+         * The Handshake was timed out
+         */
+        HANDSHAKE_TIMEOUT,
+
         /**
          * The Handshake was started but the server did not response yet to the request
          */
@@ -200,12 +206,18 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
         if (cp.get(WebSocketClientProtocolHandshakeHandler.class) == null) {
             // Add the WebSocketClientProtocolHandshakeHandler before this one.
             ctx.pipeline().addBefore(ctx.name(), WebSocketClientProtocolHandshakeHandler.class.getName(),
-                    new WebSocketClientProtocolHandshakeHandler(handshaker));
+                                     new WebSocketClientProtocolHandshakeHandler(handshaker)
+                                             .handshakeTimeoutMillis(handshakeTimeoutMillis));
         }
         if (cp.get(Utf8FrameValidator.class) == null) {
             // Add the UFT8 checking before this one.
             ctx.pipeline().addBefore(ctx.name(), Utf8FrameValidator.class.getName(),
                     new Utf8FrameValidator());
         }
+    }
+
+    public WebSocketClientProtocolHandler handshakeTimeoutMillis(long handshakeTimeoutMillis) {
+        this.handshakeTimeoutMillis = handshakeTimeoutMillis;
+        return this;
     }
 }
