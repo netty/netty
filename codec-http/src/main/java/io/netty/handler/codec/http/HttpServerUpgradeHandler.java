@@ -31,6 +31,8 @@ import static io.netty.util.AsciiString.containsAllContentEqualsIgnoreCase;
 import static io.netty.util.AsciiString.containsContentEqualsIgnoreCase;
 import static io.netty.util.AsciiString.containsIgnoreCase;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.StringUtil.COMMA;
+import static io.netty.util.internal.StringUtil.DOUBLE_QUOTE;
 
 /**
  * A server-side handler that receives HTTP requests and optionally performs a protocol switch if
@@ -290,24 +292,20 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
             return false;
         }
 
-        CharSequence connectionHeader = null;
-
+        // Make sure the CONNECTION header contains UPGRADE as well as all protocol-specific headers.
+        Collection<CharSequence> requiredHeaders = upgradeCodec.requiredUpgradeHeaders();
+        boolean requiredHeadersFoundWithUpgrade = false;
         for (CharSequence connectionHeaderValue : connectionHeaderValues) {
             if (containsIgnoreCase(connectionHeaderValue, HttpHeaderNames.UPGRADE)) {
-                connectionHeader = connectionHeaderValue;
-                break;
+                List<CharSequence> values = splitHeader(connectionHeaderValue);
+                if (containsContentEqualsIgnoreCase(values, HttpHeaderNames.UPGRADE) &&
+                        containsAllContentEqualsIgnoreCase(values, requiredHeaders)) {
+                    requiredHeadersFoundWithUpgrade = true;
+                }
             }
         }
 
-        if (connectionHeader == null) {
-            return false;
-        }
-
-        // Make sure the CONNECTION header contains UPGRADE as well as all protocol-specific headers.
-        Collection<CharSequence> requiredHeaders = upgradeCodec.requiredUpgradeHeaders();
-        List<CharSequence> values = splitHeader(connectionHeader);
-        if (!containsContentEqualsIgnoreCase(values, HttpHeaderNames.UPGRADE) ||
-                !containsAllContentEqualsIgnoreCase(values, requiredHeaders)) {
+        if (!requiredHeadersFoundWithUpgrade) {
             return false;
         }
 
@@ -395,5 +393,34 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
         }
 
         return protocols;
+    }
+
+    private String asCsv(final List<CharSequence> arr) {
+        if (arr == null || arr.isEmpty()) {
+            return "";
+        }
+        final StringBuilder sb = new StringBuilder(arr.size() * 10);
+        final int end = arr.size() - 1;
+        for (int i = 0; i < end; ++i) {
+            quoted(sb, arr.get(i)).append(COMMA);
+        }
+        quoted(sb, arr.get(end));
+        return sb.toString();
+    }
+
+    private static StringBuilder quoted(final StringBuilder sb, final CharSequence value) {
+        if (contains(value, COMMA) && !contains(value, DOUBLE_QUOTE)) {
+            return sb.append(DOUBLE_QUOTE).append(value).append(DOUBLE_QUOTE);
+        }
+        return sb.append(value);
+    }
+
+    private static boolean contains(CharSequence value, char c) {
+        for (int i = 0; i < value.length(); ++i) {
+            if (value.charAt(i) == c) {
+                return true;
+            }
+        }
+        return false;
     }
 }
