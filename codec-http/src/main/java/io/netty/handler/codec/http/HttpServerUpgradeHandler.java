@@ -294,6 +294,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
         for (CharSequence connectionHeaderValue : connectionHeaderValues) {
             concatenatedConnectionValue.append(connectionHeaderValue).append(COMMA);
         }
+        concatenatedConnectionValue.setLength(concatenatedConnectionValue.length() - 1);
 
         // Make sure the CONNECTION header contains UPGRADE as well as all protocol-specific headers.
         Collection<CharSequence> requiredHeaders = upgradeCodec.requiredUpgradeHeaders();
