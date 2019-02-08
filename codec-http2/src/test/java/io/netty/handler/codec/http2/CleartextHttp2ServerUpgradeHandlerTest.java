@@ -202,14 +202,14 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     }
 
     @Test
-    public void multipleUpgradeHeaders() {
+    public void requiredHeadersInSeparateConnectionHeaders() {
         setUpServerChannel();
 
         String upgradeString = "GET / HTTP/1.1\r\n" +
                 "Host: example.com\r\n" +
                 "Connection: keep-alive\r\n" +
+                "Connection: HTTP2-Settings\r\n" +
                 "Connection: Upgrade\r\n" +
-                "Connection: Upgrade, HTTP2-Settings\r\n" +
                 "Upgrade: h2c\r\n" +
                 "HTTP2-Settings: AAMAAABkAAQAAP__\r\n\r\n";
         ByteBuf upgrade = Unpooled.copiedBuffer(upgradeString, CharsetUtil.US_ASCII);
