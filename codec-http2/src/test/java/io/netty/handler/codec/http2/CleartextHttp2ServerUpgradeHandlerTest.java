@@ -119,8 +119,6 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
     @Test
     public void upgrade() throws Exception {
-        setUpServerChannel();
-
         String upgradeString = "GET / HTTP/1.1\r\n" +
                 "Host: example.com\r\n" +
                 "Connection: Upgrade, HTTP2-Settings\r\n" +
@@ -131,8 +129,6 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
     @Test
     public void upgradeWithMultipleConnectionHeaders() {
-        setUpServerChannel();
-
         String upgradeString = "GET / HTTP/1.1\r\n" +
                 "Host: example.com\r\n" +
                 "Connection: keep-alive\r\n" +
@@ -144,8 +140,6 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
     @Test
     public void requiredHeadersInSeparateConnectionHeaders() {
-        setUpServerChannel();
-
         String upgradeString = "GET / HTTP/1.1\r\n" +
                 "Host: example.com\r\n" +
                 "Connection: keep-alive\r\n" +
@@ -257,6 +251,8 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
     }
 
     private void validateClearTextUpgrade(String upgradeString) {
+        setUpServerChannel();
+
         ByteBuf upgrade = Unpooled.copiedBuffer(upgradeString, CharsetUtil.US_ASCII);
 
         assertFalse(channel.writeInbound(upgrade));
