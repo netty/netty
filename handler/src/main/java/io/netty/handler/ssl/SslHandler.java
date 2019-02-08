@@ -1682,6 +1682,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     }
                 }
             } catch (final Throwable cause) {
+                processTask = false;
                 handleException(cause);
             }
         }
