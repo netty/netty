@@ -64,7 +64,12 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
          * it provides extra information about the handshake
          */
         @Deprecated
-        HANDSHAKE_COMPLETE
+        HANDSHAKE_COMPLETE,
+
+        /**
+         * The Handshake was timed out
+         */
+        HANDSHAKE_TIMEOUT
     }
 
     /**
@@ -103,6 +108,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     private final int maxFramePayloadLength;
     private final boolean allowMaskMismatch;
     private final boolean checkStartsWith;
+    private volatile long handshakeTimeoutMillis = 10000;
 
     public WebSocketServerProtocolHandler(String websocketPath) {
         this(websocketPath, null, false);
@@ -154,7 +160,8 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
             // Add the WebSocketHandshakeHandler before this one.
             ctx.pipeline().addBefore(ctx.name(), WebSocketServerProtocolHandshakeHandler.class.getName(),
                     new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols,
-                            allowExtensions, maxFramePayloadLength, allowMaskMismatch, checkStartsWith));
+                            allowExtensions, maxFramePayloadLength, allowMaskMismatch, checkStartsWith)
+                            .handshakeTimeoutMillis(handshakeTimeoutMillis));
         }
         if (cp.get(Utf8FrameValidator.class) == null) {
             // Add the UFT8 checking before this one.
@@ -212,5 +219,10 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
                 }
             }
         };
+    }
+
+    public WebSocketServerProtocolHandler handshakeTimeoutMillis(long handshakeTimeoutMillis) {
+        this.handshakeTimeoutMillis = handshakeTimeoutMillis;
+        return this;
     }
 }

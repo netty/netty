@@ -20,6 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
 import io.netty.util.concurrent.DefaultPromise;
@@ -41,7 +42,7 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     private final WebSocketClientHandshaker handshaker;
     private volatile long handshakeTimeoutMillis;
     private volatile ChannelHandlerContext ctx;
-    private final Promise<Channel> handshakePromise = new LazyChannelPromise();
+    private volatile ChannelPromise handshakePromise;
 
     WebSocketClientProtocolHandshakeHandler(WebSocketClientHandshaker handshaker) {
         this.handshaker = handshaker;
@@ -50,6 +51,7 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
+        handshakePromise = ctx.newPromise();
     }
 
     @Override
@@ -81,7 +83,7 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         try {
             if (!handshaker.isHandshakeComplete()) {
                 handshaker.finishHandshake(ctx.channel(), response);
-                handshakePromise.trySuccess(ctx.channel());
+                handshakePromise.trySuccess();
                 ctx.fireUserEventTriggered(
                         WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE);
                 ctx.pipeline().remove(this);
@@ -99,7 +101,7 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     }
 
     public void applyHandshakeTimeout() {
-        final Promise<Channel> localHandshakePromise = handshakePromise;
+        final ChannelPromise localHandshakePromise = handshakePromise;
         final long handshakeTimeoutMillis = this.handshakeTimeoutMillis;
         if (handshakeTimeoutMillis <= 0 || localHandshakePromise.isDone()) {
             return;
@@ -121,36 +123,11 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
 
         // Cancel the handshake timeout when handshake is finished.
-        localHandshakePromise.addListener(new FutureListener<Channel>() {
+        localHandshakePromise.addListener(new FutureListener<Void>() {
             @Override
-            public void operationComplete(Future<Channel> f) throws Exception {
+            public void operationComplete(Future<Void> f) throws Exception {
                 timeoutFuture.cancel(false);
             }
         });
-    }
-
-    private final class LazyChannelPromise extends DefaultPromise<Channel> {
-
-        @Override
-        protected EventExecutor executor() {
-            if (ctx == null) {
-                throw new IllegalStateException();
-            }
-            return ctx.executor();
-        }
-
-        @Override
-        protected void checkDeadLock() {
-            if (ctx == null) {
-                // If ctx is null the handlerAdded(...) callback was not called, in this case the checkDeadLock()
-                // method was called from another Thread then the one that is used by ctx.executor(). We need to
-                // guard against this as a user can see a race if handshakeFuture().sync() is called but the
-                // handlerAdded(..) method was not yet as it is called from the EventExecutor of the
-                // ChannelHandlerContext. If we not guard against this super.checkDeadLock() would cause an
-                // IllegalStateException when trying to call executor().
-                return;
-            }
-            super.checkDeadLock();
-        }
     }
 }
