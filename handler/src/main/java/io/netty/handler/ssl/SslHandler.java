@@ -1507,8 +1507,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
         } else {
             final Runnable task = engine.getDelegatedTask();
-            // We only call the method when NEED_TASK is returned so we must have a task!
-            assert task != null;
+            if (task == null) {
+                // There was nothing to do just continue execute on the EventExecutor thread.
+                return true;
+            }
             executeDelegatingTask(task, inUnwrap);
             return false;
         }
@@ -1602,9 +1604,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     // There is another task that needs to be executed and offloaded to the delegatingTaskExecutor.
                     case NEED_TASK:
                         final Runnable task = engine.getDelegatedTask();
-                        // We only call the method when NEED_TASK is returned so we must have a task!
-                        assert task != null;
-                        executeDelegatingTask(task, inUnwrap);
+
+                        if (task != null) {
+                            executeDelegatingTask(task, inUnwrap);
+                        } else {
+                            // There was no task to run so lets try to feed in more data to make progress.
+                            tryDecodeAgain();
+                        }
 
                         break;
 
@@ -1666,20 +1672,21 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 task.run();
                 if (engine.getHandshakeStatus() == HandshakeStatus.NEED_TASK) {
                     final Runnable task = engine.getDelegatedTask();
-                    // We only call the method when NEED_TASK is returned so we must have a task!
-                    assert task != null;
-                    delegatedTaskExecutor.execute(new SslTask(task, inUnwrap));
-                } else {
-                    if (ctx.executor().inEventLoop()) {
-                        resumeOnEventExecutor();
-                    } else {
-                        ctx.executor().execute(new Runnable() {
-                            @Override
-                            public void run() {
-                                resumeOnEventExecutor();
-                            }
-                        });
+                    if (task != null) {
+                        delegatedTaskExecutor.execute(new SslTask(task, inUnwrap));
+                        return;
                     }
+                    // There was no task to process lets continue on the EventExecutor.
+                }
+                if (ctx.executor().inEventLoop()) {
+                    resumeOnEventExecutor();
+                } else {
+                    ctx.executor().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            resumeOnEventExecutor();
+                        }
+                    });
                 }
             } catch (final Throwable cause) {
                 processTask = false;
