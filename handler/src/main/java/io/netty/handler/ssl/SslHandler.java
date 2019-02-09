@@ -1678,16 +1678,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     }
                     // There was no task to process lets continue on the EventExecutor.
                 }
-                if (ctx.executor().inEventLoop()) {
-                    resumeOnEventExecutor();
-                } else {
-                    ctx.executor().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            resumeOnEventExecutor();
-                        }
-                    });
-                }
+                // Jump back on the EventExecutor.
+                ctx.executor().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        resumeOnEventExecutor();
+                    }
+                });
             } catch (final Throwable cause) {
                 processTask = false;
                 handleException(cause);
