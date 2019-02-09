@@ -1635,10 +1635,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         // Flush now as we may have written some data as part of the wrap call.
                         forceFlush(ctx);
 
-                        // deliberate fall-through
+                        tryDecodeAgain();
+                        break;
 
-                    // We need more data so lets try to call decode again which will feed us with buffered data.
+                    // We need more data so lets try to unwrap first and then call decode again which will feed us
+                    // with buffered data (if there is any).
                     case NEED_UNWRAP:
+                        unwrapNonAppData(ctx);
                         tryDecodeAgain();
                         break;
 
