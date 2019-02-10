@@ -161,6 +161,10 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         return this;
     }
 
+    public ChannelFuture getHandshakeFuture() {
+        return handshakePromise;
+    }
+
     public void applyHandshakeTimeout() {
         final ChannelPromise localHandshakePromise = handshakePromise;
         final long handshakeTimeoutMillis = this.handshakeTimeoutMillis;

@@ -130,4 +130,8 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
             }
         });
     }
+
+    public ChannelFuture getHandshakeFuture() {
+        return handshakePromise;
+    }
 }
