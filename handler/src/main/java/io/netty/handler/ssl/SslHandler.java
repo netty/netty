@@ -1488,7 +1488,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         return executor instanceof EventExecutor && ((EventExecutor) executor).inEventLoop();
     }
 
-    private static void runAllDelegatingTasks(SSLEngine engine) {
+    private static void runAllDelegatedTasks(SSLEngine engine) {
         for (;;) {
             Runnable task = engine.getDelegatedTask();
             if (task == null) {
@@ -1509,7 +1509,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         if (delegatedTaskExecutor == ImmediateExecutor.INSTANCE || inEventLoop(delegatedTaskExecutor)) {
             // We should run the task directly in the EventExecutor thread and not offload at all.
             for (;;) {
-                runAllDelegatingTasks(engine);
+                runAllDelegatedTasks(engine);
                 return true;
             }
         } else {
@@ -1665,7 +1665,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         @Override
         public void run() {
             try {
-                runAllDelegatingTasks(engine);
+                runAllDelegatedTasks(engine);
 
                 // All tasks were processed.
                 assert engine.getHandshakeStatus() != HandshakeStatus.NEED_TASK;
