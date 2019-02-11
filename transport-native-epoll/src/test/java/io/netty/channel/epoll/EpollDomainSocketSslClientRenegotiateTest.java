@@ -26,8 +26,8 @@ import java.util.List;
 
 public class EpollDomainSocketSslClientRenegotiateTest extends SocketSslClientRenegotiateTest {
 
-    public EpollDomainSocketSslClientRenegotiateTest(SslContext serverCtx, SslContext clientCtx) {
-        super(serverCtx, clientCtx);
+    public EpollDomainSocketSslClientRenegotiateTest(SslContext serverCtx, SslContext clientCtx, boolean delegate) {
+        super(serverCtx, clientCtx, delegate);
     }
 
     @Override

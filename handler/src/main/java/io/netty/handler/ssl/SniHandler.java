@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
 import io.netty.util.AsyncMapping;
@@ -129,7 +130,7 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
     protected void replaceHandler(ChannelHandlerContext ctx, String hostname, SslContext sslContext) throws Exception {
         SslHandler sslHandler = null;
         try {
-            sslHandler = sslContext.newHandler(ctx.alloc());
+            sslHandler = newSslHandler(sslContext, ctx.alloc());
             ctx.pipeline().replace(this, SslHandler.class.getName(), sslHandler);
             sslHandler = null;
         } finally {
@@ -140,6 +141,14 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
                 ReferenceCountUtil.safeRelease(sslHandler.engine());
             }
         }
+    }
+
+    /**
+     * Returns a new {@link SslHandler} using the given {@link SslContext} and {@link ByteBufAllocator}.
+     * Users may override this method to implement custom behavior.
+     */
+    protected SslHandler newSslHandler(SslContext context, ByteBufAllocator allocator) {
+        return context.newHandler(allocator);
     }
 
     private static final class AsyncMappingAdapter implements AsyncMapping<String, SslContext> {

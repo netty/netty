@@ -25,8 +25,8 @@ import java.util.List;
 
 public class KQueueSocketSslClientRenegotiateTest extends SocketSslClientRenegotiateTest {
 
-    public KQueueSocketSslClientRenegotiateTest(SslContext serverCtx, SslContext clientCtx) {
-        super(serverCtx, clientCtx);
+    public KQueueSocketSslClientRenegotiateTest(SslContext serverCtx, SslContext clientCtx, boolean delegate) {
+        super(serverCtx, clientCtx, delegate);
     }
 
     @Override

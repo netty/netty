@@ -142,14 +142,17 @@ public class JdkSslEngineTest extends SSLEngineTest {
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
     private static final String APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE = "my-protocol-FOO";
 
-    @Parameterized.Parameters(name = "{index}: providerType = {0}, bufferType = {1}, combo = {2}")
+    @Parameterized.Parameters(name = "{index}: providerType = {0}, bufferType = {1}, combo = {2}, delegate = {3}")
     public static Collection<Object[]> data() {
         List<Object[]> params = new ArrayList<Object[]>();
         for (ProviderType providerType : ProviderType.values()) {
             for (BufferType bufferType : BufferType.values()) {
-                params.add(new Object[]{ providerType, bufferType, ProtocolCipherCombo.tlsv12()});
+                params.add(new Object[]{ providerType, bufferType, ProtocolCipherCombo.tlsv12(), true });
+                params.add(new Object[]{ providerType, bufferType, ProtocolCipherCombo.tlsv12(), false });
+
                 if (PlatformDependent.javaVersion() >= 11) {
-                    params.add(new Object[] { providerType, bufferType, ProtocolCipherCombo.tlsv13() });
+                    params.add(new Object[] { providerType, bufferType, ProtocolCipherCombo.tlsv13(), true });
+                    params.add(new Object[] { providerType, bufferType, ProtocolCipherCombo.tlsv13(), false });
                 }
             }
         }
@@ -160,8 +163,9 @@ public class JdkSslEngineTest extends SSLEngineTest {
 
     private Provider provider;
 
-    public JdkSslEngineTest(ProviderType providerType, BufferType bufferType, ProtocolCipherCombo protocolCipherCombo) {
-        super(bufferType, protocolCipherCombo);
+    public JdkSslEngineTest(ProviderType providerType, BufferType bufferType,
+                            ProtocolCipherCombo protocolCipherCombo, boolean delegate) {
+        super(bufferType, protocolCipherCombo, delegate);
         this.providerType = providerType;
     }
 
