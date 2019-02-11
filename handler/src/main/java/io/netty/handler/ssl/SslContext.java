@@ -60,6 +60,7 @@ import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.List;
+import java.util.concurrent.Executor;
 
 /**
  * A secure socket protocol implementation which acts as a factory for {@link SSLEngine} and {@link SslHandler}.
@@ -880,6 +881,22 @@ public abstract class SslContext {
     public abstract SSLSessionContext sessionContext();
 
     /**
+     * Create a new SslHandler.
+     * @see #newHandler(ByteBufAllocator, Executor)
+     */
+    public final SslHandler newHandler(ByteBufAllocator alloc) {
+        return newHandler(alloc, startTls);
+    }
+
+    /**
+     * Create a new SslHandler.
+     * @see #newHandler(ByteBufAllocator)
+     */
+    protected SslHandler newHandler(ByteBufAllocator alloc, boolean startTls) {
+        return new SslHandler(newEngine(alloc), startTls);
+    }
+
+    /**
      * Creates a new {@link SslHandler}.
      * <p>If {@link SslProvider#OPENSSL_REFCNT} is used then the returned {@link SslHandler} will release the engine
      * that is wrapped. If the returned {@link SslHandler} is not inserted into a pipeline then you may leak native
@@ -900,18 +917,37 @@ public abstract class SslContext {
      * <a href="https://docs.oracle.com/javase/7/docs/api/javax/net/ssl/SSLEngine.html">SSLEngine javadocs</a> which
      * limits wrap/unwrap to operate on a single SSL/TLS packet.
      * @param alloc If supported by the SSLEngine then the SSLEngine will use this to allocate ByteBuf objects.
+     * @param delegatedTaskExecutor the {@link Executor} that will be used to execute tasks that are returned by
+     *                              {@link SSLEngine#getDelegatedTask()}.
      * @return a new {@link SslHandler}
      */
-    public final SslHandler newHandler(ByteBufAllocator alloc) {
-        return newHandler(alloc, startTls);
+    public SslHandler newHandler(ByteBufAllocator alloc, Executor delegatedTaskExecutor) {
+        return newHandler(alloc, startTls, delegatedTaskExecutor);
     }
 
     /**
      * Create a new SslHandler.
-     * @see #newHandler(ByteBufAllocator)
+     * @see #newHandler(ByteBufAllocator, String, int, boolean, Executor)
      */
-    protected SslHandler newHandler(ByteBufAllocator alloc, boolean startTls) {
-        return new SslHandler(newEngine(alloc), startTls);
+    protected SslHandler newHandler(ByteBufAllocator alloc, boolean startTls, Executor executor) {
+        return new SslHandler(newEngine(alloc), startTls, executor);
+    }
+
+    /**
+     * Creates a new {@link SslHandler}
+     *
+     * @see #newHandler(ByteBufAllocator, String, int, Executor)
+     */
+    public final SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort) {
+        return newHandler(alloc, peerHost, peerPort, startTls);
+    }
+
+    /**
+     * Create a new SslHandler.
+     * @see #newHandler(ByteBufAllocator, String, int, boolean, Executor)
+     */
+    protected SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls) {
+        return new SslHandler(newEngine(alloc, peerHost, peerPort), startTls);
     }
 
     /**
@@ -937,19 +973,19 @@ public abstract class SslContext {
      * @param alloc If supported by the SSLEngine then the SSLEngine will use this to allocate ByteBuf objects.
      * @param peerHost the non-authoritative name of the host
      * @param peerPort the non-authoritative port
+     * @param delegatedTaskExecutor the {@link Executor} that will be used to execute tasks that are returned by
+     *                              {@link SSLEngine#getDelegatedTask()}.
      *
      * @return a new {@link SslHandler}
      */
-    public final SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort) {
-        return newHandler(alloc, peerHost, peerPort, startTls);
+    public SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort,
+                                 Executor delegatedTaskExecutor) {
+        return newHandler(alloc, peerHost, peerPort, startTls, delegatedTaskExecutor);
     }
 
-    /**
-     * Create a new SslHandler.
-     * @see #newHandler(ByteBufAllocator, String, int, boolean)
-     */
-    protected SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls) {
-        return new SslHandler(newEngine(alloc, peerHost, peerPort), startTls);
+    protected SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls,
+                                    Executor delegatedTaskExecutor) {
+        return new SslHandler(newEngine(alloc, peerHost, peerPort), startTls, delegatedTaskExecutor);
     }
 
     /**
