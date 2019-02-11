@@ -25,8 +25,8 @@ import java.util.List;
 
 public class EpollSocketSslGreetingTest extends SocketSslGreetingTest {
 
-    public EpollSocketSslGreetingTest(SslContext serverCtx, SslContext clientCtx) {
-        super(serverCtx, clientCtx);
+    public EpollSocketSslGreetingTest(SslContext serverCtx, SslContext clientCtx, boolean delegate) {
+        super(serverCtx, clientCtx, delegate);
     }
 
     @Override
