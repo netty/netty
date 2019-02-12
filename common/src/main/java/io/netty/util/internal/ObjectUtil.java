@@ -86,9 +86,9 @@ public final class ObjectUtil {
      * Checks that the given argument locates [left, right]. If it is not, throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
      */
-    public static int checkClosedInterval(int index, int left, int right, String name) {
-        if (index < left || index > right) {
-            throw new IllegalArgumentException(String.format("%s: %d (expected: %d~%d)", name, index, left, right));
+    public static int checkClosedInterval(int index, int min, int max, String name) {
+        if (index < min || index > max) {
+            throw new IllegalArgumentException(String.format("%s: %d (expected: %d~%d)", name, index, min, max));
         }
         return index;
     }
@@ -97,9 +97,9 @@ public final class ObjectUtil {
      * Checks that the given argument locates [left, right]. If it is not, throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
      */
-    public static long checkClosedInterval(long index, long left, long right, String name) {
-        if (index < left || index > right) {
-            throw new IllegalArgumentException(String.format("%s: %d (expected: %d~%d)", name, index, left, right));
+    public static long checkClosedInterval(long index, long min, long max, String name) {
+        if (index < min || index > max) {
+            throw new IllegalArgumentException(String.format("%s: %d (expected: %d~%d)", name, index, min, max));
         }
         return index;
     }
