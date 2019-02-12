@@ -15,14 +15,12 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.base64.Base64;
-import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -91,13 +89,8 @@ final class WebSocketUtil {
      * @return An encoded string containing the data
      */
     static String base64(byte[] data) {
-        ByteBuf encodedData = Unpooled.wrappedBuffer(data);
-        ByteBuf encoded = Base64.encode(encodedData);
-        String encodedString = encoded.toString(CharsetUtil.UTF_8);
-        encoded.release();
-        return encodedString;
+        return Base64.getEncoder().encodeToString(data);
     }
-
     /**
      * Creates an arbitrary number of random bytes
      *
