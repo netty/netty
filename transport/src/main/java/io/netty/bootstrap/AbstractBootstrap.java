@@ -99,6 +99,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * You either use this or {@link #channelFactory(io.netty.channel.ChannelFactory)} if your
      * {@link Channel} implementation has no no-args constructor.
      */
+
     public B channel(Class<? extends C> channelClass) {
         if (channelClass == null) {
             throw new NullPointerException("channelClass");
@@ -117,7 +118,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         if (this.channelFactory != null) {
             throw new IllegalStateException("channelFactory set already");
         }
-
+        //创建一个channelFactory
         this.channelFactory = channelFactory;
         return self();
     }
@@ -270,6 +271,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     /**
      * Create a new {@link Channel} and bind it.
      */
+    /***
+     *
+     * @param localAddress
+     * @return
+     */
     public ChannelFuture bind(SocketAddress localAddress) {
         validate();
         if (localAddress == null) {
@@ -279,6 +285,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     private ChannelFuture doBind(final SocketAddress localAddress) {
+        //创建服务端的channeL
         final ChannelFuture regFuture = initAndRegister();
         final Channel channel = regFuture.channel();
         if (regFuture.cause() != null) {
@@ -317,8 +324,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     final ChannelFuture initAndRegister() {
         Channel channel = null;
         try {
+            //new 一个channel
             channel = channelFactory.newChannel();
-            init(channel);
+            init(channel);//初始化channel
         } catch (Throwable t) {
             if (channel != null) {
                 // channel can be null if newChannel crashed (eg SocketException("too many open files"))

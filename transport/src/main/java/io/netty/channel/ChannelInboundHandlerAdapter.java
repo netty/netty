@@ -29,6 +29,11 @@ package io.netty.channel;
  * releases the received messages automatically, please see {@link SimpleChannelInboundHandler}.
  * </p>
  */
+
+/**
+ * ChannelInboundHandlerAdapter是ChannelInboundHandler的一个简单实现，默认情况下不会做任何处理，
+ * 只是简单的将操作通过fire*方法传递到ChannelPipeline中的下一个ChannelHandler中让链中的下一个ChannelHandler去处理。
+ */
 public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implements ChannelInboundHandler {
 
     /**
@@ -50,6 +55,8 @@ public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implemen
      */
     @Override
     public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+        //调用channelPipeline中下一个channelHandler的 ChannelUnregistered 方法
+
         ctx.fireChannelUnregistered();
     }
 
@@ -61,6 +68,8 @@ public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implemen
      */
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        //调用channelPipeline中下一个channelHandler的 ChannelActive 方法
+
         ctx.fireChannelActive();
     }
 
@@ -81,8 +90,15 @@ public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implemen
      *
      * Sub-classes may override this method to change behavior.
      */
+    /***
+     * channelRead方法处理之后不会自动释放（因为信息不会被自动释放所以能将消息传递给下一个ChannelHandler处理）。
+     * @param ctx
+     * @param msg
+     * @throws Exception
+     */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        //调用channelPipeline中下一个channelHandler的channelRead方法
         ctx.fireChannelRead(msg);
     }
 
@@ -94,6 +110,8 @@ public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implemen
      */
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        //调用channelPipeline中下一个channelHandler的 ChannelReadComplet 方法
+
         ctx.fireChannelReadComplete();
     }
 

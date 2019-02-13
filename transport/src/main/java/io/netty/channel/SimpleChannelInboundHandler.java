@@ -63,6 +63,10 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
      * @param autoRelease   {@code true} if handled messages should be released automatically by passing them to
      *                      {@link ReferenceCountUtil#release(Object)}.
      */
+    /****
+     * 可以关闭自动释放内存的功能
+     * @param autoRelease
+     */
     protected SimpleChannelInboundHandler(boolean autoRelease) {
         matcher = TypeParameterMatcher.find(this, SimpleChannelInboundHandler.class, "I");
         this.autoRelease = autoRelease;
@@ -99,16 +103,22 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         boolean release = true;
         try {
+            //判断类型是否是指定对应的类型，是的话，才回执行并释放
             if (acceptInboundMessage(msg)) {
                 @SuppressWarnings("unchecked")
                 I imsg = (I) msg;
+                //因此我们继承SimpleChannelInboundHandler后，
+                //处理入站的数据我们只需要重新实现channelRead0方法，当channelRead真正被调用的时候我们的逻辑才会被处理。
                 channelRead0(ctx, imsg);
             } else {
                 release = false;
                 ctx.fireChannelRead(msg);
             }
         } finally {
+            //所以说会自动释放内存
             if (autoRelease && release) {
+                //底层是实现ReferenceCounted，当新的对象初始化的时候计数为1，retain()方法实现其他地方的引用计数加1，
+                // release()方法实现应用减一，当计数减少到0的时候会被显示清除，再次访问被清除的对象会出现访问冲突。
                 ReferenceCountUtil.release(msg);
             }
         }

@@ -399,6 +399,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    /***
+     * 这个类似于ServerSocket,它不会不断的循环：
+     *      1、接收客户端新的连接，
+     *      2、接收客户端的数据写入的事件
+     */
     @Override
     protected void run() {
         for (;;) {
@@ -542,7 +547,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             final Object a = k.attachment();
             i.remove();
 
-            if (a instanceof AbstractNioChannel) {
+            if (a instanceof AbstractNioChannel) {//开始处理每一个连接
                 processSelectedKey(k, (AbstractNioChannel) a);
             } else {
                 @SuppressWarnings("unchecked")
@@ -643,7 +648,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
             // to a spin loop
             if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
-                unsafe.read();
+                unsafe.read();//NioMessageUnSafe
             }
         } catch (CancelledKeyException ignored) {
             unsafe.close(unsafe.voidPromise());
@@ -725,6 +730,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    /***
+     * 相当于bio里的accept方法
+     * @param oldWakenUp
+     * @throws IOException
+     */
     private void select(boolean oldWakenUp) throws IOException {
         Selector selector = this.selector;
         try {
