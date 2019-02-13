@@ -71,6 +71,8 @@ public class WebSocketServerHandshaker00Test {
             assertEquals("Missing origin header, got only "
                     + "[host, upgrade, connection, sec-websocket-key1, sec-websocket-protocol]",
                 e.getMessage());
+        } finally {
+            req.release();
         }
     }
 
