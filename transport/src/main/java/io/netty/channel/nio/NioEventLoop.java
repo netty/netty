@@ -456,7 +456,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                         // 2）Selector 在 'selector.select(...)' 与 'if (wakenUp.get()) { ... }' 之间被唤醒。(OK)
                         // 在第一种情况下，'wakenUp'设置为true，后面的'selector.select（...）'将立即唤醒。
                         // 直到'wakenUp'在下一轮中再次设置为false，'wakenUp.compareAndSet（false，true）'将失败，
-                        // 因此任何唤醒选择器的尝试也将失败，从而导致以下'selector.select（。 ..）'呼吁阻止不必要的。
+                        // 因此任何唤醒选择器的尝试也将失败，从而导致下次'selector.select（...）'不能被唤醒。
 
                         // 要解决这个问题，如果在selector.select（...）操作之后wakenUp立即为true，我们会再次唤醒selector。
                         // 它是低效率的，因为它唤醒了第一种情况（BAD - 需要唤醒）和第二种情况（OK - 不需要唤醒）的选择器。
@@ -624,6 +624,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             final SelectionKey k = selectedKeys.keys[i];
             // null out entry in the array to allow to have it GC'ed once the Channel close
             // See https://github.com/netty/netty/issues/2363
+            //手动将数组元素赋为null，以帮助gc（因为在系统压力大的时候，SelectionKey数组靠后的部分会被占用，如果不手动将用过的元素设置为null，那么在系统压力小的时候，这些元素是不会被释放的，也就是内存泄漏了）
             selectedKeys.keys[i] = null;
 
             final Object a = k.attachment();
@@ -814,6 +815,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 // 假设我们的ChannelPipeline中存在一个IdleStateHandler，
                 // 那么就可能导致因为Selector.select(long timeout)操作的timeout比IdleStateHandler设置的idle timeout长，
                 // 而导致IdleStateHandler不能对空闲超时做出即使的处理。
+                // 所以提前判断一下
 
                 // If a task was submitted when wakenUp value was true, the task didn't get a chance to call
                 // Selector#wakeup. So we need to check task queue again before executing select operation.
@@ -900,6 +902,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         return selector;
     }
 
+    // 作用：尽快释放掉无效的连接
     private void selectAgain() {
         needsToSelectAgain = false;
         try {

@@ -673,6 +673,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     /**
      * Confirm that the shutdown if the instance should be done now!
+     *
+     * 关闭操作被确认。在run执行后如果关闭了，必须对关闭进行确认
      */
     protected boolean confirmShutdown() {
         if (!isShuttingDown()) {
@@ -689,6 +691,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             gracefulShutdownStartTime = ScheduledFutureTask.nanoTime();
         }
 
+        // 有任务或有shutdownHook被执行
         if (runAllTasks() || runShutdownHooks()) {
             if (isShutdown()) {
                 // Executor shut down - no new tasks anymore.
@@ -701,16 +704,23 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             if (gracefulShutdownQuietPeriod == 0) {
                 return true;
             }
+            // 唤醒等待任务再次执行
             wakeup(true);
             return false;
         }
 
+        // 没有任务
+
         final long nanoTime = ScheduledFutureTask.nanoTime();
 
+        // 超时
         if (isShutdown() || nanoTime - gracefulShutdownStartTime > gracefulShutdownTimeout) {
             return true;
         }
 
+        // 最近有任务被执行。如果一个任务在平静期内提交了，它会保证任务被接受并且重新开始平静期。
+        // 我们可以将静默时间看为一段观察期，在此期间如果没有任务执行说明可以跳出循环；
+        // 如果此期间有任务执行，执行完后立即进入下一个观察期继续观察；如果连续多个观察期一直有任务执行，那么截止时间到则跳出循环。
         if (nanoTime - lastExecutionTime <= gracefulShutdownQuietPeriod) {
             // Check if any tasks were added to the queue every 100ms.
             // TODO: Change the behavior of takeTask() so that it returns on timeout.
@@ -723,6 +733,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
             return false;
         }
+
+        // 没有任务在平静期提交
 
         // No tasks were added for last quiet period - hopefully safe to shut down.
         // (Hopefully because we really cannot make a guarantee that there will be no execute() calls by a user.)
@@ -746,6 +758,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         return isTerminated();
     }
 
+    /**
+     * 调用execute方法后，任务会被添加到队列中
+     * 如果isshutdown状态，则抛出拒绝任务异常。但如果是shuttingdown状态还可以接受任务
+     * 如果任务队列满，则抛出拒绝任务异常
+     * @param task
+     */
     @Override
     public void execute(Runnable task) {
         if (task == null) {
@@ -895,6 +913,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             @Override
             public void run() {
                 thread = Thread.currentThread();
+                // 如果没有启动前，被中断过
                 if (interrupted) {
                     thread.interrupt();
                 }
@@ -915,6 +934,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                         }
                     }
 
+                    // 提示功能，要求run最后需要调用confirmShutdown来对关闭操作进行确认
                     // Check if confirmShutdown() was called at the end of the loop.
                     if (success && gracefulShutdownStartTime == 0) {
                         if (logger.isErrorEnabled()) {
