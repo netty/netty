@@ -217,10 +217,13 @@ public final class NativeLibraryLoader {
             try {
                 if (tmpFile != null && tmpFile.isFile() && tmpFile.canRead() &&
                     !NoexecVolumeDetector.canExecuteExecutable(tmpFile)) {
+                    // Pass "io.netty.native.workdir" as an argument to allow shading tools to see
+                    // the string. Since this is printed out to users to tell them what to do next,
+                    // we want the value to be correct even when shading.
                     logger.info("{} exists but cannot be executed even when execute permissions set; " +
-                                "check volume for \"noexec\" flag; use -Dio.netty.native.workdir=[path] " +
+                                "check volume for \"noexec\" flag; use -D{}=[path] " +
                                 "to set native working directory separately.",
-                                tmpFile.getPath());
+                                tmpFile.getPath(), "io.netty.native.workdir");
                 }
             } catch (Throwable t) {
                 suppressed.add(t);
