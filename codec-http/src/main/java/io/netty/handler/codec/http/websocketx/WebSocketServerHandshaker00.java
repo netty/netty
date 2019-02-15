@@ -152,7 +152,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             int b = (int) (Long.parseLong(BEGINNING_DIGIT.matcher(key2).replaceAll("")) /
                            BEGINNING_SPACE.matcher(key2).replaceAll("").length());
             long c = req.content().readLong();
-            ByteBuf input = Unpooled.buffer(16);
+            ByteBuf input = Unpooled.wrappedBuffer(new byte[16]).setIndex(0, 0);
             input.writeInt(a);
             input.writeInt(b);
             input.writeLong(c);
