@@ -433,6 +433,42 @@ public class ChunkedWriteHandlerTest {
         assertEquals(1, chunks.get());
     }
 
+    @Test
+    public void testCloseSuccessfulChunkedInput() {
+        int chunks = 10;
+        TestChunkedInput input = new TestChunkedInput(chunks);
+        EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
+
+        assertTrue(ch.writeOutbound(input));
+
+        for (int i = 0; i < chunks; i++) {
+            ByteBuf buf = ch.readOutbound();
+            assertEquals(i, buf.readInt());
+            buf.release();
+        }
+
+        assertTrue(input.isClosed());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testCloseFailedChunkedInput() {
+        Exception error = new Exception("Unable to produce a chunk");
+        ThrowingChunkedInput input = new ThrowingChunkedInput(error);
+
+        EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
+
+        try {
+            ch.writeOutbound(input);
+            fail("Exception expected");
+        } catch (Exception e) {
+            assertEquals(error, e);
+        }
+
+        assertTrue(input.isClosed());
+        assertFalse(ch.finish());
+    }
+
     private static void check(Object... inputs) {
         EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
 
@@ -523,5 +559,97 @@ public class ChunkedWriteHandlerTest {
         }
 
         assertEquals(BYTES.length, read);
+    }
+
+    private static final class TestChunkedInput implements ChunkedInput<ByteBuf> {
+        private final int chunksToProduce;
+
+        private int chunksProduced;
+        private volatile boolean closed;
+
+        TestChunkedInput(int chunksToProduce) {
+            this.chunksToProduce = chunksToProduce;
+        }
+
+        @Override
+        public boolean isEndOfInput() {
+            return chunksProduced >= chunksToProduce;
+        }
+
+        @Override
+        public void close() {
+            closed = true;
+        }
+
+        @Override
+        public ByteBuf readChunk(ChannelHandlerContext ctx) {
+            return readChunk(ctx.alloc());
+        }
+
+        @Override
+        public ByteBuf readChunk(ByteBufAllocator allocator) {
+            ByteBuf buf = allocator.buffer();
+            buf.writeInt(chunksProduced);
+            chunksProduced++;
+            return buf;
+        }
+
+        @Override
+        public long length() {
+            return chunksToProduce;
+        }
+
+        @Override
+        public long progress() {
+            return chunksProduced;
+        }
+
+        boolean isClosed() {
+            return closed;
+        }
+    }
+
+    private static final class ThrowingChunkedInput implements ChunkedInput<ByteBuf> {
+        private final Exception error;
+
+        private volatile boolean closed;
+
+        ThrowingChunkedInput(Exception error) {
+            this.error = error;
+        }
+
+        @Override
+        public boolean isEndOfInput() {
+            return false;
+        }
+
+        @Override
+        public void close() {
+            closed = true;
+        }
+
+        @Override
+        public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
+            return readChunk(ctx.alloc());
+        }
+
+        @Override
+        public ByteBuf readChunk(ByteBufAllocator allocator) throws Exception {
+            throw error;
+        }
+
+        @Override
+        public long length() {
+            return -1;
+        }
+
+        @Override
+        public long progress() {
+            return -1;
+        }
+
+        boolean isClosed() {
+            return closed;
+        }
     }
 }

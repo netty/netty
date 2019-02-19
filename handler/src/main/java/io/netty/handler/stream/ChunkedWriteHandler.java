@@ -280,12 +280,12 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
                             if (!future.isSuccess()) {
-                                closeInput(chunks);
                                 currentWrite.fail(future.cause());
                             } else {
                                 currentWrite.progress(chunks.progress(), chunks.length());
                                 currentWrite.success(chunks.length());
                             }
+                            closeInput(chunks);
                         }
                     });
                 } else if (channel.isWritable()) {
