@@ -1033,4 +1033,9 @@ class WrappedByteBuf extends ByteBuf {
     public boolean release(int decrement) {
         return buf.release(decrement);
     }
+
+    @Override
+    final boolean isAccessible() {
+        return buf.isAccessible();
+    }
 }

@@ -300,7 +300,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     @SuppressWarnings("deprecation")
     private Component newComponent(ByteBuf buf, int offset) {
-        if (checkAccessible && buf.refCnt() == 0) {
+        if (checkAccessible && !buf.isAccessible()) {
             throw new IllegalReferenceCountException(0);
         }
         int srcIndex = buf.readerIndex(), len = buf.readableBytes();
@@ -1074,7 +1074,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     @Override
     public CompositeByteBuf setShort(int index, int value) {
-        super.setShort(index, value);
+        checkIndex(index, 2);
+        _setShort(index, value);
         return this;
     }
 
@@ -1108,7 +1109,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     @Override
     public CompositeByteBuf setMedium(int index, int value) {
-        super.setMedium(index, value);
+        checkIndex(index, 3);
+        _setMedium(index, value);
         return this;
     }
 
@@ -1142,7 +1144,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     @Override
     public CompositeByteBuf setInt(int index, int value) {
-        super.setInt(index, value);
+        checkIndex(index, 4);
+        _setInt(index, value);
         return this;
     }
 
@@ -1176,7 +1179,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     @Override
     public CompositeByteBuf setLong(int index, long value) {
-        super.setLong(index, value);
+        checkIndex(index, 8);
+        _setLong(index, value);
         return this;
     }
 
@@ -1284,7 +1288,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
         int i = toComponentIndex0(index);
         int readBytes = 0;
-
         do {
             Component c = components[i];
             int localLength = Math.min(length, c.endOffset - index);
@@ -2052,7 +2055,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     @Override
     public CompositeByteBuf writeBytes(byte[] src) {
-        writeBytes(src, 0, src.length);
+        super.writeBytes(src, 0, src.length);
         return this;
     }
 
@@ -2118,6 +2121,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         for (int i = 0, size = componentCount; i < size; i++) {
             components[i].free();
         }
+    }
+
+    @Override
+    boolean isAccessible() {
+        return !freed;
     }
 
     @Override
