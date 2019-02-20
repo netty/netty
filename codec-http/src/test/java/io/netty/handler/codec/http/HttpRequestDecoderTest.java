@@ -320,4 +320,22 @@ public class HttpRequestDecoderTest {
         assertTrue(request.decoderResult().cause() instanceof TooLongFrameException);
         assertFalse(channel.finish());
     }
+
+    @Test
+    public void testSpacesInURI() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        String request =  "GET /user?name=Jian Wang HTTP/1.1\r\n" +
+            "Host: localhost\r\n\r\n";
+
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(request, CharsetUtil.US_ASCII)));
+        HttpRequest req = channel.readInbound();
+        assertEquals("/user?name=Jian Wang", req.uri());
+        assertEquals("HTTP/1.1", req.protocolVersion().text());
+
+        LastHttpContent c = channel.readInbound();
+        c.release();
+
+        assertFalse(channel.finish());
+        assertNull(channel.readInbound());
+    }
 }
