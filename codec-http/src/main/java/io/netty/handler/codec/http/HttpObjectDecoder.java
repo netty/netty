@@ -703,18 +703,18 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         int cEnd;
 
         aStart = findNonWhitespace(sb, 0);
-        aEnd = findWhitespace(sb, aStart);
+        aEnd = findWhitespace(sb, aStart + 1);
 
-        bStart = findNonWhitespace(sb, aEnd);
-        bEnd = findWhitespace(sb, bStart);
-
-        cStart = findNonWhitespace(sb, bEnd);
         cEnd = findEndOfString(sb);
+        cStart = findWhitespaceRight(sb, cEnd - 2) + 1;
+
+        bStart = findNonWhitespace(sb, aEnd + 1);
+        bEnd = findNonWhitespaceRight(sb, cStart - 1) + 1;
 
         return new String[] {
                 sb.subStringUnsafe(aStart, aEnd),
-                sb.subStringUnsafe(bStart, bEnd),
-                cStart < cEnd? sb.subStringUnsafe(cStart, cEnd) : "" };
+                bStart < bEnd ? sb.subStringUnsafe(bStart, bEnd) : sb.subStringUnsafe(cStart, cEnd),
+                bStart < bEnd ? sb.subStringUnsafe(cStart, cEnd) : "" };
     }
 
     private void splitHeader(AppendableCharSequence sb) {
@@ -759,6 +759,15 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return sb.length();
     }
 
+    public static int findNonWhitespaceRight(AppendableCharSequence sb, int offset) {
+        for (int result = offset; result > 0; --result) {
+            if (!Character.isWhitespace(sb.charAtUnsafe(result))) {
+                return result;
+            }
+        }
+        return 0;
+    }
+
     private static int findWhitespace(AppendableCharSequence sb, int offset) {
         for (int result = offset; result < sb.length(); ++result) {
             if (Character.isWhitespace(sb.charAtUnsafe(result))) {
@@ -766,6 +775,15 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
         }
         return sb.length();
+    }
+
+    public static int findWhitespaceRight(AppendableCharSequence sb, int offset) {
+        for (int result = offset; result > 0; --result) {
+            if (Character.isWhitespace(sb.charAtUnsafe(result))) {
+                return result;
+            }
+        }
+        return 0;
     }
 
     private static int findEndOfString(AppendableCharSequence sb) {
