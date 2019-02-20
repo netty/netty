@@ -64,10 +64,8 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    int internalRefCnt() {
-        // Try to do non-volatile read for performance as the ensureAccessible() is racy anyway and only provide
-        // a best-effort guard.
-        return realRefCnt(nonVolatileRawCnt());
+    final boolean isAccessible() {
+        return maxCapacity() != -1;
     }
 
     @Override
@@ -133,6 +131,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         int rawCnt = nonVolatileRawCnt(), realCnt = toLiveRealCnt(rawCnt, decrement);
         if (decrement == realCnt) {
             if (refCntUpdater.compareAndSet(this, rawCnt, 1)) {
+                maxCapacity(-1);
                 deallocate();
                 return true;
             }
@@ -155,6 +154,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
             int rawCnt = refCntUpdater.get(this), realCnt = toLiveRealCnt(rawCnt, decrement);
             if (decrement == realCnt) {
                 if (refCntUpdater.compareAndSet(this, rawCnt, 1)) {
+                    maxCapacity(-1);
                     deallocate();
                     return true;
                 }

@@ -2445,4 +2445,12 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
 
     @Override
     public abstract ByteBuf touch(Object hint);
+
+    /**
+     * Used internally by {@link AbstractByteBuf#ensureAccessible()} to try to guard
+     * against using the buffer after it was released (best-effort).
+     */
+    boolean isAccessible() {
+        return refCnt() != 0;
+    }
 }

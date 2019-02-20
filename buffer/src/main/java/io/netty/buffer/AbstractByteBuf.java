@@ -1376,6 +1376,10 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     private static void checkRangeBounds(final int index, final int fieldLength, final int capacity) {
         if (isOutOfBounds(index, fieldLength, capacity)) {
+            if (capacity == -1) {
+                // special case: negative capacity implies buffer is deallocated
+                throw new IllegalReferenceCountException(0);
+            }
             throw new IndexOutOfBoundsException(String.format(
                     "index: %d, length: %d (expected: range(0, %d))", index, fieldLength, capacity));
         }
@@ -1437,17 +1441,9 @@ public abstract class AbstractByteBuf extends ByteBuf {
      * if the buffer was released before.
      */
     protected final void ensureAccessible() {
-        if (checkAccessible && internalRefCnt() == 0) {
+        if (checkAccessible && !isAccessible()) {
             throw new IllegalReferenceCountException(0);
         }
-    }
-
-    /**
-     * Returns the reference count that is used internally by {@link #ensureAccessible()} to try to guard
-     * against using the buffer after it was released (best-effort).
-     */
-    int internalRefCnt() {
-        return refCnt();
     }
 
     final void setIndex0(int readerIndex, int writerIndex) {
