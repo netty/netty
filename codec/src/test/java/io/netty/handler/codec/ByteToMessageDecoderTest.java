@@ -19,6 +19,7 @@ import io.netty.buffer.*;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.ByteToMessageDecoder.Cumulator;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.Test;
 
@@ -344,113 +345,176 @@ public class ByteToMessageDecoderTest {
         }
     }
 
+    private static abstract class PartialCumulationDecoder extends ByteToMessageDecoder
+    {
+        final int messageSize;
+        int cumulations;
+
+        private PartialCumulationDecoder(int messageSize) {
+            this.messageSize = messageSize;
+            setCumulator(new PartialCumulator());
+        }
+
+        private class PartialCumulator implements Cumulator {
+            @Override
+            public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
+                ++cumulations;
+                if (!cumulation.isReadable()) {
+                    return in;
+                }
+
+                assertTrue(cumulation.readableBytes() < messageSize);
+                ByteBuf result = alloc.buffer(messageSize);
+                result.writeBytes(cumulation);
+                while (result.isWritable() && in.isReadable()) {
+                    result.writeByte(in.readByte());
+                }
+
+                cumulation.release();
+                if (!in.isReadable()) {
+                    in.release();
+                }
+
+                return result;
+            }
+        }
+    }
+
     @Test
     public void partialCumulate() {
         final Object decoded = new Object();
-        ByteBuf in1 = Unpooled.buffer().writeZero(1);
-        ByteBuf in2 = Unpooled.buffer().writeZero(5);
-        class Decoder extends ByteToMessageDecoder {
-            int count = 0;
-            {
-                setCumulator(new Cumulator() {
+        for (int firstMessageCount = 0 ; firstMessageCount <= 1 ; ++firstMessageCount) {
+            for (int unreadFinalBytes = 0 ; unreadFinalBytes <= 1 ; ++unreadFinalBytes) {
+                final PartialCumulationDecoder decoder = new PartialCumulationDecoder(2) {
                     @Override
-                    public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
-                        if (!cumulation.isReadable())
+                    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+                        while (true)
                         {
-                            assertEquals(0, count++);
-                            return in;
+                            if (in.readableBytes() < 2)
+                                return;
+                            in.readByte();
+                            in.readByte();
+                            out.add(decoded);
                         }
-
-                        assertEquals(1, count++);
-                        ByteBuf result = alloc.buffer((cumulation.readableBytes() + 2) & ~1);
-                        result.writeBytes(cumulation);
-                        result.writeByte(in.readByte());
-                        if (result.isWritable() && in.isReadable())
-                            result.writeByte(in.readByte());
-                        cumulation.release();
-                        if (!in.isReadable())
-                            in.release();
-                        return result;
                     }
-                });
-            }
+                };
 
-            @Override
-            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-                if (in.readableBytes() < 2)
-                    return;
-                in.readByte();
-                in.readByte();
-                out.add(decoded);
+                ByteBuf in1 = Unpooled.buffer().writeZero(firstMessageCount * 2 + 1);
+                ByteBuf in2 = Unpooled.buffer().writeZero(5 + unreadFinalBytes);
+                EmbeddedChannel channel = new EmbeddedChannel(decoder);
+
+                channel.writeInbound(in1);
+                for (int i = 0 ; i < firstMessageCount ; ++i) {
+                    assertSame(decoded, channel.readInbound());
+                }
+                assertNull(channel.readInbound());
+                channel.writeInbound(in2);
+                for (int i = 0 ; i < 3 ; ++i) {
+                    assertSame(decoded, channel.readInbound());
+                }
+                assertEquals(0, in1.refCnt());
+                assertEquals(2 + unreadFinalBytes, decoder.cumulations);
+                if (unreadFinalBytes > 0) {
+                    assertSame(in2, decoder.cumulation);
+                    assertEquals(1, decoder.cumulation.readableBytes());
+                    decoder.cumulation.release();
+                } else {
+                    assertEquals(0, in2.refCnt());
+                    assertNull(decoder.cumulation);
+                }
             }
         }
-
-        Decoder decoder = new Decoder();
-        EmbeddedChannel channel = new EmbeddedChannel(decoder);
-        channel.writeInbound(in1);
-        assertNull(channel.readInbound());
-        channel.writeInbound(in2);
-        assertSame(decoded, channel.readInbound());
-        assertSame(decoded, channel.readInbound());
-        assertSame(decoded, channel.readInbound());
-        assertEquals(0, in1.refCnt());
-        assertEquals(0, in2.refCnt());
     }
 
     @Test
-    public void releaseIfDecodeThrowsWithPartialCumulate() {
-        final Error fail = new Error();
-        ByteBuf in1 = Unpooled.buffer().writeZero(1);
-        ByteBuf in2 = Unpooled.buffer().writeZero(5);
-        class Decoder extends ByteToMessageDecoder {
-            int count = 0;
-            {
-                setCumulator(new Cumulator() {
+    public void readableIfDecodeThrowsWithPartialCumulate() {
+        final DecoderException fail = new DecoderException();
+
+        final Object decoded = new Object();
+        for (int firstMessageCount = 0 ; firstMessageCount <= 1 ; ++firstMessageCount) {
+            for (int throwAfterCount = 0 ; throwAfterCount <= 1 ; ++throwAfterCount) {
+                final int throwAfterCountFinal = throwAfterCount;
+                final PartialCumulationDecoder decoder = new PartialCumulationDecoder(2) {
+                    int count = 0;
                     @Override
-                    public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
-                        if (!cumulation.isReadable())
-                        {
-                            assertEquals(0, count++);
-                            return in;
-                        }
-
-                        assertEquals(1, count++);
-                        ByteBuf result = alloc.buffer((cumulation.readableBytes() + 2) & ~1);
-                        result.writeBytes(cumulation);
-                        result.writeByte(in.readByte());
-                        if (result.isWritable() && in.isReadable())
-                            result.writeByte(in.readByte());
-                        cumulation.release();
-                        if (!in.isReadable())
-                            in.release();
-                        return result;
+                    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+                        if (in.readableBytes() < 2)
+                            return;
+                        in.readByte();
+                        if (count++ == throwAfterCountFinal)
+                            throw fail;
+                        in.readByte();
+                        out.add(decoded);
                     }
-                });
-            }
+                };
 
-            @Override
-            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-                if (in.readableBytes() < 2)
-                    return;
-                in.readByte();
-                throw fail;
+                ByteBuf in1 = Unpooled.buffer().writeZero(firstMessageCount * 2 + 1);
+                ByteBuf in2 = Unpooled.buffer().writeZero(5);
+                EmbeddedChannel channel = new EmbeddedChannel(decoder);
+
+                // try to write our first buffer, which may contain zero or one messages
+                boolean failed = false;
+                try {
+                    channel.writeInbound(in1);
+                } catch (Throwable t) {
+                    assertSame(fail, t);
+                    failed = true;
+                }
+                // we fail only if the buffer contained more messages than we need to read before throwing an exception
+                assertEquals(failed, throwAfterCount < firstMessageCount);
+                for (int i = 0 ; i < Math.min(throwAfterCount, firstMessageCount) ; ++i) {
+                    assertSame(decoded, channel.readInbound());
+                }
+                assertNull(channel.readInbound());
+
+                if (!failed) {
+                    try {
+                        channel.writeInbound(in2);
+                        assertTrue(false); // should never reach here
+                    } catch (Throwable t) {
+                        assertSame(fail, t);
+                    }
+                    for (int i = 0 ; i < throwAfterCount - firstMessageCount ; ++i) {
+                        assertSame(decoded, channel.readInbound());
+                    }
+                    assertNull(channel.readInbound());
+                }
+
+                if (throwAfterCount < firstMessageCount) {
+                    assertEquals(0, decoder.cumulations);
+                    assertEquals(1, in1.refCnt());
+                    assertSame(in1, decoder.cumulation);
+                    assertEquals(1, in2.refCnt());
+                    assertEquals(2, decoder.cumulation.readableBytes());
+                    in2.release();
+                } else {
+                    assertEquals(2, decoder.cumulations);
+                    assertEquals(0, in1.refCnt());
+                    if (throwAfterCount > firstMessageCount) {
+                        assertSame(in2, decoder.cumulation);
+                        assertEquals(3, decoder.cumulation.readableBytes());
+                    } else {
+                        assertNotSame(in2, decoder.cumulation);
+                        assertEquals(5, decoder.cumulation.readableBytes());
+                    }
+                }
+                decoder.cumulation.release();
             }
         }
-
-        Decoder decoder = new Decoder();
-        EmbeddedChannel channel = new EmbeddedChannel(decoder);
-        channel.writeInbound(in1);
-        assertNull(channel.readInbound());
-        try
-        {
-            channel.writeInbound(in2);
-        }
-        catch (Throwable t)
-        {
-            assertSame(fail, t);
-        }
-        assertNull(channel.readInbound());
-        assertEquals(0, in1.refCnt());
-        assertEquals(0, in2.refCnt());
     }
+
+    @Test
+    public void defaultCumulatorsFreeEmptyCumulation() {
+        for (Cumulator cumulator : new Cumulator[] { ByteToMessageDecoder.MERGE_CUMULATOR, ByteToMessageDecoder.COMPOSITE_CUMULATOR }) {
+            ByteBuf in = Unpooled.buffer().writeZero(1);
+            ByteBuf empty = Unpooled.buffer().writeZero(1);
+            empty.readByte();
+            ByteBuf out = cumulator.cumulate(empty.alloc(), empty, in);
+            assertSame(in, out);
+            assertEquals(0, empty.refCnt());
+            assertEquals(1, in.refCnt());
+            in.release();
+        }
+    }
+
 }

@@ -78,6 +78,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         @Override
         public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
             if (!cumulation.isReadable()) {
+                cumulation.release();
                 return in;
             }
 
@@ -115,6 +116,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         @Override
         public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
             if (!cumulation.isReadable()) {
+                cumulation.release();
                 return in;
             }
 
