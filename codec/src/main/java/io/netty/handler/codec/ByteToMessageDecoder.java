@@ -281,8 +281,9 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     first = cumulation == null;
                     if (first) {
                         callDecode(ctx, data, out);
-                        if (!data.isReadable())
+                        if (!data.isReadable()) {
                             break;
+                        }
 
                         cumulation = Unpooled.EMPTY_BUFFER;
                     }
@@ -293,11 +294,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     int oldReadableBytes = cumulation.readableBytes();
                     int newReadableBytes = data.readableBytes();
                     cumulation = cumulator.cumulate(ctx.alloc(), cumulation, data);
-                    if (cumulation.readableBytes() == oldReadableBytes + newReadableBytes)
-                    {
+                    if (cumulation.readableBytes() == oldReadableBytes + newReadableBytes) {
                         data = null;
-                        if (first)
+                        if (first) {
                             break; // don't bother calling decode again if we've already passed it everything
+                        }
                     }
 
                     callDecode(ctx, data, out);
@@ -307,6 +308,20 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     }
                 } while (data != null);
             } catch (Exception e) {
+                if (data != null) {
+                    if (cumulation == null) {
+                        cumulation = data;
+                        data = null;
+                    } else {
+                        // make sure we are using a cumulator that copies all remaining bytes
+                        Cumulator cumulator = this.cumulator;
+                        if (cumulator != COMPOSITE_CUMULATOR) {
+                            cumulator = MERGE_CUMULATOR;
+                        }
+                        cumulation = cumulator.cumulate(ctx.alloc(), cumulation, data);
+                        data = null;
+                    }
+                }
                 if (e instanceof DecoderException)
                     throw e;
                 throw new DecoderException(e);
