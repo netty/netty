@@ -1250,7 +1250,7 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     public final void deallocate() {
         // this is to avoid overriding isAccessible(), so that it can be
         // final in AbstractReferenceCountedByteBuf
-        maxCapacity(-1);
+        maxCapacity(-rawMaxCapacity());
         wrapped.deallocate();
     }
 

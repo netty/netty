@@ -94,11 +94,16 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public int maxCapacity() {
-        return maxCapacity;
+        return Math.abs(maxCapacity);
     }
 
     protected final void maxCapacity(int maxCapacity) {
         this.maxCapacity = maxCapacity;
+    }
+
+    // used only by AbstractRefCountedByteBuf
+    final int rawMaxCapacity() {
+        return maxCapacity;
     }
 
     @Override
@@ -280,16 +285,17 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (minWritableBytes <= writableBytes()) {
             return;
         }
+        int maxCap = maxCapacity();
         if (checkBounds) {
-            if (minWritableBytes > maxCapacity - writerIndex) {
+            if (minWritableBytes > maxCap - writerIndex) {
                 throw new IndexOutOfBoundsException(String.format(
                         "writerIndex(%d) + minWritableBytes(%d) exceeds maxCapacity(%d): %s",
-                        writerIndex, minWritableBytes, maxCapacity, this));
+                        writerIndex, minWritableBytes, maxCap, this));
             }
         }
 
         // Normalize the current capacity to the power of 2.
-        int newCapacity = alloc().calculateNewCapacity(writerIndex + minWritableBytes, maxCapacity);
+        int newCapacity = alloc().calculateNewCapacity(writerIndex + minWritableBytes, maxCap);
 
         // Adjust to the new capacity.
         capacity(newCapacity);
@@ -861,7 +867,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
             return Unpooled.EMPTY_BUFFER;
         }
 
-        ByteBuf buf = alloc().buffer(length, maxCapacity);
+        ByteBuf buf = alloc().buffer(length, maxCapacity());
         buf.writeBytes(this, readerIndex, length);
         readerIndex += length;
         return buf;
@@ -1353,8 +1359,9 @@ public abstract class AbstractByteBuf extends ByteBuf {
             .append("(ridx: ").append(readerIndex)
             .append(", widx: ").append(writerIndex)
             .append(", cap: ").append(capacity());
-        if (maxCapacity != Integer.MAX_VALUE) {
-            buf.append('/').append(maxCapacity);
+        int maxCap = maxCapacity();
+        if (maxCap != Integer.MAX_VALUE) {
+            buf.append('/').append(maxCap);
         }
 
         ByteBuf unwrapped = unwrap();
@@ -1376,10 +1383,6 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     private static void checkRangeBounds(final int index, final int fieldLength, final int capacity) {
         if (isOutOfBounds(index, fieldLength, capacity)) {
-            if (capacity == -1) {
-                // special case: negative capacity implies buffer is deallocated
-                throw new IllegalReferenceCountException(0);
-            }
             throw new IndexOutOfBoundsException(String.format(
                     "index: %d, length: %d (expected: range(0, %d))", index, fieldLength, capacity));
         }
