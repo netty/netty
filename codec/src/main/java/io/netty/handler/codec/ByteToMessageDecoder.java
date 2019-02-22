@@ -280,11 +280,18 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 do {
                     first = cumulation == null;
                     if (first) {
-                        callDecode(ctx, data, out);
-                        if (!data.isReadable()) {
+                        // transfer data ownership to cumulation, so other methods have access to it
+                        cumulation = data;
+                        data = null;
+
+                        callDecode(ctx, cumulation, out);
+                        if (cumulation == null || !cumulation.isReadable()) {
                             break;
                         }
 
+                        // if we still have data to read, take ownership again so that the cumulator
+                        // can choose whether to keep the input buffer or copy it to a new one
+                        data = cumulation;
                         cumulation = Unpooled.EMPTY_BUFFER;
                     }
 
@@ -301,7 +308,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                         }
                     }
 
-                    callDecode(ctx, data, out);
+                    callDecode(ctx, cumulation, out);
                     if (!cumulation.isReadable()) {
                         cumulation.release();
                         cumulation = null;
