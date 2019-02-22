@@ -77,6 +77,10 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     public static final Cumulator MERGE_CUMULATOR = new Cumulator() {
         @Override
         public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
+            if (!cumulation.isReadable()) {
+                return in;
+            }
+
             try {
                 final ByteBuf buffer;
                 if (cumulation.writerIndex() > cumulation.maxCapacity() - in.readableBytes()
@@ -110,6 +114,10 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     public static final Cumulator COMPOSITE_CUMULATOR = new Cumulator() {
         @Override
         public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
+            if (!cumulation.isReadable()) {
+                return in;
+            }
+
             ByteBuf buffer;
             try {
                 if (cumulation.refCnt() > 1) {
@@ -267,20 +275,45 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof ByteBuf) {
             CodecOutputList out = CodecOutputList.newInstance();
+            ByteBuf data = (ByteBuf) msg;
             try {
-                ByteBuf data = (ByteBuf) msg;
-                first = cumulation == null;
-                if (first) {
-                    cumulation = data;
-                } else {
+                do {
+                    first = cumulation == null;
+                    if (first) {
+                        callDecode(ctx, data, out);
+                        if (!data.isReadable())
+                            break;
+
+                        cumulation = Unpooled.EMPTY_BUFFER;
+                    }
+
+                    // we permit our cumulators to be smart, and guarantee exactly one message's worth of data is buffered
+                    // before we switch back to using the input buffer, so that if we are waiting for a message of known size
+                    // we can allocate an accurately sized buffer, and read any remaining messages without copying or composing
+                    int oldReadableBytes = cumulation.readableBytes();
+                    int newReadableBytes = data.readableBytes();
                     cumulation = cumulator.cumulate(ctx.alloc(), cumulation, data);
-                }
-                callDecode(ctx, cumulation, out);
-            } catch (DecoderException e) {
-                throw e;
+                    if (cumulation.readableBytes() == oldReadableBytes + newReadableBytes)
+                    {
+                        data = null;
+                        if (first)
+                            break; // don't bother calling decode again if we've already passed it everything
+                    }
+
+                    callDecode(ctx, data, out);
+                    if (!cumulation.isReadable()) {
+                        cumulation.release();
+                        cumulation = null;
+                    }
+                } while (data != null);
             } catch (Exception e) {
+                if (e instanceof DecoderException)
+                    throw e;
                 throw new DecoderException(e);
             } finally {
+                if (data != null) {
+                    data.release();
+                }
                 if (cumulation != null && !cumulation.isReadable()) {
                     numReads = 0;
                     cumulation.release();
@@ -540,6 +573,16 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
          * Cumulate the given {@link ByteBuf}s and return the {@link ByteBuf} that holds the cumulated bytes.
          * The implementation is responsible to correctly handle the life-cycle of the given {@link ByteBuf}s and so
          * call {@link ByteBuf#release()} if a {@link ByteBuf} is fully consumed.
+         *
+         * It is not required that all bytes from in make it to the result, so long as at least one message can be
+         * successfully decoded from the resulting buffer.  If this happens, cumulate will be called again after
+         * decode has been called on the result, successively, until we have attempted to decode the entirety of {@code in}.
+         * Once all of the bytes have been propagated, the lifetime of {@code in} is in the hands of the {@link Cumulator}.
+         *
+         * @param cumulation if no readable bytes, we must return a buffer fully containing {@code in}
+         * @param in the bytes from this buffer must be at least partially propagated to the output {@link ByteBuf};
+         *           it must be guaranteed that at least one message can be decoded from the result, or that
+         *           all of the input data is propagated.  If {@code cumulation} is empty, all of {@code in} should be propagated.
          */
         ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in);
     }
