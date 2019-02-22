@@ -1035,7 +1035,7 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
-    boolean isAccessible() {
+    final boolean isAccessible() {
         return buf.isAccessible();
     }
 }
