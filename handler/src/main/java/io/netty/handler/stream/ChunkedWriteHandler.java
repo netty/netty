@@ -166,25 +166,28 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
             Object message = currentWrite.msg;
             if (message instanceof ChunkedInput) {
                 ChunkedInput<?> in = (ChunkedInput<?>) message;
+                boolean endOfInput;
+                long inputLength;
                 try {
-                    // read state of the input in local variables before closing it
-                    boolean endOfInput = in.isEndOfInput();
-                    long inputLength = in.length();
+                    endOfInput = in.isEndOfInput();
+                    inputLength = in.length();
                     closeInput(in);
-                    if (!endOfInput) {
-                        if (cause == null) {
-                            cause = new ClosedChannelException();
-                        }
-                        currentWrite.fail(cause);
-                    } else {
-                        currentWrite.success(inputLength);
-                    }
                 } catch (Exception e) {
                     closeInput(in);
                     currentWrite.fail(e);
                     if (logger.isWarnEnabled()) {
                         logger.warn(ChunkedInput.class.getSimpleName() + " failed", e);
                     }
+                    continue;
+                }
+
+                if (!endOfInput) {
+                    if (cause == null) {
+                        cause = new ClosedChannelException();
+                    }
+                    currentWrite.fail(cause);
+                } else {
+                    currentWrite.success(inputLength);
                 }
             } else {
                 if (cause == null) {
