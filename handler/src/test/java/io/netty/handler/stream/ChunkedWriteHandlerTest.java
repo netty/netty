@@ -21,8 +21,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -33,9 +33,11 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.util.concurrent.TimeUnit.*;
 import static org.junit.Assert.*;
 
 public class ChunkedWriteHandlerTest {
@@ -466,6 +468,106 @@ public class ChunkedWriteHandlerTest {
         }
 
         assertTrue(input.isClosed());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testWriteListenerInvokedAfterSuccessfulChunkedInputClosed() throws Exception {
+        final TestChunkedInput input = new TestChunkedInput(2);
+        EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
+
+        final AtomicBoolean inputClosedWhenListenerInvoked = new AtomicBoolean();
+        final CountDownLatch listenerInvoked = new CountDownLatch(1);
+
+        ChannelFuture writeFuture = ch.write(input);
+        writeFuture.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                inputClosedWhenListenerInvoked.set(input.isClosed());
+                listenerInvoked.countDown();
+            }
+        });
+        ch.flush();
+
+        assertTrue(listenerInvoked.await(10, SECONDS));
+        assertTrue(writeFuture.isSuccess());
+        assertTrue(inputClosedWhenListenerInvoked.get());
+        assertTrue(ch.finishAndReleaseAll());
+    }
+
+    @Test
+    public void testWriteListenerInvokedAfterFailedChunkedInputClosed() throws Exception {
+        final ThrowingChunkedInput input = new ThrowingChunkedInput(new RuntimeException());
+        EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
+
+        final AtomicBoolean inputClosedWhenListenerInvoked = new AtomicBoolean();
+        final CountDownLatch listenerInvoked = new CountDownLatch(1);
+
+        ChannelFuture writeFuture = ch.write(input);
+        writeFuture.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                inputClosedWhenListenerInvoked.set(input.isClosed());
+                listenerInvoked.countDown();
+            }
+        });
+        ch.flush();
+
+        assertTrue(listenerInvoked.await(10, SECONDS));
+        assertFalse(writeFuture.isSuccess());
+        assertTrue(inputClosedWhenListenerInvoked.get());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testWriteListenerInvokedAfterChannelClosedAndInputFullyConsumed() throws Exception {
+        // use empty input which has endOfInput = true
+        final TestChunkedInput input = new TestChunkedInput(0);
+        EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
+
+        final AtomicBoolean inputClosedWhenListenerInvoked = new AtomicBoolean();
+        final CountDownLatch listenerInvoked = new CountDownLatch(1);
+
+        ChannelFuture writeFuture = ch.write(input);
+        writeFuture.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                inputClosedWhenListenerInvoked.set(input.isClosed());
+                listenerInvoked.countDown();
+            }
+        });
+        ch.close(); // close channel to make handler discard the input on subsequent flush
+        ch.flush();
+
+        assertTrue(listenerInvoked.await(10, SECONDS));
+        assertTrue(writeFuture.isSuccess());
+        assertTrue(inputClosedWhenListenerInvoked.get());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testWriteListenerInvokedAfterChannelClosedAndInputNotFullyConsumed() throws Exception {
+        // use non-empty input which has endOfInput = false
+        final TestChunkedInput input = new TestChunkedInput(42);
+        EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
+
+        final AtomicBoolean inputClosedWhenListenerInvoked = new AtomicBoolean();
+        final CountDownLatch listenerInvoked = new CountDownLatch(1);
+
+        ChannelFuture writeFuture = ch.write(input);
+        writeFuture.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                inputClosedWhenListenerInvoked.set(input.isClosed());
+                listenerInvoked.countDown();
+            }
+        });
+        ch.close(); // close channel to make handler discard the input on subsequent flush
+        ch.flush();
+
+        assertTrue(listenerInvoked.await(10, SECONDS));
+        assertFalse(writeFuture.isSuccess());
+        assertTrue(inputClosedWhenListenerInvoked.get());
         assertFalse(ch.finish());
     }
 
