@@ -124,35 +124,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read attempt on a
         // socket which has not even been connected yet. This has been observed to block during unit tests.
         inputClosedSeenErrorOnRead = true;
-        try {
-            if (isRegistered()) {
-                // The FD will be closed, which should take care of deleting any associated events from kqueue, but
-                // since we rely upon jniSelfRef to be consistent we make sure that we clear this reference out for
-                // all events which are pending in kqueue to avoid referencing a deleted pointer at a later time.
-
-                // Need to check if we are on the EventLoop as doClose() may be triggered by the GlobalEventExecutor
-                // if SO_LINGER is used.
-                //
-                // See https://github.com/netty/netty/issues/7159
-                EventLoop loop = eventLoop();
-                if (loop.inEventLoop()) {
-                    doDeregister();
-                } else {
-                    loop.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                doDeregister();
-                            } catch (Throwable cause) {
-                                pipeline().fireExceptionCaught(cause);
-                            }
-                        }
-                    });
-                }
-            }
-        } finally {
-            socket.close();
-        }
+        socket.close();
     }
 
     @Override
