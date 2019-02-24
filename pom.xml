@@ -14,1345 +14,1374 @@
   ~ License for the specific language governing permissions and limitations
   ~ under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
-  <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>org.sonatype.oss</groupId>
-    <artifactId>oss-parent</artifactId>
-    <version>9</version>
-  </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.sonatype.oss</groupId>
+        <artifactId>oss-parent</artifactId>
+        <version>9</version>
+    </parent>
 
-  <groupId>io.netty</groupId>
-  <artifactId>netty-parent</artifactId>
-  <packaging>pom</packaging>
-  <version>4.1.23.Final-SNAPSHOT</version>
+    <groupId>io.netty</groupId>
+    <artifactId>netty-parent</artifactId>
+    <packaging>pom</packaging>
+    <version>4.1.23.Final-SNAPSHOT</version>
 
-  <name>Netty</name>
-  <url>http://netty.io/</url>
-  <description>
-    Netty is an asynchronous event-driven network application framework for
-    rapid development of maintainable high performance protocol servers and
-    clients.
-  </description>
-
-  <organization>
-    <name>The Netty Project</name>
+    <name>Netty</name>
     <url>http://netty.io/</url>
-  </organization>
+    <description>
+        Netty is an asynchronous event-driven network application framework for
+        rapid development of maintainable high performance protocol servers and
+        clients.
+    </description>
 
-  <licenses>
-    <license>
-      <name>Apache License, Version 2.0</name>
-      <url>http://www.apache.org/licenses/LICENSE-2.0</url>
-    </license>
-  </licenses>
-  <inceptionYear>2008</inceptionYear>
+    <organization>
+        <name>The Netty Project</name>
+        <url>http://netty.io/</url>
+    </organization>
 
-  <scm>
-    <url>https://github.com/netty/netty</url>
-    <connection>scm:git:git://github.com/netty/netty.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/netty/netty.git</developerConnection>
-    <tag>HEAD</tag>
-  </scm>
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+        </license>
+    </licenses>
+    <inceptionYear>2008</inceptionYear>
 
-  <developers>
-    <developer>
-      <id>netty.io</id>
-      <name>The Netty Project Contributors</name>
-      <email>netty@googlegroups.com</email>
-      <url>http://netty.io/</url>
-      <organization>The Netty Project</organization>
-      <organizationUrl>http://netty.io/</organizationUrl>
-    </developer>
-  </developers>
+    <scm>
+        <url>https://github.com/netty/netty</url>
+        <connection>scm:git:git://github.com/netty/netty.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/netty/netty.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
 
-  <profiles>
-    <!-- JDK9 -->
-    <profile>
-      <id>java9</id>
-      <properties>
-        <argLine.java9.extras />
-        <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--add-modules java.xml.bind ${argLine.java9.extras}</argLine.java9>
-        <!-- Not use alpn agent as Java9 supports alpn out of the box -->
-        <argLine.alpnAgent />
-        <!-- Skip as maven plugin not works with Java9 yet --> 
-        <skipOsgiTestsuite>true</skipOsgiTestsuite>
-        <forbiddenapis.skip>true</forbiddenapis.skip>
-        <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
-        <enforcer.plugin.version>3.0.0-M1</enforcer.plugin.version>
-      </properties>
-      <activation>
-        <jdk>9</jdk>
-      </activation>
-    </profile>
+    <developers>
+        <developer>
+            <id>netty.io</id>
+            <name>The Netty Project Contributors</name>
+            <email>netty@googlegroups.com</email>
+            <url>http://netty.io/</url>
+            <organization>The Netty Project</organization>
+            <organizationUrl>http://netty.io/</organizationUrl>
+        </developer>
+    </developers>
 
-    <profile>
-      <id>leak</id>
-      <properties>
-        <argLine.leak>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.maxRecords=32</argLine.leak>
-      </properties>
-    </profile>
-    <profile>
-      <id>noPrintGC</id>
-      <properties>
-        <argLine.printGC>-D_</argLine.printGC>
-      </properties>
-    </profile>
-    <profile>
-      <id>noUnsafe</id>
-      <properties>
-        <argLine.noUnsafe>-Dio.netty.noUnsafe</argLine.noUnsafe>
-      </properties>
-    </profile>
-    <profile>
-      <id>coverage</id>
-      <properties>
-        <argLine.coverage>${jacoco.argLine}</argLine.coverage>
-      </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.jacoco</groupId>
-            <artifactId>jacoco-maven-plugin</artifactId>
-            <version>0.7.7.201606060606</version>
-            <executions>
-              <execution>
-                <id>jacoco-prepare-agent</id>
-                <goals>
-                  <goal>prepare-agent</goal>
-                </goals>
-                <configuration>
-                  <propertyName>jacoco.argLine</propertyName>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>jdk8</id>
-      <activation>
-        <jdk>[1.8,)</jdk>
-      </activation>
-      <properties>
-        <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
-        <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
-      </properties>
-    </profile>
-    <profile>
-      <!--
-      This profile exists because either ALPN or NPN can exits on the class path at once, but not both.
-      The JDK version is typically used to distinguish which should be used but there is some overlap
-      where both could be used.  ALPN is the default and this profile is enabled with a -Dforcenpn=true arugument
-      -->
-      <id>forcenpn</id>
-      <activation>
-        <property>
-          <name>forcenpn</name>
-          <value>true</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpnAgent.option>forceNpn=true</jetty.alpnAgent.option>
-      </properties>
-    </profile>
-  </profiles>
+    <profiles>
+        <!-- JDK9 -->
+        <profile>
+            <id>java9</id>
+            <properties>
+                <argLine.java9.extras/>
+                <!-- Export some stuff which is used during our tests -->
+                <argLine.java9>--add-modules java.xml.bind ${argLine.java9.extras}</argLine.java9>
+                <!-- Not use alpn agent as Java9 supports alpn out of the box -->
+                <argLine.alpnAgent/>
+                <!-- Skip as maven plugin not works with Java9 yet -->
+                <skipOsgiTestsuite>true</skipOsgiTestsuite>
+                <forbiddenapis.skip>true</forbiddenapis.skip>
+                <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
+                <enforcer.plugin.version>3.0.0-M1</enforcer.plugin.version>
+            </properties>
+            <activation>
+                <jdk>9</jdk>
+            </activation>
+        </profile>
 
-  <properties>
-    <maven.compiler.source>1.6</maven.compiler.source>
-    <maven.compiler.target>1.6</maven.compiler.target>
-    <netty.dev.tools.directory>${project.build.directory}/dev-tools</netty.dev.tools.directory>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <netty.build.version>22</netty.build.version>
-    <jboss.marshalling.version>1.4.11.Final</jboss.marshalling.version>
-    <jetty.alpnAgent.version>2.0.7</jetty.alpnAgent.version>
-    <jetty.alpnAgent.path>"${settings.localRepository}"/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
-    <argLine.common>
-      -server
-      -dsa -da -ea:io.netty...
-      -XX:+AggressiveOpts
-      -XX:+TieredCompilation
-      -XX:+UseBiasedLocking
-      -XX:+UseFastAccessorMethods
-      -XX:+OptimizeStringConcat
-      -XX:+HeapDumpOnOutOfMemoryError
-    </argLine.common>
-    <!-- Default to ALPN. See forcenpn profile to force NPN -->
-    <argLine.alpnAgent>-javaagent:${jetty.alpnAgent.path}=${jetty.alpnAgent.option}</argLine.alpnAgent>
-    <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
-    <argLine.noUnsafe>-D_</argLine.noUnsafe> <!-- Overridden when 'noUnsafe' profile is active -->
-    <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
-    <argLine.printGC>-XX:+PrintGCDetails</argLine.printGC>
-    <argLine.java9 /> <!-- Overridden when 'java9' profile is active -->
-    <argLine.javaProperties>-D_</argLine.javaProperties>
-    <!-- Configure the os-maven-plugin extension to expand the classifier on                  -->
-    <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
-    <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
-    <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
-    <tcnative.version>2.0.7.Final</tcnative.version>
-    <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
-    <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
-    <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
-    <conscrypt.version>1.0.0</conscrypt.version>
-    <conscrypt.classifier />
-    <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
-    <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
-    <logging.logLevel>debug</logging.logLevel>
-    <log4j2.version>2.6.2</log4j2.version>
-    <enforcer.plugin.version>1.4.1</enforcer.plugin.version>
-    <testJavaHome>${env.JAVA_HOME}</testJavaHome>
-    <skipOsgiTestsuite>false</skipOsgiTestsuite>
-    <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
-    <skipHttp2Testsuite>false</skipHttp2Testsuite>
-  </properties>
+        <profile>
+            <id>leak</id>
+            <properties>
+                <argLine.leak>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.maxRecords=32
+                </argLine.leak>
+            </properties>
+        </profile>
+        <profile>
+            <id>noPrintGC</id>
+            <properties>
+                <argLine.printGC>-D_</argLine.printGC>
+            </properties>
+        </profile>
+        <profile>
+            <id>noUnsafe</id>
+            <properties>
+                <argLine.noUnsafe>-Dio.netty.noUnsafe</argLine.noUnsafe>
+            </properties>
+        </profile>
+        <profile>
+            <id>coverage</id>
+            <properties>
+                <argLine.coverage>${jacoco.argLine}</argLine.coverage>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>0.7.7.201606060606</version>
+                        <executions>
+                            <execution>
+                                <id>jacoco-prepare-agent</id>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                                <configuration>
+                                    <propertyName>jacoco.argLine</propertyName>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>jdk8</id>
+            <activation>
+                <jdk>[1.8,)</jdk>
+            </activation>
+            <properties>
+                <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
+                <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
+            </properties>
+        </profile>
+        <profile>
+            <!--
+            This profile exists because either ALPN or NPN can exits on the class path at once, but not both.
+            The JDK version is typically used to distinguish which should be used but there is some overlap
+            where both could be used.  ALPN is the default and this profile is enabled with a -Dforcenpn=true arugument
+            -->
+            <id>forcenpn</id>
+            <activation>
+                <property>
+                    <name>forcenpn</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <properties>
+                <jetty.alpnAgent.option>forceNpn=true</jetty.alpnAgent.option>
+            </properties>
+        </profile>
+    </profiles>
 
-  <modules>
-    <module>all</module>
-    <module>dev-tools</module>
-    <module>common</module>
-    <module>buffer</module>
-    <module>codec</module>
-    <module>codec-dns</module>
-    <module>codec-haproxy</module>
-    <module>codec-http</module>
-    <module>codec-http2</module>
-    <module>codec-memcache</module>
-    <module>codec-mqtt</module>
-    <module>codec-redis</module>
-    <module>codec-smtp</module>
-    <module>codec-socks</module>
-    <module>codec-stomp</module>
-    <module>codec-xml</module>
-    <module>resolver</module>
-    <module>resolver-dns</module>
-    <module>tarball</module>
-    <module>transport</module>
-    <module>transport-native-unix-common-tests</module>
-    <module>transport-native-unix-common</module>
-    <module>transport-native-epoll</module>
-    <module>transport-native-kqueue</module>
-    <module>transport-rxtx</module>
-    <module>transport-sctp</module>
-    <module>transport-udt</module>
-    <module>handler</module>
-    <module>handler-proxy</module>
-    <module>example</module>
-    <module>testsuite</module>
-    <module>testsuite-autobahn</module>
-    <module>testsuite-http2</module>
-    <module>testsuite-osgi</module>
-    <module>microbench</module>
-    <module>bom</module>
-  </modules>
+    <properties>
+        <maven.compiler.source>1.6</maven.compiler.source>
+        <maven.compiler.target>1.6</maven.compiler.target>
+        <netty.dev.tools.directory>${project.build.directory}/dev-tools</netty.dev.tools.directory>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <netty.build.version>22</netty.build.version>
+        <jboss.marshalling.version>1.4.11.Final</jboss.marshalling.version>
+        <jetty.alpnAgent.version>2.0.7</jetty.alpnAgent.version>
+        <jetty.alpnAgent.path>
+            "${settings.localRepository}"/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar
+        </jetty.alpnAgent.path>
+        <argLine.common>
+            -server
+            -dsa -da -ea:io.netty...
+            -XX:+AggressiveOpts
+            -XX:+TieredCompilation
+            -XX:+UseBiasedLocking
+            -XX:+UseFastAccessorMethods
+            -XX:+OptimizeStringConcat
+            -XX:+HeapDumpOnOutOfMemoryError
+        </argLine.common>
+        <!-- Default to ALPN. See forcenpn profile to force NPN -->
+        <argLine.alpnAgent>-javaagent:${jetty.alpnAgent.path}=${jetty.alpnAgent.option}</argLine.alpnAgent>
+        <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
+        <argLine.noUnsafe>-D_</argLine.noUnsafe> <!-- Overridden when 'noUnsafe' profile is active -->
+        <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
+        <argLine.printGC>-XX:+PrintGCDetails</argLine.printGC>
+        <argLine.java9/> <!-- Overridden when 'java9' profile is active -->
+        <argLine.javaProperties>-D_</argLine.javaProperties>
+        <!-- Configure the os-maven-plugin extension to expand the classifier on                  -->
+        <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
+        <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
+        <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
+        <tcnative.version>2.0.7.Final</tcnative.version>
+        <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
+        <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
+        <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
+        <conscrypt.version>1.0.0</conscrypt.version>
+        <conscrypt.classifier/>
+        <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
+        <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
+        <logging.logLevel>debug</logging.logLevel>
+        <log4j2.version>2.6.2</log4j2.version>
+        <enforcer.plugin.version>1.4.1</enforcer.plugin.version>
+        <testJavaHome>${env.JAVA_HOME}</testJavaHome>
+        <skipOsgiTestsuite>false</skipOsgiTestsuite>
+        <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
+        <skipHttp2Testsuite>false</skipHttp2Testsuite>
+    </properties>
 
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>netty-dev-tools</artifactId>
-        <version>${project.version}</version>
-      </dependency>
+    <modules>
+        <module>all</module>
+        <module>dev-tools</module>
+        <module>common</module>
+        <module>buffer</module>
+        <module>codec</module>
+        <module>codec-dns</module>
+        <module>codec-haproxy</module>
+        <module>codec-http</module>
+        <module>codec-http2</module>
+        <module>codec-memcache</module>
+        <module>codec-mqtt</module>
+        <module>codec-redis</module>
+        <module>codec-smtp</module>
+        <module>codec-socks</module>
+        <module>codec-stomp</module>
+        <module>codec-xml</module>
+        <module>resolver</module>
+        <module>resolver-dns</module>
+        <module>tarball</module>
+        <module>transport</module>
+        <module>transport-native-unix-common-tests</module>
+        <module>transport-native-unix-common</module>
+        <module>transport-native-epoll</module>
+        <module>transport-native-kqueue</module>
+        <module>transport-rxtx</module>
+        <module>transport-sctp</module>
+        <module>transport-udt</module>
+        <module>handler</module>
+        <module>handler-proxy</module>
+        <module>example</module>
+        <module>testsuite</module>
+        <module>testsuite-autobahn</module>
+        <module>testsuite-http2</module>
+        <module>testsuite-osgi</module>
+        <module>microbench</module>
+        <module>bom</module>
+        <module>mercury</module>
+    </modules>
 
-      <!-- Byte code generator - completely optional -->
-      <dependency>
-        <groupId>org.javassist</groupId>
-        <artifactId>javassist</artifactId>
-        <version>3.20.0-GA</version>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
-
-      <!-- JBoss Marshalling - completely optional -->
-      <dependency>
-        <groupId>org.jboss.marshalling</groupId>
-        <artifactId>jboss-marshalling</artifactId>
-        <version>${jboss.marshalling.version}</version>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
-
-      <!-- SPDY and HTTP/2 - completely optional -->
-      <dependency>
-        <groupId>org.eclipse.jetty.npn</groupId>
-        <artifactId>npn-api</artifactId>
-        <version>1.1.1.v20141010</version>
-        <scope>provided</scope> <!-- Provided by npn-boot -->
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty.alpn</groupId>
-        <artifactId>alpn-api</artifactId>
-        <version>1.1.2.v20150522</version>
-        <scope>provided</scope> <!-- Provided by alpn-boot -->
-      </dependency>
-
-      <!-- Google Protocol Buffers - completely optional -->
-      <dependency>
-        <groupId>com.google.protobuf</groupId>
-        <artifactId>protobuf-java</artifactId>
-        <version>2.6.1</version>
-      </dependency>
-      <dependency>
-        <groupId>com.google.protobuf.nano</groupId>
-        <artifactId>protobuf-javanano</artifactId>
-        <version>3.0.0-alpha-5</version>
-      </dependency>
-
-      <!-- Our own Tomcat Native fork - completely optional, used for accelerating SSL with OpenSSL. -->
-      <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>${tcnative.artifactId}</artifactId>
-        <version>${tcnative.version}</version>
-        <classifier>${tcnative.classifier}</classifier>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
-
-      <!-- Conscrypt - needed for running tests, used for acclerating SSL with OpenSSL. -->
-      <dependency>
-        <groupId>${conscrypt.groupId}</groupId>
-        <artifactId>${conscrypt.artifactId}</artifactId>
-        <classifier>${conscrypt.classifier}</classifier>
-        <version>${conscrypt.version}</version>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
-
-      <!--
-        Bouncy Castle - completely optional, only needed when:
-        - you generate a temporary self-signed certificate using SelfSignedCertificate, and
-        - you don't use the JDK which doesn't provide sun.security.x509 package.
-      -->
-      <dependency>
-        <groupId>org.bouncycastle</groupId>
-        <artifactId>bcpkix-jdk15on</artifactId>
-        <version>1.54</version>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
-
-      <!-- 
-        Completely optional and only needed for OCSP stapling to construct and
-        parse OCSP requests and responses.
-      -->
-      <dependency>
-        <groupId>org.bouncycastle</groupId>
-        <artifactId>bcprov-jdk15on</artifactId>
-        <version>1.54</version>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
-
-      <dependency>
-        <groupId>com.fasterxml</groupId>
-        <artifactId>aalto-xml</artifactId>
-        <version>1.0.0</version>
-      </dependency>
-
-      <dependency>
-        <groupId>com.jcraft</groupId>
-        <artifactId>jzlib</artifactId>
-        <version>1.1.3</version>
-      </dependency>
-      <dependency>
-        <groupId>com.ning</groupId>
-        <artifactId>compress-lzf</artifactId>
-        <version>1.0.3</version>
-      </dependency>
-      <dependency>
-        <groupId>net.jpountz.lz4</groupId>
-        <artifactId>lz4</artifactId>
-        <version>1.3.0</version>
-      </dependency>
-      <dependency>
-        <groupId>com.github.jponge</groupId>
-        <artifactId>lzma-java</artifactId>
-        <version>1.3</version>
-      </dependency>
-
-      <!-- Java concurrency tools for the JVM -->
-      <dependency>
-        <groupId>org.jctools</groupId>
-        <artifactId>jctools-core</artifactId>
-        <version>2.1.1</version>
-      </dependency>
-
-      <dependency>
-        <groupId>org.rxtx</groupId>
-        <artifactId>rxtx</artifactId>
-        <version>2.1.7</version>
-      </dependency>
-
-      <dependency>
-        <groupId>com.barchart.udt</groupId>
-        <artifactId>barchart-udt-bundle</artifactId>
-        <version>2.3.0</version>
-      </dependency>
-
-      <dependency>
-        <groupId>javax.servlet</groupId>
-        <artifactId>servlet-api</artifactId>
-        <version>2.5</version>
-      </dependency>
-
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
-        <version>1.7.21</version>
-      </dependency>
-      <dependency>
-        <groupId>commons-logging</groupId>
-        <artifactId>commons-logging</artifactId>
-        <version>1.2</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-api</artifactId>
-        <version>${log4j2.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>log4j</groupId>
-        <artifactId>log4j</artifactId>
-        <version>1.2.17</version>
-        <exclusions>
-          <exclusion>
-            <artifactId>mail</artifactId>
-            <groupId>javax.mail</groupId>
-          </exclusion>
-          <exclusion>
-            <artifactId>jms</artifactId>
-            <groupId>javax.jms</groupId>
-          </exclusion>
-          <exclusion>
-            <artifactId>jmxtools</artifactId>
-            <groupId>com.sun.jdmk</groupId>
-          </exclusion>
-          <exclusion>
-            <artifactId>jmxri</artifactId>
-            <groupId>com.sun.jmx</groupId>
-          </exclusion>
-        </exclusions>
-        <optional>true</optional>
-      </dependency>
-
-      <!-- Metrics providers -->
-      <dependency>
-        <groupId>com.yammer.metrics</groupId>
-        <artifactId>metrics-core</artifactId>
-        <version>2.2.0</version>
-      </dependency>
-
-      <!-- Common test dependencies -->
-      <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>4.12</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>netty-build</artifactId>
-        <version>${netty.build.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.hamcrest</groupId>
-        <artifactId>hamcrest-library</artifactId>
-        <version>1.3</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.mockito</groupId>
-        <artifactId>mockito-core</artifactId>
-        <version>2.7.2</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback-classic</artifactId>
-        <version>1.1.7</version>
-        <scope>test</scope>
-      </dependency>
-
-      <!-- Test dependencies for jboss marshalling encoder/decoder -->
-      <dependency>
-        <groupId>org.jboss.marshalling</groupId>
-        <artifactId>jboss-marshalling-serial</artifactId>
-        <version>${jboss.marshalling.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.marshalling</groupId>
-        <artifactId>jboss-marshalling-river</artifactId>
-        <version>${jboss.marshalling.version}</version>
-        <scope>test</scope>
-      </dependency>
-
-      <!-- Test dependencies for microbench -->
-      <dependency>
-        <groupId>com.google.caliper</groupId>
-        <artifactId>caliper</artifactId>
-        <version>0.5-rc1</version>
-        <scope>test</scope>
-      </dependency>
-
-      <!-- Test dependency for Bzip2 compression codec -->
-      <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-compress</artifactId>
-        <version>1.12</version>
-        <scope>test</scope>
-      </dependency>
-
-      <!-- Test dependency used by http/2 hpack -->
-      <dependency>
-        <groupId>com.google.code.gson</groupId>
-        <artifactId>gson</artifactId>
-        <version>2.7</version>
-        <scope>test</scope>
-      </dependency>
-
-      <!-- Test suite dependency for generating a compressed heap dump file -->
-      <dependency>
-        <groupId>org.tukaani</groupId>
-        <artifactId>xz</artifactId>
-        <version>1.5</version>
-      </dependency>
-
-      <!-- Test dependency for resolver-dns -->
-      <dependency>
-        <groupId>org.apache.directory.server</groupId>
-        <artifactId>apacheds-protocol-dns</artifactId>
-        <version>1.5.7</version>
-        <scope>test</scope>
-      </dependency>
-
-      <!-- Test dependency for log4j2 tests -->
-      <dependency>
-        <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-core</artifactId>
-        <version>${log4j2.version}</version>
-        <scope>test</scope>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
-
-  <dependencies>
-    <!-- Enable Javassist support for all test runs -->
-    <dependency>
-      <groupId>org.javassist</groupId>
-      <artifactId>javassist</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <!-- Testing frameworks and related dependencies -->
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty-build</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-library</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
-
-  <build>
-    <extensions>
-      <extension>
-        <groupId>kr.motd.maven</groupId>
-        <artifactId>os-maven-plugin</artifactId>
-        <version>1.5.0.Final</version>
-      </extension>
-    </extensions>
-
-    <plugins>
-      <plugin>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <version>${enforcer.plugin.version}</version>
-        <executions>
-          <execution>
-            <id>enforce-tools</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <requireJavaVersion>
-                  <!-- Enforce JDK 1.8+ for compilation. -->
-                  <!-- This is needed because of java.util.zip.Deflater and NIO UDP multicast. -->
-                  <version>[1.8.0,)</version>
-                </requireJavaVersion>
-                <requireMavenVersion>
-                  <version>[3.1.1,)</version>
-                </requireMavenVersion>
-                <requireProperty>
-                  <regexMessage>
-                    x86_64 JDK must be used.
-                  </regexMessage>
-                  <property>os.detected.arch</property>
-                  <regex>^x86_64$</regex>
-                </requireProperty>
-              </rules>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.6.0</version>
-        <configuration>
-          <compilerVersion>1.8</compilerVersion>
-          <fork>true</fork>
-          <source>${maven.compiler.source}</source>
-          <target>${maven.compiler.target}</target>
-          <debug>true</debug>
-          <optimize>true</optimize>
-          <showDeprecation>true</showDeprecation>
-          <showWarnings>true</showWarnings>
-          <compilerArgument>-Xlint:-options</compilerArgument>
-          <!-- XXX: maven-release-plugin complains - MRELEASE-715 -->
-          <!--
-          <compilerArguments>
-            <Xlint:-options />
-            <Xlint:unchecked />
-            <Xlint:deprecation />
-          </compilerArguments>
-          -->
-          <meminitial>256m</meminitial>
-          <maxmem>1024m</maxmem>
-          <excludes>
-            <exclude>**/package-info.java</exclude>
-          </excludes>
-        </configuration>
-      </plugin>
-      <plugin>
-        <!-- ensure that only methods available in java 1.6 can
-             be used even when compiling with java 1.7+ -->
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>animal-sniffer-maven-plugin</artifactId>
-        <version>1.16</version>
-        <configuration>
-          <signature>
-            <groupId>org.codehaus.mojo.signature</groupId>
-            <artifactId>java16</artifactId>
-            <version>1.1</version>
-          </signature>
-          <ignores>
-            <ignore>sun.misc.Unsafe</ignore>
-            <ignore>sun.misc.Cleaner</ignore>
-            <ignore>sun.nio.ch.DirectBuffer</ignore>
-
-            <ignore>java.util.zip.Deflater</ignore>
-
-            <!-- Used for NIO -->
-            <ignore>java.nio.channels.DatagramChannel</ignore>
-            <ignore>java.nio.channels.MembershipKey</ignore>
-            <ignore>java.nio.channels.ServerSocketChannel</ignore>
-            <ignore>java.nio.channels.SocketChannel</ignore>
-            <ignore>java.net.StandardProtocolFamily</ignore>
-            <ignore>java.nio.channels.spi.SelectorProvider</ignore>
-
-            <!-- Self-signed certificate generation -->
-            <ignore>sun.security.x509.AlgorithmId</ignore>
-            <ignore>sun.security.x509.CertificateAlgorithmId</ignore>
-            <ignore>sun.security.x509.CertificateIssuerName</ignore>
-            <ignore>sun.security.x509.CertificateSerialNumber</ignore>
-            <ignore>sun.security.x509.CertificateSubjectName</ignore>
-            <ignore>sun.security.x509.CertificateValidity</ignore>
-            <ignore>sun.security.x509.CertificateVersion</ignore>
-            <ignore>sun.security.x509.CertificateX509Key</ignore>
-            <ignore>sun.security.x509.X500Name</ignore>
-            <ignore>sun.security.x509.X509CertInfo</ignore>
-            <ignore>sun.security.x509.X509CertImpl</ignore>
-
-            <!-- SSLSession implementation -->
-            <ignore>javax.net.ssl.SSLEngine</ignore>
-            <ignore>javax.net.ssl.X509ExtendedTrustManager</ignore>
-            <ignore>javax.net.ssl.SSLParameters</ignore>
-            <ignore>javax.net.ssl.SNIServerName</ignore>
-            <ignore>javax.net.ssl.SNIHostName</ignore>
-            <ignore>javax.net.ssl.SNIMatcher</ignore>
-            <ignore>java.security.AlgorithmConstraints</ignore>
-            <ignore>java.security.cert.CertificateRevokedException</ignore>
-            <ignore>java.security.cert.CertPathValidatorException</ignore>
-            <ignore>java.security.cert.CertPathValidatorException$Reason</ignore>
-            <ignore>java.security.cert.CertPathValidatorException$BasicReason</ignore>
-
-            <ignore>java.util.concurrent.ConcurrentLinkedDeque</ignore>
-            <ignore>java.util.concurrent.ThreadLocalRandom</ignore>
-
-            <!-- Compression -->
-            <ignore>java.util.zip.CRC32</ignore>
-            <ignore>java.util.zip.Adler32</ignore>
-
-            <!-- NioDatagramChannel implementation -->
-            <ignore>java.net.ProtocolFamily</ignore>
-
-            <!-- JDK 9 -->
-            <ignore>java.nio.ByteBuffer</ignore>
-            <ignore>java.nio.CharBuffer</ignore>
-
-            <!-- JDK 8 -->
-            <ignore>java.util.concurrent.atomic.LongAdder</ignore>
-            <ignore>java.util.function.BiFunction</ignore>
-
-            <!-- Resolver -->
-            <ignore>java.net.InetAddress</ignore>
-
-            <!-- NoexecVolumeDetector -->
-            <ignore>java.nio.file.attribute.PosixFilePermission</ignore>
-            <ignore>java.nio.file.Files</ignore>
-            <ignore>java.nio.file.LinkOption</ignore>
-            <ignore>java.nio.file.Path</ignore>
-            <ignore>java.io.File</ignore>
-          </ignores>
-          <annotations>
-            <annotation>io.netty.util.internal.SuppressJava6Requirement</annotation>
-          </annotations>
-        </configuration>
-        <executions>
-          <execution>
-            <phase>process-classes</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>2.12.1</version>
-        <executions>
-          <execution>
-            <id>check-style</id>
-            <goals>
-              <goal>check</goal>
-            </goals>
-            <phase>validate</phase>
-            <configuration>
-              <consoleOutput>true</consoleOutput>
-              <logViolationsToConsole>true</logViolationsToConsole>
-              <failsOnError>true</failsOnError>
-              <failOnViolation>true</failOnViolation>
-              <configLocation>io/netty/checkstyle.xml</configLocation>
-              <includeTestSourceDirectory>true</includeTestSourceDirectory>
-            </configuration>
-          </execution>
-        </executions>
+    <dependencyManagement>
         <dependencies>
-          <dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>netty-dev-tools</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Byte code generator - completely optional -->
+            <dependency>
+                <groupId>org.javassist</groupId>
+                <artifactId>javassist</artifactId>
+                <version>3.20.0-GA</version>
+                <scope>compile</scope>
+                <optional>true</optional>
+            </dependency>
+
+            <!-- JBoss Marshalling - completely optional -->
+            <dependency>
+                <groupId>org.jboss.marshalling</groupId>
+                <artifactId>jboss-marshalling</artifactId>
+                <version>${jboss.marshalling.version}</version>
+                <scope>compile</scope>
+                <optional>true</optional>
+            </dependency>
+
+            <!-- SPDY and HTTP/2 - completely optional -->
+            <dependency>
+                <groupId>org.eclipse.jetty.npn</groupId>
+                <artifactId>npn-api</artifactId>
+                <version>1.1.1.v20141010</version>
+                <scope>provided</scope> <!-- Provided by npn-boot -->
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty.alpn</groupId>
+                <artifactId>alpn-api</artifactId>
+                <version>1.1.2.v20150522</version>
+                <scope>provided</scope> <!-- Provided by alpn-boot -->
+            </dependency>
+
+            <!-- Google Protocol Buffers - completely optional -->
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <version>2.6.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.protobuf.nano</groupId>
+                <artifactId>protobuf-javanano</artifactId>
+                <version>3.0.0-alpha-5</version>
+            </dependency>
+
+            <!-- Our own Tomcat Native fork - completely optional, used for accelerating SSL with OpenSSL. -->
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>${tcnative.artifactId}</artifactId>
+                <version>${tcnative.version}</version>
+                <classifier>${tcnative.classifier}</classifier>
+                <scope>compile</scope>
+                <optional>true</optional>
+            </dependency>
+
+            <!-- Conscrypt - needed for running tests, used for acclerating SSL with OpenSSL. -->
+            <dependency>
+                <groupId>${conscrypt.groupId}</groupId>
+                <artifactId>${conscrypt.artifactId}</artifactId>
+                <classifier>${conscrypt.classifier}</classifier>
+                <version>${conscrypt.version}</version>
+                <scope>compile</scope>
+                <optional>true</optional>
+            </dependency>
+
+            <!--
+              Bouncy Castle - completely optional, only needed when:
+              - you generate a temporary self-signed certificate using SelfSignedCertificate, and
+              - you don't use the JDK which doesn't provide sun.security.x509 package.
+            -->
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk15on</artifactId>
+                <version>1.54</version>
+                <scope>compile</scope>
+                <optional>true</optional>
+            </dependency>
+
+            <!--
+              Completely optional and only needed for OCSP stapling to construct and
+              parse OCSP requests and responses.
+            -->
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk15on</artifactId>
+                <version>1.54</version>
+                <scope>compile</scope>
+                <optional>true</optional>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml</groupId>
+                <artifactId>aalto-xml</artifactId>
+                <version>1.0.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.jcraft</groupId>
+                <artifactId>jzlib</artifactId>
+                <version>1.1.3</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ning</groupId>
+                <artifactId>compress-lzf</artifactId>
+                <version>1.0.3</version>
+            </dependency>
+            <dependency>
+                <groupId>net.jpountz.lz4</groupId>
+                <artifactId>lz4</artifactId>
+                <version>1.3.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.jponge</groupId>
+                <artifactId>lzma-java</artifactId>
+                <version>1.3</version>
+            </dependency>
+
+            <!-- Java concurrency tools for the JVM -->
+            <dependency>
+                <groupId>org.jctools</groupId>
+                <artifactId>jctools-core</artifactId>
+                <version>2.1.1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.rxtx</groupId>
+                <artifactId>rxtx</artifactId>
+                <version>2.1.7</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.barchart.udt</groupId>
+                <artifactId>barchart-udt-bundle</artifactId>
+                <version>2.3.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+                <version>2.5</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>1.7.21</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
+                <version>1.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-api</artifactId>
+                <version>${log4j2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>log4j</groupId>
+                <artifactId>log4j</artifactId>
+                <version>1.2.17</version>
+                <exclusions>
+                    <exclusion>
+                        <artifactId>mail</artifactId>
+                        <groupId>javax.mail</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>jms</artifactId>
+                        <groupId>javax.jms</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>jmxtools</artifactId>
+                        <groupId>com.sun.jdmk</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>jmxri</artifactId>
+                        <groupId>com.sun.jmx</groupId>
+                    </exclusion>
+                </exclusions>
+                <optional>true</optional>
+            </dependency>
+
+            <!-- Metrics providers -->
+            <dependency>
+                <groupId>com.yammer.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
+                <version>2.2.0</version>
+            </dependency>
+
+            <!-- Common test dependencies -->
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>4.12</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>netty-build</artifactId>
+                <version>${netty.build.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.hamcrest</groupId>
+                <artifactId>hamcrest-library</artifactId>
+                <version>1.3</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>2.7.2</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>1.1.7</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- Test dependencies for jboss marshalling encoder/decoder -->
+            <dependency>
+                <groupId>org.jboss.marshalling</groupId>
+                <artifactId>jboss-marshalling-serial</artifactId>
+                <version>${jboss.marshalling.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.jboss.marshalling</groupId>
+                <artifactId>jboss-marshalling-river</artifactId>
+                <version>${jboss.marshalling.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- Test dependencies for microbench -->
+            <dependency>
+                <groupId>com.google.caliper</groupId>
+                <artifactId>caliper</artifactId>
+                <version>0.5-rc1</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- Test dependency for Bzip2 compression codec -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>1.12</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- Test dependency used by http/2 hpack -->
+            <dependency>
+                <groupId>com.google.code.gson</groupId>
+                <artifactId>gson</artifactId>
+                <version>2.7</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- Test suite dependency for generating a compressed heap dump file -->
+            <dependency>
+                <groupId>org.tukaani</groupId>
+                <artifactId>xz</artifactId>
+                <version>1.5</version>
+            </dependency>
+
+            <!-- Test dependency for resolver-dns -->
+            <dependency>
+                <groupId>org.apache.directory.server</groupId>
+                <artifactId>apacheds-protocol-dns</artifactId>
+                <version>1.5.7</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- Test dependency for log4j2 tests -->
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-core</artifactId>
+                <version>${log4j2.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- Enable Javassist support for all test runs -->
+        <dependency>
+            <groupId>org.javassist</groupId>
+            <artifactId>javassist</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Testing frameworks and related dependencies -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>netty-build</artifactId>
-            <version>${netty.build.version}</version>
-          </dependency>
-        </dependencies>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>xml-maven-plugin</artifactId>
-        <version>1.0.1</version>
-        <executions>
-          <execution>
-            <id>check-style</id>
-            <goals>
-              <goal>check-format</goal>
-            </goals>
-            <phase>validate</phase>
-          </execution>
-        </executions>
-        <configuration>
-          <formatFileSets>
-            <formatFileSet>
-              <directory>${project.basedir}</directory>
-              <includes>
-                <include>**/pom.xml</include>
-              </includes>
-            </formatFileSet>
-          </formatFileSets>
-          <useDefaultFormatFileSet>false</useDefaultFormatFileSet>
-        </configuration>
-      </plugin>
-      <!-- Download the npn-boot.jar in advance to add it to the boot classpath. -->
-      <plugin>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>get-jetty-alpn-agent</id>
-            <phase>validate</phase>
-            <goals>
-              <goal>get</goal>
-            </goals>
-            <configuration>
-              <groupId>org.mortbay.jetty.alpn</groupId>
-              <artifactId>jetty-alpn-agent</artifactId>
-              <version>${jetty.alpnAgent.version}</version>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <includes>
-            <include>**/*Test*.java</include>
-            <include>**/*Benchmark*.java</include>
-          </includes>
-          <excludes>
-            <exclude>**/Abstract*</exclude>
-            <exclude>**/*TestUtil*</exclude>
-          </excludes>
-          <runOrder>random</runOrder>
-          <systemPropertyVariables>
-            <logback.configurationFile>${logging.config}</logback.configurationFile>
-            <logLevel>${logging.logLevel}</logLevel>
-          </systemPropertyVariables>
-          <argLine>${argLine.common} ${argLine.printGC} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.java9} ${argLine.javaProperties}</argLine>
-          <properties>
-            <property>
-              <name>listener</name>
-              <value>io.netty.build.junit.TimedOutTestsListener</value>
-            </property>
-          </properties>
-          <jvm>${testJavaHome}/bin/java</jvm>
-        </configuration>
-      </plugin>
-      <!-- always produce osgi bundles -->
-      <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
-        <version>2.5.4</version>
-        <executions>
-          <execution>
-            <id>generate-manifest</id>
-            <phase>process-classes</phase>
-            <goals>
-              <goal>manifest</goal>
-            </goals>
-            <configuration>
-              <supportedProjectTypes>
-                <supportedProjectType>jar</supportedProjectType>
-                <supportedProjectType>bundle</supportedProjectType>
-              </supportedProjectTypes>
-              <instructions>
-                <Export-Package>${project.groupId}.*</Export-Package>
-                <!-- enforce JVM vendor package as optional -->
-                <Import-Package>sun.misc.*;resolution:=optional,sun.nio.ch;resolution:=optional,sun.security.*;resolution:=optional,org.eclipse.jetty.npn;version="[1,2)";resolution:=optional,org.eclipse.jetty.alpn;version="[1,2)";resolution:=optional,*</Import-Package>
-                <!-- override "internal" private package convention -->
-                <Private-Package>!*</Private-Package>
-              </instructions>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-library</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <version>1.10</version>
-        <executions>
-          <execution>
-            <id>parse-version</id>
-            <goals>
-              <goal>parse-version</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
+    <build>
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.5.0.Final</version>
+            </extension>
+        </extensions>
 
-      <plugin>
-        <artifactId>maven-source-plugin</artifactId>
-        <version>3.0.1</version>
-        <!-- Eclipse-related OSGi manifests
-             See https://github.com/netty/netty/issues/3886
-             More information: http://rajakannappan.blogspot.ie/2010/03/automating-eclipse-source-bundle.html -->
-        <configuration>
-          <archive>
-            <manifestEntries>
-              <Bundle-ManifestVersion>2</Bundle-ManifestVersion>
-              <Bundle-Name>${project.name}</Bundle-Name>
-              <Bundle-SymbolicName>${project.groupId}.${project.artifactId}.source</Bundle-SymbolicName>
-              <Bundle-Vendor>${project.organization.name}</Bundle-Vendor>
-              <Bundle-Version>${parsedVersion.osgiVersion}</Bundle-Version>
-              <Eclipse-SourceBundle>${project.groupId}.${project.artifactId};version="${parsedVersion.osgiVersion}";roots:="."</Eclipse-SourceBundle>
-            </manifestEntries>
-          </archive>
-        </configuration>
+        <plugins>
+            <plugin>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>${enforcer.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>enforce-tools</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <!-- Enforce JDK 1.8+ for compilation. -->
+                                    <!-- This is needed because of java.util.zip.Deflater and NIO UDP multicast. -->
+                                    <version>[1.8.0,)</version>
+                                </requireJavaVersion>
+                                <requireMavenVersion>
+                                    <version>[3.1.1,)</version>
+                                </requireMavenVersion>
+                                <requireProperty>
+                                    <regexMessage>
+                                        x86_64 JDK must be used.
+                                    </regexMessage>
+                                    <property>os.detected.arch</property>
+                                    <regex>^x86_64$</regex>
+                                </requireProperty>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.6.0</version>
+                <configuration>
+                    <compilerVersion>1.8</compilerVersion>
+                    <fork>true</fork>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                    <debug>true</debug>
+                    <optimize>true</optimize>
+                    <showDeprecation>true</showDeprecation>
+                    <showWarnings>true</showWarnings>
+                    <compilerArgument>-Xlint:-options</compilerArgument>
+                    <!-- XXX: maven-release-plugin complains - MRELEASE-715 -->
+                    <!--
+                    <compilerArguments>
+                      <Xlint:-options />
+                      <Xlint:unchecked />
+                      <Xlint:deprecation />
+                    </compilerArguments>
+                    -->
+                    <meminitial>256m</meminitial>
+                    <maxmem>1024m</maxmem>
+                    <excludes>
+                        <exclude>**/package-info.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <!-- ensure that only methods available in java 1.6 can
+                     be used even when compiling with java 1.7+ -->
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>animal-sniffer-maven-plugin</artifactId>
+                <version>1.16</version>
+                <configuration>
+                    <signature>
+                        <groupId>org.codehaus.mojo.signature</groupId>
+                        <artifactId>java16</artifactId>
+                        <version>1.1</version>
+                    </signature>
+                    <ignores>
+                        <ignore>sun.misc.Unsafe</ignore>
+                        <ignore>sun.misc.Cleaner</ignore>
+                        <ignore>sun.nio.ch.DirectBuffer</ignore>
 
-        <executions>
-          <!--
-            ~ This workaround prevents Maven from executing the 'generate-sources' phase twice.
-            ~ See http://jira.codehaus.org/browse/MSOURCES-13
-            ~ and http://blog.peterlynch.ca/2010/05/maven-how-to-prevent-generate-sources.html
+                        <ignore>java.util.zip.Deflater</ignore>
+
+                        <!-- Used for NIO -->
+                        <ignore>java.nio.channels.DatagramChannel</ignore>
+                        <ignore>java.nio.channels.MembershipKey</ignore>
+                        <ignore>java.nio.channels.ServerSocketChannel</ignore>
+                        <ignore>java.nio.channels.SocketChannel</ignore>
+                        <ignore>java.net.StandardProtocolFamily</ignore>
+                        <ignore>java.nio.channels.spi.SelectorProvider</ignore>
+
+                        <!-- Self-signed certificate generation -->
+                        <ignore>sun.security.x509.AlgorithmId</ignore>
+                        <ignore>sun.security.x509.CertificateAlgorithmId</ignore>
+                        <ignore>sun.security.x509.CertificateIssuerName</ignore>
+                        <ignore>sun.security.x509.CertificateSerialNumber</ignore>
+                        <ignore>sun.security.x509.CertificateSubjectName</ignore>
+                        <ignore>sun.security.x509.CertificateValidity</ignore>
+                        <ignore>sun.security.x509.CertificateVersion</ignore>
+                        <ignore>sun.security.x509.CertificateX509Key</ignore>
+                        <ignore>sun.security.x509.X500Name</ignore>
+                        <ignore>sun.security.x509.X509CertInfo</ignore>
+                        <ignore>sun.security.x509.X509CertImpl</ignore>
+
+                        <!-- SSLSession implementation -->
+                        <ignore>javax.net.ssl.SSLEngine</ignore>
+                        <ignore>javax.net.ssl.X509ExtendedTrustManager</ignore>
+                        <ignore>javax.net.ssl.SSLParameters</ignore>
+                        <ignore>javax.net.ssl.SNIServerName</ignore>
+                        <ignore>javax.net.ssl.SNIHostName</ignore>
+                        <ignore>javax.net.ssl.SNIMatcher</ignore>
+                        <ignore>java.security.AlgorithmConstraints</ignore>
+                        <ignore>java.security.cert.CertificateRevokedException</ignore>
+                        <ignore>java.security.cert.CertPathValidatorException</ignore>
+                        <ignore>java.security.cert.CertPathValidatorException$Reason</ignore>
+                        <ignore>java.security.cert.CertPathValidatorException$BasicReason</ignore>
+
+                        <ignore>java.util.concurrent.ConcurrentLinkedDeque</ignore>
+                        <ignore>java.util.concurrent.ThreadLocalRandom</ignore>
+
+                        <!-- Compression -->
+                        <ignore>java.util.zip.CRC32</ignore>
+                        <ignore>java.util.zip.Adler32</ignore>
+
+                        <!-- NioDatagramChannel implementation -->
+                        <ignore>java.net.ProtocolFamily</ignore>
+
+                        <!-- JDK 9 -->
+                        <ignore>java.nio.ByteBuffer</ignore>
+                        <ignore>java.nio.CharBuffer</ignore>
+
+                        <!-- JDK 8 -->
+                        <ignore>java.util.concurrent.atomic.LongAdder</ignore>
+                        <ignore>java.util.function.BiFunction</ignore>
+
+                        <!-- Resolver -->
+                        <ignore>java.net.InetAddress</ignore>
+
+                        <!-- NoexecVolumeDetector -->
+                        <ignore>java.nio.file.attribute.PosixFilePermission</ignore>
+                        <ignore>java.nio.file.Files</ignore>
+                        <ignore>java.nio.file.LinkOption</ignore>
+                        <ignore>java.nio.file.Path</ignore>
+                        <ignore>java.io.File</ignore>
+                    </ignores>
+                    <annotations>
+                        <annotation>io.netty.util.internal.SuppressJava6Requirement</annotation>
+                    </annotations>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>2.12.1</version>
+                <executions>
+                    <execution>
+                        <id>check-style</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <phase>validate</phase>
+                        <configuration>
+                            <consoleOutput>true</consoleOutput>
+                            <logViolationsToConsole>true</logViolationsToConsole>
+                            <failsOnError>true</failsOnError>
+                            <failOnViolation>true</failOnViolation>
+                            <configLocation>io/netty/checkstyle.xml</configLocation>
+                            <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>${project.groupId}</groupId>
+                        <artifactId>netty-build</artifactId>
+                        <version>${netty.build.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>xml-maven-plugin</artifactId>
+                <version>1.0.1</version>
+                <executions>
+                    <execution>
+                        <id>check-style</id>
+                        <goals>
+                            <goal>check-format</goal>
+                        </goals>
+                        <phase>validate</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <formatFileSets>
+                        <formatFileSet>
+                            <directory>${project.basedir}</directory>
+                            <includes>
+                                <include>**/pom.xml</include>
+                            </includes>
+                        </formatFileSet>
+                    </formatFileSets>
+                    <useDefaultFormatFileSet>false</useDefaultFormatFileSet>
+                </configuration>
+            </plugin>
+            <!-- Download the npn-boot.jar in advance to add it to the boot classpath. -->
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>get-jetty-alpn-agent</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>get</goal>
+                        </goals>
+                        <configuration>
+                            <groupId>org.mortbay.jetty.alpn</groupId>
+                            <artifactId>jetty-alpn-agent</artifactId>
+                            <version>${jetty.alpnAgent.version}</version>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>**/*Test*.java</include>
+                        <include>**/*Benchmark*.java</include>
+                    </includes>
+                    <excludes>
+                        <exclude>**/Abstract*</exclude>
+                        <exclude>**/*TestUtil*</exclude>
+                    </excludes>
+                    <runOrder>random</runOrder>
+                    <systemPropertyVariables>
+                        <logback.configurationFile>${logging.config}</logback.configurationFile>
+                        <logLevel>${logging.logLevel}</logLevel>
+                    </systemPropertyVariables>
+                    <argLine>${argLine.common} ${argLine.printGC} ${argLine.alpnAgent} ${argLine.leak}
+                        ${argLine.coverage} ${argLine.noUnsafe} ${argLine.java9} ${argLine.javaProperties}
+                    </argLine>
+                    <properties>
+                        <property>
+                            <name>listener</name>
+                            <value>io.netty.build.junit.TimedOutTestsListener</value>
+                        </property>
+                    </properties>
+                    <jvm>${testJavaHome}/bin/java</jvm>
+                </configuration>
+            </plugin>
+            <!-- always produce osgi bundles -->
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <version>2.5.4</version>
+                <executions>
+                    <execution>
+                        <id>generate-manifest</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>manifest</goal>
+                        </goals>
+                        <configuration>
+                            <supportedProjectTypes>
+                                <supportedProjectType>jar</supportedProjectType>
+                                <supportedProjectType>bundle</supportedProjectType>
+                            </supportedProjectTypes>
+                            <instructions>
+                                <Export-Package>${project.groupId}.*</Export-Package>
+                                <!-- enforce JVM vendor package as optional -->
+                                <Import-Package>
+                                    sun.misc.*;resolution:=optional,sun.nio.ch;resolution:=optional,sun.security.*;resolution:=optional,org.eclipse.jetty.npn;version="[1,2)";resolution:=optional,org.eclipse.jetty.alpn;version="[1,2)";resolution:=optional,*
+                                </Import-Package>
+                                <!-- override "internal" private package convention -->
+                                <Private-Package>!*</Private-Package>
+                            </instructions>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.10</version>
+                <executions>
+                    <execution>
+                        <id>parse-version</id>
+                        <goals>
+                            <goal>parse-version</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.0.1</version>
+                <!-- Eclipse-related OSGi manifests
+                     See https://github.com/netty/netty/issues/3886
+                     More information: http://rajakannappan.blogspot.ie/2010/03/automating-eclipse-source-bundle.html -->
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Bundle-ManifestVersion>2</Bundle-ManifestVersion>
+                            <Bundle-Name>${project.name}</Bundle-Name>
+                            <Bundle-SymbolicName>${project.groupId}.${project.artifactId}.source</Bundle-SymbolicName>
+                            <Bundle-Vendor>${project.organization.name}</Bundle-Vendor>
+                            <Bundle-Version>${parsedVersion.osgiVersion}</Bundle-Version>
+                            <Eclipse-SourceBundle>
+                                ${project.groupId}.${project.artifactId};version="${parsedVersion.osgiVersion}";roots:="."
+                            </Eclipse-SourceBundle>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+
+                <executions>
+                    <!--
+                      ~ This workaround prevents Maven from executing the 'generate-sources' phase twice.
+                      ~ See http://jira.codehaus.org/browse/MSOURCES-13
+                      ~ and http://blog.peterlynch.ca/2010/05/maven-how-to-prevent-generate-sources.html
+                      -->
+                    <execution>
+                        <id>attach-sources</id>
+                        <phase>invalid</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>attach-sources-no-fork</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.10.4</version>
+                <configuration>
+                    <detectOfflineLinks>false</detectOfflineLinks>
+                    <breakiterator>true</breakiterator>
+                    <version>false</version>
+                    <author>false</author>
+                    <keywords>true</keywords>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>2.8.2</version>
+                <configuration>
+                    <retryFailedDeploymentCount>10</retryFailedDeploymentCount>
+                </configuration>
+            </plugin>
+            <!-- After artifacts were deployed from linux and macos we need to execute the following on macOS (in the root of the project).
+                 mvn -Psonatype-oss-release,full,uber-staging -pl transport-native-kqueue,transport-native-unix-common,all,tarball clean package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DstagingRepositoryId=${netty-id} -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging
             -->
-          <execution>
-            <id>attach-sources</id>
-            <phase>invalid</phase>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>attach-sources-no-fork</id>
-            <phase>package</phase>
-            <goals>
-              <goal>jar-no-fork</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.10.4</version>
-        <configuration>
-          <detectOfflineLinks>false</detectOfflineLinks>
-          <breakiterator>true</breakiterator>
-          <version>false</version>
-          <author>false</author>
-          <keywords>true</keywords>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-deploy-plugin</artifactId>
-        <version>2.8.2</version>
-        <configuration>
-          <retryFailedDeploymentCount>10</retryFailedDeploymentCount>
-        </configuration>
-      </plugin>
-      <!-- After artifacts were deployed from linux and macos we need to execute the following on macOS (in the root of the project).
-           mvn -Psonatype-oss-release,full,uber-staging -pl transport-native-kqueue,transport-native-unix-common,all,tarball clean package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DstagingRepositoryId=${netty-id} -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging
-      -->
-      <plugin>
-        <artifactId>maven-release-plugin</artifactId>
-        <!-- Downgrade to 2.4.1 if release fails -->
-        <version>2.5.3</version>
-        <configuration>
-          <useReleaseProfile>false</useReleaseProfile>
-          <arguments>-P restricted-release,sonatype-oss-release,full</arguments>
-          <autoVersionSubmodules>true</autoVersionSubmodules>
-          <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
-          <tagNameFormat>netty-@{project.version}</tagNameFormat>
-        </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>org.apache.maven.scm</groupId>
-            <artifactId>maven-scm-api</artifactId>
-            <version>1.9.4</version>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.maven.scm</groupId>
-            <artifactId>maven-scm-provider-gitexe</artifactId>
-            <version>1.9.4</version>
-          </dependency>
-        </dependencies>
-      </plugin>
+            <plugin>
+                <artifactId>maven-release-plugin</artifactId>
+                <!-- Downgrade to 2.4.1 if release fails -->
+                <version>2.5.3</version>
+                <configuration>
+                    <useReleaseProfile>false</useReleaseProfile>
+                    <arguments>-P restricted-release,sonatype-oss-release,full</arguments>
+                    <autoVersionSubmodules>true</autoVersionSubmodules>
+                    <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
+                    <tagNameFormat>netty-@{project.version}</tagNameFormat>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.scm</groupId>
+                        <artifactId>maven-scm-api</artifactId>
+                        <version>1.9.4</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.apache.maven.scm</groupId>
+                        <artifactId>maven-scm-provider-gitexe</artifactId>
+                        <version>1.9.4</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
 
-      <!-- Ensure to put maven-antrun-plugin at the end of the plugin list
-           so that they are run lastly in the same phase. -->
-      <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
-          <!-- Generate the version properties for all artifacts. -->
-          <execution>
-            <id>write-version-properties</id>
-            <phase>initialize</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <taskdef resource="net/sf/antcontrib/antlib.xml" />
+            <!-- Ensure to put maven-antrun-plugin at the end of the plugin list
+                 so that they are run lastly in the same phase. -->
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <!-- Generate the version properties for all artifacts. -->
+                    <execution>
+                        <id>write-version-properties</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <taskdef resource="net/sf/antcontrib/antlib.xml"/>
 
-                <!-- Get the information about the latest commit -->
-                <exec executable="git" outputproperty="gitOutput.lastCommit" resultproperty="gitExitCode.lastCommit" failonerror="false" failifexecutionfails="false">
-                  <arg value="log" />
-                  <arg value="-1" />
-                  <arg value="--format=format:%h %H %cd" />
-                  <arg value="--date=iso" />
-                </exec>
-                <propertyregex property="shortCommitHash" input="${gitOutput.lastCommit}" regexp="^([0-9a-f]+) .*$" select="\1" casesensitive="true" defaultValue="0" />
-                <propertyregex property="longCommitHash" input="${gitOutput.lastCommit}" regexp="^[0-9a-f]+ ([0-9a-f]{40}) .*$" select="\1" casesensitive="true" defaultValue="0000000000000000000000000000000000000000" />
-                <propertyregex property="commitDate" input="${gitOutput.lastCommit}" regexp="^[0-9a-f]+ [0-9a-f]{40} (.*)$" select="\1" casesensitive="true" defaultValue="1970-01-01 00:00:00 +0000" />
+                                <!-- Get the information about the latest commit -->
+                                <exec executable="git" outputproperty="gitOutput.lastCommit"
+                                      resultproperty="gitExitCode.lastCommit" failonerror="false"
+                                      failifexecutionfails="false">
+                                    <arg value="log"/>
+                                    <arg value="-1"/>
+                                    <arg value="--format=format:%h %H %cd"/>
+                                    <arg value="--date=iso"/>
+                                </exec>
+                                <propertyregex property="shortCommitHash" input="${gitOutput.lastCommit}"
+                                               regexp="^([0-9a-f]+) .*$" select="\1" casesensitive="true"
+                                               defaultValue="0"/>
+                                <propertyregex property="longCommitHash" input="${gitOutput.lastCommit}"
+                                               regexp="^[0-9a-f]+ ([0-9a-f]{40}) .*$" select="\1" casesensitive="true"
+                                               defaultValue="0000000000000000000000000000000000000000"/>
+                                <propertyregex property="commitDate" input="${gitOutput.lastCommit}"
+                                               regexp="^[0-9a-f]+ [0-9a-f]{40} (.*)$" select="\1" casesensitive="true"
+                                               defaultValue="1970-01-01 00:00:00 +0000"/>
 
-                <!-- Get the information abount whether the repository is clean or dirty -->
-                <exec executable="git" outputproperty="gitOutput.repoStatus" resultproperty="gitExitCode.repoStatus" failonerror="false" failifexecutionfails="false">
-                  <arg value="status" />
-                  <arg value="--porcelain" />
-                </exec>
-                <if>
-                  <equals arg2="0" arg1="${gitExitCode.repoStatus}" />
-                  <then>
-                    <if>
-                      <equals arg2="" arg1="${gitOutput.repoStatus}" />
-                      <then>
-                        <property name="repoStatus" value="clean" />
-                      </then>
-                      <else>
-                        <property name="repoStatus" value="dirty" />
-                      </else>
-                    </if>
-                  </then>
-                  <else>
-                    <property name="repoStatus" value="unknown" />
-                  </else>
-                </if>
+                                <!-- Get the information abount whether the repository is clean or dirty -->
+                                <exec executable="git" outputproperty="gitOutput.repoStatus"
+                                      resultproperty="gitExitCode.repoStatus" failonerror="false"
+                                      failifexecutionfails="false">
+                                    <arg value="status"/>
+                                    <arg value="--porcelain"/>
+                                </exec>
+                                <if>
+                                    <equals arg2="0" arg1="${gitExitCode.repoStatus}"/>
+                                    <then>
+                                        <if>
+                                            <equals arg2="" arg1="${gitOutput.repoStatus}"/>
+                                            <then>
+                                                <property name="repoStatus" value="clean"/>
+                                            </then>
+                                            <else>
+                                                <property name="repoStatus" value="dirty"/>
+                                            </else>
+                                        </if>
+                                    </then>
+                                    <else>
+                                        <property name="repoStatus" value="unknown"/>
+                                    </else>
+                                </if>
 
-                <!-- Print the obtained commit information. -->
-                <echo>Current commit: ${shortCommitHash} on ${commitDate}</echo>
+                                <!-- Print the obtained commit information. -->
+                                <echo>Current commit: ${shortCommitHash} on ${commitDate}</echo>
 
-                <!-- Generate the .properties file. -->
-                <!--
-                <property name="metaInfDir" value="${project.basedir}/src/main/resources/META-INF" />
-                -->
-                <property name="metaInfDir" value="${project.build.outputDirectory}/META-INF" />
-                <property name="versionPropFile" value="${metaInfDir}/${project.groupId}.versions.properties" />
-                <mkdir dir="${metaInfDir}" />
-                <delete file="${versionPropFile}" quiet="true" />
+                                <!-- Generate the .properties file. -->
+                                <!--
+                                <property name="metaInfDir" value="${project.basedir}/src/main/resources/META-INF" />
+                                -->
+                                <property name="metaInfDir" value="${project.build.outputDirectory}/META-INF"/>
+                                <property name="versionPropFile"
+                                          value="${metaInfDir}/${project.groupId}.versions.properties"/>
+                                <mkdir dir="${metaInfDir}"/>
+                                <delete file="${versionPropFile}" quiet="true"/>
 
-                <propertyfile file="${versionPropFile}" comment="Generated by netty-parent/pom.xml">
-                  <entry key="${project.artifactId}.version" value="${project.version}" />
-                  <entry key="${project.artifactId}.buildDate" type="date" value="now" pattern="yyyy-MM-dd HH:mm:ss Z" />
-                  <entry key="${project.artifactId}.commitDate" value="${commitDate}" />
-                  <entry key="${project.artifactId}.shortCommitHash" value="${shortCommitHash}" />
-                  <entry key="${project.artifactId}.longCommitHash" value="${longCommitHash}" />
-                  <entry key="${project.artifactId}.repoStatus" value="${repoStatus}" />
-                </propertyfile>
-              </target>
-            </configuration>
-          </execution>
-        </executions>
-        <dependencies>
-          <dependency>
-            <groupId>org.apache.ant</groupId>
-            <artifactId>ant</artifactId>
-            <version>1.9.7</version>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.ant</groupId>
-            <artifactId>ant-launcher</artifactId>
-            <version>1.9.7</version>
-          </dependency>
-          <dependency>
-            <groupId>ant-contrib</groupId>
-            <artifactId>ant-contrib</artifactId>
-            <version>1.0b3</version>
-            <exclusions>
-              <exclusion>
-                <groupId>ant</groupId>
-                <artifactId>ant</artifactId>
-              </exclusion>
-            </exclusions>
-          </dependency>
-        </dependencies>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-remote-resources-plugin</artifactId>
-        <version>1.5</version>
-      </plugin>
-      <plugin>
-        <groupId>de.thetaphi</groupId>
-        <artifactId>forbiddenapis</artifactId>
-        <version>2.2</version>
-      </plugin>
-    </plugins>
+                                <propertyfile file="${versionPropFile}" comment="Generated by netty-parent/pom.xml">
+                                    <entry key="${project.artifactId}.version" value="${project.version}"/>
+                                    <entry key="${project.artifactId}.buildDate" type="date" value="now"
+                                           pattern="yyyy-MM-dd HH:mm:ss Z"/>
+                                    <entry key="${project.artifactId}.commitDate" value="${commitDate}"/>
+                                    <entry key="${project.artifactId}.shortCommitHash" value="${shortCommitHash}"/>
+                                    <entry key="${project.artifactId}.longCommitHash" value="${longCommitHash}"/>
+                                    <entry key="${project.artifactId}.repoStatus" value="${repoStatus}"/>
+                                </propertyfile>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.ant</groupId>
+                        <artifactId>ant</artifactId>
+                        <version>1.9.7</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.apache.ant</groupId>
+                        <artifactId>ant-launcher</artifactId>
+                        <version>1.9.7</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>ant-contrib</groupId>
+                        <artifactId>ant-contrib</artifactId>
+                        <version>1.0b3</version>
+                        <exclusions>
+                            <exclusion>
+                                <groupId>ant</groupId>
+                                <artifactId>ant</artifactId>
+                            </exclusion>
+                        </exclusions>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-remote-resources-plugin</artifactId>
+                <version>1.5</version>
+            </plugin>
+            <plugin>
+                <groupId>de.thetaphi</groupId>
+                <artifactId>forbiddenapis</artifactId>
+                <version>2.2</version>
+            </plugin>
+        </plugins>
 
-    <pluginManagement>
-      <plugins>
-        <!-- keep surefire and failsafe in sync -->
-        <plugin>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.19.1</version>
-        </plugin>
-        <!-- keep surefire and failsafe in sync -->
-        <plugin>
-          <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.19.1</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-clean-plugin</artifactId>
-          <version>3.0.0</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-resources-plugin</artifactId>
-          <version>3.0.1</version>
-        </plugin>
-        <plugin>
-          <groupId>org.ops4j.pax.exam</groupId>
-          <artifactId>maven-paxexam-plugin</artifactId>
-          <version>1.2.4</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-jar-plugin</artifactId>
-          <version>3.0.2</version>
-          <executions>
-            <execution>
-              <id>default-jar</id>
-              <configuration>
-                <archive>
-                  <manifest>
-                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                  </manifest>
-                  <manifestEntries>
-                    <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
-                  </manifestEntries>
-                  <index>true</index>
-                  <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
-                </archive>
-              </configuration>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <artifactId>maven-dependency-plugin</artifactId>
-          <version>2.10</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-assembly-plugin</artifactId>
-          <version>2.6</version>
-        </plugin>
-        <plugin>
-          <!-- Do NOT upgrade -->
-          <artifactId>maven-jxr-plugin</artifactId>
-          <version>2.2</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-antrun-plugin</artifactId>
-          <version>1.8</version>
-          <dependencies>
-            <dependency>
-              <groupId>ant-contrib</groupId>
-              <artifactId>ant-contrib</artifactId>
-              <version>1.0b3</version>
-              <exclusions>
-                <exclusion>
-                  <groupId>ant</groupId>
-                  <artifactId>ant</artifactId>
-                </exclusion>
-              </exclusions>
-            </dependency>
-          </dependencies>
-        </plugin>
-        <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>build-helper-maven-plugin</artifactId>
-          <version>1.10</version>
-        </plugin>
-        <plugin>
-          <groupId>org.fusesource.hawtjni</groupId>
-          <artifactId>maven-hawtjni-plugin</artifactId>
-          <version>1.14</version>
-        </plugin>
-        <plugin>
-          <groupId>kr.motd.maven</groupId>
-          <artifactId>exec-maven-plugin</artifactId>
-          <version>1.0.0.Final</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-shade-plugin</artifactId>
-          <version>3.1.0</version>
-        </plugin>
-
-        <!-- Workaround for the 'M2E plugin execution not covered' problem.
-             See: http://wiki.eclipse.org/M2E_plugin_execution_not_covered -->
-        <plugin>
-          <groupId>org.eclipse.m2e</groupId>
-          <artifactId>lifecycle-mapping</artifactId>
-          <version>1.0.0</version>
-          <configuration>
-            <lifecycleMappingMetadata>
-              <pluginExecutions>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-antrun-plugin</artifactId>
-                    <versionRange>[1.7,)</versionRange>
-                    <goals>
-                      <goal>run</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-checkstyle-plugin</artifactId>
-                    <versionRange>[1.0,)</versionRange>
-                    <goals>
-                      <goal>check</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-enforcer-plugin</artifactId>
-                    <versionRange>[1.0,)</versionRange>
-                    <goals>
-                      <goal>enforce</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.maven.plugins</groupId>
+        <pluginManagement>
+            <plugins>
+                <!-- keep surefire and failsafe in sync -->
+                <plugin>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>2.19.1</version>
+                </plugin>
+                <!-- keep surefire and failsafe in sync -->
+                <plugin>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>2.19.1</version>
+                </plugin>
+                <plugin>
                     <artifactId>maven-clean-plugin</artifactId>
-                    <versionRange>[1.0,)</versionRange>
-                    <goals>
-                      <goal>clean</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.felix</groupId>
-                    <artifactId>maven-bundle-plugin</artifactId>
-                    <versionRange>[2.4,)</versionRange>
-                    <goals>
-                      <goal>manifest</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <pluginExecutionFilter>
+                    <version>3.0.0</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>3.0.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.ops4j.pax.exam</groupId>
+                    <artifactId>maven-paxexam-plugin</artifactId>
+                    <version>1.2.4</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.0.2</version>
+                    <executions>
+                        <execution>
+                            <id>default-jar</id>
+                            <configuration>
+                                <archive>
+                                    <manifest>
+                                        <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                                    </manifest>
+                                    <manifestEntries>
+                                        <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                                    </manifestEntries>
+                                    <index>true</index>
+                                    <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+                                </archive>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>2.10</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-assembly-plugin</artifactId>
+                    <version>2.6</version>
+                </plugin>
+                <plugin>
+                    <!-- Do NOT upgrade -->
+                    <artifactId>maven-jxr-plugin</artifactId>
+                    <version>2.2</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-antrun-plugin</artifactId>
+                    <version>1.8</version>
+                    <dependencies>
+                        <dependency>
+                            <groupId>ant-contrib</groupId>
+                            <artifactId>ant-contrib</artifactId>
+                            <version>1.0b3</version>
+                            <exclusions>
+                                <exclusion>
+                                    <groupId>ant</groupId>
+                                    <artifactId>ant</artifactId>
+                                </exclusion>
+                            </exclusions>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>build-helper-maven-plugin</artifactId>
+                    <version>1.10</version>
+                </plugin>
+                <plugin>
                     <groupId>org.fusesource.hawtjni</groupId>
                     <artifactId>maven-hawtjni-plugin</artifactId>
-                    <versionRange>[1.10,)</versionRange>
-                    <goals>
-                      <goal>generate</goal>
-                      <goal>build</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <pluginExecutionFilter>
+                    <version>1.14</version>
+                </plugin>
+                <plugin>
+                    <groupId>kr.motd.maven</groupId>
+                    <artifactId>exec-maven-plugin</artifactId>
+                    <version>1.0.0.Final</version>
+                </plugin>
+                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-dependency-plugin</artifactId>
-                    <versionRange>[2.8,)</versionRange>
-                    <goals>
-                      <goal>get</goal>
-                      <goal>copy</goal>
-                      <goal>properties</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-              </pluginExecutions>
-            </lifecycleMappingMetadata>
-          </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-remote-resources-plugin</artifactId>
-          <version>1.5</version>
-          <configuration>
-            <resourceBundles>
-              <resourceBundle>io.netty:netty-dev-tools:${project.version}</resourceBundle>
-            </resourceBundles>
-            <outputDirectory>${netty.dev.tools.directory}</outputDirectory>
-            <!-- don't include netty-dev-tools in artifacts -->
-            <attachToMain>false</attachToMain>
-            <attachToTest>false</attachToTest>
-          </configuration>
-          <executions>
-            <execution>
-              <goals>
-                <goal>process</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <groupId>de.thetaphi</groupId>
-          <artifactId>forbiddenapis</artifactId>
-          <version>2.2</version>
-          <executions>
-            <execution>
-              <id>check-forbidden-apis</id>
-              <configuration>
-                <targetVersion>${maven.compiler.target}</targetVersion>
-                <!-- allow undocumented classes like sun.misc.Unsafe: -->
-                <internalRuntimeForbidden>false</internalRuntimeForbidden>
-                <!-- if the used Java version is too new, don't fail, just do nothing: -->
-                <failOnUnsupportedJava>false</failOnUnsupportedJava>
-                <bundledSignatures>
-                  <!-- This will automatically choose the right signatures based on 'targetVersion': -->
-                  <!-- enabling these should be done in the future -->
-                  <!-- bundledSignature>jdk-unsafe</bundledSignature -->
-                  <!-- bundledSignature>jdk-deprecated</bundledSignature -->
-                  <!-- bundledSignature>jdk-system-out</bundledSignature -->
-                </bundledSignatures>
-                <signaturesFiles>
-                  <signaturesFile>${netty.dev.tools.directory}/forbidden/signatures.txt</signaturesFile>
-                </signaturesFiles>
-                <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
-              </configuration>
-              <phase>compile</phase>
-              <goals>
-                <goal>check</goal>
-              </goals>
-            </execution>
-            <execution>
-              <id>check-forbidden-test-apis</id>
-              <configuration>
-                <targetVersion>${maven.compiler.target}</targetVersion>
-                <!-- allow undocumented classes like sun.misc.Unsafe: -->
-                <internalRuntimeForbidden>true</internalRuntimeForbidden>
-                <!-- if the used Java version is too new, don't fail, just do nothing: -->
-                <failOnUnsupportedJava>false</failOnUnsupportedJava>
-                <bundledSignatures>
-                  <!-- This will automatically choose the right signatures based on 'targetVersion': -->
-                  <!-- enabling these should be done in the future -->
-                  <!-- bundledSignature>jdk-unsafe</bundledSignature -->
-                  <!-- bundledSignature>jdk-deprecated</bundledSignature -->
-                </bundledSignatures>
-                <signaturesFiles>
-                  <signaturesFile>${netty.dev.tools.directory}/forbidden/signatures.txt</signaturesFile>
-                </signaturesFiles>
-                <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
-              </configuration>
-              <phase>test-compile</phase>
-              <goals>
-                <goal>testCheck</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-  </build>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>3.1.0</version>
+                </plugin>
+
+                <!-- Workaround for the 'M2E plugin execution not covered' problem.
+                     See: http://wiki.eclipse.org/M2E_plugin_execution_not_covered -->
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.maven.plugins</groupId>
+                                        <artifactId>maven-antrun-plugin</artifactId>
+                                        <versionRange>[1.7,)</versionRange>
+                                        <goals>
+                                            <goal>run</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore/>
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.maven.plugins</groupId>
+                                        <artifactId>maven-checkstyle-plugin</artifactId>
+                                        <versionRange>[1.0,)</versionRange>
+                                        <goals>
+                                            <goal>check</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore/>
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.maven.plugins</groupId>
+                                        <artifactId>maven-enforcer-plugin</artifactId>
+                                        <versionRange>[1.0,)</versionRange>
+                                        <goals>
+                                            <goal>enforce</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore/>
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.maven.plugins</groupId>
+                                        <artifactId>maven-clean-plugin</artifactId>
+                                        <versionRange>[1.0,)</versionRange>
+                                        <goals>
+                                            <goal>clean</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore/>
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.felix</groupId>
+                                        <artifactId>maven-bundle-plugin</artifactId>
+                                        <versionRange>[2.4,)</versionRange>
+                                        <goals>
+                                            <goal>manifest</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore/>
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.fusesource.hawtjni</groupId>
+                                        <artifactId>maven-hawtjni-plugin</artifactId>
+                                        <versionRange>[1.10,)</versionRange>
+                                        <goals>
+                                            <goal>generate</goal>
+                                            <goal>build</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore/>
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.maven.plugins</groupId>
+                                        <artifactId>maven-dependency-plugin</artifactId>
+                                        <versionRange>[2.8,)</versionRange>
+                                        <goals>
+                                            <goal>get</goal>
+                                            <goal>copy</goal>
+                                            <goal>properties</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore/>
+                                    </action>
+                                </pluginExecution>
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-remote-resources-plugin</artifactId>
+                    <version>1.5</version>
+                    <configuration>
+                        <resourceBundles>
+                            <resourceBundle>io.netty:netty-dev-tools:${project.version}</resourceBundle>
+                        </resourceBundles>
+                        <outputDirectory>${netty.dev.tools.directory}</outputDirectory>
+                        <!-- don't include netty-dev-tools in artifacts -->
+                        <attachToMain>false</attachToMain>
+                        <attachToTest>false</attachToTest>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>process</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>de.thetaphi</groupId>
+                    <artifactId>forbiddenapis</artifactId>
+                    <version>2.2</version>
+                    <executions>
+                        <execution>
+                            <id>check-forbidden-apis</id>
+                            <configuration>
+                                <targetVersion>${maven.compiler.target}</targetVersion>
+                                <!-- allow undocumented classes like sun.misc.Unsafe: -->
+                                <internalRuntimeForbidden>false</internalRuntimeForbidden>
+                                <!-- if the used Java version is too new, don't fail, just do nothing: -->
+                                <failOnUnsupportedJava>false</failOnUnsupportedJava>
+                                <bundledSignatures>
+                                    <!-- This will automatically choose the right signatures based on 'targetVersion': -->
+                                    <!-- enabling these should be done in the future -->
+                                    <!-- bundledSignature>jdk-unsafe</bundledSignature -->
+                                    <!-- bundledSignature>jdk-deprecated</bundledSignature -->
+                                    <!-- bundledSignature>jdk-system-out</bundledSignature -->
+                                </bundledSignatures>
+                                <signaturesFiles>
+                                    <signaturesFile>${netty.dev.tools.directory}/forbidden/signatures.txt
+                                    </signaturesFile>
+                                </signaturesFiles>
+                                <suppressAnnotations>
+                                    <annotation>**.SuppressForbidden</annotation>
+                                </suppressAnnotations>
+                            </configuration>
+                            <phase>compile</phase>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>check-forbidden-test-apis</id>
+                            <configuration>
+                                <targetVersion>${maven.compiler.target}</targetVersion>
+                                <!-- allow undocumented classes like sun.misc.Unsafe: -->
+                                <internalRuntimeForbidden>true</internalRuntimeForbidden>
+                                <!-- if the used Java version is too new, don't fail, just do nothing: -->
+                                <failOnUnsupportedJava>false</failOnUnsupportedJava>
+                                <bundledSignatures>
+                                    <!-- This will automatically choose the right signatures based on 'targetVersion': -->
+                                    <!-- enabling these should be done in the future -->
+                                    <!-- bundledSignature>jdk-unsafe</bundledSignature -->
+                                    <!-- bundledSignature>jdk-deprecated</bundledSignature -->
+                                </bundledSignatures>
+                                <signaturesFiles>
+                                    <signaturesFile>${netty.dev.tools.directory}/forbidden/signatures.txt
+                                    </signaturesFile>
+                                </signaturesFiles>
+                                <suppressAnnotations>
+                                    <annotation>**.SuppressForbidden</annotation>
+                                </suppressAnnotations>
+                            </configuration>
+                            <phase>test-compile</phase>
+                            <goals>
+                                <goal>testCheck</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 </project>
