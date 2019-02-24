@@ -106,12 +106,20 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
     @Param
     public ByteBufType bufferType;
 
-    private ByteBuf buffer;
+    @Param({ "true", "false" })
+    public String checkAccessible;
+
+    @Param({ "true", "false" })
+    public String checkBounds;
 
     @Setup
     public void setup() {
+        System.setProperty("io.netty.buffer.checkAccessible", checkAccessible);
+        System.setProperty("io.netty.buffer.checkBounds", checkBounds);
         buffer = bufferType.newBuffer();
     }
+
+    private ByteBuf buffer;
 
     @TearDown
     public void tearDown() {
@@ -131,20 +139,21 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     public void readEightBytes(final Blackhole bh) {
         buffer.readerIndex(0).touch();
-        bh.consume(buffer.readByte());
-        bh.consume(buffer.readByte());
-        bh.consume(buffer.readByte());
-        bh.consume(buffer.readByte());
-        bh.consume(buffer.readByte());
-        bh.consume(buffer.readByte());
-        bh.consume(buffer.readByte());
-        bh.consume(buffer.readByte());
+        byte b1 = buffer.readByte();
+        byte b2 = buffer.readByte();
+        byte b3 = buffer.readByte();
+        byte b4 = buffer.readByte();
+        byte b5 = buffer.readByte();
+        byte b6 = buffer.readByte();
+        byte b7 = buffer.readByte();
+        byte b8 = buffer.readByte();
+        bh.consume(b1);
+        bh.consume(b2);
+        bh.consume(b3);
+        bh.consume(b4);
+        bh.consume(b5);
+        bh.consume(b6);
+        bh.consume(b7);
+        bh.consume(b8);
     }
-
-    // doesn't seem to be possible to parameterize JVM args with JMH right now
-//  @Test
-//  public void runWithNoCheck() throws Exception {
-//      new Runner(newOptionsBuilder()
-//              .jvmArgsAppend("-Dio.netty.buffer.checkAccessible=false").build()).run();
-//  }
 }

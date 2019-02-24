@@ -64,8 +64,8 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     }
 
     @Override
-    final boolean isAccessible() {
-        return rawMaxCapacity() >= 0;
+    boolean isAccessible() {
+        return rawMaxCapacity() > 0 || (rawMaxCapacity() == 0 && (nonVolatileRawCnt() & 1) == 0);
     }
 
     @Override
@@ -131,7 +131,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         int rawCnt = nonVolatileRawCnt(), realCnt = toLiveRealCnt(rawCnt, decrement);
         if (decrement == realCnt) {
             if (refCntUpdater.compareAndSet(this, rawCnt, 1)) {
-                maxCapacity(-rawMaxCapacity());
+                maxCapacity(-maxCapacity());
                 deallocate();
                 return true;
             }
@@ -154,7 +154,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
             int rawCnt = refCntUpdater.get(this), realCnt = toLiveRealCnt(rawCnt, decrement);
             if (decrement == realCnt) {
                 if (refCntUpdater.compareAndSet(this, rawCnt, 1)) {
-                    maxCapacity(-rawMaxCapacity());
+                    maxCapacity(-maxCapacity());
                     deallocate();
                     return true;
                 }

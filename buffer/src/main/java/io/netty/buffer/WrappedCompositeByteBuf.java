@@ -424,6 +424,11 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     }
 
     @Override
+    final boolean isAccessible() {
+        return wrapped.isAccessible();
+    }
+
+    @Override
     public ByteBuf duplicate() {
         return wrapped.duplicate();
     }
@@ -1248,9 +1253,6 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
 
     @Override
     public final void deallocate() {
-        // this is to avoid overriding isAccessible(), so that it can be
-        // final in AbstractReferenceCountedByteBuf
-        maxCapacity(-rawMaxCapacity());
         wrapped.deallocate();
     }
 
