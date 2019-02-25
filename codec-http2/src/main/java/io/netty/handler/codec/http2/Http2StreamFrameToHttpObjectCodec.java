@@ -77,6 +77,15 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
     }
 
     @Override
+    public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+        if (!acceptInboundMessage(msg) && msg instanceof Http2Frame) {
+            processSystemFrame(ctx, (Http2Frame) msg);
+            return;
+        }
+        super.channelRead(ctx, msg);
+    }
+
+    @Override
     public boolean acceptInboundMessage(Object msg) throws Exception {
         return (msg instanceof Http2HeadersFrame) || (msg instanceof Http2DataFrame);
     }
@@ -124,6 +133,23 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
                 out.add(new DefaultHttpContent(dataFrame.content().retain()));
             }
         }
+    }
+
+    /**
+     * This method is called for all {@link Http2Frame} objects that are not
+     * handled by the {@link Http2StreamFrameToHttpObjectCodec}.
+     * <p>The call is made from {@link #channelRead(ChannelHandlerContext, Object)} method and
+     * the object is not passed to the {@code channelRead} pipeline, so it's the responsibility
+     * of this method to release the object if it happens to be {@link io.netty.util.ReferenceCounted}.
+     * <p>The default implementation sends all http2 frames to the {@link #channelRead(ChannelHandlerContext, Object)}
+     * pipeline.
+     * <p>
+     * @param ctx {@link ChannelHandlerContext} from {@link #channelRead(ChannelHandlerContext, Object)}
+     * @param msg {@link Http2Frame} instance to process
+     */
+    protected void processSystemFrame(ChannelHandlerContext ctx, Http2Frame msg) {
+        // by default, sending all frames to the 'channelRead()' pipeline
+        ctx.fireChannelRead(msg);
     }
 
     private void encodeLastContent(LastHttpContent last, List<Object> out) {
