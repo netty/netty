@@ -43,9 +43,12 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * This handler converts from {@link Http2StreamFrame} to {@link HttpObject},
@@ -63,17 +66,90 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
     private static final AttributeKey<HttpScheme> SCHEME_ATTR_KEY =
         AttributeKey.valueOf(HttpScheme.class, "STREAMFRAMECODEC_SCHEME");
 
+    /**
+     * Describes an action to be taken on frames that could not be translated to HTTP1 counterparts.
+     * E.g. {@link Http2ResetFrame} or {@link Http2WindowUpdateFrame}.
+     */
+    public interface Http2SystemFramesProcessor {
+
+        /**
+         * This method is called for all {@link Http2Frame} objects that are not
+         * handled by the {@link Http2StreamFrameToHttpObjectCodec}.
+         * <p>The call is made from {@link #channelRead(ChannelHandlerContext, Object)} method and
+         * the object is not passed to the {@code channelRead} pipeline, so it's the responsibility
+         * of this method to release the object if it happens to be {@link io.netty.util.ReferenceCounted}.
+         */
+        void inboundSystemFrame(ChannelHandlerContext ctx, Http2Frame systemFrame);
+    }
+
+    /**
+     * An implementation of the {@link Http2SystemFramesProcessor} that sends all
+     * objects further to the {@link #channelRead(ChannelHandlerContext, Object)} pipeline.
+     * <p>This treatment is used by default.
+     */
+    public static final Http2SystemFramesProcessor SEND_SYSTEM_FRAMES_AS_MESSAGES =
+            new Http2SystemFramesProcessor() {
+                @Override
+                public void inboundSystemFrame(ChannelHandlerContext ctx, Http2Frame http2Frame) {
+                    ctx.fireChannelRead(http2Frame);
+                }
+            };
+
+    /**
+     * An implementation of the {@link Http2SystemFramesProcessor} that sends all
+     * objects as user messages.
+     * <p>Note, if an object is {@link io.netty.util.ReferenceCounted}, it will have to be released
+     * within the {@code userEventTriggered} pipeline.
+     */
+    public static final Http2SystemFramesProcessor SEND_SYSTEM_FRAMES_AS_USER_EVENTS =
+            new Http2SystemFramesProcessor() {
+                @Override
+                public void inboundSystemFrame(ChannelHandlerContext ctx, Http2Frame http2Frame) {
+                    ctx.fireUserEventTriggered(http2Frame);
+                }
+            };
+
+    /**
+     * An implementation of the {@link Http2SystemFramesProcessor} that simply discards all of
+     * the http2 frames that have not been converted to http1 counterparts.
+     */
+    public static final Http2SystemFramesProcessor IGNORE_SYSTEM_FRAMES =
+            new Http2SystemFramesProcessor() {
+                @Override
+                public void inboundSystemFrame(ChannelHandlerContext ctx, Http2Frame http2Frame) {
+                    // no-op
+                    ReferenceCountUtil.release(http2Frame);
+                }
+            };
+
     private final boolean isServer;
     private final boolean validateHeaders;
+    private final Http2SystemFramesProcessor systemFrameTreatment;
+
+    public Http2StreamFrameToHttpObjectCodec(final boolean isServer,
+                                             final boolean validateHeaders,
+                                             final Http2SystemFramesProcessor systemFrameTreatment) {
+        this.isServer = isServer;
+        this.validateHeaders = validateHeaders;
+        this.systemFrameTreatment = checkNotNull(systemFrameTreatment, "systemFrameTreatment");
+    }
 
     public Http2StreamFrameToHttpObjectCodec(final boolean isServer,
                                              final boolean validateHeaders) {
-        this.isServer = isServer;
-        this.validateHeaders = validateHeaders;
+        this(isServer, validateHeaders, SEND_SYSTEM_FRAMES_AS_MESSAGES);
     }
 
     public Http2StreamFrameToHttpObjectCodec(final boolean isServer) {
-        this(isServer, true);
+        this(isServer, true, SEND_SYSTEM_FRAMES_AS_MESSAGES);
+    }
+
+    @Override
+    public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+        if (!acceptInboundMessage(msg) && msg instanceof Http2Frame) {
+            systemFrameTreatment.inboundSystemFrame(ctx, (Http2Frame) msg);
+            return;
+        }
+        super.channelRead(ctx, msg);
     }
 
     @Override

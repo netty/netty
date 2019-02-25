@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -40,14 +41,14 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpScheme;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec.Http2SystemFramesProcessor;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.util.CharsetUtil;
-
 import org.junit.Test;
 
 import java.util.Queue;
@@ -56,10 +57,14 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 public class Http2StreamFrameToHttpObjectCodecTest {
 
@@ -932,5 +937,66 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertThat(headers.path().toString(), is("/hello/world"));
         assertTrue(headersFrame.isEndStream());
         assertNull(frames.poll());
+    }
+
+    @Test
+    public void testDefaultTreatmentOfSystemFrames() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
+        DefaultHttp2ResetFrame expected = new DefaultHttp2ResetFrame(Http2Error.NO_ERROR);
+        assertTrue(ch.writeInbound(expected));
+
+        Object actual = ch.readInbound();
+        assertEquals(expected, actual);
+
+        assertThat(ch.readInbound(), is(nullValue()));
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testSendAsMessageTreatmentOfSystemFrames() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(
+                false, true, Http2StreamFrameToHttpObjectCodec.SEND_SYSTEM_FRAMES_AS_MESSAGES
+        ));
+        DefaultHttp2ResetFrame expected = new DefaultHttp2ResetFrame(Http2Error.NO_ERROR);
+        assertTrue(ch.writeInbound(expected));
+
+        Object actual = ch.readInbound();
+        assertEquals(expected, actual);
+
+        assertThat(ch.readInbound(), is(nullValue()));
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testIgnoreTreatmentOfSystemFrames() throws Exception {
+        EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(
+                false, true, Http2StreamFrameToHttpObjectCodec.IGNORE_SYSTEM_FRAMES
+        ));
+        assertFalse(ch.writeInbound(new DefaultHttp2ResetFrame(Http2Error.NO_ERROR)));
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testSendAsUserEventTreatmentOfSystemFrames() throws Exception {
+        ChannelInboundHandler mockHandler = mock(ChannelInboundHandler.class);
+        EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(
+                false, true, Http2StreamFrameToHttpObjectCodec.SEND_SYSTEM_FRAMES_AS_USER_EVENTS
+        ), mockHandler);
+        DefaultHttp2ResetFrame expected = new DefaultHttp2ResetFrame(Http2Error.NO_ERROR);
+        assertFalse(ch.writeInbound(expected));
+        assertFalse(ch.finish());
+        verify(mockHandler).userEventTriggered(any(ChannelHandlerContext.class), eq(expected));
+    }
+
+    @Test
+    public void testCustomTreatmentOfSystemFrames() throws Exception {
+        Http2SystemFramesProcessor mock = mock(
+                Http2SystemFramesProcessor.class
+        );
+        EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false, true, mock));
+        DefaultHttp2ResetFrame expected = new DefaultHttp2ResetFrame(Http2Error.NO_ERROR);
+        assertFalse(ch.writeInbound(expected));
+        assertFalse(ch.finish());
+        verify(mock).inboundSystemFrame(any(ChannelHandlerContext.class), eq(expected));
     }
 }
