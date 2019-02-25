@@ -25,49 +25,43 @@ package io.netty.handler.codec.http.websocketx;
  * </p>
  */
 public enum WebSocketVersion {
-    UNKNOWN,
+    UNKNOWN("unknown"),
 
     /**
      * <a href= "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-00"
      * >draft-ietf-hybi-thewebsocketprotocol- 00</a>.
      */
-    V00,
+    V00("0"),
 
     /**
      * <a href= "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-07"
      * >draft-ietf-hybi-thewebsocketprotocol- 07</a>
      */
-    V07,
+    V07("7"),
 
     /**
      * <a href= "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10"
      * >draft-ietf-hybi-thewebsocketprotocol- 10</a>
      */
-    V08,
+    V08("8"),
 
     /**
      * <a href="http://tools.ietf.org/html/rfc6455 ">RFC 6455</a>. This was originally <a href=
      * "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-17" >draft-ietf-hybi-thewebsocketprotocol-
      * 17</a>
      */
-    V13;
+    V13("13");
+
+    private final String version;
+
+    WebSocketVersion(String version) {
+        this.version = version;
+    }
 
     /**
      * @return Value for HTTP Header 'Sec-WebSocket-Version'
      */
     public String toHttpHeaderValue() {
-        if (this == V00) {
-            return "0";
-        }
-        if (this == V07) {
-            return "7";
-        }
-        if (this == V08) {
-            return "8";
-        }
-        if (this == V13) {
-            return "13";
-        }
-        throw new IllegalStateException("Unknown web socket version: " + this);
+        return version;
     }
 }
