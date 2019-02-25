@@ -2123,6 +2123,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     }
 
     @Override
+    boolean isAccessible() {
+        return componentCount != -1;
+    }
+
+    @Override
     public ByteBuf unwrap() {
         return null;
     }
