@@ -97,24 +97,24 @@ final class CookieUtil {
 
     static void add(StringBuilder sb, String name, long val) {
         sb.append(name);
-        sb.append((char) HttpConstants.EQUALS);
+        sb.append('=');
         sb.append(val);
-        sb.append((char) HttpConstants.SEMICOLON);
-        sb.append((char) HttpConstants.SP);
+        sb.append(';');
+        sb.append(HttpConstants.SP_CHAR);
     }
 
     static void add(StringBuilder sb, String name, String val) {
         sb.append(name);
-        sb.append((char) HttpConstants.EQUALS);
+        sb.append('=');
         sb.append(val);
-        sb.append((char) HttpConstants.SEMICOLON);
-        sb.append((char) HttpConstants.SP);
+        sb.append(';');
+        sb.append(HttpConstants.SP_CHAR);
     }
 
     static void add(StringBuilder sb, String name) {
         sb.append(name);
-        sb.append((char) HttpConstants.SEMICOLON);
-        sb.append((char) HttpConstants.SP);
+        sb.append(';');
+        sb.append(HttpConstants.SP_CHAR);
     }
 
     static void addQuoted(StringBuilder sb, String name, String val) {
@@ -123,12 +123,12 @@ final class CookieUtil {
         }
 
         sb.append(name);
-        sb.append((char) HttpConstants.EQUALS);
-        sb.append((char) HttpConstants.DOUBLE_QUOTE);
+        sb.append('=');
+        sb.append('"');
         sb.append(val);
-        sb.append((char) HttpConstants.DOUBLE_QUOTE);
-        sb.append((char) HttpConstants.SEMICOLON);
-        sb.append((char) HttpConstants.SP);
+        sb.append('"');
+        sb.append(';');
+        sb.append(HttpConstants.SP_CHAR);
     }
 
     static int firstInvalidCookieNameOctet(CharSequence cs) {
