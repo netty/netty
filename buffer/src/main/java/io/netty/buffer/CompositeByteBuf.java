@@ -470,8 +470,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     }
 
     private void checkComponentIndex(int cIndex) {
+        ensureAccessible();
         if (cIndex < 0 || cIndex > componentCount) {
-            ensureAccessible();
             throw new IndexOutOfBoundsException(String.format(
                     "cIndex: %d (expected: >= 0 && <= numComponents(%d))",
                     cIndex, componentCount));
@@ -479,8 +479,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     }
 
     private void checkComponentIndex(int cIndex, int numComponents) {
+        ensureAccessible();
         if (cIndex < 0 || cIndex + numComponents > componentCount) {
-            ensureAccessible();
             throw new IndexOutOfBoundsException(String.format(
                     "cIndex: %d, numComponents: %d " +
                     "(expected: cIndex >= 0 && cIndex + numComponents <= totalNumComponents(%d))",
@@ -1603,9 +1603,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Consolidate the composed {@link ByteBuf}s
      */
     public CompositeByteBuf consolidate() {
+        ensureAccessible();
         final int numComponents = componentCount;
         if (numComponents <= 1) {
-            ensureAccessible();
             return this;
         }
 
@@ -2118,13 +2118,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         for (int i = 0, size = componentCount; i < size; i++) {
             components[i].free();
         }
-        // allows us to omit explicit accessibility check in most cases
-        componentCount = -1;
     }
 
     @Override
     boolean isAccessible() {
-        return componentCount != -1;
+        return !freed;
     }
 
     @Override

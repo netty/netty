@@ -132,28 +132,12 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public ByteBuf setLong() {
-        return buffer.setLong(0, 1);
-    }
-
-    @Benchmark
-    public void readEightBytes(final Blackhole bh) {
+    public int readBatch() {
         buffer.readerIndex(0).touch();
-        byte b1 = buffer.readByte();
-        byte b2 = buffer.readByte();
-        byte b3 = buffer.readByte();
-        byte b4 = buffer.readByte();
-        byte b5 = buffer.readByte();
-        byte b6 = buffer.readByte();
-        byte b7 = buffer.readByte();
-        byte b8 = buffer.readByte();
-        bh.consume(b1);
-        bh.consume(b2);
-        bh.consume(b3);
-        bh.consume(b4);
-        bh.consume(b5);
-        bh.consume(b6);
-        bh.consume(b7);
-        bh.consume(b8);
+        int result = 0;
+        for (int i = 0; i < 8; i++) {
+            result += buffer.readByte();
+        }
+        return result;
     }
 }
