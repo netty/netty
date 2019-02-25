@@ -139,6 +139,12 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
         long written = file.transferTo(this.position + position, count, target);
         if (written > 0) {
             transferred += written;
+        } else if (written == 0) {
+            // If the amount of written data is 0 we need to check if the requested count is bigger then the
+            // actual file itself as it may have been truncated on disk.
+            //
+            // See https://github.com/netty/netty/issues/8868
+            validate(this, position);
         }
         return written;
     }
@@ -181,5 +187,17 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
     @Override
     public FileRegion touch(Object hint) {
         return this;
+    }
+
+    static void validate(DefaultFileRegion region, long position) throws IOException {
+        // If the amount of written data is 0 we need to check if the requested count is bigger then the
+        // actual file itself as it may have been truncated on disk.
+        //
+        // See https://github.com/netty/netty/issues/8868
+        long size = region.file.size();
+        long count = region.count - position;
+        if (region.position + count + position > size) {
+            throw new IOException("Underlying file size " + size + " smaller then requested count " + region.count);
+        }
     }
 }
