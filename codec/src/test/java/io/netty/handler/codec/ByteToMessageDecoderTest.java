@@ -15,7 +15,12 @@
  */
 package io.netty.handler.codec;
 
-import io.netty.buffer.*;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.UnpooledHeapByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -413,12 +418,11 @@ public class ByteToMessageDecoderTest {
                 if (unreadFinalBytes > 0) {
                     assertSame(in2, decoder.cumulation);
                     assertEquals(1, decoder.cumulation.readableBytes());
-                    assertFalse(channel.finish());
                 } else {
                     assertEquals(0, in2.refCnt());
                     assertNull(decoder.cumulation);
-                    assertFalse(channel.finish());
                 }
+                assertFalse(channel.finish());
             }
         }
     }
