@@ -315,8 +315,9 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     if (cumulation == null) {
                         // this can only happen if we have been removed, so propagate any remaining bytes we may own
                         if (data != null && data.isReadable()) {
-                            ctx.fireChannelRead(data);
+                            ByteBuf propagate = data;
                             data = null;
+                            ctx.fireChannelRead(propagate);
                             ctx.fireChannelReadComplete();
                         }
                         break;
