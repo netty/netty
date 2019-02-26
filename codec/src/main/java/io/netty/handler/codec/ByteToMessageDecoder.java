@@ -155,8 +155,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     };
 
     private static final byte STATE_INIT = 0;
-    private static final byte STATE_CALLING_CHILD_DECODE = 1;
-    private static final byte STATE_HANDLER_REMOVED_PENDING = 2;
+    private static final byte STATE_DEFER_HANDLER_REMOVED = 1;
+    private static final byte STATE_DEFER_INPUT_CLOSED = 2;
+    private static final byte STATE_HANDLER_REMOVED_PENDING = 4;
+    private static final byte STATE_INPUT_CLOSED_PENDING = 8;
+    private static final byte STATE_INPUT_CLOSED_PENDING_CALL_INACTIVE = 24;
 
     ByteBuf cumulation;
     private Cumulator cumulator = MERGE_CUMULATOR;
@@ -167,8 +170,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * A bitmask where the bits are defined as
      * <ul>
      *     <li>{@link #STATE_INIT}</li>
-     *     <li>{@link #STATE_CALLING_CHILD_DECODE}</li>
+     *     <li>{@link #STATE_DEFER_HANDLER_REMOVED}</li>
+     *     <li>{@link #STATE_DEFER_INPUT_CLOSED}</li>
      *     <li>{@link #STATE_HANDLER_REMOVED_PENDING}</li>
+     *     <li>{@link #STATE_INPUT_CLOSED_PENDING}</li>
+     *     <li>{@link #STATE_INPUT_CLOSED_PENDING_CALL_INACTIVE}</li>
      * </ul>
      */
     private byte decodeState = STATE_INIT;
@@ -197,6 +203,14 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      */
     public boolean isSingleDecode() {
         return singleDecode;
+    }
+
+    private boolean hasState(byte checkIfHasState) {
+        return hasState(decodeState, checkIfHasState);
+    }
+
+    private static boolean hasState(byte decodeState, byte checkIfHasState) {
+        return checkIfHasState == (decodeState & checkIfHasState);
     }
 
     /**
@@ -243,8 +257,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public final void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        if (decodeState == STATE_CALLING_CHILD_DECODE) {
-            decodeState = STATE_HANDLER_REMOVED_PENDING;
+        if (hasState(STATE_DEFER_HANDLER_REMOVED)) {
+            decodeState |= STATE_HANDLER_REMOVED_PENDING;
             return;
         }
         ByteBuf buf = cumulation;
@@ -278,14 +292,16 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         if (msg instanceof ByteBuf) {
             CodecOutputList out = CodecOutputList.newInstance();
             ByteBuf data = (ByteBuf) msg;
+
+            byte state = STATE_DEFER_HANDLER_REMOVED | STATE_DEFER_INPUT_CLOSED;
             try {
 
-                decodeState = STATE_CALLING_CHILD_DECODE;
+                decodeState = state;
                 do {
                     first = cumulation == null;
                     if (first) {
                         callDecode(ctx, data, out);
-                        if (decodeState != STATE_CALLING_CHILD_DECODE || !data.isReadable()) {
+                        if (decodeState != state || !data.isReadable()) {
                             break;
                         }
                         cumulation = Unpooled.EMPTY_BUFFER;
@@ -306,7 +322,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     }
 
                     callDecode(ctx, cumulation, out);
-                    if (decodeState != STATE_CALLING_CHILD_DECODE) {
+                    if (decodeState != state) {
                         break;
                     }
 
@@ -322,11 +338,16 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 }
                 throw new DecoderException(e);
             } finally {
+                state = decodeState;
+                decodeState = STATE_INIT;
+
                 saveToCumulation(data);
-                if (decodeState == STATE_HANDLER_REMOVED_PENDING) {
+                if (hasState(state, STATE_HANDLER_REMOVED_PENDING)) {
                     handlerRemoved(ctx);
                 }
-                decodeState = STATE_INIT;
+                if (hasState(state, STATE_INPUT_CLOSED_PENDING)) {
+                    channelInputClosed(ctx, hasState(state, STATE_INPUT_CLOSED_PENDING_CALL_INACTIVE));
+                }
                 if (cumulation == null) {
                     numReads = 0;
                 } else if (!cumulation.isReadable()) {
@@ -433,6 +454,10 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     }
 
     private void channelInputClosed(ChannelHandlerContext ctx, boolean callChannelInactive) throws Exception {
+        if (hasState(STATE_DEFER_INPUT_CLOSED)) {
+            decodeState |= callChannelInactive ? STATE_INPUT_CLOSED_PENDING_CALL_INACTIVE : STATE_INPUT_CLOSED_PENDING;
+            return;
+        }
         CodecOutputList out = CodecOutputList.newInstance();
         try {
             channelInputClosed(ctx, out);
@@ -563,17 +588,17 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      */
     final void decodeRemovalReentryProtection(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
             throws Exception {
-        boolean handleRemove;
-        if (handleRemove = decodeState == STATE_INIT) {
-            decodeState = STATE_CALLING_CHILD_DECODE;
+        boolean handlePending;
+        if (handlePending = decodeState == STATE_INIT) {
+            decodeState = STATE_DEFER_HANDLER_REMOVED;
         }
         try {
             decode(ctx, in, out);
         } finally {
-            if (handleRemove) {
-                boolean removePending = decodeState == STATE_HANDLER_REMOVED_PENDING;
+            if (handlePending) {
+                boolean hasPendingRemove = hasState(STATE_HANDLER_REMOVED_PENDING);
                 decodeState = STATE_INIT;
-                if (removePending) {
+                if (hasPendingRemove) {
                     handlerRemoved(ctx);
                 }
             }
