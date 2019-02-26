@@ -279,21 +279,15 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             CodecOutputList out = CodecOutputList.newInstance();
             ByteBuf data = (ByteBuf) msg;
             try {
+
+                decodeState = STATE_CALLING_CHILD_DECODE;
                 do {
                     first = cumulation == null;
                     if (first) {
-                        // transfer data ownership to cumulation, so other methods have access to it
-                        cumulation = data;
-                        data = null;
-
-                        callDecode(ctx, cumulation, out);
-                        if (cumulation == null || !cumulation.isReadable()) {
+                        callDecode(ctx, data, out);
+                        if (decodeState != STATE_CALLING_CHILD_DECODE || !data.isReadable()) {
                             break;
                         }
-
-                        // if we still have data to read, take ownership again so that the cumulator
-                        // can choose whether to keep the input buffer or copy it to a new one
-                        data = cumulation;
                         cumulation = Unpooled.EMPTY_BUFFER;
                     }
 
@@ -312,44 +306,30 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     }
 
                     callDecode(ctx, cumulation, out);
-                    if (cumulation == null) {
-                        // this can only happen if we have been removed, so propagate any remaining bytes we may own
-                        if (data != null && data.isReadable()) {
-                            ByteBuf propagate = data;
-                            data = null;
-                            ctx.fireChannelRead(propagate);
-                            ctx.fireChannelReadComplete();
-                        }
+                    if (decodeState != STATE_CALLING_CHILD_DECODE) {
                         break;
-                    } else if (!cumulation.isReadable()) {
+                    }
+
+                    if (!cumulation.isReadable()) {
                         cumulation.release();
                         cumulation = null;
                     }
                 } while (data != null);
+
             } catch (Exception e) {
-                if (data != null) {
-                    if (cumulation == null) {
-                        cumulation = data;
-                        data = null;
-                    } else {
-                        // make sure we are using a cumulator that copies all remaining bytes
-                        Cumulator cumulator = this.cumulator;
-                        if (cumulator != COMPOSITE_CUMULATOR) {
-                            cumulator = MERGE_CUMULATOR;
-                        }
-                        cumulation = cumulator.cumulate(ctx.alloc(), cumulation, data);
-                        data = null;
-                    }
-                }
                 if (e instanceof DecoderException) {
                     throw e;
                 }
                 throw new DecoderException(e);
             } finally {
-                if (data != null) {
-                    data.release();
+                saveToCumulation(data);
+                if (decodeState == STATE_HANDLER_REMOVED_PENDING) {
+                    handlerRemoved(ctx);
                 }
-                if (cumulation != null && !cumulation.isReadable()) {
+                decodeState = STATE_INIT;
+                if (cumulation == null) {
+                    numReads = 0;
+                } else if (!cumulation.isReadable()) {
                     numReads = 0;
                     cumulation.release();
                     cumulation = null;
@@ -367,6 +347,24 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             }
         } else {
             ctx.fireChannelRead(msg);
+        }
+    }
+
+    private void saveToCumulation(ByteBuf data)
+    {
+        if (data != null) {
+            if (!data.isReadable()) {
+                data.release();
+            } else if (cumulation == null) {
+                cumulation = data;
+            } else {
+                // make sure we are using a cumulator that copies all remaining bytes
+                Cumulator cumulator = this.cumulator;
+                if (cumulator != COMPOSITE_CUMULATOR) {
+                    cumulator = MERGE_CUMULATOR;
+                }
+                cumulation = cumulator.cumulate(cumulation.alloc(), cumulation, data);
+            }
         }
     }
 
@@ -565,14 +563,19 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      */
     final void decodeRemovalReentryProtection(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
             throws Exception {
-        decodeState = STATE_CALLING_CHILD_DECODE;
+        boolean handleRemove;
+        if (handleRemove = decodeState == STATE_INIT) {
+            decodeState = STATE_CALLING_CHILD_DECODE;
+        }
         try {
             decode(ctx, in, out);
         } finally {
-            boolean removePending = decodeState == STATE_HANDLER_REMOVED_PENDING;
-            decodeState = STATE_INIT;
-            if (removePending) {
-                handlerRemoved(ctx);
+            if (handleRemove) {
+                boolean removePending = decodeState == STATE_HANDLER_REMOVED_PENDING;
+                decodeState = STATE_INIT;
+                if (removePending) {
+                    handlerRemoved(ctx);
+                }
             }
         }
     }
