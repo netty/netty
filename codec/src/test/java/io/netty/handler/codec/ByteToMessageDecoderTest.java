@@ -359,6 +359,7 @@ public class ByteToMessageDecoderTest {
             public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
                 ++cumulations;
                 if (!cumulation.isReadable()) {
+                    cumulation.release();
                     return in;
                 }
 
