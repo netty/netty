@@ -613,4 +613,34 @@ public class @K@ObjectHashMapTest {
         }
         assertTrue(map.isEmpty());
     }
+
+    @Test
+    public void valuesIteratorRemove() {
+        Value v1 = new Value("v1");
+        Value v2 = new Value("v2");
+        Value v3 = new Value("v3");
+        map.put((@k@) 1, v1);
+        map.put((@k@) 2, v2);
+        map.put((@k@) 3, v3);
+
+        Iterator<Value> it = map.values().iterator();
+
+        assertSame(v1, it.next());
+        assertSame(v2, it.next());
+        it.remove();
+
+        assertSame(v3, it.next());
+        assertFalse(it.hasNext());
+
+        assertEquals(2, map.size());
+        assertSame(v1, map.get((@k@) 1));
+        assertNull(map.get((@k@) 2));
+        assertSame(v3, map.get((@k@) 3));
+
+        it = map.values().iterator();
+
+        assertSame(v1, it.next());
+        assertSame(v3, it.next());
+        assertFalse(it.hasNext());
+    }
 }
