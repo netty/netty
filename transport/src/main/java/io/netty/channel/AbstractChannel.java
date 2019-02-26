@@ -1094,6 +1094,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return msg;
     }
 
+    protected void validateFileRegion(DefaultFileRegion region, long position) throws IOException {
+        DefaultFileRegion.validate(region, position);
+    }
+
     static final class CloseFuture extends DefaultChannelPromise {
 
         CloseFuture(AbstractChannel ch) {
