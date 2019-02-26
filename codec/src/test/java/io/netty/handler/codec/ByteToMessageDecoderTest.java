@@ -345,17 +345,16 @@ public class ByteToMessageDecoderTest {
         }
     }
 
-    private static abstract class PartialCumulationDecoder extends ByteToMessageDecoder
-    {
+    static abstract class PartialCumulationDecoder extends ByteToMessageDecoder {
         final int messageSize;
         int cumulations;
 
-        private PartialCumulationDecoder(int messageSize) {
+        PartialCumulationDecoder(int messageSize) {
             this.messageSize = messageSize;
             setCumulator(new PartialCumulator());
         }
 
-        private class PartialCumulator implements Cumulator {
+        class PartialCumulator implements Cumulator {
             @Override
             public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
                 ++cumulations;
@@ -388,12 +387,8 @@ public class ByteToMessageDecoderTest {
                 final PartialCumulationDecoder decoder = new PartialCumulationDecoder(2) {
                     @Override
                     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
-                        while (true)
-                        {
-                            if (in.readableBytes() < 2)
-                                return;
-                            in.readByte();
-                            in.readByte();
+                        while (in.readableBytes() >= 2) {
+                            in.skipBytes(2);
                             out.add(decoded);
                         }
                     }
@@ -403,12 +398,12 @@ public class ByteToMessageDecoderTest {
                 ByteBuf in2 = Unpooled.buffer().writeZero(5 + unreadFinalBytes);
                 EmbeddedChannel channel = new EmbeddedChannel(decoder);
 
-                channel.writeInbound(in1);
+                assertEquals(firstMessageCount > 0, channel.writeInbound(in1));
                 for (int i = 0 ; i < firstMessageCount ; ++i) {
                     assertSame(decoded, channel.readInbound());
                 }
                 assertNull(channel.readInbound());
-                channel.writeInbound(in2);
+                assertTrue(channel.writeInbound(in2));
                 for (int i = 0 ; i < 3 ; ++i) {
                     assertSame(decoded, channel.readInbound());
                 }
@@ -417,10 +412,11 @@ public class ByteToMessageDecoderTest {
                 if (unreadFinalBytes > 0) {
                     assertSame(in2, decoder.cumulation);
                     assertEquals(1, decoder.cumulation.readableBytes());
-                    decoder.cumulation.release();
+                    assertFalse(channel.finish());
                 } else {
                     assertEquals(0, in2.refCnt());
                     assertNull(decoder.cumulation);
+                    assertFalse(channel.finish());
                 }
             }
         }
@@ -438,12 +434,14 @@ public class ByteToMessageDecoderTest {
                     int count = 0;
                     @Override
                     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
-                        if (in.readableBytes() < 2)
+                        if (in.readableBytes() < 2) {
                             return;
-                        in.readByte();
-                        if (count++ == throwAfterCountFinal)
+                        }
+                        in.skipBytes(1);
+                        if (count++ == throwAfterCountFinal) {
                             throw fail;
-                        in.readByte();
+                        }
+                        in.skipBytes(1);
                         out.add(decoded);
                     }
                 };
@@ -455,7 +453,7 @@ public class ByteToMessageDecoderTest {
                 // try to write our first buffer, which may contain zero or one messages
                 boolean failed = false;
                 try {
-                    channel.writeInbound(in1);
+                    assertEquals(firstMessageCount > 0 && throwAfterCount > 0, channel.writeInbound(in1));
                 } catch (Throwable t) {
                     assertSame(fail, t);
                     failed = true;
@@ -470,7 +468,7 @@ public class ByteToMessageDecoderTest {
                 if (!failed) {
                     try {
                         channel.writeInbound(in2);
-                        assertTrue(false); // should never reach here
+                        fail(); // should never reach here
                     } catch (Throwable t) {
                         assertSame(fail, t);
                     }
@@ -498,7 +496,7 @@ public class ByteToMessageDecoderTest {
                         assertEquals(5, decoder.cumulation.readableBytes());
                     }
                 }
-                decoder.cumulation.release();
+                assertTrue(channel.finish());
             }
         }
     }
@@ -508,7 +506,7 @@ public class ByteToMessageDecoderTest {
         for (Cumulator cumulator : new Cumulator[] { ByteToMessageDecoder.MERGE_CUMULATOR, ByteToMessageDecoder.COMPOSITE_CUMULATOR }) {
             ByteBuf in = Unpooled.buffer().writeZero(1);
             ByteBuf empty = Unpooled.buffer().writeZero(1);
-            empty.readByte();
+            empty.skipBytes(1);
             ByteBuf out = cumulator.cumulate(empty.alloc(), empty, in);
             assertSame(in, out);
             assertEquals(0, empty.refCnt());
