@@ -318,7 +318,7 @@ public class ByteToMessageDecoderTest {
                 throw error;
             }
         };
-        cumulation.writeByte(1);
+        cumulation.writeByte(1); // ensure cumulation is non-null, so that cumulator writes to it instead of replacing it
         ByteBuf in = Unpooled.buffer().writeZero(12);
         try {
             ByteToMessageDecoder.MERGE_CUMULATOR.cumulate(UnpooledByteBufAllocator.DEFAULT, cumulation, in);
@@ -339,7 +339,7 @@ public class ByteToMessageDecoderTest {
                 throw error;
             }
         };
-        cumulation.writeByte(1);
+        cumulation.writeByte(1); // ensure cumulation is non-null, so that cumulator writes to it instead of replacing it
         ByteBuf in = Unpooled.buffer().writeZero(12);
         try {
             ByteToMessageDecoder.COMPOSITE_CUMULATOR.cumulate(UnpooledByteBufAllocator.DEFAULT, cumulation, in);
@@ -350,7 +350,7 @@ public class ByteToMessageDecoderTest {
         }
     }
 
-    static abstract class PartialCumulationDecoder extends ByteToMessageDecoder {
+    abstract static class PartialCumulationDecoder extends ByteToMessageDecoder {
         final int messageSize;
         int cumulations;
 
@@ -436,7 +436,7 @@ public class ByteToMessageDecoderTest {
             for (int throwAfterCount = 0 ; throwAfterCount <= 1 ; ++throwAfterCount) {
                 final int throwAfterCountFinal = throwAfterCount;
                 final PartialCumulationDecoder decoder = new PartialCumulationDecoder(2) {
-                    int count = 0;
+                    int count;
                     @Override
                     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
                         if (in.readableBytes() < 2) {

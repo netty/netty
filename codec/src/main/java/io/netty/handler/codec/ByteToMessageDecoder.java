@@ -297,9 +297,10 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                         cumulation = Unpooled.EMPTY_BUFFER;
                     }
 
-                    // we permit our cumulators to be smart, and guarantee exactly one message's worth of data is buffered
-                    // before we switch back to using the input buffer, so that if we are waiting for a message of known size
-                    // we can allocate an accurately sized buffer, and read any remaining messages without copying or composing
+                    // we permit our cumulators to be smart, and guarantee exactly one message's worth of data is
+                    // buffered before we switch back to using the input buffer, so that if we are waiting for a message
+                    // of known size we can allocate an accurately sized buffer, and read any remaining messages without
+                    // copying or composing
                     int oldReadableBytes = cumulation.readableBytes();
                     int newReadableBytes = data.readableBytes();
                     cumulation = cumulator.cumulate(ctx.alloc(), cumulation, data);
@@ -311,7 +312,15 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     }
 
                     callDecode(ctx, cumulation, out);
-                    if (!cumulation.isReadable()) {
+                    if (cumulation == null) {
+                        // this can only happen if we have been removed, so propagate any remaining bytes we may own
+                        if (data != null && data.isReadable()) {
+                            ctx.fireChannelRead(data);
+                            data = null;
+                            ctx.fireChannelReadComplete();
+                        }
+                        break;
+                    } else if (!cumulation.isReadable()) {
                         cumulation.release();
                         cumulation = null;
                     }
@@ -331,8 +340,9 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                         data = null;
                     }
                 }
-                if (e instanceof DecoderException)
+                if (e instanceof DecoderException) {
                     throw e;
+                }
                 throw new DecoderException(e);
             } finally {
                 if (data != null) {
@@ -598,15 +608,22 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
          * The implementation is responsible to correctly handle the life-cycle of the given {@link ByteBuf}s and so
          * call {@link ByteBuf#release()} if a {@link ByteBuf} is fully consumed.
          *
-         * It is not required that all bytes from in make it to the result, so long as at least one message can be
-         * successfully decoded from the resulting buffer.  If this happens, cumulate will be called again after
-         * decode has been called on the result, successively, until we have attempted to decode the entirety of {@code in}.
-         * Once all of the bytes have been propagated, the lifetime of {@code in} is in the hands of the {@link Cumulator}.
+         * It is not required that all bytes from {@code in} make it to the result, so long as at least one message
+         * can be successfully decoded from the resulting buffer.  If this happens, cumulate will be called again after
+         * the resulting cumulation has been passed to {@link #callDecode}; this will happen repeatedly,
+         * until we have attempted to decode the entirety of {@code in} (or we can switch to {@code in} exclusively).
+         *
+         * Once all of the bytes have been propagated, the lifetime of {@code in} is in the hands of the
+         * {@link Cumulator}.
+         *
+         * The lifetime of {@code cumulation} is always handed to the control of this method; only the buffer that
+         * is returned, which may be {@code cumulation} itself, and {@code in} if its contents are propagated only
+         * partially, are returned to the ownership of the caller.
          *
          * @param cumulation if no readable bytes, we must return a buffer fully containing {@code in}
          * @param in the bytes from this buffer must be at least partially propagated to the output {@link ByteBuf};
-         *           it must be guaranteed that at least one message can be decoded from the result, or that
-         *           all of the input data is propagated.  If {@code cumulation} is empty, all of {@code in} should be propagated.
+         *           it must be guaranteed that at least one message can be decoded from the result, or that all of the
+         *           input data is propagated.  If {@code cumulation} is empty, all of {@code in} should be propagated.
          */
         ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in);
     }
