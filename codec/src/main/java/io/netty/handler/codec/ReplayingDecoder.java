@@ -325,6 +325,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
     final void channelInputClosed(ChannelHandlerContext ctx, List<Object> out) throws Exception {
         try {
             replayable.terminate();
+            saveInProgressToCumulation();
             if (cumulation != null) {
                 callDecode(ctx, internalBuffer(), out);
             } else {

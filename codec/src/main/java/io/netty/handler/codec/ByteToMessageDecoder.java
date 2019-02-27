@@ -155,13 +155,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     };
 
     private static final byte STATE_INIT = 0;
-    private static final byte STATE_DEFER_HANDLER_REMOVED = 1;
-    private static final byte STATE_DEFER_INPUT_CLOSED = 2;
-    private static final byte STATE_HANDLER_REMOVED_PENDING = 4;
-    private static final byte STATE_INPUT_CLOSED_PENDING = 8;
-    private static final byte STATE_INPUT_CLOSED_PENDING_CALL_INACTIVE = 24;
+    private static final byte STATE_CALLING_CHILD_DECODE = 1;
+    private static final byte STATE_HANDLER_REMOVED_PENDING = 2;
 
     ByteBuf cumulation;
+    ByteBuf inProgress;
     private Cumulator cumulator = MERGE_CUMULATOR;
     private boolean singleDecode;
     private boolean decodeWasNull;
@@ -170,11 +168,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * A bitmask where the bits are defined as
      * <ul>
      *     <li>{@link #STATE_INIT}</li>
-     *     <li>{@link #STATE_DEFER_HANDLER_REMOVED}</li>
-     *     <li>{@link #STATE_DEFER_INPUT_CLOSED}</li>
+     *     <li>{@link #STATE_CALLING_CHILD_DECODE}</li>
      *     <li>{@link #STATE_HANDLER_REMOVED_PENDING}</li>
-     *     <li>{@link #STATE_INPUT_CLOSED_PENDING}</li>
-     *     <li>{@link #STATE_INPUT_CLOSED_PENDING_CALL_INACTIVE}</li>
      * </ul>
      */
     private byte decodeState = STATE_INIT;
@@ -203,14 +198,6 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      */
     public boolean isSingleDecode() {
         return singleDecode;
-    }
-
-    private boolean hasState(byte checkIfHasState) {
-        return hasState(decodeState, checkIfHasState);
-    }
-
-    private static boolean hasState(byte decodeState, byte checkIfHasState) {
-        return checkIfHasState == (decodeState & checkIfHasState);
     }
 
     /**
@@ -257,10 +244,12 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     @Override
     public final void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        if (hasState(STATE_DEFER_HANDLER_REMOVED)) {
-            decodeState |= STATE_HANDLER_REMOVED_PENDING;
+        if (decodeState == STATE_CALLING_CHILD_DECODE) {
+            decodeState = STATE_HANDLER_REMOVED_PENDING;
             return;
         }
+
+        saveInProgressToCumulation();
         ByteBuf buf = cumulation;
         if (buf != null) {
             // Directly set this to null so we are sure we not access it in any other method here anymore.
@@ -291,17 +280,14 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof ByteBuf) {
             CodecOutputList out = CodecOutputList.newInstance();
-            ByteBuf data = (ByteBuf) msg;
-
-            byte state = STATE_DEFER_HANDLER_REMOVED | STATE_DEFER_INPUT_CLOSED;
+            inProgress = (ByteBuf) msg;
             try {
 
-                decodeState = state;
                 do {
                     first = cumulation == null;
                     if (first) {
-                        callDecode(ctx, data, out);
-                        if (decodeState != state || !data.isReadable()) {
+                        callDecode(ctx, inProgress, out);
+                        if (inProgress == null || !inProgress.isReadable()) {
                             break;
                         }
                         cumulation = Unpooled.EMPTY_BUFFER;
@@ -312,25 +298,25 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     // of known size we can allocate an accurately sized buffer, and read any remaining messages without
                     // copying or composing
                     int oldReadableBytes = cumulation.readableBytes();
-                    int newReadableBytes = data.readableBytes();
-                    cumulation = cumulator.cumulate(ctx.alloc(), cumulation, data);
+                    int newReadableBytes = inProgress.readableBytes();
+                    cumulation = cumulator.cumulate(ctx.alloc(), cumulation, inProgress);
                     if (cumulation.readableBytes() == oldReadableBytes + newReadableBytes) {
-                        data = null;
+                        inProgress = null;
                         if (first) {
                             break; // don't bother calling decode again if we've already passed it everything
                         }
                     }
 
                     callDecode(ctx, cumulation, out);
-                    if (decodeState != state) {
-                        break;
-                    }
-
-                    if (!cumulation.isReadable()) {
+                    if (cumulation == null) {
+                        break; // have had intervening handlerRemoved or channelInputClosed
+                    } else if (!cumulation.isReadable()) {
+                        // we have finished cumulation, but may have more inProgress
                         cumulation.release();
                         cumulation = null;
+                        numReads = 0;
                     }
-                } while (data != null);
+                } while (inProgress != null);
 
             } catch (Exception e) {
                 if (e instanceof DecoderException) {
@@ -338,16 +324,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 }
                 throw new DecoderException(e);
             } finally {
-                state = decodeState;
-                decodeState = STATE_INIT;
-
-                saveToCumulation(data);
-                if (hasState(state, STATE_HANDLER_REMOVED_PENDING)) {
-                    handlerRemoved(ctx);
-                }
-                if (hasState(state, STATE_INPUT_CLOSED_PENDING)) {
-                    channelInputClosed(ctx, hasState(state, STATE_INPUT_CLOSED_PENDING_CALL_INACTIVE));
-                }
+                saveInProgressToCumulation();
                 if (cumulation == null) {
                     numReads = 0;
                 } else if (!cumulation.isReadable()) {
@@ -371,20 +348,21 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         }
     }
 
-    private void saveToCumulation(ByteBuf data)
-    {
-        if (data != null) {
-            if (!data.isReadable()) {
-                data.release();
+    void saveInProgressToCumulation() {
+        ByteBuf buf = inProgress;
+        if (buf != null) {
+            inProgress = null;
+            if (!buf.isReadable()) {
+                buf.release();
             } else if (cumulation == null) {
-                cumulation = data;
+                cumulation = buf;
             } else {
                 // make sure we are using a cumulator that copies all remaining bytes
                 Cumulator cumulator = this.cumulator;
                 if (cumulator != COMPOSITE_CUMULATOR) {
                     cumulator = MERGE_CUMULATOR;
                 }
-                cumulation = cumulator.cumulate(cumulation.alloc(), cumulation, data);
+                cumulation = cumulator.cumulate(cumulation.alloc(), cumulation, buf);
             }
         }
     }
@@ -454,10 +432,6 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     }
 
     private void channelInputClosed(ChannelHandlerContext ctx, boolean callChannelInactive) throws Exception {
-        if (hasState(STATE_DEFER_INPUT_CLOSED)) {
-            decodeState |= callChannelInactive ? STATE_INPUT_CLOSED_PENDING_CALL_INACTIVE : STATE_INPUT_CLOSED_PENDING;
-            return;
-        }
         CodecOutputList out = CodecOutputList.newInstance();
         try {
             channelInputClosed(ctx, out);
@@ -467,6 +441,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             throw new DecoderException(e);
         } finally {
             try {
+                saveInProgressToCumulation();
                 if (cumulation != null) {
                     cumulation.release();
                     cumulation = null;
@@ -492,6 +467,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * {@link ChannelInputShutdownEvent}.
      */
     void channelInputClosed(ChannelHandlerContext ctx, List<Object> out) throws Exception {
+        saveInProgressToCumulation();
         if (cumulation != null) {
             callDecode(ctx, cumulation, out);
             decodeLast(ctx, cumulation, out);
@@ -588,19 +564,14 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      */
     final void decodeRemovalReentryProtection(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
             throws Exception {
-        boolean handlePending;
-        if (handlePending = decodeState == STATE_INIT) {
-            decodeState = STATE_DEFER_HANDLER_REMOVED;
-        }
+        decodeState = STATE_CALLING_CHILD_DECODE;
         try {
             decode(ctx, in, out);
         } finally {
-            if (handlePending) {
-                boolean hasPendingRemove = hasState(STATE_HANDLER_REMOVED_PENDING);
-                decodeState = STATE_INIT;
-                if (hasPendingRemove) {
-                    handlerRemoved(ctx);
-                }
+            boolean removePending = decodeState == STATE_HANDLER_REMOVED_PENDING;
+            decodeState = STATE_INIT;
+            if (removePending) {
+                handlerRemoved(ctx);
             }
         }
     }
