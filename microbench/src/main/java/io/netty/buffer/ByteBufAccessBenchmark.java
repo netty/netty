@@ -19,8 +19,11 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.TearDown;
@@ -32,6 +35,8 @@ import io.netty.util.internal.PlatformDependent;
 @Warmup(iterations = 5, time = 1500, timeUnit = TimeUnit.MILLISECONDS)
 @Measurement(iterations = 10, time = 1500, timeUnit = TimeUnit.MILLISECONDS)
 @Fork(3)
+@BenchmarkMode(Mode.AverageTime)
+@OutputTimeUnit(TimeUnit.NANOSECONDS)
 public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
 
     static final class NioFacade extends WrappedByteBuf {
@@ -111,6 +116,9 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
     @Param({ "true", "false" })
     public String checkBounds;
 
+    @Param({ "8" })
+    public int batchSize; // applies only to readBatch benchmark
+
     @Setup
     public void setup() {
         System.setProperty("io.netty.buffer.checkAccessible", checkAccessible);
@@ -123,6 +131,8 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
     @TearDown
     public void tearDown() {
         buffer.release();
+        System.clearProperty("io.netty.buffer.checkAccessible");
+        System.clearProperty("io.netty.buffer.checkBounds");
     }
 
     @Benchmark
@@ -139,7 +149,7 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
     public int readBatch() {
         buffer.readerIndex(0).touch();
         int result = 0;
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0, size = batchSize; i < size; i++) {
             result += buffer.readByte();
         }
         return result;
