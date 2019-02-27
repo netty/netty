@@ -159,7 +159,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     private static final byte STATE_HANDLER_REMOVED_PENDING = 2;
 
     ByteBuf cumulation;
-    ByteBuf inProgress;
+    private ByteBuf inProgress;
     private Cumulator cumulator = MERGE_CUMULATOR;
     private boolean singleDecode;
     private boolean decodeWasNull;
@@ -318,10 +318,9 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     }
                 } while (inProgress != null);
 
+            } catch (DecoderException e) {
+                throw e;
             } catch (Exception e) {
-                if (e instanceof DecoderException) {
-                    throw e;
-                }
                 throw new DecoderException(e);
             } finally {
                 saveInProgressToCumulation();
