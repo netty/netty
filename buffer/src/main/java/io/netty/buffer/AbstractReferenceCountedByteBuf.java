@@ -69,13 +69,14 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         // a best-effort guard.
 
         // This is copied explicitly from the nonVolatileRawCnt() method above to reduce call stack depth,
-        // and avoid inlining prevention for this reason
+        // to avoid hitting the default limit for inlining (9)
         final int rawCnt = REFCNT_FIELD_OFFSET != -1 ? PlatformDependent.getInt(this, REFCNT_FIELD_OFFSET)
                 : refCntUpdater.get(this);
 
+        // The "real" ref count is > 0 if the rawCnt is even.
         // (x & y) appears to be surprisingly expensive relative to (x == y). Thus the expression below provides
-        // a fast path for most common cases where refCnt is 1, 2, 3 or 4.
-        return rawCnt == 2 || rawCnt == 4 || rawCnt == 6 || rawCnt == 8 ||  (rawCnt & 1) == 0;
+        // a fast path for most common cases where the ref count is 1, 2, 3 or 4.
+        return rawCnt == 2 || rawCnt == 4 || rawCnt == 6 || rawCnt == 8 || (rawCnt & 1) == 0;
     }
 
     @Override
