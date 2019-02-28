@@ -51,7 +51,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
     volatile EventLoopGroup group;
     @SuppressWarnings("deprecation")
-    private volatile ChannelFactory<? extends C> channelFactory;
+    protected volatile ChannelFactory<? extends C> channelFactory;
     private volatile SocketAddress localAddress;
     private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
     private final Map<AttributeKey<?>, Object> attrs = new LinkedHashMap<AttributeKey<?>, Object>();
@@ -209,10 +209,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      */
     public B validate() {
         if (group == null) {
-            throw new IllegalStateException("group not set");
-        }
-        if (channelFactory == null) {
-            throw new IllegalStateException("channel or channelFactory not set");
+            group(ChannelSystem.getOptimal().newLoopGroup());
         }
         return self();
     }

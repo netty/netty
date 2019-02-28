@@ -283,6 +283,9 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         if (config.handler() == null) {
             throw new IllegalStateException("handler not set");
         }
+        if (channelFactory == null) {
+            channel(ChannelSystem.getOptimal().getChannelClass());
+        }
         return this;
     }
 

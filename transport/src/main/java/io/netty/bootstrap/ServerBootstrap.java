@@ -196,6 +196,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             logger.warn("childGroup is not set. Using parentGroup instead.");
             childGroup = config.group();
         }
+        if (channelFactory == null) {
+            channel(ChannelSystem.getOptimal().getServerChannelClass());
+        }
         return this;
     }
 
