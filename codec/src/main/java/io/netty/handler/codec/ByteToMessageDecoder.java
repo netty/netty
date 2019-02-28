@@ -281,7 +281,6 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof ByteBuf) {
             CodecOutputList out = CodecOutputList.newInstance();
-            boolean hasInProgress = true;
             inProgress = (ByteBuf) msg;
             try {
                 do {
@@ -308,12 +307,12 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     cumulation = cumulator.cumulate(ctx.alloc(), cumulation, inProgress);
                     if (cumulation.readableBytes() == oldReadableBytes + newReadableBytes) {
                         inProgress = null;
-                        hasInProgress = false;
                         if (first) {
                             break; // don't bother calling decode again if we've already passed it everything
                         }
                     }
 
+                    boolean hadInProgress = inProgress != null;
                     callDecode(ctx, cumulation, out);
                     if (cumulation == null) {
                         break; // have had intervening handlerRemoved or channelInputClosed
@@ -322,12 +321,12 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                         cumulation.release();
                         cumulation = null;
                         numReads = 0;
-                    } else if (hasInProgress && inProgress == null) {
+                    } else if (hadInProgress && inProgress == null) {
                         // if the caller invokes internalBuffer(), we may have unprocessed bytes in cumulation
                         callDecode(ctx, cumulation, out);
                         break;
                     }
-                } while (hasInProgress);
+                } while (inProgress != null);
 
             } catch (DecoderException e) {
                 throw e;
