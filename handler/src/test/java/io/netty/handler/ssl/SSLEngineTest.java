@@ -1151,7 +1151,7 @@ public abstract class SSLEngineTest {
                                                MessageReceiver receiver) throws Exception {
         List<ByteBuf> dataCapture = null;
         try {
-            assertTrue(sendChannel.writeAndFlush(message).await(50, TimeUnit.SECONDS));
+            assertTrue(sendChannel.writeAndFlush(message).await(5, TimeUnit.SECONDS));
             receiverLatch.await(5, TimeUnit.SECONDS);
             message.resetReaderIndex();
             ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
