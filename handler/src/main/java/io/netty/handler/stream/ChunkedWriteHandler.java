@@ -166,22 +166,28 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
             Object message = currentWrite.msg;
             if (message instanceof ChunkedInput) {
                 ChunkedInput<?> in = (ChunkedInput<?>) message;
+                boolean endOfInput;
+                long inputLength;
                 try {
-                    if (!in.isEndOfInput()) {
-                        if (cause == null) {
-                            cause = new ClosedChannelException();
-                        }
-                        currentWrite.fail(cause);
-                    } else {
-                        currentWrite.success(in.length());
-                    }
+                    endOfInput = in.isEndOfInput();
+                    inputLength = in.length();
                     closeInput(in);
                 } catch (Exception e) {
+                    closeInput(in);
                     currentWrite.fail(e);
                     if (logger.isWarnEnabled()) {
-                        logger.warn(ChunkedInput.class.getSimpleName() + ".isEndOfInput() failed", e);
+                        logger.warn(ChunkedInput.class.getSimpleName() + " failed", e);
                     }
-                    closeInput(in);
+                    continue;
+                }
+
+                if (!endOfInput) {
+                    if (cause == null) {
+                        cause = new ClosedChannelException();
+                    }
+                    currentWrite.fail(cause);
+                } else {
+                    currentWrite.success(inputLength);
                 }
             } else {
                 if (cause == null) {
@@ -249,8 +255,8 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                         ReferenceCountUtil.release(message);
                     }
 
-                    currentWrite.fail(t);
                     closeInput(chunks);
+                    currentWrite.fail(t);
                     break;
                 }
 
@@ -283,8 +289,12 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                                 closeInput(chunks);
                                 currentWrite.fail(future.cause());
                             } else {
-                                currentWrite.progress(chunks.progress(), chunks.length());
-                                currentWrite.success(chunks.length());
+                                // read state of the input in local variables before closing it
+                                long inputProgress = chunks.progress();
+                                long inputLength = chunks.length();
+                                closeInput(chunks);
+                                currentWrite.progress(inputProgress, inputLength);
+                                currentWrite.success(inputLength);
                             }
                         }
                     });
@@ -293,7 +303,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
                             if (!future.isSuccess()) {
-                                closeInput((ChunkedInput<?>) pendingMessage);
+                                closeInput(chunks);
                                 currentWrite.fail(future.cause());
                             } else {
                                 currentWrite.progress(chunks.progress(), chunks.length());
@@ -305,7 +315,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
                             if (!future.isSuccess()) {
-                                closeInput((ChunkedInput<?>) pendingMessage);
+                                closeInput(chunks);
                                 currentWrite.fail(future.cause());
                             } else {
                                 currentWrite.progress(chunks.progress(), chunks.length());
