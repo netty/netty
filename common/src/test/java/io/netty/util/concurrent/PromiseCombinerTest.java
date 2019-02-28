@@ -19,6 +19,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -26,6 +27,7 @@ import org.mockito.stubbing.Answer;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -56,7 +58,7 @@ public class PromiseCombinerTest {
     @Before
     public void setup() {
         MockitoAnnotations.initMocks(this);
-        combiner = new PromiseCombiner();
+        combiner = new PromiseCombiner(ImmediateEventExecutor.INSTANCE);
     }
 
     @Test
@@ -159,6 +161,38 @@ public class PromiseCombinerTest {
         verifyNotCompleted(p3);
         combiner.finish(p3);
         verifyFail(p3, e1);
+    }
+
+    @Test
+    public void testEventExecutor() {
+        EventExecutor executor = mock(EventExecutor.class);
+        when(executor.inEventLoop()).thenReturn(false);
+        combiner = new PromiseCombiner(executor);
+
+        Future<?> future = mock(Future.class);
+
+        try {
+            combiner.add(future);
+            Assert.fail();
+        } catch (IllegalStateException expected) {
+            // expected
+        }
+
+        try {
+            combiner.addAll(future);
+            Assert.fail();
+        } catch (IllegalStateException expected) {
+            // expected
+        }
+
+        @SuppressWarnings("unchecked")
+        Promise<Void> promise = (Promise<Void>) mock(Promise.class);
+        try {
+            combiner.finish(promise);
+            Assert.fail();
+        } catch (IllegalStateException expected) {
+            // expected
+        }
     }
 
     private static void verifyFail(Promise<Void> p, Throwable cause) {
