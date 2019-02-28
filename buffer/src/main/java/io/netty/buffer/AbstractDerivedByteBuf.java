@@ -32,6 +32,11 @@ public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
     }
 
     @Override
+    final boolean isAccessible() {
+        return unwrap().isAccessible();
+    }
+
+    @Override
     public final int refCnt() {
         return refCnt0();
     }
