@@ -282,7 +282,6 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             CodecOutputList out = CodecOutputList.newInstance();
             inProgress = (ByteBuf) msg;
             try {
-
                 do {
                     first = cumulation == null;
                     if (first) {

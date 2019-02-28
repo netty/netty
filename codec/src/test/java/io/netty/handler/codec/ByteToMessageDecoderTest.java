@@ -32,6 +32,8 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
+import static io.netty.handler.codec.ByteToMessageDecoder.MERGE_CUMULATOR;
+import static io.netty.handler.codec.ByteToMessageDecoder.COMPOSITE_CUMULATOR;
 import static org.junit.Assert.*;
 
 public class ByteToMessageDecoderTest {
@@ -318,10 +320,10 @@ public class ByteToMessageDecoderTest {
                 throw error;
             }
         };
-        cumulation.writeByte(1); // ensure cumulation is non-null, so that cumulator writes to it instead of replacing it
+        cumulation.writeByte(1); // ensure cumulation is non-null, so that cumulator writes to instead of replacing it
         ByteBuf in = Unpooled.buffer().writeZero(12);
         try {
-            ByteToMessageDecoder.MERGE_CUMULATOR.cumulate(UnpooledByteBufAllocator.DEFAULT, cumulation, in);
+            MERGE_CUMULATOR.cumulate(UnpooledByteBufAllocator.DEFAULT, cumulation, in);
             fail();
         } catch (Error expected) {
             assertSame(error, expected);
@@ -339,10 +341,10 @@ public class ByteToMessageDecoderTest {
                 throw error;
             }
         };
-        cumulation.writeByte(1); // ensure cumulation is non-null, so that cumulator writes to it instead of replacing it
+        cumulation.writeByte(1); // ensure cumulation is non-null, so that cumulator writes to instead of replacing it
         ByteBuf in = Unpooled.buffer().writeZero(12);
         try {
-            ByteToMessageDecoder.COMPOSITE_CUMULATOR.cumulate(UnpooledByteBufAllocator.DEFAULT, cumulation, in);
+            COMPOSITE_CUMULATOR.cumulate(UnpooledByteBufAllocator.DEFAULT, cumulation, in);
             fail();
         } catch (Error expected) {
             assertSame(error, expected);
@@ -508,7 +510,7 @@ public class ByteToMessageDecoderTest {
 
     @Test
     public void defaultCumulatorsFreeEmptyCumulation() {
-        for (Cumulator cumulator : new Cumulator[] { ByteToMessageDecoder.MERGE_CUMULATOR, ByteToMessageDecoder.COMPOSITE_CUMULATOR }) {
+        for (Cumulator cumulator : new Cumulator[] { MERGE_CUMULATOR, COMPOSITE_CUMULATOR }) {
             ByteBuf in = Unpooled.buffer().writeZero(1);
             ByteBuf empty = Unpooled.buffer().writeZero(1);
             empty.skipBytes(1);
