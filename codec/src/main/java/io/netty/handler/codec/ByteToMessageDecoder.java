@@ -235,6 +235,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * Use it only when you must use it at your own risk.
      */
     protected ByteBuf internalBuffer() {
+        saveInProgressToCumulation();
         if (cumulation != null) {
             return cumulation;
         } else {
@@ -280,13 +281,19 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof ByteBuf) {
             CodecOutputList out = CodecOutputList.newInstance();
+            boolean hasInProgress = true;
             inProgress = (ByteBuf) msg;
             try {
                 do {
                     first = cumulation == null;
                     if (first) {
                         callDecode(ctx, inProgress, out);
-                        if (inProgress == null || !inProgress.isReadable()) {
+                        if (cumulation != null) {
+                            // somebody has invoked internalBuffer() during evaluation, which cumulated our contents
+                            callDecode(ctx, cumulation, out);
+                            break;
+                        } else if (inProgress == null || !inProgress.isReadable()) {
+                            // we have been closed or had ourselves removed during evaluation
                             break;
                         }
                         cumulation = Unpooled.EMPTY_BUFFER;
@@ -301,6 +308,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     cumulation = cumulator.cumulate(ctx.alloc(), cumulation, inProgress);
                     if (cumulation.readableBytes() == oldReadableBytes + newReadableBytes) {
                         inProgress = null;
+                        hasInProgress = false;
                         if (first) {
                             break; // don't bother calling decode again if we've already passed it everything
                         }
@@ -314,8 +322,12 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                         cumulation.release();
                         cumulation = null;
                         numReads = 0;
+                    } else if (hasInProgress && inProgress == null) {
+                        // if the caller invokes internalBuffer(), we may have unprocessed bytes in cumulation
+                        callDecode(ctx, cumulation, out);
+                        break;
                     }
-                } while (inProgress != null);
+                } while (hasInProgress);
 
             } catch (DecoderException e) {
                 throw e;
