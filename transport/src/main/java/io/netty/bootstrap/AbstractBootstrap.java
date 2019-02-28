@@ -106,6 +106,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         return channelFactory(new ReflectiveChannelFactory<C>(channelClass));
     }
 
+    public B setChannelSystem(ChannelSystem channelSystem) {
+        group(channelSystem.newLoopGroup());
+        return self();
+    }
+
     /**
      * @deprecated Use {@link #channelFactory(io.netty.channel.ChannelFactory)} instead.
      */

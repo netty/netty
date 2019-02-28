@@ -187,6 +187,12 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     }
 
     @Override
+    public ServerBootstrap setChannelSystem(ChannelSystem channelSystem) {
+        channel(channelSystem.getServerChannelClass());
+        return super.setChannelSystem(channelSystem);
+    }
+
+    @Override
     public ServerBootstrap validate() {
         super.validate();
         if (childHandler == null) {

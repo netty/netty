@@ -106,6 +106,12 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         return this;
     }
 
+    @Override
+    public Bootstrap setChannelSystem(ChannelSystem channelSystem) {
+        channel(channelSystem.getChannelClass());
+        return super.setChannelSystem(channelSystem);
+    }
+
     /**
      * Connect a {@link Channel} to the remote peer.
      */
