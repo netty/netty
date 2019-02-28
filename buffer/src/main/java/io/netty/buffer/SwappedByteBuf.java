@@ -972,6 +972,11 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    final boolean isAccessible() {
+        return buf.isAccessible();
+    }
+
+    @Override
     public ByteBuf retain() {
         buf.retain();
         return this;
