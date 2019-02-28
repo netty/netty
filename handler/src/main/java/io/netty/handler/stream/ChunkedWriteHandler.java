@@ -20,7 +20,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -160,22 +159,28 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
             Object message = currentWrite.msg;
             if (message instanceof ChunkedInput) {
                 ChunkedInput<?> in = (ChunkedInput<?>) message;
+                boolean endOfInput;
+                long inputLength;
                 try {
-                    if (!in.isEndOfInput()) {
-                        if (cause == null) {
-                            cause = new ClosedChannelException();
-                        }
-                        currentWrite.fail(cause);
-                    } else {
-                        currentWrite.success(in.length());
-                    }
+                    endOfInput = in.isEndOfInput();
+                    inputLength = in.length();
                     closeInput(in);
                 } catch (Exception e) {
+                    closeInput(in);
                     currentWrite.fail(e);
                     if (logger.isWarnEnabled()) {
-                        logger.warn(ChunkedInput.class.getSimpleName() + ".isEndOfInput() failed", e);
+                        logger.warn(ChunkedInput.class.getSimpleName() + " failed", e);
                     }
-                    closeInput(in);
+                    continue;
+                }
+
+                if (!endOfInput) {
+                    if (cause == null) {
+                        cause = new ClosedChannelException();
+                    }
+                    currentWrite.fail(cause);
+                } else {
+                    currentWrite.success(inputLength);
                 }
             } else {
                 if (cause == null) {
@@ -243,8 +248,8 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                         ReferenceCountUtil.release(message);
                     }
 
-                    currentWrite.fail(t);
                     closeInput(chunks);
+                    currentWrite.fail(t);
                     break;
                 }
 
@@ -270,28 +275,33 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                     // be closed before its not written.
                     //
                     // See https://github.com/netty/netty/issues/303
-                    f.addListener((ChannelFutureListener) future -> {
+
+                    f.addListener(future -> {
                         if (!future.isSuccess()) {
                             closeInput(chunks);
                             currentWrite.fail(future.cause());
                         } else {
-                            currentWrite.progress(chunks.progress(), chunks.length());
-                            currentWrite.success(chunks.length());
+                            // read state of the input in local variables before closing it
+                            long inputProgress = chunks.progress();
+                            long inputLength = chunks.length();
+                            closeInput(chunks);
+                            currentWrite.progress(inputProgress, inputLength);
+                            currentWrite.success(inputLength);
                         }
                     });
                 } else if (channel.isWritable()) {
-                    f.addListener((ChannelFutureListener) future -> {
+                    f.addListener(future -> {
                         if (!future.isSuccess()) {
-                            closeInput((ChunkedInput<?>) pendingMessage);
+                            closeInput(chunks);
                             currentWrite.fail(future.cause());
                         } else {
                             currentWrite.progress(chunks.progress(), chunks.length());
                         }
                     });
                 } else {
-                    f.addListener((ChannelFutureListener) future -> {
+                    f.addListener(future -> {
                         if (!future.isSuccess()) {
-                            closeInput((ChunkedInput<?>) pendingMessage);
+                            closeInput(chunks);
                             currentWrite.fail(future.cause());
                         } else {
                             currentWrite.progress(chunks.progress(), chunks.length());
