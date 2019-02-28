@@ -130,7 +130,7 @@ public final class PendingWriteQueue {
         }
 
         ChannelPromise p = ctx.newPromise();
-        PromiseCombiner combiner = new PromiseCombiner();
+        PromiseCombiner combiner = new PromiseCombiner(ctx.executor());
         try {
             // It is possible for some of the written promises to trigger more writes. The new writes
             // will "revive" the queue, so we need to write them up until the queue is empty.
