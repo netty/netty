@@ -38,6 +38,7 @@
 
     <jarName>${project.artifactId}-${project.version}.jar</jarName>
     <shadedPackagePrefix>io.netty.</shadedPackagePrefix>
+    <skipJapicmp>true</skipJapicmp>
   </properties>
 
   <build>
