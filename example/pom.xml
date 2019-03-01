@@ -29,6 +29,9 @@
 
   <name>Netty/Example</name>
 
+  <properties>
+    <skipJapicmp>true</skipJapicmp>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
