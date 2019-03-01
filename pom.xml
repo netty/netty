@@ -686,7 +686,6 @@
               <ignoreMissingClassesByRegularExpression>^io\.netty\.internal\.tcnative\..*</ignoreMissingClassesByRegularExpression>
             </ignoreMissingClassesByRegularExpressions>
             <excludes>
-              <exclude>io.netty.util.internal</exclude>
               <exclude>@io.netty.util.internal.UnstableApi</exclude>
             </excludes>
           </parameter>
