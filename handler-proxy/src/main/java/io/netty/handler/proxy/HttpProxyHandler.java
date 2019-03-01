@@ -172,7 +172,7 @@ public final class HttpProxyHandler extends ProxyHandler {
     }
 
     @Override
-    protected boolean handleResponse(ChannelHandlerContext ctx, Object response) throws HttpProxyConnectException {
+    protected boolean handleResponse(ChannelHandlerContext ctx, Object response) throws Exception {
         if (response instanceof HttpResponse) {
             if (status != null) {
                 throw new HttpProxyConnectException(exceptionMessage("too many responses"), /*headers=*/ null);
