@@ -625,7 +625,7 @@ final class PlatformDependent0 {
         int remainingBytes = length & 7;
         final long baseOffset1 = BYTE_ARRAY_BASE_OFFSET + startPos1;
         final long diff = startPos2 - startPos1;
-        if (length > 7) {
+        if (length >= 8) {
             final long end = baseOffset1 + remainingBytes;
             for (long i = baseOffset1 - 8 + length; i >= end; i -= 8) {
                 if (UNSAFE.getLong(bytes1, i) != UNSAFE.getLong(bytes2, i + diff)) {
@@ -640,14 +640,14 @@ final class PlatformDependent0 {
                 return false;
             }
         }
-        long baseOffset2 = baseOffset1 + diff;
+        final long baseOffset2 = baseOffset1 + diff;
         if (remainingBytes >= 2) {
             return UNSAFE.getChar(bytes1, baseOffset1) == UNSAFE.getChar(bytes2, baseOffset2) &&
-                    (remainingBytes == 2
-                    || UNSAFE.getByte(bytes1, baseOffset1 + 2) == UNSAFE.getByte(bytes2, baseOffset2 + 2));
+                    (remainingBytes == 2 ||
+                    UNSAFE.getByte(bytes1, baseOffset1 + 2) == UNSAFE.getByte(bytes2, baseOffset2 + 2));
         }
-        return remainingBytes == 0
-                || UNSAFE.getByte(bytes1, baseOffset1) == UNSAFE.getByte(bytes2, baseOffset2);
+        return remainingBytes == 0 ||
+                UNSAFE.getByte(bytes1, baseOffset1) == UNSAFE.getByte(bytes2, baseOffset2);
     }
 
     static int equalsConstantTime(byte[] bytes1, int startPos1, byte[] bytes2, int startPos2, int length) {

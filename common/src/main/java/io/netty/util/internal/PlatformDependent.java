@@ -753,8 +753,9 @@ public final class PlatformDependent {
      * The resulting hash code will be case insensitive.
      */
     public static int hashCodeAscii(CharSequence bytes) {
+        final int length = bytes.length();
+        final int remainingBytes = length & 7;
         int hash = HASH_CODE_ASCII_SEED;
-        final int length = bytes.length(), remainingBytes = length & 7;
         // Benchmarking shows that by just naively looping for inputs 8~31 bytes long we incur a relatively large
         // performance penalty (only achieve about 60% performance of loop which iterates over each char). So because
         // of this we take special provisions to unroll the looping for these conditions.
