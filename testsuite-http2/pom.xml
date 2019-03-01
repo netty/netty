@@ -28,6 +28,10 @@
 
   <name>Netty/Testsuite/Http2</name>
 
+  <properties>
+    <skipJapicmp>true</skipJapicmp>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>

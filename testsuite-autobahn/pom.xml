@@ -28,6 +28,10 @@
 
   <name>Netty/Testsuite/Autobahn</name>
 
+  <properties>
+    <skipJapicmp>true</skipJapicmp>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>

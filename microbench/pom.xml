@@ -38,8 +38,8 @@
     <!-- This only be set when run on mac as on other platforms we just want to include the jar without native
          code -->
     <kqueue.classifier />
+    <skipJapicmp>true</skipJapicmp>
   </properties>
-
   <profiles>
     <profile>
       <id>linux</id>
