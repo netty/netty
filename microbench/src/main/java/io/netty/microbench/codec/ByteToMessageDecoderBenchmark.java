@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2019 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,7 +21,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.internal.PlatformDependent;
 import org.openjdk.jmh.annotations.*;
@@ -41,10 +40,10 @@ public class ByteToMessageDecoderBenchmark extends AbstractMicrobenchmark {
         MERGE, COMPOSITE, MESSAGE_AWARE_MERGE
     }
 
-    public static class MessageDecoder extends ByteToMessageDecoder {
+    private static class MessageDecoder extends ByteToMessageDecoder {
         final int messageSize;
         final int skipSize;
-        public MessageDecoder(int messageSize, int skipSize, SelectCumulator cumulator) {
+        MessageDecoder(int messageSize, int skipSize, SelectCumulator cumulator) {
             this.messageSize = messageSize;
             this.skipSize = skipSize;
             switch (cumulator) {
@@ -57,6 +56,8 @@ public class ByteToMessageDecoderBenchmark extends AbstractMicrobenchmark {
                 case MESSAGE_AWARE_MERGE:
                     setCumulator(new MessageAwareCumulator(messageSize));
                     break;
+                default:
+                    throw new IllegalStateException();
             }
         }
         @Override
@@ -69,7 +70,7 @@ public class ByteToMessageDecoderBenchmark extends AbstractMicrobenchmark {
         }
     }
 
-    static class MessageAwareCumulator implements ByteToMessageDecoder.Cumulator {
+    private static final class MessageAwareCumulator implements ByteToMessageDecoder.Cumulator {
         final int messageSize;
         MessageAwareCumulator(int messageSize) {
             this.messageSize = messageSize;
