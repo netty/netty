@@ -127,7 +127,8 @@ public class QueryStringDecoderTest {
         assertQueryString("/foo?a=", "/foo?&a=");
         assertQueryString("/foo?a=b&c=d", "/foo?a=b&c=d");
         assertQueryString("/foo?a=1&a=&a=", "/foo?a=1&a&a=");
-    }
+        // ";" should be treated as a normal character, see #8855
+        assertQueryString("/foo?a=1;2", "/foo?a=1%3B2");    }
 
     @Test
     public void testPathSpecific() {
@@ -324,6 +325,7 @@ public class QueryStringDecoderTest {
     }
 
     // See https://github.com/netty/netty/issues/1833
+    // corrected : ";" should now be treated as a normal character, see #8855
     @Test
     public void testURI2() {
         URI uri = URI.create("http://foo.com/images;num=10?query=name;value=123");
@@ -333,18 +335,13 @@ public class QueryStringDecoderTest {
         Assert.assertEquals("query=name;value=123", decoder.rawQuery());
 
         Map<String, List<String>> params =  decoder.parameters();
-        Assert.assertEquals(2, params.size());
+        Assert.assertEquals(1, params.size());
         Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
 
         Entry<String, List<String>> entry = entries.next();
         Assert.assertEquals("query", entry.getKey());
         Assert.assertEquals(1, entry.getValue().size());
-        Assert.assertEquals("name", entry.getValue().get(0));
-
-        entry = entries.next();
-        Assert.assertEquals("value", entry.getKey());
-        Assert.assertEquals(1, entry.getValue().size());
-        Assert.assertEquals("123", entry.getValue().get(0));
+        Assert.assertEquals("name;value=123", entry.getValue().get(0));
 
         Assert.assertFalse(entries.hasNext());
     }

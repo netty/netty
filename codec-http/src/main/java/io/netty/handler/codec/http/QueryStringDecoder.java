@@ -227,7 +227,6 @@ public class QueryStringDecoder {
                 }
                 break;
             case '&':
-            case ';':
                 if (addParam(s, nameStart, valueStart, i, params, charset)) {
                     paramsLimit--;
                     if (paramsLimit == 0) {
