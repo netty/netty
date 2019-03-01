@@ -1688,7 +1688,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
         // if SSL_do_handshake returns > 0 or sslError == SSL.SSL_ERROR_NAME it means the handshake was finished.
         session.handshakeFinished();
-        engineMap.remove(ssl);
         return FINISHED;
     }
 
