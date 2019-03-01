@@ -74,6 +74,7 @@ public final class PlatformDependent {
 
     private static final boolean IS_WINDOWS = isWindows0();
     private static final boolean IS_OSX = isOsx0();
+    private static final boolean IS_J9_JVM = isJ9Jvm0();
 
     private static final boolean MAYBE_SUPER_USER;
 
@@ -996,6 +997,19 @@ public final class PlatformDependent {
             // Probably failed to initialize PlatformDependent0.
             return new UnsupportedOperationException("Could not determine if Unsafe is available", t);
         }
+    }
+
+    /**
+     * Returns {@code true} if the running JVM is either <a href="https://developer.ibm.com/javasdk/">IBM J9</a> or
+     * <a href="https://www.eclipse.org/openj9/">Eclipse OpenJ9</a>, {@code false} otherwise.
+     */
+    public static boolean isJ9Jvm() {
+        return IS_J9_JVM;
+    }
+
+    private static boolean isJ9Jvm0() {
+        String vmName = SystemPropertyUtil.get("java.vm.name", "").toLowerCase();
+        return vmName.startsWith("ibm j9") || vmName.startsWith("eclipse openj9");
     }
 
     private static long maxDirectMemory0() {

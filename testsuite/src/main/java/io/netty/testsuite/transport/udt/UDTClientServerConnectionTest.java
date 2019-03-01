@@ -35,6 +35,8 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.internal.PlatformDependent;
+import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -338,6 +340,8 @@ public class UDTClientServerConnectionTest {
      */
     @Test
     public void connection() throws Exception {
+        Assume.assumeFalse("Not supported on J9 JVM", PlatformDependent.isJ9Jvm());
+
         log.info("Starting server.");
         // Using LOCALHOST4 as UDT transport does not support IPV6 :(
         final Server server = new Server(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
