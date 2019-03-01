@@ -307,9 +307,9 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     cumulation = cumulator.cumulate(ctx.alloc(), cumulation, inProgress);
                     if (cumulation.readableBytes() == oldReadableBytes + newReadableBytes) {
                         inProgress = null;
-                        if (first) {
-                            break; // don't bother calling decode again if we've already passed it everything
-                        }
+                    }
+                    if (first) {
+                        break; // don't bother calling decode again if we've already passed it everything
                     }
 
                     boolean hadInProgress = inProgress != null;
