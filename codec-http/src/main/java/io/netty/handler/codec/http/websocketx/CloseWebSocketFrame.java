@@ -21,7 +21,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 
 /**
- * Web Socket Frame for closing the connection
+ * Web Socket Frame for closing the connection.
  */
 public class CloseWebSocketFrame extends WebSocketFrame {
 
@@ -51,7 +51,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
      * @param rsv
-     *            reserved bits used for protocol extensions
+     *            reserved bits used for protocol extensions.
      */
     public CloseWebSocketFrame(boolean finalFragment, int rsv) {
         this(finalFragment, rsv, Unpooled.buffer(0));
