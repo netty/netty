@@ -86,7 +86,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                                                       2048));
                 }
             });
-
+    private static final boolean USE_TASKS =
+            SystemPropertyUtil.getBoolean("io.netty.handler.ssl.openssl.useTasks", false);
     private static final Integer DH_KEY_LENGTH;
     private static final ResourceLeakDetector<ReferenceCountedOpenSslContext> leakDetector =
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(ReferenceCountedOpenSslContext.class);
@@ -342,6 +343,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             if (enableOcsp) {
                 SSLContext.enableOcsp(ctx, isClient());
             }
+
+            SSLContext.setUseTasks(ctx, USE_TASKS);
             success = true;
         } finally {
             if (!success) {
