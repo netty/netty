@@ -1511,10 +1511,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private boolean runDelegatedTasks(boolean inUnwrap) {
         if (delegatedTaskExecutor == ImmediateExecutor.INSTANCE || inEventLoop(delegatedTaskExecutor)) {
             // We should run the task directly in the EventExecutor thread and not offload at all.
-            for (;;) {
-                runAllDelegatedTasks(engine);
-                return true;
-            }
+            runAllDelegatedTasks(engine);
+            return true;
         } else {
             executeDelegatedTasks(inUnwrap);
             return false;
