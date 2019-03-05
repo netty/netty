@@ -2001,7 +2001,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // thread.
         private X509Certificate[] x509PeerCerts;
         private Certificate[] peerCerts;
-        private Certificate[] localCerts;
 
         private String protocol;
         private String cipher;
@@ -2156,7 +2155,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     id = SSL.getSessionId(ssl);
                     cipher = toJavaCipherSuite(SSL.getCipherForSSL(ssl));
                     protocol = SSL.getVersion(ssl);
-                    localCerts = localCertificateChain;
 
                     initPeerCerts();
                     selectApplicationProtocol();
@@ -2291,6 +2289,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public Certificate[] getLocalCertificates() {
+            Certificate[] localCerts = ReferenceCountedOpenSslEngine.this.localCertificateChain;
             if (localCerts == null) {
                 return null;
             }
@@ -2317,7 +2316,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public Principal getLocalPrincipal() {
-            Certificate[] local = localCerts;
+            Certificate[] local = ReferenceCountedOpenSslEngine.this.localCertificateChain;
             if (local == null || local.length == 0) {
                 return null;
             }
