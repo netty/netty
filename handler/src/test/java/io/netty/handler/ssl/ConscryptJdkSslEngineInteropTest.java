@@ -92,5 +92,6 @@ public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
     @Override
     public void testHandshakeSession() throws Exception {
         // Ignore as Conscrypt does not correctly return the local certificates while the TrustManager is invoked.
+        // See https://github.com/google/conscrypt/issues/634
     }
 }
