@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -92,7 +93,7 @@ public class NativeLibraryLoaderTest {
 
     private static void testPatchingId0(boolean match, boolean withOsArch) throws IOException {
         byte[] bytes = new byte[1024];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         byte[] idBytes = ("/workspace/netty-tcnative/boringssl-static/target/" +
                 "native-build/target/lib/libnetty_tcnative-2.0.20.Final.jnilib").getBytes(CharsetUtil.UTF_8);
 
