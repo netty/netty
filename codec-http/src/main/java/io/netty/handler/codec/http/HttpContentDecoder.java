@@ -51,6 +51,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
     protected ChannelHandlerContext ctx;
     private EmbeddedChannel decoder;
     private boolean continueResponse;
+    private boolean needRead;
 
     @Override
     protected void decode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
@@ -145,7 +146,13 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
             if (decoder == null) {
                 out.add(c.retain());
             } else {
-                decodeContent(c, out);
+                try {
+                    decodeContent(c, out);
+                } finally {
+                    if (!needRead) {
+                        needRead = out.isEmpty();
+                    }
+                }
             }
         }
     }
@@ -166,6 +173,20 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
             } else {
                 out.add(new ComposedLastHttpContent(headers, DecoderResult.SUCCESS));
+            }
+        }
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        boolean needRead = this.needRead;
+        this.needRead = false;
+
+        try {
+            ctx.fireChannelReadComplete();
+        } finally {
+            if (needRead && !ctx.channel().config().isAutoRead()) {
+                ctx.read();
             }
         }
     }
