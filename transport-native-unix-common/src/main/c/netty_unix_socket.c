@@ -232,16 +232,25 @@ static jint _socket(JNIEnv* env, jclass clazz, int type) {
 int netty_unix_socket_initSockaddr(JNIEnv* env, jbyteArray address, jint scopeId, jint jport,
                                    const struct sockaddr_storage* addr, socklen_t* addrSize) {
     uint16_t port = htons((uint16_t) jport);
+    // We use 16 bytes as this allows us to fit ipv6, ipv4 and ipv4 mapped ipv6 addresses in the array.
+    jbyte addressBytes[16];
 
-    // Use GetPrimitiveArrayCritical and ReleasePrimitiveArrayCritical to signal the VM that we really would like
-    // to not do a memory copy here. This is ok as we not do any blocking action here anyway.
-    // This is important as the VM may suspend GC for the time!
-    jbyte* addressBytes = (*env)->GetPrimitiveArrayCritical(env, address, 0);
-    if (addressBytes == NULL) {
-        // No memory left ?!?!?
-        netty_unix_errors_throwOutOfMemoryError(env);
+    int len = (*env)->GetArrayLength(env, address);
+
+    if (len > 16) {
+        // This should never happen but let's guard against it anyway.
         return -1;
     }
+
+    // We use GetByteArrayRegion(...) and copy into a small stack allocated buffer and NOT GetPrimitiveArrayCritical(...)
+    // as there are still multiple GCLocker related bugs which are not fixed yet.
+    //
+    // For example:
+    //     https://bugs.openjdk.java.net/browse/JDK-8048556
+    //     https://bugs.openjdk.java.net/browse/JDK-8057573
+    //     https://bugs.openjdk.java.net/browse/JDK-8057586
+    (*env)->GetByteArrayRegion(env, address, 0, len, addressBytes);
+
     if (socketType == AF_INET6) {
         struct sockaddr_in6* ip6addr = (struct sockaddr_in6*) addr;
         *addrSize = sizeof(struct sockaddr_in6);
@@ -262,8 +271,6 @@ int netty_unix_socket_initSockaddr(JNIEnv* env, jbyteArray address, jint scopeId
         ipaddr->sin_port = port;
         memcpy(&(ipaddr->sin_addr.s_addr), addressBytes + 12, 4);
     }
-
-    (*env)->ReleasePrimitiveArrayCritical(env, address, addressBytes, JNI_ABORT);
     return 0;
 }
 
