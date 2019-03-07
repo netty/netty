@@ -237,6 +237,11 @@ int netty_unix_socket_initSockaddr(JNIEnv* env, jbyteArray address, jint scopeId
 
     int len = (*env)->GetArrayLength(env, address);
 
+    if (len > 16) {
+        // This should never happen but let's guard against it anyway.
+        return -1;
+    }
+
     // We use GetByteArrayRegion(...) and copy into a small stack allocated buffer and NOT GetPrimitiveArrayCritical(...)
     // as there are still multiple GCLocker related bugs which are not fixed yet.
     //
