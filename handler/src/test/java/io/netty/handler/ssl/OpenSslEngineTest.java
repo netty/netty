@@ -160,6 +160,12 @@ public class OpenSslEngineTest extends SSLEngineTest {
         super.testClientHostnameValidationFail();
     }
 
+    @Override
+    public void testHandshakeSession() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testHandshakeSession();
+    }
+
     private static boolean isNpnSupported(String versionString) {
         String[] versionStringParts = versionString.split(" ", -1);
         if (versionStringParts.length == 2 && "LibreSSL".equals(versionStringParts[0])) {

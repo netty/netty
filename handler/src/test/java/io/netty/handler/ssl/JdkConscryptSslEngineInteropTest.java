@@ -85,4 +85,11 @@ public class JdkConscryptSslEngineInteropTest extends SSLEngineTest {
         // TODO(scott): work around for a JDK issue. The exception should be SSLHandshakeException.
         return super.mySetupMutualAuthServerIsValidClientException(cause) || causedBySSLException(cause);
     }
+
+    @Ignore("Ignore due bug in Conscrypt")
+    @Override
+    public void testHandshakeSession() throws Exception {
+        // Ignore as Conscrypt does not correctly return the local certificates while the TrustManager is invoked.
+        // See https://github.com/google/conscrypt/issues/634
+    }
 }
