@@ -128,6 +128,12 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
     }
 
     @Override
+    public void testHandshakeSession() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testHandshakeSession();
+    }
+
+    @Override
     protected SSLEngine wrapEngine(SSLEngine engine) {
         return Java8SslTestUtils.wrapSSLEngineForTesting(engine);
     }
