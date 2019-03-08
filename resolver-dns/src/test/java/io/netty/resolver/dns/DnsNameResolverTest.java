@@ -37,6 +37,7 @@ import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsSection;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
@@ -2466,5 +2467,76 @@ public class DnsNameResolverTest {
                 1, // ndots
                 true // decodeIdn
         ).close();
+    }
+
+    @Test
+    public void testQueryTxt() throws Exception {
+        final String hostname = "txt.netty.io";
+        final String txt1 = "some text";
+        final String txt2 = "some more text";
+
+        TestDnsServer server = new TestDnsServer(new RecordStore() {
+
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                if (question.getDomainName().equals(hostname)) {
+                    Map<String, Object> map1 = new HashMap<String, Object>();
+                    map1.put(DnsAttribute.CHARACTER_STRING.toLowerCase(), txt1);
+
+                    Map<String, Object> map2 = new HashMap<String, Object>();
+                    map2.put(DnsAttribute.CHARACTER_STRING.toLowerCase(), txt2);
+
+                    Set<ResourceRecord> records = new HashSet<ResourceRecord>();
+                    records.add(new TestDnsServer.TestResourceRecord(question.getDomainName(), RecordType.TXT, map1));
+                    records.add(new TestDnsServer.TestResourceRecord(question.getDomainName(), RecordType.TXT, map2));
+                    return records;
+                }
+                return Collections.emptySet();
+            }
+        });
+        server.start();
+        DnsNameResolver resolver = newResolver(ResolvedAddressTypes.IPV4_ONLY)
+                .nameServerProvider(new SingletonDnsServerAddressStreamProvider(server.localAddress()))
+                .build();
+        try {
+            AddressedEnvelope<DnsResponse, InetSocketAddress> envelope = resolver.query(
+                    new DefaultDnsQuestion(hostname, DnsRecordType.TXT)).syncUninterruptibly().getNow();
+            assertNotNull(envelope.sender());
+
+            DnsResponse response = envelope.content();
+            assertNotNull(response);
+
+            assertEquals(DnsResponseCode.NOERROR, response.code());
+            int count = response.count(DnsSection.ANSWER);
+
+            assertEquals(2, count);
+            List<String> txts = new ArrayList<String>();
+
+            for (int i = 0; i < 2; i++) {
+                txts.addAll(decodeTxt(response.recordAt(DnsSection.ANSWER, i)));
+            }
+            assertTrue(txts.contains(txt1));
+            assertTrue(txts.contains(txt2));
+            envelope.release();
+        } finally {
+            resolver.close();
+            server.stop();
+        }
+    }
+
+    private static List<String> decodeTxt(DnsRecord record) {
+        if (!(record instanceof DnsRawRecord)) {
+            return Collections.emptyList();
+        }
+        List<String> list = new ArrayList<String>();
+        ByteBuf data = ((DnsRawRecord) record).content();
+        int idx = data.readerIndex();
+        int wIdx = data.writerIndex();
+        while (idx < wIdx) {
+            int len = data.getUnsignedByte(idx++);
+            list.add(data.toString(idx, len, CharsetUtil.UTF_8));
+            idx += len;
+        }
+        return list;
     }
 }
