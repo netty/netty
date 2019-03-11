@@ -337,6 +337,10 @@ public class ByteToMessageDecoderTest {
             public CompositeByteBuf addComponent(boolean increaseWriterIndex, ByteBuf buffer) {
                 throw error;
             }
+            @Override
+            public CompositeByteBuf addFlattenedComponents(boolean increaseWriterIndex, ByteBuf buffer) {
+                throw error;
+            }
         };
         ByteBuf in = Unpooled.buffer().writeZero(12);
         try {
