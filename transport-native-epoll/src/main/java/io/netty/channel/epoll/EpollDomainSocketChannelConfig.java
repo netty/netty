@@ -20,6 +20,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.DomainSocketChannelConfig;
 import io.netty.channel.unix.DomainSocketReadMode;
 
@@ -28,6 +29,7 @@ import java.util.Map;
 public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
         implements DomainSocketChannelConfig {
     private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;
+    private volatile boolean allowHalfClosure;
 
     EpollDomainSocketChannelConfig(AbstractEpollChannel channel) {
         super(channel);
@@ -44,6 +46,9 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
         if (option == EpollChannelOption.DOMAIN_SOCKET_READ_MODE) {
             return (T) getReadMode();
         }
+        if (option == EpollChannelOption.ALLOW_HALF_CLOSURE) {
+            return (T) Boolean.valueOf(isAllowHalfClosure());
+        }
         return super.getOption(option);
     }
 
@@ -53,6 +58,8 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
 
         if (option == EpollChannelOption.DOMAIN_SOCKET_READ_MODE) {
             setReadMode((DomainSocketReadMode) value);
+        } else if (option == EpollChannelOption.ALLOW_HALF_CLOSURE) {
+            setAllowHalfClosure((Boolean) value);
         } else {
             return super.setOption(option, value);
         }
@@ -147,5 +154,20 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
     @Override
     public DomainSocketReadMode getReadMode() {
         return mode;
+    }
+
+    /**
+     * @see SocketChannelConfig#isAllowHalfClosure()
+     */
+    public boolean isAllowHalfClosure() {
+        return allowHalfClosure;
+    }
+
+    /**
+     * @see SocketChannelConfig#setAllowHalfClosure(boolean)
+     */
+    public EpollDomainSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+        this.allowHalfClosure = allowHalfClosure;
+        return this;
     }
 }
