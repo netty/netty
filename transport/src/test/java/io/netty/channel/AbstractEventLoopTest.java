@@ -36,7 +36,7 @@ public abstract class AbstractEventLoopTest {
         ServerBootstrap b = new ServerBootstrap();
         b.group(loop)
                 .channel(newChannel())
-                .childHandler(new ChannelInboundHandlerAdapter());
+                .childHandler(new ChannelInboundHandler() { });
 
         // Not close the Channel to ensure the EventLoop is still shutdown in time.
         b.bind(0).sync().channel();

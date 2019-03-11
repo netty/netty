@@ -29,7 +29,10 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      * @param promise       the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception    thrown if an error occurs
      */
-    void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception;
+    @Skip
+    default void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+        ctx.bind(localAddress, promise);
+    }
 
     /**
      * Called once a connect operation is made.
@@ -40,9 +43,12 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error occurs
      */
-    void connect(
+    @Skip
+    default void connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress,
-            SocketAddress localAddress, ChannelPromise promise) throws Exception;
+            SocketAddress localAddress, ChannelPromise promise) throws Exception {
+        ctx.connect(remoteAddress, localAddress, promise);
+    }
 
     /**
      * Called once a disconnect operation is made.
@@ -51,7 +57,10 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error occurs
      */
-    void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
+    @Skip
+    default void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.disconnect(promise);
+    }
 
     /**
      * Called once a close operation is made.
@@ -60,7 +69,10 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error occurs
      */
-    void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
+    @Skip
+    default void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.close(promise);
+    }
 
     /**
      * Called once a register operation is made to register for IO on the {@link EventLoop}.
@@ -69,7 +81,10 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error occurs
      */
-    void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
+    @Skip
+    default void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.register(promise);
+    }
 
     /**
      * Called once a deregister operation is made from the current registered {@link EventLoop}.
@@ -78,12 +93,18 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error occurs
      */
-    void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
+    @Skip
+    default void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.deregister(promise);
+    }
 
     /**
      * Intercepts {@link ChannelHandlerContext#read()}.
      */
-    void read(ChannelHandlerContext ctx) throws Exception;
+    @Skip
+    default void read(ChannelHandlerContext ctx) throws Exception {
+        ctx.read();
+    }
 
     /**
     * Called once a write operation is made. The write operation will write the messages through the
@@ -95,7 +116,10 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error occurs
      */
-    void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception;
+    @Skip
+    default void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        ctx.write(msg, promise);
+    }
 
     /**
      * Called once a flush operation is made. The flush operation will try to flush out all previous written messages
@@ -104,5 +128,8 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      * @param ctx               the {@link ChannelHandlerContext} for which the flush operation is made
      * @throws Exception        thrown if an error occurs
      */
-    void flush(ChannelHandlerContext ctx) throws Exception;
+    @Skip
+    default void flush(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
+    }
 }

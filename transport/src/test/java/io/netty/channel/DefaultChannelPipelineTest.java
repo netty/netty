@@ -80,7 +80,7 @@ public class DefaultChannelPipelineTest {
         final AtomicReference<Channel> peerRef = new AtomicReference<>();
         ServerBootstrap sb = new ServerBootstrap();
         sb.group(group).channel(LocalServerChannel.class);
-        sb.childHandler(new ChannelInboundHandlerAdapter() {
+        sb.childHandler(new ChannelInboundHandler() {
             @Override
             public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
                 peerRef.set(ctx.channel());
@@ -145,7 +145,7 @@ public class DefaultChannelPipelineTest {
         assertTrue(handler.called);
     }
 
-    private static final class StringInboundHandler extends ChannelInboundHandlerAdapter {
+    private static final class StringInboundHandler implements ChannelInboundHandler {
         boolean called;
 
         @Override
@@ -216,7 +216,10 @@ public class DefaultChannelPipelineTest {
 
         assertNull(pipeline.removeIfExists("handlerXXX"));
         assertNull(pipeline.removeIfExists(handler2));
-        assertNull(pipeline.removeIfExists(ChannelOutboundHandlerAdapter.class));
+
+        class NonExistingHandler implements ChannelHandler { }
+
+        assertNull(pipeline.removeIfExists(NonExistingHandler.class));
         assertNotNull(pipeline.get("handler1"));
     }
 
@@ -276,7 +279,7 @@ public class DefaultChannelPipelineTest {
         pipeline.addLast(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                ch.pipeline().addLast(new ChannelInboundHandler() {
                     @Override
                     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
                         latch.countDown();
@@ -802,7 +805,7 @@ public class DefaultChannelPipelineTest {
             pipeline1.channel().register().addListener((ChannelFutureListener) future -> {
                 ChannelPipeline pipeline = future.channel().pipeline();
                 final AtomicBoolean handlerAddedCalled = new AtomicBoolean();
-                pipeline.addLast(new ChannelInboundHandlerAdapter() {
+                pipeline.addLast(new ChannelInboundHandler() {
                     @Override
                     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                         handlerAddedCalled.set(true);
@@ -890,7 +893,7 @@ public class DefaultChannelPipelineTest {
 
                 final CountDownLatch latch = new CountDownLatch(1);
 
-                pipeline.addLast(new ChannelInboundHandlerAdapter() {
+                pipeline.addLast(new ChannelInboundHandler() {
                     @Override
                     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
                         // Block just for a bit so we have a chance to trigger the race mentioned in the issue.
@@ -902,7 +905,7 @@ public class DefaultChannelPipelineTest {
                 // should call handlerRemoved(...) if and only if handlerAdded(...) was called for the handler before.
                 pipeline.close();
 
-                pipeline.addLast(new ChannelInboundHandlerAdapter() {
+                pipeline.addLast(new ChannelInboundHandler() {
                     private boolean handerAddedCalled;
 
                     @Override
@@ -1096,7 +1099,7 @@ public class DefaultChannelPipelineTest {
             }
         }
 
-        final class OutboundCalledHandler extends ChannelOutboundHandlerAdapter {
+        final class OutboundCalledHandler implements ChannelOutboundHandler {
             private static final int MASK_BIND = 1;
             private static final int MASK_CONNECT = 1 << 1;
             private static final int MASK_DISCONNECT = 1 << 2;
@@ -1193,7 +1196,7 @@ public class DefaultChannelPipelineTest {
             }
         }
 
-        final class InboundCalledHandler extends ChannelInboundHandlerAdapter {
+        final class InboundCalledHandler implements ChannelInboundHandler {
 
             private static final int MASK_CHANNEL_REGISTER = 1;
             private static final int MASK_CHANNEL_UNREGISTER = 1 << 1;
@@ -1384,7 +1387,7 @@ public class DefaultChannelPipelineTest {
         final CountDownLatch doneLatch = new CountDownLatch(1);
 
         Runnable r = () -> {
-            pipeline.addLast(new ChannelInboundHandlerAdapter() {
+            pipeline.addLast(new ChannelInboundHandler() {
                 @Override
                 public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                     if (evt == userEvent) {
@@ -1430,7 +1433,7 @@ public class DefaultChannelPipelineTest {
 
         @Override
         public void run() {
-            pipeline.addLast(new ChannelInboundHandlerAdapter());
+            pipeline.addLast(new ChannelInboundHandler() { });
             latch.countDown();
         }
     }
@@ -1459,7 +1462,7 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    private static final class CheckExceptionHandler extends ChannelInboundHandlerAdapter {
+    private static final class CheckExceptionHandler implements ChannelInboundHandler {
         private final Throwable expected;
         private final Promise<Void> promise;
 
@@ -1488,7 +1491,7 @@ public class DefaultChannelPipelineTest {
         fail("handler was not one of the expected handlers");
     }
 
-    private static final class CheckOrderHandler extends ChannelInboundHandlerAdapter {
+    private static final class CheckOrderHandler implements ChannelInboundHandler {
         private final Queue<CheckOrderHandler> addedQueue;
         private final Queue<CheckOrderHandler> removedQueue;
         private final AtomicReference<Throwable> error = new AtomicReference<>();

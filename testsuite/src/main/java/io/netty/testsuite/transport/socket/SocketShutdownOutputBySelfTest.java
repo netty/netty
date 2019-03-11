@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.WriteBufferWaterMark;
@@ -216,7 +216,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         ChannelFuture cf = null;
         try {
             ss.bind(newSocketAddress());
-            cf = cb.option(ChannelOption.SO_LINGER, 1).handler(new ChannelInboundHandlerAdapter())
+            cf = cb.option(ChannelOption.SO_LINGER, 1).handler(new ChannelInboundHandler() { })
                     .connect(ss.getLocalSocketAddress()).sync();
             s = ss.accept();
 

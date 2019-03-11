@@ -22,7 +22,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakDetector;
@@ -200,7 +200,7 @@ public class EpollReuseAddrTest {
     }
 
     @ChannelHandler.Sharable
-    private static class ServerSocketTestHandler extends ChannelInboundHandlerAdapter {
+    private static class ServerSocketTestHandler implements ChannelInboundHandler {
         private final AtomicBoolean accepted;
 
         ServerSocketTestHandler(AtomicBoolean accepted) {
@@ -215,7 +215,7 @@ public class EpollReuseAddrTest {
     }
 
     @ChannelHandler.Sharable
-    private static class DatagramSocketTestHandler extends ChannelInboundHandlerAdapter {
+    private static class DatagramSocketTestHandler implements ChannelInboundHandler {
         private final AtomicBoolean received;
 
         DatagramSocketTestHandler(AtomicBoolean received) {

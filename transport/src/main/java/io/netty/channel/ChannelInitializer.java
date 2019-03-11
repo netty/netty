@@ -47,7 +47,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  * @param <C>   A sub-type of {@link Channel}
  */
 @Sharable
-public abstract class ChannelInitializer<C extends Channel> extends ChannelInboundHandlerAdapter {
+public abstract class ChannelInitializer<C extends Channel> implements ChannelInboundHandler {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelInitializer.class);
 

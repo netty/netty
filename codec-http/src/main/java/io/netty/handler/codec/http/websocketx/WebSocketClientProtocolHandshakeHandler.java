@@ -15,13 +15,12 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpResponse;
 
-class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapter {
+class WebSocketClientProtocolHandshakeHandler implements ChannelInboundHandler {
     private final WebSocketClientHandshaker handshaker;
 
     WebSocketClientProtocolHandshakeHandler(WebSocketClientHandshaker handshaker) {
@@ -30,7 +29,7 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
 
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
-        super.channelActive(ctx);
+        ctx.fireChannelActive();
         handshaker.handshake(ctx.channel()).addListener((ChannelFutureListener) future -> {
             if (!future.isSuccess()) {
                 ctx.fireExceptionCaught(future.cause());

@@ -40,8 +40,6 @@ import java.lang.annotation.Target;
  * <p>
  * Alternatively, the following adapter classes are provided for your convenience:
  * <ul>
- * <li>{@link ChannelInboundHandlerAdapter} to handle inbound I/O events,</li>
- * <li>{@link ChannelOutboundHandlerAdapter} to handle outbound I/O operations, and</li>
  * <li>{@link ChannelDuplexHandler} to handle both inbound and outbound events</li>
  * </ul>
  * </p>
@@ -180,13 +178,17 @@ public interface ChannelHandler {
     /**
      * Gets called after the {@link ChannelHandler} was added to the actual context and it's ready to handle events.
      */
-    void handlerAdded(ChannelHandlerContext ctx) throws Exception;
+    default void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        // NOOP
+    }
 
     /**
      * Gets called after the {@link ChannelHandler} was removed from the actual context and it doesn't handle events
      * anymore.
      */
-    void handlerRemoved(ChannelHandlerContext ctx) throws Exception;
+    default void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        // NOOP
+    }
 
     /**
      * Indicates that the same instance of the annotated {@link ChannelHandler}

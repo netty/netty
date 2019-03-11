@@ -16,6 +16,7 @@
 
 package io.netty.handler.codec;
 
+import io.netty.channel.ChannelOutboundHandler;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -26,12 +27,11 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 
 public class MessageAggregatorTest {
-    private static final class ReadCounter extends ChannelOutboundHandlerAdapter {
+    private static final class ReadCounter implements ChannelOutboundHandler {
         int value;
 
         @Override

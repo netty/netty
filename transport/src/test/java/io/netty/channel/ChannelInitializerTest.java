@@ -57,7 +57,7 @@ public class ChannelInitializerTest {
         client = new Bootstrap()
                 .group(group)
                 .channel(LocalChannel.class)
-                .handler(new ChannelInboundHandlerAdapter());
+                .handler(new ChannelInboundHandler() { });
         testHandler = new InspectableHandler();
     }
 
@@ -109,10 +109,10 @@ public class ChannelInitializerTest {
 
     @Test
     public void testChannelInitializerInInitializerCorrectOrdering() {
-        final ChannelInboundHandlerAdapter handler1 = new ChannelInboundHandlerAdapter();
-        final ChannelInboundHandlerAdapter handler2 = new ChannelInboundHandlerAdapter();
-        final ChannelInboundHandlerAdapter handler3 = new ChannelInboundHandlerAdapter();
-        final ChannelInboundHandlerAdapter handler4 = new ChannelInboundHandlerAdapter();
+        final ChannelInboundHandler handler1 = new ChannelInboundHandler() { };
+        final ChannelInboundHandler handler2 = new ChannelInboundHandler() { };
+        final ChannelInboundHandler handler3 = new ChannelInboundHandler() { };
+        final ChannelInboundHandler handler4 = new ChannelInboundHandler() { };
 
         client.handler(new ChannelInitializer<Channel>() {
             @Override
@@ -150,7 +150,7 @@ public class ChannelInitializerTest {
     @Test
     public void testChannelInitializerReentrance() {
         final AtomicInteger registeredCalled = new AtomicInteger(0);
-        final ChannelInboundHandlerAdapter handler1 = new ChannelInboundHandlerAdapter() {
+        final ChannelInboundHandler handler1 = new ChannelInboundHandler() {
             @Override
             public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
                 registeredCalled.incrementAndGet();

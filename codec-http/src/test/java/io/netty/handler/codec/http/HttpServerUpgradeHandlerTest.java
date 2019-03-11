@@ -18,16 +18,15 @@ package io.netty.handler.codec.http;
 import java.util.Collection;
 import java.util.Collections;
 
+import io.netty.channel.ChannelInboundHandler;
 import org.junit.Test;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodec;
@@ -57,7 +56,7 @@ public class HttpServerUpgradeHandlerTest {
             assertNotNull(ctx.pipeline().get(HttpServerUpgradeHandler.class));
 
             // Add a marker handler to signal that the upgrade has happened
-            ctx.pipeline().addAfter(ctx.name(), "marker", new ChannelInboundHandlerAdapter());
+            ctx.pipeline().addAfter(ctx.name(), "marker", new ChannelInboundHandler() { });
           }
     }
 

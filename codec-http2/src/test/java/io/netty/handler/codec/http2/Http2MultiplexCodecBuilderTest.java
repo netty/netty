@@ -25,7 +25,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -81,25 +81,25 @@ public class Http2MultiplexCodecBuilderTest {
 
                             @Override
                             protected void initChannel(Channel ch) throws Exception {
-                                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                ch.pipeline().addLast(new ChannelInboundHandler() {
                                     private boolean writable;
 
                                     @Override
                                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
                                         writable |= ctx.channel().isWritable();
-                                        super.channelActive(ctx);
+                                        ctx.fireChannelActive();
                                     }
 
                                     @Override
                                     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
                                         writable |= ctx.channel().isWritable();
-                                        super.channelWritabilityChanged(ctx);
+                                        ctx.fireChannelWritabilityChanged();
                                     }
 
                                     @Override
                                     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                                         assertTrue(writable);
-                                        super.channelInactive(ctx);
+                                        ctx.fireChannelInactive();
                                     }
                                 });
                                 ch.pipeline().addLast(serverLastInboundHandler);
