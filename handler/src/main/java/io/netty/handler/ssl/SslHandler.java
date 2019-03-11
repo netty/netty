@@ -808,7 +808,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             final int wrapDataSize = this.wrapDataSize;
             // Only continue to loop if the handler was not removed in the meantime.
             // See https://github.com/netty/netty/issues/5860
-            outer: while (!ctx.isRemoved()) {
+            outer: while (!isRemoved()) {
                 promise = ctx.newPromise();
                 buf = wrapDataSize > 0 ?
                         pendingUnencryptedWrites.remove(alloc, wrapDataSize, promise) :
@@ -919,7 +919,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         try {
             // Only continue to loop if the handler was not removed in the meantime.
             // See https://github.com/netty/netty/issues/5860
-            outer: while (!ctx.isRemoved()) {
+            outer: while (!isRemoved()) {
                 if (out == null) {
                     // As this is called for the handshake we have no real idea how big the buffer needs to be.
                     // That said 2048 should give us enough room to include everything like ALPN / NPN data.
@@ -1320,7 +1320,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         try {
             // Only continue to loop if the handler was not removed in the meantime.
             // See https://github.com/netty/netty/issues/5860
-            unwrapLoop: while (!ctx.isRemoved()) {
+            unwrapLoop: while (!isRemoved()) {
                 final SSLEngineResult result = engineType.unwrap(this, packet, offset, length, decodeOut);
                 final Status status = result.getStatus();
                 final HandshakeStatus handshakeStatus = result.getHandshakeStatus();
