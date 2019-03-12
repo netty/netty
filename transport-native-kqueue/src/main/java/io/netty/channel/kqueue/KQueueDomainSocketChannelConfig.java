@@ -40,7 +40,7 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), DOMAIN_SOCKET_READ_MODE);
+        return getOptions(super.getOptions(), DOMAIN_SOCKET_READ_MODE, ChannelOption.ALLOW_HALF_CLOSURE);
     }
 
     @SuppressWarnings("unchecked")

@@ -43,7 +43,7 @@ public abstract class AbstractSocketShutdownOutputByPeerTest<Socket> extends Abs
 
     public void testShutdownOutput(ServerBootstrap sb) throws Throwable {
         TestHandler h = new TestHandler();
-        Socket s = getSocket();
+        Socket s = newSocket();
         Channel sc = null;
         try {
             sc = sb.childHandler(h).childOption(ChannelOption.ALLOW_HALF_CLOSURE, true).bind().sync().channel();
@@ -84,7 +84,7 @@ public abstract class AbstractSocketShutdownOutputByPeerTest<Socket> extends Abs
 
     public void testShutdownOutputWithoutOption(ServerBootstrap sb) throws Throwable {
         TestHandler h = new TestHandler();
-        Socket s = getSocket();
+        Socket s = newSocket();
         Channel sc = null;
         try {
             sc = sb.childHandler(h).bind().sync().channel();
@@ -125,9 +125,9 @@ public abstract class AbstractSocketShutdownOutputByPeerTest<Socket> extends Abs
 
     protected abstract void close(Socket s) throws IOException;
 
-    protected abstract void write(Socket s, int i) throws IOException;
+    protected abstract void write(Socket s, int data) throws IOException;
 
-    protected abstract Socket getSocket();
+    protected abstract Socket newSocket();
 
     private static class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile DuplexChannel ch;

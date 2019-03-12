@@ -37,7 +37,7 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), EpollChannelOption.DOMAIN_SOCKET_READ_MODE);
+        return getOptions(super.getOptions(), EpollChannelOption.DOMAIN_SOCKET_READ_MODE, ChannelOption.ALLOW_HALF_CLOSURE);
     }
 
     @SuppressWarnings("unchecked")

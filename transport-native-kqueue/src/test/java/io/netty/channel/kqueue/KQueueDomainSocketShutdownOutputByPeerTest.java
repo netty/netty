@@ -53,16 +53,16 @@ public class KQueueDomainSocketShutdownOutputByPeerTest extends AbstractSocketSh
     }
 
     @Override
-    protected void write(BsdSocket s, int i) throws IOException {
+    protected void write(BsdSocket s, int data) throws IOException {
         final ByteBuffer buf = Buffer.allocateDirectWithNativeOrder(4);
-        buf.putInt(i);
+        buf.putInt(data);
         buf.flip();
         s.write(buf, buf.position(), buf.limit());
         Buffer.free(buf);
     }
 
     @Override
-    protected BsdSocket getSocket() {
+    protected BsdSocket newSocket() {
         return BsdSocket.newSocketDomain();
     }
 }

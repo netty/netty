@@ -39,12 +39,12 @@ public class SocketShutdownOutputByPeerTest extends AbstractSocketShutdownOutput
     }
 
     @Override
-    protected void write(Socket s, int i) throws IOException {
-        s.getOutputStream().write(i);
+    protected void write(Socket s, int data) throws IOException {
+        s.getOutputStream().write(data);
     }
 
     @Override
-    protected Socket getSocket() {
+    protected Socket newSocket() {
         return new Socket();
     }
 

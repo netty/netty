@@ -54,16 +54,16 @@ public class EpollDomainSocketShutdownOutputByPeerTest extends AbstractSocketShu
     }
 
     @Override
-    protected void write(LinuxSocket s, int i) throws IOException {
+    protected void write(LinuxSocket s, int data) throws IOException {
         final ByteBuffer buf = Buffer.allocateDirectWithNativeOrder(4);
-        buf.putInt(i);
+        buf.putInt(data);
         buf.flip();
         s.write(buf, buf.position(), buf.limit());
         Buffer.free(buf);
     }
 
     @Override
-    protected LinuxSocket getSocket() {
+    protected LinuxSocket newSocket() {
         return LinuxSocket.newSocketDomain();
     }
 }
