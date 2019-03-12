@@ -27,6 +27,7 @@ import io.netty.util.internal.UnstableApi;
 
 import java.util.Map;
 
+import static io.netty.channel.ChannelOption.ALLOW_HALF_CLOSURE;
 import static io.netty.channel.unix.UnixChannelOption.*;
 
 @UnstableApi
@@ -40,7 +41,7 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), DOMAIN_SOCKET_READ_MODE, ChannelOption.ALLOW_HALF_CLOSURE);
+        return getOptions(super.getOptions(), DOMAIN_SOCKET_READ_MODE, ALLOW_HALF_CLOSURE);
     }
 
     @SuppressWarnings("unchecked")
