@@ -66,9 +66,10 @@ public abstract class AbstractSocketShutdownOutputByPeerTest<Socket> extends Abs
             assertTrue(h.ch.isActive());
             assertTrue(h.ch.isInputShutdown());
             assertFalse(h.ch.isOutputShutdown());
-            assertEquals(1, h.closure.getCount());
-            Thread.sleep(100);
-            assertEquals(1, h.halfClosureCount.intValue());
+
+            while (h.closure.getCount() != 1 && h.halfClosureCount.intValue() != 1) {
+                Thread.sleep(100);
+            }
         } finally {
             if (sc != null) {
                 sc.close();
@@ -108,9 +109,9 @@ public abstract class AbstractSocketShutdownOutputByPeerTest<Socket> extends Abs
             assertTrue(h.ch.isInputShutdown());
             assertTrue(h.ch.isOutputShutdown());
 
-            assertEquals(1, h.halfClosure.getCount());
-            Thread.sleep(100);
-            assertEquals(0, h.halfClosureCount.intValue());
+            while (h.halfClosure.getCount() != 1 && h.halfClosureCount.intValue() != 0) {
+                Thread.sleep(100);
+            }
         } finally {
             if (sc != null) {
                 sc.close();
