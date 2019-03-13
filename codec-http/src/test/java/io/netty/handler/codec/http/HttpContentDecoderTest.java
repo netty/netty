@@ -546,7 +546,7 @@ public class HttpContentDecoderTest {
             @Override
             public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                 assertTrue(channelInactiveCalled.compareAndSet(false, true));
-                ctx.fireChannelActive();
+                ctx.fireChannelInactive();
             }
         });
         assertTrue(channel.writeInbound(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/")));
