@@ -24,17 +24,15 @@ import io.netty.util.internal.PlatformDependent;
 /**
  * Common logic for {@link ReferenceCounted} implementations
  */
-public final class ReferenceCountUpdater<T extends ReferenceCounted> {
+public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
 
     // For updated int field:
     //   Even => "real" refcount is (refCnt >>> 1)
     //   Odd  => "real" refcount is 0
 
-    private final long refCntFieldOffset;
-    private final AtomicIntegerFieldUpdater<T> refCntUpdater;
+    protected ReferenceCountUpdater() { }
 
-    // Unfortunately the owning class must create the AtomicIntegerFieldUpdater
-    private ReferenceCountUpdater(Class<T> clz, String fieldName, AtomicIntegerFieldUpdater<T> fieldUpdater) {
+    public static long getUnsafeOffset(Class<? extends ReferenceCounted> clz, String fieldName) {
         long fieldOffset = -1;
         try {
             if (PlatformDependent.hasUnsafe()) {
@@ -43,28 +41,26 @@ public final class ReferenceCountUpdater<T extends ReferenceCounted> {
         } catch (Throwable ignore) {
             // fall-back
         }
-        refCntFieldOffset = fieldOffset;
-        refCntUpdater = fieldUpdater;
+        return fieldOffset;
     }
 
-    public static <T extends ReferenceCounted> ReferenceCountUpdater<T> newUpdater(Class<T> clz,
-            String fieldName, AtomicIntegerFieldUpdater<T> fieldUpdater) {
-        return new ReferenceCountUpdater<T>(clz, fieldName, fieldUpdater);
-    }
+    protected abstract AtomicIntegerFieldUpdater<T> updater();
+
+    protected abstract long unsafeOffset();
 
     public int initialValue() {
         return 2;
     }
 
     private static int realRefCnt(int rawCnt) {
-        return (rawCnt & 1) != 0 ? 0 : rawCnt >>> 1;
+        return rawCnt != 2 && rawCnt != 4 && (rawCnt & 1) != 0 ? 0 : rawCnt >>> 1;
     }
 
     /**
      * Like {@link #realRefCnt(int)} but throws if refCnt == 0
      */
     private static int toLiveRealCnt(int rawCnt, int decrement) {
-        if ((rawCnt & 1) == 0) {
+        if (rawCnt == 2 || rawCnt == 4 || (rawCnt & 1) == 0) {
             return rawCnt >>> 1;
         }
         // odd rawCnt => already deallocated
@@ -73,37 +69,43 @@ public final class ReferenceCountUpdater<T extends ReferenceCounted> {
 
     private int nonVolatileRawCnt(T instance) {
         // TODO: Once we compile against later versions of Java we can replace the Unsafe usage here by varhandles.
-        return refCntFieldOffset != -1 ? PlatformDependent.getInt(instance, refCntFieldOffset)
-                : refCntUpdater.get(instance);
+        final long offset = unsafeOffset();
+        return offset != -1 ? PlatformDependent.getInt(instance, offset) : updater().get(instance);
     }
 
     public int refCnt(T instance) {
-        return realRefCnt(refCntUpdater.get(instance));
+        return realRefCnt(updater().get(instance));
     }
 
-    public int nonVolatileRefCnt(T instance) {
-        return realRefCnt(nonVolatileRawCnt(instance));
+    public final boolean isLiveNonVolatile(T instance) {
+        final long offset = unsafeOffset();
+        final int rawCnt = offset != -1 ? PlatformDependent.getInt(instance, offset) : updater().get(instance);
+
+        // The "real" ref count is > 0 if the rawCnt is even.
+        // (x & y) appears to be surprisingly expensive relative to (x == y). Thus the expression below provides
+        // a fast path for most common cases where the ref count is 1, 2, 3 or 4.
+        return rawCnt == 2 || rawCnt == 4 || rawCnt == 6 || rawCnt == 8 || (rawCnt & 1) == 0;
     }
 
     /**
      * An unsafe operation that sets the reference count directly
      */
-    public void setRefCnt(T instance, int refCnt) {
-        refCntUpdater.set(instance, refCnt > 0 ? refCnt << 1 : 1); // overflow OK here
+    public final void setRefCnt(T instance, int refCnt) {
+        updater().set(instance, refCnt > 0 ? refCnt << 1 : 1); // overflow OK here
     }
 
     /**
      * Resets the reference count to 1
      */
-    public void resetRefCnt(T instance) {
-        refCntUpdater.set(instance, initialValue());
+    public final void resetRefCnt(T instance) {
+        updater().set(instance, initialValue());
     }
 
-    public T retain(T instance) {
+    public final T retain(T instance) {
         return retain0(instance, 1, 2);
     }
 
-    public T retain(T instance, int increment) {
+    public final T retain(T instance, int increment) {
         // all changes to the raw count are 2x the "real" change - overflow is OK
         int rawIncrement = checkPositive(increment, "increment") << 1;
         return retain0(instance, increment, rawIncrement);
@@ -111,27 +113,27 @@ public final class ReferenceCountUpdater<T extends ReferenceCounted> {
 
     // rawIncrement == increment << 1
     private T retain0(T instance, final int increment, final int rawIncrement) {
-        int oldRef = refCntUpdater.getAndAdd(instance, rawIncrement);
-        if ((oldRef & 1) != 0) {
+        int oldRef = updater().getAndAdd(instance, rawIncrement);
+        if (oldRef != 2 && oldRef != 4 && (oldRef & 1) != 0) {
             throw new IllegalReferenceCountException(0, increment);
         }
         // don't pass 0!
         if ((oldRef <= 0 && oldRef + rawIncrement >= 0)
                 || (oldRef >= 0 && oldRef + rawIncrement < oldRef)) {
             // overflow case
-            refCntUpdater.getAndAdd(instance, -rawIncrement);
+            updater().getAndAdd(instance, -rawIncrement);
             throw new IllegalReferenceCountException(realRefCnt(oldRef), increment);
         }
         return instance;
     }
 
-    public boolean release(T instance) {
+    public final boolean release(T instance) {
         int rawCnt = nonVolatileRawCnt(instance);
         return rawCnt == 2 ? tryFinalRelease0(instance, 2) || retryRelease0(instance, 1)
                 : nonFinalRelease0(instance, 1, rawCnt, toLiveRealCnt(rawCnt, 1));
     }
 
-    public boolean release(T instance, int decrement) {
+    public final boolean release(T instance, int decrement) {
         int rawCnt = nonVolatileRawCnt(instance);
         int realCnt = toLiveRealCnt(rawCnt, checkPositive(decrement, "decrement"));
         return decrement == realCnt ? tryFinalRelease0(instance, rawCnt) || retryRelease0(instance, decrement)
@@ -139,13 +141,13 @@ public final class ReferenceCountUpdater<T extends ReferenceCounted> {
     }
 
     private boolean tryFinalRelease0(T instance, int expectRawCnt) {
-        return refCntUpdater.compareAndSet(instance, expectRawCnt, 1); // any odd number will work
+        return updater().compareAndSet(instance, expectRawCnt, 1); // any odd number will work
     }
 
     private boolean nonFinalRelease0(T instance, int decrement, int rawCnt, int realCnt) {
         if (decrement < realCnt
                 // all changes to the raw count are 2x the "real" change - overflow is OK
-                && refCntUpdater.compareAndSet(instance, rawCnt, rawCnt - (decrement << 1))) {
+                && updater().compareAndSet(instance, rawCnt, rawCnt - (decrement << 1))) {
             return false;
         }
         return retryRelease0(instance, decrement);
@@ -153,14 +155,14 @@ public final class ReferenceCountUpdater<T extends ReferenceCounted> {
 
     private boolean retryRelease0(T instance, int decrement) {
         for (;;) {
-            int rawCnt = refCntUpdater.get(instance), realCnt = toLiveRealCnt(rawCnt, decrement);
+            int rawCnt = updater().get(instance), realCnt = toLiveRealCnt(rawCnt, decrement);
             if (decrement == realCnt) {
                 if (tryFinalRelease0(instance, rawCnt)) {
                     return true;
                 }
             } else if (decrement < realCnt) {
                 // all changes to the raw count are 2x the "real" change
-                if (refCntUpdater.compareAndSet(instance, rawCnt, rawCnt - (decrement << 1))) {
+                if (updater().compareAndSet(instance, rawCnt, rawCnt - (decrement << 1))) {
                     return false;
                 }
             } else {

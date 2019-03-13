@@ -24,9 +24,22 @@ import io.netty.util.ReferenceCountUpdater;
  * Abstract base class for {@link ByteBuf} implementations that count references.
  */
 public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
+    private static final long REFCNT_FIELD_OFFSET =
+            ReferenceCountUpdater.getUnsafeOffset(AbstractReferenceCountedByteBuf.class, "refCnt");
+    private static final AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> AIF_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCountedByteBuf.class, "refCnt");
+
     private static final ReferenceCountUpdater<AbstractReferenceCountedByteBuf> updater =
-            ReferenceCountUpdater.newUpdater(AbstractReferenceCountedByteBuf.class, "refCnt",
-                    AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCountedByteBuf.class, "refCnt"));
+            new ReferenceCountUpdater<AbstractReferenceCountedByteBuf>() {
+        @Override
+        protected AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> updater() {
+            return AIF_UPDATER;
+        }
+        @Override
+        protected long unsafeOffset() {
+            return REFCNT_FIELD_OFFSET;
+        }
+    };
 
     // Value might not equal "real" reference count, all access should be via the updater
     @SuppressWarnings("unused")
@@ -40,7 +53,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     boolean isAccessible() {
         // Try to do non-volatile read for performance as the ensureAccessible() is racy anyway and only provide
         // a best-effort guard.
-        return updater.nonVolatileRefCnt(this) != 0;
+        return updater.isLiveNonVolatile(this);
     }
 
     @Override

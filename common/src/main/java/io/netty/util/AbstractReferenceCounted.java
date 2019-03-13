@@ -21,9 +21,22 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  * Abstract base class for classes wants to implement {@link ReferenceCounted}.
  */
 public abstract class AbstractReferenceCounted implements ReferenceCounted {
+    private static final long REFCNT_FIELD_OFFSET =
+            ReferenceCountUpdater.getUnsafeOffset(AbstractReferenceCounted.class, "refCnt");
+    private static final AtomicIntegerFieldUpdater<AbstractReferenceCounted> AIF_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCounted.class, "refCnt");
+
     private static final ReferenceCountUpdater<AbstractReferenceCounted> updater =
-            ReferenceCountUpdater.newUpdater(AbstractReferenceCounted.class, "refCnt",
-                    AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCounted.class, "refCnt"));
+            new ReferenceCountUpdater<AbstractReferenceCounted>() {
+        @Override
+        protected AtomicIntegerFieldUpdater<AbstractReferenceCounted> updater() {
+            return AIF_UPDATER;
+        }
+        @Override
+        protected long unsafeOffset() {
+            return REFCNT_FIELD_OFFSET;
+        }
+    };
 
     // Value might not equal "real" reference count, all access should be via the updater
     @SuppressWarnings("unused")
