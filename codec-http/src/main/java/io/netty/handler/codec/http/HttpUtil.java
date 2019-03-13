@@ -65,16 +65,9 @@ public final class HttpUtil {
      * {@link HttpVersion#isKeepAliveDefault()}.
      */
     public static boolean isKeepAlive(HttpMessage message) {
-        CharSequence connection = message.headers().get(HttpHeaderNames.CONNECTION);
-        if (HttpHeaderValues.CLOSE.contentEqualsIgnoreCase(connection)) {
-            return false;
-        }
-
-        if (message.protocolVersion().isKeepAliveDefault()) {
-            return !HttpHeaderValues.CLOSE.contentEqualsIgnoreCase(connection);
-        } else {
-            return HttpHeaderValues.KEEP_ALIVE.contentEqualsIgnoreCase(connection);
-        }
+        return !message.headers().containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE, true) &&
+               (message.protocolVersion().isKeepAliveDefault() ||
+                message.headers().containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE, true));
     }
 
     /**
