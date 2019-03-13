@@ -18,7 +18,7 @@ package io.netty.handler.codec;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
@@ -55,7 +55,7 @@ public class MessageToMessageEncoderTest {
 
         final Exception firstWriteException = new Exception();
 
-        ChannelHandler writeThrower = new ChannelOutboundHandlerAdapter() {
+        ChannelHandler writeThrower = new ChannelOutboundHandler() {
             private boolean firstWritten;
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {

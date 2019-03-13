@@ -25,7 +25,7 @@ import static org.junit.Assert.assertTrue;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
@@ -72,7 +72,7 @@ public class IdleStateHandlerTest {
         assertTrue("The number of expected events must be >= 1", expected.length >= 1);
 
         final List<Object> events = new ArrayList<>();
-        ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
+        ChannelInboundHandler handler = new ChannelInboundHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 events.add(evt);
@@ -143,7 +143,7 @@ public class IdleStateHandlerTest {
                                    Action action, Object expected) throws Exception {
 
         final List<Object> events = new ArrayList<>();
-        ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
+        ChannelInboundHandler handler = new ChannelInboundHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 events.add(evt);
@@ -203,7 +203,7 @@ public class IdleStateHandlerTest {
                 true, 0L, writerIdleTime, allIdleTime, TimeUnit.SECONDS);
 
         final List<Object> events = new ArrayList<>();
-        ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
+        ChannelInboundHandler handler = new ChannelInboundHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 events.add(evt);

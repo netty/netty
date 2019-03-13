@@ -14,11 +14,11 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.channel.ChannelInboundHandler;
 import org.junit.Test;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 import static org.junit.Assert.assertEquals;
@@ -28,14 +28,14 @@ import static org.junit.Assert.assertTrue;
 public class Http2MultiplexCodecClientUpgradeTest {
 
     @ChannelHandler.Sharable
-    private final class NoopHandler extends ChannelInboundHandlerAdapter {
+    private final class NoopHandler implements ChannelInboundHandler {
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
             ctx.channel().close();
         }
     }
 
-    private final class UpgradeHandler extends ChannelInboundHandlerAdapter {
+    private final class UpgradeHandler implements ChannelInboundHandler {
         Http2Stream.State stateOnActive;
         int streamId;
 
@@ -44,7 +44,7 @@ public class Http2MultiplexCodecClientUpgradeTest {
             Http2StreamChannel ch = (Http2StreamChannel) ctx.channel();
             stateOnActive = ch.stream().state();
             streamId = ch.stream().id();
-            super.channelActive(ctx);
+            ctx.fireChannelActive();
         }
     }
 

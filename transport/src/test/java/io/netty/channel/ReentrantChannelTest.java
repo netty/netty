@@ -116,7 +116,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.config().setWriteBufferLowWaterMark(512);
         clientChannel.config().setWriteBufferHighWaterMark(1024);
 
-        clientChannel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+        clientChannel.pipeline().addLast(new ChannelInboundHandler() {
             @Override
             public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
                 if (!ctx.channel().isWritable()) {
@@ -164,7 +164,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         Channel clientChannel = cb.connect(addr).sync().channel();
 
-        clientChannel.pipeline().addLast(new ChannelOutboundHandlerAdapter() {
+        clientChannel.pipeline().addLast(new ChannelOutboundHandler() {
 
             int writeCount;
             int flushCount;
@@ -175,7 +175,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
                     writeCount++;
                     ctx.channel().flush();
                 }
-                super.write(ctx, msg,  promise);
+                ctx.write(msg,  promise);
             }
 
             @Override
@@ -184,7 +184,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
                     flushCount++;
                     ctx.channel().write(createTestBuf(2000));
                 }
-                super.flush(ctx);
+                ctx.flush();
             }
         });
 
@@ -221,12 +221,12 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         Channel clientChannel = cb.connect(addr).sync().channel();
 
-        clientChannel.pipeline().addLast(new ChannelOutboundHandlerAdapter() {
+        clientChannel.pipeline().addLast(new ChannelOutboundHandler() {
 
             @Override
             public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
                 promise.addListener(future -> ctx.channel().close());
-                super.write(ctx, msg, promise);
+                ctx.write(msg, promise);
                 ctx.channel().flush();
             }
         });
@@ -251,14 +251,14 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         Channel clientChannel = cb.connect(addr).sync().channel();
 
-        clientChannel.pipeline().addLast(new ChannelOutboundHandlerAdapter() {
+        clientChannel.pipeline().addLast(new ChannelOutboundHandler() {
 
             @Override
             public void flush(ChannelHandlerContext ctx) throws Exception {
                 throw new Exception("intentional failure");
             }
 
-        }, new ChannelInboundHandlerAdapter() {
+        }, new ChannelInboundHandler() {
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 ctx.close();

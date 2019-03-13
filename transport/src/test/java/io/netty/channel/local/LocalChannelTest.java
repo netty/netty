@@ -24,7 +24,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
@@ -339,20 +339,20 @@ public class LocalChannelTest {
 
             sb.group(group2)
             .channel(LocalServerChannel.class)
-            .childHandler(new ChannelInboundHandlerAdapter() {
+            .childHandler(new ChannelInboundHandler() {
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                     if (msg.equals(data)) {
                         ReferenceCountUtil.safeRelease(msg);
                         messageLatch.countDown();
                     } else {
-                        super.channelRead(ctx, msg);
+                        ctx.fireChannelRead(msg);
                     }
                 }
                 @Override
                 public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                     messageLatch.countDown();
-                    super.channelInactive(ctx);
+                    ctx.fireChannelInactive();
                 }
             });
 
@@ -394,7 +394,7 @@ public class LocalChannelTest {
         try {
             cb.group(sharedGroup)
                     .channel(LocalChannel.class)
-                    .handler(new ChannelInboundHandlerAdapter() {
+                    .handler(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             ctx.writeAndFlush(data.retainedDuplicate());
@@ -406,14 +406,14 @@ public class LocalChannelTest {
                                 ReferenceCountUtil.safeRelease(msg);
                                 messageLatch.countDown();
                             } else {
-                                super.channelRead(ctx, msg);
+                                ctx.fireChannelRead(msg);
                             }
                         }
                     });
 
             sb.group(sharedGroup)
                     .channel(LocalServerChannel.class)
-                    .childHandler(new ChannelInboundHandlerAdapter() {
+                    .childHandler(new ChannelInboundHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                             if (data.equals(msg)) {
@@ -421,14 +421,14 @@ public class LocalChannelTest {
                                 ctx.writeAndFlush(data);
                                 ctx.close();
                             } else {
-                                super.channelRead(ctx, msg);
+                                ctx.fireChannelRead(msg);
                             }
                         }
 
                         @Override
                         public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                             messageLatch.countDown();
-                            super.channelInactive(ctx);
+                            ctx.fireChannelInactive();
                         }
                     });
 
@@ -466,7 +466,7 @@ public class LocalChannelTest {
 
             sb.group(group2)
             .channel(LocalServerChannel.class)
-            .childHandler(new ChannelInboundHandlerAdapter() {
+            .childHandler(new ChannelInboundHandler() {
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                     final long count = messageLatch.getCount();
@@ -474,7 +474,7 @@ public class LocalChannelTest {
                         ReferenceCountUtil.safeRelease(msg);
                         messageLatch.countDown();
                     } else {
-                        super.channelRead(ctx, msg);
+                        ctx.fireChannelRead(msg);
                     }
                 }
             });
@@ -520,14 +520,14 @@ public class LocalChannelTest {
 
         cb.group(group1)
                 .channel(LocalChannel.class)
-                .handler(new ChannelInboundHandlerAdapter() {
+                .handler(new ChannelInboundHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                         if (data2.equals(msg)) {
                             ReferenceCountUtil.safeRelease(msg);
                             messageLatch.countDown();
                         } else {
-                            super.channelRead(ctx, msg);
+                            ctx.fireChannelRead(msg);
                         }
                     }
                 });
@@ -537,14 +537,14 @@ public class LocalChannelTest {
                 .childHandler(new ChannelInitializer<LocalChannel>() {
                     @Override
                     public void initChannel(LocalChannel ch) throws Exception {
-                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                        ch.pipeline().addLast(new ChannelInboundHandler() {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                                 if (data.equals(msg)) {
                                     ReferenceCountUtil.safeRelease(msg);
                                     messageLatch.countDown();
                                 } else {
-                                    super.channelRead(ctx, msg);
+                                    ctx.fireChannelRead(msg);
                                 }
                             }
                         });
@@ -596,14 +596,14 @@ public class LocalChannelTest {
         try {
             cb.group(sharedGroup)
             .channel(LocalChannel.class)
-            .handler(new ChannelInboundHandlerAdapter() {
+            .handler(new ChannelInboundHandler() {
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                     if (data2.equals(msg) && messageLatch.getCount() == 1) {
                         ReferenceCountUtil.safeRelease(msg);
                         messageLatch.countDown();
                     } else {
-                        super.channelRead(ctx, msg);
+                        ctx.fireChannelRead(msg);
                     }
                 }
             });
@@ -613,14 +613,14 @@ public class LocalChannelTest {
             .childHandler(new ChannelInitializer<LocalChannel>() {
                 @Override
                 public void initChannel(LocalChannel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                             if (data.equals(msg) && messageLatch.getCount() == 2) {
                                 ReferenceCountUtil.safeRelease(msg);
                                 messageLatch.countDown();
                             } else {
-                                super.channelRead(ctx, msg);
+                                ctx.fireChannelRead(msg);
                             }
                         }
                     });
@@ -685,14 +685,14 @@ public class LocalChannelTest {
             .childHandler(new ChannelInitializer<LocalChannel>() {
                 @Override
                 public void initChannel(LocalChannel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                             if (data.equals(msg)) {
                                 ReferenceCountUtil.safeRelease(msg);
                                 serverMessageLatch.countDown();
                             } else {
-                                super.channelRead(ctx, msg);
+                                ctx.fireChannelRead(msg);
                             }
                         }
                     });
@@ -769,7 +769,7 @@ public class LocalChannelTest {
 
         cb.group(group1)
                 .channel(LocalChannel.class)
-                .handler(new ChannelInboundHandlerAdapter());
+                .handler(new ChannelInboundHandler() { });
 
         sb.group(group2)
                 .channel(LocalServerChannel.class)
@@ -839,7 +839,7 @@ public class LocalChannelTest {
         }
     }
 
-    static class TestHandler extends ChannelInboundHandlerAdapter {
+    static class TestHandler implements ChannelInboundHandler {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             logger.info(String.format("Received message: %s", msg));
@@ -934,7 +934,7 @@ public class LocalChannelTest {
         cb.group(serverGroup)
                 .channel(LocalChannel.class)
                 .option(ChannelOption.AUTO_READ, false)
-                .handler(new ChannelInboundHandlerAdapter() {
+                .handler(new ChannelInboundHandler() {
 
                     @Override
                     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
@@ -950,7 +950,7 @@ public class LocalChannelTest {
         sb.group(clientGroup)
                 .channel(LocalServerChannel.class)
                 .childOption(ChannelOption.AUTO_READ, false)
-                .childHandler(new ChannelInboundHandlerAdapter() {
+                .childHandler(new ChannelInboundHandler() {
                     @Override
                     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
                         ctx.read();
@@ -1012,7 +1012,7 @@ public class LocalChannelTest {
                 .handler(new ChannelReadHandler(countDownLatch, autoRead));
         sb.group(clientGroup)
                 .channel(LocalServerChannel.class)
-                .childHandler(new ChannelInboundHandlerAdapter() {
+                .childHandler(new ChannelInboundHandler() {
                     @Override
                     public void channelActive(final ChannelHandlerContext ctx) {
                         for (int i = 0; i < 10; i++) {
@@ -1102,7 +1102,7 @@ public class LocalChannelTest {
         }
     }
 
-    private static final class ChannelReadHandler extends ChannelInboundHandlerAdapter {
+    private static final class ChannelReadHandler implements ChannelInboundHandler {
 
         private final CountDownLatch latch;
         private final boolean autoRead;

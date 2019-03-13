@@ -24,28 +24,43 @@ public interface ChannelInboundHandler extends ChannelHandler {
     /**
      * The {@link Channel} of the {@link ChannelHandlerContext} was registered with its {@link EventLoop}
      */
-    void channelRegistered(ChannelHandlerContext ctx) throws Exception;
+    @Skip
+    default void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelRegistered();
+    }
 
     /**
      * The {@link Channel} of the {@link ChannelHandlerContext} was unregistered from its {@link EventLoop}
      */
-    void channelUnregistered(ChannelHandlerContext ctx) throws Exception;
+    @Skip
+    default void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelUnregistered();
+    }
 
     /**
      * The {@link Channel} of the {@link ChannelHandlerContext} is now active
      */
-    void channelActive(ChannelHandlerContext ctx) throws Exception;
+    @Skip
+    default void channelActive(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelActive();
+    }
 
     /**
      * The {@link Channel} of the {@link ChannelHandlerContext} was registered is now inactive and reached its
      * end of lifetime.
      */
-    void channelInactive(ChannelHandlerContext ctx) throws Exception;
+    @Skip
+    default void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelInactive();
+    }
 
     /**
      * Invoked when the current {@link Channel} has read a message from the peer.
      */
-    void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception;
+    @Skip
+    default void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        ctx.fireChannelRead(msg);
+    }
 
     /**
      * Invoked when the last message read by the current read operation has been consumed by
@@ -53,21 +68,33 @@ public interface ChannelInboundHandler extends ChannelHandler {
      * attempt to read an inbound data from the current {@link Channel} will be made until
      * {@link ChannelHandlerContext#read()} is called.
      */
-    void channelReadComplete(ChannelHandlerContext ctx) throws Exception;
+    @Skip
+    default void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelReadComplete();
+    }
 
     /**
      * Gets called if an user event was triggered.
      */
-    void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception;
+    @Skip
+    default void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        ctx.fireUserEventTriggered(evt);
+    }
 
     /**
      * Gets called once the writable state of a {@link Channel} changed. You can check the state with
      * {@link Channel#isWritable()}.
      */
-    void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception;
+    @Skip
+    default void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+        ctx.fireChannelWritabilityChanged();
+    }
 
     /**
      * Gets called if a {@link Throwable} was thrown.
      */
-    void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception;
+    @Skip
+    default void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        ctx.fireExceptionCaught(cause);
+    }
 }

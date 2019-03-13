@@ -17,13 +17,13 @@ package io.netty.example.sctp;
 
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 
 /**
  * Handler implementation for the SCTP echo server.
  */
 @Sharable
-public class SctpEchoServerHandler extends ChannelInboundHandlerAdapter {
+public class SctpEchoServerHandler implements ChannelInboundHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {

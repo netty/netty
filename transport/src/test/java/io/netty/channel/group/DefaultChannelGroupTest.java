@@ -18,7 +18,7 @@ package io.netty.channel.group;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
@@ -38,7 +38,7 @@ public class DefaultChannelGroupTest {
 
         ServerBootstrap b = new ServerBootstrap();
         b.group(bossGroup, workerGroup);
-        b.childHandler(new ChannelInboundHandlerAdapter() {
+        b.childHandler(new ChannelInboundHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
                 allChannels.add(ctx.channel());

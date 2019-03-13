@@ -20,7 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -83,7 +83,7 @@ public class SocketExceptionHandlingTest extends AbstractSocketTest {
         }
     }
 
-    private static class BuggyChannelHandler extends ChannelInboundHandlerAdapter {
+    private static class BuggyChannelHandler implements ChannelInboundHandler {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             ReferenceCountUtil.release(msg);
@@ -91,7 +91,7 @@ public class SocketExceptionHandlingTest extends AbstractSocketTest {
         }
     }
 
-    private static class ExceptionHandler extends ChannelInboundHandlerAdapter {
+    private static class ExceptionHandler implements ChannelInboundHandler {
         final AtomicLong count = new AtomicLong();
         /**
          * We expect to get 1 call to {@link #exceptionCaught(ChannelHandlerContext, Throwable)}.

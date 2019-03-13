@@ -22,7 +22,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
@@ -114,7 +113,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
                 // Just drop the message.
             }
         });
-        cb.handler(new ChannelInboundHandlerAdapter());
+        cb.handler(new ChannelInboundHandler() { });
 
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect(sc.localAddress()).sync().channel();
