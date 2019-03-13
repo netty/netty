@@ -317,4 +317,25 @@ public class HttpUtilTest {
             "http:localhost/http_1_0");
         assertFalse(HttpUtil.isKeepAlive(http10Message));
     }
+
+    @Test
+    public void testKeepAliveIfConnectionHeaderMultipleValues() {
+        HttpMessage http11Message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+            "http:localhost/http_1_1");
+        http11Message.headers().set(
+                HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE + ", " + HttpHeaderValues.CLOSE);
+        assertFalse(HttpUtil.isKeepAlive(http11Message));
+
+        http11Message.headers().set(
+                HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE + ", Close");
+        assertFalse(HttpUtil.isKeepAlive(http11Message));
+
+        http11Message.headers().set(
+                HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE + ", " + HttpHeaderValues.UPGRADE);
+        assertFalse(HttpUtil.isKeepAlive(http11Message));
+
+        http11Message.headers().set(
+                HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE + ", " + HttpHeaderValues.KEEP_ALIVE);
+        assertTrue(HttpUtil.isKeepAlive(http11Message));
+    }
 }
