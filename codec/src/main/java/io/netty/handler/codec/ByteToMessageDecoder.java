@@ -138,6 +138,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 if (in != null) {
                     // We must release if the ownership was not transferred as otherwise it may produce a leak
                     in.release();
+                    // Also release any new buffer allocated if we're not returning it
                     if (composite != null && composite != cumulation) {
                         composite.release();
                     }
