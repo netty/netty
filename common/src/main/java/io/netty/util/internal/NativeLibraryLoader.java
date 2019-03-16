@@ -138,7 +138,7 @@ public final class NativeLibraryLoader {
         } catch (Throwable ex) {
             suppressed.add(ex);
             logger.debug(
-                    "{} cannot be loaded from java.libary.path, "
+                    "{} cannot be loaded from java.library.path, "
                     + "now trying export to -Dio.netty.native.workdir: {}", name, WORKDIR, ex);
         }
 
