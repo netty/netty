@@ -131,7 +131,13 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 throw new SSLException("failed to set certificate and key", e);
             }
 
-            SSLContext.setVerify(ctx, SSL.SSL_CVERIFY_NONE, VERIFY_DEPTH);
+            // On the client side we always need to use SSL_CVERIFY_OPTIONAL (which will translate to SSL_VERIFY_PEER)
+            // to ensure that when the TrustManager throws we will produce the correct alert back to the server.
+            //
+            // See:
+            //   - https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_set_verify.html
+            //   - https://github.com/netty/netty/issues/8942
+            SSLContext.setVerify(ctx, SSL.SSL_CVERIFY_OPTIONAL, VERIFY_DEPTH);
 
             try {
                 if (trustCertCollection != null) {
