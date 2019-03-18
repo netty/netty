@@ -294,7 +294,7 @@ public final class PlatformDependent {
      *
      * @see #maxDirectMemory()
      */
-    public static long directMemoryCounter() {
+    public static long usedDirectMemory() {
         return DIRECT_MEMORY_COUNTER != null ? DIRECT_MEMORY_COUNTER.get() : -1;
     }
 
