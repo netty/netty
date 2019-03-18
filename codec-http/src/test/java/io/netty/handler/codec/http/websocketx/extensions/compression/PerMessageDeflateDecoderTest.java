@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
@@ -261,4 +262,47 @@ public class PerMessageDeflateDecoderTest {
         assertTrue(encoderChannel.finish());
         assertFalse(decoderChannel.finish());
     }
+
+    @Test(expected = DecoderException.class)
+    public void testIllegalStateWhenDecompressionInProgress() {
+        WebSocketExtensionFilter selectivityDecompressionFilter = new WebSocketExtensionFilter() {
+            @Override
+            public boolean mustSkip(WebSocketFrame frame) {
+                return frame.content().readableBytes() < 100;
+            }
+        };
+
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(
+                ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(
+                new PerMessageDeflateDecoder(false, selectivityDecompressionFilter));
+
+        byte[] firstPayload = new byte[200];
+        random.nextBytes(firstPayload);
+
+        byte[] finalPayload = new byte[50];
+        random.nextBytes(finalPayload);
+
+        assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(firstPayload)));
+        assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(finalPayload)));
+        ByteBuf compressedFirstPayload = encoderChannel.readOutbound();
+        ByteBuf compressedFinalPayload = encoderChannel.readOutbound();
+        assertTrue(encoderChannel.finish());
+
+        BinaryWebSocketFrame firstPart = new BinaryWebSocketFrame(false, WebSocketExtension.RSV1,
+                                                                  compressedFirstPayload);
+        ContinuationWebSocketFrame finalPart = new ContinuationWebSocketFrame(true, WebSocketExtension.RSV1,
+                                                                              compressedFinalPayload);
+        assertTrue(decoderChannel.writeInbound(firstPart));
+
+        BinaryWebSocketFrame outboundFirstPart = decoderChannel.readInbound();
+        //first part is decompressed
+        assertEquals(0, outboundFirstPart.rsv());
+        assertArrayEquals(firstPayload, ByteBufUtil.getBytes(outboundFirstPart.content()));
+        assertTrue(outboundFirstPart.release());
+
+        //final part throwing exception
+        decoderChannel.writeInbound(finalPart);
+    }
+
 }

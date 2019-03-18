@@ -62,10 +62,10 @@ class PerFrameDeflateEncoder extends DeflateEncoder {
             return false;
         }
 
-        return (msg instanceof TextWebSocketFrame || msg instanceof BinaryWebSocketFrame
-                || msg instanceof ContinuationWebSocketFrame)
-                && wsFrame.content().readableBytes() > 0
-                && (wsFrame.rsv() & WebSocketExtension.RSV1) == 0;
+        return (msg instanceof TextWebSocketFrame || msg instanceof BinaryWebSocketFrame ||
+                msg instanceof ContinuationWebSocketFrame) &&
+               wsFrame.content().readableBytes() > 0 &&
+               (wsFrame.rsv() & WebSocketExtension.RSV1) == 0;
     }
 
     @Override

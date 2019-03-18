@@ -57,9 +57,9 @@ class PerFrameDeflateDecoder extends DeflateDecoder {
             return false;
         }
 
-        return (msg instanceof TextWebSocketFrame || msg instanceof BinaryWebSocketFrame
-                || msg instanceof ContinuationWebSocketFrame)
-               && (wsFrame.rsv() & WebSocketExtension.RSV1) > 0;
+        return (msg instanceof TextWebSocketFrame || msg instanceof BinaryWebSocketFrame ||
+                msg instanceof ContinuationWebSocketFrame) &&
+               (wsFrame.rsv() & WebSocketExtension.RSV1) > 0;
     }
 
     @Override
@@ -71,4 +71,5 @@ class PerFrameDeflateDecoder extends DeflateDecoder {
     protected boolean appendFrameTail(WebSocketFrame msg) {
         return true;
     }
+
 }
