@@ -19,21 +19,16 @@ package io.netty.osgitests;
 import static org.junit.Assert.assertFalse;
 import static org.ops4j.pax.exam.CoreOptions.frameworkProperty;
 import static org.ops4j.pax.exam.CoreOptions.junitBundles;
-import static org.ops4j.pax.exam.CoreOptions.mavenBundle;
 import static org.ops4j.pax.exam.CoreOptions.systemProperty;
-import static org.ops4j.pax.exam.CoreOptions.wrappedBundle;
+import static org.ops4j.pax.exam.CoreOptions.url;
 import static org.osgi.framework.Constants.FRAMEWORK_BOOTDELEGATION;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.FilenameFilter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -44,45 +39,25 @@ import io.netty.util.internal.PlatformDependent;
 
 @RunWith(PaxExam.class)
 public class OsgiBundleTest {
-    private static final Pattern SLASH = Pattern.compile("/", Pattern.LITERAL);
-    private static final String DEPENCIES_LINE = "# dependencies";
-    private static final String GROUP = "io.netty";
-    private static final Collection<String> BUNDLES;
+    private static final Collection<String> LINKS;
 
     static {
-        final Set<String> artifacts = new HashSet<String>();
-        final File f = new File("target/classes/META-INF/maven/dependencies.properties");
-        try {
-            final BufferedReader r = new BufferedReader(new FileReader(f));
-            try {
-                boolean haveDeps = false;
+        final Set<String> links = new HashSet<String>();
 
-                while (true) {
-                    final String line = r.readLine();
-                    if (line == null) {
-                        // End-of-file
-                        break;
-                    }
-
-                    // We need to ignore any lines up to the dependencies
-                    // line, otherwise we would include ourselves.
-                    if (DEPENCIES_LINE.equals(line)) {
-                        haveDeps = true;
-                    } else if (haveDeps && line.startsWith(GROUP)) {
-                        final String[] split = SLASH.split(line);
-                        if (split.length > 1) {
-                            artifacts.add(split[1]);
-                        }
-                    }
-                }
-            } finally {
-                r.close();
+        final File directory = new File("target/generated-test-resources/alta/");
+        File[] files = directory.listFiles(new FilenameFilter() {
+            @Override
+            public boolean accept(File dir, String name) {
+                return (name.startsWith("io.netty") || name.startsWith("com.barchart.udt")) && name.endsWith(".link");
             }
-        } catch (IOException e) {
-            throw new ExceptionInInitializerError(e);
+        });
+        if (files == null) {
+            throw new IllegalStateException(directory + " is not found or is not a directory");
         }
-
-        BUNDLES = artifacts;
+        for (File f: files) {
+            links.add(f.getName());
+        }
+        LINKS = links;
     }
 
     @Configuration
@@ -92,13 +67,10 @@ public class OsgiBundleTest {
         // Avoid boot delegating sun.misc which would fail testCanLoadPlatformDependent()
         options.add(frameworkProperty(FRAMEWORK_BOOTDELEGATION).value("com.sun.*"));
         options.add(systemProperty("pax.exam.osgi.unresolved.fail").value("true"));
-        options.addAll(Arrays.asList(junitBundles()));
+        options.add(junitBundles());
 
-        options.add(mavenBundle("com.barchart.udt", "barchart-udt-bundle").versionAsInProject());
-        options.add(wrappedBundle(mavenBundle("org.rxtx", "rxtx").versionAsInProject()));
-
-        for (String name : BUNDLES) {
-            options.add(mavenBundle(GROUP, name).versionAsInProject());
+        for (String link : LINKS) {
+            options.add(url("link:classpath:" + link));
         }
 
         return options.toArray(new Option[0]);
@@ -107,11 +79,11 @@ public class OsgiBundleTest {
     @Test
     public void testResolvedBundles() {
         // No-op, as we just want the bundles to be resolved. Just check if we tested something
-        assertFalse("At least one bundle needs to be tested", BUNDLES.isEmpty());
+        assertFalse("At least one bundle needs to be tested", LINKS.isEmpty());
     }
 
     @Test
     public void testCanLoadPlatformDependent() {
-        assertFalse(PlatformDependent.hasUnsafe());
+        assertFalse(PlatformDependent.addressSize() == 0);
     }
 }
