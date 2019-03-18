@@ -46,6 +46,40 @@
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
     </profile>
+
+    <profile>
+      <id>linux</id>
+      <activation>
+        <os>
+          <family>linux</family>
+        </os>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-epoll</artifactId>
+          <version>${project.version}</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+
+    <profile>
+      <id>mac</id>
+      <activation>
+        <os>
+          <family>mac</family>
+        </os>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-kqueue</artifactId>
+          <version>${project.version}</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
   </profiles>
 
   <dependencies>
@@ -154,9 +188,14 @@
     </dependency>
 
     <dependency>
-      <groupId>org.ops4j.pax.exam</groupId>
-      <artifactId>pax-exam-container-native</artifactId>
-      <version>${exam.version}</version>
+      <groupId>org.apache.felix</groupId>
+      <artifactId>org.apache.felix.configadmin</artifactId>
+      <version>1.9.14</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.felix</groupId>
+      <artifactId>org.apache.felix.framework</artifactId>
+      <version>6.0.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -167,54 +206,36 @@
     </dependency>
     <dependency>
       <groupId>org.ops4j.pax.exam</groupId>
-      <artifactId>pax-exam</artifactId>
+      <artifactId>pax-exam-container-native</artifactId>
       <version>${exam.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.ops4j.pax.exam</groupId>
-      <artifactId>pax-exam-spi</artifactId>
+      <artifactId>pax-exam-link-assembly</artifactId>
       <version>${exam.version}</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.ops4j.pax.exam</groupId>
-      <artifactId>pax-exam-link-mvn</artifactId>
-      <version>${exam.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.ops4j.pax.url</groupId>
-      <artifactId>pax-url-wrap</artifactId>
-      <version>2.4.7</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.osgi</groupId>
-      <artifactId>org.osgi.core</artifactId>
-      <version>6.0.0</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.felix</groupId>
-      <artifactId>org.apache.felix.framework</artifactId>
-      <version>5.6.10</version>
-      <scope>test</scope>
-    </dependency>
-
   </dependencies>
 
   <build>
     <plugins>
       <plugin>
-        <groupId>org.ops4j.pax.exam</groupId>
-        <artifactId>maven-paxexam-plugin</artifactId>
+        <groupId>com.github.veithen.alta</groupId>
+        <artifactId>alta-maven-plugin</artifactId>
+        <version>0.6.2</version>
         <executions>
           <execution>
-            <id>generate-config</id>
             <goals>
-              <goal>generate-depends-file</goal>
+              <goal>generate-test-resources</goal>
             </goals>
+            <configuration>
+              <name>%bundle.symbolicName%.link</name>
+              <value>%url%</value>
+              <dependencySet>
+                <scope>test</scope>
+              </dependencySet>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -222,6 +243,9 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <skip>${skipOsgiTestsuite}</skip>
+          <additionalClasspathElements>
+            <additionalClasspathElement>${project.build.directory}/generated-test-resources/alta</additionalClasspathElement>
+          </additionalClasspathElements>
         </configuration>
       </plugin>
     </plugins>
