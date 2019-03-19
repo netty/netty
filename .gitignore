@@ -37,3 +37,7 @@ dependency-reduced-pom.xml
 # exclude mainframer files
 mainframer
 .mainframer
+
+# exclude docker-sync stuff
+.docker-sync
+*/.docker-sync
