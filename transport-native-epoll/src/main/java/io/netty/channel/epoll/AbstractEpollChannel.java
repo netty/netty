@@ -237,6 +237,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     private static boolean isAllowHalfClosure(ChannelConfig config) {
+        if (config instanceof EpollDomainSocketChannelConfig) {
+            return ((EpollDomainSocketChannelConfig) config).isAllowHalfClosure();
+        }
         return config instanceof SocketChannelConfig &&
                 ((SocketChannelConfig) config).isAllowHalfClosure();
     }
