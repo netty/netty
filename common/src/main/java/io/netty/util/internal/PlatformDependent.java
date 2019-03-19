@@ -289,6 +289,16 @@ public final class PlatformDependent {
     }
 
     /**
+     * Returns the current memory reserved for direct buffer allocation.
+     * This method returns -1 in case that a value is not available.
+     *
+     * @see #maxDirectMemory()
+     */
+    public static long usedDirectMemory() {
+        return DIRECT_MEMORY_COUNTER != null ? DIRECT_MEMORY_COUNTER.get() : -1;
+    }
+
+    /**
      * Returns the temporary directory.
      */
     public static File tmpdir() {
