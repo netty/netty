@@ -21,7 +21,8 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.util.AttributeMap;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -74,7 +75,7 @@ import java.net.SocketAddress;
  * resources once you are done with the {@link Channel}. This ensures all resources are
  * released in a proper way, i.e. filehandles.
  */
-public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparable<Channel> {
+public interface Channel extends ChannelOutboundInvoker, Comparable<Channel> {
 
     /**
      * Returns the globally unique identifier of this {@link Channel}.
@@ -192,6 +193,17 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
 
     @Override
     Channel flush();
+
+    /**
+     * Get the {@link Attribute} for the given {@link AttributeKey}. This method will never return null, but may return
+     * an {@link Attribute} which does not have a value set yet.
+     */
+    <T> Attribute<T> attr(AttributeKey<T> key);
+
+    /**
+     * Returns {@code} true if and only if the given {@link Attribute} exists in this {@link Channel}.
+     */
+    <T> boolean hasAttr(AttributeKey<T> key);
 
     /**
      * <em>Unsafe</em> operations that should <em>never</em> be called from user-code. These methods

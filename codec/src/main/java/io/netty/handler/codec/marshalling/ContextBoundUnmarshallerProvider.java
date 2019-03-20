@@ -26,7 +26,7 @@ import org.jboss.marshalling.Unmarshaller;
 
 /**
  * {@link UnmarshallerProvider} which store a reference to the {@link Unmarshaller} in the
- * {@link ChannelHandlerContext} via the {@link ChannelHandlerContext#attr(AttributeKey)}
+ * {@link ChannelHandlerContext} via the {@link Channel#attr(AttributeKey)}
  * method. So the same {@link Unmarshaller} will be used during the life-time of a {@link Channel}
  * for the {@link ChannelHandler}'s {@link ChannelHandlerContext}.
  *

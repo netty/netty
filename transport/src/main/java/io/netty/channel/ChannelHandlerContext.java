@@ -17,9 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
-import io.netty.util.AttributeMap;
 import io.netty.util.concurrent.EventExecutor;
 
 import java.nio.channels.Channels;
@@ -64,7 +62,7 @@ import java.nio.channels.Channels;
  *
  * <h3>Storing stateful information</h3>
  *
- * {@link #attr(AttributeKey)} allow you to
+ * {@link Channel#attr(AttributeKey)} allow you to
  * store and access stateful information that is related with a handler and its
  * context.  Please refer to {@link ChannelHandler} to learn various recommended
  * ways to manage stateful information.
@@ -122,7 +120,7 @@ import java.nio.channels.Channels;
  * what fundamental differences they have, how they flow in a  pipeline,  and how to handle
  * the operation in your application.
  */
-public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvoker, ChannelOutboundInvoker {
+public interface ChannelHandlerContext extends ChannelInboundInvoker, ChannelOutboundInvoker {
 
     /**
      * Return the {@link Channel} which is bound to the {@link ChannelHandlerContext}.
@@ -196,17 +194,4 @@ public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvok
      */
     ByteBufAllocator alloc();
 
-    /**
-     * @deprecated Use {@link Channel#attr(AttributeKey)}
-     */
-    @Deprecated
-    @Override
-    <T> Attribute<T> attr(AttributeKey<T> key);
-
-    /**
-     * @deprecated Use {@link Channel#hasAttr(AttributeKey)}
-     */
-    @Deprecated
-    @Override
-    <T> boolean hasAttr(AttributeKey<T> key);
 }

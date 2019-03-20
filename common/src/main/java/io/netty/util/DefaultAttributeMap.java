@@ -22,10 +22,11 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
- * Default {@link AttributeMap} implementation which use simple synchronization per bucket to keep the memory overhead
+ * Default {@link DefaultAttributeMap} implementation which
+ * use simple synchronization per bucket to keep the memory overhead
  * as low as possible.
  */
-public class DefaultAttributeMap implements AttributeMap {
+public class DefaultAttributeMap {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultAttributeMap, AtomicReferenceArray> updater =
@@ -39,7 +40,6 @@ public class DefaultAttributeMap implements AttributeMap {
     private volatile AtomicReferenceArray<DefaultAttribute<?>> attributes;
 
     @SuppressWarnings("unchecked")
-    @Override
     public <T> Attribute<T> attr(AttributeKey<T> key) {
         requireNonNull(key, "key");
         AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
@@ -88,7 +88,6 @@ public class DefaultAttributeMap implements AttributeMap {
         }
     }
 
-    @Override
     public <T> boolean hasAttr(AttributeKey<T> key) {
         requireNonNull(key, "key");
         AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;

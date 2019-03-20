@@ -27,8 +27,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
 
 import java.net.SocketAddress;
@@ -213,16 +211,6 @@ final class Http2FrameInboundWriter {
         @Override
         public ByteBufAllocator alloc() {
             return channel.alloc();
-        }
-
-        @Override
-        public <T> Attribute<T> attr(AttributeKey<T> key) {
-            return channel.attr(key);
-        }
-
-        @Override
-        public <T> boolean hasAttr(AttributeKey<T> key) {
-            return channel.hasAttr(key);
         }
 
         @Override

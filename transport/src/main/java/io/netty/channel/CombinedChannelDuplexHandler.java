@@ -18,8 +18,6 @@ package io.netty.channel;
 import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
 
 import java.net.SocketAddress;
@@ -562,16 +560,6 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         @Override
         public ChannelPromise voidPromise() {
             return ctx.voidPromise();
-        }
-
-        @Override
-        public <T> Attribute<T> attr(AttributeKey<T> key) {
-            return ctx.channel().attr(key);
-        }
-
-        @Override
-        public <T> boolean hasAttr(AttributeKey<T> key) {
-            return ctx.channel().hasAttr(key);
         }
 
         void remove() {
