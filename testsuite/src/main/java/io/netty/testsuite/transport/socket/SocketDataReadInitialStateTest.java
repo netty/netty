@@ -19,8 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.junit.Test;
@@ -55,7 +55,7 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
             sb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(new ChannelInboundHandler() {
+                    ch.pipeline().addLast(new ChannelHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
                             acceptorReadLatch.countDown();

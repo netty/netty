@@ -20,8 +20,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.junit.Test;
@@ -85,7 +85,7 @@ public class SocketEchoTest extends AbstractSocketTest {
         final EchoHandler ch = new EchoHandler(autoRead);
 
         sb.childHandler(sh);
-        sb.handler(new ChannelInboundHandler() {
+        sb.handler(new ChannelHandler() {
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                 cause.printStackTrace();

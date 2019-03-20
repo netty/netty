@@ -16,14 +16,14 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * A {@link ChannelDuplexHandler} providing additional functionality for HTTP/2. Specifically it allows to:
+ * A {@link ChannelHandler} providing additional functionality for HTTP/2. Specifically it allows to:
  * <ul>
  *     <li>Create new outbound streams using {@link #newStream()}.</li>
  *     <li>Iterate over all active streams using {@link #forEachActiveStream(Http2FrameStreamVisitor)}.</li>
@@ -33,7 +33,7 @@ import io.netty.util.internal.UnstableApi;
  * or else an {@link IllegalStateException} will be thrown.
  */
 @UnstableApi
-public abstract class Http2ChannelDuplexHandler extends ChannelDuplexHandler {
+public abstract class Http2ChannelDuplexHandler implements ChannelHandler {
 
     private volatile Http2FrameCodec frameCodec;
 

@@ -64,20 +64,4 @@ public abstract class ChannelHandlerAdapter implements ChannelHandler {
         }
         return sharable;
     }
-
-    /**
-     * Do nothing by default, sub-classes may override this method.
-     */
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
-
-    /**
-     * Do nothing by default, sub-classes may override this method.
-     */
-    @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        // NOOP
-    }
 }

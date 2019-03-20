@@ -23,8 +23,8 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -149,7 +149,7 @@ public class SniHandlerTest {
             final AtomicReference<SslHandshakeCompletionEvent> evtRef =
                     new AtomicReference<>();
             SniHandler handler = new SniHandler(new DomainNameMappingBuilder<>(nettyContext).build());
-            EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandler() {
+            EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelHandler() {
                 @Override
                 public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                     if (evt instanceof SslHandshakeCompletionEvent) {
@@ -196,7 +196,7 @@ public class SniHandlerTest {
 
             final AtomicReference<SniCompletionEvent> evtRef = new AtomicReference<>();
             SniHandler handler = new SniHandler(mapping);
-            EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelInboundHandler() {
+            EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelHandler() {
                 @Override
                 public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                     if (evt instanceof SniCompletionEvent) {

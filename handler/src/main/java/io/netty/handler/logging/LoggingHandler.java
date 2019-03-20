@@ -17,7 +17,6 @@ package io.netty.handler.logging;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -39,7 +38,7 @@ import static java.util.Objects.requireNonNull;
  */
 @Sharable
 @SuppressWarnings({ "StringConcatenationInsideStringBufferAppend", "StringBufferReplaceableByString" })
-public class LoggingHandler extends ChannelDuplexHandler {
+public class LoggingHandler implements ChannelHandler {
 
     private static final LogLevel DEFAULT_LEVEL = LogLevel.DEBUG;
 

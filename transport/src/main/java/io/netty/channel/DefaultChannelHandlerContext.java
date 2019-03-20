@@ -24,8 +24,6 @@ import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.FastThreadLocal;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.StringUtil;
@@ -34,19 +32,23 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
-import java.security.AccessController;
-import java.security.PrivilegedExceptionAction;
-import java.util.Map;
-import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-final class DefaultChannelHandlerContext
-        implements ChannelHandlerContext, ResourceLeakHint {
+import static io.netty.channel.ChannelHandlerMask.*;
+
+final class DefaultChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelHandlerContext.class);
 
     private static final AtomicIntegerFieldUpdater<DefaultChannelHandlerContext> HANDLER_STATE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(DefaultChannelHandlerContext.class, "handlerState");
+
+    /**
+     * Neither {@link ChannelHandler#handlerAdded(ChannelHandlerContext)}
+     * nor {@link ChannelHandler#handlerRemoved(ChannelHandlerContext)} was called.
+     */
+    private static final int INIT = 0;
+
     /**
      * {@link ChannelHandler#handlerAdded(ChannelHandlerContext)} was called.
      */
@@ -56,45 +58,6 @@ final class DefaultChannelHandlerContext
      * {@link ChannelHandler#handlerRemoved(ChannelHandlerContext)} was called.
      */
     private static final int REMOVE_COMPLETE = 2;
-    /**
-     * Neither {@link ChannelHandler#handlerAdded(ChannelHandlerContext)}
-     * nor {@link ChannelHandler#handlerRemoved(ChannelHandlerContext)} was called.
-     */
-    private static final int INIT = 0;
-
-    // Using to mask which methods must be called for a ChannelHandler.
-    private static final int MASK_EXCEPTION_CAUGHT = 1;
-    private static final int MASK_CHANNEL_REGISTERED = 1 << 1;
-    private static final int MASK_CHANNEL_UNREGISTERED = 1 << 2;
-    private static final int MASK_CHANNEL_ACTIVE = 1 << 3;
-    private static final int MASK_CHANNEL_INACTIVE = 1 << 4;
-    private static final int MASK_CHANNEL_READ = 1 << 5;
-    private static final int MASK_CHANNEL_READ_COMPLETE = 1 << 6;
-    private static final int MASK_USER_EVENT_TRIGGERED = 1 << 7;
-    private static final int MASK_CHANNEL_WRITABILITY_CHANGED = 1 << 8;
-    private static final int MASK_BIND = 1 << 9;
-    private static final int MASK_CONNECT = 1 << 10;
-    private static final int MASK_DISCONNECT = 1 << 11;
-    private static final int MASK_CLOSE = 1 << 12;
-    private static final int MASK_REGISTER = 1 << 13;
-    private static final int MASK_DEREGISTER = 1 << 14;
-    private static final int MASK_READ = 1 << 15;
-    private static final int MASK_WRITE = 1 << 16;
-    private static final int MASK_FLUSH = 1 << 17;
-
-    private static final int MASK_ALL_INBOUND = MASK_EXCEPTION_CAUGHT | MASK_CHANNEL_REGISTERED |
-            MASK_CHANNEL_UNREGISTERED | MASK_CHANNEL_ACTIVE | MASK_CHANNEL_INACTIVE | MASK_CHANNEL_READ |
-            MASK_CHANNEL_READ_COMPLETE | MASK_USER_EVENT_TRIGGERED | MASK_CHANNEL_WRITABILITY_CHANGED;
-    private static final int MASK_ALL_OUTBOUND = MASK_BIND | MASK_CONNECT | MASK_DISCONNECT |
-            MASK_CLOSE | MASK_REGISTER | MASK_DEREGISTER | MASK_READ | MASK_WRITE | MASK_FLUSH;
-
-    private static final FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>> MASKS =
-            new FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>>() {
-                @Override
-                protected Map<Class<? extends ChannelHandler>, Integer> initialValue() {
-                    return new WeakHashMap<>(32);
-                }
-            };
 
     private final int executionMask;
     private final DefaultChannelPipeline pipeline;
@@ -113,7 +76,7 @@ final class DefaultChannelHandlerContext
                                  ChannelHandler handler) {
         this.name = requireNonNull(name, "name");
         this.pipeline = pipeline;
-        this.executionMask = mask(handler.getClass());
+        this.executionMask = ChannelHandlerMask.mask(handler.getClass());
         this.handler = handler;
     }
 
@@ -133,109 +96,6 @@ final class DefaultChannelHandlerContext
     @Override
     public ChannelHandler handler() {
         return handler;
-    }
-
-    /**
-     * Return the {@code executionMask}.
-     */
-    private static int mask(Class<? extends ChannelHandler> clazz) {
-        // Try to obtain the mask from the cache first. If this fails calculate it and put it in the cache for fast
-        // lookup in the future.
-        Map<Class<? extends ChannelHandler>, Integer> cache = MASKS.get();
-        Integer mask = cache.get(clazz);
-        if (mask == null) {
-            mask = mask0(clazz);
-            cache.put(clazz, mask);
-        }
-        return mask;
-    }
-
-    /**
-     * Calculate the {@code executionMask}.
-     */
-    private static int mask0(Class<? extends ChannelHandler> handlerType) {
-        int mask = 0;
-        try {
-            if (ChannelInboundHandler.class.isAssignableFrom(handlerType)) {
-                mask |= MASK_ALL_INBOUND;
-
-                if (isSkippable(handlerType, "exceptionCaught", ChannelHandlerContext.class, Throwable.class)) {
-                    mask &= ~MASK_EXCEPTION_CAUGHT;
-                }
-
-                if (isSkippable(handlerType, "channelRegistered", ChannelHandlerContext.class)) {
-                    mask &= ~MASK_CHANNEL_REGISTERED;
-                }
-                if (isSkippable(handlerType, "channelUnregistered", ChannelHandlerContext.class)) {
-                    mask &= ~MASK_CHANNEL_UNREGISTERED;
-                }
-                if (isSkippable(handlerType, "channelActive", ChannelHandlerContext.class)) {
-                    mask &= ~MASK_CHANNEL_ACTIVE;
-                }
-                if (isSkippable(handlerType, "channelInactive", ChannelHandlerContext.class)) {
-                    mask &= ~MASK_CHANNEL_INACTIVE;
-                }
-                if (isSkippable(handlerType, "channelRead", ChannelHandlerContext.class, Object.class)) {
-                    mask &= ~MASK_CHANNEL_READ;
-                }
-                if (isSkippable(handlerType, "channelReadComplete", ChannelHandlerContext.class)) {
-                    mask &= ~MASK_CHANNEL_READ_COMPLETE;
-                }
-                if (isSkippable(handlerType, "channelWritabilityChanged", ChannelHandlerContext.class)) {
-                    mask &= ~MASK_CHANNEL_WRITABILITY_CHANGED;
-                }
-                if (isSkippable(handlerType, "userEventTriggered", ChannelHandlerContext.class, Object.class)) {
-                    mask &= ~MASK_USER_EVENT_TRIGGERED;
-                }
-            }
-            if (ChannelOutboundHandler.class.isAssignableFrom(handlerType)) {
-                mask |= MASK_ALL_OUTBOUND;
-
-                if (isSkippable(handlerType, "bind", ChannelHandlerContext.class,
-                        SocketAddress.class, ChannelPromise.class)) {
-                    mask &= ~MASK_BIND;
-                }
-                if (isSkippable(handlerType, "connect", ChannelHandlerContext.class, SocketAddress.class,
-                        SocketAddress.class, ChannelPromise.class)) {
-                    mask &= ~MASK_CONNECT;
-                }
-                if (isSkippable(handlerType, "disconnect", ChannelHandlerContext.class, ChannelPromise.class)) {
-                    mask &= ~MASK_DISCONNECT;
-                }
-                if (isSkippable(handlerType, "close", ChannelHandlerContext.class, ChannelPromise.class)) {
-                    mask &= ~MASK_CLOSE;
-                }
-                if (isSkippable(handlerType, "register", ChannelHandlerContext.class, ChannelPromise.class)) {
-                    mask &= ~MASK_REGISTER;
-                }
-                if (isSkippable(handlerType, "deregister", ChannelHandlerContext.class, ChannelPromise.class)) {
-                    mask &= ~MASK_DEREGISTER;
-                }
-                if (isSkippable(handlerType, "read", ChannelHandlerContext.class)) {
-                    mask &= ~MASK_READ;
-                }
-                if (isSkippable(handlerType, "write", ChannelHandlerContext.class,
-                        Object.class, ChannelPromise.class)) {
-                    mask &= ~MASK_WRITE;
-                }
-                if (isSkippable(handlerType, "flush", ChannelHandlerContext.class)) {
-                    mask &= ~MASK_FLUSH;
-                }
-            }
-        } catch (Exception e) {
-            // Should never reach here.
-            PlatformDependent.throwException(e);
-        }
-
-        return mask;
-    }
-
-    @SuppressWarnings("rawtypes")
-    private static boolean isSkippable(
-            final Class<?> handlerType, final String methodName, final Class<?>... paramTypes) throws Exception {
-
-        return AccessController.doPrivileged((PrivilegedExceptionAction<Boolean>) () ->
-                handlerType.getMethod(methodName, paramTypes).isAnnotationPresent(ChannelHandler.Skip.class));
     }
 
     @Override
@@ -275,7 +135,7 @@ final class DefaultChannelHandlerContext
 
     void invokeChannelRegistered() {
         try {
-            ((ChannelInboundHandler) handler()).channelRegistered(this);
+            handler().channelRegistered(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -298,7 +158,7 @@ final class DefaultChannelHandlerContext
 
     void invokeChannelUnregistered() {
         try {
-            ((ChannelInboundHandler) handler()).channelUnregistered(this);
+            handler().channelUnregistered(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -321,7 +181,7 @@ final class DefaultChannelHandlerContext
 
     void invokeChannelActive() {
         try {
-            ((ChannelInboundHandler) handler()).channelActive(this);
+            handler().channelActive(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -344,7 +204,7 @@ final class DefaultChannelHandlerContext
 
     void invokeChannelInactive() {
         try {
-            ((ChannelInboundHandler) handler()).channelInactive(this);
+            handler().channelInactive(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -375,7 +235,7 @@ final class DefaultChannelHandlerContext
 
     void invokeExceptionCaught(final Throwable cause) {
         try {
-            ((ChannelInboundHandler) handler()).exceptionCaught(this, cause);
+            handler().exceptionCaught(this, cause);
         } catch (Throwable error) {
             if (logger.isDebugEnabled()) {
                 logger.debug(
@@ -410,7 +270,7 @@ final class DefaultChannelHandlerContext
 
     void invokeUserEventTriggered(Object event) {
         try {
-            ((ChannelInboundHandler) handler()).userEventTriggered(this, event);
+            handler().userEventTriggered(this, event);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -440,7 +300,7 @@ final class DefaultChannelHandlerContext
     void invokeChannelRead(Object msg) {
         final Object m = pipeline.touch(requireNonNull(msg, "msg"), this);
         try {
-            ((ChannelInboundHandler) handler()).channelRead(this, m);
+            handler().channelRead(this, m);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -464,7 +324,7 @@ final class DefaultChannelHandlerContext
 
     void invokeChannelReadComplete() {
         try {
-            ((ChannelInboundHandler) handler()).channelReadComplete(this);
+            handler().channelReadComplete(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -488,7 +348,7 @@ final class DefaultChannelHandlerContext
 
     void invokeChannelWritabilityChanged() {
         try {
-            ((ChannelInboundHandler) handler()).channelWritabilityChanged(this);
+            handler().channelWritabilityChanged(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
         }
@@ -552,7 +412,7 @@ final class DefaultChannelHandlerContext
 
     private void invokeBind(SocketAddress localAddress, ChannelPromise promise) {
         try {
-            ((ChannelOutboundHandler) handler()).bind(this, localAddress, promise);
+            handler().bind(this, localAddress, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -587,7 +447,7 @@ final class DefaultChannelHandlerContext
 
     private void invokeConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
         try {
-            ((ChannelOutboundHandler) handler()).connect(this, remoteAddress, localAddress, promise);
+            handler().connect(this, remoteAddress, localAddress, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -629,7 +489,7 @@ final class DefaultChannelHandlerContext
 
     private void invokeDisconnect(ChannelPromise promise) {
         try {
-            ((ChannelOutboundHandler) handler()).disconnect(this, promise);
+            handler().disconnect(this, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -657,7 +517,7 @@ final class DefaultChannelHandlerContext
 
     private void invokeClose(ChannelPromise promise) {
         try {
-            ((ChannelOutboundHandler) handler()).close(this, promise);
+            handler().close(this, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -685,7 +545,7 @@ final class DefaultChannelHandlerContext
 
     private void invokeRegister(ChannelPromise promise) {
         try {
-            ((ChannelOutboundHandler) handler()).register(this, promise);
+            handler().register(this, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -713,7 +573,7 @@ final class DefaultChannelHandlerContext
 
     private void invokeDeregister(ChannelPromise promise) {
         try {
-            ((ChannelOutboundHandler) handler()).deregister(this, promise);
+            handler().deregister(this, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -737,7 +597,7 @@ final class DefaultChannelHandlerContext
 
     private void invokeRead() {
         try {
-            ((ChannelOutboundHandler) handler()).read(this);
+            handler().read(this);
         } catch (Throwable t) {
             invokeExceptionCaughtFromOutbound(t);
         }
@@ -766,7 +626,7 @@ final class DefaultChannelHandlerContext
     private void invokeWrite(Object msg, ChannelPromise promise) {
         final Object m = pipeline.touch(msg, this);
         try {
-            ((ChannelOutboundHandler) handler()).write(this, m, promise);
+            handler().write(this, m, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
         }
@@ -791,7 +651,7 @@ final class DefaultChannelHandlerContext
 
     private void invokeFlush() {
         try {
-            ((ChannelOutboundHandler) handler()).flush(this);
+            handler().flush(this);
         } catch (Throwable t) {
             invokeExceptionCaughtFromOutbound(t);
         }

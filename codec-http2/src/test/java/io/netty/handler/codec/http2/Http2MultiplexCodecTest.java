@@ -21,7 +21,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpMethod;
@@ -132,7 +131,7 @@ public class Http2MultiplexCodecTest {
 
     @Test
     public void writeUnknownFrame() {
-        Http2StreamChannel childChannel = newOutboundStream(new ChannelInboundHandler() {
+        Http2StreamChannel childChannel = newOutboundStream(new ChannelHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
                 ctx.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
@@ -156,7 +155,7 @@ public class Http2MultiplexCodecTest {
                                                 AtomicInteger maxReads, final ChannelHandler childHandler) {
         final AtomicReference<Http2StreamChannel> streamChannelRef = new AtomicReference<>();
         childChannelInitializer.maxReads = maxReads;
-        childChannelInitializer.handler = new ChannelInboundHandler() {
+        childChannelInitializer.handler = new ChannelHandler() {
             @Override
             public void channelRegistered(ChannelHandlerContext ctx) {
                 assertNull(streamChannelRef.get());
@@ -183,7 +182,7 @@ public class Http2MultiplexCodecTest {
         // header frame and unknown frame
         verifyFramesMultiplexedToCorrectChannel(channel, handler, 2);
 
-        Channel childChannel = newOutboundStream(new ChannelInboundHandler() { });
+        Channel childChannel = newOutboundStream(new ChannelHandler() { });
         assertTrue(childChannel.isActive());
     }
 
@@ -309,7 +308,7 @@ public class Http2MultiplexCodecTest {
         assertNotNull(headersFrame);
 
         // Add a handler which will request reads.
-        childChannel.pipeline().addFirst(new ChannelInboundHandler() {
+        childChannel.pipeline().addFirst(new ChannelHandler() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 ctx.fireChannelRead(msg);
@@ -363,7 +362,7 @@ public class Http2MultiplexCodecTest {
 
     @Test
     public void outboundStreamShouldWriteResetFrameOnClose_headersSent() {
-        ChannelHandler handler = new ChannelInboundHandler() {
+        ChannelHandler handler = new ChannelHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
                 ctx.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
@@ -398,7 +397,7 @@ public class Http2MultiplexCodecTest {
             }
         });
 
-        Http2StreamChannel childChannel = newOutboundStream(new ChannelInboundHandler() {
+        Http2StreamChannel childChannel = newOutboundStream(new ChannelHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
                 ctx.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
@@ -629,7 +628,7 @@ public class Http2MultiplexCodecTest {
     public void settingChannelOptsAndAttrs() {
         AttributeKey<String> key = AttributeKey.newInstance("foo");
 
-        Channel childChannel = newOutboundStream(new ChannelInboundHandler() { });
+        Channel childChannel = newOutboundStream(new ChannelHandler() { });
         childChannel.config().setAutoRead(false).setWriteSpinCount(1000);
         childChannel.attr(key).set("bar");
         assertFalse(childChannel.config().isAutoRead());
@@ -639,7 +638,7 @@ public class Http2MultiplexCodecTest {
 
     @Test
     public void outboundFlowControlWritability() {
-        Http2StreamChannel childChannel = newOutboundStream(new ChannelInboundHandler() { });
+        Http2StreamChannel childChannel = newOutboundStream(new ChannelHandler() { });
         assertTrue(childChannel.isActive());
 
         assertTrue(childChannel.isWritable());
@@ -691,7 +690,7 @@ public class Http2MultiplexCodecTest {
         assertTrue(childChannel.isOpen());
         assertTrue(childChannel.isActive());
 
-        childChannel.pipeline().addLast(new ChannelInboundHandler() {
+        childChannel.pipeline().addLast(new ChannelHandler() {
             @Override
             public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                 channelOpen.set(ctx.channel().isOpen());
@@ -712,7 +711,7 @@ public class Http2MultiplexCodecTest {
         final AtomicInteger exceptionCaught = new AtomicInteger(-1);
         final AtomicInteger channelInactive = new AtomicInteger(-1);
         final AtomicInteger channelUnregistered = new AtomicInteger(-1);
-        Http2StreamChannel childChannel = newOutboundStream(new ChannelInboundHandler() {
+        Http2StreamChannel childChannel = newOutboundStream(new ChannelHandler() {
 
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
@@ -721,7 +720,7 @@ public class Http2MultiplexCodecTest {
             }
         });
 
-        childChannel.pipeline().addLast(new ChannelInboundHandler() {
+        childChannel.pipeline().addLast(new ChannelHandler() {
 
             @Override
             public void channelInactive(ChannelHandlerContext ctx) throws Exception {
@@ -784,7 +783,7 @@ public class Http2MultiplexCodecTest {
 
         assertEquals(new DefaultHttp2HeadersFrame(request).stream(childChannel.stream()), inboundHandler.readInbound());
 
-        ChannelHandler readCompleteSupressHandler = new ChannelInboundHandler() {
+        ChannelHandler readCompleteSupressHandler = new ChannelHandler() {
             @Override
             public void channelReadComplete(ChannelHandlerContext ctx) {
                 // We want to simulate the parent channel calling channelRead and delay calling channelReadComplete.
@@ -847,7 +846,7 @@ public class Http2MultiplexCodecTest {
 
         assertEquals(new DefaultHttp2HeadersFrame(request).stream(childChannel.stream()), inboundHandler.readInbound());
 
-        ChannelHandler readCompleteSupressHandler = new ChannelInboundHandler() {
+        ChannelHandler readCompleteSupressHandler = new ChannelHandler() {
             @Override
             public void channelReadComplete(ChannelHandlerContext ctx) {
                 // We want to simulate the parent channel calling channelRead and delay calling channelReadComplete.
@@ -907,7 +906,7 @@ public class Http2MultiplexCodecTest {
 
         assertEquals(new DefaultHttp2HeadersFrame(request).stream(childChannel.stream()), inboundHandler.readInbound());
 
-        ChannelHandler readCompleteSupressHandler = new ChannelInboundHandler() {
+        ChannelHandler readCompleteSupressHandler = new ChannelHandler() {
             @Override
             public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
                 // We want to simulate the parent channel calling channelRead and delay calling channelReadComplete.

@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.unix.DomainSocketReadMode;
@@ -51,7 +52,7 @@ public class KQueueDomainSocketFdTest extends AbstractSocketTest {
 
     public void testSendRecvFd(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         final BlockingQueue<Object> queue = new LinkedBlockingQueue<>(1);
-        sb.childHandler(new ChannelInboundHandler() {
+        sb.childHandler(new ChannelHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 // Create new channel and obtain a file descriptor from it.
@@ -65,7 +66,7 @@ public class KQueueDomainSocketFdTest extends AbstractSocketTest {
                 });
             }
         });
-        cb.handler(new ChannelInboundHandler() {
+        cb.handler(new ChannelHandler() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 FileDescriptor fd = (FileDescriptor) msg;

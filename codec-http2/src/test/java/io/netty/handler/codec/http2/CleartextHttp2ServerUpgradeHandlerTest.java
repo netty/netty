@@ -18,8 +18,8 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
@@ -78,7 +78,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
         CleartextHttp2ServerUpgradeHandler handler = new CleartextHttp2ServerUpgradeHandler(
                 httpServerCodec, upgradeHandler, http2ConnectionHandler);
-        channel = new EmbeddedChannel(handler, new ChannelInboundHandler() {
+        channel = new EmbeddedChannel(handler, new ChannelHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 userEvents.add(evt);
@@ -204,7 +204,7 @@ public class CleartextHttp2ServerUpgradeHandlerTest {
 
         CleartextHttp2ServerUpgradeHandler handler = new CleartextHttp2ServerUpgradeHandler(
                 httpServerCodec, upgradeHandler, http2Codec);
-        channel = new EmbeddedChannel(handler, new ChannelInboundHandler() {
+        channel = new EmbeddedChannel(handler, new ChannelHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 userEvents.add(evt);

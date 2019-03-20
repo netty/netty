@@ -47,11 +47,11 @@ import java.nio.channels.Channels;
  * You can keep the {@link ChannelHandlerContext} for later use, such as
  * triggering an event outside the handler methods, even from a different thread.
  * <pre>
- * public class MyHandler extends {@link ChannelDuplexHandler} {
+ * public class MyHandler extends {@link ChannelHandler} {
  *
  *     <b>private {@link ChannelHandlerContext} ctx;</b>
  *
- *     public void beforeAdd({@link ChannelHandlerContext} ctx) {
+ *     public void handlerAdded({@link ChannelHandlerContext} ctx) {
  *         <b>this.ctx = ctx;</b>
  *     }
  *

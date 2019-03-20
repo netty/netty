@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec.http.cors;
 
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -46,7 +46,7 @@ import static java.util.Objects.requireNonNull;
  * This handler can be configured using one or more {@link CorsConfig}, please
  * refer to this class for details about the configuration options available.
  */
-public class CorsHandler extends ChannelDuplexHandler {
+public class CorsHandler implements ChannelHandler {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(CorsHandler.class);
     private static final String ANY_ORIGIN = "*";

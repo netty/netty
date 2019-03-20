@@ -18,7 +18,6 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -154,7 +153,7 @@ public class WebSocketServerProtocolHandlerTest {
         return new String(response.content().array());
     }
 
-    private class MockOutboundHandler implements ChannelOutboundHandler {
+    private class MockOutboundHandler implements ChannelHandler {
 
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {

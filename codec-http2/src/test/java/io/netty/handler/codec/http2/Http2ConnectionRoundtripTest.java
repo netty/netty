@@ -23,11 +23,10 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -642,7 +641,7 @@ public class Http2ConnectionRoundtripTest {
         runInChannel(clientChannel, () -> {
             http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0, (short) 16, false, 0, false,
                     newPromise());
-            clientChannel.pipeline().addFirst(new ChannelOutboundHandler() {
+            clientChannel.pipeline().addFirst(new ChannelHandler() {
                 @Override
                 public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
                     ReferenceCountUtil.release(msg);
@@ -1061,7 +1060,7 @@ public class Http2ConnectionRoundtripTest {
                         .validateHeaders(false)
                         .gracefulShutdownTimeoutMillis(0)
                         .build());
-                p.addLast(new ChannelInboundHandler() {
+                p.addLast(new ChannelHandler() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {

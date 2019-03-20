@@ -18,8 +18,8 @@ package io.netty.handler.ssl;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -164,7 +164,7 @@ public class SslErrorTest {
                             if (!serverProduceError) {
                                 ch.pipeline().addLast(new AlertValidationHandler(promise));
                             }
-                            ch.pipeline().addLast(new ChannelInboundHandler() {
+                            ch.pipeline().addLast(new ChannelHandler() {
 
                                 @Override
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
@@ -184,7 +184,7 @@ public class SslErrorTest {
                             if (serverProduceError) {
                                 ch.pipeline().addLast(new AlertValidationHandler(promise));
                             }
-                            ch.pipeline().addLast(new ChannelInboundHandler() {
+                            ch.pipeline().addLast(new ChannelHandler() {
 
                                 @Override
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
@@ -239,7 +239,7 @@ public class SslErrorTest {
         }
     }
 
-    private final class AlertValidationHandler implements ChannelInboundHandler {
+    private final class AlertValidationHandler implements ChannelHandler {
         private final Promise<Void> promise;
 
         AlertValidationHandler(Promise<Void> promise) {

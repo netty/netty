@@ -17,8 +17,8 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import org.junit.Test;
@@ -96,7 +96,7 @@ public class ReplayingDecoderTest {
         assertNull(ch.readInbound());
     }
 
-    private static final class BloatedLineDecoder implements ChannelInboundHandler {
+    private static final class BloatedLineDecoder implements ChannelHandler {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             ctx.pipeline().replace(this, "less-bloated", new LineDecoder());
@@ -226,7 +226,7 @@ public class ReplayingDecoderTest {
                 assertFalse(in.isReadable());
                 out.add("data");
             }
-        }, new ChannelInboundHandler() {
+        }, new ChannelHandler() {
             @Override
             public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                 queue.add(3);

@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.testsuite.transport.TestsuitePermutation;
@@ -46,7 +47,7 @@ public class DatagramConnectNotExistsTest extends AbstractClientSocketTest {
 
     public void testConnectNotExists(Bootstrap cb) throws Throwable {
         final Promise<Throwable> promise = ImmediateEventExecutor.INSTANCE.newPromise();
-        cb.handler(new ChannelInboundHandler() {
+        cb.handler(new ChannelHandler() {
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 promise.trySuccess(cause);

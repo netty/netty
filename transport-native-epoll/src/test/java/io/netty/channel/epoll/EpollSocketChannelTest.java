@@ -16,7 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -35,7 +35,7 @@ public class EpollSocketChannelTest {
             Bootstrap bootstrap = new Bootstrap();
             EpollSocketChannel ch = (EpollSocketChannel) bootstrap.group(group)
                     .channel(EpollSocketChannel.class)
-                    .handler(new ChannelInboundHandler() { })
+                    .handler(new ChannelHandler() { })
                     .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
             EpollTcpInfo info = ch.tcpInfo();
             assertTcpInfo0(info);
@@ -53,7 +53,7 @@ public class EpollSocketChannelTest {
             Bootstrap bootstrap = new Bootstrap();
             EpollSocketChannel ch = (EpollSocketChannel) bootstrap.group(group)
                     .channel(EpollSocketChannel.class)
-                    .handler(new ChannelInboundHandler() { })
+                    .handler(new ChannelHandler() { })
                     .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
             EpollTcpInfo info = new EpollTcpInfo();
             ch.tcpInfo(info);
@@ -111,7 +111,7 @@ public class EpollSocketChannelTest {
             EpollSocketChannel ch = (EpollSocketChannel) bootstrap.group(group)
                     .channel(EpollSocketChannel.class)
                     .option(ChannelOption.SO_LINGER, 10)
-                    .handler(new ChannelInboundHandler() { })
+                    .handler(new ChannelHandler() { })
                     .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
             ch.close().syncUninterruptibly();
         } finally {

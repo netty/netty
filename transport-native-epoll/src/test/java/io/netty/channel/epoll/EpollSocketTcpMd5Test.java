@@ -17,7 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoopGroup;
@@ -55,7 +55,7 @@ public class EpollSocketTcpMd5Test {
         ServerBootstrap bootstrap = new ServerBootstrap();
         server = (EpollServerSocketChannel) bootstrap.group(GROUP)
                 .channel(EpollServerSocketChannel.class)
-                .childHandler(new ChannelInboundHandler() { })
+                .childHandler(new ChannelHandler() { })
                 .bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0)).syncUninterruptibly().channel();
     }
 
@@ -76,7 +76,7 @@ public class EpollSocketTcpMd5Test {
         ServerBootstrap bootstrap = new ServerBootstrap();
         EpollServerSocketChannel ch = (EpollServerSocketChannel) bootstrap.group(GROUP)
                 .channel(EpollServerSocketChannel.class)
-                .childHandler(new ChannelInboundHandler() { })
+                .childHandler(new ChannelHandler() { })
                 .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
 
         ch.config().setOption(EpollChannelOption.TCP_MD5SIG,
@@ -93,7 +93,7 @@ public class EpollSocketTcpMd5Test {
 
         EpollSocketChannel client = (EpollSocketChannel) new Bootstrap().group(GROUP)
                 .channel(EpollSocketChannel.class)
-                .handler(new ChannelInboundHandler() { })
+                .handler(new ChannelHandler() { })
                 .option(EpollChannelOption.TCP_MD5SIG,
                         Collections.singletonMap(NetUtil.LOCALHOST4, BAD_KEY))
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
@@ -108,7 +108,7 @@ public class EpollSocketTcpMd5Test {
 
         EpollSocketChannel client = (EpollSocketChannel) new Bootstrap().group(GROUP)
                 .channel(EpollSocketChannel.class)
-                .handler(new ChannelInboundHandler() { })
+                .handler(new ChannelHandler() { })
                 .option(EpollChannelOption.TCP_MD5SIG,
                         Collections.singletonMap(NetUtil.LOCALHOST4, SERVER_KEY))
                 .connect(server.localAddress()).syncUninterruptibly().channel();

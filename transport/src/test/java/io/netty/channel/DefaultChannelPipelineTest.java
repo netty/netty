@@ -80,7 +80,7 @@ public class DefaultChannelPipelineTest {
         final AtomicReference<Channel> peerRef = new AtomicReference<>();
         ServerBootstrap sb = new ServerBootstrap();
         sb.group(group).channel(LocalServerChannel.class);
-        sb.childHandler(new ChannelInboundHandler() {
+        sb.childHandler(new ChannelHandler() {
             @Override
             public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
                 peerRef.set(ctx.channel());
@@ -279,7 +279,7 @@ public class DefaultChannelPipelineTest {
         pipeline.addLast(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(new ChannelInboundHandler() {
+                ch.pipeline().addLast(new ChannelHandler() {
                     @Override
                     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
                         latch.countDown();
@@ -805,7 +805,7 @@ public class DefaultChannelPipelineTest {
             pipeline1.channel().register().addListener((ChannelFutureListener) future -> {
                 ChannelPipeline pipeline = future.channel().pipeline();
                 final AtomicBoolean handlerAddedCalled = new AtomicBoolean();
-                pipeline.addLast(new ChannelInboundHandler() {
+                pipeline.addLast(new ChannelHandler() {
                     @Override
                     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                         handlerAddedCalled.set(true);
@@ -858,7 +858,7 @@ public class DefaultChannelPipelineTest {
         final Exception exception = new IllegalArgumentException();
         try {
             pipeline1.channel().register().syncUninterruptibly();
-            pipeline1.addLast(new ChannelDuplexHandler() {
+            pipeline1.addLast(new ChannelHandler() {
                 @Override
                 public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
                     throw exception;
@@ -893,7 +893,7 @@ public class DefaultChannelPipelineTest {
 
                 final CountDownLatch latch = new CountDownLatch(1);
 
-                pipeline.addLast(new ChannelInboundHandler() {
+                pipeline.addLast(new ChannelHandler() {
                     @Override
                     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
                         // Block just for a bit so we have a chance to trigger the race mentioned in the issue.
@@ -905,7 +905,7 @@ public class DefaultChannelPipelineTest {
                 // should call handlerRemoved(...) if and only if handlerAdded(...) was called for the handler before.
                 pipeline.close();
 
-                pipeline.addLast(new ChannelInboundHandler() {
+                pipeline.addLast(new ChannelHandler() {
                     private boolean handerAddedCalled;
 
                     @Override
@@ -1387,7 +1387,7 @@ public class DefaultChannelPipelineTest {
         final CountDownLatch doneLatch = new CountDownLatch(1);
 
         Runnable r = () -> {
-            pipeline.addLast(new ChannelInboundHandler() {
+            pipeline.addLast(new ChannelHandler() {
                 @Override
                 public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                     if (evt == userEvent) {
@@ -1396,7 +1396,7 @@ public class DefaultChannelPipelineTest {
                     ctx.fireUserEventTriggered(evt);
                 }
             });
-            pipeline.addFirst(new ChannelDuplexHandler() {
+            pipeline.addFirst(new ChannelHandler() {
                 @Override
                 public void handlerAdded(ChannelHandlerContext ctx) {
                     ctx.fireUserEventTriggered(userEvent);
@@ -1433,7 +1433,7 @@ public class DefaultChannelPipelineTest {
 
         @Override
         public void run() {
-            pipeline.addLast(new ChannelInboundHandler() { });
+            pipeline.addLast(new ChannelHandler() { });
             latch.countDown();
         }
     }
@@ -1642,9 +1642,9 @@ public class DefaultChannelPipelineTest {
     }
 
     @Sharable
-    private static class TestHandler extends ChannelDuplexHandler { }
+    private static class TestHandler implements ChannelHandler { }
 
-    private static class BufferedTestHandler extends ChannelDuplexHandler {
+    private static class BufferedTestHandler implements ChannelHandler {
         final Queue<Object> inboundBuffer = new ArrayDeque<>();
         final Queue<Object> outboundBuffer = new ArrayDeque<>();
 

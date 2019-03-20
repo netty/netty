@@ -19,7 +19,7 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 
@@ -57,7 +57,7 @@ public class EpollSocketChannelConfigTest {
         Bootstrap bootstrap = new Bootstrap();
         ch = (EpollSocketChannel) bootstrap.group(group)
                 .channel(EpollSocketChannel.class)
-                .handler(new ChannelInboundHandler() { })
+                .handler(new ChannelHandler() { })
                 .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
     }
 

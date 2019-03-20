@@ -23,8 +23,8 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
@@ -339,7 +339,7 @@ public class LocalChannelTest {
 
             sb.group(group2)
             .channel(LocalServerChannel.class)
-            .childHandler(new ChannelInboundHandler() {
+            .childHandler(new ChannelHandler() {
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                     if (msg.equals(data)) {
@@ -394,7 +394,7 @@ public class LocalChannelTest {
         try {
             cb.group(sharedGroup)
                     .channel(LocalChannel.class)
-                    .handler(new ChannelInboundHandler() {
+                    .handler(new ChannelHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             ctx.writeAndFlush(data.retainedDuplicate());
@@ -413,7 +413,7 @@ public class LocalChannelTest {
 
             sb.group(sharedGroup)
                     .channel(LocalServerChannel.class)
-                    .childHandler(new ChannelInboundHandler() {
+                    .childHandler(new ChannelHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                             if (data.equals(msg)) {
@@ -466,7 +466,7 @@ public class LocalChannelTest {
 
             sb.group(group2)
             .channel(LocalServerChannel.class)
-            .childHandler(new ChannelInboundHandler() {
+            .childHandler(new ChannelHandler() {
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                     final long count = messageLatch.getCount();
@@ -520,7 +520,7 @@ public class LocalChannelTest {
 
         cb.group(group1)
                 .channel(LocalChannel.class)
-                .handler(new ChannelInboundHandler() {
+                .handler(new ChannelHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                         if (data2.equals(msg)) {
@@ -537,7 +537,7 @@ public class LocalChannelTest {
                 .childHandler(new ChannelInitializer<LocalChannel>() {
                     @Override
                     public void initChannel(LocalChannel ch) throws Exception {
-                        ch.pipeline().addLast(new ChannelInboundHandler() {
+                        ch.pipeline().addLast(new ChannelHandler() {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                                 if (data.equals(msg)) {
@@ -596,7 +596,7 @@ public class LocalChannelTest {
         try {
             cb.group(sharedGroup)
             .channel(LocalChannel.class)
-            .handler(new ChannelInboundHandler() {
+            .handler(new ChannelHandler() {
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                     if (data2.equals(msg) && messageLatch.getCount() == 1) {
@@ -613,7 +613,7 @@ public class LocalChannelTest {
             .childHandler(new ChannelInitializer<LocalChannel>() {
                 @Override
                 public void initChannel(LocalChannel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandler() {
+                    ch.pipeline().addLast(new ChannelHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                             if (data.equals(msg) && messageLatch.getCount() == 2) {
@@ -685,7 +685,7 @@ public class LocalChannelTest {
             .childHandler(new ChannelInitializer<LocalChannel>() {
                 @Override
                 public void initChannel(LocalChannel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandler() {
+                    ch.pipeline().addLast(new ChannelHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                             if (data.equals(msg)) {
@@ -769,7 +769,7 @@ public class LocalChannelTest {
 
         cb.group(group1)
                 .channel(LocalChannel.class)
-                .handler(new ChannelInboundHandler() { });
+                .handler(new ChannelHandler() { });
 
         sb.group(group2)
                 .channel(LocalServerChannel.class)
@@ -839,7 +839,7 @@ public class LocalChannelTest {
         }
     }
 
-    static class TestHandler implements ChannelInboundHandler {
+    static class TestHandler implements ChannelHandler {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             logger.info(String.format("Received message: %s", msg));
@@ -934,7 +934,7 @@ public class LocalChannelTest {
         cb.group(serverGroup)
                 .channel(LocalChannel.class)
                 .option(ChannelOption.AUTO_READ, false)
-                .handler(new ChannelInboundHandler() {
+                .handler(new ChannelHandler() {
 
                     @Override
                     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
@@ -950,7 +950,7 @@ public class LocalChannelTest {
         sb.group(clientGroup)
                 .channel(LocalServerChannel.class)
                 .childOption(ChannelOption.AUTO_READ, false)
-                .childHandler(new ChannelInboundHandler() {
+                .childHandler(new ChannelHandler() {
                     @Override
                     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
                         ctx.read();
@@ -1012,7 +1012,7 @@ public class LocalChannelTest {
                 .handler(new ChannelReadHandler(countDownLatch, autoRead));
         sb.group(clientGroup)
                 .channel(LocalServerChannel.class)
-                .childHandler(new ChannelInboundHandler() {
+                .childHandler(new ChannelHandler() {
                     @Override
                     public void channelActive(final ChannelHandlerContext ctx) {
                         for (int i = 0; i < 10; i++) {
@@ -1102,7 +1102,7 @@ public class LocalChannelTest {
         }
     }
 
-    private static final class ChannelReadHandler implements ChannelInboundHandler {
+    private static final class ChannelReadHandler implements ChannelHandler {
 
         private final CountDownLatch latch;
         private final boolean autoRead;

@@ -17,10 +17,6 @@ package io.netty.channel;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import org.junit.Test;
 
@@ -36,7 +32,7 @@ public abstract class AbstractEventLoopTest {
         ServerBootstrap b = new ServerBootstrap();
         b.group(loop)
                 .channel(newChannel())
-                .childHandler(new ChannelInboundHandler() { });
+                .childHandler(new ChannelHandler() { });
 
         // Not close the Channel to ensure the EventLoop is still shutdown in time.
         b.bind(0).sync().channel();

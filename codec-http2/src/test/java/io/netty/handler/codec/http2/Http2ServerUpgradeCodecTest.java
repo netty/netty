@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
@@ -57,7 +56,7 @@ public class Http2ServerUpgradeCodecTest {
         request.headers().set(HttpHeaderNames.UPGRADE, "h2c");
         request.headers().set("HTTP2-Settings", "AAMAAABkAAQAAP__");
 
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandler() { });
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() { });
         ChannelHandlerContext ctx = channel.pipeline().firstContext();
         Http2ServerUpgradeCodec codec = new Http2ServerUpgradeCodec("connectionHandler", handler);
         assertTrue(codec.prepareUpgradeResponse(ctx, request, new DefaultHttpHeaders()));
@@ -78,5 +77,5 @@ public class Http2ServerUpgradeCodecTest {
     }
 
     @ChannelHandler.Sharable
-    private static final class HttpInboundHandler implements ChannelInboundHandler { }
+    private static final class HttpInboundHandler implements ChannelHandler { }
 }

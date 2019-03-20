@@ -25,10 +25,11 @@ import io.netty.util.concurrent.EventExecutor;
 import java.net.SocketAddress;
 
 /**
- *  Combines a {@link ChannelInboundHandler} and a {@link ChannelOutboundHandler} into one {@link ChannelHandler}.
+ *  Combines a {@link ChannelHandler} (which only implements inbound handling) and a {@link ChannelHandler}
+ *  (which only implements outbound handling) into one {@link ChannelHandler}.
  */
-public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O extends ChannelOutboundHandler>
-        extends ChannelDuplexHandler {
+public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends ChannelHandler>
+        extends ChannelHandlerAdapter {
 
     private DelegatingChannelHandlerContext inboundCtx;
     private DelegatingChannelHandlerContext outboundCtx;
@@ -39,7 +40,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
 
     /**
      * Creates a new uninitialized instance. A class that extends this handler must invoke
-     * {@link #init(ChannelInboundHandler, ChannelOutboundHandler)} before adding this handler into a
+     * {@link #init(ChannelHandler, ChannelHandler)} before adding this handler into a
      * {@link ChannelPipeline}.
      */
     protected CombinedChannelDuplexHandler() {
@@ -77,15 +78,13 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
 
         requireNonNull(inboundHandler, "inboundHandler");
         requireNonNull(outboundHandler, "outboundHandler");
-        if (inboundHandler instanceof ChannelOutboundHandler) {
+        if (ChannelHandlerMask.isOutbound(inboundHandler.getClass())) {
             throw new IllegalArgumentException(
-                    "inboundHandler must not implement " +
-                    ChannelOutboundHandler.class.getSimpleName() + " to get combined.");
+                    "inboundHandler must not implement any outbound method to get combined.");
         }
-        if (outboundHandler instanceof ChannelInboundHandler) {
+        if (ChannelHandlerMask.isInbound(outboundHandler.getClass())) {
             throw new IllegalArgumentException(
-                    "outboundHandler must not implement " +
-                    ChannelInboundHandler.class.getSimpleName() + " to get combined.");
+                    "outboundHandler must not implement any inbound method to get combined.");
         }
     }
 
