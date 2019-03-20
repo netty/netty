@@ -333,7 +333,13 @@ public class DefaultChannelConfig implements ChannelConfig {
      * Is called once {@link #setAutoRead(boolean)} is called with {@code false} and {@link #isAutoRead()} was
      * {@code true} before.
      */
-    protected void autoReadCleared() { }
+    protected void autoReadCleared() {
+        interruptReading();
+    }
+
+    @Override
+    public void interruptReading() {
+    }
 
     @Override
     public boolean isAutoClose() {

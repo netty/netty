@@ -42,6 +42,7 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * Abstract base class for {@link Channel} implementations which use a Selector based approach.
@@ -53,8 +54,12 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     private static final ClosedChannelException DO_CLOSE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new ClosedChannelException(), AbstractNioChannel.class, "doClose()");
+    private static final AtomicIntegerFieldUpdater<AbstractNioChannel> INTERRUPTED_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(AbstractNioChannel.class, "interrupted");
 
     private final SelectableChannel ch;
+    @SuppressWarnings("unused")
+    private volatile int interrupted;
     protected final int readInterestOp;
     volatile SelectionKey selectionKey;
     boolean readPending;
@@ -160,6 +165,15 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             // not set yet so it would produce an assertion failure.
             this.readPending = readPending;
         }
+    }
+
+    final boolean interrupted() {
+        return INTERRUPTED_UPDATER.getAndSet(this, 0) == 1;
+    }
+
+    protected final void interruptReading() {
+        INTERRUPTED_UPDATER.set(this, 1);
+        clearReadPending();
     }
 
     /**

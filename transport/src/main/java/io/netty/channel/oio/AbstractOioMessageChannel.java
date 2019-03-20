@@ -56,6 +56,7 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
         boolean closed = false;
         Throwable exception = null;
+        boolean interrupted = false;
         try {
             do {
                 // Perform a read.
@@ -69,7 +70,7 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
                 }
 
                 allocHandle.incMessagesRead(localRead);
-            } while (allocHandle.continueReading());
+            } while (!(interrupted = interrupted()) && allocHandle.continueReading());
         } catch (Throwable t) {
             exception = t;
         }
@@ -99,7 +100,7 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
             if (isOpen()) {
                 unsafe().close(unsafe().voidPromise());
             }
-        } else if (readPending || config.isAutoRead() || !readData && isActive()) {
+        } else if (readPending || (!interrupted && config.isAutoRead()) || !readData && isActive()) {
             // Reading 0 bytes could mean there is a SocketTimeout and no data was actually read, so we
             // should execute read() again because no data may have been read.
             read();

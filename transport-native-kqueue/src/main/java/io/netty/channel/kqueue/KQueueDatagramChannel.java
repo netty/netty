@@ -421,6 +421,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
             readReadyBefore();
 
             Throwable exception = null;
+            boolean interrupted = false;
             try {
                 ByteBuf byteBuf = null;
                 try {
@@ -484,7 +485,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
                         pipeline.fireChannelRead(packet);
 
                         byteBuf = null;
-                    } while (allocHandle.continueReading());
+                    } while (!(interrupted = interrupted()) && allocHandle.continueReading());
                 } catch (Throwable t) {
                     if (byteBuf != null) {
                         byteBuf.release();
@@ -499,7 +500,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
                     pipeline.fireExceptionCaught(exception);
                 }
             } finally {
-                readReadyFinally(config);
+                readReadyFinally(config, interrupted);
             }
         }
     }

@@ -49,12 +49,16 @@ import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.UnixChannelUtil.computeRemoteAddr;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChannel {
+    private static final AtomicIntegerFieldUpdater<AbstractKQueueChannel> INTERRUPTED_UPDATER =
+        AtomicIntegerFieldUpdater.newUpdater(AbstractKQueueChannel.class, "interrupted");
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     /**
      * The future of the current connection attempt.  If not null, subsequent
@@ -72,6 +76,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     protected volatile boolean active;
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
+
+    @SuppressWarnings("unused")
+    private volatile int interrupted;
 
     AbstractKQueueChannel(Channel parent, BsdSocket fd, boolean active) {
         super(parent);
@@ -294,6 +301,15 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 ((SocketChannelConfig) config).isAllowHalfClosure();
     }
 
+    boolean interrupted() {
+        return INTERRUPTED_UPDATER.getAndSet(this, 0) == 1;
+    }
+
+    final void interruptReading() {
+        INTERRUPTED_UPDATER.set(this,  1);
+        clearReadFilter();
+    }
+
     final void clearReadFilter() {
         // Only clear if registered with an EventLoop as otherwise
         if (isRegistered()) {
@@ -372,7 +388,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             maybeMoreDataToRead = false;
         }
 
-        final void readReadyFinally(ChannelConfig config) {
+        final void readReadyFinally(ChannelConfig config, boolean interrupted) {
             maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
 
             if (allocHandle.isReadEOF() || (readPending && maybeMoreDataToRead)) {
@@ -384,7 +400,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 // to false before every read operation to prevent re-entry into readReady() we will not read from
                 // the underlying OS again unless the user happens to call read again.
                 executeReadReadyRunnable(config);
-            } else if (!readPending && !config.isAutoRead()) {
+            } else if (!readPending && (interrupted || !config.isAutoRead())) {
                 // Check if there is a readPending which was not processed yet.
                 // This could be for two reasons:
                 // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method

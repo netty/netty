@@ -344,7 +344,7 @@ public class OioSocketChannel extends OioByteStreamChannel implements SocketChan
         super.setReadPending(readPending);
     }
 
-    final void clearReadPending0() {
-        clearReadPending();
+    protected final void interruptReading0() {
+        interruptReading();
     }
 }

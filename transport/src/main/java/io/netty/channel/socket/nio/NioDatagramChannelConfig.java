@@ -180,8 +180,8 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
     }
 
     @Override
-    protected void autoReadCleared() {
-        ((NioDatagramChannel) channel).clearReadPending0();
+    public void interruptReading() {
+        ((NioDatagramChannel) channel).interruptReading0();
     }
 
     private Object getOption0(Object option) {

@@ -33,7 +33,6 @@ import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -595,10 +594,6 @@ public final class NioDatagramChannel
         super.setReadPending(readPending);
     }
 
-    void clearReadPending0() {
-        clearReadPending();
-    }
-
     @Override
     protected boolean closeOnReadError(Throwable cause) {
         // We do not want to close on SocketException when using DatagramChannel as we usually can continue receiving.
@@ -607,5 +602,9 @@ public final class NioDatagramChannel
             return false;
         }
         return super.closeOnReadError(cause);
+    }
+
+    final void interruptReading0() {
+        interruptReading();
     }
 }

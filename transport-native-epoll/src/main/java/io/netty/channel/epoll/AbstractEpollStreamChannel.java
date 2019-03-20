@@ -758,6 +758,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
             ByteBuf byteBuf = null;
             boolean close = false;
+            boolean interrupted = false;
             try {
                 do {
                     if (spliceQueue != null) {
@@ -810,7 +811,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                         //   was "wrapped" by this Channel implementation.
                         break;
                     }
-                } while (allocHandle.continueReading());
+                } while (!(interrupted = interrupted()) && allocHandle.continueReading());
 
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
@@ -821,7 +822,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, close, allocHandle);
             } finally {
-                epollInFinally(config);
+                epollInFinally(config, interrupted);
             }
         }
     }

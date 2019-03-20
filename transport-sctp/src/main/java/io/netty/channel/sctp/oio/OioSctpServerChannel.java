@@ -304,8 +304,8 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
         }
 
         @Override
-        protected void autoReadCleared() {
-            clearReadPending();
+        public void interruptReading() {
+            ((OioSctpServerChannel) channel).interruptReading();
         }
     }
 }

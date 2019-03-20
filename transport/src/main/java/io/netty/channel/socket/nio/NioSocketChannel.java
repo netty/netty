@@ -469,8 +469,8 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         }
 
         @Override
-        protected void autoReadCleared() {
-            clearReadPending();
+        public void interruptReading() {
+            NioSocketChannel.this.interruptReading();
         }
 
         @Override

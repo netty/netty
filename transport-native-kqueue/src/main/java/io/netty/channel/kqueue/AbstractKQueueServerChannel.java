@@ -96,6 +96,7 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
             readReadyBefore();
 
             Throwable exception = null;
+            boolean interrupted = false;
             try {
                 try {
                     do {
@@ -111,7 +112,7 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
                         readPending = false;
                         pipeline.fireChannelRead(newChildChannel(acceptFd, acceptedAddress, 1,
                                                                  acceptedAddress[0]));
-                    } while (allocHandle.continueReading());
+                    } while (!(interrupted = interrupted()) && allocHandle.continueReading());
                 } catch (Throwable t) {
                     exception = t;
                 }
@@ -122,7 +123,7 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
                     pipeline.fireExceptionCaught(exception);
                 }
             } finally {
-                readReadyFinally(config);
+                readReadyFinally(config, interrupted);
             }
         }
     }

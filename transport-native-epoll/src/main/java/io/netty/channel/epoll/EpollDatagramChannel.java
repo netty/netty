@@ -450,6 +450,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             epollInBefore();
 
             Throwable exception = null;
+            boolean interrupted = false;
             try {
                 ByteBuf byteBuf = null;
                 try {
@@ -513,7 +514,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         pipeline.fireChannelRead(packet);
 
                         byteBuf = null;
-                    } while (allocHandle.continueReading());
+                    } while (!(interrupted = interrupted()) && allocHandle.continueReading());
                 } catch (Throwable t) {
                     if (byteBuf != null) {
                         byteBuf.release();
@@ -528,7 +529,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                     pipeline.fireExceptionCaught(exception);
                 }
             } finally {
-                epollInFinally(config);
+                epollInFinally(config, interrupted);
             }
         }
     }

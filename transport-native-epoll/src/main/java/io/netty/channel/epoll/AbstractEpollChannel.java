@@ -51,6 +51,7 @@ import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.UnixChannelUtil.computeRemoteAddr;
@@ -59,6 +60,8 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel {
     private static final ClosedChannelException DO_CLOSE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new ClosedChannelException(), AbstractEpollChannel.class, "doClose()");
+    private static final AtomicIntegerFieldUpdater<AbstractEpollChannel> INTERRUPTED_UPDATER =
+        AtomicIntegerFieldUpdater.newUpdater(AbstractEpollChannel.class, "interrupted");
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     final LinuxSocket socket;
     /**
@@ -77,6 +80,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     boolean epollInReadyRunnablePending;
 
     protected volatile boolean active;
+
+    @SuppressWarnings("unused")
+    private volatile int interrupted;
 
     AbstractEpollChannel(LinuxSocket fd) {
         this(null, fd, false);
@@ -244,6 +250,15 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 ((SocketChannelConfig) config).isAllowHalfClosure();
     }
 
+    boolean interrupted() {
+        return INTERRUPTED_UPDATER.getAndSet(this, 0) == 1;
+    }
+
+    final void interruptReading() {
+        INTERRUPTED_UPDATER.set(this, 1);
+        clearEpollIn();
+    }
+
     final void clearEpollIn() {
         // Only clear if registered with an EventLoop as otherwise
         if (isRegistered()) {
@@ -395,7 +410,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             maybeMoreDataToRead = false;
         }
 
-        final void epollInFinally(ChannelConfig config) {
+        final void epollInFinally(ChannelConfig config, boolean interrupted) {
             maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
 
             if (allocHandle.isReceivedRdHup() || (readPending && maybeMoreDataToRead)) {
@@ -407,7 +422,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 // to false before every read operation to prevent re-entry into epollInReady() we will not read from
                 // the underlying OS again unless the user happens to call read again.
                 executeEpollInReadyRunnable(config);
-            } else if (!readPending && !config.isAutoRead()) {
+            } else if (!readPending && (interrupted || !config.isAutoRead())) {
                 // Check if there is a readPending which was not processed yet.
                 // This could be for two reasons:
                 // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method

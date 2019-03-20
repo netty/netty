@@ -522,6 +522,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
 
             ByteBuf byteBuf = null;
             boolean close = false;
+            boolean interrupted = false;
             try {
                 do {
                     // we use a direct buffer here as the native implementations only be able
@@ -558,7 +559,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                         //   was "wrapped" by this Channel implementation.
                         break;
                     }
-                } while (allocHandle.continueReading());
+                } while (!(interrupted = interrupted()) && allocHandle.continueReading());
 
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
@@ -569,7 +570,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, close, allocHandle);
             } finally {
-                readReadyFinally(config);
+                readReadyFinally(config, interrupted);
             }
         }
 

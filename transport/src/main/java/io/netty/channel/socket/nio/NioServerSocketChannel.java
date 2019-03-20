@@ -200,8 +200,8 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         }
 
         @Override
-        protected void autoReadCleared() {
-            clearReadPending();
+        public void interruptReading() {
+            NioServerSocketChannel.this.interruptReading();
         }
 
         @Override

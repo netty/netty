@@ -142,6 +142,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
             ByteBuf byteBuf = null;
             boolean close = false;
+            boolean interrupted = false;
             try {
                 do {
                     byteBuf = allocHandle.allocate(allocator);
@@ -162,7 +163,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     readPending = false;
                     pipeline.fireChannelRead(byteBuf);
                     byteBuf = null;
-                } while (allocHandle.continueReading());
+                } while (!(interrupted = interrupted()) && allocHandle.continueReading());
 
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
@@ -173,15 +174,19 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, close, allocHandle);
             } finally {
-                // Check if there is a readPending which was not processed yet.
-                // This could be for two reasons:
-                // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
-                // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
-                //
-                // See https://github.com/netty/netty/issues/2254
-                if (!readPending && !config.isAutoRead()) {
-                    removeReadOp();
-                }
+                nioInFinally(config, interrupted);
+            }
+        }
+
+        private void nioInFinally(ChannelConfig config, boolean interrupted) {
+            // Check if there is a readPending which was not processed yet.
+            // This could be for two reasons:
+            // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
+            // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
+            //
+            // See https://github.com/netty/netty/issues/2254
+            if (!readPending && (interrupted || !config.isAutoRead())) {
+                removeReadOp();
             }
         }
     }

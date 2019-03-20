@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.util.internal.UnstableApi;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
@@ -195,6 +196,13 @@ public interface ChannelConfig {
      * need to call it at all. The default value is {@code true}.
      */
     ChannelConfig setAutoRead(boolean autoRead);
+
+    /**
+     * Interrupts the current {@code read()} operation and suspends further reading until
+     * the user calls {@code read()} again.
+     */
+    @UnstableApi
+    void interruptReading();
 
     /**
      * Returns {@code true} if and only if the {@link Channel} will be closed automatically and immediately on
