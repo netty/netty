@@ -20,7 +20,8 @@ import static java.util.Objects.requireNonNull;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.channel.socket.ChannelOutputShutdownException;
-import io.netty.util.DefaultAttributeMap;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThrowableUtil;
@@ -38,11 +39,14 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * A skeletal {@link Channel} implementation.
  */
-public abstract class AbstractChannel extends DefaultAttributeMap implements Channel {
+public abstract class AbstractChannel implements Channel {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractChannel.class);
 
@@ -56,6 +60,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             new ExtendedClosedChannelException(null), AbstractUnsafe.class, "flush0()");
     private static final NotYetConnectedException FLUSH0_NOT_YET_CONNECTED_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new NotYetConnectedException(), AbstractUnsafe.class, "flush0()");
+    private static final AtomicReferenceFieldUpdater<AbstractChannel, AtomicReferenceArray> updater =
+            AtomicReferenceFieldUpdater.newUpdater(AbstractChannel.class, AtomicReferenceArray.class, "attributes");
+
+    private static final int BUCKET_SIZE = 4;
+    private static final int MASK = BUCKET_SIZE  - 1;
+
+    // Initialize lazily to reduce memory consumption; updated by AtomicReferenceFieldUpdater above.
+    @SuppressWarnings("UnusedDeclaration")
+    private volatile AtomicReferenceArray<DefaultAttribute<?>> attributes;
 
     private final Channel parent;
     private final ChannelId id;
@@ -443,6 +456,167 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected final void readIfIsAutoRead() {
         if (config().isAutoRead()) {
             read();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> Attribute<T> attr(AttributeKey<T> key) {
+        requireNonNull(key, "key");
+        AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
+        if (attributes == null) {
+            // Not using ConcurrentHashMap due to high memory consumption.
+            attributes = new AtomicReferenceArray<>(BUCKET_SIZE);
+
+            if (!updater.compareAndSet(this, null, attributes)) {
+                attributes = this.attributes;
+            }
+        }
+
+        int i = index(key);
+        DefaultAttribute<?> head = attributes.get(i);
+        if (head == null) {
+            // No head exists yet which means we may be able to add the attribute without synchronization and just
+            // use compare and set. At worst we need to fallback to synchronization and waste two allocations.
+            head = new DefaultAttribute();
+            DefaultAttribute<T> attr = new DefaultAttribute<>(head, key);
+            head.next = attr;
+            attr.prev = head;
+            if (attributes.compareAndSet(i, null, head)) {
+                // we were able to add it so return the attr right away
+                return attr;
+            } else {
+                head = attributes.get(i);
+            }
+        }
+
+        synchronized (head) {
+            DefaultAttribute<?> curr = head;
+            for (;;) {
+                DefaultAttribute<?> next = curr.next;
+                if (next == null) {
+                    DefaultAttribute<T> attr = new DefaultAttribute<>(head, key);
+                    curr.next = attr;
+                    attr.prev = curr;
+                    return attr;
+                }
+
+                if (next.key == key && !next.removed) {
+                    return (Attribute<T>) next;
+                }
+                curr = next;
+            }
+        }
+    }
+
+    public <T> boolean hasAttr(AttributeKey<T> key) {
+        requireNonNull(key, "key");
+        AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
+        if (attributes == null) {
+            // no attribute exists
+            return false;
+        }
+
+        int i = index(key);
+        DefaultAttribute<?> head = attributes.get(i);
+        if (head == null) {
+            // No attribute exists which point to the bucket in which the head should be located
+            return false;
+        }
+
+        // We need to synchronize on the head.
+        synchronized (head) {
+            // Start with head.next as the head itself does not store an attribute.
+            DefaultAttribute<?> curr = head.next;
+            while (curr != null) {
+                if (curr.key == key && !curr.removed) {
+                    return true;
+                }
+                curr = curr.next;
+            }
+            return false;
+        }
+    }
+
+    private static int index(AttributeKey<?> key) {
+        return key.id() & MASK;
+    }
+
+    @SuppressWarnings("serial")
+    private static final class DefaultAttribute<T> extends AtomicReference<T> implements Attribute<T> {
+
+        private static final long serialVersionUID = -2661411462200283011L;
+
+        // The head of the linked-list this attribute belongs to
+        private final DefaultAttribute<?> head;
+        private final AttributeKey<T> key;
+
+        // Double-linked list to prev and next node to allow fast removal
+        private DefaultAttribute<?> prev;
+        private DefaultAttribute<?> next;
+
+        // Will be set to true one the attribute is removed via getAndRemove() or remove()
+        private volatile boolean removed;
+
+        DefaultAttribute(DefaultAttribute<?> head, AttributeKey<T> key) {
+            this.head = head;
+            this.key = key;
+        }
+
+        // Special constructor for the head of the linked-list.
+        DefaultAttribute() {
+            head = this;
+            key = null;
+        }
+
+        @Override
+        public AttributeKey<T> key() {
+            return key;
+        }
+
+        @Override
+        public T setIfAbsent(T value) {
+            while (!compareAndSet(null, value)) {
+                T old = get();
+                if (old != null) {
+                    return old;
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public T getAndRemove() {
+            removed = true;
+            T oldValue = getAndSet(null);
+            remove0();
+            return oldValue;
+        }
+
+        @Override
+        public void remove() {
+            removed = true;
+            set(null);
+            remove0();
+        }
+
+        private void remove0() {
+            synchronized (head) {
+                if (prev == null) {
+                    // Removed before.
+                    return;
+                }
+
+                prev.next = next;
+
+                if (next != null) {
+                    next.prev = prev;
+                }
+
+                // Null out prev and next - this will guard against multiple remove0() calls which may corrupt
+                // the linked list for the bucket.
+                prev = null;
+                next = null;
+            }
         }
     }
 

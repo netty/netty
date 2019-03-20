@@ -13,8 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.util;
+package io.netty.channel;
 
+import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -22,24 +25,24 @@ import static org.junit.Assert.*;
 
 public class DefaultAttributeMapTest {
 
-    private DefaultAttributeMap map;
+    private Channel channel;
 
     @Before
     public void setup() {
-        map = new DefaultAttributeMap();
+        channel = new EmbeddedChannel();
     }
 
     @Test
-    public void testMapExists() {
-        assertNotNull(map);
+    public void testchannelExists() {
+        assertNotNull(channel);
     }
 
     @Test
     public void testGetSetString() {
         AttributeKey<String> key = AttributeKey.valueOf("Nothing");
-        Attribute<String> one = map.attr(key);
+        Attribute<String> one = channel.attr(key);
 
-        assertSame(one, map.attr(key));
+        assertSame(one, channel.attr(key));
 
         one.setIfAbsent("Whoohoo");
         assertSame("Whoohoo", one.get());
@@ -54,9 +57,9 @@ public class DefaultAttributeMapTest {
     @Test
     public void testGetSetInt() {
         AttributeKey<Integer> key = AttributeKey.valueOf("Nada");
-        Attribute<Integer> one = map.attr(key);
+        Attribute<Integer> one = channel.attr(key);
 
-        assertSame(one, map.attr(key));
+        assertSame(one, channel.attr(key));
 
         one.setIfAbsent(3653);
         assertEquals(Integer.valueOf(3653), one.get());
@@ -73,11 +76,11 @@ public class DefaultAttributeMapTest {
     public void testSetRemove() {
         AttributeKey<Integer> key = AttributeKey.valueOf("key");
 
-        Attribute<Integer> attr = map.attr(key);
+        Attribute<Integer> attr = channel.attr(key);
         attr.set(1);
         assertSame(1, attr.getAndRemove());
 
-        Attribute<Integer> attr2 = map.attr(key);
+        Attribute<Integer> attr2 = channel.attr(key);
         attr2.set(2);
         assertSame(2, attr2.get());
         assertNotSame(attr, attr2);
@@ -87,11 +90,11 @@ public class DefaultAttributeMapTest {
     public void testGetAndSetWithNull() {
         AttributeKey<Integer> key = AttributeKey.valueOf("key");
 
-        Attribute<Integer> attr = map.attr(key);
+        Attribute<Integer> attr = channel.attr(key);
         attr.set(1);
         assertSame(1, attr.getAndSet(null));
 
-        Attribute<Integer> attr2 = map.attr(key);
+        Attribute<Integer> attr2 = channel.attr(key);
         attr2.set(2);
         assertSame(2, attr2.get());
         assertSame(attr, attr2);

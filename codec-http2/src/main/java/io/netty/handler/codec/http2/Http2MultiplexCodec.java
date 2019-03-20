@@ -37,7 +37,8 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator.Handle;
 import io.netty.channel.VoidChannelPromise;
 import io.netty.channel.WriteBufferWaterMark;
-import io.netty.util.DefaultAttributeMap;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.StringUtil;
@@ -437,7 +438,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
     }
 
     // TODO: Handle writability changes due writing from outside the eventloop.
-    private final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Http2StreamChannel {
+    private final class DefaultHttp2StreamChannel implements Http2StreamChannel {
         private final Http2StreamChannelConfig config = new Http2StreamChannelConfig(this);
         private final Http2ChannelUnsafe unsafe = new Http2ChannelUnsafe();
         private final ChannelId channelId;
@@ -716,6 +717,16 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         @Override
         public ChannelPromise voidPromise() {
             return pipeline().voidPromise();
+        }
+
+        @Override
+        public <T> Attribute<T> attr(AttributeKey<T> key) {
+            return null;
+        }
+
+        @Override
+        public <T> boolean hasAttr(AttributeKey<T> key) {
+            return false;
         }
 
         @Override
