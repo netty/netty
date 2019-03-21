@@ -39,6 +39,13 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.oracle.substratevm</groupId>
+      <artifactId>svm</artifactId>
+      <version>${graalvm.version}</version>
+      <!-- Provided scope as it is only needed for compiling the SVM substitution classes -->
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>org.jctools</groupId>
       <artifactId>jctools-core</artifactId>
       <!-- Need compile scope to be taken into account by shade plugin -->
