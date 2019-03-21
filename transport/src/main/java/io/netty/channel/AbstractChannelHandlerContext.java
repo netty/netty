@@ -18,7 +18,6 @@ package io.netty.channel;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
-import io.netty.util.DefaultAttributeMap;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
@@ -35,8 +34,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-abstract class AbstractChannelHandlerContext extends DefaultAttributeMap
-        implements ChannelHandlerContext, ResourceLeakHint {
+abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractChannelHandlerContext.class);
     volatile AbstractChannelHandlerContext next;
