@@ -27,13 +27,32 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class FastThreadLocalTest {
     @Before
     public void setUp() {
         FastThreadLocal.removeAll();
         assertThat(FastThreadLocal.size(), is(0));
+    }
+
+    @Test
+    public void testGetIfExists() {
+        FastThreadLocal<Boolean> threadLocal = new FastThreadLocal<Boolean>() {
+            @Override
+            protected Boolean initialValue() {
+                return Boolean.TRUE;
+            }
+        };
+
+        assertNull(threadLocal.getIfExists());
+        assertTrue(threadLocal.get());
+        assertTrue(threadLocal.getIfExists());
+
+        FastThreadLocal.removeAll();
+        assertNull(threadLocal.getIfExists());
     }
 
     @Test(timeout = 10000)

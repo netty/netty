@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.ThreadExecutorMap;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -142,7 +143,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
      * @param rejectedHandler   the {@link RejectedExecutionHandler} to use.
      */
     public SingleThreadEventExecutor(Executor executor, int maxPendingTasks, RejectedExecutionHandler rejectedHandler) {
-        this.executor = requireNonNull(executor, "executor");
+        this.executor = ThreadExecutorMap.apply(executor, this);
         taskQueue = newTaskQueue(Math.max(16, maxPendingTasks));
         this.addTaskWakesUp = taskQueue instanceof BlockingQueue;
         rejectedExecutionHandler = requireNonNull(rejectedHandler, "rejectedHandler");
