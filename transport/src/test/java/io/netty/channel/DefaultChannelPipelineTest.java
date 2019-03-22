@@ -24,6 +24,7 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.oio.OioEventLoopGroup;
@@ -1154,6 +1155,117 @@ public class DefaultChannelPipelineTest {
             pipeline1.channel().close().syncUninterruptibly();
             defaultGroup.shutdownGracefully();
         }
+    }
+
+    // Test for https://github.com/netty/netty/issues/8676.
+    @Test
+    public void testHandlerRemovedOnlyCalledWhenHandlerAddedCalled() throws Exception {
+        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        try {
+            final AtomicReference<Error> errorRef = new AtomicReference<Error>();
+
+            // As this only happens via a race we will verify 500 times. This was good enough to have it failed most of
+            // the time.
+            for (int i = 0; i < 500; i++) {
+
+                ChannelPipeline pipeline = new LocalChannel().pipeline();
+                group.register(pipeline.channel()).sync();
+
+                final CountDownLatch latch = new CountDownLatch(1);
+
+                pipeline.addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+                        // Block just for a bit so we have a chance to trigger the race mentioned in the issue.
+                        latch.await(50, TimeUnit.MILLISECONDS);
+                    }
+                });
+
+                // Close the pipeline which will call destroy0(). This will remove each handler in the pipeline and
+                // should call handlerRemoved(...) if and only if handlerAdded(...) was called for the handler before.
+                pipeline.close();
+
+                pipeline.addLast(new ChannelInboundHandlerAdapter() {
+                    private boolean handerAddedCalled;
+
+                    @Override
+                    public void handlerAdded(ChannelHandlerContext ctx) {
+                        handerAddedCalled = true;
+                    }
+
+                    @Override
+                    public void handlerRemoved(ChannelHandlerContext ctx) {
+                        if (!handerAddedCalled) {
+                            errorRef.set(new AssertionError(
+                                    "handlerRemoved(...) called without handlerAdded(...) before"));
+                        }
+                    }
+                });
+
+                latch.countDown();
+
+                pipeline.channel().closeFuture().syncUninterruptibly();
+
+                // Schedule something on the EventLoop to ensure all other scheduled tasks had a chance to complete.
+                pipeline.channel().eventLoop().submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        // NOOP
+                    }
+                }).syncUninterruptibly();
+                Error error = errorRef.get();
+                if (error != null) {
+                    throw error;
+                }
+            }
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void testWriteThrowsReleaseMessage() {
+        testWriteThrowsReleaseMessage0(false);
+    }
+
+    @Test
+    public void testWriteAndFlushThrowsReleaseMessage() {
+        testWriteThrowsReleaseMessage0(true);
+    }
+
+    private void testWriteThrowsReleaseMessage0(boolean flush) {
+        ReferenceCounted referenceCounted = new AbstractReferenceCounted() {
+            @Override
+            protected void deallocate() {
+                // NOOP
+            }
+
+            @Override
+            public ReferenceCounted touch(Object hint) {
+                return this;
+            }
+        };
+        assertEquals(1, referenceCounted.refCnt());
+
+        Channel channel = new LocalChannel();
+        Channel channel2 = new LocalChannel();
+        group.register(channel).syncUninterruptibly();
+        group.register(channel2).syncUninterruptibly();
+
+        try {
+            if (flush) {
+                channel.writeAndFlush(referenceCounted, channel2.newPromise());
+            } else {
+                channel.write(referenceCounted, channel2.newPromise());
+            }
+            fail();
+        } catch (IllegalArgumentException expected) {
+            // expected
+        }
+        assertEquals(0, referenceCounted.refCnt());
+
+        channel.close().syncUninterruptibly();
+        channel2.close().syncUninterruptibly();
     }
 
     @Test(timeout = 5000)

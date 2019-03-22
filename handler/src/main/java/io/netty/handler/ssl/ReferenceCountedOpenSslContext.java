@@ -44,6 +44,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -85,7 +86,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                                                       2048));
                 }
             });
-
+    private static final boolean USE_TASKS =
+            SystemPropertyUtil.getBoolean("io.netty.handler.ssl.openssl.useTasks", false);
     private static final Integer DH_KEY_LENGTH;
     private static final ResourceLeakDetector<ReferenceCountedOpenSslContext> leakDetector =
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(ReferenceCountedOpenSslContext.class);
@@ -341,6 +343,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             if (enableOcsp) {
                 SSLContext.enableOcsp(ctx, isClient());
             }
+
+            SSLContext.setUseTasks(ctx, USE_TASKS);
             success = true;
         } finally {
             if (!success) {
@@ -398,6 +402,17 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     @Override
     protected final SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls) {
         return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), startTls);
+    }
+
+    @Override
+    protected SslHandler newHandler(ByteBufAllocator alloc, boolean startTls, Executor executor) {
+        return new SslHandler(newEngine0(alloc, null, -1, false), startTls, executor);
+    }
+
+    @Override
+    protected SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort,
+                                    boolean startTls, Executor executor) {
+        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), executor);
     }
 
     SSLEngine newEngine0(ByteBufAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {

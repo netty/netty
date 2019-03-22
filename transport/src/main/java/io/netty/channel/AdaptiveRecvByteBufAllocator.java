@@ -18,6 +18,7 @@ package io.netty.channel;
 import java.util.ArrayList;
 import java.util.List;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -95,7 +96,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
         private int nextReceiveBufferSize;
         private boolean decreaseNow;
 
-        public HandleImpl(int minIndex, int maxIndex, int initial) {
+        HandleImpl(int minIndex, int maxIndex, int initial) {
             this.minIndex = minIndex;
             this.maxIndex = maxIndex;
 
@@ -163,9 +164,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
      * @param maximum  the inclusive upper bound of the expected buffer size
      */
     public AdaptiveRecvByteBufAllocator(int minimum, int initial, int maximum) {
-        if (minimum <= 0) {
-            throw new IllegalArgumentException("minimum: " + minimum);
-        }
+        checkPositive(minimum, "minimum");
         if (initial < minimum) {
             throw new IllegalArgumentException("initial: " + initial);
         }

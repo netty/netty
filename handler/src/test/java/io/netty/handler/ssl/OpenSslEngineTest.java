@@ -67,21 +67,23 @@ public class OpenSslEngineTest extends SSLEngineTest {
     private static final String PREFERRED_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http2";
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
 
-    @Parameterized.Parameters(name = "{index}: bufferType = {0}, combo = {1}")
+    @Parameterized.Parameters(name = "{index}: bufferType = {0}, combo = {1}, delegate = {2}")
     public static Collection<Object[]> data() {
         List<Object[]> params = new ArrayList<Object[]>();
         for (BufferType type: BufferType.values()) {
-            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12()});
+            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), false });
+            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), true });
 
             if (OpenSsl.isTlsv13Supported()) {
-                params.add(new Object[] { type, ProtocolCipherCombo.tlsv13() });
+                params.add(new Object[] { type, ProtocolCipherCombo.tlsv13(), false });
+                params.add(new Object[] { type, ProtocolCipherCombo.tlsv13(), true });
             }
         }
         return params;
     }
 
-    public OpenSslEngineTest(BufferType type, ProtocolCipherCombo cipherCombo) {
-        super(type, cipherCombo);
+    public OpenSslEngineTest(BufferType type, ProtocolCipherCombo cipherCombo, boolean delegate) {
+        super(type, cipherCombo, delegate);
     }
 
     @BeforeClass
@@ -156,6 +158,12 @@ public class OpenSslEngineTest extends SSLEngineTest {
     public void testClientHostnameValidationFail() throws InterruptedException, SSLException {
         assumeTrue(OpenSsl.supportsHostnameValidation());
         super.testClientHostnameValidationFail();
+    }
+
+    @Override
+    public void testHandshakeSession() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testHandshakeSession();
     }
 
     private static boolean isNpnSupported(String versionString) {

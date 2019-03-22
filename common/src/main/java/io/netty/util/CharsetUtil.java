@@ -65,7 +65,9 @@ public final class CharsetUtil {
     private static final Charset[] CHARSETS = new Charset[]
             { UTF_16, UTF_16BE, UTF_16LE, UTF_8, ISO_8859_1, US_ASCII };
 
-    public static Charset[] values() { return CHARSETS; }
+    public static Charset[] values() {
+        return CHARSETS;
+    }
 
     /**
      * @deprecated Use {@link #encoder(Charset)}.

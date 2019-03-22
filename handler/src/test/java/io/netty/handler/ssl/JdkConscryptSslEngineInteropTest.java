@@ -32,17 +32,18 @@ import static org.junit.Assume.assumeTrue;
 @RunWith(Parameterized.class)
 public class JdkConscryptSslEngineInteropTest extends SSLEngineTest {
 
-    @Parameterized.Parameters(name = "{index}: bufferType = {0}, combo = {1}")
+    @Parameterized.Parameters(name = "{index}: bufferType = {0}, combo = {1}, delegate = {2}")
     public static Collection<Object[]> data() {
         List<Object[]> params = new ArrayList<Object[]>();
         for (BufferType type: BufferType.values()) {
-            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12()});
+            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), false });
+            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), true });
         }
         return params;
     }
 
-    public JdkConscryptSslEngineInteropTest(BufferType type, ProtocolCipherCombo combo) {
-        super(type, combo);
+    public JdkConscryptSslEngineInteropTest(BufferType type, ProtocolCipherCombo combo, boolean delegate) {
+        super(type, combo, delegate);
     }
 
     @BeforeClass
@@ -83,5 +84,12 @@ public class JdkConscryptSslEngineInteropTest extends SSLEngineTest {
     protected boolean mySetupMutualAuthServerIsValidClientException(Throwable cause) {
         // TODO(scott): work around for a JDK issue. The exception should be SSLHandshakeException.
         return super.mySetupMutualAuthServerIsValidClientException(cause) || causedBySSLException(cause);
+    }
+
+    @Ignore("Ignore due bug in Conscrypt")
+    @Override
+    public void testHandshakeSession() throws Exception {
+        // Ignore as Conscrypt does not correctly return the local certificates while the TrustManager is invoked.
+        // See https://github.com/google/conscrypt/issues/634
     }
 }

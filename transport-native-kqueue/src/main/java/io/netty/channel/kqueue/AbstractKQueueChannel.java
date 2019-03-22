@@ -69,15 +69,6 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private boolean writeFilterEnabled;
     boolean readReadyRunnablePending;
     boolean inputClosedSeenErrorOnRead;
-    /**
-     * This member variable means we don't have to have a map in {@link KQueueEventLoop} which associates the FDs
-     * from kqueue to instances of this class. This field will be initialized by JNI when modifying kqueue events.
-     * If there is no global reference when JNI gets a kqueue evSet call (aka this field is 0) then a global reference
-     * will be created and the address will be saved in this member variable. Then when we process a kevent in Java
-     * we can ask JNI to give us the {@link AbstractKQueueChannel} that corresponds to that event.
-     */
-    long jniSelfPtr;
-
     protected volatile boolean active;
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
@@ -133,35 +124,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read attempt on a
         // socket which has not even been connected yet. This has been observed to block during unit tests.
         inputClosedSeenErrorOnRead = true;
-        try {
-            if (isRegistered()) {
-                // The FD will be closed, which should take care of deleting any associated events from kqueue, but
-                // since we rely upon jniSelfRef to be consistent we make sure that we clear this reference out for
-                // all events which are pending in kqueue to avoid referencing a deleted pointer at a later time.
-
-                // Need to check if we are on the EventLoop as doClose() may be triggered by the GlobalEventExecutor
-                // if SO_LINGER is used.
-                //
-                // See https://github.com/netty/netty/issues/7159
-                EventLoop loop = eventLoop();
-                if (loop.inEventLoop()) {
-                    doDeregister();
-                } else {
-                    loop.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                doDeregister();
-                            } catch (Throwable cause) {
-                                pipeline().fireExceptionCaught(cause);
-                            }
-                        }
-                    });
-                }
-            }
-        } finally {
-            socket.close();
-        }
+        socket.close();
     }
 
     @Override
@@ -213,6 +176,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         // make sure the readReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
         // new EventLoop.
         readReadyRunnablePending = false;
+
+        ((KQueueEventLoop) eventLoop()).add(this);
+
         // Add the write event first so we get notified of connection refused on the client side!
         if (writeFilterEnabled) {
             evSet0(Native.EVFILT_WRITE, Native.EV_ADD_CLEAR_ENABLE);
@@ -303,7 +269,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 return 1;
             }
         } else {
-            final ByteBuffer nioBuf = buf.nioBufferCount() == 1 ?
+            final ByteBuffer nioBuf = buf.nioBufferCount() == 1?
                     buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes()) : buf.nioBuffer();
             int localFlushedAmount = socket.write(nioBuf, nioBuf.position(), nioBuf.limit());
             if (localFlushedAmount > 0) {
@@ -320,6 +286,10 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     private static boolean isAllowHalfClosure(ChannelConfig config) {
+        if (config instanceof KQueueDomainSocketChannelConfig) {
+            return ((KQueueDomainSocketChannelConfig) config).isAllowHalfClosure();
+        }
+
         return config instanceof SocketChannelConfig &&
                 ((SocketChannelConfig) config).isAllowHalfClosure();
     }
@@ -398,7 +368,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
         abstract void readReady(KQueueRecvByteAllocatorHandle allocHandle);
 
-        final void readReadyBefore() { maybeMoreDataToRead = false; }
+        final void readReadyBefore() {
+            maybeMoreDataToRead = false;
+        }
 
         final void readReadyFinally(ChannelConfig config) {
             maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
@@ -714,7 +686,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
         boolean connected = doConnect0(remoteAddress);
         if (connected) {
-            remote = remoteSocketAddr == null ?
+            remote = remoteSocketAddr == null?
                     remoteAddress : computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
         }
         // We always need to set the localAddress even if not connected yet as the bind already took place.

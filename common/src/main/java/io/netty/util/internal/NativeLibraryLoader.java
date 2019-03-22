@@ -138,7 +138,7 @@ public final class NativeLibraryLoader {
         } catch (Throwable ex) {
             suppressed.add(ex);
             logger.debug(
-                    "{} cannot be loaded from java.libary.path, "
+                    "{} cannot be loaded from java.library.path, "
                     + "now trying export to -Dio.netty.native.workdir: {}", name, WORKDIR, ex);
         }
 
@@ -184,28 +184,16 @@ public final class NativeLibraryLoader {
             in = url.openStream();
             out = new FileOutputStream(tmpFile);
 
-            byte[] buffer = new byte[8192];
-            int length;
-            if (TRY_TO_PATCH_SHADED_ID && PlatformDependent.isOsx() && !packagePrefix.isEmpty()) {
-                // We read the whole native lib into memory to make it easier to monkey-patch the id.
-                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(in.available());
-
-                while ((length = in.read(buffer)) > 0) {
-                    byteArrayOutputStream.write(buffer, 0, length);
-                }
-                byteArrayOutputStream.flush();
-                byte[] bytes = byteArrayOutputStream.toByteArray();
-                byteArrayOutputStream.close();
-
-                // Try to patch the library id.
-                patchShadedLibraryId(bytes, originalName, name);
-
-                out.write(bytes);
+            if (shouldShadedLibraryIdBePatched(packagePrefix)) {
+                patchShadedLibraryId(in, out, originalName, name);
             } else {
+                byte[] buffer = new byte[8192];
+                int length;
                 while ((length = in.read(buffer)) > 0) {
                     out.write(buffer, 0, length);
                 }
             }
+
             out.flush();
 
             // Close the output stream before loading the unpacked library,
@@ -217,10 +205,13 @@ public final class NativeLibraryLoader {
             try {
                 if (tmpFile != null && tmpFile.isFile() && tmpFile.canRead() &&
                     !NoexecVolumeDetector.canExecuteExecutable(tmpFile)) {
+                    // Pass "io.netty.native.workdir" as an argument to allow shading tools to see
+                    // the string. Since this is printed out to users to tell them what to do next,
+                    // we want the value to be correct even when shading.
                     logger.info("{} exists but cannot be executed even when execute permissions set; " +
-                                "check volume for \"noexec\" flag; use -Dio.netty.native.workdir=[path] " +
+                                "check volume for \"noexec\" flag; use -D{}=[path] " +
                                 "to set native working directory separately.",
-                                tmpFile.getPath());
+                                tmpFile.getPath(), "io.netty.native.workdir");
                 }
             } catch (Throwable t) {
                 suppressed.add(t);
@@ -246,10 +237,50 @@ public final class NativeLibraryLoader {
         }
     }
 
+    // Package-private for testing.
+    static boolean patchShadedLibraryId(InputStream in, OutputStream out, String originalName, String name)
+            throws IOException {
+        byte[] buffer = new byte[8192];
+        int length;
+        // We read the whole native lib into memory to make it easier to monkey-patch the id.
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(in.available());
+
+        while ((length = in.read(buffer)) > 0) {
+            byteArrayOutputStream.write(buffer, 0, length);
+        }
+        byteArrayOutputStream.flush();
+        byte[] bytes = byteArrayOutputStream.toByteArray();
+        byteArrayOutputStream.close();
+
+        final boolean patched;
+        // Try to patch the library id.
+        if (!patchShadedLibraryId(bytes, originalName, name)) {
+            // We did not find the Id, check if we used a originalName that has the os and arch as suffix.
+            // If this is the case we should also try to patch with the os and arch suffix removed.
+            String os = PlatformDependent.normalizedOs();
+            String arch = PlatformDependent.normalizedArch();
+            String osArch = "_" + os + "_" + arch;
+            if (originalName.endsWith(osArch)) {
+                patched = patchShadedLibraryId(bytes,
+                        originalName.substring(0, originalName.length() - osArch.length()), name);
+            } else {
+                patched = false;
+            }
+        } else {
+            patched = true;
+        }
+        out.write(bytes, 0, bytes.length);
+        return patched;
+    }
+
+    private static boolean shouldShadedLibraryIdBePatched(String packagePrefix) {
+        return TRY_TO_PATCH_SHADED_ID && PlatformDependent.isOsx() && !packagePrefix.isEmpty();
+    }
+
     /**
      * Try to patch shaded library to ensure it uses a unique ID.
      */
-    private static void patchShadedLibraryId(byte[] bytes, String originalName, String name) {
+    private static boolean patchShadedLibraryId(byte[] bytes, String originalName, String name) {
         // Our native libs always have the name as part of their id so we can search for it and replace it
         // to make the ID unique if shading is used.
         byte[] nameBytes = originalName.getBytes(CharsetUtil.UTF_8);
@@ -275,6 +306,7 @@ public final class NativeLibraryLoader {
 
         if (idIdx == -1) {
             logger.debug("Was not able to find the ID of the shaded native library {}, can't adjust it.", name);
+            return false;
         } else {
             // We found our ID... now monkey-patch it!
             for (int i = 0; i < nameBytes.length; i++) {
@@ -288,6 +320,7 @@ public final class NativeLibraryLoader {
                         "Found the ID of the shaded native library {}. Replacing ID part {} with {}",
                         name, originalName, new String(bytes, idIdx, nameBytes.length, CharsetUtil.UTF_8));
             }
+            return true;
         }
     }
 

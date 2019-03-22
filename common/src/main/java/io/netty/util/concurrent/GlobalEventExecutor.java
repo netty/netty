@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * task pending in the task queue for 1 second.  Please note it is not scalable to schedule large number of tasks to
  * this executor; use a dedicated executor.
  */
-public final class GlobalEventExecutor extends AbstractScheduledEventExecutor {
+public final class GlobalEventExecutor extends AbstractScheduledEventExecutor implements OrderedEventExecutor {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(GlobalEventExecutor.class);
 

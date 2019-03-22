@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.util.ReferenceCountUtil;
 
@@ -77,10 +78,10 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             acceptedEncoding = HttpContentDecoder.IDENTITY;
         }
 
-        HttpMethod meth = msg.method();
-        if (meth == HttpMethod.HEAD) {
+        HttpMethod method = msg.method();
+        if (HttpMethod.HEAD.equals(method)) {
             acceptedEncoding = ZERO_LENGTH_HEAD;
-        } else if (meth == HttpMethod.CONNECT) {
+        } else if (HttpMethod.CONNECT.equals(method)) {
             acceptedEncoding = ZERO_LENGTH_CONNECT;
         }
 
@@ -264,7 +265,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
             if (headers.isEmpty()) {
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
             } else {
-                out.add(new ComposedLastHttpContent(headers));
+                out.add(new ComposedLastHttpContent(headers, DecoderResult.SUCCESS));
             }
             return true;
         }

@@ -27,6 +27,7 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultEventLoopGroup;
@@ -37,6 +38,7 @@ import io.netty.handler.codec.http2.Http2TestUtil.FrameCountDown;
 import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
 import io.netty.util.AsciiString;
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import org.junit.After;
 import org.junit.Before;
@@ -682,7 +684,7 @@ public class Http2ConnectionRoundtripTest {
         writeOfEmptyReleasedBufferQueuedInFlowControllerShouldFail(WriteEmptyBufferMode.SECOND_WITH_TRAILERS);
     }
 
-    public void writeOfEmptyReleasedBufferQueuedInFlowControllerShouldFail(final WriteEmptyBufferMode mode)
+    private void writeOfEmptyReleasedBufferQueuedInFlowControllerShouldFail(final WriteEmptyBufferMode mode)
             throws Exception {
         bootstrapEnv(1, 1, 2, 1);
 
@@ -726,6 +728,59 @@ public class Http2ConnectionRoundtripTest {
         } catch (ExecutionException e) {
             assertThat(e.getCause(), is(instanceOf(IllegalReferenceCountException.class)));
         }
+    }
+
+    @Test
+    public void writeFailureFlowControllerRemoveFrame()
+            throws Exception {
+        bootstrapEnv(1, 1, 2, 1);
+
+        final ChannelPromise dataPromise = newPromise();
+        final ChannelPromise assertPromise = newPromise();
+
+        runInChannel(clientChannel, new Http2Runnable() {
+            @Override
+            public void run() throws Http2Exception {
+                http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0, (short) 16, false, 0, false,
+                        newPromise());
+                clientChannel.pipeline().addFirst(new ChannelOutboundHandlerAdapter() {
+                    @Override
+                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                        ReferenceCountUtil.release(msg);
+
+                        // Ensure we update the window size so we will try to write the rest of the frame while
+                        // processing the flush.
+                        http2Client.encoder().flowController().initialWindowSize(8);
+                        promise.setFailure(new IllegalStateException());
+                    }
+                });
+
+                http2Client.encoder().flowController().initialWindowSize(4);
+                http2Client.encoder().writeData(ctx(), 3, randomBytes(8), 0, false, dataPromise);
+                assertTrue(http2Client.encoder().flowController()
+                        .hasFlowControlled(http2Client.connection().stream(3)));
+
+                http2Client.flush(ctx());
+
+                try {
+                    // The Frame should have been removed after the write failed.
+                    assertFalse(http2Client.encoder().flowController()
+                            .hasFlowControlled(http2Client.connection().stream(3)));
+                    assertPromise.setSuccess();
+                } catch (Throwable error) {
+                    assertPromise.setFailure(error);
+                }
+            }
+        });
+
+        try {
+            dataPromise.get();
+            fail();
+        } catch (ExecutionException e) {
+            assertThat(e.getCause(), is(instanceOf(IllegalStateException.class)));
+        }
+
+        assertPromise.sync();
     }
 
     @Test

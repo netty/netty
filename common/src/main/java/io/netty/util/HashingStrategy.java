@@ -41,7 +41,7 @@ public interface HashingStrategy<T> {
      * This method has the following restrictions:
      * <ul>
      * <li><i>reflexive</i> - {@code equals(a, a)} should return true</li>
-     * <li><i>symmetric</i> - {@code equals(a, b)} returns {@code true} iff {@code equals(b, a)} returns
+     * <li><i>symmetric</i> - {@code equals(a, b)} returns {@code true} if {@code equals(b, a)} returns
      * {@code true}</li>
      * <li><i>transitive</i> - if {@code equals(a, b)} returns {@code true} and {@code equals(a, c)} returns
      * {@code true} then {@code equals(b, c)} should also return {@code true}</li>

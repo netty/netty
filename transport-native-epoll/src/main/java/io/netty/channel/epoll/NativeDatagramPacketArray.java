@@ -33,6 +33,10 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
 
     // Use UIO_MAX_IOV as this is the maximum number we can write with one sendmmsg(...) call.
     private final NativeDatagramPacket[] packets = new NativeDatagramPacket[UIO_MAX_IOV];
+
+    // We share one IovArray for all NativeDatagramPackets to reduce memory overhead. This will allow us to write
+    // up to IOV_MAX iovec across all messages in one sendmmsg(...) call.
+    private final IovArray iovArray = new IovArray();
     private int count;
 
     NativeDatagramPacketArray() {
@@ -47,6 +51,8 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
      */
     boolean add(DatagramPacket packet) {
         if (count == packets.length) {
+            // We already filled up to UIO_MAX_IOV messages. This is the max allowed per sendmmsg(...) call, we will
+            // try again later.
             return false;
         }
         ByteBuf content = packet.content();
@@ -56,9 +62,13 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
         }
         NativeDatagramPacket p = packets[count];
         InetSocketAddress recipient = packet.recipient();
-        if (!p.init(content, recipient)) {
+
+        int offset = iovArray.count();
+        if (!iovArray.add(content)) {
+            // Not enough space to hold the whole content, we will try again later.
             return false;
         }
+        p.init(iovArray.memoryAddress(offset), iovArray.count() - offset, recipient);
 
         count++;
         return true;
@@ -85,13 +95,11 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
 
     void clear() {
         this.count = 0;
+        this.iovArray.clear();
     }
 
     void release() {
-        // Release all packets
-        for (NativeDatagramPacket datagramPacket : packets) {
-            datagramPacket.release();
-        }
+        iovArray.release();
     }
 
     /**
@@ -99,10 +107,6 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
      */
     @SuppressWarnings("unused")
     static final class NativeDatagramPacket {
-        // Each NativeDatagramPackets holds a IovArray which is used for gathering writes.
-        // This is ok as NativeDatagramPacketArray is always obtained from an EpollEventLoop
-        // field so the memory needed is quite small anyway.
-        private final IovArray array = new IovArray();
 
         // This is the actual struct iovec*
         private long memoryAddress;
@@ -112,21 +116,9 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
         private int scopeId;
         private int port;
 
-        private void release() {
-            array.release();
-        }
-
-        /**
-         * Init this instance and return {@code true} if the init was successful.
-         */
-        private boolean init(ByteBuf buf, InetSocketAddress recipient) {
-            array.clear();
-            if (!array.add(buf)) {
-                return false;
-            }
-            // always start from offset 0
-            memoryAddress = array.memoryAddress(0);
-            count = array.count();
+        private void init(long memoryAddress, int count, InetSocketAddress recipient) {
+            this.memoryAddress = memoryAddress;
+            this.count = count;
 
             InetAddress address = recipient.getAddress();
             if (address instanceof Inet6Address) {
@@ -137,7 +129,6 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
                 scopeId = 0;
             }
             port = recipient.getPort();
-            return true;
         }
     }
 }

@@ -25,8 +25,8 @@ import java.util.List;
 
 public class KQueueSocketSslGreetingTest extends SocketSslGreetingTest {
 
-    public KQueueSocketSslGreetingTest(SslContext serverCtx, SslContext clientCtx) {
-        super(serverCtx, clientCtx);
+    public KQueueSocketSslGreetingTest(SslContext serverCtx, SslContext clientCtx, boolean delegate) {
+        super(serverCtx, clientCtx, delegate);
     }
 
     @Override

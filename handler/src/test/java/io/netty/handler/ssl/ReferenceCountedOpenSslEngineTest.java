@@ -23,8 +23,8 @@ import javax.net.ssl.SSLEngine;
 
 public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
 
-    public ReferenceCountedOpenSslEngineTest(BufferType type, ProtocolCipherCombo combo) {
-        super(type, combo);
+    public ReferenceCountedOpenSslEngineTest(BufferType type, ProtocolCipherCombo combo, boolean delegate) {
+        super(type, combo, delegate);
     }
 
     @Override

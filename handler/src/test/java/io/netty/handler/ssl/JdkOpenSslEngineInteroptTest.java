@@ -33,21 +33,23 @@ import static org.junit.Assume.assumeTrue;
 @RunWith(Parameterized.class)
 public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
 
-    @Parameterized.Parameters(name = "{index}: bufferType = {0}, combo = {1}")
+    @Parameterized.Parameters(name = "{index}: bufferType = {0}, combo = {1}, delegate = {2}")
     public static Collection<Object[]> data() {
         List<Object[]> params = new ArrayList<Object[]>();
         for (BufferType type: BufferType.values()) {
-            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12()});
+            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), false });
+            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), true });
 
             if (PlatformDependent.javaVersion() >= 11 && OpenSsl.isTlsv13Supported()) {
-                params.add(new Object[] { type, ProtocolCipherCombo.tlsv13() });
+                params.add(new Object[] { type, ProtocolCipherCombo.tlsv13(), false });
+                params.add(new Object[] { type, ProtocolCipherCombo.tlsv13(), true });
             }
         }
         return params;
     }
 
-    public JdkOpenSslEngineInteroptTest(BufferType type, ProtocolCipherCombo protocolCipherCombo) {
-        super(type, protocolCipherCombo);
+    public JdkOpenSslEngineInteroptTest(BufferType type, ProtocolCipherCombo protocolCipherCombo, boolean delegate) {
+        super(type, protocolCipherCombo, delegate);
     }
 
     @BeforeClass
@@ -101,6 +103,20 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
     }
 
     @Override
+    @Test
+    public void testSessionAfterHandshakeKeyManagerFactoryMutualAuth() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testSessionAfterHandshakeKeyManagerFactoryMutualAuth();
+    }
+
+    @Override
+    @Test
+    public void testSessionAfterHandshakeKeyManagerFactory() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testSessionAfterHandshakeKeyManagerFactory();
+    }
+
+    @Override
     protected void mySetupMutualAuthServerInitSslHandler(SslHandler handler) {
         ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) handler.engine();
         engine.setVerify(SSL_CVERIFY_IGNORED, 1);
@@ -110,6 +126,12 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
     protected boolean mySetupMutualAuthServerIsValidClientException(Throwable cause) {
         // TODO(scott): work around for a JDK issue. The exception should be SSLHandshakeException.
         return super.mySetupMutualAuthServerIsValidClientException(cause) || causedBySSLException(cause);
+    }
+
+    @Override
+    public void testHandshakeSession() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testHandshakeSession();
     }
 
     @Override

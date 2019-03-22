@@ -366,7 +366,7 @@ public class FixedChannelPool extends SimpleChannelPool {
         final long expireNanoTime = System.nanoTime() + acquireTimeoutNanos;
         ScheduledFuture<?> timeoutFuture;
 
-        public AcquireTask(Promise<Channel> promise) {
+        AcquireTask(Promise<Channel> promise) {
             super(promise);
             // We need to create a new promise as we need to ensure the AcquireListener runs in the correct
             // EventLoop.

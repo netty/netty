@@ -16,6 +16,8 @@
 
 package io.netty.testsuite.http2;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -59,9 +61,7 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
     }
 
     Http2ServerInitializer(int maxHttpContentLength) {
-        if (maxHttpContentLength < 0) {
-            throw new IllegalArgumentException("maxHttpContentLength (expected >= 0): " + maxHttpContentLength);
-        }
+        checkPositiveOrZero(maxHttpContentLength, "maxHttpContentLength");
         this.maxHttpContentLength = maxHttpContentLength;
     }
 

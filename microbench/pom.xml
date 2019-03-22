@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.33.Final-SNAPSHOT</version>
+    <version>4.1.35.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-microbench</artifactId>
@@ -38,8 +38,8 @@
     <!-- This only be set when run on mac as on other platforms we just want to include the jar without native
          code -->
     <kqueue.classifier />
+    <skipJapicmp>true</skipJapicmp>
   </properties>
-
   <profiles>
     <profile>
       <id>linux</id>

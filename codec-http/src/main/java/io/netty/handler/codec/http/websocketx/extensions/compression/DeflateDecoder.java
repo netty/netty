@@ -47,7 +47,7 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
      * Constructor
      * @param noContext true to disable context takeover.
      */
-    public DeflateDecoder(boolean noContext) {
+    DeflateDecoder(boolean noContext) {
         this.noContext = noContext;
     }
 

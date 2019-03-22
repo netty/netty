@@ -28,6 +28,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.unix.DatagramSocketAddress;
+import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.internal.StringUtil;
@@ -37,6 +38,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.net.PortUnreachableException;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
@@ -420,41 +422,72 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
 
             Throwable exception = null;
             try {
-                ByteBuf data = null;
+                ByteBuf byteBuf = null;
                 try {
+                    boolean connected = isConnected();
                     do {
-                        data = allocHandle.allocate(allocator);
-                        allocHandle.attemptedBytesRead(data.writableBytes());
-                        final DatagramSocketAddress remoteAddress;
-                        if (data.hasMemoryAddress()) {
-                            // has a memory address so use optimized call
-                            remoteAddress = socket.recvFromAddress(data.memoryAddress(), data.writerIndex(),
-                                    data.capacity());
-                        } else {
-                            ByteBuffer nioData = data.internalNioBuffer(data.writerIndex(), data.writableBytes());
-                            remoteAddress = socket.recvFrom(nioData, nioData.position(), nioData.limit());
-                        }
+                        byteBuf = allocHandle.allocate(allocator);
+                        allocHandle.attemptedBytesRead(byteBuf.writableBytes());
 
-                        if (remoteAddress == null) {
-                            allocHandle.lastBytesRead(-1);
-                            data.release();
-                            data = null;
-                            break;
+                        final DatagramPacket packet;
+                        if (connected) {
+                            try {
+                                allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                            } catch (Errors.NativeIoException e) {
+                                // We need to correctly translate connect errors to match NIO behaviour.
+                                if (e.expectedErr() == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
+                                    PortUnreachableException error = new PortUnreachableException(e.getMessage());
+                                    error.initCause(e);
+                                    throw error;
+                                }
+                                throw e;
+                            }
+                            if (allocHandle.lastBytesRead() <= 0) {
+                                // nothing was read, release the buffer.
+                                byteBuf.release();
+                                byteBuf = null;
+                                break;
+                            }
+                            packet = new DatagramPacket(byteBuf,
+                                    (InetSocketAddress) localAddress(), (InetSocketAddress) remoteAddress());
+                        } else {
+                            final DatagramSocketAddress remoteAddress;
+                            if (byteBuf.hasMemoryAddress()) {
+                                // has a memory address so use optimized call
+                                remoteAddress = socket.recvFromAddress(byteBuf.memoryAddress(), byteBuf.writerIndex(),
+                                        byteBuf.capacity());
+                            } else {
+                                ByteBuffer nioData = byteBuf.internalNioBuffer(
+                                        byteBuf.writerIndex(), byteBuf.writableBytes());
+                                remoteAddress = socket.recvFrom(nioData, nioData.position(), nioData.limit());
+                            }
+
+                            if (remoteAddress == null) {
+                                allocHandle.lastBytesRead(-1);
+                                byteBuf.release();
+                                byteBuf = null;
+                                break;
+                            }
+                            InetSocketAddress localAddress = remoteAddress.localAddress();
+                            if (localAddress == null) {
+                                localAddress = (InetSocketAddress) localAddress();
+                            }
+                            allocHandle.lastBytesRead(remoteAddress.receivedAmount());
+                            byteBuf.writerIndex(byteBuf.writerIndex() + allocHandle.lastBytesRead());
+
+                            packet = new DatagramPacket(byteBuf, localAddress, remoteAddress);
                         }
 
                         allocHandle.incMessagesRead(1);
-                        allocHandle.lastBytesRead(remoteAddress.receivedAmount());
-                        data.writerIndex(data.writerIndex() + allocHandle.lastBytesRead());
 
                         readPending = false;
-                        pipeline.fireChannelRead(
-                                new DatagramPacket(data, (InetSocketAddress) localAddress(), remoteAddress));
+                        pipeline.fireChannelRead(packet);
 
-                        data = null;
+                        byteBuf = null;
                     } while (allocHandle.continueReading());
                 } catch (Throwable t) {
-                    if (data != null) {
-                        data.release();
+                    if (byteBuf != null) {
+                        byteBuf.release();
                     }
                     exception = t;
                 }

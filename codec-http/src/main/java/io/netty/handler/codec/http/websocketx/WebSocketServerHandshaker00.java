@@ -152,14 +152,18 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             int b = (int) (Long.parseLong(BEGINNING_DIGIT.matcher(key2).replaceAll("")) /
                            BEGINNING_SPACE.matcher(key2).replaceAll("").length());
             long c = req.content().readLong();
-            ByteBuf input = Unpooled.buffer(16);
+            ByteBuf input = Unpooled.wrappedBuffer(new byte[16]).setIndex(0, 0);
             input.writeInt(a);
             input.writeInt(b);
             input.writeLong(c);
             res.content().writeBytes(WebSocketUtil.md5(input.array()));
         } else {
             // Old Hixie 75 handshake getMethod with no challenge:
-            res.headers().add(HttpHeaderNames.WEBSOCKET_ORIGIN, req.headers().get(HttpHeaderNames.ORIGIN));
+            String origin = req.headers().get(HttpHeaderNames.ORIGIN);
+            if (origin == null) {
+                throw new WebSocketHandshakeException("Missing origin header, got only " + req.headers().names());
+            }
+            res.headers().add(HttpHeaderNames.WEBSOCKET_ORIGIN, origin);
             res.headers().add(HttpHeaderNames.WEBSOCKET_LOCATION, uri());
 
             String protocol = req.headers().get(HttpHeaderNames.WEBSOCKET_PROTOCOL);

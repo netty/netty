@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.33.Final-SNAPSHOT</version>
+    <version>4.1.35.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-example</artifactId>
@@ -29,6 +29,9 @@
 
   <name>Netty/Example</name>
 
+  <properties>
+    <skipJapicmp>true</skipJapicmp>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>

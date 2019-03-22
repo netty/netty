@@ -15,6 +15,8 @@
 */
 package io.netty.channel.sctp;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import com.sun.nio.sctp.SctpServerChannel;
 import com.sun.nio.sctp.SctpStandardSocketOptions;
 import io.netty.buffer.ByteBufAllocator;
@@ -152,9 +154,7 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
 
     @Override
     public SctpServerChannelConfig setBacklog(int backlog) {
-        if (backlog < 0) {
-            throw new IllegalArgumentException("backlog: " + backlog);
-        }
+        checkPositiveOrZero(backlog, "backlog");
         this.backlog = backlog;
         return this;
     }

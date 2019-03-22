@@ -20,13 +20,17 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.33.Final-SNAPSHOT</version>
+    <version>4.1.35.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite-http2</artifactId>
   <packaging>jar</packaging>
 
   <name>Netty/Testsuite/Http2</name>
+
+  <properties>
+    <skipJapicmp>true</skipJapicmp>
+  </properties>
 
   <dependencies>
     <dependency>

@@ -21,6 +21,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -61,6 +62,41 @@ public class DefaultPromiseTest {
 
     private static int stackOverflowTestDepth() {
         return max(stackOverflowDepth << 1, stackOverflowDepth);
+    }
+
+    @Test
+    public void testCancelDoesNotScheduleWhenNoListeners() {
+        EventExecutor executor = Mockito.mock(EventExecutor.class);
+        Mockito.when(executor.inEventLoop()).thenReturn(false);
+
+        Promise<Void> promise = new DefaultPromise<Void>(executor);
+        promise.cancel(false);
+        Mockito.verify(executor, Mockito.never()).execute(Mockito.any(Runnable.class));
+        assertTrue(promise.isCancelled());
+    }
+
+    @Test
+    public void testSuccessDoesNotScheduleWhenNoListeners() {
+        EventExecutor executor = Mockito.mock(EventExecutor.class);
+        Mockito.when(executor.inEventLoop()).thenReturn(false);
+
+        Object value = new Object();
+        Promise<Object> promise = new DefaultPromise<Object>(executor);
+        promise.setSuccess(value);
+        Mockito.verify(executor, Mockito.never()).execute(Mockito.any(Runnable.class));
+        assertSame(value, promise.getNow());
+    }
+
+    @Test
+    public void testFailureDoesNotScheduleWhenNoListeners() {
+        EventExecutor executor = Mockito.mock(EventExecutor.class);
+        Mockito.when(executor.inEventLoop()).thenReturn(false);
+
+        Exception cause = new Exception();
+        Promise<Void> promise = new DefaultPromise<Void>(executor);
+        promise.setFailure(cause);
+        Mockito.verify(executor, Mockito.never()).execute(Mockito.any(Runnable.class));
+        assertSame(cause, promise.cause());
     }
 
     @Test(expected = CancellationException.class)

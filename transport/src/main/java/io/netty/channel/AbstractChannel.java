@@ -44,14 +44,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractChannel.class);
 
-    private static final ClosedChannelException FLUSH0_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), AbstractUnsafe.class, "flush0()");
     private static final ClosedChannelException ENSURE_OPEN_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), AbstractUnsafe.class, "ensureOpen(...)");
+            new ExtendedClosedChannelException(null), AbstractUnsafe.class, "ensureOpen(...)");
     private static final ClosedChannelException CLOSE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new ClosedChannelException(), AbstractUnsafe.class, "close(...)");
     private static final ClosedChannelException WRITE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), AbstractUnsafe.class, "write(...)");
+            new ExtendedClosedChannelException(null), AbstractUnsafe.class, "write(...)");
+    private static final ClosedChannelException FLUSH0_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            new ExtendedClosedChannelException(null), AbstractUnsafe.class, "flush0()");
     private static final NotYetConnectedException FLUSH0_NOT_YET_CONNECTED_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new NotYetConnectedException(), AbstractUnsafe.class, "flush0()");
 
@@ -67,6 +67,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile EventLoop eventLoop;
     private volatile boolean registered;
     private boolean closeInitiated;
+    private Throwable initialCloseCause;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -870,7 +871,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 // need to fail the future right away. If it is not null the handling of the rest
                 // will be done in flush0()
                 // See https://github.com/netty/netty/issues/2362
-                safeSetFailure(promise, WRITE_CLOSED_CHANNEL_EXCEPTION);
+                safeSetFailure(promise, newWriteException(initialCloseCause));
                 // release message now to prevent resource-leak
                 ReferenceCountUtil.release(msg);
                 return;
@@ -926,7 +927,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         outboundBuffer.failFlushed(FLUSH0_NOT_YET_CONNECTED_EXCEPTION, true);
                     } else {
                         // Do not trigger channelWritabilityChanged because the channel is closed already.
-                        outboundBuffer.failFlushed(FLUSH0_CLOSED_CHANNEL_EXCEPTION, false);
+                        outboundBuffer.failFlushed(newFlush0Exception(initialCloseCause), false);
                     }
                 } finally {
                     inFlush0 = false;
@@ -946,17 +947,43 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                      * This is needed as otherwise {@link #isActive()} , {@link #isOpen()} and {@link #isWritable()}
                      * may still return {@code true} even if the channel should be closed as result of the exception.
                      */
-                    close(voidPromise(), t, FLUSH0_CLOSED_CHANNEL_EXCEPTION, false);
+                    initialCloseCause = t;
+                    close(voidPromise(), t, newFlush0Exception(t), false);
                 } else {
                     try {
                         shutdownOutput(voidPromise(), t);
                     } catch (Throwable t2) {
-                        close(voidPromise(), t2, FLUSH0_CLOSED_CHANNEL_EXCEPTION, false);
+                        initialCloseCause = t;
+                        close(voidPromise(), t2, newFlush0Exception(t), false);
                     }
                 }
             } finally {
                 inFlush0 = false;
             }
+        }
+
+        private ClosedChannelException newWriteException(Throwable cause) {
+            if (cause == null) {
+                return WRITE_CLOSED_CHANNEL_EXCEPTION;
+            }
+            return ThrowableUtil.unknownStackTrace(
+                    new ExtendedClosedChannelException(cause), AbstractUnsafe.class, "write(...)");
+        }
+
+        private ClosedChannelException newFlush0Exception(Throwable cause) {
+            if (cause == null) {
+                return FLUSH0_CLOSED_CHANNEL_EXCEPTION;
+            }
+            return ThrowableUtil.unknownStackTrace(
+                    new ExtendedClosedChannelException(cause), AbstractUnsafe.class, "flush0()");
+        }
+
+        private ClosedChannelException newEnsureOpenException(Throwable cause) {
+            if (cause == null) {
+                return ENSURE_OPEN_CLOSED_CHANNEL_EXCEPTION;
+            }
+            return ThrowableUtil.unknownStackTrace(
+                    new ExtendedClosedChannelException(cause), AbstractUnsafe.class, "ensureOpen(...)");
         }
 
         @Override
@@ -971,7 +998,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return true;
             }
 
-            safeSetFailure(promise, ENSURE_OPEN_CLOSED_CHANNEL_EXCEPTION);
+            safeSetFailure(promise, newEnsureOpenException(initialCloseCause));
             return false;
         }
 
@@ -1120,6 +1147,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected Object filterOutboundMessage(Object msg) throws Exception {
         return msg;
+    }
+
+    protected void validateFileRegion(DefaultFileRegion region, long position) throws IOException {
+        DefaultFileRegion.validate(region, position);
     }
 
     static final class CloseFuture extends DefaultChannelPromise {

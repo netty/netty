@@ -47,9 +47,10 @@ public final class HttpProxyHandler extends ProxyHandler {
     private final String username;
     private final String password;
     private final CharSequence authorization;
+    private final HttpHeaders outboundHeaders;
     private final boolean ignoreDefaultPortsInConnectHostHeader;
     private HttpResponseStatus status;
-    private HttpHeaders headers;
+    private HttpHeaders inboundHeaders;
 
     public HttpProxyHandler(SocketAddress proxyAddress) {
         this(proxyAddress, null);
@@ -66,7 +67,7 @@ public final class HttpProxyHandler extends ProxyHandler {
         username = null;
         password = null;
         authorization = null;
-        this.headers = headers;
+        this.outboundHeaders = headers;
         this.ignoreDefaultPortsInConnectHostHeader = ignoreDefaultPortsInConnectHostHeader;
     }
 
@@ -102,7 +103,7 @@ public final class HttpProxyHandler extends ProxyHandler {
         authz.release();
         authzBase64.release();
 
-        this.headers = headers;
+        this.outboundHeaders = headers;
         this.ignoreDefaultPortsInConnectHostHeader = ignoreDefaultPortsInConnectHostHeader;
     }
 
@@ -163,8 +164,8 @@ public final class HttpProxyHandler extends ProxyHandler {
             req.headers().set(HttpHeaderNames.PROXY_AUTHORIZATION, authorization);
         }
 
-        if (headers != null) {
-            req.headers().add(headers);
+        if (outboundHeaders != null) {
+            req.headers().add(outboundHeaders);
         }
 
         return req;
@@ -174,21 +175,48 @@ public final class HttpProxyHandler extends ProxyHandler {
     protected boolean handleResponse(ChannelHandlerContext ctx, Object response) throws Exception {
         if (response instanceof HttpResponse) {
             if (status != null) {
-                throw new ProxyConnectException(exceptionMessage("too many responses"));
+                throw new HttpProxyConnectException(exceptionMessage("too many responses"), /*headers=*/ null);
             }
-            status = ((HttpResponse) response).status();
+            HttpResponse res = (HttpResponse) response;
+            status = res.status();
+            inboundHeaders = res.headers();
         }
 
         boolean finished = response instanceof LastHttpContent;
         if (finished) {
             if (status == null) {
-                throw new ProxyConnectException(exceptionMessage("missing response"));
+                throw new HttpProxyConnectException(exceptionMessage("missing response"), inboundHeaders);
             }
             if (status.code() != 200) {
-                throw new ProxyConnectException(exceptionMessage("status: " + status));
+                throw new HttpProxyConnectException(exceptionMessage("status: " + status), inboundHeaders);
             }
         }
 
         return finished;
+    }
+
+    /**
+     * Specific case of a connection failure, which may include headers from the proxy.
+     */
+    public static final class HttpProxyConnectException extends ProxyConnectException {
+        private static final long serialVersionUID = -8824334609292146066L;
+
+        private final HttpHeaders headers;
+
+        /**
+         * @param message The failure message.
+         * @param headers Header associated with the connection failure.  May be {@code null}.
+         */
+        public HttpProxyConnectException(String message, HttpHeaders headers) {
+            super(message);
+            this.headers = headers;
+        }
+
+        /**
+         * Returns headers, if any.  May be {@code null}.
+         */
+        public HttpHeaders headers() {
+            return headers;
+        }
     }
 }

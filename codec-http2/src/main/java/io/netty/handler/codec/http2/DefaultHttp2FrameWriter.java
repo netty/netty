@@ -61,6 +61,8 @@ import static io.netty.handler.codec.http2.Http2FrameTypes.RST_STREAM;
 import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
 import static io.netty.handler.codec.http2.Http2FrameTypes.WINDOW_UPDATE;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -614,15 +616,11 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     }
 
     private static void verifyStreamId(int streamId, String argumentName) {
-        if (streamId <= 0) {
-            throw new IllegalArgumentException(argumentName + " must be > 0");
-        }
+        checkPositive(streamId, "streamId");
     }
 
     private static void verifyStreamOrConnectionId(int streamId, String argumentName) {
-        if (streamId < 0) {
-            throw new IllegalArgumentException(argumentName + " must be >= 0");
-        }
+        checkPositiveOrZero(streamId, "streamId");
     }
 
     private static void verifyWeight(short weight) {
@@ -638,9 +636,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     }
 
     private static void verifyWindowSizeIncrement(int windowSizeIncrement) {
-        if (windowSizeIncrement < 0) {
-            throw new IllegalArgumentException("WindowSizeIncrement must be >= 0");
-        }
+        checkPositiveOrZero(windowSizeIncrement, "windowSizeIncrement");
     }
 
     private static void verifyPingPayload(ByteBuf data) {

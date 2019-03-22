@@ -233,7 +233,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         private ByteBuf clientPrefaceString;
         private boolean prefaceSent;
 
-        public PrefaceDecoder(ChannelHandlerContext ctx) throws Exception {
+        PrefaceDecoder(ChannelHandlerContext ctx) throws Exception {
             clientPrefaceString = clientPrefaceString(encoder.connection());
             // This handler was just added to the context. In case it was handled after
             // the connection became active, send the connection preface now.
@@ -527,8 +527,18 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
     }
 
-    void channelReadComplete0(ChannelHandlerContext ctx) throws Exception {
-        super.channelReadComplete(ctx);
+    final void channelReadComplete0(ChannelHandlerContext ctx) {
+        // Discard bytes of the cumulation buffer if needed.
+        discardSomeReadBytes();
+
+        // Ensure we never stale the HTTP/2 Channel. Flow-control is enforced by HTTP/2.
+        //
+        // See https://tools.ietf.org/html/rfc7540#section-5.2.2
+        if (!ctx.channel().config().isAutoRead()) {
+            ctx.read();
+        }
+
+        ctx.fireChannelReadComplete();
     }
 
     /**

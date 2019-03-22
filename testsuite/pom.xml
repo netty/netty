@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.33.Final-SNAPSHOT</version>
+    <version>4.1.35.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite</artifactId>
@@ -104,6 +104,7 @@
   <properties>
     <!-- Needed for SSL tests as these use the SelfSignedCertificate --> 
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
+    <skipJapicmp>true</skipJapicmp>
   </properties>
 
   <build>

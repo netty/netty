@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -163,10 +165,7 @@ public class LengthFieldPrepender extends MessageToMessageEncoder<ByteBuf> {
             length += lengthFieldLength;
         }
 
-        if (length < 0) {
-            throw new IllegalArgumentException(
-                    "Adjusted frame length (" + length + ") is less than zero");
-        }
+        checkPositiveOrZero(length, "length");
 
         switch (lengthFieldLength) {
         case 1:

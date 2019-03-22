@@ -30,6 +30,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGH
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.min;
 
@@ -397,6 +398,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             queue.releaseAndFailAll(cause);
             // Don't update dataSize because we need to ensure the size() method returns a consistent size even after
             // error so we don't invalidate flow control when returning bytes to flow control.
+            //
+            // That said we will set dataSize and padding to 0 in the write(...) method if we cleared the queue
+            // because of an error.
             lifecycleManager.onError(ctx, true, cause);
         }
 
@@ -405,11 +409,21 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             int queuedData = queue.readableBytes();
             if (!endOfStream) {
                 if (queuedData == 0) {
-                    // There's no need to write any data frames because there are only empty data frames in the queue
-                    // and it is not end of stream yet. Just complete their promises by getting the buffer corresponding
-                    // to 0 bytes and writing it to the channel (to preserve notification order).
-                    ChannelPromise writePromise = ctx.newPromise().addListener(this);
-                    ctx.write(queue.remove(0, writePromise), writePromise);
+                    if (queue.isEmpty()) {
+                        // When the queue is empty it means we did clear it because of an error(...) call
+                        // (as otherwise we will have at least 1 entry in there), which will happen either when called
+                        // explicit or when the write itself fails. In this case just set dataSize and padding to 0
+                        // which will signal back that the whole frame was consumed.
+                        //
+                        // See https://github.com/netty/netty/issues/8707.
+                        padding = dataSize = 0;
+                    } else {
+                        // There's no need to write any data frames because there are only empty data frames in the
+                        // queue and it is not end of stream yet. Just complete their promises by getting the buffer
+                        // corresponding to 0 bytes and writing it to the channel (to preserve notification order).
+                        ChannelPromise writePromise = ctx.newPromise().addListener(this);
+                        ctx.write(queue.remove(0, writePromise), writePromise);
+                    }
                     return;
                 }
 
@@ -530,9 +544,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
         FlowControlledBase(final Http2Stream stream, int padding, boolean endOfStream,
                 final ChannelPromise promise) {
-            if (padding < 0) {
-                throw new IllegalArgumentException("padding must be >= 0");
-            }
+            checkPositiveOrZero(padding, "padding");
             this.padding = padding;
             this.endOfStream = endOfStream;
             this.stream = stream;

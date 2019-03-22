@@ -96,8 +96,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         this(alloc, direct, maxNumComponents,
                 buffers instanceof Collection ? ((Collection<ByteBuf>) buffers).size() : 0);
 
-        addComponents0(false, 0, buffers);
-        consolidateIfNeeded();
+        addComponents(false, 0, buffers);
         setIndex(0, capacity());
     }
 
@@ -158,8 +157,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
      * If you need to have it increased use {@link #addComponent(boolean, ByteBuf)}.
      * <p>
-     * {@link ByteBuf#release()} ownership of {@code buffer} is transfered to this {@link CompositeByteBuf}.
-     * @param buffer the {@link ByteBuf} to add. {@link ByteBuf#release()} ownership is transfered to this
+     * {@link ByteBuf#release()} ownership of {@code buffer} is transferred to this {@link CompositeByteBuf}.
+     * @param buffer the {@link ByteBuf} to add. {@link ByteBuf#release()} ownership is transferred to this
      * {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponent(ByteBuf buffer) {
@@ -172,10 +171,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
      * If you need to have it increased use {@link #addComponents(boolean, ByteBuf[])}.
      * <p>
-     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transfered to this
+     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transferred to this
      * {@link CompositeByteBuf}.
      * @param buffers the {@link ByteBuf}s to add. {@link ByteBuf#release()} ownership of all {@link ByteBuf#release()}
-     * ownership of all {@link ByteBuf} objects is transfered to this {@link CompositeByteBuf}.
+     * ownership of all {@link ByteBuf} objects is transferred to this {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponents(ByteBuf... buffers) {
         return addComponents(false, buffers);
@@ -187,10 +186,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
      * If you need to have it increased use {@link #addComponents(boolean, Iterable)}.
      * <p>
-     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transfered to this
+     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transferred to this
      * {@link CompositeByteBuf}.
      * @param buffers the {@link ByteBuf}s to add. {@link ByteBuf#release()} ownership of all {@link ByteBuf#release()}
-     * ownership of all {@link ByteBuf} objects is transfered to this {@link CompositeByteBuf}.
+     * ownership of all {@link ByteBuf} objects is transferred to this {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponents(Iterable<ByteBuf> buffers) {
         return addComponents(false, buffers);
@@ -202,9 +201,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
      * If you need to have it increased use {@link #addComponent(boolean, int, ByteBuf)}.
      * <p>
-     * {@link ByteBuf#release()} ownership of {@code buffer} is transfered to this {@link CompositeByteBuf}.
+     * {@link ByteBuf#release()} ownership of {@code buffer} is transferred to this {@link CompositeByteBuf}.
      * @param cIndex the index on which the {@link ByteBuf} will be added.
-     * @param buffer the {@link ByteBuf} to add. {@link ByteBuf#release()} ownership is transfered to this
+     * @param buffer the {@link ByteBuf} to add. {@link ByteBuf#release()} ownership is transferred to this
      * {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponent(int cIndex, ByteBuf buffer) {
@@ -215,25 +214,22 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Add the given {@link ByteBuf} and increase the {@code writerIndex} if {@code increaseWriterIndex} is
      * {@code true}.
      *
-     * {@link ByteBuf#release()} ownership of {@code buffer} is transfered to this {@link CompositeByteBuf}.
-     * @param buffer the {@link ByteBuf} to add. {@link ByteBuf#release()} ownership is transfered to this
+     * {@link ByteBuf#release()} ownership of {@code buffer} is transferred to this {@link CompositeByteBuf}.
+     * @param buffer the {@link ByteBuf} to add. {@link ByteBuf#release()} ownership is transferred to this
      * {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponent(boolean increaseWriterIndex, ByteBuf buffer) {
-        checkNotNull(buffer, "buffer");
-        addComponent0(increaseWriterIndex, componentCount, buffer);
-        consolidateIfNeeded();
-        return this;
+        return addComponent(increaseWriterIndex, componentCount, buffer);
     }
 
     /**
      * Add the given {@link ByteBuf}s and increase the {@code writerIndex} if {@code increaseWriterIndex} is
      * {@code true}.
      *
-     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transfered to this
+     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transferred to this
      * {@link CompositeByteBuf}.
      * @param buffers the {@link ByteBuf}s to add. {@link ByteBuf#release()} ownership of all {@link ByteBuf#release()}
-     * ownership of all {@link ByteBuf} objects is transfered to this {@link CompositeByteBuf}.
+     * ownership of all {@link ByteBuf} objects is transferred to this {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponents(boolean increaseWriterIndex, ByteBuf... buffers) {
         checkNotNull(buffers, "buffers");
@@ -246,24 +242,22 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Add the given {@link ByteBuf}s and increase the {@code writerIndex} if {@code increaseWriterIndex} is
      * {@code true}.
      *
-     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transfered to this
+     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transferred to this
      * {@link CompositeByteBuf}.
      * @param buffers the {@link ByteBuf}s to add. {@link ByteBuf#release()} ownership of all {@link ByteBuf#release()}
-     * ownership of all {@link ByteBuf} objects is transfered to this {@link CompositeByteBuf}.
+     * ownership of all {@link ByteBuf} objects is transferred to this {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponents(boolean increaseWriterIndex, Iterable<ByteBuf> buffers) {
-        addComponents0(increaseWriterIndex, componentCount, buffers);
-        consolidateIfNeeded();
-        return this;
+        return addComponents(increaseWriterIndex, componentCount, buffers);
     }
 
     /**
      * Add the given {@link ByteBuf} on the specific index and increase the {@code writerIndex}
      * if {@code increaseWriterIndex} is {@code true}.
      *
-     * {@link ByteBuf#release()} ownership of {@code buffer} is transfered to this {@link CompositeByteBuf}.
+     * {@link ByteBuf#release()} ownership of {@code buffer} is transferred to this {@link CompositeByteBuf}.
      * @param cIndex the index on which the {@link ByteBuf} will be added.
-     * @param buffer the {@link ByteBuf} to add. {@link ByteBuf#release()} ownership is transfered to this
+     * @param buffer the {@link ByteBuf} to add. {@link ByteBuf#release()} ownership is transferred to this
      * {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponent(boolean increaseWriterIndex, int cIndex, ByteBuf buffer) {
@@ -304,14 +298,14 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         }
     }
 
-    // unwrap if already sliced
     @SuppressWarnings("deprecation")
     private Component newComponent(ByteBuf buf, int offset) {
-        if (checkAccessible && buf.refCnt() == 0) {
+        if (checkAccessible && !buf.isAccessible()) {
             throw new IllegalReferenceCountException(0);
         }
         int srcIndex = buf.readerIndex(), len = buf.readableBytes();
         ByteBuf slice = null;
+        // unwrap if already sliced
         if (buf instanceof AbstractUnpooledSlicedByteBuf) {
             srcIndex += ((AbstractUnpooledSlicedByteBuf) buf).idx(0);
             slice = buf;
@@ -330,13 +324,13 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
      * If you need to have it increased you need to handle it by your own.
      * <p>
-     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transfered to this
+     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transferred to this
      * {@link CompositeByteBuf}.
      * @param cIndex the index on which the {@link ByteBuf} will be added. {@link ByteBuf#release()} ownership of all
-     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects is transfered to this
+     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects is transferred to this
      * {@link CompositeByteBuf}.
      * @param buffers the {@link ByteBuf}s to add. {@link ByteBuf#release()} ownership of all {@link ByteBuf#release()}
-     * ownership of all {@link ByteBuf} objects is transfered to this {@link CompositeByteBuf}.
+     * ownership of all {@link ByteBuf} objects is transferred to this {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponents(int cIndex, ByteBuf... buffers) {
         checkNotNull(buffers, "buffers");
@@ -345,20 +339,25 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         return this;
     }
 
-    private int addComponents0(boolean increaseWriterIndex, final int cIndex, ByteBuf[] buffers, int arrOffset) {
+    private CompositeByteBuf addComponents0(boolean increaseWriterIndex,
+            final int cIndex, ByteBuf[] buffers, int arrOffset) {
         final int len = buffers.length, count = len - arrOffset;
+        // only set ci after we've shifted so that finally block logic is always correct
         int ci = Integer.MAX_VALUE;
         try {
             checkComponentIndex(cIndex);
             shiftComps(cIndex, count); // will increase componentCount
-            ci = cIndex; // only set this after we've shifted so that finally block logic is always correct
             int nextOffset = cIndex > 0 ? components[cIndex - 1].endOffset : 0;
-            for (ByteBuf b; arrOffset < len && (b = buffers[arrOffset]) != null; arrOffset++, ci++) {
+            for (ci = cIndex; arrOffset < len; arrOffset++, ci++) {
+                ByteBuf b = buffers[arrOffset];
+                if (b == null) {
+                    break;
+                }
                 Component c = newComponent(b, nextOffset);
                 components[ci] = c;
                 nextOffset = c.endOffset;
             }
-            return ci;
+            return this;
         } finally {
             // ci is now the index following the last successfully added component
             if (ci < componentCount) {
@@ -379,7 +378,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     private <T> int addComponents0(boolean increaseWriterIndex, int cIndex,
             ByteWrapper<T> wrapper, T[] buffers, int offset) {
-        checkNotNull(buffers, "buffers");
         checkComponentIndex(cIndex);
 
         // No need for consolidation
@@ -405,26 +403,24 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * Be aware that this method does not increase the {@code writerIndex} of the {@link CompositeByteBuf}.
      * If you need to have it increased you need to handle it by your own.
      * <p>
-     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transfered to this
+     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects in {@code buffers} is transferred to this
      * {@link CompositeByteBuf}.
      * @param cIndex the index on which the {@link ByteBuf} will be added.
      * @param buffers the {@link ByteBuf}s to add.  {@link ByteBuf#release()} ownership of all
-     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects is transfered to this
+     * {@link ByteBuf#release()} ownership of all {@link ByteBuf} objects is transferred to this
      * {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addComponents(int cIndex, Iterable<ByteBuf> buffers) {
-        addComponents0(false, cIndex, buffers);
-        consolidateIfNeeded();
-        return this;
+        return addComponents(false, cIndex, buffers);
     }
 
     // TODO optimize further, similar to ByteBuf[] version
     // (difference here is that we don't know *always* know precise size increase in advance,
     // but we do in the most common case that the Iterable is a Collection)
-    private int addComponents0(boolean increaseIndex, int cIndex, Iterable<ByteBuf> buffers) {
+    private CompositeByteBuf addComponents(boolean increaseIndex, int cIndex, Iterable<ByteBuf> buffers) {
         if (buffers instanceof ByteBuf) {
             // If buffers also implements ByteBuf (e.g. CompositeByteBuf), it has to go to addComponent(ByteBuf).
-            return addComponent0(increaseIndex, cIndex, (ByteBuf) buffers);
+            return addComponent(increaseIndex, cIndex, (ByteBuf) buffers);
         }
         checkNotNull(buffers, "buffers");
         Iterator<ByteBuf> it = buffers.iterator();
@@ -440,12 +436,13 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 cIndex = addComponent0(increaseIndex, cIndex, b) + 1;
                 cIndex = Math.min(cIndex, componentCount);
             }
-            return cIndex;
         } finally {
             while (it.hasNext()) {
                 ReferenceCountUtil.safeRelease(it.next());
             }
         }
+        consolidateIfNeeded();
+        return this;
     }
 
     /**
@@ -497,7 +494,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             return;
         }
 
-        int nextIndex = cIndex > 0 ? components[cIndex].endOffset : 0;
+        int nextIndex = cIndex > 0 ? components[cIndex - 1].endOffset : 0;
         for (; cIndex < size; cIndex++) {
             Component c = components[cIndex];
             c.reposition(nextIndex);
@@ -516,7 +513,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         if (lastAccessed == comp) {
             lastAccessed = null;
         }
-        comp.freeIfNecessary();
+        comp.free();
         removeComp(cIndex);
         if (comp.length() > 0) {
             // Only need to call updateComponentOffsets if the length was > 0
@@ -547,7 +544,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             if (lastAccessed == c) {
                 lastAccessed = null;
             }
-            c.freeIfNecessary();
+            c.free();
         }
         removeCompRange(cIndex, endIndex);
 
@@ -748,6 +745,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 consolidateIfNeeded();
             }
         } else if (newCapacity < oldCapacity) {
+            lastAccessed = null;
             int i = size - 1;
             for (int bytesToTrim = oldCapacity - newCapacity; i >= 0; i--) {
                 Component c = components[i];
@@ -758,7 +756,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                     c.slice = null;
                     break;
                 }
-                c.freeIfNecessary();
+                c.free();
                 bytesToTrim -= cLength;
             }
             removeCompRange(i + 1, size);
@@ -801,7 +799,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      */
     public int toComponentIndex(int offset) {
         checkIndex(offset);
-        return toComponentIndex(offset);
+        return toComponentIndex0(offset);
     }
 
     private int toComponentIndex0(int offset) {
@@ -1076,7 +1074,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     @Override
     public CompositeByteBuf setShort(int index, int value) {
-        super.setShort(index, value);
+        checkIndex(index, 2);
+        _setShort(index, value);
         return this;
     }
 
@@ -1110,7 +1109,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     @Override
     public CompositeByteBuf setMedium(int index, int value) {
-        super.setMedium(index, value);
+        checkIndex(index, 3);
+        _setMedium(index, value);
         return this;
     }
 
@@ -1144,7 +1144,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     @Override
     public CompositeByteBuf setInt(int index, int value) {
-        super.setInt(index, value);
+        checkIndex(index, 4);
+        _setInt(index, value);
         return this;
     }
 
@@ -1178,7 +1179,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     @Override
     public CompositeByteBuf setLong(int index, long value) {
-        super.setLong(index, value);
+        checkIndex(index, 8);
+        _setLong(index, value);
         return this;
     }
 
@@ -1286,7 +1288,6 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
         int i = toComponentIndex0(index);
         int readBytes = 0;
-
         do {
             Component c = components[i];
             int localLength = Math.min(length, c.endOffset - index);
@@ -1304,15 +1305,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 }
             }
 
+            index += localReadBytes;
+            length -= localReadBytes;
+            readBytes += localReadBytes;
             if (localReadBytes == localLength) {
-                index += localLength;
-                length -= localLength;
-                readBytes += localLength;
                 i ++;
-            } else {
-                index += localReadBytes;
-                length -= localReadBytes;
-                readBytes += localReadBytes;
             }
         } while (length > 0);
 
@@ -1350,15 +1347,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 }
             }
 
+            index += localReadBytes;
+            length -= localReadBytes;
+            readBytes += localReadBytes;
             if (localReadBytes == localLength) {
-                index += localLength;
-                length -= localLength;
-                readBytes += localLength;
                 i ++;
-            } else {
-                index += localReadBytes;
-                length -= localReadBytes;
-                readBytes += localReadBytes;
             }
         } while (length > 0);
 
@@ -1396,15 +1389,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 }
             }
 
+            index += localReadBytes;
+            length -= localReadBytes;
+            readBytes += localReadBytes;
             if (localReadBytes == localLength) {
-                index += localLength;
-                length -= localLength;
-                readBytes += localLength;
                 i ++;
-            } else {
-                index += localReadBytes;
-                length -= localReadBytes;
-                readBytes += localReadBytes;
             }
         } while (length > 0);
 
@@ -1676,7 +1665,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         int writerIndex = writerIndex();
         if (readerIndex == writerIndex && writerIndex == capacity()) {
             for (int i = 0, size = componentCount; i < size; i++) {
-                components[i].freeIfNecessary();
+                components[i].free();
             }
             lastAccessed = null;
             clearComps();
@@ -1688,7 +1677,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         // Remove read components.
         int firstComponentId = toComponentIndex0(readerIndex);
         for (int i = 0; i < firstComponentId; i ++) {
-            components[i].freeIfNecessary();
+            components[i].free();
         }
         lastAccessed = null;
         removeCompRange(0, firstComponentId);
@@ -1714,7 +1703,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         int writerIndex = writerIndex();
         if (readerIndex == writerIndex && writerIndex == capacity()) {
             for (int i = 0, size = componentCount; i < size; i++) {
-                components[i].freeIfNecessary();
+                components[i].free();
             }
             lastAccessed = null;
             clearComps();
@@ -1727,7 +1716,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         int firstComponentId = toComponentIndex0(readerIndex);
         for (int i = 0; i < firstComponentId; i ++) {
             Component c = components[i];
-            c.freeIfNecessary();
+            c.free();
             if (lastAccessed == c) {
                 lastAccessed = null;
             }
@@ -1737,7 +1726,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         Component c = components[firstComponentId];
         if (readerIndex == c.endOffset) {
             // new slice would be empty, so remove instead
-            c.freeIfNecessary();
+            c.free();
             if (lastAccessed == c) {
                 lastAccessed = null;
             }
@@ -1803,7 +1792,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         // copy then release
         void transferTo(ByteBuf dst) {
             dst.writeBytes(buf, idx(offset), length());
-            freeIfNecessary();
+            free();
         }
 
         ByteBuf slice() {
@@ -1814,7 +1803,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             return buf.duplicate().setIndex(idx(offset), idx(endOffset));
         }
 
-        void freeIfNecessary() {
+        void free() {
             // Release the slice if present since it may have a different
             // refcount to the unwrapped buf if it is a PooledSlicedByteBuf
             ByteBuf buffer = slice;
@@ -1823,7 +1812,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             } else {
                 buf.release();
             }
-            // null out in either case since it could be racy
+            // null out in either case since it could be racy if set lazily (but not
+            // in the case we care about, where it will have been set in the ctor)
             slice = null;
         }
     }
@@ -2065,7 +2055,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     @Override
     public CompositeByteBuf writeBytes(byte[] src) {
-        writeBytes(src, 0, src.length);
+        super.writeBytes(src, 0, src.length);
         return this;
     }
 
@@ -2129,8 +2119,13 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         // We're not using foreach to avoid creating an iterator.
         // see https://github.com/netty/netty/issues/2642
         for (int i = 0, size = componentCount; i < size; i++) {
-            components[i].freeIfNecessary();
+            components[i].free();
         }
+    }
+
+    @Override
+    boolean isAccessible() {
+        return !freed;
     }
 
     @Override

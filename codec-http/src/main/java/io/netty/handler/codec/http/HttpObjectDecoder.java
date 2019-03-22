@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -168,21 +170,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders, int initialBufferSize) {
-        if (maxInitialLineLength <= 0) {
-            throw new IllegalArgumentException(
-                    "maxInitialLineLength must be a positive integer: " +
-                     maxInitialLineLength);
-        }
-        if (maxHeaderSize <= 0) {
-            throw new IllegalArgumentException(
-                    "maxHeaderSize must be a positive integer: " +
-                    maxHeaderSize);
-        }
-        if (maxChunkSize <= 0) {
-            throw new IllegalArgumentException(
-                    "maxChunkSize must be a positive integer: " +
-                    maxChunkSize);
-        }
+        checkPositive(maxInitialLineLength, "maxInitialLineLength");
+        checkPositive(maxHeaderSize, "maxHeaderSize");
+        checkPositive(maxChunkSize, "maxChunkSize");
+
         AppendableCharSequence seq = new AppendableCharSequence(initialBufferSize);
         lineParser = new LineParser(seq, maxInitialLineLength);
         headerParser = new HeaderParser(seq, maxHeaderSize);
@@ -640,49 +631,50 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         if (line == null) {
             return null;
         }
-        CharSequence lastHeader = null;
-        if (line.length() > 0) {
-            LastHttpContent trailer = this.trailer;
-            if (trailer == null) {
-                trailer = this.trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
-            }
-            do {
-                char firstChar = line.charAt(0);
-                if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
-                    List<String> current = trailer.trailingHeaders().getAll(lastHeader);
-                    if (!current.isEmpty()) {
-                        int lastPos = current.size() - 1;
-                        //please do not make one line from below code
-                        //as it breaks +XX:OptimizeStringConcat optimization
-                        String lineTrimmed = line.toString().trim();
-                        String currentLastPos = current.get(lastPos);
-                        current.set(lastPos, currentLastPos + lineTrimmed);
-                    }
-                } else {
-                    splitHeader(line);
-                    CharSequence headerName = name;
-                    if (!HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(headerName) &&
-                        !HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(headerName) &&
-                        !HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(headerName)) {
-                        trailer.trailingHeaders().add(headerName, value);
-                    }
-                    lastHeader = name;
-                    // reset name and value fields
-                    name = null;
-                    value = null;
-                }
-
-                line = headerParser.parse(buffer);
-                if (line == null) {
-                    return null;
-                }
-            } while (line.length() > 0);
-
-            this.trailer = null;
-            return trailer;
+        LastHttpContent trailer = this.trailer;
+        if (line.length() == 0 && trailer == null) {
+            // We have received the empty line which signals the trailer is complete and did not parse any trailers
+            // before. Just return an empty last content to reduce allocations.
+            return LastHttpContent.EMPTY_LAST_CONTENT;
         }
 
-        return LastHttpContent.EMPTY_LAST_CONTENT;
+        CharSequence lastHeader = null;
+        if (trailer == null) {
+            trailer = this.trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
+        }
+        while (line.length() > 0) {
+            char firstChar = line.charAt(0);
+            if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
+                List<String> current = trailer.trailingHeaders().getAll(lastHeader);
+                if (!current.isEmpty()) {
+                    int lastPos = current.size() - 1;
+                    //please do not make one line from below code
+                    //as it breaks +XX:OptimizeStringConcat optimization
+                    String lineTrimmed = line.toString().trim();
+                    String currentLastPos = current.get(lastPos);
+                    current.set(lastPos, currentLastPos + lineTrimmed);
+                }
+            } else {
+                splitHeader(line);
+                CharSequence headerName = name;
+                if (!HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(headerName) &&
+                        !HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(headerName) &&
+                        !HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(headerName)) {
+                    trailer.trailingHeaders().add(headerName, value);
+                }
+                lastHeader = name;
+                // reset name and value fields
+                name = null;
+                value = null;
+            }
+            line = headerParser.parse(buffer);
+            if (line == null) {
+                return null;
+            }
+        }
+
+        this.trailer = null;
+        return trailer;
     }
 
     protected abstract boolean isDecodingRequest();

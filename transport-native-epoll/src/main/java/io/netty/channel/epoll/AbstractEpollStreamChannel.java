@@ -54,6 +54,7 @@ import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRI
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.FileDescriptor.pipe;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel implements DuplexChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
@@ -163,9 +164,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         if (ch.eventLoop() != eventLoop()) {
             throw new IllegalArgumentException("EventLoops are not the same.");
         }
-        if (len < 0) {
-            throw new IllegalArgumentException("len: " + len + " (expected: >= 0)");
-        }
+        checkPositiveOrZero(len, "len");
         if (ch.config().getEpollMode() != EpollMode.LEVEL_TRIGGERED
                 || config().getEpollMode() != EpollMode.LEVEL_TRIGGERED) {
             throw new IllegalStateException("spliceTo() supported only when using " + EpollMode.LEVEL_TRIGGERED);
@@ -214,12 +213,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      */
     public final ChannelFuture spliceTo(final FileDescriptor ch, final int offset, final int len,
                                         final ChannelPromise promise) {
-        if (len < 0) {
-            throw new IllegalArgumentException("len: " + len + " (expected: >= 0)");
-        }
-        if (offset < 0) {
-            throw new IllegalArgumentException("offset must be >= 0 but was " + offset);
-        }
+        checkPositiveOrZero(len, "len");
+        checkPositiveOrZero(offset, "offser");
         if (config().getEpollMode() != EpollMode.LEVEL_TRIGGERED) {
             throw new IllegalStateException("spliceTo() supported only when using " + EpollMode.LEVEL_TRIGGERED);
         }
@@ -372,13 +367,13 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      * </ul>
      */
     private int writeDefaultFileRegion(ChannelOutboundBuffer in, DefaultFileRegion region) throws Exception {
+        final long offset = region.transferred();
         final long regionCount = region.count();
-        if (region.transferred() >= regionCount) {
+        if (offset >= regionCount) {
             in.remove();
             return 0;
         }
 
-        final long offset = region.transferred();
         final long flushedAmount = socket.sendFile(region, region.position(), offset, regionCount - offset);
         if (flushedAmount > 0) {
             in.progress(flushedAmount);
@@ -386,6 +381,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 in.remove();
             }
             return 1;
+        } else if (flushedAmount == 0) {
+            validateFileRegion(region, offset);
         }
         return WRITE_STATUS_SNDBUF_FULL;
     }

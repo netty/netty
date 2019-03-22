@@ -16,6 +16,8 @@
 
 package io.netty.buffer;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
@@ -223,9 +225,7 @@ public final class EmptyByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf ensureWritable(int minWritableBytes) {
-        if (minWritableBytes < 0) {
-            throw new IllegalArgumentException("minWritableBytes: " + minWritableBytes + " (expected: >= 0)");
-        }
+        checkPositiveOrZero(minWritableBytes, "minWritableBytes");
         if (minWritableBytes != 0) {
             throw new IndexOutOfBoundsException();
         }
@@ -234,9 +234,7 @@ public final class EmptyByteBuf extends ByteBuf {
 
     @Override
     public int ensureWritable(int minWritableBytes, boolean force) {
-        if (minWritableBytes < 0) {
-            throw new IllegalArgumentException("minWritableBytes: " + minWritableBytes + " (expected: >= 0)");
-        }
+        checkPositiveOrZero(minWritableBytes, "minWritableBytes");
 
         if (minWritableBytes == 0) {
             return 0;
@@ -1048,9 +1046,7 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     private ByteBuf checkIndex(int index, int length) {
-        if (length < 0) {
-            throw new IllegalArgumentException("length: " + length);
-        }
+        checkPositiveOrZero(length, "length");
         if (index != 0 || length != 0) {
             throw new IndexOutOfBoundsException();
         }
@@ -1058,9 +1054,7 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     private ByteBuf checkLength(int length) {
-        if (length < 0) {
-            throw new IllegalArgumentException("length: " + length + " (expected: >= 0)");
-        }
+        checkPositiveOrZero(length, "length");
         if (length != 0) {
             throw new IndexOutOfBoundsException();
         }

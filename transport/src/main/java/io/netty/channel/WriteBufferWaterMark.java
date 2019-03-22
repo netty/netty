@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 /**
  * WriteBufferWaterMark is used to set low water mark and high water mark for the write buffer.
  * <p>
@@ -54,9 +56,7 @@ public final class WriteBufferWaterMark {
      */
     WriteBufferWaterMark(int low, int high, boolean validate) {
         if (validate) {
-            if (low < 0) {
-                throw new IllegalArgumentException("write buffer's low water mark must be >= 0");
-            }
+            checkPositiveOrZero(low, "low");
             if (high < low) {
                 throw new IllegalArgumentException(
                         "write buffer's high water mark cannot be less than " +

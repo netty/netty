@@ -69,7 +69,7 @@ public final class WebSocketExtensionTestUtil {
 
         private final String name;
 
-        public WebSocketExtensionDataMatcher(String name) {
+        WebSocketExtensionDataMatcher(String name) {
             this.name = name;
         }
 

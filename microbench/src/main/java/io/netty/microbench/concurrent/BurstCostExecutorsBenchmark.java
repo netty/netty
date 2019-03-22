@@ -67,7 +67,7 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
         private final AtomicBoolean poisoned = new AtomicBoolean();
         private final Thread executorThread;
 
-        public SpinExecutorService(int maxTasks) {
+        SpinExecutorService(int maxTasks) {
             tasks = PlatformDependent.newFixedMpscQueue(maxTasks);
             executorThread = new Thread(new Runnable() {
                 @Override

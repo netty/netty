@@ -50,9 +50,9 @@ public class TestChannelInitializer extends ChannelInitializer<Channel> {
     /**
      * Designed to read a single byte at a time to control the number of reads done at a fine granularity.
      */
-    private static final class TestNumReadsRecvByteBufAllocator implements RecvByteBufAllocator {
+    static final class TestNumReadsRecvByteBufAllocator implements RecvByteBufAllocator {
         private final AtomicInteger numReads;
-        TestNumReadsRecvByteBufAllocator(AtomicInteger numReads) {
+        private TestNumReadsRecvByteBufAllocator(AtomicInteger numReads) {
             this.numReads = numReads;
         }
 

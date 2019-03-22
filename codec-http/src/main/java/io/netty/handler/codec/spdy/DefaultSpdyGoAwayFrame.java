@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.spdy;
 
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -62,10 +64,7 @@ public class DefaultSpdyGoAwayFrame implements SpdyGoAwayFrame {
 
     @Override
     public SpdyGoAwayFrame setLastGoodStreamId(int lastGoodStreamId) {
-        if (lastGoodStreamId < 0) {
-            throw new IllegalArgumentException("Last-good-stream-ID"
-                    + " cannot be negative: " + lastGoodStreamId);
-        }
+        checkPositiveOrZero(lastGoodStreamId, "lastGoodStreamId");
         this.lastGoodStreamId = lastGoodStreamId;
         return this;
     }

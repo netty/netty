@@ -123,7 +123,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
     /**
      * {@inheritDoc}
      *
-     * This can be safetly cast to {@link OioDatagramChannelConfig}.
+     * This can be safely cast to {@link OioDatagramChannelConfig}.
      */
     @Override
     // TODO: Change return type to OioDatagramChannelConfig in next major release

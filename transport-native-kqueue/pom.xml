@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.33.Final-SNAPSHOT</version>
+    <version>4.1.35.Final-SNAPSHOT</version>
   </parent>
   <artifactId>netty-transport-native-kqueue</artifactId>
 
@@ -90,7 +90,6 @@
                   <goal>generate</goal>
                   <goal>build</goal>
                 </goals>
-                <phase>compile</phase>
               </execution>
             </executions>
           </plugin>
@@ -198,7 +197,6 @@
                   <goal>generate</goal>
                   <goal>build</goal>
                 </goals>
-                <phase>compile</phase>
               </execution>
             </executions>
           </plugin>
@@ -305,7 +303,6 @@
                   <goal>generate</goal>
                   <goal>build</goal>
                 </goals>
-                <phase>compile</phase>
               </execution>
             </executions>
           </plugin>
@@ -355,8 +352,8 @@
 
   <properties>
     <javaModuleName>io.netty.transport.kqueue</javaModuleName>
-    <!-- Needed by the native transport as we need the memoryAddress of the ByteBuffer -->
-    <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED</argLine.java9.extras>
+    <!-- Needed as we use SelfSignedCertificate in our tests -->
+    <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
     <unix.common.lib.name>netty-unix-common</unix.common.lib.name>
     <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>
     <unix.common.lib.unpacked.dir>${unix.common.lib.dir}/META-INF/native/lib</unix.common.lib.unpacked.dir>

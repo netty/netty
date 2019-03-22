@@ -157,7 +157,7 @@ public class OcspClientExample {
 
         private final Promise<FullHttpResponse> promise;
 
-        public HttpClientHandler(String host, Promise<FullHttpResponse> promise) {
+        HttpClientHandler(String host, Promise<FullHttpResponse> promise) {
             this.host = host;
             this.promise = promise;
         }
@@ -203,7 +203,7 @@ public class OcspClientExample {
 
     private static class ExampleOcspClientHandler extends OcspClientHandler {
 
-        public ExampleOcspClientHandler(ReferenceCountedOpenSslEngine engine) {
+        ExampleOcspClientHandler(ReferenceCountedOpenSslEngine engine) {
             super(engine);
         }
 

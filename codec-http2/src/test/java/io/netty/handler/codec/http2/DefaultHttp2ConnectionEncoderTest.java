@@ -55,6 +55,7 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -126,6 +127,13 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(channel.unsafe()).thenReturn(unsafe);
         ChannelConfig config = new DefaultChannelConfig(channel);
         when(channel.config()).thenReturn(config);
+        doAnswer(new Answer<ChannelFuture>() {
+            @Override
+            public ChannelFuture answer(InvocationOnMock in) {
+                return newPromise().setFailure((Throwable) in.getArgument(0));
+            }
+        }).when(channel).newFailedFuture(any(Throwable.class));
+
         when(writer.configuration()).thenReturn(writerConfig);
         when(writerConfig.frameSizePolicy()).thenReturn(frameSizePolicy);
         when(frameSizePolicy.maxFrameSize()).thenReturn(64);
@@ -204,6 +212,36 @@ public class DefaultHttp2ConnectionEncoderTest {
 
         encoder = new DefaultHttp2ConnectionEncoder(connection, writer);
         encoder.lifecycleManager(lifecycleManager);
+    }
+
+    @Test
+    public void dataWithEndOfStreamWriteShouldSignalThatFrameWasConsumedOnError() throws Exception {
+        dataWriteShouldSignalThatFrameWasConsumedOnError0(true);
+    }
+
+    @Test
+    public void dataWriteShouldSignalThatFrameWasConsumedOnError() throws Exception {
+        dataWriteShouldSignalThatFrameWasConsumedOnError0(false);
+    }
+
+    private void dataWriteShouldSignalThatFrameWasConsumedOnError0(boolean endOfStream) throws Exception {
+        createStream(STREAM_ID, false);
+        final ByteBuf data = dummyData();
+        ChannelPromise p = newPromise();
+        encoder.writeData(ctx, STREAM_ID, data, 0, endOfStream, p);
+
+        FlowControlled controlled = payloadCaptor.getValue();
+        assertEquals(8, controlled.size());
+        payloadCaptor.getValue().write(ctx, 4);
+        assertEquals(4, controlled.size());
+
+        Throwable error = new IllegalStateException();
+        payloadCaptor.getValue().error(ctx, error);
+        payloadCaptor.getValue().write(ctx, 8);
+        assertEquals(0, controlled.size());
+        assertEquals("abcd", writtenData.get(0));
+        assertEquals(0, data.refCnt());
+        assertSame(error, p.cause());
     }
 
     @Test
