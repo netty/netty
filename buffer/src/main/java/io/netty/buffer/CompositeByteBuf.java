@@ -425,7 +425,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      * {@link CompositeByteBuf}.
      */
     public CompositeByteBuf addFlattenedComponents(boolean increaseWriterIndex, ByteBuf buffer) {
-        checkNotNull(buffer, "buffers");
+        checkNotNull(buffer, "buffer");
         final int ridx = buffer.readerIndex();
         final int widx = buffer.writerIndex();
         if (ridx == widx) {
@@ -473,7 +473,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             return this;
         } finally {
             if (buffer != null) {
-                // if we did not succeed, attempt to rollback any added
+                // if we did not succeed, attempt to rollback any components that were added
                 if (increaseWriterIndex) {
                     writerIndex = writerIndexBefore;
                 }
