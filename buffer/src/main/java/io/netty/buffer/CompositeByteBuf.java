@@ -753,7 +753,12 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 if (bytesToTrim < cLength) {
                     // Trim the last component
                     c.endOffset -= bytesToTrim;
-                    c.slice = null;
+                    ByteBuf slice = c.slice;
+                    if (slice != null) {
+                        // We must replace the cached slice with a derived one to ensure that
+                        // it can later be released properly in the case of PooledSlicedByteBuf.
+                        c.slice = slice.slice(0, c.length());
+                    }
                     break;
                 }
                 c.free();
@@ -1732,10 +1737,16 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             }
             firstComponentId++;
         } else {
+            int trimmedBytes = readerIndex - c.offset;
             c.offset = 0;
             c.endOffset -= readerIndex;
             c.adjustment += readerIndex;
-            c.slice = null;
+            ByteBuf slice = c.slice;
+            if (slice != null) {
+                // We must replace the cached slice with a derived one to ensure that
+                // it can later be released properly in the case of PooledSlicedByteBuf.
+                c.slice = slice.slice(trimmedBytes, c.length());
+            }
         }
 
         removeCompRange(0, firstComponentId);
