@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
 /**
- * Web Socket frame containing binary data
+ * Web Socket frame containing binary data.
  */
 public class PingWebSocketFrame extends WebSocketFrame {
 
@@ -41,7 +41,7 @@ public class PingWebSocketFrame extends WebSocketFrame {
     }
 
     /**
-     * Creates a new ping frame with the specified binary data
+     * Creates a new ping frame with the specified binary data.
      *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
