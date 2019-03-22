@@ -20,7 +20,7 @@ import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.util.internal.StringUtil;
 
 /**
- * Base class for web socket frames
+ * Base class for web socket frames.
  */
 public abstract class WebSocketFrame extends DefaultByteBufHolder {
 

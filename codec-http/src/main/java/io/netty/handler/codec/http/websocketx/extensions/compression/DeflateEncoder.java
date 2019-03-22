@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx.extensions.compression;
 
-import static io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateDecoder.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -28,8 +27,12 @@ import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionEncoder;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter;
 
 import java.util.List;
+
+import static io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateDecoder.*;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * Deflate implementation of a payload compressor for
@@ -40,6 +43,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
     private final int compressionLevel;
     private final int windowSize;
     private final boolean noContext;
+    private final WebSocketExtensionFilter extensionEncoderFilter;
 
     private EmbeddedChannel encoder;
 
@@ -48,11 +52,21 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
      * @param compressionLevel compression level of the compressor.
      * @param windowSize maximum size of the window compressor buffer.
      * @param noContext true to disable context takeover.
+     * @param extensionEncoderFilter extension encoder filter.
      */
-    DeflateEncoder(int compressionLevel, int windowSize, boolean noContext) {
+    DeflateEncoder(int compressionLevel, int windowSize, boolean noContext,
+                   WebSocketExtensionFilter extensionEncoderFilter) {
         this.compressionLevel = compressionLevel;
         this.windowSize = windowSize;
         this.noContext = noContext;
+        this.extensionEncoderFilter = checkNotNull(extensionEncoderFilter, "extensionEncoderFilter");
+    }
+
+    /**
+     * Returns the extension encoder filter.
+     */
+    protected WebSocketExtensionFilter extensionEncoderFilter() {
+        return extensionEncoderFilter;
     }
 
     /**
