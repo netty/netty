@@ -289,7 +289,7 @@ public class SslErrorTest {
                 // When the error is produced on the client side and the client side uses JDK as provider it will always
                 // use "certificate unknown".
                 !serverProduceError && clientProvider == SslProvider.JDK &&
-                        message.toLowerCase(Locale.UK).contains("certificate unknown")) {
+                        message.toLowerCase(Locale.UK).contains("unknown")) {
             promise.setSuccess(null);
         } else {
             Throwable error = new AssertionError("message not contains '" + messagePart + "': " + message);
