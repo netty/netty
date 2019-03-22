@@ -76,7 +76,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
                                  ChannelHandler handler) {
         this.name = requireNonNull(name, "name");
         this.pipeline = pipeline;
-        this.executionMask = ChannelHandlerMask.mask(handler.getClass());
+        this.executionMask = mask(handler.getClass());
         this.handler = handler;
     }
 

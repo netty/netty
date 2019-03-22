@@ -25,8 +25,8 @@ import io.netty.util.concurrent.EventExecutor;
 import java.net.SocketAddress;
 
 /**
- *  Combines a {@link ChannelHandler} (which only implements inbound handling) and a {@link ChannelHandler}
- *  (which only implements outbound handling) into one {@link ChannelHandler}.
+ *  Combines the inbound handling of one {@link ChannelHandler} with the outbound handling of
+ *  another {@link ChannelHandler}.
  */
 public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends ChannelHandler>
         extends ChannelHandlerAdapter {
