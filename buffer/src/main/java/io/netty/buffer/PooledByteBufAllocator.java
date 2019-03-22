@@ -474,7 +474,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 
         @Override
         protected void onRemoval(PoolThreadCache threadCache) {
-            threadCache.free();
+            threadCache.free(false);
         }
 
         private <T> PoolArena<T> leastUsedArena(PoolArena<T>[] arenas) {
