@@ -144,7 +144,7 @@ public class PerFrameDeflateDecoderTest {
 
         assertTrue(inboundBinaryFrame.release());
 
-        assertTrue(encoderChannel.finish());
+        assertTrue(encoderChannel.finishAndReleaseAll());
         assertFalse(decoderChannel.finish());
     }
 

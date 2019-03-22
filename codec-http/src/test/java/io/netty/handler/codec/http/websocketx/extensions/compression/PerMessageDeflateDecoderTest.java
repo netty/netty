@@ -214,7 +214,7 @@ public class PerMessageDeflateDecoderTest {
         assertEquals(compressedPayload, inboundFrame.content());
         assertTrue(inboundFrame.release());
 
-        assertTrue(encoderChannel.finish());
+        assertTrue(encoderChannel.finishAndReleaseAll());
         assertFalse(decoderChannel.finish());
     }
 
@@ -259,7 +259,7 @@ public class PerMessageDeflateDecoderTest {
         assertArrayEquals(binaryPayload, ByteBufUtil.getBytes(inboundBinaryFrame.content()));
         assertTrue(inboundBinaryFrame.release());
 
-        assertTrue(encoderChannel.finish());
+        assertTrue(encoderChannel.finishAndReleaseAll());
         assertFalse(decoderChannel.finish());
     }
 
@@ -287,7 +287,7 @@ public class PerMessageDeflateDecoderTest {
         assertTrue(encoderChannel.writeOutbound(Unpooled.wrappedBuffer(finalPayload)));
         ByteBuf compressedFirstPayload = encoderChannel.readOutbound();
         ByteBuf compressedFinalPayload = encoderChannel.readOutbound();
-        assertTrue(encoderChannel.finish());
+        assertTrue(encoderChannel.finishAndReleaseAll());
 
         BinaryWebSocketFrame firstPart = new BinaryWebSocketFrame(false, WebSocketExtension.RSV1,
                                                                   compressedFirstPayload);
@@ -302,7 +302,12 @@ public class PerMessageDeflateDecoderTest {
         assertTrue(outboundFirstPart.release());
 
         //final part throwing exception
-        decoderChannel.writeInbound(finalPart);
+        try {
+            decoderChannel.writeInbound(finalPart);
+        } finally {
+            assertTrue(finalPart.release());
+            assertFalse(encoderChannel.finishAndReleaseAll());
+        }
     }
 
 }

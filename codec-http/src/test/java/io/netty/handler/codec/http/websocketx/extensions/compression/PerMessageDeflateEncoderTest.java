@@ -264,7 +264,12 @@ public class PerMessageDeflateEncoderTest {
         assertTrue(outboundFirstPart.release());
 
         //final part throwing exception
-        encoderChannel.writeOutbound(finalPart);
+        try {
+            encoderChannel.writeOutbound(finalPart);
+        } finally {
+            assertTrue(finalPart.release());
+            assertFalse(encoderChannel.finishAndReleaseAll());
+        }
     }
 
 }
