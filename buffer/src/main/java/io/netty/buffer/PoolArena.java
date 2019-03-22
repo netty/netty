@@ -276,7 +276,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 return;
             }
 
-            freeChunk(chunk, handle, sizeClass, nioBuffer);
+            freeChunk(chunk, handle, sizeClass, nioBuffer, false);
         }
     }
 
@@ -287,21 +287,25 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         return isTiny(normCapacity) ? SizeClass.Tiny : SizeClass.Small;
     }
 
-    void freeChunk(PoolChunk<T> chunk, long handle, SizeClass sizeClass, ByteBuffer nioBuffer) {
+    void freeChunk(PoolChunk<T> chunk, long handle, SizeClass sizeClass, ByteBuffer nioBuffer, boolean finalizer) {
         final boolean destroyChunk;
         synchronized (this) {
-            switch (sizeClass) {
-            case Normal:
-                ++deallocationsNormal;
-                break;
-            case Small:
-                ++deallocationsSmall;
-                break;
-            case Tiny:
-                ++deallocationsTiny;
-                break;
-            default:
-                throw new Error();
+            // We only call this if freeChunk is not called because of the PoolThreadCache finalizer as otherwise this
+            // may fail due lazy class-loading in for example tomcat.
+            if (!finalizer) {
+                switch (sizeClass) {
+                    case Normal:
+                        ++deallocationsNormal;
+                        break;
+                    case Small:
+                        ++deallocationsSmall;
+                        break;
+                    case Tiny:
+                        ++deallocationsTiny;
+                        break;
+                    default:
+                        throw new Error();
+                }
             }
             destroyChunk = !chunk.parent.free(chunk, handle, nioBuffer);
         }
