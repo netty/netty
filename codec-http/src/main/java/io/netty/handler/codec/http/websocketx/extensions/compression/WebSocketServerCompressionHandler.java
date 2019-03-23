@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.websocketx.extensions.compression;
 
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandler;
+import io.netty.handler.codec.http.HttpRequest;
 
 /**
  * Extends <tt>io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerExtensionHandler</tt>
@@ -30,6 +31,18 @@ public class WebSocketServerCompressionHandler extends WebSocketServerExtensionH
      */
     public WebSocketServerCompressionHandler() {
         super(new PerMessageDeflateServerExtensionHandshaker(),
+                new DeflateFrameServerExtensionHandshaker());
+    }
+
+    /**
+     * Constructor
+     *
+     * @param request
+     *      The instance of WebSocket upgrade HTTP request.
+     */
+    public WebSocketServerCompressionHandler(HttpRequest request) {
+        super(request,
+                new PerMessageDeflateServerExtensionHandshaker(),
                 new DeflateFrameServerExtensionHandshaker());
     }
 

@@ -55,6 +55,24 @@ public class WebSocketServerCompressionHandlerTest {
     }
 
     @Test
+    public void testPredefinedReuqestSuccess() {
+        HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION);
+        EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerCompressionHandler(req));
+
+        HttpResponse res = newUpgradeResponse(null);
+        ch.writeOutbound(res);
+
+        HttpResponse res2 = ch.readOutbound();
+        List<WebSocketExtensionData> exts = WebSocketExtensionUtil.extractExtensions(
+                res2.headers().get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS));
+
+        Assert.assertEquals(PERMESSAGE_DEFLATE_EXTENSION, exts.get(0).name());
+        Assert.assertTrue(exts.get(0).parameters().isEmpty());
+        Assert.assertNotNull(ch.pipeline().get(PerMessageDeflateDecoder.class));
+        Assert.assertNotNull(ch.pipeline().get(PerMessageDeflateEncoder.class));
+    }
+
+    @Test
     public void testClientWindowSizeSuccess() {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
                 new PerMessageDeflateServerExtensionHandshaker(6, false, 10, false, false)));

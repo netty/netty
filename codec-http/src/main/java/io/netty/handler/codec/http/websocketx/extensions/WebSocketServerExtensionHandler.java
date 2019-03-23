@@ -62,44 +62,61 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
         this.extensionHandshakers = Arrays.asList(extensionHandshakers);
     }
 
+    /**
+     * Constructor
+     *
+     * @param request
+     *      The instance of WebSocket upgrade HTTP request.
+     * @param extensionHandshakers
+     *      The extension handshaker in priority order. A handshaker could be repeated many times
+     *      with fallback configuration.
+     */
+    public WebSocketServerExtensionHandler(HttpRequest request,
+                                           WebSocketServerExtensionHandshaker... extensionHandshakers) {
+        this(extensionHandshakers);
+        processHttpRequest(request);
+    }
+
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg)
             throws Exception {
         if (msg instanceof HttpRequest) {
-            HttpRequest request = (HttpRequest) msg;
+            processHttpRequest((HttpRequest) msg);
+        }
 
-            if (WebSocketExtensionUtil.isWebsocketUpgrade(request.headers())) {
-                String extensionsHeader = request.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
+        super.channelRead(ctx, msg);
+    }
 
-                if (extensionsHeader != null) {
-                    List<WebSocketExtensionData> extensions =
-                            WebSocketExtensionUtil.extractExtensions(extensionsHeader);
-                    int rsv = 0;
+    private void processHttpRequest(HttpRequest request) {
+        if (WebSocketExtensionUtil.isWebsocketUpgrade(request.headers())) {
+            String extensionsHeader = request.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
 
-                    for (WebSocketExtensionData extensionData : extensions) {
-                        Iterator<WebSocketServerExtensionHandshaker> extensionHandshakersIterator =
-                                extensionHandshakers.iterator();
-                        WebSocketServerExtension validExtension = null;
+            if (extensionsHeader != null) {
+                List<WebSocketExtensionData> extensions =
+                        WebSocketExtensionUtil.extractExtensions(extensionsHeader);
+                int rsv = 0;
 
-                        while (validExtension == null && extensionHandshakersIterator.hasNext()) {
-                            WebSocketServerExtensionHandshaker extensionHandshaker =
-                                    extensionHandshakersIterator.next();
-                            validExtension = extensionHandshaker.handshakeExtension(extensionData);
+                for (WebSocketExtensionData extensionData : extensions) {
+                    Iterator<WebSocketServerExtensionHandshaker> extensionHandshakersIterator =
+                            extensionHandshakers.iterator();
+                    WebSocketServerExtension validExtension = null;
+
+                    while (validExtension == null && extensionHandshakersIterator.hasNext()) {
+                        WebSocketServerExtensionHandshaker extensionHandshaker =
+                                extensionHandshakersIterator.next();
+                        validExtension = extensionHandshaker.handshakeExtension(extensionData);
+                    }
+
+                    if (validExtension != null && ((validExtension.rsv() & rsv) == 0)) {
+                        if (validExtensions == null) {
+                            validExtensions = new ArrayList<WebSocketServerExtension>(1);
                         }
-
-                        if (validExtension != null && ((validExtension.rsv() & rsv) == 0)) {
-                            if (validExtensions == null) {
-                                validExtensions = new ArrayList<WebSocketServerExtension>(1);
-                            }
-                            rsv = rsv | validExtension.rsv();
-                            validExtensions.add(validExtension);
-                        }
+                        rsv = rsv | validExtension.rsv();
+                        validExtensions.add(validExtension);
                     }
                 }
             }
         }
-
-        super.channelRead(ctx, msg);
     }
 
     @Override
