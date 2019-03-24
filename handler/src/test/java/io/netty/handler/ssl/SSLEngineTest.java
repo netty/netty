@@ -67,6 +67,7 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.Principal;
+import java.security.PrivateKey;
 import java.security.Provider;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
@@ -83,7 +84,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import javax.net.ssl.ExtendedSSLSession;
+import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.KeyManagerFactorySpi;
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
@@ -100,6 +104,7 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.TrustManagerFactorySpi;
+import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 import javax.security.cert.X509Certificate;
@@ -3049,6 +3054,126 @@ public abstract class SSLEngineTest {
 
             Principal clientPeerPrincipal = clientSession.getPeerPrincipal();
             assertEquals(serverLocalPrincipal, clientPeerPrincipal);
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
+            ssc.delete();
+        }
+    }
+
+    @Test
+    public void testSupportedSignatureAlgorithms() throws Exception {
+        final SelfSignedCertificate ssc = new SelfSignedCertificate();
+
+        final class TestKeyManagerFactory extends KeyManagerFactory {
+            TestKeyManagerFactory(final KeyManagerFactory factory) {
+                super(new KeyManagerFactorySpi() {
+
+                    private final KeyManager[] managers = factory.getKeyManagers();
+
+                    @Override
+                    protected void engineInit(KeyStore keyStore, char[] chars)  {
+                        throw new UnsupportedOperationException();
+                    }
+
+                    @Override
+                    protected void engineInit(ManagerFactoryParameters managerFactoryParameters) {
+                        throw new UnsupportedOperationException();
+                    }
+
+                    @Override
+                    protected KeyManager[] engineGetKeyManagers() {
+                        KeyManager[] array = new KeyManager[managers.length];
+
+                        for (int i = 0 ; i < array.length; i++) {
+                            final X509ExtendedKeyManager x509ExtendedKeyManager = (X509ExtendedKeyManager) managers[i];
+
+                            array[i] = new X509ExtendedKeyManager() {
+                                @Override
+                                public String[] getClientAliases(String s, Principal[] principals) {
+                                    fail();
+                                    return null;
+                                }
+
+                                @Override
+                                public String chooseClientAlias(
+                                        String[] strings, Principal[] principals, Socket socket) {
+                                    fail();
+                                    return null;
+                                }
+
+                                @Override
+                                public String[] getServerAliases(String s, Principal[] principals) {
+                                    fail();
+                                    return null;
+                                }
+
+                                @Override
+                                public String chooseServerAlias(String s, Principal[] principals, Socket socket) {
+                                    fail();
+                                    return null;
+                                }
+
+                                @Override
+                                public String chooseEngineClientAlias(
+                                        String[] strings, Principal[] principals, SSLEngine sslEngine) {
+                                    assertNotEquals(0, ((ExtendedSSLSession) sslEngine.getHandshakeSession())
+                                            .getPeerSupportedSignatureAlgorithms().length);
+                                    assertNotEquals(0, ((ExtendedSSLSession) sslEngine.getHandshakeSession())
+                                            .getLocalSupportedSignatureAlgorithms().length);
+                                    return x509ExtendedKeyManager.chooseEngineClientAlias(
+                                            strings, principals, sslEngine);
+                                }
+
+                                @Override
+                                public String chooseEngineServerAlias(
+                                        String s, Principal[] principals, SSLEngine sslEngine) {
+                                    assertNotEquals(0, ((ExtendedSSLSession) sslEngine.getHandshakeSession())
+                                            .getPeerSupportedSignatureAlgorithms().length);
+                                    assertNotEquals(0, ((ExtendedSSLSession) sslEngine.getHandshakeSession())
+                                            .getLocalSupportedSignatureAlgorithms().length);
+                                    return x509ExtendedKeyManager.chooseEngineServerAlias(s, principals, sslEngine);
+                                }
+
+                                @Override
+                                public java.security.cert.X509Certificate[] getCertificateChain(String s) {
+                                    return x509ExtendedKeyManager.getCertificateChain(s);
+                                }
+
+                                @Override
+                                public PrivateKey getPrivateKey(String s) {
+                                    return x509ExtendedKeyManager.getPrivateKey(s);
+                                }
+                            };
+                        }
+                        return array;
+                    }
+                }, factory.getProvider(), factory.getAlgorithm());
+            }
+        }
+
+        clientSslCtx = SslContextBuilder.forClient().keyManager(new TestKeyManagerFactory(newKeyManagerFactory(ssc)))
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
+                .build();
+
+        serverSslCtx = SslContextBuilder.forServer(new TestKeyManagerFactory(newKeyManagerFactory(ssc)))
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslContextProvider(serverSslContextProvider())
+                .sslProvider(sslServerProvider())
+                .protocols(protocols())
+                .ciphers(ciphers())
+                .clientAuth(ClientAuth.REQUIRE)
+                .build();
+        SSLEngine clientEngine = null;
+        SSLEngine serverEngine = null;
+        try {
+            clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+            handshake(clientEngine, serverEngine);
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
