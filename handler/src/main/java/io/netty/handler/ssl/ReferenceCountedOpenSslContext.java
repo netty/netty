@@ -673,6 +673,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 logger.debug("verification of certificate failed", cause);
                 SSLHandshakeException e = new SSLHandshakeException("General OpenSslEngine problem");
                 e.initCause(cause);
+                assert engine.handshakeException == null;
                 engine.handshakeException = e;
 
                 // Try to extract the correct error code that should be used.
