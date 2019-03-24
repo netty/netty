@@ -214,6 +214,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                 logger.debug("Failed to set the server-side key material", cause);
                 SSLHandshakeException e = new SSLHandshakeException("General OpenSslEngine problem");
                 e.initCause(cause);
+                assert engine.handshakeException == null;
                 engine.handshakeException = e;
             }
         }
