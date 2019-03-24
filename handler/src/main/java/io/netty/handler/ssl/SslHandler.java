@@ -989,6 +989,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         throw new IllegalStateException("Unknown handshake status: " + result.getHandshakeStatus());
                 }
 
+                // Check if did not produce any bytes and if so break out of the loop, but only if we did not process
+                // a task as last action. It's fine to not produce any data as part of executing a task.
                 if (result.bytesProduced() == 0 && status != HandshakeStatus.NEED_TASK) {
                     break;
                 }
@@ -1657,7 +1659,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             }
 
                             // Flush now as we may have written some data as part of the wrap call.
-                             forceFlush(ctx);
+                            forceFlush(ctx);
                         } catch (Throwable e) {
                             taskError(e);
                             return;
@@ -1666,6 +1668,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         // Now try to feed in more data that we have buffered.
                         tryDecodeAgain();
                         break;
+
                     default:
                         // Should never reach here as we handle all cases.
                         throw new AssertionError();
