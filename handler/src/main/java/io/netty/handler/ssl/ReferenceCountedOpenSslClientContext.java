@@ -278,6 +278,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 logger.debug("request of key failed", cause);
                 SSLHandshakeException e = new SSLHandshakeException("General OpenSslEngine problem");
                 e.initCause(cause);
+                assert engine.handshakeException == null;
                 engine.handshakeException = e;
             }
         }
