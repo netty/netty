@@ -141,7 +141,7 @@ public final class Native {
             throw newIOException("epoll_ctl", res);
         }
     }
-    private static native int epollCtlAdd0(int efd, final int fd, final int flags);
+    private static native int epollCtlAdd0(int efd, int fd, int flags);
 
     public static void epollCtlMod(int efd, final int fd, final int flags) throws IOException {
         int res = epollCtlMod0(efd, fd, flags);
@@ -149,7 +149,7 @@ public final class Native {
             throw newIOException("epoll_ctl", res);
         }
     }
-    private static native int epollCtlMod0(int efd, final int fd, final int flags);
+    private static native int epollCtlMod0(int efd, int fd, int flags);
 
     public static void epollCtlDel(int efd, final int fd) throws IOException {
         int res = epollCtlDel0(efd, fd);
@@ -157,7 +157,7 @@ public final class Native {
             throw newIOException("epoll_ctl", res);
         }
     }
-    private static native int epollCtlDel0(int efd, final int fd);
+    private static native int epollCtlDel0(int efd, int fd);
 
     // File-descriptor operations
     public static int splice(int fd, long offIn, int fdOut, long offOut, long len) throws IOException {
