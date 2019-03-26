@@ -33,7 +33,6 @@ import java.util.Set;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
@@ -276,10 +275,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 keyManagerHolder.setKeyMaterialClientSide(engine, keyTypes, issuers);
             } catch (Throwable cause) {
                 logger.debug("request of key failed", cause);
-                SSLHandshakeException e = new SSLHandshakeException("General OpenSslEngine problem");
-                e.initCause(cause);
-                assert engine.handshakeException == null;
-                engine.handshakeException = e;
+                engine.initHandshakeException(cause);
             }
         }
 

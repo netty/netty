@@ -30,7 +30,6 @@ import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
@@ -212,10 +211,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                 keyManagerHolder.setKeyMaterialServerSide(engine);
             } catch (Throwable cause) {
                 logger.debug("Failed to set the server-side key material", cause);
-                SSLHandshakeException e = new SSLHandshakeException("General OpenSslEngine problem");
-                e.initCause(cause);
-                assert engine.handshakeException == null;
-                engine.handshakeException = e;
+                engine.initHandshakeException(cause);
             }
         }
     }
