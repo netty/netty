@@ -224,10 +224,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private final boolean enableOcsp;
     private int maxWrapOverhead;
     private int maxWrapBufferSize;
-
-    // This is package-private as we set it from OpenSslContext if an exception is thrown during
-    // the verification step.
-    SSLHandshakeException handshakeException;
+    private Throwable handshakeException;
 
     /**
      * Create a new instance.
@@ -1689,11 +1686,25 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             return NEED_WRAP;
         }
 
-        SSLHandshakeException exception = handshakeException;
+        Throwable exception = handshakeException;
         assert exception != null;
         handshakeException = null;
         shutdown();
-        throw exception;
+        if (exception instanceof SSLHandshakeException) {
+            throw (SSLHandshakeException) exception;
+        }
+        SSLHandshakeException e = new SSLHandshakeException("General OpenSslEngine problem");
+        e.initCause(exception);
+        throw e;
+    }
+
+    /**
+     * Should be called if the handshake will be failed due a callback that throws an exception.
+     * This cause will then be used to give more details as part of the {@link SSLHandshakeException}.
+     */
+    final void initHandshakeException(Throwable cause) {
+        assert handshakeException == null;
+        handshakeException = cause;
     }
 
     private SSLEngineResult.HandshakeStatus handshake() throws SSLException {
