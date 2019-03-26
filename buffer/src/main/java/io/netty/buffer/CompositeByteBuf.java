@@ -450,14 +450,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 final int toIdx = Math.min(widx, component.endOffset);
                 final int len = toIdx - fromIdx;
                 if (len > 0) { // skip empty components
-                    final ByteBuf buf = component.buf;
-                    ByteBuf slice = component.slice;
-                    if (slice == null) {
-                        buf.retain();
-                    } else {
-                        slice = slice.retainedSlice(fromIdx - compOffset, len);
-                    }
-                    addComp(componentCount, new Component(buf, component.idx(fromIdx), newOffset, len, slice));
+                    // Note that it's safe to just retain the unwrapped buf here, even in the case
+                    // of PooledSlicedByteBufs - those slices will still be properly released by the
+                    // source Component's free() method.
+                    addComp(componentCount, new Component(
+                            component.buf.retain(), component.idx(fromIdx), newOffset, len, null));
                 }
                 if (widx == toIdx) {
                     break;
