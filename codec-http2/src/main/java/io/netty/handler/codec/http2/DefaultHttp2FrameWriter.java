@@ -593,7 +593,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                 if (paddingBytes(padding) > 0) {
                     ctx.write(ZERO_BUFFER.slice(0, paddingBytes(padding)), promiseAggregator.newPromise());
                 }
-            } while(headerBlock.isReadable());
+            } while (headerBlock.isReadable());
         }
         return promiseAggregator;
     }
