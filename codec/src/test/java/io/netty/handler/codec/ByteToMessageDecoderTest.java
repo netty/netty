@@ -20,6 +20,7 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.buffer.UnpooledHeapByteBuf;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -174,7 +175,7 @@ public class ByteToMessageDecoderTest {
                 assertFalse(in.isReadable());
                 out.add("data");
             }
-        }, new ChannelInboundHandler() {
+        }, new ChannelHandler() {
             @Override
             public void channelInactive(ChannelHandlerContext ctx) {
                 queue.add(3);
@@ -212,7 +213,7 @@ public class ByteToMessageDecoderTest {
             }
         };
 
-        EmbeddedChannel channel = new EmbeddedChannel(decoder, new ChannelInboundHandler() {
+        EmbeddedChannel channel = new EmbeddedChannel(decoder, new ChannelHandler() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 if (msg == upgradeMessage) {

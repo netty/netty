@@ -22,8 +22,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -64,7 +64,7 @@ public class EpollSpliceTest {
         ServerBootstrap bs2 = new ServerBootstrap();
         bs2.channel(EpollServerSocketChannel.class);
         bs2.childOption(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED);
-        bs2.group(group).childHandler(new ChannelInboundHandler() {
+        bs2.group(group).childHandler(new ChannelHandler() {
             @Override
             public void channelActive(final ChannelHandlerContext ctx) throws Exception {
                 ctx.channel().config().setAutoRead(false);
@@ -72,7 +72,7 @@ public class EpollSpliceTest {
                 bs.option(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED);
 
                 bs.channel(EpollSocketChannel.class);
-                bs.group(ctx.channel().eventLoop()).handler(new ChannelInboundHandler() {
+                bs.group(ctx.channel().eventLoop()).handler(new ChannelHandler() {
                     @Override
                     public void channelActive(ChannelHandlerContext context) throws Exception {
                         final EpollSocketChannel ch = (EpollSocketChannel) ctx.channel();
@@ -195,7 +195,7 @@ public class EpollSpliceTest {
         Bootstrap cb = new Bootstrap();
         cb.group(group);
         cb.channel(EpollSocketChannel.class);
-        cb.handler(new ChannelInboundHandler() { });
+        cb.handler(new ChannelHandler() { });
         Channel cc = cb.connect(sc.localAddress()).syncUninterruptibly().channel();
 
         for (int i = 0; i < data.length;) {
@@ -278,7 +278,7 @@ public class EpollSpliceTest {
         }
     }
 
-    private static class SpliceHandler implements ChannelInboundHandler {
+    private static class SpliceHandler implements ChannelHandler {
         private final File file;
 
         volatile Channel channel;

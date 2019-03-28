@@ -19,8 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.Test;
@@ -43,14 +43,14 @@ public class SocketConnectTest extends AbstractSocketTest {
         Channel clientChannel = null;
         try {
             final Promise<InetSocketAddress> localAddressPromise = ImmediateEventExecutor.INSTANCE.newPromise();
-            serverChannel = sb.childHandler(new ChannelInboundHandler() {
+            serverChannel = sb.childHandler(new ChannelHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             localAddressPromise.setSuccess((InetSocketAddress) ctx.channel().localAddress());
                         }
                     }).bind().syncUninterruptibly().channel();
 
-            clientChannel = cb.handler(new ChannelInboundHandler() { }).register().syncUninterruptibly().channel();
+            clientChannel = cb.handler(new ChannelHandler() { }).register().syncUninterruptibly().channel();
 
             assertNull(clientChannel.localAddress());
             assertNull(clientChannel.remoteAddress());
@@ -81,10 +81,10 @@ public class SocketConnectTest extends AbstractSocketTest {
         Channel sc = null;
         Channel cc = null;
         try {
-            sb.childHandler(new ChannelInboundHandler() { });
+            sb.childHandler(new ChannelHandler() { });
             sc = sb.bind().syncUninterruptibly().channel();
 
-            cb.handler(new ChannelInboundHandler() {
+            cb.handler(new ChannelHandler() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) throws Exception {
                     events.add(0);

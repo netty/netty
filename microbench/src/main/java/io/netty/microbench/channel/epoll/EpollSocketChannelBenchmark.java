@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
@@ -57,7 +57,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
             .childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(new ChannelDuplexHandler() {
+                    ch.pipeline().addLast(new ChannelHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
                             if (msg instanceof ByteBuf) {
@@ -77,7 +77,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
         .handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) {
-                ch.pipeline().addLast(new ChannelDuplexHandler() {
+                ch.pipeline().addLast(new ChannelHandler() {
 
                 private ChannelPromise lastWritePromise;
 
@@ -108,7 +108,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
                             throw new IllegalStateException();
                         }
                         lastWritePromise = promise;
-                        super.write(ctx, msg, ctx.voidPromise());
+                        ctx.write(msg, ctx.voidPromise());
                     }
                 });
             }

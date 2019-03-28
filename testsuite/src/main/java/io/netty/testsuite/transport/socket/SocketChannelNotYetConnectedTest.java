@@ -16,6 +16,7 @@
 package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import org.junit.Test;
@@ -32,7 +33,7 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
     }
 
     public void testShutdownNotYetConnected(Bootstrap cb) throws Throwable {
-        SocketChannel ch = (SocketChannel) cb.handler(new ChannelInboundHandler() { })
+        SocketChannel ch = (SocketChannel) cb.handler(new ChannelHandler() { })
                 .bind(newSocketAddress()).syncUninterruptibly().channel();
         try {
             try {

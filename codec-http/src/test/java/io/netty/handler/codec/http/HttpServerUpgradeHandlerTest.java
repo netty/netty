@@ -18,12 +18,10 @@ package io.netty.handler.codec.http;
 import java.util.Collection;
 import java.util.Collections;
 
-import io.netty.channel.ChannelInboundHandler;
 import org.junit.Test;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -56,7 +54,7 @@ public class HttpServerUpgradeHandlerTest {
             assertNotNull(ctx.pipeline().get(HttpServerUpgradeHandler.class));
 
             // Add a marker handler to signal that the upgrade has happened
-            ctx.pipeline().addAfter(ctx.name(), "marker", new ChannelInboundHandler() { });
+            ctx.pipeline().addAfter(ctx.name(), "marker", new ChannelHandler() { });
           }
     }
 
@@ -65,7 +63,7 @@ public class HttpServerUpgradeHandlerTest {
         final HttpServerCodec httpServerCodec = new HttpServerCodec();
         final UpgradeCodecFactory factory = protocol -> new TestUpgradeCodec();
 
-        ChannelHandler testInStackFrame = new ChannelDuplexHandler() {
+        ChannelHandler testInStackFrame = new ChannelHandler() {
             // marker boolean to signal that we're in the `channelRead` method
             private boolean inReadCall;
             private boolean writeUpgradeMessage;
@@ -78,7 +76,7 @@ public class HttpServerUpgradeHandlerTest {
 
                 inReadCall = true;
                 try {
-                    super.channelRead(ctx, msg);
+                    ctx.fireChannelRead(msg);
                     // All in the same call stack, the upgrade codec should receive the message,
                     // written the upgrade response, and upgraded the pipeline.
                     assertTrue(writeUpgradeMessage);

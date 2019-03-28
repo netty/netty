@@ -18,10 +18,9 @@ package io.netty.bootstrap;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -62,7 +61,7 @@ public class BootstrapTest {
 
     private static final EventLoopGroup groupA = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
     private static final EventLoopGroup groupB = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
-    private static final ChannelInboundHandler dummyHandler = new DummyHandler();
+    private static final ChannelHandler dummyHandler = new DummyHandler();
 
     @AfterClass
     public static void destroy() {
@@ -281,7 +280,7 @@ public class BootstrapTest {
         assertThat(connectFuture.channel(), is(not(nullValue())));
     }
 
-    private static final class LateRegisterHandler implements ChannelOutboundHandler {
+    private static final class LateRegisterHandler implements ChannelHandler {
 
         private final CountDownLatch latch = new CountDownLatch(1);
         private ChannelPromise registerPromise;
@@ -306,7 +305,7 @@ public class BootstrapTest {
     }
 
     @Sharable
-    private static final class DummyHandler implements ChannelInboundHandler { }
+    private static final class DummyHandler implements ChannelHandler { }
 
     private static final class TestAddressResolverGroup extends AddressResolverGroup<SocketAddress> {
 

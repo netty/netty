@@ -20,7 +20,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -63,8 +62,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * {@link Http2LocalFlowController}
  */
 @UnstableApi
-public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http2LifecycleManager,
-                                                                            ChannelOutboundHandler {
+public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http2LifecycleManager {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2ConnectionHandler.class);
 

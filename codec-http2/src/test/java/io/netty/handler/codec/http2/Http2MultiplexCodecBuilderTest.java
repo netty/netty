@@ -25,7 +25,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -81,7 +80,7 @@ public class Http2MultiplexCodecBuilderTest {
 
                             @Override
                             protected void initChannel(Channel ch) throws Exception {
-                                ch.pipeline().addLast(new ChannelInboundHandler() {
+                                ch.pipeline().addLast(new ChannelHandler() {
                                     private boolean writable;
 
                                     @Override

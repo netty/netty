@@ -21,7 +21,10 @@ package io.netty.channel;
  *
  * It is a good starting point if your {@link ChannelHandler} implementation needs to intercept operations and also
  * state updates.
+ *
+ * @deprecated use {@link ChannelHandler}
  */
+@Deprecated
 public class ChannelDuplexHandler extends ChannelHandlerAdapter
         implements ChannelInboundHandler, ChannelOutboundHandler {
 }

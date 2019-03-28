@@ -18,8 +18,8 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.DecoderResult;
@@ -397,7 +397,7 @@ public class HttpContentEncoderTest {
             @Override
             protected Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception {
                 return new Result("myencoding", new EmbeddedChannel(
-                        new ChannelInboundHandler() {
+                        new ChannelHandler() {
                     @Override
                     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                         ctx.fireExceptionCaught(new EncoderException());
@@ -408,7 +408,7 @@ public class HttpContentEncoderTest {
         };
 
         final AtomicBoolean channelInactiveCalled = new AtomicBoolean();
-        EmbeddedChannel channel = new EmbeddedChannel(encoder, new ChannelInboundHandler() {
+        EmbeddedChannel channel = new EmbeddedChannel(encoder, new ChannelHandler() {
             @Override
             public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                 assertTrue(channelInactiveCalled.compareAndSet(false, true));

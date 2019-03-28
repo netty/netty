@@ -89,7 +89,7 @@ public class PendingWriteQueueTest {
         final AtomicReference<PendingWriteQueue> queueRef = new AtomicReference<>();
         final ByteBuf msg = Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII);
 
-        final EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandler() {
+        final EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
             public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                 ctxRef.set(ctx);
@@ -214,13 +214,13 @@ public class PendingWriteQueueTest {
 
     @Test
     public void testRemoveAndWriteAllReentrantWrite() {
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 // Convert to writeAndFlush(...) so the promise will be notified by the transport.
                 ctx.writeAndFlush(msg, promise);
             }
-        }, new ChannelOutboundHandler() { });
+        }, new ChannelHandler() { });
 
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().lastContext());
 
@@ -246,13 +246,13 @@ public class PendingWriteQueueTest {
 
     @Test
     public void testRemoveAndWriteAllWithVoidPromise() {
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 // Convert to writeAndFlush(...) so the promise will be notified by the transport.
                 ctx.writeAndFlush(msg, promise);
             }
-        }, new ChannelOutboundHandler() { });
+        }, new ChannelHandler() { });
 
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().lastContext());
 
@@ -338,13 +338,13 @@ public class PendingWriteQueueTest {
         assertSame(ex, promise.cause());
     }
 
-    private static class TestHandler extends ChannelDuplexHandler {
+    private static class TestHandler implements ChannelHandler {
         protected PendingWriteQueue queue;
         private int expectedSize;
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            super.channelActive(ctx);
+            ctx.fireChannelActive();
             assertQueueEmpty(queue);
             assertTrue("Should be writable", ctx.channel().isWritable());
         }

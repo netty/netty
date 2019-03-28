@@ -1145,7 +1145,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private static final class HeadHandler extends ChannelDuplexHandler {
+    private static final class HeadHandler implements ChannelHandler {
 
         @Override
         public void bind(

@@ -15,7 +15,6 @@
 package io.netty.handler.codec.http;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.AsciiString;
 
@@ -36,7 +35,7 @@ import static java.util.Objects.requireNonNull;
  * simply removes itself from the pipeline. If the upgrade is successful, upgrades the pipeline to
  * the new protocol.
  */
-public class HttpClientUpgradeHandler extends HttpObjectAggregator implements ChannelOutboundHandler {
+public class HttpClientUpgradeHandler extends HttpObjectAggregator {
 
     /**
      * User events that are fired to notify about upgrade status.

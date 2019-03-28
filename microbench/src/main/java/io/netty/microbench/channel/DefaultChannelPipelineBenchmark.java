@@ -17,7 +17,6 @@ package io.netty.microbench.channel;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.microbench.util.AbstractMicrobenchmark;
@@ -38,10 +37,10 @@ import org.openjdk.jmh.infra.Blackhole;
 public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
 
     @ChannelHandler.Sharable
-    private static final ChannelInboundHandler NOOP_HANDLER = new ChannelInboundHandler() { };
+    private static final ChannelHandler NOOP_HANDLER = new ChannelHandler() { };
 
     @ChannelHandler.Sharable
-    private static final ChannelInboundHandler CONSUMING_HANDLER = new ChannelInboundHandler() {
+    private static final ChannelHandler CONSUMING_HANDLER = new ChannelHandler() {
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) {
             // NOOP

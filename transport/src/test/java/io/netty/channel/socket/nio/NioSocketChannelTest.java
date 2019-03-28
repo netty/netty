@@ -22,8 +22,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -72,7 +72,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group).channel(NioServerSocketChannel.class);
             sb.childOption(ChannelOption.SO_SNDBUF, 1024);
-            sb.childHandler(new ChannelInboundHandler() {
+            sb.childHandler(new ChannelHandler() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) throws Exception {
                     // Write a large enough data so that it is split into two loops.
@@ -126,7 +126,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
         try {
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group).channel(NioServerSocketChannel.class);
-            sb.childHandler(new ChannelInboundHandler() {
+            sb.childHandler(new ChannelHandler() {
                 @Override
                 public void channelActive(final ChannelHandlerContext ctx) throws Exception {
                     // Trigger a gathering write by writing two buffers.
@@ -207,7 +207,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
 
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(group).channel(NioSocketChannel.class);
-            bootstrap.handler(new ChannelInboundHandler() { });
+            bootstrap.handler(new ChannelHandler() { });
             cc = bootstrap.connect(sc.localAddress()).syncUninterruptibly().channel();
             cc.writeAndFlush(Unpooled.wrappedBuffer(bytes)).syncUninterruptibly();
             latch.await();
@@ -231,7 +231,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
         try {
             Bootstrap sb = new Bootstrap();
             sb.group(group).channel(NioSocketChannel.class);
-            sb.handler(new ChannelInboundHandler() { });
+            sb.handler(new ChannelHandler() { });
 
             SocketChannel channel = (SocketChannel) sb.connect(socket.getLocalSocketAddress())
                     .syncUninterruptibly().channel();

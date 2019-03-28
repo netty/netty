@@ -19,7 +19,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
@@ -47,7 +46,7 @@ public class ServerBootstrapTest {
             ServerBootstrap sb = new ServerBootstrap();
             sb.channel(LocalServerChannel.class)
               .group(group)
-              .childHandler(new ChannelInboundHandler() { })
+              .childHandler(new ChannelHandler() { })
               .handler(new ChannelHandlerAdapter() {
                   @Override
                   public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
@@ -83,7 +82,7 @@ public class ServerBootstrapTest {
         final CountDownLatch readLatch = new CountDownLatch(1);
         final CountDownLatch initLatch = new CountDownLatch(1);
 
-        final ChannelHandler handler = new ChannelInboundHandler() {
+        final ChannelHandler handler = new ChannelHandler() {
             @Override
             public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                 initLatch.countDown();
@@ -104,7 +103,7 @@ public class ServerBootstrapTest {
             ServerBootstrap sb = new ServerBootstrap();
             sb.channel(LocalServerChannel.class)
                     .group(group)
-                    .childHandler(new ChannelInboundHandler() { });
+                    .childHandler(new ChannelHandler() { });
             if (channelInitializer) {
                 sb.handler(new ChannelInitializer<Channel>() {
                     @Override
@@ -119,7 +118,7 @@ public class ServerBootstrapTest {
             Bootstrap cb = new Bootstrap();
             cb.group(group)
                     .channel(LocalChannel.class)
-                    .handler(new ChannelInboundHandler() { });
+                    .handler(new ChannelHandler() { });
 
             sch = sb.bind(addr).syncUninterruptibly().channel();
 

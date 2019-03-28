@@ -27,9 +27,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -95,7 +93,7 @@ public class SslHandlerTest {
 
         SSLEngine engine = SSLContext.getDefault().createSSLEngine();
         EmbeddedChannel ch = new EmbeddedChannel(
-                DefaultChannelId.newInstance(), false, false, new ChannelInboundHandler() {
+                DefaultChannelId.newInstance(), false, false, new ChannelHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 // Not forward the event to the SslHandler but just close the Channel.
@@ -110,7 +108,7 @@ public class SslHandlerTest {
                 super.handlerAdded(ctx);
                 inActive.set(false);
             }
-        }, new ChannelInboundHandler() {
+        }, new ChannelHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 if (evt instanceof SslHandshakeCompletionEvent) {
@@ -274,7 +272,7 @@ public class SslHandlerTest {
         }
     }
 
-    private static final class TlsReadTest implements ChannelOutboundHandler {
+    private static final class TlsReadTest implements ChannelHandler {
         private volatile boolean readIssued;
 
         @Override
@@ -290,7 +288,7 @@ public class SslHandlerTest {
             EmbeddedChannel ch = new EmbeddedChannel(false, false,
                     this,
                     new SslHandler(engine),
-                    new ChannelInboundHandler() {
+                    new ChannelHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             if (!dropChannelActive) {
@@ -375,7 +373,7 @@ public class SslHandlerTest {
                     ch.eventLoop().execute(ch::close);
                 });
 
-                ch.pipeline().addLast(new ChannelInboundHandler() {
+                ch.pipeline().addLast(new ChannelHandler() {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         if (cause instanceof CodecException) {
@@ -418,7 +416,7 @@ public class SslHandlerTest {
     public void testEventsFired() throws Exception {
         SSLEngine engine = newServerModeSSLEngine();
         final BlockingQueue<SslCompletionEvent> events = new LinkedBlockingQueue<>();
-        EmbeddedChannel channel = new EmbeddedChannel(new SslHandler(engine), new ChannelInboundHandler() {
+        EmbeddedChannel channel = new EmbeddedChannel(new SslHandler(engine), new ChannelHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 if (evt instanceof SslCompletionEvent) {
@@ -457,7 +455,7 @@ public class SslHandlerTest {
                   @Override
                   protected void initChannel(Channel ch) {
                       ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
-                      ch.pipeline().addLast(new ChannelInboundHandler() {
+                      ch.pipeline().addLast(new ChannelHandler() {
                           @Override
                           public void channelActive(ChannelHandlerContext ctx) {
                               ByteBuf buf = ctx.alloc().buffer(10);
@@ -486,7 +484,7 @@ public class SslHandlerTest {
                 .handler(new ChannelInitializer<Channel>() {
                     @Override
                     protected void initChannel(Channel ch) {
-                        ch.pipeline().addFirst(new ChannelInboundHandler() {
+                        ch.pipeline().addFirst(new ChannelHandler() {
                             @Override
                             public void channelActive(ChannelHandlerContext ctx) {
                                 ByteBuf buf = ctx.alloc().buffer(1000);
@@ -691,7 +689,7 @@ public class SslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
-                    .childHandler(new ChannelInboundHandler() { })
+                    .childHandler(new ChannelHandler() { })
                     .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
 
             cc = new Bootstrap()
@@ -701,7 +699,7 @@ public class SslHandlerTest {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline().addLast(sslHandler);
-                            ch.pipeline().addLast(new ChannelInboundHandler() {
+                            ch.pipeline().addLast(new ChannelHandler() {
                                 @Override
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
                                         throws Exception {
@@ -770,7 +768,7 @@ public class SslHandlerTest {
             sc = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
-                    .childHandler(new ChannelInboundHandler() { })
+                    .childHandler(new ChannelHandler() { })
                     .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
 
             ChannelFuture future = new Bootstrap()
@@ -781,7 +779,7 @@ public class SslHandlerTest {
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline().addLast(sslHandler);
                             if (startTls) {
-                                ch.pipeline().addLast(new ChannelInboundHandler() {
+                                ch.pipeline().addLast(new ChannelHandler() {
                                     @Override
                                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
                                         ctx.writeAndFlush(wrappedBuffer(new byte[] { 1, 2, 3, 4 }));

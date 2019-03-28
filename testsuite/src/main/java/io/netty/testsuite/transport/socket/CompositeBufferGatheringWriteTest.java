@@ -23,8 +23,8 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.util.ReferenceCountUtil;
@@ -54,7 +54,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandler() {
+                    ch.pipeline().addLast(new ChannelHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             ctx.writeAndFlush(newCompositeBuffer(ctx.alloc()))
@@ -66,7 +66,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandler() {
+                    ch.pipeline().addLast(new ChannelHandler() {
                         private ByteBuf aggregator;
                         @Override
                         public void handlerAdded(ChannelHandlerContext ctx) {
@@ -164,7 +164,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
               .childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandler() {
+                    ch.pipeline().addLast(new ChannelHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             compositeBufferPartialWriteDoesNotCorruptDataInitServerConfig(ctx.channel().config(),
@@ -208,7 +208,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandler() {
+                    ch.pipeline().addLast(new ChannelHandler() {
                         private ByteBuf aggregator;
                         @Override
                         public void handlerAdded(ChannelHandlerContext ctx) {

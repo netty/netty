@@ -19,8 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
@@ -186,7 +186,7 @@ public class HttpProxyHandlerTest {
                         @Override
                         protected void initChannel(Channel ch) {
                             ch.pipeline().addFirst(new HttpResponseEncoder());
-                            ch.pipeline().addFirst(new ChannelInboundHandler() {
+                            ch.pipeline().addFirst(new ChannelHandler() {
                                 @Override
                                 public void channelActive(ChannelHandlerContext ctx) {
                                     DefaultFullHttpResponse response = new DefaultFullHttpResponse(
@@ -205,7 +205,7 @@ public class HttpProxyHandlerTest {
                     @Override
                     protected void initChannel(Channel ch) {
                         ch.pipeline().addFirst(new HttpProxyHandler(addr));
-                        ch.pipeline().addLast(new ChannelInboundHandler() {
+                        ch.pipeline().addLast(new ChannelHandler() {
                             @Override
                             public void exceptionCaught(ChannelHandlerContext ctx,
                                 Throwable cause) {

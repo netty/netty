@@ -19,7 +19,7 @@ import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.EnumSet;
 
-final class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHandler {
+final class LoggingHandler implements ChannelHandler {
 
     enum Event { WRITE, FLUSH, BIND, CONNECT, DISCONNECT, CLOSE, REGISTER, DEREGISTER, READ, WRITABILITY,
         HANDLER_ADDED, HANDLER_REMOVED, EXCEPTION, READ_COMPLETE, REGISTERED, UNREGISTERED, ACTIVE, INACTIVE,

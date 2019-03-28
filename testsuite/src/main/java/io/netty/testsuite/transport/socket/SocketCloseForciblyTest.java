@@ -18,6 +18,7 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
@@ -31,7 +32,7 @@ public class SocketCloseForciblyTest extends AbstractSocketTest {
     }
 
     public void testCloseForcibly(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        sb.handler(new ChannelInboundHandler() {
+        sb.handler(new ChannelHandler() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 final SocketChannel childChannel = (SocketChannel) msg;
@@ -41,9 +42,9 @@ public class SocketCloseForciblyTest extends AbstractSocketTest {
                     childChannel.unsafe().closeForcibly();
                 });
             }
-        }).childHandler(new ChannelInboundHandler() { });
+        }).childHandler(new ChannelHandler() { });
 
-        cb.handler(new ChannelInboundHandler() { });
+        cb.handler(new ChannelHandler() { });
 
         Channel sc = sb.bind().sync().channel();
 

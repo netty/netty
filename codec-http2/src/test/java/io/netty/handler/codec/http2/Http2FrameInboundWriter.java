@@ -22,7 +22,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
@@ -107,7 +106,7 @@ final class Http2FrameInboundWriter {
     }
 
     private static final class WriteInboundChannelHandlerContext
-            implements ChannelHandlerContext, ChannelOutboundHandler {
+            implements ChannelHandlerContext, ChannelHandler {
         private final EmbeddedChannel channel;
 
         WriteInboundChannelHandlerContext(EmbeddedChannel channel) {

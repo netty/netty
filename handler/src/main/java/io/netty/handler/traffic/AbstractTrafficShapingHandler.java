@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
@@ -46,7 +47,7 @@ import java.util.concurrent.TimeUnit;
  * or start the monitoring, to change the checkInterval directly, or to have access to its values.</li>
  * </ul>
  */
-public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler {
+public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AbstractTrafficShapingHandler.class);
     /**
@@ -578,7 +579,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         setUserDefinedWritability(ctx, true);
-        super.channelRegistered(ctx);
+        ctx.fireChannelRegistered();
     }
 
     void setUserDefinedWritability(ChannelHandlerContext ctx, boolean writable) {

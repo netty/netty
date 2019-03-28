@@ -18,7 +18,6 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
@@ -40,7 +39,7 @@ import java.util.Locale;
  * The client will send host name in the handshake data so server could decide
  * which certificate to choose for the host name.</p>
  */
-public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder implements ChannelOutboundHandler {
+public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder {
 
     // Maximal number of ssl records to inspect before fallback to the default SslContext.
     private static final int MAX_SSL_RECORDS = 4;

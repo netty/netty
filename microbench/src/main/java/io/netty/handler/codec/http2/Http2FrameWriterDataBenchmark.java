@@ -19,6 +19,7 @@ import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPromise;
@@ -79,7 +80,7 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
         payload.writeZero(payloadSize);
         ctx = new EmbeddedChannelWriteReleaseHandlerContext(
                 pooled ? PooledByteBufAllocator.DEFAULT : UnpooledByteBufAllocator.DEFAULT,
-                new ChannelInboundHandler() { }) {
+                new ChannelHandler() { }) {
             @Override
             protected void handleException(Throwable t) {
                 handleUnexpectedException(t);

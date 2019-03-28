@@ -19,8 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
@@ -108,7 +108,7 @@ final class SniClientJava8TestUtil {
                     handler.engine().setSSLParameters(parameters);
 
                     ch.pipeline().addFirst(handler);
-                    ch.pipeline().addLast(new ChannelInboundHandler() {
+                    ch.pipeline().addLast(new ChannelHandler() {
                         @Override
                         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                             if (evt instanceof SslHandshakeCompletionEvent) {

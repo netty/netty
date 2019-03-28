@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -44,7 +44,7 @@ import static io.netty.handler.codec.http.HttpUtil.*;
  *  </pre>
  * </blockquote>
  */
-public class HttpServerKeepAliveHandler extends ChannelDuplexHandler {
+public class HttpServerKeepAliveHandler implements ChannelHandler {
     private static final String MULTIPART_PREFIX = "multipart";
 
     private boolean persistentConnection = true;
@@ -61,7 +61,7 @@ public class HttpServerKeepAliveHandler extends ChannelDuplexHandler {
                 persistentConnection = isKeepAlive(request);
             }
         }
-        super.channelRead(ctx, msg);
+        ctx.fireChannelRead(msg);
     }
 
     @Override
@@ -84,7 +84,7 @@ public class HttpServerKeepAliveHandler extends ChannelDuplexHandler {
         if (msg instanceof LastHttpContent && !shouldKeepAlive()) {
             promise = promise.unvoid().addListener(ChannelFutureListener.CLOSE);
         }
-        super.write(ctx, msg, promise);
+        ctx.write(msg, promise);
     }
 
     private void trackResponse(HttpResponse response) {

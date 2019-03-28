@@ -36,7 +36,7 @@ public class AbstractChannelTest {
         when(eventLoop.unsafe()).thenReturn(mock(EventLoop.Unsafe.class));
 
         TestChannel channel = new TestChannel(eventLoop);
-        ChannelInboundHandler handler = mock(ChannelInboundHandler.class);
+        ChannelHandler handler = mock(ChannelHandler.class);
         channel.pipeline().addLast(handler);
 
         registerChannel(channel);
@@ -59,7 +59,7 @@ public class AbstractChannelTest {
         }).when(eventLoop).execute(any(Runnable.class));
 
         final TestChannel channel = new TestChannel(eventLoop);
-        ChannelInboundHandler handler = mock(ChannelInboundHandler.class);
+        ChannelHandler handler = mock(ChannelHandler.class);
 
         channel.pipeline().addLast(handler);
 

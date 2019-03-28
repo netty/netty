@@ -20,7 +20,7 @@ import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
@@ -38,13 +38,13 @@ import io.netty.util.CharsetUtil;
  * Channels. This API is very experimental and incomplete.
  */
 @Sharable
-public class HelloWorldHttp2Handler extends ChannelDuplexHandler {
+public class HelloWorldHttp2Handler implements ChannelHandler {
 
     static final ByteBuf RESPONSE_BYTES = unreleasableBuffer(copiedBuffer("Hello World", CharsetUtil.UTF_8));
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        super.exceptionCaught(ctx, cause);
+        ctx.fireExceptionCaught(cause);
         cause.printStackTrace();
         ctx.close();
     }
@@ -56,7 +56,7 @@ public class HelloWorldHttp2Handler extends ChannelDuplexHandler {
         } else if (msg instanceof Http2DataFrame) {
             onDataRead(ctx, (Http2DataFrame) msg);
         } else {
-            super.channelRead(ctx, msg);
+            ctx.fireChannelRead(msg);
         }
     }
 

@@ -19,7 +19,6 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -64,7 +63,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  *
  * @see ChannelConfig#setAutoRead(boolean)
  */
-public class FlowControlHandler extends ChannelDuplexHandler {
+public class FlowControlHandler implements ChannelHandler {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(FlowControlHandler.class);
 
     private final boolean releaseMessages;

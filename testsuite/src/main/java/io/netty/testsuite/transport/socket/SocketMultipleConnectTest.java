@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.NetUtil;
 import org.junit.Test;
@@ -41,10 +41,10 @@ public class SocketMultipleConnectTest extends AbstractSocketTest {
         Channel sc = null;
         Channel cc = null;
         try {
-            sb.childHandler(new ChannelInboundHandler() { });
+            sb.childHandler(new ChannelHandler() { });
             sc = sb.bind(NetUtil.LOCALHOST, 0).syncUninterruptibly().channel();
 
-            cb.handler(new ChannelInboundHandler() { });
+            cb.handler(new ChannelHandler() { });
             cc = cb.register().syncUninterruptibly().channel();
             cc.connect(sc.localAddress()).syncUninterruptibly();
             ChannelFuture connectFuture2 = cc.connect(sc.localAddress()).await();

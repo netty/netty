@@ -20,8 +20,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
@@ -113,7 +113,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
                 // Just drop the message.
             }
         });
-        cb.handler(new ChannelInboundHandler() { });
+        cb.handler(new ChannelHandler() { });
 
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect(sc.localAddress()).sync().channel();
@@ -156,7 +156,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
         out.close();
 
-        ChannelInboundHandler ch = new SimpleChannelInboundHandler<Object>() {
+        ChannelHandler ch = new SimpleChannelInboundHandler<Object>() {
             @Override
             public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
             }
