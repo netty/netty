@@ -21,6 +21,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerMask.Skip;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
@@ -953,14 +954,14 @@ public class DefaultChannelPipelineTest {
                 errorRef = new AssertionError("Method should never been called");
             }
 
-            @ChannelHandlerMask.Skip
+            @Skip
             @Override
             public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
                 fail();
                 ctx.bind(localAddress, promise);
             }
 
-            @ChannelHandlerMask.Skip
+            @Skip
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
                                 SocketAddress localAddress, ChannelPromise promise) {
@@ -968,112 +969,112 @@ public class DefaultChannelPipelineTest {
                 ctx.connect(remoteAddress, localAddress, promise);
             }
 
-            @ChannelHandlerMask.Skip
+            @Skip
             @Override
             public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
                 fail();
                 ctx.disconnect(promise);
             }
 
-            @ChannelHandlerMask.Skip
+            @Skip
             @Override
             public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
                 fail();
                 ctx.close(promise);
             }
 
-            @ChannelHandlerMask.Skip
+            @Skip
             @Override
             public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
                 fail();
                 ctx.register(promise);
             }
 
-            @ChannelHandlerMask.Skip
+            @Skip
             @Override
             public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
                 fail();
                 ctx.deregister(promise);
             }
 
-            @ChannelHandlerMask.Skip
+            @Skip
             @Override
             public void read(ChannelHandlerContext ctx) {
                 fail();
                 ctx.read();
             }
 
-            @ChannelHandlerMask.Skip
+            @Skip
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 fail();
                 ctx.write(msg, promise);
             }
 
-            @ChannelHandlerMask.Skip
+            @Skip
             @Override
             public void flush(ChannelHandlerContext ctx) {
                 fail();
                 ctx.flush();
             }
 
-            @ChannelHandlerMask.Skip
+            @Skip
             @Override
             public void channelRegistered(ChannelHandlerContext ctx) {
                 fail();
                 ctx.fireChannelRegistered();
             }
 
-            @ChannelHandlerMask.Skip
+            @Skip
             @Override
             public void channelUnregistered(ChannelHandlerContext ctx) {
                 fail();
                 ctx.fireChannelUnregistered();
             }
 
-            @ChannelHandlerMask.Skip
+            @Skip
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
                 fail();
                 ctx.fireChannelActive();
             }
 
-            @ChannelHandlerMask.Skip
+            @Skip
             @Override
             public void channelInactive(ChannelHandlerContext ctx) {
                 fail();
                 ctx.fireChannelInactive();
             }
 
-            @ChannelHandlerMask.Skip
+            @Skip
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 fail();
                 ctx.fireChannelRead(msg);
             }
 
-            @ChannelHandlerMask.Skip
+            @Skip
             @Override
             public void channelReadComplete(ChannelHandlerContext ctx) {
                 fail();
                 ctx.fireChannelReadComplete();
             }
 
-            @ChannelHandlerMask.Skip
+            @Skip
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 fail();
                 ctx.fireUserEventTriggered(evt);
             }
 
-            @ChannelHandlerMask.Skip
+            @Skip
             @Override
             public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                 fail();
                 ctx.fireChannelWritabilityChanged();
             }
 
-            @ChannelHandlerMask.Skip
+            @Skip
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 fail();
