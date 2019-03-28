@@ -149,6 +149,16 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     }
 
     /**
+     * Returns the number of {@link Channel}s registered with this {@link EventLoop} or {@code -1}
+     * if operation is not supported. The returned value is not guaranteed to be exact accurate and
+     * should be viewed as a best effort.
+     */
+    @UnstableApi
+    public int registeredChannels() {
+        return -1;
+    }
+
+    /**
      * Marker interface for {@link Runnable} that will not trigger an {@link #wakeup(boolean)} in all cases.
      */
     interface NonWakeupRunnable extends Runnable { }

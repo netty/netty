@@ -227,6 +227,11 @@ class EpollEventLoop extends SingleThreadEventLoop {
         this.ioRatio = ioRatio;
     }
 
+    @Override
+    public int registeredChannels() {
+        return channels.size();
+    }
+
     private int epollWait(boolean oldWakeup) throws IOException {
         // If a task was submitted when wakenUp value was 1, the task didn't get a chance to produce wakeup event.
         // So we need to check task queue again before calling epoll_wait. If we don't, the task might be pended
