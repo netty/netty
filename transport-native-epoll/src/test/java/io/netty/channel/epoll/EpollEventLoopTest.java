@@ -18,6 +18,8 @@ package io.netty.channel.epoll;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.testsuite.transport.AbstractSingleThreadEventLoopTest;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
@@ -31,7 +33,17 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-public class EpollEventLoopTest {
+public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
+
+    @Override
+    protected EventLoopGroup newEventLoopGroup() {
+        return new EpollEventLoopGroup();
+    }
+
+    @Override
+    protected ServerSocketChannel newChannel() {
+        return new EpollServerSocketChannel();
+    }
 
     @Test
     public void testScheduleBigDelayNotOverflow() {

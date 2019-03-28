@@ -258,4 +258,25 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         }
     }
 
+    @Test
+    public void testChannelsRegistered()  {
+        NioEventLoopGroup group = new NioEventLoopGroup(1);
+        final NioEventLoop loop = (NioEventLoop) group.next();
+
+        try {
+            final Channel ch1 = new NioServerSocketChannel();
+            final Channel ch2 = new NioServerSocketChannel();
+
+            assertEquals(0, loop.registeredChannels());
+
+            assertTrue(loop.register(ch1).syncUninterruptibly().isSuccess());
+            assertTrue(loop.register(ch2).syncUninterruptibly().isSuccess());
+            assertEquals(2, loop.registeredChannels());
+
+            assertTrue(ch1.deregister().syncUninterruptibly().isSuccess());
+            assertEquals(1, loop.registeredChannels());
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
 }

@@ -356,6 +356,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         rebuildSelector0();
     }
 
+    @Override
+    public int registeredChannels() {
+        return selector.keys().size() - cancelledKeys;
+    }
+
     private void rebuildSelector0() {
         final Selector oldSelector = selector;
         final SelectorTuple newSelectorTuple;
