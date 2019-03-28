@@ -84,6 +84,7 @@ public abstract class ChannelHandlerAdapter implements ChannelHandler {
      *
      * @deprecated is part of {@link ChannelInboundHandler}
      */
+    @ChannelHandlerMask.Skip
     @Override
     @Deprecated
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
