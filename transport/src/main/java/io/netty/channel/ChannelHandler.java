@@ -195,35 +195,9 @@ public interface ChannelHandler {
     }
 
     /**
-     * Indicates that the annotated event handler method in {@link ChannelHandler} will not be invoked by
-     * {@link ChannelPipeline}. This annotation is only useful when your handler method implementation
-     * only passes the event through to the next handler, like the following:
-     *
-     * <pre>
-     * {@code @Skip}
-     * {@code @Override}
-     * public void channelActive({@link ChannelHandlerContext} ctx) {
-     *     ctx.fireChannelActive(); // do nothing but passing through to the next handler
-     * }
-     * </pre>
-     *
-     * <p>
-     * Note that this annotation is not {@linkplain Inherited inherited}.  If you override a method annotated with
-     * {@link Skip}, it will not be skipped anymore.  Similarly, you can override a method not annotated with
-     * {@link Skip} and simply pass the event through to the next handler, which reverses the behavior of the
-     * supertype.
-     * </p>
-     */
-    @Target(ElementType.METHOD)
-    @Retention(RetentionPolicy.RUNTIME)
-    @interface Skip {
-        // no value
-    }
-
-    /**
      * The {@link Channel} of the {@link ChannelHandlerContext} was registered with its {@link EventLoop}
      */
-    @Skip
+    @ChannelHandlerMask.Skip
     default void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelRegistered();
     }
@@ -231,7 +205,7 @@ public interface ChannelHandler {
     /**
      * The {@link Channel} of the {@link ChannelHandlerContext} was unregistered from its {@link EventLoop}
      */
-    @Skip
+    @ChannelHandlerMask.Skip
     default void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelUnregistered();
     }
@@ -239,7 +213,7 @@ public interface ChannelHandler {
     /**
      * The {@link Channel} of the {@link ChannelHandlerContext} is now active
      */
-    @Skip
+    @ChannelHandlerMask.Skip
     default void channelActive(ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelActive();
     }
@@ -248,7 +222,7 @@ public interface ChannelHandler {
      * The {@link Channel} of the {@link ChannelHandlerContext} was registered is now inactive and reached its
      * end of lifetime.
      */
-    @Skip
+    @ChannelHandlerMask.Skip
     default void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelInactive();
     }
@@ -256,7 +230,7 @@ public interface ChannelHandler {
     /**
      * Invoked when the current {@link Channel} has read a message from the peer.
      */
-    @Skip
+    @ChannelHandlerMask.Skip
     default void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         ctx.fireChannelRead(msg);
     }
@@ -267,7 +241,7 @@ public interface ChannelHandler {
      * attempt to read an inbound data from the current {@link Channel} will be made until
      * {@link ChannelHandlerContext#read()} is called.
      */
-    @Skip
+    @ChannelHandlerMask.Skip
     default void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelReadComplete();
     }
@@ -275,7 +249,7 @@ public interface ChannelHandler {
     /**
      * Gets called if an user event was triggered.
      */
-    @Skip
+    @ChannelHandlerMask.Skip
     default void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         ctx.fireUserEventTriggered(evt);
     }
@@ -284,7 +258,7 @@ public interface ChannelHandler {
      * Gets called once the writable state of a {@link Channel} changed. You can check the state with
      * {@link Channel#isWritable()}.
      */
-    @Skip
+    @ChannelHandlerMask.Skip
     default void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
         ctx.fireChannelWritabilityChanged();
     }
@@ -292,7 +266,7 @@ public interface ChannelHandler {
     /**
      * Gets called if a {@link Throwable} was thrown.
      */
-    @Skip
+    @ChannelHandlerMask.Skip
     default void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         ctx.fireExceptionCaught(cause);
     }
@@ -305,7 +279,7 @@ public interface ChannelHandler {
      * @param promise       the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception    thrown if an error occurs
      */
-    @Skip
+    @ChannelHandlerMask.Skip
     default void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
         ctx.bind(localAddress, promise);
     }
@@ -319,7 +293,7 @@ public interface ChannelHandler {
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error occurs
      */
-    @Skip
+    @ChannelHandlerMask.Skip
     default void connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress,
             SocketAddress localAddress, ChannelPromise promise) throws Exception {
@@ -333,7 +307,7 @@ public interface ChannelHandler {
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error occurs
      */
-    @Skip
+    @ChannelHandlerMask.Skip
     default void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ctx.disconnect(promise);
     }
@@ -345,7 +319,7 @@ public interface ChannelHandler {
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error occurs
      */
-    @Skip
+    @ChannelHandlerMask.Skip
     default void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ctx.close(promise);
     }
@@ -357,7 +331,7 @@ public interface ChannelHandler {
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error occurs
      */
-    @Skip
+    @ChannelHandlerMask.Skip
     default void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ctx.register(promise);
     }
@@ -369,7 +343,7 @@ public interface ChannelHandler {
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error occurs
      */
-    @Skip
+    @ChannelHandlerMask.Skip
     default void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         ctx.deregister(promise);
     }
@@ -377,7 +351,7 @@ public interface ChannelHandler {
     /**
      * Intercepts {@link ChannelHandlerContext#read()}.
      */
-    @Skip
+    @ChannelHandlerMask.Skip
     default void read(ChannelHandlerContext ctx) throws Exception {
         ctx.read();
     }
@@ -392,7 +366,7 @@ public interface ChannelHandler {
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error occurs
      */
-    @Skip
+    @ChannelHandlerMask.Skip
     default void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         ctx.write(msg, promise);
     }
@@ -404,7 +378,7 @@ public interface ChannelHandler {
      * @param ctx               the {@link ChannelHandlerContext} for which the flush operation is made
      * @throws Exception        thrown if an error occurs
      */
-    @Skip
+    @ChannelHandlerMask.Skip
     default void flush(ChannelHandlerContext ctx) throws Exception {
         ctx.flush();
     }
