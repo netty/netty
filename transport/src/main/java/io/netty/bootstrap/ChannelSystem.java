@@ -22,6 +22,8 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
+import java.lang.reflect.Constructor;
+
 public enum ChannelSystem {
 
     NIO(NioSocketChannel.class, NioServerSocketChannel.class) {
@@ -31,16 +33,25 @@ public enum ChannelSystem {
         }
 
         @Override
+        public EventLoopGroup newLoopGroup(int nThreads) {
+            return new NioEventLoopGroup(nThreads);
+        }
+
+        @Override
         public boolean isAvailable() {
             return true;
         }
     },
     EPOLL(null, null) {
         Class eventLoop;
+        Constructor<EventLoopGroup> threadLoopConstructor;
         {
             try {
                 eventLoop = Class.forName("io.netty.channel.epoll.EpollEventLoopGroup");
+                threadLoopConstructor = eventLoop.getConstructor(int.class);
             } catch (ClassNotFoundException ignored) {
+
+            } catch (NoSuchMethodException ignored) {
 
             }
         }
@@ -48,6 +59,15 @@ public enum ChannelSystem {
         public EventLoopGroup newLoopGroup() {
             try {
                 return (EventLoopGroup) eventLoop.newInstance();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public EventLoopGroup newLoopGroup(int nThreads) {
+            try {
+                return threadLoopConstructor.newInstance(nThreads);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -80,6 +100,7 @@ public enum ChannelSystem {
     }
 
     public abstract EventLoopGroup newLoopGroup();
+    public abstract EventLoopGroup newLoopGroup(int nThreads);
     public abstract boolean isAvailable();
 
     public Class<? extends Channel> getChannelClass() {
