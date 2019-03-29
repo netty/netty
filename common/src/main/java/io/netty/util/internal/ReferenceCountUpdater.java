@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2019 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,42 +13,49 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.util;
+package io.netty.util.internal;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import io.netty.util.internal.PlatformDependent;
+import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.ReferenceCounted;
 
 /**
  * Common logic for {@link ReferenceCounted} implementations
  */
 public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
-
-    // For updated int field:
-    //   Even => "real" refcount is (refCnt >>> 1)
-    //   Odd  => "real" refcount is 0
+    /*
+     * Implementation notes:
+     *
+     * For the updated int field:
+     *   Even => "real" refcount is (refCnt >>> 1)
+     *   Odd  => "real" refcount is 0
+     *
+     * (x & y) appears to be surprisingly expensive relative to (x == y). Thus this class uses
+     * a fast-path in some places for most common low values when checking for live (even) refcounts,
+     * for example: if (rawCnt == 2 || rawCnt == 4 || (rawCnt & 1) == 0) { ...
+     */
 
     protected ReferenceCountUpdater() { }
 
     public static long getUnsafeOffset(Class<? extends ReferenceCounted> clz, String fieldName) {
-        long fieldOffset = -1;
         try {
             if (PlatformDependent.hasUnsafe()) {
-                fieldOffset = PlatformDependent.objectFieldOffset(clz.getDeclaredField(fieldName));
+                return PlatformDependent.objectFieldOffset(clz.getDeclaredField(fieldName));
             }
         } catch (Throwable ignore) {
             // fall-back
         }
-        return fieldOffset;
+        return -1;
     }
 
     protected abstract AtomicIntegerFieldUpdater<T> updater();
 
     protected abstract long unsafeOffset();
 
-    public int initialValue() {
+    public final int initialValue() {
         return 2;
     }
 
@@ -59,7 +66,7 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
     /**
      * Like {@link #realRefCnt(int)} but throws if refCnt == 0
      */
-    private static int toLiveRealCnt(int rawCnt, int decrement) {
+    private static int toLiveRealRefCnt(int rawCnt, int decrement) {
         if (rawCnt == 2 || rawCnt == 4 || (rawCnt & 1) == 0) {
             return rawCnt >>> 1;
         }
@@ -73,7 +80,7 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
         return offset != -1 ? PlatformDependent.getInt(instance, offset) : updater().get(instance);
     }
 
-    public int refCnt(T instance) {
+    public final int refCnt(T instance) {
         return realRefCnt(updater().get(instance));
     }
 
@@ -82,8 +89,6 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
         final int rawCnt = offset != -1 ? PlatformDependent.getInt(instance, offset) : updater().get(instance);
 
         // The "real" ref count is > 0 if the rawCnt is even.
-        // (x & y) appears to be surprisingly expensive relative to (x == y). Thus the expression below provides
-        // a fast path for most common cases where the ref count is 1, 2, 3 or 4.
         return rawCnt == 2 || rawCnt == 4 || rawCnt == 6 || rawCnt == 8 || (rawCnt & 1) == 0;
     }
 
@@ -130,12 +135,12 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
     public final boolean release(T instance) {
         int rawCnt = nonVolatileRawCnt(instance);
         return rawCnt == 2 ? tryFinalRelease0(instance, 2) || retryRelease0(instance, 1)
-                : nonFinalRelease0(instance, 1, rawCnt, toLiveRealCnt(rawCnt, 1));
+                : nonFinalRelease0(instance, 1, rawCnt, toLiveRealRefCnt(rawCnt, 1));
     }
 
     public final boolean release(T instance, int decrement) {
         int rawCnt = nonVolatileRawCnt(instance);
-        int realCnt = toLiveRealCnt(rawCnt, checkPositive(decrement, "decrement"));
+        int realCnt = toLiveRealRefCnt(rawCnt, checkPositive(decrement, "decrement"));
         return decrement == realCnt ? tryFinalRelease0(instance, rawCnt) || retryRelease0(instance, decrement)
                 : nonFinalRelease0(instance, decrement, rawCnt, realCnt);
     }
@@ -155,7 +160,7 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
 
     private boolean retryRelease0(T instance, int decrement) {
         for (;;) {
-            int rawCnt = updater().get(instance), realCnt = toLiveRealCnt(rawCnt, decrement);
+            int rawCnt = updater().get(instance), realCnt = toLiveRealRefCnt(rawCnt, decrement);
             if (decrement == realCnt) {
                 if (tryFinalRelease0(instance, rawCnt)) {
                     return true;
