@@ -15,6 +15,7 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.util.concurrent.SaturationHistogram;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -129,9 +130,18 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
         }
     }
 
+    public long[] getSaturationHistogramSnapshot() {
+        return getSaturationHistogram().snapshot();
+    }
+
+    public long getFullySaturatedTimeNanos() {
+        return getSaturationHistogram().getFullySaturatedTimeNanos();
+    }
+
     @Override
     protected EventLoop newChild(Executor executor, Object... args) throws Exception {
         return new EpollEventLoop(this, executor, (Integer) args[0],
-                ((SelectStrategyFactory) args[1]).newSelectStrategy(), (RejectedExecutionHandler) args[2]);
+                ((SelectStrategyFactory) args[1]).newSelectStrategy(), (RejectedExecutionHandler) args[2],
+                getSaturationHistogram());
     }
 }

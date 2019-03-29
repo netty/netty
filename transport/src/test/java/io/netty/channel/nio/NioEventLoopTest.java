@@ -104,6 +104,31 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     }
 
     @Test
+    public void testHistogramAccounting() {
+        NioEventLoopGroup group = new NioEventLoopGroup(1);
+
+        final EventLoop el = group.next();
+        Future<?> future = el.submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+        future.awaitUninterruptibly();
+        Future<?> shutdownFuture = group.shutdownGracefully();
+        shutdownFuture.awaitUninterruptibly();
+
+        final long[] histogram = group.getSaturationHistogramSnapshot();
+        assertEquals(1, histogram.length);
+        assertTrue(histogram[0] > 0);
+        assertTrue(group.getFullySaturatedTimeNanos() > 100000000);
+    }
+
+    @Test
     public void testInterruptEventLoopThread() throws Exception {
         EventLoopGroup group = new NioEventLoopGroup(1);
         final NioEventLoop loop = (NioEventLoop) group.next();

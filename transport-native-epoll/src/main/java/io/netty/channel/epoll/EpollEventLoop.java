@@ -15,6 +15,7 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.util.concurrent.SaturationHistogram;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SelectStrategy;
@@ -66,6 +67,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
     private NativeDatagramPacketArray datagramPacketArray;
 
     private final SelectStrategy selectStrategy;
+    private final SaturationHistogram histogram;
     private final IntSupplier selectNowSupplier = new IntSupplier() {
         @Override
         public int get() throws Exception {
@@ -80,9 +82,12 @@ class EpollEventLoop extends SingleThreadEventLoop {
     private static final long MAX_SCHEDULED_TIMERFD_NS = 999999999;
 
     EpollEventLoop(EventLoopGroup parent, Executor executor, int maxEvents,
-                   SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler) {
+                   SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler,
+                   SaturationHistogram histogram) {
         super(parent, executor, false, DEFAULT_MAX_PENDING_TASKS, rejectedExecutionHandler);
         selectStrategy = ObjectUtil.checkNotNull(strategy, "strategy");
+        this.histogram = ObjectUtil.checkNotNull(histogram, "histogram");
+
         if (maxEvents == 0) {
             allowGrowing = true;
             events = new EpollEventArray(4096);
@@ -315,28 +320,33 @@ class EpollEventLoop extends SingleThreadEventLoop {
                     default:
                 }
 
-                final int ioRatio = this.ioRatio;
-                if (ioRatio == 100) {
-                    try {
-                        if (strategy > 0) {
-                            processReady(events, strategy);
+                try {
+                    histogram.enter();
+                    final int ioRatio = this.ioRatio;
+                    if (ioRatio == 100) {
+                        try {
+                            if (strategy > 0) {
+                                processReady(events, strategy);
+                            }
+                        } finally {
+                            // Ensure we always run tasks.
+                            runAllTasks();
                         }
-                    } finally {
-                        // Ensure we always run tasks.
-                        runAllTasks();
-                    }
-                } else {
-                    final long ioStartTime = System.nanoTime();
+                    } else {
+                        final long ioStartTime = System.nanoTime();
 
-                    try {
-                        if (strategy > 0) {
-                            processReady(events, strategy);
+                        try {
+                            if (strategy > 0) {
+                                processReady(events, strategy);
+                            }
+                        } finally {
+                            // Ensure we always run tasks.
+                            final long ioTime = System.nanoTime() - ioStartTime;
+                            runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
                         }
-                    } finally {
-                        // Ensure we always run tasks.
-                        final long ioTime = System.nanoTime() - ioStartTime;
-                        runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
                     }
+                } finally {
+                    histogram.exit();
                 }
                 if (allowGrowing && strategy == events.length()) {
                     //increase the size of the array as we needed the whole space for the events

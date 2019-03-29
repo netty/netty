@@ -23,6 +23,7 @@ import io.netty.channel.SelectStrategy;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.IntSupplier;
 import io.netty.util.concurrent.RejectedExecutionHandler;
+import io.netty.util.concurrent.SaturationHistogram;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReflectionUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -115,6 +116,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private SelectedSelectionKeySet selectedKeys;
 
     private final SelectorProvider provider;
+    private final SaturationHistogram histogram;
 
     /**
      * Boolean that controls determines if a blocked Selector.select should
@@ -131,7 +133,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private boolean needsToSelectAgain;
 
     NioEventLoop(NioEventLoopGroup parent, Executor executor, SelectorProvider selectorProvider,
-                 SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler) {
+                 SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler,
+                 SaturationHistogram histogram) {
         super(parent, executor, false, DEFAULT_MAX_PENDING_TASKS, rejectedExecutionHandler);
         if (selectorProvider == null) {
             throw new NullPointerException("selectorProvider");
@@ -139,6 +142,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         if (strategy == null) {
             throw new NullPointerException("selectStrategy");
         }
+        if (histogram == null) {
+            throw new NullPointerException("histogram");
+        }
+
+        this.histogram = histogram;
         provider = selectorProvider;
         final SelectorTuple selectorTuple = openSelector();
         selector = selectorTuple.selector;
@@ -483,22 +491,28 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 cancelledKeys = 0;
                 needsToSelectAgain = false;
                 final int ioRatio = this.ioRatio;
-                if (ioRatio == 100) {
-                    try {
-                        processSelectedKeys();
-                    } finally {
-                        // Ensure we always run tasks.
-                        runAllTasks();
+
+                try {
+                    histogram.enter();
+                    if (ioRatio == 100) {
+                        try {
+                            processSelectedKeys();
+                        } finally {
+                            // Ensure we always run tasks.
+                            runAllTasks();
+                        }
+                    } else {
+                        final long ioStartTime = System.nanoTime();
+                        try {
+                            processSelectedKeys();
+                        } finally {
+                            // Ensure we always run tasks.
+                            final long ioTime = System.nanoTime() - ioStartTime;
+                            runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
+                        }
                     }
-                } else {
-                    final long ioStartTime = System.nanoTime();
-                    try {
-                        processSelectedKeys();
-                    } finally {
-                        // Ensure we always run tasks.
-                        final long ioTime = System.nanoTime() - ioStartTime;
-                        runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
-                    }
+                } finally {
+                    histogram.exit();
                 }
             } catch (Throwable t) {
                 handleLoopException(t);

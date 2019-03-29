@@ -16,6 +16,7 @@
 package io.netty.channel.nio;
 
 import io.netty.channel.Channel;
+import io.netty.util.concurrent.SaturationHistogram;
 import io.netty.channel.EventLoop;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -91,7 +92,7 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
                              final SelectorProvider selectorProvider,
                              final SelectStrategyFactory selectStrategyFactory) {
         super(nThreads, executor, chooserFactory, selectorProvider, selectStrategyFactory,
-                RejectedExecutionHandlers.reject());
+              RejectedExecutionHandlers.reject());
     }
 
     public NioEventLoopGroup(int nThreads, Executor executor, EventExecutorChooserFactory chooserFactory,
@@ -121,9 +122,18 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
         }
     }
 
+    public long[] getSaturationHistogramSnapshot() {
+        return getSaturationHistogram().snapshot();
+    }
+
+    public long getFullySaturatedTimeNanos() {
+        return getSaturationHistogram().getFullySaturatedTimeNanos();
+    }
+
     @Override
     protected EventLoop newChild(Executor executor, Object... args) throws Exception {
         return new NioEventLoop(this, executor, (SelectorProvider) args[0],
-            ((SelectStrategyFactory) args[1]).newSelectStrategy(), (RejectedExecutionHandler) args[2]);
+            ((SelectStrategyFactory) args[1]).newSelectStrategy(), (RejectedExecutionHandler) args[2],
+            getSaturationHistogram());
     }
 }

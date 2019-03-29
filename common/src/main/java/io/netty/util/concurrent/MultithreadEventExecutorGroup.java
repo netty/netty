@@ -35,6 +35,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
     private final AtomicInteger terminatedChildren = new AtomicInteger();
     private final Promise<?> terminationFuture = new DefaultPromise(GlobalEventExecutor.INSTANCE);
     private final EventExecutorChooserFactory.EventExecutorChooser chooser;
+    private final SaturationHistogram saturationHistogram;
 
     /**
      * Create a new instance.
@@ -76,6 +77,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             executor = new ThreadPerTaskExecutor(newDefaultThreadFactory());
         }
 
+        saturationHistogram = new SaturationHistogram(nThreads);
         children = new EventExecutor[nThreads];
 
         for (int i = 0; i < nThreads; i ++) {
@@ -130,6 +132,10 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
 
     protected ThreadFactory newDefaultThreadFactory() {
         return new DefaultThreadFactory(getClass());
+    }
+
+    protected final SaturationHistogram getSaturationHistogram() {
+        return saturationHistogram;
     }
 
     @Override

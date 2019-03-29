@@ -15,6 +15,7 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.util.concurrent.SaturationHistogram;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -51,7 +52,8 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
         final EventLoopGroup group = new EpollEventLoop(null,
                 new ThreadPerTaskExecutor(new DefaultThreadFactory(getClass())), 0,
-                DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy(), RejectedExecutionHandlers.reject()) {
+                DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy(), RejectedExecutionHandlers.reject(),
+                new SaturationHistogram(1)) {
             @Override
             void handleLoopException(Throwable t) {
                 capture.set(t);
