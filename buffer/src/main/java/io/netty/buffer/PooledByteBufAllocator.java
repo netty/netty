@@ -123,7 +123,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
                 "io.netty.allocation.cacheTrimIntervalMillis", 0);
 
         DEFAULT_USE_CACHE_FOR_ALL_THREADS = SystemPropertyUtil.getBoolean(
-                "io.netty.allocator.useCacheForAllThreads", true);
+                "io.netty.allocator.useCacheForAllThreads", false);
 
         DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT = SystemPropertyUtil.getInt(
                 "io.netty.allocator.directMemoryCacheAlignment", 0);
