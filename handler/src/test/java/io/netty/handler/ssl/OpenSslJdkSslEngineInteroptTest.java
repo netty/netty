@@ -102,20 +102,6 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
 
     @Override
     @Test
-    public void testClientHostnameValidationSuccess() throws InterruptedException, SSLException {
-        assumeTrue(OpenSsl.supportsHostnameValidation());
-        super.testClientHostnameValidationSuccess();
-    }
-
-    @Override
-    @Test
-    public void testClientHostnameValidationFail() throws InterruptedException, SSLException {
-        assumeTrue(OpenSsl.supportsHostnameValidation());
-        super.testClientHostnameValidationFail();
-    }
-
-    @Override
-    @Test
     public void testSessionAfterHandshakeKeyManagerFactoryMutualAuth() throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSessionAfterHandshakeKeyManagerFactoryMutualAuth();

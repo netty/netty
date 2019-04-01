@@ -22,7 +22,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
 import java.security.Provider;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -107,20 +106,6 @@ public class OpenSslConscryptSslEngineInteropTest extends ConscryptSslEngineTest
     public void testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth() throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth();
-    }
-
-    @Override
-    @Test
-    public void testClientHostnameValidationSuccess() throws InterruptedException, SSLException {
-        assumeTrue(OpenSsl.supportsHostnameValidation());
-        super.testClientHostnameValidationSuccess();
-    }
-
-    @Override
-    @Test
-    public void testClientHostnameValidationFail() throws InterruptedException, SSLException {
-        assumeTrue(OpenSsl.supportsHostnameValidation());
-        super.testClientHostnameValidationFail();
     }
 
     @Override
