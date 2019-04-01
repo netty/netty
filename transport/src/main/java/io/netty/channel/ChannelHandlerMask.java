@@ -18,6 +18,11 @@ package io.netty.channel;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.net.SocketAddress;
 import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
@@ -163,8 +168,25 @@ final class ChannelHandlerMask {
             final Class<?> handlerType, final String methodName, final Class<?>... paramTypes) throws Exception {
 
         return AccessController.doPrivileged((PrivilegedExceptionAction<Boolean>) () ->
-                handlerType.getMethod(methodName, paramTypes).isAnnotationPresent(ChannelHandler.Skip.class));
+                handlerType.getMethod(methodName, paramTypes).isAnnotationPresent(Skip.class));
     }
 
     private ChannelHandlerMask() { }
+
+    /**
+     * Indicates that the annotated event handler method in {@link ChannelHandler} will not be invoked by
+     * {@link ChannelPipeline} and so <strong>MUST</strong> only be used when the {@link ChannelHandler}
+     * method does nothing except forward to the next {@link ChannelHandler} in the pipeline.
+     * <p>
+     * Note that this annotation is not {@linkplain Inherited inherited}. If a user overrides a method annotated with
+     * {@link Skip}, it will not be skipped anymore. Similarly, the user can override a method not annotated with
+     * {@link Skip} and simply pass the event through to the next handler, which reverses the behavior of the
+     * supertype.
+     * </p>
+     */
+    @Target(ElementType.METHOD)
+    @Retention(RetentionPolicy.RUNTIME)
+    @interface Skip {
+        // no value
+    }
 }
