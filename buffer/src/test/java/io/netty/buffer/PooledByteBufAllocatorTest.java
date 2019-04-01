@@ -149,7 +149,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
     @Test
     public void testArenaMetricsCache() {
-        testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 9, 1000, 1000, 1000), 100, 1, 1, 0);
+        testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 9, 1000, 1000, 1000, true, 0), 100, 1, 1, 0);
     }
 
     @Test

@@ -144,7 +144,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         }
 
         DEFAULT_USE_CACHE_FOR_ALL_THREADS = SystemPropertyUtil.getBoolean(
-                "io.netty.allocator.useCacheForAllThreads", true);
+                "io.netty.allocator.useCacheForAllThreads", false);
 
         // Use 1023 by default as we use an ArrayDeque as backing storage which will then allocate an internal array
         // of 1024 elements. Otherwise we would allocate 2048 and only use 1024 which is wasteful.
