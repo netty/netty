@@ -147,20 +147,6 @@ public class OpenSslEngineTest extends SSLEngineTest {
     }
 
     @Override
-    @Test
-    public void testClientHostnameValidationSuccess() throws InterruptedException, SSLException {
-        assumeTrue(OpenSsl.supportsHostnameValidation());
-        super.testClientHostnameValidationSuccess();
-    }
-
-    @Override
-    @Test
-    public void testClientHostnameValidationFail() throws InterruptedException, SSLException {
-        assumeTrue(OpenSsl.supportsHostnameValidation());
-        super.testClientHostnameValidationFail();
-    }
-
-    @Override
     public void testHandshakeSession() throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testHandshakeSession();

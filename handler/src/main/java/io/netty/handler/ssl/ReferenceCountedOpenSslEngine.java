@@ -120,10 +120,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             SSL.SSL_OP_NO_TLSv1_2,
             SSL.SSL_OP_NO_TLSv1_3
     };
-    /**
-     * <a href="https://www.openssl.org/docs/man1.0.2/crypto/X509_check_host.html">The flags argument is usually 0</a>.
-     */
-    private static final int DEFAULT_HOSTNAME_VALIDATION_FLAGS = 0;
 
     /**
      * Depends upon tcnative ... only use if tcnative is available!
@@ -1961,18 +1957,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             final String endPointIdentificationAlgorithm = sslParameters.getEndpointIdentificationAlgorithm();
             final boolean endPointVerificationEnabled = isEndPointVerificationEnabled(endPointIdentificationAlgorithm);
 
-            final boolean wasEndPointVerificationEnabled =
-                    isEndPointVerificationEnabled(this.endPointIdentificationAlgorithm);
-
-            if (wasEndPointVerificationEnabled && !endPointVerificationEnabled) {
-                // Passing in null will disable hostname verification again so only do so if it was enabled before.
-                SSL.setHostNameValidation(ssl, DEFAULT_HOSTNAME_VALIDATION_FLAGS, null);
-            } else {
-                String host = endPointVerificationEnabled ? getPeerHost() : null;
-                if (host != null && !host.isEmpty()) {
-                    SSL.setHostNameValidation(ssl, DEFAULT_HOSTNAME_VALIDATION_FLAGS, host);
-                }
-            }
             // If the user asks for hostname verification we must ensure we verify the peer.
             // If the user disables hostname verification we leave it up to the user to change the mode manually.
             if (clientMode && endPointVerificationEnabled) {
