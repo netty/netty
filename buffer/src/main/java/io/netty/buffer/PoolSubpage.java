@@ -204,16 +204,24 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         final int maxNumElems;
         final int numAvail;
         final int elemSize;
-        synchronized (chunk.arena) {
-            if (!this.doNotDestroy) {
-                doNotDestroy = false;
-                // Not used for creating the String.
-                maxNumElems = numAvail = elemSize = -1;
-            } else {
-                doNotDestroy = true;
-                maxNumElems = this.maxNumElems;
-                numAvail = this.numAvail;
-                elemSize = this.elemSize;
+        if (chunk == null) {
+            // This is the head so there is no need to synchronize at all as these never change.
+            doNotDestroy = true;
+            maxNumElems = 0;
+            numAvail = 0;
+            elemSize = -1;
+        } else {
+            synchronized (chunk.arena) {
+                if (!this.doNotDestroy) {
+                    doNotDestroy = false;
+                    // Not used for creating the String.
+                    maxNumElems = numAvail = elemSize = -1;
+                } else {
+                    doNotDestroy = true;
+                    maxNumElems = this.maxNumElems;
+                    numAvail = this.numAvail;
+                    elemSize = this.elemSize;
+                }
             }
         }
 
@@ -227,6 +235,11 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     @Override
     public int maxNumElements() {
+        if (chunk == null) {
+            // It's the head.
+            return 0;
+        }
+
         synchronized (chunk.arena) {
             return maxNumElems;
         }
@@ -234,6 +247,11 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     @Override
     public int numAvailable() {
+        if (chunk == null) {
+            // It's the head.
+            return 0;
+        }
+
         synchronized (chunk.arena) {
             return numAvail;
         }
@@ -241,6 +259,11 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     @Override
     public int elementSize() {
+        if (chunk == null) {
+            // It's the head.
+            return -1;
+        }
+
         synchronized (chunk.arena) {
             return elemSize;
         }
