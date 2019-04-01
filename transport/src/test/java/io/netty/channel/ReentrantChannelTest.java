@@ -20,6 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.LoggingHandler.Event;
 import io.netty.channel.local.LocalAddress;
 
+import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import java.nio.channels.ClosedChannelException;
@@ -270,7 +271,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
             fail();
         } catch (Throwable cce) {
             // FIXME:  shouldn't this contain the "intentional failure" exception?
-            assertEquals(ClosedChannelException.class, cce.getClass());
+            assertThat(cce.getCause(), Matchers.instanceOf(ClosedChannelException.class));
         }
 
         clientChannel.closeFuture().sync();

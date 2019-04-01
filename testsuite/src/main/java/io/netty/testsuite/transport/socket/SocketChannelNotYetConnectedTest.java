@@ -40,14 +40,14 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
                 ch.shutdownInput().syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
-                checkThrowable(cause);
+                checkThrowable(cause.getCause());
             }
 
             try {
                 ch.shutdownOutput().syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
-                checkThrowable(cause);
+                checkThrowable(cause.getCause());
             }
         } finally {
             ch.close().syncUninterruptibly();

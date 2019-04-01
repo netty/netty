@@ -27,7 +27,6 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.Mapping;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 
@@ -80,12 +79,12 @@ public class SniClientTest {
     }
 
     @Test(timeout = 30000)
-    public void testSniSNIMatcherMatchesClient() throws Exception {
+    public void testSniSNIMatcherMatchesClient() throws Throwable {
         SniClientJava8TestUtil.testSniClient(serverProvider, clientProvider, true);
     }
 
     @Test(timeout = 30000, expected = SSLException.class)
-    public void testSniSNIMatcherDoesNotMatchClient() throws Exception {
+    public void testSniSNIMatcherDoesNotMatchClient() throws Throwable {
         SniClientJava8TestUtil.testSniClient(serverProvider, clientProvider, false);
     }
 

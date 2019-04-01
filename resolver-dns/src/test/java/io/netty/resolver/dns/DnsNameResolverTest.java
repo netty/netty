@@ -83,6 +83,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -679,10 +680,11 @@ public class DnsNameResolverTest {
 
     private static UnknownHostException resolveNonExistentDomain(DnsNameResolver resolver) {
         try {
-            resolver.resolve("non-existent.netty.io").sync();
+            resolver.resolve("non-existent.netty.io").syncUninterruptibly();
             fail();
             return null;
-        } catch (Exception e) {
+        } catch (CompletionException cause) {
+            Throwable e = cause.getCause();
             assertThat(e, is(instanceOf(UnknownHostException.class)));
 
             TestRecursiveCacheDnsQueryLifecycleObserverFactory lifecycleObserverFactory =
@@ -2108,7 +2110,7 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testFollowCNAMELoop() throws IOException {
+    public void testFollowCNAMELoop() throws Throwable {
         expectedException.expect(UnknownHostException.class);
         TestDnsServer dnsServer2 = new TestDnsServer(question -> {
             Set<ResourceRecord> records = new LinkedHashSet<>(4);
@@ -2141,6 +2143,8 @@ public class DnsNameResolverTest {
 
             resolver = builder.build();
             resolver.resolveAll("somehost.netty.io").syncUninterruptibly().getNow();
+        } catch (CompletionException e) {
+            throw e.getCause();
         } finally {
             dnsServer2.stop();
             if (resolver != null) {
@@ -2150,24 +2154,26 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testSearchDomainQueryFailureForSingleAddressTypeCompletes() {
+    public void testSearchDomainQueryFailureForSingleAddressTypeCompletes() throws Throwable {
         expectedException.expect(UnknownHostException.class);
         testSearchDomainQueryFailureCompletes(ResolvedAddressTypes.IPV4_ONLY);
     }
 
     @Test
-    public void testSearchDomainQueryFailureForMultipleAddressTypeCompletes() {
+    public void testSearchDomainQueryFailureForMultipleAddressTypeCompletes() throws Throwable {
         expectedException.expect(UnknownHostException.class);
         testSearchDomainQueryFailureCompletes(ResolvedAddressTypes.IPV4_PREFERRED);
     }
 
-    private void testSearchDomainQueryFailureCompletes(ResolvedAddressTypes types) {
+    private void testSearchDomainQueryFailureCompletes(ResolvedAddressTypes types) throws Throwable {
         DnsNameResolver resolver = newResolver()
                 .resolvedAddressTypes(types)
                 .ndots(1)
                 .searchDomains(singletonList(".")).build();
         try {
             resolver.resolve("invalid.com").syncUninterruptibly();
+        } catch (CompletionException cause) {
+            throw cause.getCause();
         } finally {
             resolver.close();
         }

@@ -24,6 +24,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -561,8 +562,10 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         if (cause == null) {
             return;
         }
-
-        PlatformDependent.throwException(cause);
+        if (cause instanceof CancellationException) {
+            throw (CancellationException) cause;
+        }
+        throw new CompletionException(cause);
     }
 
     private boolean await0(long timeoutNanos, boolean interruptable) throws InterruptedException {

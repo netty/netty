@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -203,7 +204,7 @@ public class BootstrapTest {
     }
 
     @Test(expected = ConnectException.class, timeout = 10000)
-    public void testLateRegistrationConnect() throws Exception {
+    public void testLateRegistrationConnect() throws Throwable {
         EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
         LateRegisterHandler registerHandler = new LateRegisterHandler();
         try {
@@ -215,6 +216,8 @@ public class BootstrapTest {
             assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess();
             future.syncUninterruptibly();
+        } catch (CompletionException e) {
+            throw e.getCause();
         } finally {
             group.shutdownGracefully();
         }

@@ -113,13 +113,13 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
                 ch.shutdownInput().syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
-                checkThrowable(cause);
+                checkThrowable(cause.getCause());
             }
             try {
                 ch.shutdownOutput().syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
-                checkThrowable(cause);
+                checkThrowable(cause.getCause());
             }
         } finally {
             if (s != null) {
@@ -177,7 +177,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
                 ch.writeAndFlush(Unpooled.wrappedBuffer(new byte[]{ 2 })).sync();
                 fail();
             } catch (Throwable cause) {
-                checkThrowable(cause);
+                checkThrowable(cause.getCause());
             }
             assertNull(h.writabilityQueue.poll());
         } finally {

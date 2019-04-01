@@ -26,6 +26,7 @@ import io.netty.util.CharsetUtil;
 
 import java.net.InetSocketAddress;
 import java.util.Collections;
+import java.util.concurrent.CompletionException;
 
 import io.netty.util.NetUtil;
 import org.junit.After;
@@ -87,18 +88,23 @@ public class EpollSocketTcpMd5Test {
     }
 
     @Test(expected = ConnectTimeoutException.class)
-    public void testKeyMismatch() throws Exception {
+    public void testKeyMismatch() throws Throwable {
         server.config().setOption(EpollChannelOption.TCP_MD5SIG,
                 Collections.singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
 
-        EpollSocketChannel client = (EpollSocketChannel) new Bootstrap().group(GROUP)
-                .channel(EpollSocketChannel.class)
-                .handler(new ChannelHandler() { })
-                .option(EpollChannelOption.TCP_MD5SIG,
-                        Collections.singletonMap(NetUtil.LOCALHOST4, BAD_KEY))
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
-                .connect(server.localAddress()).syncUninterruptibly().channel();
-        client.close().syncUninterruptibly();
+        try {
+            EpollSocketChannel client = (EpollSocketChannel) new Bootstrap().group(GROUP)
+                    .channel(EpollSocketChannel.class)
+                    .handler(new ChannelHandler() {
+                    })
+                    .option(EpollChannelOption.TCP_MD5SIG,
+                            Collections.singletonMap(NetUtil.LOCALHOST4, BAD_KEY))
+                    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
+                    .connect(server.localAddress()).syncUninterruptibly().channel();
+            client.close().syncUninterruptibly();
+        } catch (CompletionException e) {
+            throw e.getCause();
+        }
     }
 
     @Test

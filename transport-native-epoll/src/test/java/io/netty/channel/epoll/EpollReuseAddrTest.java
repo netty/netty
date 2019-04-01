@@ -84,7 +84,7 @@ public class EpollReuseAddrTest {
             bootstrap.bind(future.channel().localAddress()).syncUninterruptibly();
             Assert.fail();
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof IOException);
+            Assert.assertTrue(e.getCause() instanceof IOException);
         }
         future.channel().close().syncUninterruptibly();
     }
