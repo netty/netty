@@ -318,6 +318,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         try {
             // 通过反射创建服务端channel
             channel = channelFactory.newChannel();
+            // 初始化channle
             init(channel);
         } catch (Throwable t) {
             if (channel != null) {
