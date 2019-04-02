@@ -63,7 +63,9 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                                          CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
                                          String[] protocols, long sessionCacheSize, long sessionTimeout,
                                          boolean enableOcsp) throws SSLException {
-        this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout, enableOcsp, KeyStore.getDefaultType());
+        this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
+                keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize,
+                sessionTimeout, enableOcsp, KeyStore.getDefaultType());
     }
 
     ReferenceCountedOpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
@@ -95,8 +97,9 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                                                    OpenSslEngineMap engineMap,
                                                    X509Certificate[] trustCertCollection,
                                                    TrustManagerFactory trustManagerFactory,
-                                                   X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
-                                                   KeyManagerFactory keyManagerFactory, String keyStore) throws SSLException {
+                                                   X509Certificate[] keyCertChain, PrivateKey key,
+                                                   String keyPassword, KeyManagerFactory keyManagerFactory,
+                                                   String keyStore) throws SSLException {
         if (key == null && keyCertChain != null || key != null && keyCertChain == null) {
             throw new IllegalArgumentException(
                     "Either both keyCertChain and key needs to be null or none of them");

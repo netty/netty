@@ -67,7 +67,9 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
             boolean enableOcsp) throws SSLException {
-        this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls, enableOcsp, KeyStore.getDefaultType());
+        this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
+                keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
+                clientAuth, protocols, startTls, enableOcsp, KeyStore.getDefaultType());
     }
 
     private ReferenceCountedOpenSslServerContext(

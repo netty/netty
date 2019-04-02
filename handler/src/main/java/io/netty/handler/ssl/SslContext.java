@@ -1191,7 +1191,8 @@ public abstract class SslContext {
                                                     KeyManagerFactory kmf, String keyStoreType)
             throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException,
             CertificateException, IOException {
-        return buildKeyManagerFactory(certChain, KeyManagerFactory.getDefaultAlgorithm(), key, keyPassword, kmf, keyStoreType);
+        return buildKeyManagerFactory(certChain, KeyManagerFactory.getDefaultAlgorithm(), key,
+                keyPassword, kmf, keyStoreType);
     }
 
     static KeyManagerFactory buildKeyManagerFactory(X509Certificate[] certChainFile,
