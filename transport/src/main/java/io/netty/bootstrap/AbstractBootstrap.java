@@ -287,6 +287,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         if (regFuture.isDone()) {
             // At this point we know that the registration was complete and successful.
             ChannelPromise promise = channel.newPromise();
+            // 绑定端口成功，可以接受accept事件
             doBind0(regFuture, channel, localAddress, promise);
             return promise;
         } else {
