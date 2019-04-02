@@ -102,20 +102,6 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
 
     @Override
     @Test
-    public void testClientHostnameValidationSuccess() throws InterruptedException, SSLException {
-        assumeTrue(OpenSsl.supportsHostnameValidation());
-        super.testClientHostnameValidationSuccess();
-    }
-
-    @Override
-    @Test
-    public void testClientHostnameValidationFail() throws InterruptedException, SSLException {
-        assumeTrue(OpenSsl.supportsHostnameValidation());
-        super.testClientHostnameValidationFail();
-    }
-
-    @Override
-    @Test
     public void testSessionAfterHandshakeKeyManagerFactoryMutualAuth() throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSessionAfterHandshakeKeyManagerFactoryMutualAuth();
@@ -125,6 +111,12 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
     protected boolean mySetupMutualAuthServerIsValidServerException(Throwable cause) {
         // TODO(scott): work around for a JDK issue. The exception should be SSLHandshakeException.
         return super.mySetupMutualAuthServerIsValidServerException(cause) || causedBySSLException(cause);
+    }
+
+    @Override
+    public void testHandshakeSession() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testHandshakeSession();
     }
 
     @Override

@@ -76,6 +76,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.min;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
+import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_TASK;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_UNWRAP;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_WRAP;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING;
@@ -119,10 +120,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             SSL.SSL_OP_NO_TLSv1_2,
             SSL.SSL_OP_NO_TLSv1_3
     };
-    /**
-     * <a href="https://www.openssl.org/docs/man1.0.2/crypto/X509_check_host.html">The flags argument is usually 0</a>.
-     */
-    private static final int DEFAULT_HOSTNAME_VALIDATION_FLAGS = 0;
 
     /**
      * Depends upon tcnative ... only use if tcnative is available!
@@ -169,6 +166,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private boolean receivedShutdown;
     private volatile int destroyed;
     private volatile String applicationProtocol;
+    private volatile boolean needTask;
 
     // Reference Counting
     private final ResourceLeakTracker<ReferenceCountedOpenSslEngine> leak;
@@ -222,10 +220,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private final boolean enableOcsp;
     private int maxWrapOverhead;
     private int maxWrapBufferSize;
-
-    // This is package-private as we set it from OpenSslContext if an exception is thrown during
-    // the verification step.
-    SSLHandshakeException handshakeException;
+    private Throwable handshakeException;
 
     /**
      * Create a new instance.
@@ -735,7 +730,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     // Flush any data that may have been written implicitly during the handshake by OpenSSL.
                     bytesProduced = SSL.bioFlushByteBuffer(networkBIO);
 
-                    if (bytesProduced > 0 && handshakeException != null) {
+                    if (handshakeException != null) {
                         // TODO(scott): It is possible that when the handshake failed there was not enough room in the
                         // non-application buffers to hold the alert. We should get all the data before progressing on.
                         // However I'm not aware of a way to do this with the OpenSSL APIs.
@@ -744,7 +739,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         // We produced / consumed some data during the handshake, signal back to the caller.
                         // If there is a handshake exception and we have produced data, we should send the data before
                         // we allow handshake() to throw the handshake exception.
-                        return newResult(NEED_WRAP, 0, bytesProduced);
+                        //
+                        // unwrap(...) will then ensure we propagate the handshake error back to the user.
+                        return newResult(NEED_UNWRAP, 0, bytesProduced);
                     }
 
                     status = handshake();
@@ -752,6 +749,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     // Handshake may have generated more data, for example if the internal SSL buffer is small
                     // we may have freed up space by flushing above.
                     bytesProduced = bioLengthBefore - SSL.bioLengthByteBuffer(networkBIO);
+
+                    if (status == NEED_TASK) {
+                        return newResult(status, 0, bytesProduced);
+                    }
 
                     if (bytesProduced > 0) {
                         // If we have filled up the dst buffer and we have not finished the handshake we should try to
@@ -883,6 +884,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                             // to write encrypted data to. This is an OVERFLOW condition.
                             // [1] https://www.openssl.org/docs/manmaster/ssl/SSL_write.html
                             return newResult(BUFFER_OVERFLOW, status, bytesConsumed, bytesProduced);
+                        } else if (sslError == SSL.SSL_ERROR_WANT_X509_LOOKUP ||
+                                sslError == SSL.SSL_ERROR_WANT_CERTIFICATE_VERIFY) {
+                            return newResult(NEED_TASK, bytesConsumed, bytesProduced);
                         } else {
                             // Everything else is considered as error
                             throw shutdownWithError("SSL_write", sslError);
@@ -922,6 +926,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 shutdown();
             }
             return new SSLEngineResult(CLOSED, hs, bytesConsumed, bytesProduced);
+        }
+        if (hs == NEED_TASK) {
+            // Set needTask to true so getHandshakeStatus() will return the correct value.
+            needTask = true;
         }
         return new SSLEngineResult(status, hs, bytesConsumed, bytesProduced);
     }
@@ -1020,6 +1028,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
 
                 status = handshake();
+
+                if (status == NEED_TASK) {
+                    return newResult(status, 0, 0);
+                }
+
                 if (status == NEED_WRAP) {
                     return NEED_WRAP_OK;
                 }
@@ -1160,7 +1173,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                         closeAll();
                                     }
                                     return newResultMayFinishHandshake(isInboundDone() ? CLOSED : OK, status,
-                                                                       bytesConsumed, bytesProduced);
+                                            bytesConsumed, bytesProduced);
+                                } else if (sslError == SSL.SSL_ERROR_WANT_X509_LOOKUP
+                                        || sslError == SSL.SSL_ERROR_WANT_CERTIFICATE_VERIFY) {
+                                    return newResult(isInboundDone() ? CLOSED : OK,
+                                            NEED_TASK, bytesConsumed, bytesProduced);
                                 } else {
                                     return sslReadErrorResult(sslError, SSL.getLastErrorNumber(), bytesConsumed,
                                                               bytesProduced);
@@ -1293,10 +1310,29 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     }
 
     @Override
-    public final Runnable getDelegatedTask() {
-        // Currently, we do not delegate SSL computation tasks
-        // TODO: in the future, possibly create tasks to do encrypt / decrypt async
-        return null;
+    public final synchronized Runnable getDelegatedTask() {
+        if (isDestroyed()) {
+            return null;
+        }
+        final Runnable task = SSL.getTask(ssl);
+        if (task == null) {
+            return null;
+        }
+        return new Runnable() {
+            @Override
+            public void run() {
+                if (isDestroyed()) {
+                    // The engine was destroyed in the meantime, just return.
+                    return;
+                }
+                try {
+                    task.run();
+                } finally {
+                    // The task was run, reset needTask to false so getHandshakeStatus() returns the correct value.
+                    needTask = false;
+                }
+            }
+        };
     }
 
     @Override
@@ -1610,7 +1646,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 throw RENEGOTIATION_UNSUPPORTED;
             case NOT_STARTED:
                 handshakeState = HandshakeState.STARTED_EXPLICITLY;
-                handshake();
+                if (handshake() == NEED_TASK) {
+                    // Set needTask to true so getHandshakeStatus() will return the correct value.
+                    needTask = true;
+                }
                 calculateMaxWrapOverhead();
                 break;
             default:
@@ -1637,27 +1676,45 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return cert == null || cert.length == 0;
     }
 
+    private SSLEngineResult.HandshakeStatus handshakeException() throws SSLException {
+        if (SSL.bioLengthNonApplication(networkBIO) > 0) {
+            // There is something pending, we need to consume it first via a WRAP so we don't loose anything.
+            return NEED_WRAP;
+        }
+
+        Throwable exception = handshakeException;
+        assert exception != null;
+        handshakeException = null;
+        shutdown();
+        if (exception instanceof SSLHandshakeException) {
+            throw (SSLHandshakeException) exception;
+        }
+        SSLHandshakeException e = new SSLHandshakeException("General OpenSslEngine problem");
+        e.initCause(exception);
+        throw e;
+    }
+
+    /**
+     * Should be called if the handshake will be failed due a callback that throws an exception.
+     * This cause will then be used to give more details as part of the {@link SSLHandshakeException}.
+     */
+    final void initHandshakeException(Throwable cause) {
+        assert handshakeException == null;
+        handshakeException = cause;
+    }
+
     private SSLEngineResult.HandshakeStatus handshake() throws SSLException {
+        if (needTask) {
+            return NEED_TASK;
+        }
         if (handshakeState == HandshakeState.FINISHED) {
             return FINISHED;
         }
+
         checkEngineClosed(HANDSHAKE_ENGINE_CLOSED);
 
-        // Check if we have a pending handshakeException and if so see if we need to consume all pending data from the
-        // BIO first or can just shutdown and throw it now.
-        // This is needed so we ensure close_notify etc is correctly send to the remote peer.
-        // See https://github.com/netty/netty/issues/3900
-        SSLHandshakeException exception = handshakeException;
-        if (exception != null) {
-            if (SSL.bioLengthNonApplication(networkBIO) > 0) {
-                // There is something pending, we need to consume it first via a WRAP so we don't loose anything.
-                return NEED_WRAP;
-            }
-            // No more data left to send to the remote peer, so null out the exception field, shutdown and throw
-            // the exception.
-            handshakeException = null;
-            shutdown();
-            throw exception;
+        if (handshakeException != null) {
+            return handshakeException();
         }
 
         // Adding the OpenSslEngine to the OpenSslEngineMap so it can be used in the AbstractCertificateVerifier.
@@ -1668,26 +1725,30 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         int code = SSL.doHandshake(ssl);
         if (code <= 0) {
-            // Check if we have a pending exception that was created during the handshake and if so throw it after
-            // shutdown the connection.
-            if (handshakeException != null) {
-                exception = handshakeException;
-                handshakeException = null;
-                shutdown();
-                throw exception;
-            }
-
             int sslError = SSL.getError(ssl, code);
             if (sslError == SSL.SSL_ERROR_WANT_READ || sslError == SSL.SSL_ERROR_WANT_WRITE) {
                 return pendingStatus(SSL.bioLengthNonApplication(networkBIO));
-            } else {
-                // Everything else is considered as error
-                throw shutdownWithError("SSL_do_handshake", sslError);
             }
+
+            if (sslError == SSL.SSL_ERROR_WANT_X509_LOOKUP || sslError == SSL.SSL_ERROR_WANT_CERTIFICATE_VERIFY) {
+                return NEED_TASK;
+            }
+
+            // Check if we have a pending exception that was created during the handshake and if so throw it after
+            // shutdown the connection.
+            if (handshakeException != null) {
+                return handshakeException();
+            }
+
+            // Everything else is considered as error
+            throw shutdownWithError("SSL_do_handshake", sslError);
+        }
+        // We have produced more data as part of the handshake if this is the case the user should call wrap(...)
+        if (SSL.bioLengthNonApplication(networkBIO) > 0) {
+            return NEED_WRAP;
         }
         // if SSL_do_handshake returns > 0 or sslError == SSL.SSL_ERROR_NAME it means the handshake was finished.
         session.handshakeFinished();
-        engineMap.remove(ssl);
         return FINISHED;
     }
 
@@ -1704,12 +1765,26 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     @Override
     public final synchronized SSLEngineResult.HandshakeStatus getHandshakeStatus() {
         // Check if we are in the initial handshake phase or shutdown phase
-        return needPendingStatus() ? pendingStatus(SSL.bioLengthNonApplication(networkBIO)) : NOT_HANDSHAKING;
+        if (needPendingStatus()) {
+            if (needTask) {
+                // There is a task outstanding
+                return NEED_TASK;
+            }
+            return pendingStatus(SSL.bioLengthNonApplication(networkBIO));
+        }
+        return NOT_HANDSHAKING;
     }
 
     private SSLEngineResult.HandshakeStatus getHandshakeStatus(int pending) {
         // Check if we are in the initial handshake phase or shutdown phase
-        return needPendingStatus() ? pendingStatus(pending) : NOT_HANDSHAKING;
+        if (needPendingStatus()) {
+            if (needTask) {
+                // There is a task outstanding
+                return NEED_TASK;
+            }
+            return pendingStatus(pending);
+        }
+        return NOT_HANDSHAKING;
     }
 
     private boolean needPendingStatus() {
@@ -1882,18 +1957,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             final String endPointIdentificationAlgorithm = sslParameters.getEndpointIdentificationAlgorithm();
             final boolean endPointVerificationEnabled = isEndPointVerificationEnabled(endPointIdentificationAlgorithm);
 
-            final boolean wasEndPointVerificationEnabled =
-                    isEndPointVerificationEnabled(this.endPointIdentificationAlgorithm);
-
-            if (wasEndPointVerificationEnabled && !endPointVerificationEnabled) {
-                // Passing in null will disable hostname verification again so only do so if it was enabled before.
-                SSL.setHostNameValidation(ssl, DEFAULT_HOSTNAME_VALIDATION_FLAGS, null);
-            } else {
-                String host = endPointVerificationEnabled ? getPeerHost() : null;
-                if (host != null && !host.isEmpty()) {
-                    SSL.setHostNameValidation(ssl, DEFAULT_HOSTNAME_VALIDATION_FLAGS, host);
-                }
-            }
             // If the user asks for hostname verification we must ensure we verify the peer.
             // If the user disables hostname verification we leave it up to the user to change the mode manually.
             if (clientMode && endPointVerificationEnabled) {
@@ -1938,7 +2001,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // thread.
         private X509Certificate[] x509PeerCerts;
         private Certificate[] peerCerts;
-        private Certificate[] localCerts;
 
         private String protocol;
         private String cipher;
@@ -2093,7 +2155,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     id = SSL.getSessionId(ssl);
                     cipher = toJavaCipherSuite(SSL.getCipherForSSL(ssl));
                     protocol = SSL.getVersion(ssl);
-                    localCerts = localCertificateChain;
 
                     initPeerCerts();
                     selectApplicationProtocol();
@@ -2228,6 +2289,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public Certificate[] getLocalCertificates() {
+            Certificate[] localCerts = ReferenceCountedOpenSslEngine.this.localCertificateChain;
             if (localCerts == null) {
                 return null;
             }
@@ -2254,7 +2316,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public Principal getLocalPrincipal() {
-            Certificate[] local = localCerts;
+            Certificate[] local = ReferenceCountedOpenSslEngine.this.localCertificateChain;
             if (local == null || local.length == 0) {
                 return null;
             }

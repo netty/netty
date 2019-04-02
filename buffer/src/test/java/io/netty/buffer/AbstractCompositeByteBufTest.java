@@ -1253,6 +1253,40 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     }
 
     @Test
+    public void testReleasesOnShrink2() {
+        // It is important to use a pooled allocator here to ensure
+        // the slices returned by readRetainedSlice are of type
+        // PooledSlicedByteBuf, which maintains an independent refcount
+        // (so that we can be sure to cover this case)
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer();
+
+        buffer.writeShort(1).writeShort(2);
+
+        ByteBuf b1 = buffer.readRetainedSlice(2);
+        ByteBuf b2 = b1.retainedSlice(b1.readerIndex(), 2);
+
+        // composite takes ownership of b1 and b2
+        ByteBuf composite = Unpooled.compositeBuffer()
+            .addComponents(b1, b2);
+
+        assertEquals(4, composite.capacity());
+
+        // reduce capacity down to two, will drop the second component
+        composite.capacity(2);
+        assertEquals(2, composite.capacity());
+
+        // releasing composite should release the components
+        composite.release();
+        assertEquals(0, composite.refCnt());
+        assertEquals(0, b1.refCnt());
+        assertEquals(0, b2.refCnt());
+
+        // release last remaining ref to buffer
+        buffer.release();
+        assertEquals(0, buffer.refCnt());
+    }
+
+    @Test
     public void testAllocatorIsSameWhenCopy() {
         testAllocatorIsSameWhenCopy(false);
     }

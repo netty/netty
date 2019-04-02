@@ -108,7 +108,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 return promise;
             }
 
-            PromiseCombiner combiner = new PromiseCombiner();
+            PromiseCombiner combiner = new PromiseCombiner(ctx.executor());
             for (;;) {
                 ByteBuf nextBuf = nextReadableBuf(channel);
                 boolean compressedEndOfStream = nextBuf == null && endOfStream;

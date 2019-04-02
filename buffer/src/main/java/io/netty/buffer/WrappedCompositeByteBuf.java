@@ -424,8 +424,8 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     }
 
     @Override
-    int internalRefCnt() {
-        return wrapped.internalRefCnt();
+    final boolean isAccessible() {
+        return wrapped.isAccessible();
     }
 
     @Override

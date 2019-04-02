@@ -69,8 +69,6 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
 
     private HttpRequest request;
 
-    private boolean readingChunks;
-
     private HttpData partialContent;
 
     private final StringBuilder responseContent = new StringBuilder();
@@ -162,13 +160,12 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
                 return;
             }
 
-            readingChunks = HttpUtil.isTransferEncodingChunked(request);
+            boolean readingChunks = HttpUtil.isTransferEncodingChunked(request);
             responseContent.append("Is Chunked: " + readingChunks + "\r\n");
             responseContent.append("IsMultipart: " + decoder.isMultipart() + "\r\n");
             if (readingChunks) {
                 // Chunk version
                 responseContent.append("Chunks: ");
-                readingChunks = true;
             }
         }
 
@@ -194,7 +191,6 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
                 // example of reading only if at the end
                 if (chunk instanceof LastHttpContent) {
                     writeResponse(ctx.channel());
-                    readingChunks = false;
 
                     reset();
                 }

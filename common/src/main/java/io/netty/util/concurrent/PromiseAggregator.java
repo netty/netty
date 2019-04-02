@@ -20,7 +20,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * @deprecated Use {@link PromiseCombiner}
+ * @deprecated Use {@link PromiseCombiner#PromiseCombiner(EventExecutor)}.
  *
  * {@link GenericFutureListener} implementation which consolidates multiple {@link Future}s
  * into one, by listening to individual {@link Future}s and producing an aggregated result

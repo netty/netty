@@ -953,7 +953,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     out = null;
                 }
 
-                switch (result.getHandshakeStatus()) {
+                HandshakeStatus status = result.getHandshakeStatus();
+                switch (status) {
                     case FINISHED:
                         setHandshakeSuccess();
                         return false;
@@ -988,7 +989,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         throw new IllegalStateException("Unknown handshake status: " + result.getHandshakeStatus());
                 }
 
-                if (result.bytesProduced() == 0) {
+                // Check if did not produce any bytes and if so break out of the loop, but only if we did not process
+                // a task as last action. It's fine to not produce any data as part of executing a task.
+                if (result.bytesProduced() == 0 && status != HandshakeStatus.NEED_TASK) {
                     break;
                 }
 
@@ -1438,7 +1441,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         throw new IllegalStateException("unknown handshake status: " + handshakeStatus);
                 }
 
-                if (status == Status.BUFFER_UNDERFLOW || consumed == 0 && produced == 0) {
+                if (status == Status.BUFFER_UNDERFLOW ||
+                        // If we processed NEED_TASK we should try again even we did not consume or produce anything.
+                        handshakeStatus != HandshakeStatus.NEED_TASK && consumed == 0 && produced == 0) {
                     if (handshakeStatus == HandshakeStatus.NEED_UNWRAP) {
                         // The underlying engine is starving so we need to feed it with more data.
                         // See https://github.com/netty/netty/pull/5039
@@ -1508,10 +1513,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private boolean runDelegatedTasks(boolean inUnwrap) {
         if (delegatedTaskExecutor == ImmediateExecutor.INSTANCE || inEventLoop(delegatedTaskExecutor)) {
             // We should run the task directly in the EventExecutor thread and not offload at all.
-            for (;;) {
-                runAllDelegatedTasks(engine);
-                return true;
-            }
+            runAllDelegatedTasks(engine);
+            return true;
         } else {
             executeDelegatedTasks(inUnwrap);
             return false;
@@ -1624,6 +1627,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             taskError(e);
                             return;
                         }
+                        if (inUnwrap) {
+                            // If we were in the unwrap call when the task was processed we should also try to unwrap
+                            // non app data first as there may not anything left in the inbound buffer to process.
+                            unwrapNonAppData(ctx);
+                        }
 
                         // Flush now as we may have written some data as part of the wrap call.
                         forceFlush(ctx);
@@ -1642,17 +1650,25 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     // that will be written to the Channel.
                     case NEED_WRAP:
                         try {
-                            wrapNonAppData(ctx, inUnwrap);
+                            if (!wrapNonAppData(ctx, false) && inUnwrap) {
+                                // The handshake finished in wrapNonAppData(...), we need to try call
+                                // unwrapNonAppData(...) as we may have some alert that we should read.
+                                //
+                                // This mimics what we would do when we are calling this method while in unwrap(...).
+                                unwrapNonAppData(ctx);
+                            }
+
+                            // Flush now as we may have written some data as part of the wrap call.
+                            forceFlush(ctx);
                         } catch (Throwable e) {
                             taskError(e);
                             return;
                         }
-                        // Flush now as we may have written some data as part of the wrap call.
-                        forceFlush(ctx);
 
                         // Now try to feed in more data that we have buffered.
                         tryDecodeAgain();
                         break;
+
                     default:
                         // Should never reach here as we handle all cases.
                         throw new AssertionError();

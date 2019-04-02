@@ -310,6 +310,11 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
     }
 
     @Override
+    public int registeredChannels() {
+        return channels.size();
+    }
+
+    @Override
     protected void cleanup() {
         try {
             try {
