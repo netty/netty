@@ -126,6 +126,7 @@ public class ChannelInboundHandlerAdapter extends ChannelHandlerAdapter implemen
      * Sub-classes may override this method to change behavior.
      */
     @Override
+    @SuppressWarnings("deprecation")
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
             throws Exception {
         ctx.fireExceptionCaught(cause);
