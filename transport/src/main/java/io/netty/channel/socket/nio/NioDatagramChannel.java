@@ -604,7 +604,7 @@ public final class NioDatagramChannel
         return super.closeOnReadError(cause);
     }
 
-    final void interruptReading0() {
+    void interruptReading0() {
         interruptReading();
     }
 }
