@@ -110,15 +110,18 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
     public static final String HTTP_DATE_GMT_TIMEZONE = "GMT";
     public static final int HTTP_CACHE_SECONDS = 60;
 
+    private FullHttpRequest request;
+
     @Override
     public void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
+        this.request = request;
         if (!request.decoderResult().isSuccess()) {
             sendError(ctx, BAD_REQUEST);
             return;
         }
 
         if (!GET.equals(request.method())) {
-            sendError(ctx, METHOD_NOT_ALLOWED);
+            this.sendError(ctx, METHOD_NOT_ALLOWED);
             return;
         }
 
@@ -126,21 +129,21 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         final String uri = request.uri();
         final String path = sanitizeUri(uri);
         if (path == null) {
-            sendError(ctx, FORBIDDEN);
+            this.sendError(ctx, FORBIDDEN);
             return;
         }
 
         File file = new File(path);
         if (file.isHidden() || !file.exists()) {
-            sendError(ctx, NOT_FOUND);
+            this.sendError(ctx, NOT_FOUND);
             return;
         }
 
         if (file.isDirectory()) {
             if (uri.endsWith("/")) {
-                sendListing(ctx, file, uri, keepAlive);
+                this.sendListing(ctx, file, uri);
             } else {
-                sendRedirect(ctx, uri + '/', keepAlive);
+                this.sendRedirect(ctx, uri + '/');
             }
             return;
         }
@@ -161,7 +164,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             long ifModifiedSinceDateSeconds = ifModifiedSinceDate.getTime() / 1000;
             long fileLastModifiedSeconds = file.lastModified() / 1000;
             if (ifModifiedSinceDateSeconds == fileLastModifiedSeconds) {
-                sendNotModified(ctx, keepAlive);
+                this.sendNotModified(ctx);
                 return;
             }
         }
@@ -182,6 +185,8 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
         if (!keepAlive) {
             response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+        } else if (request.protocolVersion().equals(HTTP_1_0)) {
+            response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
         }
 
         // Write the initial line and the header.
@@ -266,7 +271,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
 
     private static final Pattern ALLOWED_FILE_NAME = Pattern.compile("[^-\\._]?[^<>&\\\"]*");
 
-    private static void sendListing(ChannelHandlerContext ctx, File dir, String dirPath, boolean keepAlive) {
+    private void sendListing(ChannelHandlerContext ctx, File dir, String dirPath) {
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK);
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTF-8");
 
@@ -306,22 +311,22 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         response.content().writeBytes(buffer);
         buffer.release();
 
-        sendAndCleanupConnection(ctx, response, keepAlive);
+        this.sendAndCleanupConnection(ctx, response);
     }
 
-    private static void sendRedirect(ChannelHandlerContext ctx, String newUri, boolean keepAlive) {
+    private void sendRedirect(ChannelHandlerContext ctx, String newUri) {
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, FOUND);
         response.headers().set(HttpHeaderNames.LOCATION, newUri);
 
-        sendAndCleanupConnection(ctx, response, keepAlive);
+        this.sendAndCleanupConnection(ctx, response);
     }
 
-    private static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
+    private void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HTTP_1_1, status, Unpooled.copiedBuffer("Failure: " + status + "\r\n", CharsetUtil.UTF_8));
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
 
-        sendAndCleanupConnection(ctx, response, false);
+        this.sendAndCleanupConnection(ctx, response);
     }
 
     /**
@@ -330,24 +335,27 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
      * @param ctx
      *            Context
      */
-    private static void sendNotModified(ChannelHandlerContext ctx, boolean keepAlive) {
+    private void sendNotModified(ChannelHandlerContext ctx) {
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, NOT_MODIFIED);
         setDateHeader(response);
 
-        sendAndCleanupConnection(ctx, response, keepAlive);
+        this.sendAndCleanupConnection(ctx, response);
     }
 
     /**
      * If Keep-Alive is disabled, attaches "Connection: close" header to the response
      * and closes the connection after the response being sent.
      */
-    private static void sendAndCleanupConnection(ChannelHandlerContext ctx, FullHttpResponse response,
-                                                 boolean keepAlive) {
+    private void sendAndCleanupConnection(ChannelHandlerContext ctx, FullHttpResponse response) {
+        final FullHttpRequest request = this.request;
+        final boolean keepAlive = HttpUtil.isKeepAlive(request);
         HttpUtil.setContentLength(response, response.content().readableBytes());
         if (!keepAlive) {
             // We're going to close the connection as soon as the response is sent,
             // so we should also make it clear for the client.
             response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+        } else if (request.protocolVersion().equals(HTTP_1_0)) {
+            response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
         }
 
         ChannelFuture flushPromise = ctx.writeAndFlush(response);
