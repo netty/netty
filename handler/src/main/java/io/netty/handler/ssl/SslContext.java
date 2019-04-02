@@ -819,7 +819,8 @@ public abstract class SslContext {
                 }
                 return new JdkSslClientContext(sslContextProvider,
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
-                        keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout, keyStoreType);
+                        keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize,
+                        sessionTimeout, keyStoreType);
             case OPENSSL:
                 verifyNullSslContextProvider(provider, sslContextProvider);
                 return new OpenSslClientContext(
@@ -1205,10 +1206,9 @@ public abstract class SslContext {
 
     static TrustManagerFactory buildTrustManagerFactory(
             X509Certificate[] certCollection, TrustManagerFactory trustManagerFactory)
-            throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException{
+            throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException {
         return buildTrustManagerFactory(certCollection, trustManagerFactory, KeyStore.getDefaultType());
     }
-
 
     static TrustManagerFactory buildTrustManagerFactory(
             X509Certificate[] certCollection, TrustManagerFactory trustManagerFactory, String keyStore)
@@ -1271,6 +1271,16 @@ public abstract class SslContext {
             CertificateException, UnrecoverableKeyException {
         char[] keyPasswordChars = keyStorePassword(keyPassword);
         KeyStore ks = buildKeyStore(certChainFile, key, keyPasswordChars, keyStore);
+        return buildKeyManagerFactory(ks, keyAlgorithm, keyPasswordChars, kmf);
+    }
+
+    static KeyManagerFactory buildKeyManagerFactory(X509Certificate[] certChainFile,
+                                                    String keyAlgorithm, PrivateKey key,
+                                                    String keyPassword, KeyManagerFactory kmf)
+            throws KeyStoreException, NoSuchAlgorithmException, IOException,
+            CertificateException, UnrecoverableKeyException {
+        char[] keyPasswordChars = keyStorePassword(keyPassword);
+        KeyStore ks = buildKeyStore(certChainFile, key, keyPasswordChars, KeyStore.getDefaultType());
         return buildKeyManagerFactory(ks, keyAlgorithm, keyPasswordChars, kmf);
     }
 
