@@ -18,6 +18,7 @@ package io.netty.handler.ssl;
 import io.netty.internal.tcnative.SSL;
 
 import java.io.File;
+import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 
@@ -42,7 +43,7 @@ public final class OpenSslClientContext extends OpenSslContext {
      */
     @Deprecated
     public OpenSslClientContext() throws SSLException {
-        this((File) null, null, null, null, null, null, null, IdentityCipherSuiteFilter.INSTANCE, null, 0, 0);
+        this(null, null, null, null, null, null, null, IdentityCipherSuiteFilter.INSTANCE, null, 0, 0, KeyStore.getDefaultType());
     }
 
     /**
@@ -54,7 +55,21 @@ public final class OpenSslClientContext extends OpenSslContext {
      */
     @Deprecated
     public OpenSslClientContext(File certChainFile) throws SSLException {
-        this(certChainFile, null);
+        this(certChainFile, null, KeyStore.getDefaultType());
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
+     *                            that verifies the certificates sent from servers.
+     *                            {@code null} to use the default.
+     * @param keyStore the KeyStore this context should use
+     * @deprecated use {@link SslContextBuilder}
+     */
+    @Deprecated
+    public OpenSslClientContext(TrustManagerFactory trustManagerFactory, String keyStore) throws SSLException {
+        this(null, trustManagerFactory, keyStore);
     }
 
     /**
@@ -67,7 +82,7 @@ public final class OpenSslClientContext extends OpenSslContext {
      */
     @Deprecated
     public OpenSslClientContext(TrustManagerFactory trustManagerFactory) throws SSLException {
-        this(null, trustManagerFactory);
+        this(null, trustManagerFactory, KeyStore.getDefaultType());
     }
 
     /**
@@ -81,9 +96,9 @@ public final class OpenSslClientContext extends OpenSslContext {
      * @deprecated use {@link SslContextBuilder}
      */
     @Deprecated
-    public OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory) throws SSLException {
+    public OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory, String keyStore) throws SSLException {
         this(certChainFile, trustManagerFactory, null, null, null, null, null,
-             IdentityCipherSuiteFilter.INSTANCE, null, 0, 0);
+             IdentityCipherSuiteFilter.INSTANCE, null, 0, 0, keyStore);
     }
 
     /**
@@ -104,10 +119,10 @@ public final class OpenSslClientContext extends OpenSslContext {
      */
     @Deprecated
     public OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory, Iterable<String> ciphers,
-                                ApplicationProtocolConfig apn, long sessionCacheSize, long sessionTimeout)
+                                ApplicationProtocolConfig apn, long sessionCacheSize, long sessionTimeout, String keyStore)
             throws SSLException {
         this(certChainFile, trustManagerFactory, null, null, null, null, ciphers, IdentityCipherSuiteFilter.INSTANCE,
-                apn, sessionCacheSize, sessionTimeout);
+                apn, sessionCacheSize, sessionTimeout, keyStore);
     }
 
     /**
@@ -130,9 +145,9 @@ public final class OpenSslClientContext extends OpenSslContext {
     @Deprecated
     public OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory, Iterable<String> ciphers,
                                 CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
-                                long sessionCacheSize, long sessionTimeout) throws SSLException {
+                                long sessionCacheSize, long sessionTimeout, String keyStore) throws SSLException {
         this(certChainFile, trustManagerFactory, null, null, null, null,
-             ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+             ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, keyStore);
     }
 
     /**
@@ -171,26 +186,26 @@ public final class OpenSslClientContext extends OpenSslContext {
                                 File keyCertChainFile, File keyFile, String keyPassword,
                                 KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
                                 CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
-                                long sessionCacheSize, long sessionTimeout)
+                                long sessionCacheSize, long sessionTimeout, String keyStore)
             throws SSLException {
         this(toX509CertificatesInternal(trustCertCollectionFile), trustManagerFactory,
                 toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
                 keyPassword, keyManagerFactory, ciphers, cipherFilter, apn, null, sessionCacheSize,
-                sessionTimeout, false);
+                sessionTimeout, false, keyStore);
     }
 
     OpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
                          X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
                                 KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
                                 CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
-                                long sessionCacheSize, long sessionTimeout, boolean enableOcsp)
+                                long sessionCacheSize, long sessionTimeout, boolean enableOcsp, String keyStore)
             throws SSLException {
         super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_CLIENT, keyCertChain,
                 ClientAuth.NONE, protocols, false, enableOcsp);
         boolean success = false;
         try {
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
-                                               keyCertChain, key, keyPassword, keyManagerFactory);
+                                               keyCertChain, key, keyPassword, keyManagerFactory, keyStore);
             success = true;
         } finally {
             if (!success) {

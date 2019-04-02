@@ -445,7 +445,7 @@ public class JdkSslContext extends SslContext {
      */
     @Deprecated
     protected static KeyManagerFactory buildKeyManagerFactory(File certChainFile, File keyFile, String keyPassword,
-            KeyManagerFactory kmf)
+            KeyManagerFactory kmf, String keyStore)
                     throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException,
                     NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException,
                     CertificateException, KeyException, IOException {
@@ -453,7 +453,7 @@ public class JdkSslContext extends SslContext {
         if (algorithm == null) {
             algorithm = "SunX509";
         }
-        return buildKeyManagerFactory(certChainFile, algorithm, keyFile, keyPassword, kmf);
+        return buildKeyManagerFactory(certChainFile, algorithm, keyFile, keyPassword, kmf, keyStore);
     }
 
     /**
@@ -472,11 +472,12 @@ public class JdkSslContext extends SslContext {
      */
     @Deprecated
     protected static KeyManagerFactory buildKeyManagerFactory(File certChainFile,
-            String keyAlgorithm, File keyFile, String keyPassword, KeyManagerFactory kmf)
+            String keyAlgorithm, File keyFile, String keyPassword, KeyManagerFactory kmf,
+            String keyStore)
                     throws KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException,
                     InvalidKeySpecException, InvalidAlgorithmParameterException, IOException,
                     CertificateException, KeyException, UnrecoverableKeyException {
         return buildKeyManagerFactory(toX509Certificates(certChainFile), keyAlgorithm,
-                                      toPrivateKey(keyFile, keyPassword), keyPassword, kmf);
+                                      toPrivateKey(keyFile, keyPassword), keyPassword, kmf, keyStore);
     }
 }

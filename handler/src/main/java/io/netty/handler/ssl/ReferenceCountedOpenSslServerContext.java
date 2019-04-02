@@ -72,7 +72,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                 clientAuth, protocols, startTls, enableOcsp, KeyStore.getDefaultType());
     }
 
-    private ReferenceCountedOpenSslServerContext(
+    ReferenceCountedOpenSslServerContext(
             X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
