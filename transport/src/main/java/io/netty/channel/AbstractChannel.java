@@ -22,6 +22,7 @@ import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.channel.socket.ChannelOutputShutdownException;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
@@ -63,7 +64,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final ChannelPipeline pipeline;
     private final ChannelFuture succeedFuture;
     private final VoidChannelPromise unsafeVoidPromise = new VoidChannelPromise(this, false);
-    private final CloseFuture closeFuture = new CloseFuture(this);
+    private final CloseFuture closeFuture;
 
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
@@ -85,8 +86,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected AbstractChannel(Channel parent, EventLoop eventLoop) {
         this.parent = parent;
         this.eventLoop = validateEventLoop(eventLoop);
-        id = newId();
+        closeFuture = new CloseFuture(this, eventLoop);
         succeedFuture = new SucceededChannelFuture(this, eventLoop);
+        id = newId();
         unsafe = newUnsafe();
         pipeline = newChannelPipeline();
     }
@@ -100,8 +102,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected AbstractChannel(Channel parent, EventLoop eventLoop, ChannelId id) {
         this.parent = parent;
         this.eventLoop = validateEventLoop(eventLoop);
-        this.id = id;
+        closeFuture = new CloseFuture(this, eventLoop);
         succeedFuture = new SucceededChannelFuture(this, eventLoop);
+        this.id = id;
         unsafe = newUnsafe();
         pipeline = newChannelPipeline();
     }
@@ -1100,8 +1103,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     static final class CloseFuture extends DefaultChannelPromise {
 
-        CloseFuture(AbstractChannel ch) {
-            super(ch);
+        CloseFuture(AbstractChannel ch, EventExecutor eventExecutor) {
+            super(ch, eventExecutor);
         }
 
         @Override

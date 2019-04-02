@@ -30,8 +30,6 @@ public class DefaultProgressivePromise<V> extends DefaultPromise<V> implements P
         super(executor);
     }
 
-    protected DefaultProgressivePromise() { /* only for subclasses */ }
-
     @Override
     public ProgressivePromise<V> setProgress(long progress, long total) {
         if (total < 0) {

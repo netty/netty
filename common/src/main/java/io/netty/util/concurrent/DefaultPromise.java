@@ -59,12 +59,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private short waiters;
 
     /**
-     * Threading - synchronized(this). We must prevent concurrent notification and FIFO listener notification if the
-     * executor changes.
-     */
-    private boolean notifyingListeners;
-
-    /**
      * Creates a new instance.
      *
      * It is preferable to use {@link EventExecutor#newPromise()} to create a new promise
@@ -78,14 +72,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      */
     public DefaultPromise(EventExecutor executor) {
         this.executor = requireNonNull(executor, "executor");
-    }
-
-    /**
-     * See {@link #executor()} for expectations of the executor.
-     */
-    protected DefaultPromise() {
-        // only for subclasses
-        executor = null;
     }
 
     @Override
@@ -376,13 +362,16 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      * depth exceeds a threshold.
      * @return The executor used to notify listeners when this promise is complete.
      */
-    protected EventExecutor executor() {
+    protected final EventExecutor executor() {
         return executor;
     }
 
     protected void checkDeadLock() {
-        EventExecutor e = executor();
-        if (e != null && e.inEventLoop()) {
+        checkDeadLock(executor);
+    }
+
+    protected final void checkDeadLock(EventExecutor executor) {
+        if (executor.inEventLoop()) {
             throw new BlockingOperationException(toString());
         }
     }
@@ -451,11 +440,10 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private void notifyListenersNow() {
         Object listeners;
         synchronized (this) {
-            // Only proceed if there are listeners to notify and we are not already notifying listeners.
-            if (notifyingListeners || this.listeners == null) {
+            // Only proceed if there are listeners to notify.
+            if (this.listeners == null) {
                 return;
             }
-            notifyingListeners = true;
             listeners = this.listeners;
             this.listeners = null;
         }
@@ -467,9 +455,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             }
             synchronized (this) {
                 if (this.listeners == null) {
-                    // Nothing can throw from within this method, so setting notifyingListeners back to false does not
-                    // need to be in a finally block.
-                    notifyingListeners = false;
                     return;
                 }
                 listeners = this.listeners;
