@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.logging.LogLevel;
 import io.netty.util.internal.UnstableApi;
@@ -31,7 +30,7 @@ import static java.util.Objects.requireNonNull;
  * Logs HTTP2 frames for debugging purposes.
  */
 @UnstableApi
-public class Http2FrameLogger extends ChannelHandlerAdapter {
+public class Http2FrameLogger {
 
     public enum Direction {
         INBOUND,
