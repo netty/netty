@@ -1138,6 +1138,19 @@ public abstract class SslContext {
      * Build a {@link TrustManagerFactory} from a certificate chain file.
      * @param certChainFile The certificate file to build from.
      * @param trustManagerFactory The existing {@link TrustManagerFactory} that will be used if not {@code null}.
+     * @return A {@link TrustManagerFactory} which contains the certificates in {@code certChainFile}
+     */
+    @Deprecated
+    protected static TrustManagerFactory buildTrustManagerFactory(
+            File certChainFile, TrustManagerFactory trustManagerFactory)
+            throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException {
+        return buildTrustManagerFactory(certChainFile, trustManagerFactory, KeyStore.getDefaultType());
+    }
+
+    /**
+     * Build a {@link TrustManagerFactory} from a certificate chain file.
+     * @param certChainFile The certificate file to build from.
+     * @param trustManagerFactory The existing {@link TrustManagerFactory} that will be used if not {@code null}.
      * @param keyType The KeyStore Type you want to use
      * @return A {@link TrustManagerFactory} which contains the certificates in {@code certChainFile}
      */
@@ -1189,6 +1202,13 @@ public abstract class SslContext {
         }
         return x509Certs;
     }
+
+    static TrustManagerFactory buildTrustManagerFactory(
+            X509Certificate[] certCollection, TrustManagerFactory trustManagerFactory)
+            throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException{
+        return buildTrustManagerFactory(certCollection, trustManagerFactory, KeyStore.getDefaultType());
+    }
+
 
     static TrustManagerFactory buildTrustManagerFactory(
             X509Certificate[] certCollection, TrustManagerFactory trustManagerFactory, String keyStore)
