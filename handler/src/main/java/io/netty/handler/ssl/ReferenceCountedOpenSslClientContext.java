@@ -63,12 +63,23 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                                          CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
                                          String[] protocols, long sessionCacheSize, long sessionTimeout,
                                          boolean enableOcsp) throws SSLException {
+        this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
+                keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize,
+                sessionTimeout, enableOcsp, KeyStore.getDefaultType());
+    }
+
+    ReferenceCountedOpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
+                                         X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
+                                         KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
+                                         CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
+                                         String[] protocols, long sessionCacheSize, long sessionTimeout,
+                                         boolean enableOcsp, String keyStore) throws SSLException {
         super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_CLIENT, keyCertChain,
               ClientAuth.NONE, protocols, false, enableOcsp, true);
         boolean success = false;
         try {
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
-                                               keyCertChain, key, keyPassword, keyManagerFactory);
+                                               keyCertChain, key, keyPassword, keyManagerFactory, keyStore);
             success = true;
         } finally {
             if (!success) {
@@ -86,8 +97,9 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                                                    OpenSslEngineMap engineMap,
                                                    X509Certificate[] trustCertCollection,
                                                    TrustManagerFactory trustManagerFactory,
-                                                   X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
-                                                   KeyManagerFactory keyManagerFactory) throws SSLException {
+                                                   X509Certificate[] keyCertChain, PrivateKey key,
+                                                   String keyPassword, KeyManagerFactory keyManagerFactory,
+                                                   String keyStore) throws SSLException {
         if (key == null && keyCertChain != null || key != null && keyCertChain == null) {
             throw new IllegalArgumentException(
                     "Either both keyCertChain and key needs to be null or none of them");
@@ -107,7 +119,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                     // javadocs state that keyManagerFactory has precedent over keyCertChain
                     if (keyManagerFactory == null && keyCertChain != null) {
                         char[] keyPasswordChars = keyStorePassword(keyPassword);
-                        KeyStore ks = buildKeyStore(keyCertChain, key, keyPasswordChars);
+                        KeyStore ks = buildKeyStore(keyCertChain, key, keyPasswordChars, keyStore);
                         if (ks.aliases().hasMoreElements()) {
                             keyManagerFactory = new OpenSslX509KeyManagerFactory();
                         } else {
@@ -140,7 +152,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
 
             try {
                 if (trustCertCollection != null) {
-                    trustManagerFactory = buildTrustManagerFactory(trustCertCollection, trustManagerFactory);
+                    trustManagerFactory = buildTrustManagerFactory(trustCertCollection, trustManagerFactory, keyStore);
                 } else if (trustManagerFactory == null) {
                     trustManagerFactory = TrustManagerFactory.getInstance(
                             TrustManagerFactory.getDefaultAlgorithm());

@@ -339,7 +339,7 @@ public abstract class SslContext {
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
         return newServerContext(provider, null, null, certChainFile, keyFile, keyPassword, null,
-                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, KeyStore.getDefaultType());
     }
 
     /**
@@ -382,12 +382,58 @@ public abstract class SslContext {
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
+        return newServerContext(provider, trustCertCollectionFile, trustManagerFactory, keyCertChainFile,
+                keyFile, keyPassword, keyManagerFactory, ciphers, cipherFilter, apn,
+                sessionCacheSize, sessionTimeout, KeyStore.getDefaultType());
+    }
+
+    /**
+     * Creates a new server-side {@link SslContext}.
+     * @param provider the {@link SslContext} implementation to use.
+     *                 {@code null} to use the current default one.
+     * @param trustCertCollectionFile an X.509 certificate collection file in PEM format.
+     *                      This provides the certificate collection used for mutual authentication.
+     *                      {@code null} to use the system default
+     * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
+     *                            that verifies the certificates sent from clients.
+     *                            {@code null} to use the default or the results of parsing
+     *                            {@code trustCertCollectionFile}.
+     *                            This parameter is ignored if {@code provider} is not {@link SslProvider#JDK}.
+     * @param keyCertChainFile an X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     * @param keyManagerFactory the {@link KeyManagerFactory} that provides the {@link KeyManager}s
+     *                          that is used to encrypt data being sent to clients.
+     *                          {@code null} to use the default or the results of parsing
+     *                          {@code keyCertChainFile} and {@code keyFile}.
+     *                          This parameter is ignored if {@code provider} is not {@link SslProvider#JDK}.
+     * @param ciphers the cipher suites to enable, in the order of preference.
+     *                {@code null} to use the default cipher suites.
+     * @param cipherFilter a filter to apply over the supplied list of ciphers
+     *                Only required if {@code provider} is {@link SslProvider#JDK}
+     * @param apn Provides a means to configure parameters related to application protocol negotiation.
+     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
+     *                         {@code 0} to use the default value.
+     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
+     *                       {@code 0} to use the default value.
+     * @param keyStore the keystore type that should  be used
+     * @return a new server-side {@link SslContext}
+     * @deprecated Replaced by {@link SslContextBuilder}
+     */
+    static SslContext newServerContext(
+            SslProvider provider,
+            File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
+            File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
+            Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
+            long sessionCacheSize, long sessionTimeout, String keyStore) throws SSLException {
         try {
             return newServerContextInternal(provider, null, toX509Certificates(trustCertCollectionFile),
                                             trustManagerFactory, toX509Certificates(keyCertChainFile),
                                             toPrivateKey(keyFile, keyPassword),
                                             keyPassword, keyManagerFactory, ciphers, cipherFilter, apn,
-                                            sessionCacheSize, sessionTimeout, ClientAuth.NONE, null, false, false);
+                                            sessionCacheSize, sessionTimeout, ClientAuth.NONE, null,
+                                    false, false, keyStore);
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -403,7 +449,7 @@ public abstract class SslContext {
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
-            boolean enableOcsp) throws SSLException {
+            boolean enableOcsp, String keyStoreType) throws SSLException {
 
         if (provider == null) {
             provider = defaultServerProvider();
@@ -417,19 +463,19 @@ public abstract class SslContext {
             return new JdkSslServerContext(sslContextProvider,
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth, protocols, startTls);
+                    clientAuth, protocols, startTls, keyStoreType);
         case OPENSSL:
             verifyNullSslContextProvider(provider, sslContextProvider);
             return new OpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth, protocols, startTls, enableOcsp);
+                    clientAuth, protocols, startTls, enableOcsp, keyStoreType);
         case OPENSSL_REFCNT:
             verifyNullSslContextProvider(provider, sslContextProvider);
             return new ReferenceCountedOpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth, protocols, startTls, enableOcsp);
+                    clientAuth, protocols, startTls, enableOcsp, keyStoreType);
         default:
             throw new Error(provider.toString());
         }
@@ -745,7 +791,8 @@ public abstract class SslContext {
                                             toX509Certificates(trustCertCollectionFile), trustManagerFactory,
                                             toX509Certificates(keyCertChainFile), toPrivateKey(keyFile, keyPassword),
                                             keyPassword, keyManagerFactory, ciphers, cipherFilter,
-                                            apn, null, sessionCacheSize, sessionTimeout, false);
+                                            apn, null, sessionCacheSize, sessionTimeout, false,
+                                            KeyStore.getDefaultType());
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -760,7 +807,7 @@ public abstract class SslContext {
             X509Certificate[] trustCert, TrustManagerFactory trustManagerFactory,
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
-            long sessionCacheSize, long sessionTimeout, boolean enableOcsp) throws SSLException {
+            long sessionCacheSize, long sessionTimeout, boolean enableOcsp, String keyStoreType) throws SSLException {
         if (provider == null) {
             provider = defaultClientProvider();
         }
@@ -771,19 +818,20 @@ public abstract class SslContext {
                 }
                 return new JdkSslClientContext(sslContextProvider,
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
-                        keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout);
+                        keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize,
+                        sessionTimeout, keyStoreType);
             case OPENSSL:
                 verifyNullSslContextProvider(provider, sslContextProvider);
                 return new OpenSslClientContext(
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
-                        enableOcsp);
+                        enableOcsp, keyStoreType);
             case OPENSSL_REFCNT:
                 verifyNullSslContextProvider(provider, sslContextProvider);
                 return new ReferenceCountedOpenSslClientContext(
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
-                        enableOcsp);
+                        enableOcsp, keyStoreType);
             default:
                 throw new Error(provider.toString());
         }
@@ -1029,13 +1077,14 @@ public abstract class SslContext {
      * @param certChain a X.509 certificate chain
      * @param key a PKCS#8 private key
      * @param keyPasswordChars the password of the {@code keyFile}.
-     *                    {@code null} if it's not password-protected.
+     *                    {@code null} if it's not password-protected.String keyS
+     * @param keyStore The KeyStore Type you want to use
      * @return generated {@link KeyStore}.
      */
-    static KeyStore buildKeyStore(X509Certificate[] certChain, PrivateKey key, char[] keyPasswordChars)
+    static KeyStore buildKeyStore(X509Certificate[] certChain, PrivateKey key, char[] keyPasswordChars, String keyStore)
             throws KeyStoreException, NoSuchAlgorithmException,
                    CertificateException, IOException {
-        KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+        KeyStore ks = KeyStore.getInstance(keyStore);
         ks.load(null, null);
         ks.setKeyEntry(ALIAS, key, keyPasswordChars, certChain);
         return ks;
@@ -1095,9 +1144,23 @@ public abstract class SslContext {
     protected static TrustManagerFactory buildTrustManagerFactory(
             File certChainFile, TrustManagerFactory trustManagerFactory)
             throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException {
+        return buildTrustManagerFactory(certChainFile, trustManagerFactory, KeyStore.getDefaultType());
+    }
+
+    /**
+     * Build a {@link TrustManagerFactory} from a certificate chain file.
+     * @param certChainFile The certificate file to build from.
+     * @param trustManagerFactory The existing {@link TrustManagerFactory} that will be used if not {@code null}.
+     * @param keyType The KeyStore Type you want to use
+     * @return A {@link TrustManagerFactory} which contains the certificates in {@code certChainFile}
+     */
+    @Deprecated
+    protected static TrustManagerFactory buildTrustManagerFactory(
+            File certChainFile, TrustManagerFactory trustManagerFactory, String keyType)
+            throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException {
         X509Certificate[] x509Certs = toX509Certificates(certChainFile);
 
-        return buildTrustManagerFactory(x509Certs, trustManagerFactory);
+        return buildTrustManagerFactory(x509Certs, trustManagerFactory, keyType);
     }
 
     static X509Certificate[] toX509Certificates(File file) throws CertificateException {
@@ -1143,7 +1206,13 @@ public abstract class SslContext {
     static TrustManagerFactory buildTrustManagerFactory(
             X509Certificate[] certCollection, TrustManagerFactory trustManagerFactory)
             throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException {
-        final KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+        return buildTrustManagerFactory(certCollection, trustManagerFactory, KeyStore.getDefaultType());
+    }
+
+    static TrustManagerFactory buildTrustManagerFactory(
+            X509Certificate[] certCollection, TrustManagerFactory trustManagerFactory, String keyStore)
+            throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException {
+        final KeyStore ks = KeyStore.getInstance(keyStore);
         ks.load(null, null);
 
         int i = 1;
@@ -1182,7 +1251,26 @@ public abstract class SslContext {
                                                     KeyManagerFactory kmf)
             throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException,
             CertificateException, IOException {
-        return buildKeyManagerFactory(certChain, KeyManagerFactory.getDefaultAlgorithm(), key, keyPassword, kmf);
+        return buildKeyManagerFactory(certChain, key, keyPassword, kmf, KeyStore.getDefaultType());
+    }
+
+    static KeyManagerFactory buildKeyManagerFactory(X509Certificate[] certChain, PrivateKey key, String keyPassword,
+                                                    KeyManagerFactory kmf, String keyStoreType)
+            throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException,
+            CertificateException, IOException {
+        return buildKeyManagerFactory(certChain, KeyManagerFactory.getDefaultAlgorithm(), key,
+                keyPassword, kmf, keyStoreType);
+    }
+
+    static KeyManagerFactory buildKeyManagerFactory(X509Certificate[] certChainFile,
+                                                    String keyAlgorithm, PrivateKey key,
+                                                    String keyPassword, KeyManagerFactory kmf,
+                                                    String keyStore)
+            throws KeyStoreException, NoSuchAlgorithmException, IOException,
+            CertificateException, UnrecoverableKeyException {
+        char[] keyPasswordChars = keyStorePassword(keyPassword);
+        KeyStore ks = buildKeyStore(certChainFile, key, keyPasswordChars, keyStore);
+        return buildKeyManagerFactory(ks, keyAlgorithm, keyPasswordChars, kmf);
     }
 
     static KeyManagerFactory buildKeyManagerFactory(X509Certificate[] certChainFile,
@@ -1191,7 +1279,7 @@ public abstract class SslContext {
             throws KeyStoreException, NoSuchAlgorithmException, IOException,
             CertificateException, UnrecoverableKeyException {
         char[] keyPasswordChars = keyStorePassword(keyPassword);
-        KeyStore ks = buildKeyStore(certChainFile, key, keyPasswordChars);
+        KeyStore ks = buildKeyStore(certChainFile, key, keyPasswordChars, KeyStore.getDefaultType());
         return buildKeyManagerFactory(ks, keyAlgorithm, keyPasswordChars, kmf);
     }
 

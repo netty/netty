@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyException;
+import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.Provider;
@@ -440,12 +441,13 @@ public class JdkSslContext extends SslContext {
      * @param keyPassword the password of the {@code keyFile}.
      *                    {@code null} if it's not password-protected.
      * @param kmf The existing {@link KeyManagerFactory} that will be used if not {@code null}
+     * @param keyStore the keystore that should be used in the {@link KeyManagerFactory}
      * @return A {@link KeyManagerFactory} based upon a key file, key file password, and a certificate chain.
      * @deprecated will be removed.
      */
     @Deprecated
     protected static KeyManagerFactory buildKeyManagerFactory(File certChainFile, File keyFile, String keyPassword,
-            KeyManagerFactory kmf)
+            KeyManagerFactory kmf, String keyStore)
                     throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException,
                     NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException,
                     CertificateException, KeyException, IOException {
@@ -453,7 +455,54 @@ public class JdkSslContext extends SslContext {
         if (algorithm == null) {
             algorithm = "SunX509";
         }
-        return buildKeyManagerFactory(certChainFile, algorithm, keyFile, keyPassword, kmf);
+        return buildKeyManagerFactory(certChainFile, algorithm, keyFile, keyPassword, kmf, keyStore);
+    }
+
+    /**
+     * Build a {@link KeyManagerFactory} based upon a key file, key file password, and a certificate chain.
+     * @param certChainFile a X.509 certificate chain file in PEM format
+     * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     * @param kmf The existing {@link KeyManagerFactory} that will be used if not {@code null}
+     * @return A {@link KeyManagerFactory} based upon a key file, key file password, and a certificate chain.
+     * @deprecated will be removed.
+     */
+    @Deprecated
+    protected static KeyManagerFactory buildKeyManagerFactory(File certChainFile, File keyFile, String keyPassword,
+                                                              KeyManagerFactory kmf)
+            throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException,
+            NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException,
+            CertificateException, KeyException, IOException {
+        String algorithm = Security.getProperty("ssl.KeyManagerFactory.algorithm");
+        if (algorithm == null) {
+            algorithm = "SunX509";
+        }
+        return buildKeyManagerFactory(certChainFile, algorithm, keyFile, keyPassword, kmf, KeyStore.getDefaultType());
+    }
+
+    /**
+     * Build a {@link KeyManagerFactory} based upon a key algorithm, key file, key file password,
+     * and a certificate chain.
+     * @param certChainFile a X.509 certificate chain file in PEM format
+     * @param keyAlgorithm the standard name of the requested algorithm. See the Java Secure Socket Extension
+     * Reference Guide for information about standard algorithm names.
+     * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
+     * @param kmf The existing {@link KeyManagerFactory} that will be used if not {@code null}
+     * @param keyStore the keystore that should be used in the {@link KeyManagerFactory}
+     * @return A {@link KeyManagerFactory} based upon a key algorithm, key file, key file password,
+     * and a certificate chain.
+     */
+    static KeyManagerFactory buildKeyManagerFactory(File certChainFile,
+            String keyAlgorithm, File keyFile, String keyPassword, KeyManagerFactory kmf,
+            String keyStore)
+                    throws KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException,
+                    InvalidKeySpecException, InvalidAlgorithmParameterException, IOException,
+                    CertificateException, KeyException, UnrecoverableKeyException {
+        return buildKeyManagerFactory(toX509Certificates(certChainFile), keyAlgorithm,
+                                      toPrivateKey(keyFile, keyPassword), keyPassword, kmf, keyStore);
     }
 
     /**
@@ -472,11 +521,12 @@ public class JdkSslContext extends SslContext {
      */
     @Deprecated
     protected static KeyManagerFactory buildKeyManagerFactory(File certChainFile,
-            String keyAlgorithm, File keyFile, String keyPassword, KeyManagerFactory kmf)
-                    throws KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException,
-                    InvalidKeySpecException, InvalidAlgorithmParameterException, IOException,
-                    CertificateException, KeyException, UnrecoverableKeyException {
+                                                              String keyAlgorithm, File keyFile,
+                                                              String keyPassword, KeyManagerFactory kmf)
+            throws KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException,
+            InvalidKeySpecException, InvalidAlgorithmParameterException, IOException,
+            CertificateException, KeyException, UnrecoverableKeyException {
         return buildKeyManagerFactory(toX509Certificates(certChainFile), keyAlgorithm,
-                                      toPrivateKey(keyFile, keyPassword), keyPassword, kmf);
+                toPrivateKey(keyFile, keyPassword), keyPassword, kmf, KeyStore.getDefaultType());
     }
 }
