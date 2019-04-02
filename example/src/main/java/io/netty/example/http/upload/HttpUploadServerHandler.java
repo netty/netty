@@ -155,8 +155,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             } catch (ErrorDataDecoderException e1) {
                 e1.printStackTrace();
                 responseContent.append(e1.getMessage());
-                writeResponse(ctx.channel());
-                ctx.channel().close();
+                writeResponse(ctx.channel(), true);
                 return;
             }
 
@@ -180,8 +179,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
                 } catch (ErrorDataDecoderException e1) {
                     e1.printStackTrace();
                     responseContent.append(e1.getMessage());
-                    writeResponse(ctx.channel());
-                    ctx.channel().close();
+                    writeResponse(ctx.channel(), true);
                     return;
                 }
                 responseContent.append('o');
@@ -307,24 +305,27 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
     }
 
     private void writeResponse(Channel channel) {
+        writeResponse(channel, false);
+    }
+
+    private void writeResponse(Channel channel, boolean forceClose) {
         // Convert the response content to a ChannelBuffer.
         ByteBuf buf = copiedBuffer(responseContent.toString(), CharsetUtil.UTF_8);
         responseContent.setLength(0);
 
         // Decide whether to close the connection or not.
-        boolean close = request.headers().contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE, true)
-                || request.protocolVersion().equals(HttpVersion.HTTP_1_0)
-                && !request.headers().contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE, true);
+        boolean keepAlive = HttpUtil.isKeepAlive(request) && !forceClose;
 
         // Build the response object.
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buf);
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
+        response.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, buf.readableBytes());
 
-        if (!close) {
-            // There's no need to add 'Content-Length' header
-            // if this is the last response.
-            response.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, buf.readableBytes());
+        if (!keepAlive) {
+            response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+        } else if (request.protocolVersion().equals(HttpVersion.HTTP_1_0)) {
+            response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
         }
 
         Set<Cookie> cookies;
@@ -343,7 +344,7 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
         // Write the response.
         ChannelFuture future = channel.writeAndFlush(response);
         // Close the connection after the write operation is done if necessary.
-        if (close) {
+        if (!keepAlive) {
             future.addListener(ChannelFutureListener.CLOSE);
         }
     }
@@ -428,8 +429,20 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTF-8");
         response.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, buf.readableBytes());
 
+        // Decide whether to close the connection or not.
+        boolean keepAlive = HttpUtil.isKeepAlive(request);
+        if (!keepAlive) {
+            response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+        } else if (request.protocolVersion().equals(HttpVersion.HTTP_1_0)) {
+            response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+        }
+
         // Write the response.
-        ctx.channel().writeAndFlush(response);
+        ChannelFuture future = ctx.channel().writeAndFlush(response);
+        // Close the connection after the write operation is done if necessary.
+        if (!keepAlive) {
+            future.addListener(ChannelFutureListener.CLOSE);
+        }
     }
 
     @Override
