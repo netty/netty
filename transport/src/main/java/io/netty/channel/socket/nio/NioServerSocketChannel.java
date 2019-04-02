@@ -68,6 +68,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
      * Create a new instance
      */
     public NioServerSocketChannel() {
+        // newSocket():创建jdk底层的channel
         this(newSocket(DEFAULT_SELECTOR_PROVIDER));
     }
 
@@ -83,6 +84,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
      */
     public NioServerSocketChannel(ServerSocketChannel channel) {
         super(null, channel, SelectionKey.OP_ACCEPT);
+        // tcp的配置参数
         config = new NioServerSocketChannelConfig(this, javaChannel().socket());
     }
 

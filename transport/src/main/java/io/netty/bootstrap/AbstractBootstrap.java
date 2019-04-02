@@ -316,6 +316,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     final ChannelFuture initAndRegister() {
         Channel channel = null;
         try {
+            // 通过反射创建服务端channel
             channel = channelFactory.newChannel();
             init(channel);
         } catch (Throwable t) {
