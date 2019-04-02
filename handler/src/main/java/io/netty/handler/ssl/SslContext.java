@@ -1029,13 +1029,14 @@ public abstract class SslContext {
      * @param certChain a X.509 certificate chain
      * @param key a PKCS#8 private key
      * @param keyPasswordChars the password of the {@code keyFile}.
-     *                    {@code null} if it's not password-protected.
+     *                    {@code null} if it's not password-protected.String keyS
+     * @param keyStore The KeyStore Type you want to use
      * @return generated {@link KeyStore}.
      */
-    static KeyStore buildKeyStore(X509Certificate[] certChain, PrivateKey key, char[] keyPasswordChars)
+    static KeyStore buildKeyStore(X509Certificate[] certChain, PrivateKey key, char[] keyPasswordChars, String keyStore)
             throws KeyStoreException, NoSuchAlgorithmException,
                    CertificateException, IOException {
-        KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+        KeyStore ks = KeyStore.getInstance(keyStore);
         ks.load(null, null);
         ks.setKeyEntry(ALIAS, key, keyPasswordChars, certChain);
         return ks;
@@ -1089,15 +1090,16 @@ public abstract class SslContext {
      * Build a {@link TrustManagerFactory} from a certificate chain file.
      * @param certChainFile The certificate file to build from.
      * @param trustManagerFactory The existing {@link TrustManagerFactory} that will be used if not {@code null}.
+     * @param keyType The KeyStore Type you want to use
      * @return A {@link TrustManagerFactory} which contains the certificates in {@code certChainFile}
      */
     @Deprecated
     protected static TrustManagerFactory buildTrustManagerFactory(
-            File certChainFile, TrustManagerFactory trustManagerFactory)
+            File certChainFile, TrustManagerFactory trustManagerFactory, String keyType)
             throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException {
         X509Certificate[] x509Certs = toX509Certificates(certChainFile);
 
-        return buildTrustManagerFactory(x509Certs, trustManagerFactory);
+        return buildTrustManagerFactory(x509Certs, trustManagerFactory, keyType);
     }
 
     static X509Certificate[] toX509Certificates(File file) throws CertificateException {
@@ -1141,9 +1143,9 @@ public abstract class SslContext {
     }
 
     static TrustManagerFactory buildTrustManagerFactory(
-            X509Certificate[] certCollection, TrustManagerFactory trustManagerFactory)
+            X509Certificate[] certCollection, TrustManagerFactory trustManagerFactory, String keyStore)
             throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException {
-        final KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+        final KeyStore ks = KeyStore.getInstance(keyStore);
         ks.load(null, null);
 
         int i = 1;
@@ -1182,16 +1184,24 @@ public abstract class SslContext {
                                                     KeyManagerFactory kmf)
             throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException,
             CertificateException, IOException {
-        return buildKeyManagerFactory(certChain, KeyManagerFactory.getDefaultAlgorithm(), key, keyPassword, kmf);
+        return buildKeyManagerFactory(certChain, key, keyPassword, kmf, KeyStore.getDefaultType());
+    }
+
+    static KeyManagerFactory buildKeyManagerFactory(X509Certificate[] certChain, PrivateKey key, String keyPassword,
+                                                    KeyManagerFactory kmf, String keyStoreType)
+            throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException,
+            CertificateException, IOException {
+        return buildKeyManagerFactory(certChain, KeyManagerFactory.getDefaultAlgorithm(), key, keyPassword, kmf, keyStoreType);
     }
 
     static KeyManagerFactory buildKeyManagerFactory(X509Certificate[] certChainFile,
                                                     String keyAlgorithm, PrivateKey key,
-                                                    String keyPassword, KeyManagerFactory kmf)
+                                                    String keyPassword, KeyManagerFactory kmf,
+                                                    String keyStore)
             throws KeyStoreException, NoSuchAlgorithmException, IOException,
             CertificateException, UnrecoverableKeyException {
         char[] keyPasswordChars = keyStorePassword(keyPassword);
-        KeyStore ks = buildKeyStore(certChainFile, key, keyPasswordChars);
+        KeyStore ks = buildKeyStore(certChainFile, key, keyPasswordChars, keyStore);
         return buildKeyManagerFactory(ks, keyAlgorithm, keyPasswordChars, kmf);
     }
 
