@@ -39,7 +39,7 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
      *        the {@link Channel} associated with this future
      */
     public DefaultChannelPromise(Channel channel) {
-        this.channel = requireNonNull(channel, "channel");
+        this(channel, channel.eventLoop());
     }
 
     /**
@@ -51,16 +51,6 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
     public DefaultChannelPromise(Channel channel, EventExecutor executor) {
         super(executor);
         this.channel = requireNonNull(channel, "channel");
-    }
-
-    @Override
-    protected EventExecutor executor() {
-        EventExecutor e = super.executor();
-        if (e == null) {
-            return channel().eventLoop();
-        } else {
-            return e;
-        }
     }
 
     @Override

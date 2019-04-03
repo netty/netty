@@ -21,6 +21,8 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
+import java.util.Objects;
+
 /**
  * The default {@link ChannelProgressivePromise} implementation.  It is recommended to use
  * {@link Channel#newProgressivePromise()} to create a new {@link ChannelProgressivePromise} rather than calling the
@@ -39,7 +41,7 @@ public class DefaultChannelProgressivePromise
      *        the {@link Channel} associated with this future
      */
     public DefaultChannelProgressivePromise(Channel channel) {
-        this.channel = channel;
+        this(channel, channel.eventLoop());
     }
 
     /**
@@ -50,17 +52,7 @@ public class DefaultChannelProgressivePromise
      */
     public DefaultChannelProgressivePromise(Channel channel, EventExecutor executor) {
         super(executor);
-        this.channel = channel;
-    }
-
-    @Override
-    protected EventExecutor executor() {
-        EventExecutor e = super.executor();
-        if (e == null) {
-            return channel().eventLoop();
-        } else {
-            return e;
-        }
+        this.channel = Objects.requireNonNull(channel, "channel");
     }
 
     @Override
