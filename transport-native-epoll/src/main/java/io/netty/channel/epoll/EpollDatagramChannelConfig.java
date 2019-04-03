@@ -321,37 +321,56 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
 
     @Override
     public DatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
-        throw new UnsupportedOperationException("Multicast not supported");
+        throw new UnsupportedOperationException("Enabling loopback-mode-disabled for multicast not supported");
     }
 
     @Override
     public int getTimeToLive() {
-        return -1;
+        try {
+            return ((EpollDatagramChannel) channel).socket.getTimeToLive();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+    }
     }
 
     @Override
     public EpollDatagramChannelConfig setTimeToLive(int ttl) {
-        throw new UnsupportedOperationException("Multicast not supported");
+        try {
+            ((EpollDatagramChannel) channel).socket.setTimeToLive(ttl);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public InetAddress getInterface() {
-        return null;
+        throw new UnsupportedOperationException("Retrieval of network interface address not supported");
     }
 
     @Override
     public EpollDatagramChannelConfig setInterface(InetAddress interfaceAddress) {
-        throw new UnsupportedOperationException("Multicast not supported");
+        try {
+            ((EpollDatagramChannel) channel).socket.setInterface(interfaceAddress);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public NetworkInterface getNetworkInterface() {
-        return null;
+        throw new UnsupportedOperationException("Retrieval of network interface not supported");
     }
 
     @Override
     public EpollDatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
-        throw new UnsupportedOperationException("Multicast not supported");
+        try {
+            ((EpollDatagramChannel) channel).socket.setNetworkInterface(networkInterface);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
