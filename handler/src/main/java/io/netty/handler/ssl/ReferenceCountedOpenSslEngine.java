@@ -966,7 +966,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         if (handshakeState == HandshakeState.FINISHED) {
             return new SSLException(errorString);
         }
-        return new SSLHandshakeException(errorString);
+
+        SSLHandshakeException exception = new SSLHandshakeException(errorString);
+        // If we have a handshakeException stored already we should include it as well to help the user debug things.
+        if (handshakeException != null) {
+            exception.initCause(handshakeException);
+            handshakeException = null;
+        }
+        return exception;
     }
 
     public final SSLEngineResult unwrap(
