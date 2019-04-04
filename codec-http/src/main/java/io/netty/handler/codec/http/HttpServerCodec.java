@@ -72,6 +72,14 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
     }
 
     /**
+     * Resets the state of the decoder so that it is ready to decode a new message.
+     * This method is useful for handling a rejected request with {@code Expect: 100-continue} header.
+     */
+    public void resetDecoder() {
+        inboundHandler().reset();
+    }
+
+    /**
      * Upgrades to another protocol from HTTP. Removes the {@link HttpRequestDecoder} and
      * {@link HttpResponseEncoder} from the pipeline.
      */

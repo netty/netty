@@ -115,6 +115,60 @@ public class HttpServerCodecTest {
     }
 
     @Test
+    public void test100ContinueReject() {
+        HttpServerCodec decoder = new HttpServerCodec();
+        EmbeddedChannel channel = new EmbeddedChannel(decoder);
+        String oversized =
+                "PUT /file HTTP/1.1\r\n" +
+                        "Expect: 100-continue\r\n" +
+                        "Content-Length: 1048576000\r\n\r\n";
+
+        channel.writeInbound(Unpooled.copiedBuffer(oversized, CharsetUtil.US_ASCII));
+        assertThat(channel.readInbound(), is(instanceOf(HttpRequest.class)));
+
+        // At this point, we assume that we sent '413 Entity Too Large' to the peer without closing the connection
+        // so that the client can try again.
+        decoder.resetDecoder();
+
+        String query = "GET /max-file-size HTTP/1.1\r\n\r\n";
+        channel.writeInbound(Unpooled.copiedBuffer(query, CharsetUtil.US_ASCII));
+        assertThat(channel.readInbound(), is(instanceOf(HttpRequest.class)));
+        assertThat(channel.readInbound(), is(instanceOf(LastHttpContent.class)));
+
+        assertThat(channel.finish(), is(false));
+    }
+
+    @Test
+    public void test100ContinueWithBadClient() {
+        HttpServerCodec decoder = new HttpServerCodec();
+        EmbeddedChannel channel = new EmbeddedChannel(decoder);
+        String oversized =
+                "PUT /file HTTP/1.1\r\n" +
+                        "Expect: 100-continue\r\n" +
+                        "Content-Length: 1048576000\r\n\r\n" +
+                        "WAY_TOO_LARGE_DATA_BEGINS";
+
+        channel.writeInbound(Unpooled.copiedBuffer(oversized, CharsetUtil.US_ASCII));
+        assertThat(channel.readInbound(), is(instanceOf(HttpRequest.class)));
+
+        HttpContent prematureData = channel.readInbound();
+        prematureData.release();
+
+        assertThat(channel.readInbound(), is(nullValue()));
+
+        // At this point, we assume that we sent '413 Entity Too Large' to the peer without closing the connection
+        // so that the client can try again.
+        decoder.resetDecoder();
+
+        String query = "GET /max-file-size HTTP/1.1\r\n\r\n";
+        channel.writeInbound(Unpooled.copiedBuffer(query, CharsetUtil.US_ASCII));
+        assertThat(channel.readInbound(), is(instanceOf(HttpRequest.class)));
+        assertThat(channel.readInbound(), is(instanceOf(LastHttpContent.class)));
+
+        assertThat(channel.finish(), is(false));
+    }
+
+    @Test
     public void testChunkedHeadResponse() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpServerCodec());
 

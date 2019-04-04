@@ -277,6 +277,11 @@ public class HttpObjectAggregator
             HttpObjectDecoder decoder = ctx.pipeline().get(HttpObjectDecoder.class);
             if (decoder != null) {
                 decoder.reset();
+            } else {
+                HttpServerCodec codec = ctx.pipeline().get(HttpServerCodec.class);
+                if (codec != null) {
+                    codec.resetDecoder();
+                }
             }
         } else if (oversized instanceof HttpResponse) {
             ctx.close();
