@@ -270,11 +270,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
                         if (rawValue == Marker.ERROR) {
                             return;
                         }
-                        try {
-                            applyAndNotify0(promise, (T1) v, (T2) rawValue, fn);
-                        } catch (Throwable e) {
-                            e.printStackTrace();
-                        }
+                        applyAndNotify0(promise, (T1) v, (T2) rawValue, fn);
                     }
                 } else {
                     if (reference.getAndSet(Marker.ERROR) != Marker.ERROR) {
@@ -322,7 +318,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
     @Override
     public FutureCompletionStage<Void> runAfterBothAsync(CompletionStage<?> other, Runnable action, Executor executor) {
         requireNonNull(action, "action");
-        return thenCombineAsync(other, (ignoreValue, ignoreError) -> {
+        return thenCombineAsync(other, (ignoreOtherValue, ignoreError) -> {
             action.run();
             return null;
         }, executor);

@@ -49,7 +49,7 @@ public class DefaultPromise<V> implements Promise<V> {
     private final EventExecutor executor;
 
     // It is fine to not make this volatile as even if we override the value in there it does not matter as
-    // DefaultFutureCompletionStage has no state itself and is just a wrapper around this CompletableFuture instance.
+    // DefaultFutureCompletionStage has no state itself and is just a wrapper around this DefaultPromise instance.
     private DefaultFutureCompletionStage<V> stage;
 
     /**
