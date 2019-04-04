@@ -44,10 +44,11 @@ public final class JdkSslServerContext extends JdkSslContext {
      *
      * @param certChainFile an X.509 certificate chain file in PEM format
      * @param keyFile a PKCS#8 private key file in PEM format
-     * @param keyStore the used keystore type
+     * @deprecated use {@link SslContextBuilder}
      */
-    JdkSslServerContext(File certChainFile, File keyFile, String keyStore) throws SSLException {
-        this(certChainFile, keyFile, null, keyStore);
+    @Deprecated
+    public JdkSslServerContext(File certChainFile, File keyFile) throws SSLException {
+        this(certChainFile, keyFile, null, KeyStore.getDefaultType());
     }
 
     /**
@@ -55,11 +56,15 @@ public final class JdkSslServerContext extends JdkSslContext {
      *
      * @param certChainFile an X.509 certificate chain file in PEM format
      * @param keyFile a PKCS#8 private key file in PEM format
+     * @param keyPassword the password of the {@code keyFile}.
+     *                    {@code null} if it's not password-protected.
      * @deprecated use {@link SslContextBuilder}
      */
     @Deprecated
-    public JdkSslServerContext(File certChainFile, File keyFile) throws SSLException {
-        this(certChainFile, keyFile, null, KeyStore.getDefaultType());
+    public JdkSslServerContext(File certChainFile, File keyFile,
+                               String keyPassword) throws SSLException {
+        this(certChainFile, keyFile, keyPassword, null, IdentityCipherSuiteFilter.INSTANCE,
+                JdkDefaultApplicationProtocolNegotiator.INSTANCE, 0, 0);
     }
 
     /**
