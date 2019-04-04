@@ -252,15 +252,47 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
     public static OpenSslX509KeyManagerFactory newEngineBased(X509Certificate[] certificateChain, String password)
             throws CertificateException, IOException,
                    KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
-        KeyStore store = new OpenSslEngineKeyStore(certificateChain.clone());
+        KeyStore store = new OpenSslKeyStore(certificateChain.clone(), false);
         store.load(null, null);
         OpenSslX509KeyManagerFactory factory = new OpenSslX509KeyManagerFactory();
         factory.init(store, password == null ? null : password.toCharArray());
         return factory;
     }
 
-    private static final class OpenSslEngineKeyStore extends KeyStore {
-        private OpenSslEngineKeyStore(final X509Certificate[] certificateChain) {
+    /**
+     * See {@link OpenSslX509KeyManagerFactory#newEngineBased(X509Certificate[], String)}.
+     */
+    public static OpenSslX509KeyManagerFactory newKeyless(File chain)
+            throws CertificateException, IOException,
+            KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
+        return newKeyless(SslContext.toX509Certificates(chain));
+    }
+
+    /**
+     * See {@link OpenSslX509KeyManagerFactory#newEngineBased(X509Certificate[], String)}.
+     */
+    public static OpenSslX509KeyManagerFactory newKeyless(InputStream chain)
+            throws CertificateException, IOException,
+            KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
+        return newKeyless(SslContext.toX509Certificates(chain));
+    }
+
+    /**
+     * Returns a new initialized {@link OpenSslX509KeyManagerFactory} which will provide its private key by using the
+     * {@link OpenSslPrivateKeyMethod}.
+     */
+    public static OpenSslX509KeyManagerFactory newKeyless(X509Certificate... certificateChain)
+            throws CertificateException, IOException,
+            KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
+        KeyStore store = new OpenSslKeyStore(certificateChain.clone(), true);
+        store.load(null, null);
+        OpenSslX509KeyManagerFactory factory = new OpenSslX509KeyManagerFactory();
+        factory.init(store, null);
+        return factory;
+    }
+
+    private static final class OpenSslKeyStore extends KeyStore {
+        private OpenSslKeyStore(final X509Certificate[] certificateChain, final boolean keyless) {
             super(new KeyStoreSpi() {
 
                 private final Date creationDate = new Date();
@@ -268,15 +300,21 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
                 @Override
                 public Key engineGetKey(String alias, char[] password) throws UnrecoverableKeyException {
                     if (engineContainsAlias(alias)) {
-                        try {
-                            return new OpenSslPrivateKey(SSL.loadPrivateKeyFromEngine(
-                                            alias, password == null ? null : new String(password)));
-                        } catch (Exception e) {
-                            UnrecoverableKeyException keyException =
-                                    new UnrecoverableKeyException("Unable to load key from engine");
-                            keyException.initCause(e);
-                            throw keyException;
+                        final long privateKeyAddress;
+                        if (keyless) {
+                            privateKeyAddress = 0;
+                        } else {
+                            try {
+                                privateKeyAddress = SSL.loadPrivateKeyFromEngine(
+                                        alias, password == null ? null : new String(password));
+                            } catch (Exception e) {
+                                UnrecoverableKeyException keyException =
+                                        new UnrecoverableKeyException("Unable to load key from engine");
+                                keyException.initCause(e);
+                                throw keyException;
+                            }
                         }
+                        return new OpenSslPrivateKey(privateKeyAddress);
                     }
                     return null;
                 }
