@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2019 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -28,9 +28,6 @@ public class EpollDatagramMulticastTest extends DatagramMulticastTest {
     }
 
     public void testMulticast(Bootstrap sb, Bootstrap cb) throws Throwable {
-        // Run this test with IP_RECVORIGDSTADDR option enabled
-        sb.option(EpollChannelOption.IP_RECVORIGDSTADDR, true);
         super.testMulticast(sb, cb);
-        sb.option(EpollChannelOption.IP_RECVORIGDSTADDR, false);
     }
 }

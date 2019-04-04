@@ -151,7 +151,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         }
 
         if (multicastAddress instanceof Inet6Address) {
-            promise.setFailure(new UnsupportedOperationException("IPv6 multicast not supported"));
+            promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
         } else {
             try {
                 socket.joinGroup(multicastAddress, networkInterface, source);
@@ -210,7 +210,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         }
 
         if (multicastAddress instanceof Inet6Address) {
-            promise.setFailure(new UnsupportedOperationException("IPv6 multicast not supported"));
+            promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
         } else {
             try {
                 socket.leaveGroup(multicastAddress, networkInterface, source);
@@ -243,7 +243,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         if (networkInterface == null) {
             throw new NullPointerException("networkInterface");
         }
-        promise.setFailure(new UnsupportedOperationException("The block operation for multicast not supported"));
+        promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
         return promise;
     }
 

@@ -321,7 +321,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
 
     @Override
     public DatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
-        throw new UnsupportedOperationException("Enabling loopback-mode-disabled for multicast not supported");
+        throw new UnsupportedOperationException("Multicast not supported");
     }
 
     @Override
@@ -330,7 +330,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
             return ((EpollDatagramChannel) channel).socket.getTimeToLive();
         } catch (IOException e) {
             throw new ChannelException(e);
-    }
+        }
     }
 
     @Override
@@ -345,7 +345,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
 
     @Override
     public InetAddress getInterface() {
-        throw new UnsupportedOperationException("Retrieval of network interface address not supported");
+        return null;
     }
 
     @Override
@@ -360,7 +360,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
 
     @Override
     public NetworkInterface getNetworkInterface() {
-        throw new UnsupportedOperationException("Retrieval of network interface not supported");
+        return null;
     }
 
     @Override
