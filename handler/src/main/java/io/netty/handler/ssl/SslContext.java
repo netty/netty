@@ -421,8 +421,7 @@ public abstract class SslContext {
      * @return a new server-side {@link SslContext}
      * @deprecated Replaced by {@link SslContextBuilder}
      */
-    @Deprecated
-    public static SslContext newServerContext(
+    static SslContext newServerContext(
             SslProvider provider,
             File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,

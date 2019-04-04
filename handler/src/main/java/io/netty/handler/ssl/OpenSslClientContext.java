@@ -68,9 +68,7 @@ public final class OpenSslClientContext extends OpenSslContext {
      *                            that verifies the certificates sent from servers.
      *                            {@code null} to use the default.
      * @param keyStore the KeyStore this context should use
-     * @deprecated use {@link SslContextBuilder}
      */
-    @Deprecated
     public OpenSslClientContext(TrustManagerFactory trustManagerFactory, String keyStore) throws SSLException {
         this(null, trustManagerFactory, keyStore);
     }
@@ -97,10 +95,8 @@ public final class OpenSslClientContext extends OpenSslContext {
      *                            that verifies the certificates sent from servers.
      *                            {@code null} to use the default.
      * @param keyStore the keystore type that should be used
-     * @deprecated use {@link SslContextBuilder}
      */
-    @Deprecated
-    public OpenSslClientContext(File certChainFile,
+    OpenSslClientContext(File certChainFile,
                                 TrustManagerFactory trustManagerFactory, String keyStore) throws SSLException {
         this(certChainFile, trustManagerFactory, null, null, null, null, null,
              IdentityCipherSuiteFilter.INSTANCE, null, 0, 0, keyStore);
@@ -190,10 +186,8 @@ public final class OpenSslClientContext extends OpenSslContext {
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
      * @param keyStore the keystore type that should be used
-     * @deprecated use {@link SslContextBuilder}
      */
-    @Deprecated
-    public OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory, Iterable<String> ciphers,
+    OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory, Iterable<String> ciphers,
                                 CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
                                 long sessionCacheSize, long sessionTimeout, String keyStore) throws SSLException {
         this(certChainFile, trustManagerFactory, null, null, null, null,
@@ -255,10 +249,8 @@ public final class OpenSslClientContext extends OpenSslContext {
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
      * @param keyStore the keystore that should be used
-     * @deprecated use {@link SslContextBuilder}
      */
-    @Deprecated
-    public OpenSslClientContext(File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
+    OpenSslClientContext(File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
                                 File keyCertChainFile, File keyFile, String keyPassword,
                                 KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
                                 CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,

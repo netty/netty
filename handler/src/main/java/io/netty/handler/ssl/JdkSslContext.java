@@ -494,10 +494,8 @@ public class JdkSslContext extends SslContext {
      * @param keyStore the keystore that should be used in the {@link KeyManagerFactory}
      * @return A {@link KeyManagerFactory} based upon a key algorithm, key file, key file password,
      * and a certificate chain.
-     * @deprecated will be removed.
      */
-    @Deprecated
-    protected static KeyManagerFactory buildKeyManagerFactory(File certChainFile,
+    static KeyManagerFactory buildKeyManagerFactory(File certChainFile,
             String keyAlgorithm, File keyFile, String keyPassword, KeyManagerFactory kmf,
             String keyStore)
                     throws KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException,

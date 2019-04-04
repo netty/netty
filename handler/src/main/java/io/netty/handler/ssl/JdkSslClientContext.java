@@ -161,10 +161,8 @@ public final class JdkSslClientContext extends JdkSslContext {
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
      * @param keyStore the keyStore this context should use
-     * @deprecated use {@link SslContextBuilder}
      */
-    @Deprecated
-    public JdkSslClientContext(
+    JdkSslClientContext(
             File certChainFile, TrustManagerFactory trustManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout, String keyStore) throws SSLException {

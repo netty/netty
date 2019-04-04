@@ -45,10 +45,8 @@ public final class JdkSslServerContext extends JdkSslContext {
      * @param certChainFile an X.509 certificate chain file in PEM format
      * @param keyFile a PKCS#8 private key file in PEM format
      * @param keyStore the used keystore type
-     * @deprecated use {@link SslContextBuilder}
      */
-    @Deprecated
-    public JdkSslServerContext(File certChainFile, File keyFile, String keyStore) throws SSLException {
+    JdkSslServerContext(File certChainFile, File keyFile, String keyStore) throws SSLException {
         this(certChainFile, keyFile, null, keyStore);
     }
 
@@ -152,10 +150,8 @@ public final class JdkSslServerContext extends JdkSslContext {
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                        {@code 0} to use the default value.
      * @param keyStore the used keystore type
-     * @deprecated use {@link SslContextBuilder}
      */
-    @Deprecated
-    public JdkSslServerContext(
+    JdkSslServerContext(
             File certChainFile, File keyFile, String keyPassword,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout, String keyStore) throws SSLException {
@@ -205,10 +201,8 @@ public final class JdkSslServerContext extends JdkSslContext {
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                        {@code 0} to use the default value.
      * @param keyStore the used keystore type
-     * @deprecated use {@link SslContextBuilder}
      */
-    @Deprecated
-    public JdkSslServerContext(
+    JdkSslServerContext(
             File certChainFile, File keyFile, String keyPassword,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout, String keyStore) throws SSLException {
@@ -289,9 +283,7 @@ public final class JdkSslServerContext extends JdkSslContext {
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
      * @param keyStore the used keystore type
-     * @deprecated use {@link SslContextBuilder}
      */
-    @Deprecated
     public JdkSslServerContext(File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
@@ -366,9 +358,7 @@ public final class JdkSslServerContext extends JdkSslContext {
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                        {@code 0} to use the default value.
      * @param keyStore the used keystore type
-     * @deprecated use {@link SslContextBuilder}
      */
-    @Deprecated
     public JdkSslServerContext(File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
