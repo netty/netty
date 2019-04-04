@@ -42,7 +42,7 @@ abstract class CompleteChannelFuture extends CompleteFuture<Void> implements Cha
     }
 
     @Override
-    protected EventExecutor executor() {
+    public EventExecutor executor() {
         EventExecutor e = super.executor();
         if (e == null) {
             return channel().eventLoop();

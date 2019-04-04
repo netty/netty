@@ -35,6 +35,11 @@ final class RunnableFutureAdapter<V> implements RunnableFuture<V> {
     }
 
     @Override
+    public EventExecutor executor() {
+        return promise.executor();
+    }
+
+    @Override
     public boolean isSuccess() {
         return promise.isSuccess();
     }

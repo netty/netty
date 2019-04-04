@@ -23,9 +23,13 @@ import java.util.concurrent.TimeUnit;
 /**
  * A skeletal {@link Future} implementation which represents a {@link Future} which has been completed already.
  */
-public abstract class CompleteFuture<V> extends AbstractFuture<V> {
+public abstract class CompleteFuture<V> implements Future<V> {
 
     private final EventExecutor executor;
+
+    // It is fine to not make this volatile as even if we override the value in there it does not matter as
+    // DefaultFutureCompletionStage has no state itself and is just a wrapper around this CompletableFuture instance.
+    private DefaultFutureCompletionStage<V> stage;
 
     /**
      * Creates a new instance.
@@ -39,7 +43,8 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
     /**
      * Return the {@link EventExecutor} which is used by this {@link CompleteFuture}.
      */
-    protected EventExecutor executor() {
+    @Override
+    public EventExecutor executor() {
         return executor;
     }
 
@@ -146,5 +151,14 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
         return false;
+    }
+
+    @Override
+    public FutureCompletionStage<V> asStage() {
+        DefaultFutureCompletionStage<V> stageAdapter = stage;
+        if (stageAdapter == null) {
+            stage = stageAdapter = new DefaultFutureCompletionStage<>(this);
+        }
+        return stageAdapter;
     }
 }

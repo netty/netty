@@ -54,6 +54,11 @@ final class RunnableScheduledFutureAdapter<V> implements RunnableScheduledFuture
     }
 
     @Override
+    public EventExecutor executor() {
+        return executor;
+    }
+
+    @Override
     public long deadlineNanos() {
         return deadlineNanos;
     }
