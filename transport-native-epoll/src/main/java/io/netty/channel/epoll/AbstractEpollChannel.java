@@ -259,11 +259,11 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     public final void interrupt() {
         if (!interrupted) {
           interrupted = true;
-          clearEpollIn();
+          clearEpollIn(true);
         }
     }
 
-    final void clearEpollIn() {
+    private void clearEpollIn(final boolean interrupted) {
         // Only clear if registered with an EventLoop as otherwise
         if (isRegistered()) {
             final EventLoop loop = eventLoop();
@@ -275,7 +275,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 loop.execute(new Runnable() {
                     @Override
                     public void run() {
-                        if (!unsafe.readPending && !config().isAutoRead()) {
+                        if (!unsafe.readPending && (interrupted || !config().isAutoRead())) {
                             // Still no read triggered so clear it now
                             unsafe.clearEpollIn0();
                         }
@@ -433,7 +433,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
                 //
                 // See https://github.com/netty/netty/issues/2254
-                clearEpollIn();
+                clearEpollIn(interrupted);
             }
         }
 
@@ -495,7 +495,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                         // We attempted to shutdown and failed, which means the input has already effectively been
                         // shutdown.
                     }
-                    clearEpollIn();
+                    clearEpollIn(true);
                     pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                 } else {
                     close(voidPromise());

@@ -50,8 +50,6 @@ import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.UnixChannelUtil.computeRemoteAddr;
@@ -311,11 +309,11 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     public final void interrupt() {
         if (!interrupted) {
           interrupted = true;
-          clearReadFilter();
+          clearReadFilter(true);
         }
     }
 
-    final void clearReadFilter() {
+    private void clearReadFilter(final boolean interrupted) {
         // Only clear if registered with an EventLoop as otherwise
         if (isRegistered()) {
             final EventLoop loop = eventLoop();
@@ -327,7 +325,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 loop.execute(new Runnable() {
                     @Override
                     public void run() {
-                        if (!unsafe.readPending && !config().isAutoRead()) {
+                        if (!unsafe.readPending && (interrupted || !config().isAutoRead())) {
                             // Still no read triggered so clear it now
                             unsafe.clearReadFilter0();
                         }
