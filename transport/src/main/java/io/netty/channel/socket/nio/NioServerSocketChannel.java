@@ -200,11 +200,6 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         }
 
         @Override
-        public void interruptReading() {
-            NioServerSocketChannel.this.interruptReading();
-        }
-
-        @Override
         public <T> boolean setOption(ChannelOption<T> option, T value) {
             if (PlatformDependent.javaVersion() >= 7 && option instanceof NioChannelOption) {
                 return NioChannelOption.setOption(jdkChannel(), (NioChannelOption<T>) option, value);

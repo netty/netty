@@ -198,13 +198,6 @@ public interface ChannelConfig {
     ChannelConfig setAutoRead(boolean autoRead);
 
     /**
-     * Interrupts the current {@code read()} operation and suspends further reading until
-     * the user calls {@code read()} again.
-     */
-    @UnstableApi
-    void interruptReading();
-
-    /**
      * Returns {@code true} if and only if the {@link Channel} will be closed automatically and immediately on
      * write failure. The default is {@code true}.
      */

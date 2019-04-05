@@ -30,6 +30,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
+import io.netty.channel.Interruptible;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
@@ -56,9 +57,7 @@ import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.UnixChannelUtil.computeRemoteAddr;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChannel {
-    private static final AtomicIntegerFieldUpdater<AbstractKQueueChannel> INTERRUPTED_UPDATER =
-        AtomicIntegerFieldUpdater.newUpdater(AbstractKQueueChannel.class, "interrupted");
+abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChannel, Interruptible {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     /**
      * The future of the current connection attempt.  If not null, subsequent
@@ -77,8 +76,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
 
-    @SuppressWarnings("unused")
-    private volatile int interrupted;
+    private volatile boolean interrupted;
 
     AbstractKQueueChannel(Channel parent, BsdSocket fd, boolean active) {
         super(parent);
@@ -302,12 +300,19 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     boolean interrupted() {
-        return INTERRUPTED_UPDATER.getAndSet(this, 0) == 1;
+        if (interrupted) {
+          interrupted = false;
+          return true;
+        }
+        return false;
     }
 
-    final void interruptReading() {
-        INTERRUPTED_UPDATER.set(this,  1);
-        clearReadFilter();
+    @Override
+    public final void interrupt() {
+        if (!interrupted) {
+          interrupted = true;
+          clearReadFilter();
+        }
     }
 
     final void clearReadFilter() {

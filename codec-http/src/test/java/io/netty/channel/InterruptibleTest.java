@@ -43,10 +43,10 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.util.ReferenceCountUtil;
 
 /**
- * This set of unit tests shows some aspects of {@link ChannelConfig#interruptReading()} by making use of
+ * This set of unit tests shows some aspects of {@link Interruptible#interrupt()} by making use of
  * HTTP Pipelining.
  */
-public class InterruptReadingTest {
+public class InterruptibleTest {
 
     private static final int RANDOM_PORT = 0;
 
@@ -213,7 +213,7 @@ public class InterruptReadingTest {
     }
 
     /**
-     * This unit test shows basic {@link ChannelConfig#interruptReading()} without disabling
+     * This unit test shows basic {@link Interruptible#interrupt()} without disabling
      * auto reading.
      */
     @Test(timeout = 5000L)
@@ -246,7 +246,7 @@ public class InterruptReadingTest {
 
                             // Break out of the reader loop without outright disabling auto reading!
                             reading = false;
-                            ctx.channel().config().interruptReading();
+                            ((Interruptible) ctx.channel()).interrupt();
                         }
                     }
                 });
@@ -318,7 +318,7 @@ public class InterruptReadingTest {
 
                             // Break out of reading without outright disabling auto reading.
                             reading.set(false);
-                            ctx.channel().config().interruptReading();
+                            ((Interruptible) ctx.channel()).interrupt();
                         }
                     }
                 });

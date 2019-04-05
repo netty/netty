@@ -175,11 +175,6 @@ public class EpollChannelConfig extends DefaultChannelConfig {
         }
     }
 
-    @Override
-    public void interruptReading() {
-      ((AbstractEpollChannel) channel).interruptReading();
-    }
-
     final void setMaxBytesPerGatheringWrite(long maxBytesPerGatheringWrite) {
         this.maxBytesPerGatheringWrite = maxBytesPerGatheringWrite;
     }

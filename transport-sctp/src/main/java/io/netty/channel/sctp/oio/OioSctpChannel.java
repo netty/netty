@@ -466,10 +466,5 @@ public class OioSctpChannel extends AbstractOioMessageChannel
         private OioSctpChannelConfig(OioSctpChannel channel, SctpChannel javaChannel) {
             super(channel, javaChannel);
         }
-
-        @Override
-        public void interruptReading() {
-            ((OioSctpChannel) channel).interruptReading();
-        }
     }
 }

@@ -324,9 +324,17 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (autoRead && !oldAutoRead) {
             channel.read();
         } else if (!autoRead && oldAutoRead) {
-            autoReadCleared();
+            autoReadCleared0();
         }
         return this;
+    }
+
+    private void autoReadCleared0() {
+        if (channel instanceof Interruptible) {
+            ((Interruptible) channel).interrupt();
+        }
+
+        autoReadCleared();
     }
 
     /**
@@ -334,11 +342,6 @@ public class DefaultChannelConfig implements ChannelConfig {
      * {@code true} before.
      */
     protected void autoReadCleared() {
-        interruptReading();
-    }
-
-    @Override
-    public void interruptReading() {
     }
 
     @Override

@@ -392,10 +392,5 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         private NioSctpChannelConfig(NioSctpChannel channel, SctpChannel javaChannel) {
             super(channel, javaChannel);
         }
-
-        @Override
-        public void interruptReading() {
-            ((NioSctpChannel) channel).interruptReading();
-        }
     }
 }

@@ -230,10 +230,5 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
         private NioSctpServerChannelConfig(NioSctpServerChannel channel, SctpServerChannel javaChannel) {
             super(channel, javaChannel);
         }
-
-        @Override
-        public void interruptReading() {
-            ((NioSctpServerChannel) channel).interruptReading();
-        }
     }
 }

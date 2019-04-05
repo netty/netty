@@ -30,6 +30,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
+import io.netty.channel.Interruptible;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
@@ -51,17 +52,14 @@ import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.UnixChannelUtil.computeRemoteAddr;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel {
+abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel, Interruptible {
     private static final ClosedChannelException DO_CLOSE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new ClosedChannelException(), AbstractEpollChannel.class, "doClose()");
-    private static final AtomicIntegerFieldUpdater<AbstractEpollChannel> INTERRUPTED_UPDATER =
-        AtomicIntegerFieldUpdater.newUpdater(AbstractEpollChannel.class, "interrupted");
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     final LinuxSocket socket;
     /**
@@ -81,8 +79,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     protected volatile boolean active;
 
-    @SuppressWarnings("unused")
-    private volatile int interrupted;
+    private volatile boolean interrupted;
 
     AbstractEpollChannel(LinuxSocket fd) {
         this(null, fd, false);
@@ -251,12 +248,19 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     boolean interrupted() {
-        return INTERRUPTED_UPDATER.getAndSet(this, 0) == 1;
+      if (interrupted) {
+        interrupted = false;
+        return true;
+      }
+      return false;
     }
 
-    final void interruptReading() {
-        INTERRUPTED_UPDATER.set(this, 1);
-        clearEpollIn();
+    @Override
+    public final void interrupt() {
+        if (!interrupted) {
+          interrupted = true;
+          clearEpollIn();
+        }
     }
 
     final void clearEpollIn() {

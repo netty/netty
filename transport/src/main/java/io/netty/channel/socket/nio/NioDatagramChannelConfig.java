@@ -179,11 +179,6 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
         return this;
     }
 
-    @Override
-    public void interruptReading() {
-        ((NioDatagramChannel) channel).interruptReading0();
-    }
-
     private Object getOption0(Object option) {
         if (GET_OPTION == null) {
             throw new UnsupportedOperationException();

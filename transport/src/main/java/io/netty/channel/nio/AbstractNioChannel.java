@@ -27,6 +27,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
+import io.netty.channel.Interruptible;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.ThrowableUtil;
@@ -47,19 +48,16 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 /**
  * Abstract base class for {@link Channel} implementations which use a Selector based approach.
  */
-public abstract class AbstractNioChannel extends AbstractChannel {
+public abstract class AbstractNioChannel extends AbstractChannel implements Interruptible {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AbstractNioChannel.class);
 
     private static final ClosedChannelException DO_CLOSE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new ClosedChannelException(), AbstractNioChannel.class, "doClose()");
-    private static final AtomicIntegerFieldUpdater<AbstractNioChannel> INTERRUPTED_UPDATER =
-            AtomicIntegerFieldUpdater.newUpdater(AbstractNioChannel.class, "interrupted");
 
     private final SelectableChannel ch;
-    @SuppressWarnings("unused")
-    private volatile int interrupted;
+    private volatile boolean interrupted;
     protected final int readInterestOp;
     volatile SelectionKey selectionKey;
     boolean readPending;
@@ -168,12 +166,19 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     final boolean interrupted() {
-        return INTERRUPTED_UPDATER.getAndSet(this, 0) == 1;
+        if (interrupted) {
+            interrupted = false;
+            return true;
+        }
+        return false;
     }
 
-    protected final void interruptReading() {
-        INTERRUPTED_UPDATER.set(this, 1);
-        clearReadPending();
+    @Override
+    public final void interrupt() {
+        if (!interrupted) {
+            interrupted = true;
+            clearReadPending();
+        }
     }
 
     /**

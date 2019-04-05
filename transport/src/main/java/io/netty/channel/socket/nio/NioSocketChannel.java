@@ -469,11 +469,6 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         }
 
         @Override
-        public void interruptReading() {
-            NioSocketChannel.this.interruptReading();
-        }
-
-        @Override
         public NioSocketChannelConfig setSendBufferSize(int sendBufferSize) {
             super.setSendBufferSize(sendBufferSize);
             calculateMaxBytesPerGatheringWrite();

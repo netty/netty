@@ -19,12 +19,10 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.Interruptible;
 import io.netty.channel.ThreadPerChannelEventLoop;
-import io.netty.channel.nio.AbstractNioChannel;
 
 import java.net.SocketAddress;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * Abstract base class for {@link Channel} implementations that use Old-Blocking-IO
@@ -32,15 +30,10 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  * @deprecated use NIO / EPOLL / KQUEUE transport.
  */
 @Deprecated
-public abstract class AbstractOioChannel extends AbstractChannel {
-
-    private static final AtomicIntegerFieldUpdater<AbstractOioChannel> INTERRUPTED_UPDATER =
-            AtomicIntegerFieldUpdater.newUpdater(AbstractOioChannel.class, "interrupted");
-
+public abstract class AbstractOioChannel extends AbstractChannel implements Interruptible {
     protected static final int SO_TIMEOUT = 1000;
 
-    @SuppressWarnings("unused")
-    private volatile int interrupted;
+    private volatile boolean interrupted;
     boolean readPending;
     private final Runnable readTask = new Runnable() {
         @Override
@@ -151,12 +144,19 @@ public abstract class AbstractOioChannel extends AbstractChannel {
     }
 
     final boolean interrupted() {
-        return INTERRUPTED_UPDATER.getAndSet(this, 0) == 1;
+        if (interrupted) {
+            interrupted = false;
+            return true;
+        }
+        return false;
     }
 
-    protected final void interruptReading() {
-        INTERRUPTED_UPDATER.set(this, 1);
-        clearReadPending();
+    @Override
+    public final void interrupt() {
+        if (!interrupted) {
+            interrupted = true;
+            clearReadPending();
+        }
     }
 
     /**
