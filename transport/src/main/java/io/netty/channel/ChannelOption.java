@@ -65,7 +65,10 @@ public class ChannelOption<T> extends AbstractConstant<ChannelOption<T>> {
     /**
      * Creates a new {@link ChannelOption} for the given {@code name} or fail with an
      * {@link IllegalArgumentException} if a {@link ChannelOption} for the given {@code name} exists.
+     *
+     * @deprecated use {@link #valueOf(String)}.
      */
+    @Deprecated
     @SuppressWarnings("unchecked")
     public static <T> ChannelOption<T> newInstance(String name) {
         return (ChannelOption<T>) pool.newInstance(name);
