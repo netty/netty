@@ -171,7 +171,7 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
                             pipeline.fireChannelRead(new FileDescriptor(recvFd));
                             break;
                     }
-                } while (allocHandle.continueReading());
+                } while (allocHandle.continueReading(readPending));
 
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();

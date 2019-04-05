@@ -111,7 +111,7 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
                         readPending = false;
                         pipeline.fireChannelRead(newChildChannel(acceptFd, acceptedAddress, 1,
                                                                  acceptedAddress[0]));
-                    } while (allocHandle.continueReading());
+                    } while (allocHandle.continueReading(readPending));
                 } catch (Throwable t) {
                     exception = t;
                 }

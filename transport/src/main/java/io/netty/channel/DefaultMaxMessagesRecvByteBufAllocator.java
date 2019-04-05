@@ -84,7 +84,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
     /**
      * Focuses on enforcing the maximum messages per read condition for {@link #continueReading()}.
      */
-    public abstract class MaxMessageHandle implements ExtendedHandle {
+    public abstract class MaxMessageHandle implements ReadPendingAwareHandle {
         private ChannelConfig config;
         private int maxMessagePerRead;
         private int totalMessages;
@@ -139,10 +139,20 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
 
         @Override
         public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
-            return config.isAutoRead() &&
-                   (!respectMaybeMoreData || maybeMoreDataSupplier.get()) &&
-                   totalMessages < maxMessagePerRead &&
-                   totalBytesRead > 0;
+            return continueReading(false, maybeMoreDataSupplier);
+        }
+
+        @Override
+        public boolean continueReading(boolean readPending) {
+            return continueReading(readPending, defaultMaybeMoreSupplier);
+        }
+
+        @Override
+        public boolean continueReading(boolean readPending, UncheckedBooleanSupplier maybeMoreDataSupplier) {
+            return (readPending || config.isAutoRead()) &&
+                    (!respectMaybeMoreData || maybeMoreDataSupplier.get()) &&
+                    totalMessages < maxMessagePerRead &&
+                    totalBytesRead > 0;
         }
 
         @Override

@@ -810,7 +810,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                         //   was "wrapped" by this Channel implementation.
                         break;
                     }
-                } while (allocHandle.continueReading());
+                } while (allocHandle.continueReading(readPending));
 
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();

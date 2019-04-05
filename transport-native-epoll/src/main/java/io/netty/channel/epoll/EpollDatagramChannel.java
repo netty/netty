@@ -513,7 +513,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         pipeline.fireChannelRead(packet);
 
                         byteBuf = null;
-                    } while (allocHandle.continueReading());
+                    } while (allocHandle.continueReading(readPending));
                 } catch (Throwable t) {
                     if (byteBuf != null) {
                         byteBuf.release();

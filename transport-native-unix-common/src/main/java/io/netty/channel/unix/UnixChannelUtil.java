@@ -16,6 +16,11 @@
 package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelConfig;
+import io.netty.channel.RecvByteBufAllocator;
+import io.netty.util.UncheckedBooleanSupplier;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.net.InetAddress;
@@ -58,5 +63,79 @@ public final class UnixChannelUtil {
             return osRemoteAddr;
         }
         return remoteAddr;
+    }
+
+    public static RecvByteBufAllocator.ReadPendingAwareHandle adaptHandleIfNeeded(
+            final RecvByteBufAllocator.ExtendedHandle handle) {
+        ObjectUtil.checkNotNull(handle, "handle");
+        if (handle instanceof RecvByteBufAllocator.ReadPendingAwareHandle) {
+            return (RecvByteBufAllocator.ReadPendingAwareHandle) handle;
+        }
+        return new RecvByteBufAllocator.ReadPendingAwareHandle() {
+            @Override
+            public boolean continueReading(boolean readPending) {
+                return handle.continueReading();
+            }
+
+            @Override
+            public boolean continueReading(boolean readPending, UncheckedBooleanSupplier maybeMoreDataSupplier) {
+                return handle.continueReading(maybeMoreDataSupplier);
+            }
+
+            @Override
+            public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
+                return handle.continueReading(maybeMoreDataSupplier);
+            }
+
+            @Override
+            public ByteBuf allocate(ByteBufAllocator alloc) {
+                return handle.allocate(alloc);
+            }
+
+            @Override
+            public int guess() {
+                return handle.guess();
+            }
+
+            @Override
+            public void reset(ChannelConfig config) {
+                handle.reset(config);
+            }
+
+            @Override
+            public void incMessagesRead(int numMessages) {
+                handle.incMessagesRead(numMessages);
+            }
+
+            @Override
+            public void lastBytesRead(int bytes) {
+                handle.lastBytesRead(bytes);
+            }
+
+            @Override
+            public int lastBytesRead() {
+                return handle.lastBytesRead();
+            }
+
+            @Override
+            public void attemptedBytesRead(int bytes) {
+                handle.attemptedBytesRead(bytes);
+            }
+
+            @Override
+            public int attemptedBytesRead() {
+                return handle.attemptedBytesRead();
+            }
+
+            @Override
+            public boolean continueReading() {
+                return handle.continueReading();
+            }
+
+            @Override
+            public void readComplete() {
+                handle.readComplete();
+            }
+        };
     }
 }

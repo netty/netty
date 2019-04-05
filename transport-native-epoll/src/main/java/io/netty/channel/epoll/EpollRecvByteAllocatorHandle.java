@@ -20,13 +20,13 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.unix.PreferredDirectByteBufAllocator;
+import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.UncheckedBooleanSupplier;
-import io.netty.util.internal.ObjectUtil;
 
-class EpollRecvByteAllocatorHandle implements RecvByteBufAllocator.ExtendedHandle {
+class EpollRecvByteAllocatorHandle implements RecvByteBufAllocator.ReadPendingAwareHandle {
     private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
             new PreferredDirectByteBufAllocator();
-    private final RecvByteBufAllocator.ExtendedHandle delegate;
+    private final RecvByteBufAllocator.ReadPendingAwareHandle delegate;
     private final UncheckedBooleanSupplier defaultMaybeMoreDataSupplier = new UncheckedBooleanSupplier() {
         @Override
         public boolean get() {
@@ -37,7 +37,7 @@ class EpollRecvByteAllocatorHandle implements RecvByteBufAllocator.ExtendedHandl
     private boolean receivedRdHup;
 
     EpollRecvByteAllocatorHandle(RecvByteBufAllocator.ExtendedHandle handle) {
-        delegate = ObjectUtil.checkNotNull(handle, "handle");
+         delegate = UnixChannelUtil.adaptHandleIfNeeded(handle);
     }
 
     final void receivedRdHup() {
@@ -124,7 +124,18 @@ class EpollRecvByteAllocatorHandle implements RecvByteBufAllocator.ExtendedHandl
 
     @Override
     public final boolean continueReading() {
+        return continueReading(defaultMaybeMoreDataSupplier);
+    }
+
+    @Override
+    public boolean continueReading(boolean readPending) {
         // We must override the supplier which determines if there maybe more data to read.
-        return delegate.continueReading(defaultMaybeMoreDataSupplier);
+        return continueReading(readPending, defaultMaybeMoreDataSupplier);
+    }
+
+    @Override
+    public boolean continueReading(boolean readPending, UncheckedBooleanSupplier maybeMoreDataSupplier) {
+        // We must override the supplier which determines if there maybe more data to read.
+        return delegate.continueReading(readPending, maybeMoreDataSupplier);
     }
 }

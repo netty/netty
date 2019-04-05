@@ -484,7 +484,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
                         pipeline.fireChannelRead(packet);
 
                         byteBuf = null;
-                    } while (allocHandle.continueReading());
+                    } while (allocHandle.continueReading(readPending));
                 } catch (Throwable t) {
                     if (byteBuf != null) {
                         byteBuf.release();

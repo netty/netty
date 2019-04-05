@@ -558,7 +558,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                         //   was "wrapped" by this Channel implementation.
                         break;
                     }
-                } while (allocHandle.continueReading());
+                } while (allocHandle.continueReading(readPending));
 
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();

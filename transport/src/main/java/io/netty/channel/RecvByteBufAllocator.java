@@ -117,6 +117,20 @@ public interface RecvByteBufAllocator {
         boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier);
     }
 
+    @UnstableApi
+    interface ReadPendingAwareHandle extends ExtendedHandle {
+        /**
+         * Same as {@link ExtendedHandle#continueReading()} except that the transport can give some hint if another
+         * read is pending.
+         */
+        boolean continueReading(boolean readPending);
+        /**
+         * Same as {@link ExtendedHandle#continueReading()} except that the transport can give some hint if another
+         *  read is pending.
+         */
+        boolean continueReading(boolean readPending, UncheckedBooleanSupplier maybeMoreDataSupplier);
+    }
+
     /**
      * A {@link Handle} which delegates all call to some other {@link Handle}.
      */

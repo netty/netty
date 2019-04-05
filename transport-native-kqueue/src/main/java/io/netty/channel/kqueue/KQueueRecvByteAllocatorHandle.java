@@ -20,16 +20,16 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.unix.PreferredDirectByteBufAllocator;
+import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.UncheckedBooleanSupplier;
-import io.netty.util.internal.ObjectUtil;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
-final class KQueueRecvByteAllocatorHandle implements RecvByteBufAllocator.ExtendedHandle {
+final class KQueueRecvByteAllocatorHandle implements RecvByteBufAllocator.ReadPendingAwareHandle {
     private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
             new PreferredDirectByteBufAllocator();
-    private final RecvByteBufAllocator.ExtendedHandle delegate;
+    private final RecvByteBufAllocator.ReadPendingAwareHandle delegate;
 
     private final UncheckedBooleanSupplier defaultMaybeMoreDataSupplier = new UncheckedBooleanSupplier() {
         @Override
@@ -42,7 +42,7 @@ final class KQueueRecvByteAllocatorHandle implements RecvByteBufAllocator.Extend
     private long numberBytesPending;
 
     KQueueRecvByteAllocatorHandle(RecvByteBufAllocator.ExtendedHandle handle) {
-        delegate = ObjectUtil.checkNotNull(handle, "handle");
+        delegate = UnixChannelUtil.adaptHandleIfNeeded(handle);
     }
 
     @Override
@@ -102,8 +102,18 @@ final class KQueueRecvByteAllocatorHandle implements RecvByteBufAllocator.Extend
 
     @Override
     public boolean continueReading() {
+        return continueReading(defaultMaybeMoreDataSupplier);
+    }
+
+    @Override
+    public boolean continueReading(boolean readPending) {
+        return continueReading(readPending, defaultMaybeMoreDataSupplier);
+    }
+
+    @Override
+    public boolean continueReading(boolean readPending, UncheckedBooleanSupplier maybeMoreDataSupplier) {
         // We must override the supplier which determines if there maybe more data to read.
-        return delegate.continueReading(defaultMaybeMoreDataSupplier);
+        return delegate.continueReading(maybeMoreDataSupplier);
     }
 
     void readEOF() {
