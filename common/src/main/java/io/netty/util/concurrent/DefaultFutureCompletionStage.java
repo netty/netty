@@ -28,7 +28,8 @@ import java.util.function.Function;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Wraps a {@link Future} and provides a {@link CompletionStage} implementation on top of it.
+ * Wraps a {@link io.netty.util.concurrent.Future} and provides a {@link FutureCompletionStage} implementation
+ * on top of it.
  *
  * @param <V> the value type.
  */
@@ -40,7 +41,7 @@ final class DefaultFutureCompletionStage<V> implements FutureCompletionStage<V> 
 
     // Just a marker
     private static final Executor SAME_AS_FUTURE = task -> {
-        throw new IllegalStateException();
+        throw new UnsupportedOperationException("Only a marker, should never been called!");
     };
 
     private final Future<V> future;
