@@ -129,6 +129,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     private long lastChangeCheckTimeStamp;
     private int lastMessageHashCode;
     private long lastPendingWriteBytes;
+    private long lastFlushProgress;
 
     /**
      * Creates a new instance firing {@link IdleStateEvent}s.
@@ -399,6 +400,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
             if (buf != null) {
                 lastMessageHashCode = System.identityHashCode(buf.current());
                 lastPendingWriteBytes = buf.totalPendingWriteBytes();
+                lastFlushProgress = buf.currentProgress();
             }
         }
     }
@@ -434,10 +436,13 @@ public class IdleStateHandler extends ChannelDuplexHandler {
             if (buf != null) {
                 int messageHashCode = System.identityHashCode(buf.current());
                 long pendingWriteBytes = buf.totalPendingWriteBytes();
+                long flushProgress = buf.currentProgress();
 
-                if (messageHashCode != lastMessageHashCode || pendingWriteBytes != lastPendingWriteBytes) {
+                if (messageHashCode != lastMessageHashCode ||
+                    pendingWriteBytes != lastPendingWriteBytes || flushProgress != lastFlushProgress) {
                     lastMessageHashCode = messageHashCode;
                     lastPendingWriteBytes = pendingWriteBytes;
+                    lastFlushProgress = flushProgress;
 
                     if (!first) {
                         return true;
