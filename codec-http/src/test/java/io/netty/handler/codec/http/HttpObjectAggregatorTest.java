@@ -36,6 +36,7 @@ import java.util.List;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -166,11 +167,48 @@ public class HttpObjectAggregatorTest {
         assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
         assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
 
+        assertThat(response, instanceOf(LastHttpContent.class));
+        ReferenceCountUtil.release(response);
+
         if (serverShouldCloseConnection(message, response)) {
             assertFalse(embedder.isOpen());
+
+            try {
+                embedder.writeInbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER));
+                fail();
+            } catch (Exception e) {
+                assertThat(e, instanceOf(ClosedChannelException.class));
+                // expected
+            }
             assertFalse(embedder.finish());
         } else {
             assertTrue(embedder.isOpen());
+            assertFalse(embedder.writeInbound(new DefaultHttpContent(Unpooled.copiedBuffer(new byte[8]))));
+            assertFalse(embedder.writeInbound(new DefaultHttpContent(Unpooled.copiedBuffer(new byte[8]))));
+
+            // Now start a new message and ensure we will not reject it again.
+            HttpRequest message2 = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.PUT, "http://localhost");
+            HttpUtil.setContentLength(message, 2);
+
+            assertFalse(embedder.writeInbound(message2));
+            assertNull(embedder.readOutbound());
+            assertFalse(embedder.writeInbound(new DefaultHttpContent(Unpooled.copiedBuffer(new byte[] { 1 }))));
+            assertNull(embedder.readOutbound());
+            assertTrue(embedder.writeInbound(new DefaultLastHttpContent(Unpooled.copiedBuffer(new byte[] { 2 }))));
+            assertNull(embedder.readOutbound());
+
+            FullHttpRequest request = embedder.readInbound();
+            assertEquals(message2.protocolVersion(), request.protocolVersion());
+            assertEquals(message2.method(), request.method());
+            assertEquals(message2.uri(), request.uri());
+            assertEquals(2, HttpUtil.getContentLength(request));
+
+            byte[] actual = new byte[request.content().readableBytes()];
+            request.content().readBytes(actual);
+            assertArrayEquals(new byte[] { 1, 2 }, actual);
+            request.release();
+
+            assertFalse(embedder.finish());
         }
     }
 
