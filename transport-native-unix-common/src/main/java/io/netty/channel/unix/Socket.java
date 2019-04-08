@@ -48,8 +48,11 @@ public class Socket extends FileDescriptor {
 
     public static final int UDS_SUN_PATH_SIZE = udsSunPathSize();
 
+    protected final boolean ipv6;
+
     public Socket(int fd) {
         super(fd);
+        this.ipv6 = isIPv6(fd);
     }
 
     public final void shutdown() throws IOException {
@@ -114,7 +117,7 @@ public class Socket extends FileDescriptor {
             scopeId = 0;
             address = ipv4MappedIpv6Address(addr.getAddress());
         }
-        int res = sendTo(fd, buf, pos, limit, address, scopeId, port);
+        int res = sendTo(fd, ipv6, buf, pos, limit, address, scopeId, port);
         if (res >= 0) {
             return res;
         }
@@ -138,7 +141,7 @@ public class Socket extends FileDescriptor {
             scopeId = 0;
             address = ipv4MappedIpv6Address(addr.getAddress());
         }
-        int res = sendToAddress(fd, memoryAddress, pos, limit, address, scopeId, port);
+        int res = sendToAddress(fd, ipv6, memoryAddress, pos, limit, address, scopeId, port);
         if (res >= 0) {
             return res;
         }
@@ -161,7 +164,7 @@ public class Socket extends FileDescriptor {
             scopeId = 0;
             address = ipv4MappedIpv6Address(addr.getAddress());
         }
-        int res = sendToAddresses(fd, memoryAddress, length, address, scopeId, port);
+        int res = sendToAddresses(fd, ipv6, memoryAddress, length, address, scopeId, port);
         if (res >= 0) {
             return res;
         }
@@ -213,7 +216,7 @@ public class Socket extends FileDescriptor {
         if (socketAddress instanceof InetSocketAddress) {
             InetSocketAddress inetSocketAddress = (InetSocketAddress) socketAddress;
             NativeInetAddress address = NativeInetAddress.newInstance(inetSocketAddress.getAddress());
-            res = connect(fd, address.address, address.scopeId, inetSocketAddress.getPort());
+            res = connect(fd, ipv6, address.address, address.scopeId, inetSocketAddress.getPort());
         } else if (socketAddress instanceof DomainSocketAddress) {
             DomainSocketAddress unixDomainSocketAddress = (DomainSocketAddress) socketAddress;
             res = connectDomainSocket(fd, unixDomainSocketAddress.path().getBytes(CharsetUtil.UTF_8));
@@ -243,7 +246,7 @@ public class Socket extends FileDescriptor {
     }
 
     public final void disconnect() throws IOException {
-        int res = disconnect(fd);
+        int res = disconnect(fd, ipv6);
         if (res < 0) {
             throwConnectException("disconnect", res);
         }
@@ -253,7 +256,7 @@ public class Socket extends FileDescriptor {
         if (socketAddress instanceof InetSocketAddress) {
             InetSocketAddress addr = (InetSocketAddress) socketAddress;
             NativeInetAddress address = NativeInetAddress.newInstance(addr.getAddress());
-            int res = bind(fd, address.address, address.scopeId, addr.getPort());
+            int res = bind(fd, ipv6, address.address, address.scopeId, addr.getPort());
             if (res < 0) {
                 throw newIOException("bind", res);
             }
@@ -338,7 +341,7 @@ public class Socket extends FileDescriptor {
     }
 
     public final int getTrafficClass() throws IOException {
-        return getTrafficClass(fd);
+        return getTrafficClass(fd, ipv6);
     }
 
     public final void setKeepAlive(boolean keepAlive) throws IOException {
@@ -374,8 +377,12 @@ public class Socket extends FileDescriptor {
     }
 
     public final void setTrafficClass(int trafficClass) throws IOException {
-        setTrafficClass(fd, trafficClass);
+        setTrafficClass(fd, ipv6, trafficClass);
     }
+
+    public static native boolean isIPv6Preferred();
+
+    private static native boolean isIPv6(int fd);
 
     @Override
     public String toString() {
@@ -405,7 +412,11 @@ public class Socket extends FileDescriptor {
     }
 
     protected static int newSocketStream0() {
-        int res = newSocketStreamFd();
+        return newSocketStream0(isIPv6Preferred());
+    }
+
+    protected static int newSocketStream0(boolean ipv6) {
+        int res = newSocketStreamFd(ipv6);
         if (res < 0) {
             throw new ChannelException(newIOException("newSocketStream", res));
         }
@@ -413,7 +424,11 @@ public class Socket extends FileDescriptor {
     }
 
     protected static int newSocketDgram0() {
-        int res = newSocketDgramFd();
+        return newSocketDgram0(isIPv6Preferred());
+    }
+
+    protected static int newSocketDgram0(boolean ipv6) {
+        int res = newSocketDgramFd(ipv6);
         if (res < 0) {
             throw new ChannelException(newIOException("newSocketDgram", res));
         }
@@ -429,11 +444,11 @@ public class Socket extends FileDescriptor {
     }
 
     private static native int shutdown(int fd, boolean read, boolean write);
-    private static native int connect(int fd, byte[] address, int scopeId, int port);
+    private static native int connect(int fd, boolean ipv6, byte[] address, int scopeId, int port);
     private static native int connectDomainSocket(int fd, byte[] path);
     private static native int finishConnect(int fd);
-    private static native int disconnect(int fd);
-    private static native int bind(int fd, byte[] address, int scopeId, int port);
+    private static native int disconnect(int fd, boolean ipv6);
+    private static native int bind(int fd, boolean ipv6, byte[] address, int scopeId, int port);
     private static native int bindDomainSocket(int fd, byte[] path);
     private static native int listen(int fd, int backlog);
     private static native int accept(int fd, byte[] addr);
@@ -442,11 +457,11 @@ public class Socket extends FileDescriptor {
     private static native byte[] localAddress(int fd);
 
     private static native int sendTo(
-            int fd, ByteBuffer buf, int pos, int limit, byte[] address, int scopeId, int port);
+            int fd, boolean ipv6, ByteBuffer buf, int pos, int limit, byte[] address, int scopeId, int port);
     private static native int sendToAddress(
-            int fd, long memoryAddress, int pos, int limit, byte[] address, int scopeId, int port);
+            int fd, boolean ipv6, long memoryAddress, int pos, int limit, byte[] address, int scopeId, int port);
     private static native int sendToAddresses(
-            int fd, long memoryAddress, int length, byte[] address, int scopeId, int port);
+            int fd, boolean ipv6, long memoryAddress, int length, byte[] address, int scopeId, int port);
 
     private static native DatagramSocketAddress recvFrom(
             int fd, ByteBuffer buf, int pos, int limit) throws IOException;
@@ -455,8 +470,8 @@ public class Socket extends FileDescriptor {
     private static native int recvFd(int fd);
     private static native int sendFd(int socketFd, int fd);
 
-    private static native int newSocketStreamFd();
-    private static native int newSocketDgramFd();
+    private static native int newSocketStreamFd(boolean ipv6);
+    private static native int newSocketDgramFd(boolean ipv6);
     private static native int newSocketDomainFd();
 
     private static native int isReuseAddress(int fd) throws IOException;
@@ -468,7 +483,7 @@ public class Socket extends FileDescriptor {
     private static native int isBroadcast(int fd) throws IOException;
     private static native int getSoLinger(int fd) throws IOException;
     private static native int getSoError(int fd) throws IOException;
-    private static native int getTrafficClass(int fd) throws IOException;
+    private static native int getTrafficClass(int fd, boolean ipv6) throws IOException;
 
     private static native void setReuseAddress(int fd, int reuseAddress) throws IOException;
     private static native void setReusePort(int fd, int reuseAddress) throws IOException;
@@ -478,6 +493,6 @@ public class Socket extends FileDescriptor {
     private static native void setTcpNoDelay(int fd, int tcpNoDelay) throws IOException;
     private static native void setSoLinger(int fd, int soLinger) throws IOException;
     private static native void setBroadcast(int fd, int broadcast) throws IOException;
-    private static native void setTrafficClass(int fd, int trafficClass) throws IOException;
+    private static native void setTrafficClass(int fd, boolean ipv6, int trafficClass) throws IOException;
     private static native void initialize(boolean ipv4Preferred);
 }
