@@ -36,7 +36,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.io.IOException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
@@ -143,7 +142,17 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
-                        return new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollDatagramChannel.class);
+                        return new Bootstrap().group(EPOLL_WORKER_GROUP).channelFactory(new ChannelFactory<Channel>() {
+                            @Override
+                            public Channel newChannel() {
+                                return new EpollDatagramChannel(family);
+                            }
+
+                            @Override
+                            public String toString() {
+                                return InternetProtocolFamily.class.getSimpleName() + ".class";
+                            }
+                        });
                     }
                 }
         );
