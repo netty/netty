@@ -21,21 +21,30 @@ import static org.junit.Assert.assertTrue;
 
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.HttpRequest;
@@ -46,22 +55,40 @@ import io.netty.util.ReferenceCountUtil;
  * This set of unit tests shows some aspects of {@link Interruptible#interrupt()} by making use of
  * HTTP Pipelining.
  */
+@RunWith(Parameterized.class)
 public class InterruptibleTest {
 
     private static final int RANDOM_PORT = 0;
 
     private static final int NUMBER_OF_REQUESTS_IN_ONE_PAYLOAD = 1000;
 
-    private static EventLoopGroup GROUP;
+    @Parameters
+    public static Collection<Class<?>[]> parameters() {
+        List<Class<?>[]> dst = new ArrayList<Class<?>[]>();
+        dst.add(new Class[] { NioEventLoopGroup.class, NioServerSocketChannel.class, NioSocketChannel.class });
 
-    @BeforeClass
-    public static void init() {
-        GROUP = new NioEventLoopGroup();
+        return dst;
     }
 
-    @AfterClass
-    public static void destroy() {
-        GROUP.shutdownGracefully();
+    private EventLoopGroup group;
+
+    @Parameter
+    public Class<?> eventLoopGroupType;
+
+    @Parameter(1)
+    public Class<?> serverSocketChannelType;
+
+    @Parameter(2)
+    public Class<?> socketChannelType;
+
+    @Before
+    public void init() throws Exception {
+        group = (EventLoopGroup) eventLoopGroupType.newInstance();
+    }
+
+    @After
+    public void destroy() {
+        group.shutdownGracefully();
     }
 
     /**
@@ -376,23 +403,25 @@ public class InterruptibleTest {
         }
     }
 
-    private static Channel newServer(ChannelHandler handler) throws Exception {
+    @SuppressWarnings("unchecked")
+    private Channel newServer(ChannelHandler handler) throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap();
 
-        bootstrap.channel(NioServerSocketChannel.class)
-                .group(GROUP)
+        bootstrap.channel((Class<ServerSocketChannel>) serverSocketChannelType)
+                .group(group)
                 .option(ChannelOption.SO_REUSEADDR, true)
                 .childHandler(handler);
 
         return bootstrap.bind(RANDOM_PORT).sync().channel();
     }
 
-    private static Channel newClient(InetSocketAddress address, ChannelHandler handler)
+    @SuppressWarnings("unchecked")
+    private Channel newClient(InetSocketAddress address, ChannelHandler handler)
             throws Exception {
         Bootstrap bootstrap = new Bootstrap();
 
-        bootstrap.channel(NioSocketChannel.class)
-                .group(GROUP)
+        bootstrap.channel((Class<SocketChannel>) socketChannelType)
+                .group(group)
                 .option(ChannelOption.SO_REUSEADDR, true)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
                 .handler(handler);
