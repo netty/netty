@@ -247,7 +247,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 ((SocketChannelConfig) config).isAllowHalfClosure();
     }
 
-    boolean interrupted() {
+    final boolean interrupted() {
       if (interrupted) {
         interrupted = false;
         return true;

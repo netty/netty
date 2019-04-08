@@ -297,7 +297,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 ((SocketChannelConfig) config).isAllowHalfClosure();
     }
 
-    boolean interrupted() {
+    final boolean interrupted() {
         if (interrupted) {
           interrupted = false;
           return true;
