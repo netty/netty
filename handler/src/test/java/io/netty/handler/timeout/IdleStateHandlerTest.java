@@ -404,7 +404,7 @@ public class IdleStateHandlerTest {
             // the messages in the ChannelOutboundBuffer.
         }
 
-        Object consume() {
+        private Object consume() {
             ChannelOutboundBuffer buf = unsafe().outboundBuffer();
             if (buf != null) {
                 Object msg = buf.current();
@@ -423,7 +423,7 @@ public class IdleStateHandlerTest {
          * @param byteCount count of byte to be consumed
          * @return the message currently being consumed
          */
-        Object consumePart(int byteCount) {
+        private Object consumePart(int byteCount) {
             ChannelOutboundBuffer buf = unsafe().outboundBuffer();
             if (buf != null) {
                 Object msg = buf.current();
