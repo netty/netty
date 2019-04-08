@@ -399,7 +399,6 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
 
     private void invokeHandleOversizedMessage(ChannelHandlerContext ctx, S oversized) throws Exception {
         handlingOversizedMessage = true;
-        aggregating = false;
         currentMessage = null;
         try {
             handleOversizedMessage(ctx, oversized);
