@@ -222,7 +222,7 @@ public final class ChannelOutboundBuffer {
 
     /**
      * Return the current message flush progress.
-     * @return return {@code 0} if nothing was flushed before
+     * @return {@code 0} if nothing was flushed before for the current message or there is no current message
      */
     public long currentProgress() {
         Entry entry = flushedEntry;

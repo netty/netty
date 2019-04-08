@@ -22,7 +22,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -288,9 +287,9 @@ public class IdleStateHandlerTest {
             // Consume part of the message every 2 seconds, then be idle for 1 seconds,
             // then run the task and we should get an IdleStateEvent because the first trigger
             idleStateHandler.tick(2L, TimeUnit.SECONDS);
-            assertNull(channel.consumePart(1024));
+            assertNotNullAndRelease(channel.consumePart(1024));
             idleStateHandler.tick(2L, TimeUnit.SECONDS);
-            assertNull(channel.consumePart(1024));
+            assertNotNullAndRelease(channel.consumePart(1024));
             idleStateHandler.tickRun(1L, TimeUnit.SECONDS);
             assertEquals(1, events.size());
             assertEquals(31L, idleStateHandler.tick(TimeUnit.SECONDS)); // 26s + 2s + 2s + 1s
@@ -300,9 +299,9 @@ public class IdleStateHandlerTest {
             // then consume all the rest of the message, then run the task and we shouldn't
             // get an IdleStateEvent because the data is flowing and we haven't been idle for long enough!
             idleStateHandler.tick(2L, TimeUnit.SECONDS);
-            assertNull(channel.consumePart(1024));
+            assertNotNullAndRelease(channel.consumePart(1024));
             idleStateHandler.tick(2L, TimeUnit.SECONDS);
-            assertNull(channel.consumePart(1024));
+            assertNotNullAndRelease(channel.consumePart(1024));
             idleStateHandler.tickRun(1L, TimeUnit.SECONDS);
             assertEquals(0, events.size());
             assertEquals(36L, idleStateHandler.tick(TimeUnit.SECONDS)); // 31s + 2s + 2s + 1s
@@ -405,7 +404,7 @@ public class IdleStateHandlerTest {
             // the messages in the ChannelOutboundBuffer.
         }
 
-        public Object consume() {
+        Object consume() {
             ChannelOutboundBuffer buf = unsafe().outboundBuffer();
             if (buf != null) {
                 Object msg = buf.current();
@@ -422,24 +421,16 @@ public class IdleStateHandlerTest {
          * Consume the part of a message.
          *
          * @param byteCount count of byte to be consumed
-         * @return the message If all content is consumed, otherwise return {@code null}
+         * @return the message currently being consumed
          */
-        public Object consumePart(int byteCount) {
+        Object consumePart(int byteCount) {
             ChannelOutboundBuffer buf = unsafe().outboundBuffer();
             if (buf != null) {
                 Object msg = buf.current();
-                if (msg instanceof ByteBuf) {
-                    ByteBuf byteBuf = (ByteBuf) msg;
-                    if (byteBuf.readableBytes() > byteCount) {
-                        buf.removeBytes(byteCount);
-                        return null;
-                    } else {
-                        ReferenceCountUtil.retain(msg);
-                        buf.removeBytes(byteCount);
-                        return msg;
-                    }
-                } else {
-                    return null;
+                if (msg != null) {
+                    ReferenceCountUtil.retain(msg);
+                    buf.removeBytes(byteCount);
+                    return msg;
                 }
             }
             return null;
