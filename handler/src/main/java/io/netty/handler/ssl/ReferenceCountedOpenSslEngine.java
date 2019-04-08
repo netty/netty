@@ -885,7 +885,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                             // [1] https://www.openssl.org/docs/manmaster/ssl/SSL_write.html
                             return newResult(BUFFER_OVERFLOW, status, bytesConsumed, bytesProduced);
                         } else if (sslError == SSL.SSL_ERROR_WANT_X509_LOOKUP ||
-                                sslError == SSL.SSL_ERROR_WANT_CERTIFICATE_VERIFY) {
+                                sslError == SSL.SSL_ERROR_WANT_CERTIFICATE_VERIFY ||
+                                sslError == SSL.SSL_ERROR_WANT_PRIVATE_KEY_OPERATION) {
+
                             return newResult(NEED_TASK, bytesConsumed, bytesProduced);
                         } else {
                             // Everything else is considered as error
@@ -1181,8 +1183,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                     }
                                     return newResultMayFinishHandshake(isInboundDone() ? CLOSED : OK, status,
                                             bytesConsumed, bytesProduced);
-                                } else if (sslError == SSL.SSL_ERROR_WANT_X509_LOOKUP
-                                        || sslError == SSL.SSL_ERROR_WANT_CERTIFICATE_VERIFY) {
+                                } else if (sslError == SSL.SSL_ERROR_WANT_X509_LOOKUP ||
+                                        sslError == SSL.SSL_ERROR_WANT_CERTIFICATE_VERIFY ||
+                                        sslError == SSL.SSL_ERROR_WANT_PRIVATE_KEY_OPERATION) {
                                     return newResult(isInboundDone() ? CLOSED : OK,
                                             NEED_TASK, bytesConsumed, bytesProduced);
                                 } else {
@@ -1737,7 +1740,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 return pendingStatus(SSL.bioLengthNonApplication(networkBIO));
             }
 
-            if (sslError == SSL.SSL_ERROR_WANT_X509_LOOKUP || sslError == SSL.SSL_ERROR_WANT_CERTIFICATE_VERIFY) {
+            if (sslError == SSL.SSL_ERROR_WANT_X509_LOOKUP ||
+                    sslError == SSL.SSL_ERROR_WANT_CERTIFICATE_VERIFY ||
+                    sslError == SSL.SSL_ERROR_WANT_PRIVATE_KEY_OPERATION) {
                 return NEED_TASK;
             }
 
