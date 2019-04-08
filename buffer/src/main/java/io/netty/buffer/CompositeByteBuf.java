@@ -288,7 +288,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 c.reposition(components[cIndex - 1].endOffset);
             }
             if (increaseWriterIndex) {
-                writerIndex(writerIndex() + readableBytes);
+                writerIndex += readableBytes;
             }
             return cIndex;
         } finally {
@@ -371,7 +371,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 updateComponentOffsets(ci); // only need to do this here for components after the added ones
             }
             if (increaseWriterIndex && ci > cIndex && ci <= componentCount) {
-                writerIndex(writerIndex() + components[ci - 1].endOffset - components[cIndex].offset);
+                writerIndex += components[ci - 1].endOffset - components[cIndex].offset;
             }
         }
     }
@@ -412,6 +412,74 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
      */
     public CompositeByteBuf addComponents(int cIndex, Iterable<ByteBuf> buffers) {
         return addComponents(false, cIndex, buffers);
+    }
+
+    /**
+     * Add the given {@link ByteBuf} and increase the {@code writerIndex} if {@code increaseWriterIndex} is
+     * {@code true}. If the provided buffer is a {@link CompositeByteBuf} itself, a "shallow copy" of its
+     * readable components will be performed. Thus the actual number of new components added may vary
+     * and in particular will be zero if the provided buffer is not readable.
+     * <p>
+     * {@link ByteBuf#release()} ownership of {@code buffer} is transferred to this {@link CompositeByteBuf}.
+     * @param buffer the {@link ByteBuf} to add. {@link ByteBuf#release()} ownership is transferred to this
+     * {@link CompositeByteBuf}.
+     */
+    public CompositeByteBuf addFlattenedComponents(boolean increaseWriterIndex, ByteBuf buffer) {
+        checkNotNull(buffer, "buffer");
+        final int ridx = buffer.readerIndex();
+        final int widx = buffer.writerIndex();
+        if (ridx == widx) {
+            buffer.release();
+            return this;
+        }
+        if (!(buffer instanceof CompositeByteBuf)) {
+            addComponent0(increaseWriterIndex, componentCount, buffer);
+            consolidateIfNeeded();
+            return this;
+        }
+        final CompositeByteBuf from = (CompositeByteBuf) buffer;
+        from.checkIndex(ridx, widx - ridx);
+        final Component[] fromComponents = from.components;
+        final int compCountBefore = componentCount;
+        final int writerIndexBefore = writerIndex;
+        try {
+            for (int cidx = from.toComponentIndex0(ridx), newOffset = capacity();; cidx++) {
+                final Component component = fromComponents[cidx];
+                final int compOffset = component.offset;
+                final int fromIdx = Math.max(ridx, compOffset);
+                final int toIdx = Math.min(widx, component.endOffset);
+                final int len = toIdx - fromIdx;
+                if (len > 0) { // skip empty components
+                    // Note that it's safe to just retain the unwrapped buf here, even in the case
+                    // of PooledSlicedByteBufs - those slices will still be properly released by the
+                    // source Component's free() method.
+                    addComp(componentCount, new Component(
+                            component.buf.retain(), component.idx(fromIdx), newOffset, len, null));
+                }
+                if (widx == toIdx) {
+                    break;
+                }
+                newOffset += len;
+            }
+            if (increaseWriterIndex) {
+                writerIndex = writerIndexBefore + (widx - ridx);
+            }
+            consolidateIfNeeded();
+            buffer.release();
+            buffer = null;
+            return this;
+        } finally {
+            if (buffer != null) {
+                // if we did not succeed, attempt to rollback any components that were added
+                if (increaseWriterIndex) {
+                    writerIndex = writerIndexBefore;
+                }
+                for (int cidx = componentCount - 1; cidx >= compCountBefore; cidx--) {
+                    components[cidx].free();
+                    removeComp(cidx);
+                }
+            }
+        }
     }
 
     // TODO optimize further, similar to ByteBuf[] version
@@ -767,9 +835,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             removeCompRange(i + 1, size);
 
             if (readerIndex() > newCapacity) {
-                setIndex(newCapacity, newCapacity);
-            } else if (writerIndex() > newCapacity) {
-                writerIndex(newCapacity);
+                setIndex0(newCapacity, newCapacity);
+            } else if (writerIndex > newCapacity) {
+                writerIndex = newCapacity;
             }
         }
         return this;
@@ -815,6 +883,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                     return i;
                 }
             }
+        }
+        if (size <= 2) { // fast-path for 1 and 2 component count
+            return size == 1 || offset < components[0].endOffset ? 0 : 1;
         }
         for (int low = 0, high = size; low <= high;) {
             int mid = low + high >>> 1;
@@ -1680,16 +1751,26 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         }
 
         // Remove read components.
-        int firstComponentId = toComponentIndex0(readerIndex);
-        for (int i = 0; i < firstComponentId; i ++) {
-            components[i].free();
+        int firstComponentId = 0;
+        Component c = null;
+        for (int size = componentCount; firstComponentId < size; firstComponentId++) {
+            c = components[firstComponentId];
+            if (c.endOffset > readerIndex) {
+                break;
+            }
+            c.free();
         }
-        lastAccessed = null;
+        if (firstComponentId == 0) {
+            return this; // Nothing to discard
+        }
+        Component la = lastAccessed;
+        if (la != null && la.endOffset < readerIndex) {
+            lastAccessed = null;
+        }
         removeCompRange(0, firstComponentId);
 
         // Update indexes and markers.
-        Component first = components[0];
-        int offset = first.offset;
+        int offset = c.offset;
         updateComponentOffsets(0);
         setIndex(readerIndex - offset, writerIndex - offset);
         adjustMarkers(offset);
@@ -1717,36 +1798,30 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             return this;
         }
 
-        // Remove read components.
-        int firstComponentId = toComponentIndex0(readerIndex);
-        for (int i = 0; i < firstComponentId; i ++) {
-            Component c = components[i];
-            c.free();
-            if (lastAccessed == c) {
-                lastAccessed = null;
+        int firstComponentId = 0;
+        Component c = null;
+        for (int size = componentCount; firstComponentId < size; firstComponentId++) {
+            c = components[firstComponentId];
+            if (c.endOffset > readerIndex) {
+                break;
             }
+            c.free();
         }
 
-        // Remove or replace the first readable component with a new slice.
-        Component c = components[firstComponentId];
-        if (readerIndex == c.endOffset) {
-            // new slice would be empty, so remove instead
-            c.free();
-            if (lastAccessed == c) {
-                lastAccessed = null;
-            }
-            firstComponentId++;
-        } else {
-            int trimmedBytes = readerIndex - c.offset;
-            c.offset = 0;
-            c.endOffset -= readerIndex;
-            c.adjustment += readerIndex;
-            ByteBuf slice = c.slice;
-            if (slice != null) {
-                // We must replace the cached slice with a derived one to ensure that
-                // it can later be released properly in the case of PooledSlicedByteBuf.
-                c.slice = slice.slice(trimmedBytes, c.length());
-            }
+        // Replace the first readable component with a new slice.
+        int trimmedBytes = readerIndex - c.offset;
+        c.offset = 0;
+        c.endOffset -= readerIndex;
+        c.adjustment += readerIndex;
+        ByteBuf slice = c.slice;
+        if (slice != null) {
+            // We must replace the cached slice with a derived one to ensure that
+            // it can later be released properly in the case of PooledSlicedByteBuf.
+            c.slice = slice.slice(trimmedBytes, c.length());
+        }
+        Component la = lastAccessed;
+        if (la != null && la.endOffset < readerIndex) {
+            lastAccessed = null;
         }
 
         removeCompRange(0, firstComponentId);

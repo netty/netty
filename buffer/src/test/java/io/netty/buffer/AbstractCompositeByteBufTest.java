@@ -1097,6 +1097,71 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     }
 
     @Test
+    public void testAddFlattenedComponents() {
+        ByteBuf b1 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3 });
+        CompositeByteBuf newComposite = Unpooled.compositeBuffer()
+                .addComponent(true, b1)
+                .addFlattenedComponents(true, b1.retain())
+                .addFlattenedComponents(true, Unpooled.EMPTY_BUFFER);
+
+        assertEquals(2, newComposite.numComponents());
+        assertEquals(6, newComposite.capacity());
+        assertEquals(6, newComposite.writerIndex());
+
+        // It is important to use a pooled allocator here to ensure
+        // the slices returned by readRetainedSlice are of type
+        // PooledSlicedByteBuf, which maintains an independent refcount
+        // (so that we can be sure to cover this case)
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer()
+              .writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+
+        // use mixture of slice and retained slice
+        ByteBuf s1 = buffer.readRetainedSlice(2);
+        ByteBuf s2 = s1.retainedSlice(0, 2);
+        ByteBuf s3 = buffer.slice(0, 2).retain();
+        ByteBuf s4 = s2.retainedSlice(0, 2);
+        buffer.release();
+
+        ByteBuf compositeToAdd = Unpooled.compositeBuffer()
+            .addComponent(s1)
+            .addComponent(Unpooled.EMPTY_BUFFER)
+            .addComponents(s2, s3, s4);
+        // set readable range to be from middle of first component
+        // to middle of penultimate component
+        compositeToAdd.setIndex(1, 5);
+
+        assertEquals(1, compositeToAdd.refCnt());
+        assertEquals(1, s4.refCnt());
+
+        ByteBuf compositeCopy = compositeToAdd.copy();
+
+        newComposite.addFlattenedComponents(true, compositeToAdd);
+
+        // verify that added range matches
+        ByteBufUtil.equals(compositeCopy, 0,
+                newComposite, 6, compositeCopy.readableBytes());
+
+        // should not include empty component or last component
+        // (latter outside of the readable range)
+        assertEquals(5, newComposite.numComponents());
+        assertEquals(10, newComposite.capacity());
+        assertEquals(10, newComposite.writerIndex());
+
+        assertEquals(0, compositeToAdd.refCnt());
+        // s4 wasn't in added range so should have been jettisoned
+        assertEquals(0, s4.refCnt());
+        assertEquals(1, newComposite.refCnt());
+
+        // releasing composite should release the remaining components
+        newComposite.release();
+        assertEquals(0, newComposite.refCnt());
+        assertEquals(0, s1.refCnt());
+        assertEquals(0, s2.refCnt());
+        assertEquals(0, s3.refCnt());
+        assertEquals(0, b1.refCnt());
+    }
+
+    @Test
     public void testIterator() {
         CompositeByteBuf cbuf = compositeBuffer();
         cbuf.addComponent(EMPTY_BUFFER);
