@@ -55,6 +55,7 @@ final class OpenSslServerContext extends OpenSslContext {
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
+            OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword);
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
               keyCertChain, key, keyPassword, keyManagerFactory);
             success = true;

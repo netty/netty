@@ -52,6 +52,7 @@ final class OpenSslClientContext extends OpenSslContext {
           ClientAuth.NONE, protocols, false, enableOcsp);
         boolean success = false;
         try {
+            OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword);
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
               keyCertChain, key, keyPassword, keyManagerFactory);
             success = true;
