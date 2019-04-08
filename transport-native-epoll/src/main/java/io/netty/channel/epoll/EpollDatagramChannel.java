@@ -35,6 +35,7 @@ import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.PortUnreachableException;
@@ -111,7 +112,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             return joinGroup(
                     multicastAddress,
                     NetworkInterface.getByInetAddress(localAddress().getAddress()), null, promise);
-        } catch (SocketException e) {
+        } catch (IOException e) {
             promise.setFailure(e);
         }
         return promise;
@@ -149,7 +150,16 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             throw new NullPointerException("networkInterface");
         }
 
-        promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
+        if (multicastAddress instanceof Inet6Address) {
+            promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
+        } else {
+            try {
+                socket.joinGroup(multicastAddress, networkInterface, source);
+                promise.setSuccess();
+            } catch (IOException e) {
+                promise.setFailure(e);
+            }
+        }
         return promise;
     }
 
@@ -163,7 +173,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         try {
             return leaveGroup(
                     multicastAddress, NetworkInterface.getByInetAddress(localAddress().getAddress()), null, promise);
-        } catch (SocketException e) {
+        } catch (IOException e) {
             promise.setFailure(e);
         }
         return promise;
@@ -199,8 +209,16 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             throw new NullPointerException("networkInterface");
         }
 
-        promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
-
+        if (multicastAddress instanceof Inet6Address) {
+            promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
+        } else {
+            try {
+                socket.leaveGroup(multicastAddress, networkInterface, source);
+                promise.setSuccess();
+            } catch (IOException e) {
+                promise.setFailure(e);
+            }
+        }
         return promise;
     }
 
