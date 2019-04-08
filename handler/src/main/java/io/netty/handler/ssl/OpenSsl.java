@@ -23,6 +23,7 @@ import io.netty.internal.tcnative.Buffer;
 import io.netty.internal.tcnative.Library;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.NativeLibraryLoader;
@@ -64,71 +65,47 @@ public final class OpenSsl {
     private static final boolean IS_BORINGSSL;
     static final Set<String> SUPPORTED_PROTOCOLS_SET;
 
-    // Bytes of self-signed certificate for netty.io and the matching private-key
-    private static byte[] CERT_BYTES = {
-            48, -126, 1, -93, 48, -126, 1, 12, -96, 3, 2, 1, 2, 2, 8, 31, 127, -24, 79, 67,
-            -72, -128, 124, 48, 13, 6, 9, 42, -122, 72, -122, -9, 13, 1, 1, 11, 5, 0, 48,
-            19, 49, 17, 48, 15, 6, 3, 85, 4, 3, 19, 8, 110, 101, 116, 116, 121, 46, 105,
-            111, 48, 32, 23, 13, 49, 56, 48, 51, 50, 55, 49, 50, 52, 49, 50, 49, 90, 24,
-            15, 57, 57, 57, 57, 49, 50, 51, 49, 50, 51, 53, 57, 53, 57, 90, 48, 19, 49, 17,
-            48, 15, 6, 3, 85, 4, 3, 19, 8, 110, 101, 116, 116, 121, 46, 105, 111, 48, -127,
-            -97, 48, 13, 6, 9, 42, -122, 72, -122, -9, 13, 1, 1, 1, 5, 0, 3, -127, -115, 0,
-            48, -127, -119, 2, -127, -127, 0, -105, 81, 76, -56, -118, -35, 54, -61, -39,
-            69, 77, -56, 36, -126, 15, -35, -97, 126, -59, 2, -110, -39, -122, -116, -62,
-            -83, -43, -102, 98, 46, -33, 6, 33, 74, -68, -121, -64, -9, -3, 45, 102, -121,
-            50, -86, 93, 125, -82, -110, -2, -22, -114, 18, -93, 51, -86, 63, -63, 46, 96,
-            -37, 16, 105, -11, 96, -97, -77, 98, -2, 117, -66, -118, 31, -62, -94, 109, -61,
-            -82, 31, -103, 29, -53, -6, 47, 13, -78, -30, -128, 95, -76, 18, 5, -43, -80,
-            51, 22, 39, 11, -93, 101, -66, -105, -68, -110, -80, 89, -105, -116, 10, -42,
-            16, 51, 4, 113, -23, 69, -111, 85, -61, -59, -33, -83, 5, 114, -112, 34, 34,
-            -107, 79, 2, 3, 1, 0, 1, 48, 13, 6, 9, 42, -122, 72, -122, -9, 13, 1, 1, 11, 5,
-            0, 3, -127, -127, 0, 8, -18, -42, -73, 54, 95, 39, -58, -98, 62, -26, 50, -3,
-            71, -125, -128, -19, -87, -46, -85, 72, 17, 46, 75, -104, 125, -51, 27, 123,
-            84, 34, 100, -112, 122, -28, 29, -33, 127, -20, -54, 30, -77, 109, -81, -3,
-            -73, -113, 17, 28, 98, 127, 77, 53, -76, -49, -119, 98, 113, 71, -107, -33,
-            -57, 37, -55, -60, 89, 65, 83, -96, -54, -22, 122, 10, -11, 11, -67, -58, -57,
-            85, -119, 46, -26, -41, 15, -77, 19, 4, -32, -64, -12, 49, 104, -101, 42, 88,
-            75, 27, 41, 122, 126, 70, -99, -91, -33, -36, -57, -63, -7, 94, -71, -15, -108,
-            59, -32, 50, 47, -35, 71, 104, 47, 97, 43, 93, -128, -65, 11, 29, -88
-    };
-    private static byte[] KEY_BYTES = {
-            48, -126, 2, 120, 2, 1, 0, 48, 13, 6, 9, 42, -122, 72, -122, -9, 13, 1, 1, 1, 5,
-            0, 4, -126, 2, 98, 48, -126, 2, 94, 2, 1, 0, 2, -127, -127, 0, -105, 81, 76, -56,
-            -118, -35, 54, -61, -39, 69, 77, -56, 36, -126, 15, -35, -97, 126, -59, 2, -110,
-            -39, -122, -116, -62, -83, -43, -102, 98, 46, -33, 6, 33, 74, -68, -121, -64, -9,
-            -3, 45, 102, -121, 50, -86, 93, 125, -82, -110, -2, -22, -114, 18, -93, 51, -86,
-            63, -63, 46, 96, -37, 16, 105, -11, 96, -97, -77, 98, -2, 117, -66, -118, 31, -62,
-            -94, 109, -61, -82, 31, -103, 29, -53, -6, 47, 13, -78, -30, -128, 95, -76, 18, 5,
-            -43, -80, 51, 22, 39, 11, -93, 101, -66, -105, -68, -110, -80, 89, -105, -116, 10,
-            -42, 16, 51, 4, 113, -23, 69, -111, 85, -61, -59, -33, -83, 5, 114, -112, 34, 34,
-            -107, 79, 2, 3, 1, 0, 1, 2, -127, -128, 68, 52, 93, 11, -73, -85, -26, 87, 120, -61,
-            -120, 63, -62, 84, -19, -103, -45, -98, 108, 102, -80, -110, 99, -41, 102, -104,
-            -68, 67, 14, 38, 90, 88, -123, 1, 14, -31, -111, -43, 53, -59, 21, 5, -77, -116,
-            -98, -1, 91, -124, -34, 106, 19, 7, -53, -112, 42, 24, -6, -106, 81, 9, -20, -24,
-            21, -75, 119, -49, 70, 70, -106, -6, -56, -6, 28, 104, 33, -104, 27, 65, -75, -12,
-            -93, 75, 87, 82, -64, -70, -127, 60, 91, -60, -76, 13, -115, 19, -77, -16, -3, 119,
-            -88, 111, 96, 78, -103, -30, -87, -118, 106, -7, 97, -21, 20, -31, -43, 28, -18,
-            -2, 117, 63, 111, -71, 84, -77, -42, 78, 20, -28, -54, -63, 2, 65, 0, -23, 7, -72,
-            -18, -122, 34, 90, 107, -103, 119, 105, 46, -10, -109, -7, 3, 21, 16, 91, 110, -13,
-            120, 95, 122, -77, -60, 18, -52, 103, -1, -90, 39, -3, 99, -10, 18, -14, 47, -104,
-            -87, -110, 7, -48, -23, -37, 104, -125, 97, 88, -1, -86, -90, -11, -79, -20, 41,
-            -128, 15, -35, -104, 60, 25, 121, -41, 2, 65, 0, -90, 59, -92, -31, -117, 35, -79,
-            16, -76, 57, 90, 15, -6, 84, 47, -113, -42, 19, -56, 121, 123, -121, -91, 91, -37,
-            -71, 78, -40, 12, 82, -25, -125, -58, 115, -123, 97, 10, -99, -59, 38, -48, -103,
-            -128, -125, 36, 108, 18, -86, -85, -17, -40, 8, -14, -108, -24, -20, 63, -59, -81,
-            5, 11, 35, 1, 73, 2, 65, 0, -30, 11, -8, -85, -128, 120, 80, -121, -15, -35, -80,
-            -83, -70, -55, 125, -109, 44, -38, -86, 39, 45, -116, 69, -22, 75, -7, 86, 86, -20,
-            71, 68, -111, -92, 46, 84, 100, -70, -125, -53, 46, 42, -106, -28, 100, 5, -49, 19,
-            42, -38, 95, 95, -42, 7, -99, -23, 61, -76, -103, 47, 86, -34, 109, -60, 15, 2, 65,
-            0, -126, -72, -22, -101, 87, 0, -75, 80, 110, 121, -97, 98, 107, 55, -30, -61, 24,
-            -43, 43, -44, -92, -104, -14, 39, 127, 109, -123, 28, 14, -20, -17, 20, -56, 109,
-            -75, -40, -81, 49, -116, -123, 78, -117, 55, -19, 105, 41, -9, -81, -15, 79, -58,
-            50, -101, 25, 16, -26, 31, -20, 68, 11, 18, 75, -17, -55, 2, 65, 0, -126, -11, 56,
-            -83, -60, 1, -125, 109, 74, 74, -1, -17, 54, 111, -111, 100, 125, 21, 77, 34, 119,
-            -33, 23, -13, 66, 74, -78, 80, -67, 57, -42, 65, 65, 58, 96, 0, 72, -122, 3, -78,
-            119, 68, -76, 5, 50, 37, 51, 10, -54, 54, -102, 90, -6, 127, -93, 97, 53, 24, 57,
-            77, 81, 53, -13, -127
-    };
+    // self-signed certificate for netty.io and the matching private-key
+    private static final String CERT = "-----BEGIN CERTIFICATE-----\n" +
+            "MIICrjCCAZagAwIBAgIIdSvQPv1QAZQwDQYJKoZIhvcNAQELBQAwFjEUMBIGA1UEAxMLZXhhbXBs\n" +
+            "ZS5jb20wIBcNMTgwNDA2MjIwNjU5WhgPOTk5OTEyMzEyMzU5NTlaMBYxFDASBgNVBAMTC2V4YW1w\n" +
+            "bGUuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAggbWsmDQ6zNzRZ5AW8E3eoGl\n" +
+            "qWvOBDb5Fs1oBRrVQHuYmVAoaqwDzXYJ0LOwa293AgWEQ1jpcbZ2hpoYQzqEZBTLnFhMrhRFlH6K\n" +
+            "bJND8Y33kZ/iSVBBDuGbdSbJShlM+4WwQ9IAso4MZ4vW3S1iv5fGGpLgbtXRmBf/RU8omN0Gijlv\n" +
+            "WlLWHWijLN8xQtySFuBQ7ssW8RcKAary3pUm6UUQB+Co6lnfti0Tzag8PgjhAJq2Z3wbsGRnP2YS\n" +
+            "vYoaK6qzmHXRYlp/PxrjBAZAmkLJs4YTm/XFF+fkeYx4i9zqHbyone5yerRibsHaXZWLnUL+rFoe\n" +
+            "MdKvr0VS3sGmhQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQADQi441pKmXf9FvUV5EHU4v8nJT9Iq\n" +
+            "yqwsKwXnr7AsUlDGHBD7jGrjAXnG5rGxuNKBQ35wRxJATKrUtyaquFUL6H8O6aGQehiFTk6zmPbe\n" +
+            "12Gu44vqqTgIUxnv3JQJiox8S2hMxsSddpeCmSdvmalvD6WG4NthH6B9ZaBEiep1+0s0RUaBYn73\n" +
+            "I7CCUaAtbjfR6pcJjrFk5ei7uwdQZFSJtkP2z8r7zfeANJddAKFlkaMWn7u+OIVuB4XPooWicObk\n" +
+            "NAHFtP65bocUYnDpTVdiyvn8DdqyZ/EO8n1bBKBzuSLplk2msW4pdgaFgY7Vw/0wzcFXfUXmL1uy\n" +
+            "G8sQD/wx\n" +
+            "-----END CERTIFICATE-----";
+
+    private static final String KEY = "-----BEGIN PRIVATE KEY-----\n" +
+            "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCCBtayYNDrM3NFnkBbwTd6gaWp\n" +
+            "a84ENvkWzWgFGtVAe5iZUChqrAPNdgnQs7Brb3cCBYRDWOlxtnaGmhhDOoRkFMucWEyuFEWUfops\n" +
+            "k0PxjfeRn+JJUEEO4Zt1JslKGUz7hbBD0gCyjgxni9bdLWK/l8YakuBu1dGYF/9FTyiY3QaKOW9a\n" +
+            "UtYdaKMs3zFC3JIW4FDuyxbxFwoBqvLelSbpRRAH4KjqWd+2LRPNqDw+COEAmrZnfBuwZGc/ZhK9\n" +
+            "ihorqrOYddFiWn8/GuMEBkCaQsmzhhOb9cUX5+R5jHiL3OodvKid7nJ6tGJuwdpdlYudQv6sWh4x\n" +
+            "0q+vRVLewaaFAgMBAAECggEAP8tPJvFtTxhNJAkCloHz0D0vpDHqQBMgntlkgayqmBqLwhyb18pR\n" +
+            "i0qwgh7HHc7wWqOOQuSqlEnrWRrdcI6TSe8R/sErzfTQNoznKWIPYcI/hskk4sdnQ//Yn9/Jvnsv\n" +
+            "U/BBjOTJxtD+sQbhAl80JcA3R+5sArURQkfzzHOL/YMqzAsn5hTzp7HZCxUqBk3KaHRxV7NefeOE\n" +
+            "xlZuWSmxYWfbFIs4kx19/1t7h8CHQWezw+G60G2VBtSBBxDnhBWvqG6R/wpzJ3nEhPLLY9T+XIHe\n" +
+            "ipzdMOOOUZorfIg7M+pyYPji+ZIZxIpY5OjrOzXHciAjRtr5Y7l99K1CG1LguQKBgQDrQfIMxxtZ\n" +
+            "vxU/1cRmUV9l7pt5bjV5R6byXq178LxPKVYNjdZ840Q0/OpZEVqaT1xKVi35ohP1QfNjxPLlHD+K\n" +
+            "iDAR9z6zkwjIrbwPCnb5kuXy4lpwPcmmmkva25fI7qlpHtbcuQdoBdCfr/KkKaUCMPyY89LCXgEw\n" +
+            "5KTDj64UywKBgQCNfbO+eZLGzhiHhtNJurresCsIGWlInv322gL8CSfBMYl6eNfUTZvUDdFhPISL\n" +
+            "UljKWzXDrjw0ujFSPR0XhUGtiq89H+HUTuPPYv25gVXO+HTgBFZEPl4PpA+BUsSVZy0NddneyqLk\n" +
+            "42Wey9omY9Q8WsdNQS5cbUvy0uG6WFoX7wKBgQDZ1jpW8pa0x2bZsQsm4vo+3G5CRnZlUp+XlWt2\n" +
+            "dDcp5dC0xD1zbs1dc0NcLeGDOTDv9FSl7hok42iHXXq8AygjEm/QcuwwQ1nC2HxmQP5holAiUs4D\n" +
+            "WHM8PWs3wFYPzE459EBoKTxeaeP/uWAn+he8q7d5uWvSZlEcANs/6e77eQKBgD21Ar0hfFfj7mK8\n" +
+            "9E0FeRZBsqK3omkfnhcYgZC11Xa2SgT1yvs2Va2n0RcdM5kncr3eBZav2GYOhhAdwyBM55XuE/sO\n" +
+            "eokDVutNeuZ6d5fqV96TRaRBpvgfTvvRwxZ9hvKF4Vz+9wfn/JvCwANaKmegF6ejs7pvmF3whq2k\n" +
+            "drZVAoGAX5YxQ5XMTD0QbMAl7/6qp6S58xNoVdfCkmkj1ZLKaHKIjS/benkKGlySVQVPexPfnkZx\n" +
+            "p/Vv9yyphBoudiTBS9Uog66ueLYZqpgxlM/6OhYg86Gm3U2ycvMxYjBM1NFiyze21AqAhI+HX+Ot\n" +
+            "mraV2/guSgDgZAhukRZzeQ2RucI=\n" +
+            "-----END PRIVATE KEY-----";
 
     static {
         Throwable cause = null;
@@ -256,7 +233,7 @@ public final class OpenSsl {
                                                "AEAD-CHACHA20-POLY1305-SHA256");
                         }
 
-                        PemEncoded privateKey = PemPrivateKey.toPEM(UnpooledByteBufAllocator.DEFAULT, true, KEY_BYTES);
+                        PemEncoded privateKey = PemPrivateKey.valueOf(KEY.getBytes(CharsetUtil.US_ASCII));
                         try {
                              X509Certificate certificate = selfSignedCertificate();
                             certBio = ReferenceCountedOpenSslContext.toBIO(ByteBufAllocator.DEFAULT, certificate);
@@ -388,7 +365,9 @@ public final class OpenSsl {
      * Returns a self-signed {@link X509Certificate} for {@code netty.io}.
      */
     static X509Certificate selfSignedCertificate() throws CertificateException {
-        return (X509Certificate) SslContext.X509_CERT_FACTORY.generateCertificate(new ByteArrayInputStream(CERT_BYTES));
+        return (X509Certificate) SslContext.X509_CERT_FACTORY.generateCertificate(
+                new ByteArrayInputStream(CERT.getBytes(CharsetUtil.US_ASCII))
+        );
     }
 
     private static boolean doesSupportOcsp() {
