@@ -549,6 +549,12 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     }
 
     @Override
+    public CompositeByteBuf addFlattenedComponents(boolean increaseWriterIndex, ByteBuf buffer) {
+        wrapped.addFlattenedComponents(increaseWriterIndex, buffer);
+        return this;
+    }
+
+    @Override
     public CompositeByteBuf removeComponent(int cIndex) {
         wrapped.removeComponent(cIndex);
         return this;
