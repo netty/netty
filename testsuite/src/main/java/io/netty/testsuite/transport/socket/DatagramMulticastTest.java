@@ -25,20 +25,15 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.util.NetUtil;
 import io.netty.util.internal.SocketUtils;
 import org.junit.Assume;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.net.Inet4Address;
-import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
 import java.util.List;
@@ -72,6 +67,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         sb.option(ChannelOption.IP_MULTICAST_IF, iface);
         sb.option(ChannelOption.SO_REUSEADDR, true);
+
         cb.option(ChannelOption.IP_MULTICAST_IF, iface);
         cb.option(ChannelOption.SO_REUSEADDR, true);
 

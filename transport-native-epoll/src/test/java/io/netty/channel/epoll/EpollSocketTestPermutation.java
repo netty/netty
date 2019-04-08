@@ -115,7 +115,17 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                         return NioDatagramChannel.class.getSimpleName() + ".class";
                     }
                 }),
-                () -> new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollDatagramChannel.class)
+                () -> new Bootstrap().group(EPOLL_WORKER_GROUP).channelFactory(new ChannelFactory<Channel>() {
+                    @Override
+                    public Channel newChannel(EventLoop eventLoop) {
+                        return new EpollDatagramChannel(eventLoop, family);
+                    }
+
+                    @Override
+                    public String toString() {
+                        return InternetProtocolFamily.class.getSimpleName() + ".class";
+                    }
+                })
         );
         return combo(bfs, bfs);
     }
