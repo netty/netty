@@ -16,6 +16,7 @@
 
 package io.netty.channel;
 
+import io.netty.channel.ChannelHandlerMask.Skip;
 import io.netty.util.internal.InternalThreadLocalMap;
 
 import java.util.Map;
@@ -84,6 +85,7 @@ public abstract class ChannelHandlerAdapter implements ChannelHandler {
      *
      * @deprecated is part of {@link ChannelInboundHandler}
      */
+    @Skip
     @Override
     @Deprecated
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
