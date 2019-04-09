@@ -226,7 +226,7 @@ public final class ChannelOutboundBuffer {
      */
     public long currentProgress() {
         Entry entry = flushedEntry;
-        if(entry == null) {
+        if (entry == null) {
             return 0;
         }
         return entry.progress;
