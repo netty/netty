@@ -2539,4 +2539,50 @@ public class DnsNameResolverTest {
         }
         return list;
     }
+
+    @Test
+    public void testNotIncludeDuplicates() throws IOException {
+        final String name = "netty.io";
+        final String ipv4Addr = "1.2.3.4";
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>(4);
+                String qName = question.getDomainName().toLowerCase();
+                if (qName.equals(name)) {
+                    records.add(new TestDnsServer.TestResourceRecord(
+                            qName, RecordType.CNAME,
+                            Collections.<String, Object>singletonMap(
+                                    DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname.netty.io")));
+                    records.add(new TestDnsServer.TestResourceRecord(qName,
+                            RecordType.A, Collections.<String, Object>singletonMap(
+                            DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr)));
+                } else {
+                    records.add(new TestDnsServer.TestResourceRecord(qName,
+                            RecordType.A, Collections.<String, Object>singletonMap(
+                            DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr)));
+                }
+                return records;
+            }
+        });
+        dnsServer2.start();
+        DnsNameResolver resolver = null;
+        try {
+            DnsNameResolverBuilder builder = newResolver()
+                    .recursionDesired(true)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
+            builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+
+            resolver = builder.build();
+            List<InetAddress> resolvedAddresses = resolver.resolveAll(name).syncUninterruptibly().getNow();
+            assertEquals(Collections.singletonList(InetAddress.getByAddress(name, new byte[] { 1, 2, 3, 4 })),
+                    resolvedAddresses);
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
 }
