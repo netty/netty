@@ -695,10 +695,17 @@ abstract class DnsResolveContext<T> {
                 continue;
             }
 
+            // We want to ensure we do not have duplicates in finalResult as this may be unexpected.
+            //
+            // While using a LinkedHashSet or HashSet may sound like the perfect fit for this we will use an
+            // ArrayList here as duplicates should be found quite unfrequently in the wild and we dont want to pay
+            // for the extra memory copy and allocations in this cases later on.
             if (finalResult == null) {
                 finalResult = new ArrayList<T>(8);
+                finalResult.add(converted);
+            } else if (!finalResult.contains(converted)) {
+                finalResult.add(converted);
             }
-            finalResult.add(converted);
 
             cache(hostname, additionals, r, converted);
             found = true;
