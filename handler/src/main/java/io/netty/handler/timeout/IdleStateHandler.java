@@ -436,12 +436,18 @@ public class IdleStateHandler extends ChannelDuplexHandler {
             if (buf != null) {
                 int messageHashCode = System.identityHashCode(buf.current());
                 long pendingWriteBytes = buf.totalPendingWriteBytes();
-                long flushProgress = buf.currentProgress();
 
-                if (messageHashCode != lastMessageHashCode ||
-                    pendingWriteBytes != lastPendingWriteBytes || flushProgress != lastFlushProgress) {
+                if (messageHashCode != lastMessageHashCode || pendingWriteBytes != lastPendingWriteBytes) {
                     lastMessageHashCode = messageHashCode;
                     lastPendingWriteBytes = pendingWriteBytes;
+
+                    if (!first) {
+                        return true;
+                    }
+                }
+
+                long flushProgress = buf.currentProgress();
+                if (flushProgress != lastFlushProgress) {
                     lastFlushProgress = flushProgress;
 
                     if (!first) {
