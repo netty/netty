@@ -107,9 +107,11 @@ public class OpenSslPrivateKeyMethodTest {
 
     @AfterClass
     public static void destroy() {
-        GROUP.shutdownGracefully();
-        CERT.delete();
-        EXECUTOR.shutdown();
+        if (OpenSsl.isBoringSSL()) {
+            GROUP.shutdownGracefully();
+            CERT.delete();
+            EXECUTOR.shutdown();
+        }
     }
 
     private final boolean delegate;
