@@ -1139,7 +1139,7 @@ public final class ByteBufUtil {
 
         static ThreadLocalUnsafeDirectByteBuf newInstance() {
             ThreadLocalUnsafeDirectByteBuf buf = RECYCLER.get();
-            buf.setRefCnt(1);
+            buf.resetRefCnt();
             return buf;
         }
 
@@ -1172,7 +1172,7 @@ public final class ByteBufUtil {
 
         static ThreadLocalDirectByteBuf newInstance() {
             ThreadLocalDirectByteBuf buf = RECYCLER.get();
-            buf.setRefCnt(1);
+            buf.resetRefCnt();
             return buf;
         }
 
