@@ -147,6 +147,17 @@ static jint netty_kqueue_native_keventWait(JNIEnv* env, jclass clazz, jint kqueu
         timeoutTs.tv_nsec -= beforeTs.tv_nsec;
         if (beforeTs.tv_sec < 0 || beforeTs.tv_nsec < 0 || (timeoutTs.tv_sec <= 0 && timeoutTs.tv_nsec <= 0)) {
             return 0;
+        } else if (timeoutTs.tv_nsec < 0) {
+            // If tv_nsec became negative we need to ensure we decrease the tv_sec by 1 and then correctly
+            // recalculate tv_nsec based on the left-over. This is to ensure we not pass an invalid argument
+            // into kevent which then would fail with EINVAL.
+            timeoutTs.tv_sec -= 1;
+            if (timeoutTs.tv_sec < 0) {
+                // if tv_sec became negative we have nothing left, so return now.
+                return 0;
+            }
+            // We use + here as tv_nsec is negative.
+            timeoutTs.tv_nsec = 999999999 + timeoutTs.tv_nsec;
         }
         beforeTs = nowTs;
         // https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
