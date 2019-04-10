@@ -15,12 +15,14 @@
  */
 package io.netty.util.concurrent;
 
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -52,8 +54,9 @@ public class SingleThreadEventExecutorTest {
         try {
             executor.shutdownGracefully().syncUninterruptibly();
             Assert.fail();
-        } catch (RejectedExecutionException expected) {
+        } catch (CompletionException expected) {
             // expected
+            Assert.assertThat(expected.getCause(), CoreMatchers.instanceOf(RejectedExecutionException.class));
         }
         Assert.assertTrue(executor.isShutdown());
     }
@@ -97,23 +100,39 @@ public class SingleThreadEventExecutorTest {
     }
 
     @Test(expected = RejectedExecutionException.class, timeout = 3000)
-    public void testInvokeAnyInEventLoop() {
-        testInvokeInEventLoop(true, false);
+    public void testInvokeAnyInEventLoop() throws Throwable {
+        try {
+            testInvokeInEventLoop(true, false);
+        } catch (CompletionException e) {
+            throw e.getCause();
+        }
     }
 
     @Test(expected = RejectedExecutionException.class, timeout = 3000)
-    public void testInvokeAnyInEventLoopWithTimeout() {
-        testInvokeInEventLoop(true, true);
+    public void testInvokeAnyInEventLoopWithTimeout() throws Throwable {
+        try {
+            testInvokeInEventLoop(true, true);
+        } catch (CompletionException e) {
+            throw e.getCause();
+        }
     }
 
     @Test(expected = RejectedExecutionException.class, timeout = 3000)
-    public void testInvokeAllInEventLoop() {
-        testInvokeInEventLoop(false, false);
+    public void testInvokeAllInEventLoop() throws Throwable {
+        try {
+            testInvokeInEventLoop(false, false);
+        } catch (CompletionException e) {
+            throw e.getCause();
+        }
     }
 
     @Test(expected = RejectedExecutionException.class, timeout = 3000)
-    public void testInvokeAllInEventLoopWithTimeout() {
-        testInvokeInEventLoop(false, true);
+    public void testInvokeAllInEventLoopWithTimeout() throws Throwable {
+        try {
+            testInvokeInEventLoop(false, true);
+        } catch (CompletionException e) {
+            throw e.getCause();
+        }
     }
 
     private static void testInvokeInEventLoop(final boolean any, final boolean timeout) {

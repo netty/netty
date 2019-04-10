@@ -61,6 +61,7 @@ import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -127,12 +128,12 @@ public class SslHandlerTest {
     }
 
     @Test(expected = SSLException.class, timeout = 3000)
-    public void testClientHandshakeTimeout() throws Exception {
+    public void testClientHandshakeTimeout() throws Throwable {
         testHandshakeTimeout(true);
     }
 
     @Test(expected = SSLException.class, timeout = 3000)
-    public void testServerHandshakeTimeout() throws Exception {
+    public void testServerHandshakeTimeout() throws Throwable {
         testHandshakeTimeout(false);
     }
 
@@ -146,7 +147,7 @@ public class SslHandlerTest {
         return engine;
     }
 
-    private static void testHandshakeTimeout(boolean client) throws Exception {
+    private static void testHandshakeTimeout(boolean client) throws Throwable {
         SSLEngine engine = SSLContext.getDefault().createSSLEngine();
         engine.setUseClientMode(client);
         SslHandler handler = new SslHandler(engine);
@@ -161,6 +162,8 @@ public class SslHandlerTest {
             }
 
             handler.handshakeFuture().syncUninterruptibly();
+        } catch (CompletionException e) {
+            throw e.getCause();
         } finally {
             ch.finishAndReleaseAll();
         }

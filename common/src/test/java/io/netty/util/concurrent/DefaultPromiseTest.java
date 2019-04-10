@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -295,6 +296,39 @@ public class DefaultPromiseTest {
         assertTrue(promise.isDone());
         assertTrue(promise.isSuccess());
         assertEquals("success", promise.getNow());
+    }
+
+    @Test
+    public void throwUncheckedSync() throws InterruptedException {
+        Exception exception = new Exception();
+        final Promise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        promise.setFailure(exception);
+
+        try {
+            promise.sync();
+        } catch (CompletionException e) {
+            assertSame(exception, e.getCause());
+        }
+    }
+
+    @Test
+    public void throwUncheckedSyncUninterruptibly() {
+        Exception exception = new Exception();
+        final Promise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        promise.setFailure(exception);
+
+        try {
+            promise.syncUninterruptibly();
+        } catch (CompletionException e) {
+            assertSame(exception, e.getCause());
+        }
+    }
+
+    @Test(expected = CancellationException.class)
+    public void throwCancelled() throws InterruptedException {
+        final Promise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        promise.cancel(true);
+        promise.sync();
     }
 
     private static void testStackOverFlowChainedFuturesA(int promiseChainLength, final EventExecutor executor,

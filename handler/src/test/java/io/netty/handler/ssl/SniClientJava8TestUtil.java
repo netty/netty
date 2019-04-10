@@ -67,6 +67,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
 /**
  * In extra class to be able to run tests with java7 without trying to load classes that not exists in java7.
@@ -76,7 +77,7 @@ final class SniClientJava8TestUtil {
     private SniClientJava8TestUtil() { }
 
     static void testSniClient(SslProvider sslClientProvider, SslProvider sslServerProvider, final boolean match)
-            throws Exception {
+            throws Throwable {
         final String sniHost = "sni.netty.io";
         SelfSignedCertificate cert = new SelfSignedCertificate();
         LocalAddress address = new LocalAddress("test");
@@ -150,6 +151,8 @@ final class SniClientJava8TestUtil {
 
             promise.syncUninterruptibly();
             sslHandler.handshakeFuture().syncUninterruptibly();
+        } catch (CompletionException e) {
+            throw e.getCause();
         } finally {
             if (cc != null) {
                 cc.close().syncUninterruptibly();

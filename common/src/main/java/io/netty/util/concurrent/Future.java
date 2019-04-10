@@ -83,12 +83,20 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
     /**
      * Waits for this future until it is done, and rethrows the cause of the failure if this future
      * failed.
+     *
+     * @throws CancellationException if the computation was cancelled
+     * @throws {@link java.util.concurrent.CompletionException} if the computation threw an exception.
+     * @throws InterruptedException if the current thread was interrupted while waiting
+     *
      */
     Future<V> sync() throws InterruptedException;
 
     /**
      * Waits for this future until it is done, and rethrows the cause of the failure if this future
      * failed.
+     *
+     * @throws CancellationException if the computation was cancelled
+     * @throws {@link java.util.concurrent.CompletionException} if the computation threw an exception.
      */
     Future<V> syncUninterruptibly();
 

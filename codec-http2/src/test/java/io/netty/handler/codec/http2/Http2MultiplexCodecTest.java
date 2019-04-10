@@ -40,6 +40,7 @@ import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -443,7 +444,7 @@ public class Http2MultiplexCodecTest {
     }
 
     @Test(expected = ClosedChannelException.class)
-    public void streamClosedErrorTranslatedToClosedChannelExceptionOnWrites() throws Exception {
+    public void streamClosedErrorTranslatedToClosedChannelExceptionOnWrites() throws Throwable {
         LastInboundHandler inboundHandler = new LastInboundHandler();
 
         final Http2StreamChannel childChannel = newOutboundStream(inboundHandler);
@@ -464,7 +465,11 @@ public class Http2MultiplexCodecTest {
 
         inboundHandler.checkException();
 
-        future.syncUninterruptibly();
+        try {
+            future.syncUninterruptibly();
+        } catch (CompletionException e) {
+            throw e.getCause();
+        }
     }
 
     @Test
@@ -502,7 +507,7 @@ public class Http2MultiplexCodecTest {
     // likely happen due to the max concurrent streams limit being hit or the channel running out of stream identifiers.
     //
     @Test(expected = Http2NoMoreStreamIdsException.class)
-    public void failedOutboundStreamCreationThrowsAndClosesChannel() throws Exception {
+    public void failedOutboundStreamCreationThrowsAndClosesChannel() throws Throwable {
         LastInboundHandler handler = new LastInboundHandler();
         Http2StreamChannel childChannel = newOutboundStream(handler);
         assertTrue(childChannel.isActive());
@@ -522,7 +527,11 @@ public class Http2MultiplexCodecTest {
 
         handler.checkException();
 
-        future.syncUninterruptibly();
+        try {
+            future.syncUninterruptibly();
+        } catch (CompletionException e) {
+            throw e.getCause();
+        }
     }
 
     @Test
