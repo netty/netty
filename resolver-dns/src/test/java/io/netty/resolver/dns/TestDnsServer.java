@@ -18,6 +18,7 @@ package io.netty.resolver.dns;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
 import org.apache.directory.server.dns.DnsServer;
+import org.apache.directory.server.dns.io.decoder.DnsMessageDecoder;
 import org.apache.directory.server.dns.io.encoder.DnsMessageEncoder;
 import org.apache.directory.server.dns.io.encoder.ResourceRecordEncoder;
 import org.apache.directory.server.dns.messages.DnsMessage;
@@ -28,7 +29,6 @@ import org.apache.directory.server.dns.messages.ResourceRecord;
 import org.apache.directory.server.dns.messages.ResourceRecordImpl;
 import org.apache.directory.server.dns.messages.ResourceRecordModifier;
 import org.apache.directory.server.dns.protocol.DnsProtocolHandler;
-import org.apache.directory.server.dns.protocol.DnsUdpDecoder;
 import org.apache.directory.server.dns.protocol.DnsUdpEncoder;
 import org.apache.directory.server.dns.store.DnsAttribute;
 import org.apache.directory.server.dns.store.RecordStore;
@@ -38,6 +38,8 @@ import org.apache.mina.core.session.IoSession;
 import org.apache.mina.filter.codec.ProtocolCodecFactory;
 import org.apache.mina.filter.codec.ProtocolCodecFilter;
 import org.apache.mina.filter.codec.ProtocolDecoder;
+import org.apache.mina.filter.codec.ProtocolDecoderAdapter;
+import org.apache.mina.filter.codec.ProtocolDecoderOutput;
 import org.apache.mina.filter.codec.ProtocolEncoder;
 import org.apache.mina.filter.codec.ProtocolEncoderOutput;
 import org.apache.mina.transport.socket.DatagramAcceptor;
@@ -83,6 +85,13 @@ class TestDnsServer extends DnsServer {
 
     @Override
     public void start() throws IOException {
+        start(false);
+    }
+
+    /**
+     * Start the {@link TestDnsServer} but drop all {@code AAAA} queries and not send any response to these at all.
+     */
+    public void start(final boolean dropAAAAQueries) throws IOException {
         InetSocketAddress address = new InetSocketAddress(NetUtil.LOCALHOST4, 0);
         UdpTransport transport = new UdpTransport(address.getHostName(), address.getPort());
         setTransports(transport);
@@ -94,7 +103,8 @@ class TestDnsServer extends DnsServer {
             public void sessionCreated(IoSession session) {
                 // USe our own codec to support AAAA testing
                 session.getFilterChain()
-                    .addFirst("codec", new ProtocolCodecFilter(new TestDnsProtocolUdpCodecFactory()));
+                        .addFirst("codec", new ProtocolCodecFilter(
+                                new TestDnsProtocolUdpCodecFactory(dropAAAAQueries)));
             }
         });
 
@@ -142,6 +152,11 @@ class TestDnsServer extends DnsServer {
     private final class TestDnsProtocolUdpCodecFactory implements ProtocolCodecFactory {
         private final DnsMessageEncoder encoder = new DnsMessageEncoder();
         private final TestAAAARecordEncoder recordEncoder = new TestAAAARecordEncoder();
+        private final boolean dropAAAArecords;
+
+        TestDnsProtocolUdpCodecFactory(boolean dropAAAArecords) {
+            this.dropAAAArecords = dropAAAArecords;
+        }
 
         @Override
         public ProtocolEncoder getEncoder(IoSession session) {
@@ -175,7 +190,22 @@ class TestDnsServer extends DnsServer {
 
         @Override
         public ProtocolDecoder getDecoder(IoSession session) {
-            return new DnsUdpDecoder();
+            return new ProtocolDecoderAdapter() {
+                private DnsMessageDecoder decoder = new DnsMessageDecoder();
+
+                @Override
+                public void decode(IoSession session, IoBuffer in, ProtocolDecoderOutput out) throws IOException {
+                    DnsMessage message = decoder.decode(in);
+                    if (dropAAAArecords) {
+                        for (QuestionRecord record: message.getQuestionRecords()) {
+                            if (record.getRecordType() == RecordType.AAAA) {
+                                return;
+                            }
+                        }
+                    }
+                    out.write(message);
+                }
+            };
         }
 
         private final class TestAAAARecordEncoder extends ResourceRecordEncoder {

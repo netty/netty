@@ -861,13 +861,19 @@ public class DnsNameResolver extends InetNameResolver {
 
     static <T> void trySuccess(Promise<T> promise, T result) {
         if (!promise.trySuccess(result)) {
-            logger.warn("Failed to notify success ({}) to a promise: {}", result, promise);
+            // There is nothing really wrong with not be able to notify the promise as we may have raced here because
+            // of multiple queries that have been executed. Log it with trace level anyway just in case the user
+            // wants to better understand what happened.
+            logger.trace("Failed to notify success ({}) to a promise: {}", result, promise);
         }
     }
 
     private static void tryFailure(Promise<?> promise, Throwable cause) {
         if (!promise.tryFailure(cause)) {
-            logger.warn("Failed to notify failure to a promise: {}", promise, cause);
+            // There is nothing really wrong with not be able to notify the promise as we may have raced here because
+            // of multiple queries that have been executed. Log it with trace level anyway just in case the user
+            // wants to better understand what happened.
+            logger.trace("Failed to notify failure to a promise: {}", promise, cause);
         }
     }
 

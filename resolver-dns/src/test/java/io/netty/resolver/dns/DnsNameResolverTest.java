@@ -2585,4 +2585,31 @@ public class DnsNameResolverTest {
             }
         }
     }
+
+    @Test
+    public void testDropAAAA() throws IOException {
+        String host = "somehost.netty.io";
+        TestDnsServer dnsServer2 = new TestDnsServer(Collections.singleton(host));
+        dnsServer2.start(true);
+        DnsNameResolver resolver = null;
+        try {
+            DnsNameResolverBuilder builder = newResolver()
+                    .recursionDesired(false)
+                    .queryTimeoutMillis(500)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
+
+            resolver = builder.build();
+            List<InetAddress> addressList = resolver.resolveAll(host).syncUninterruptibly().getNow();
+            assertEquals(1, addressList.size());
+            assertEquals(host, addressList.get(0).getHostName());
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
+
 }
