@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -23,11 +22,8 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
-import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.ThrowableUtil;
 
@@ -95,12 +91,12 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         }
     }
 
-    public WebSocketClientProtocolHandshakeHandler handshakeTimeoutMillis(long handshakeTimeoutMillis) {
+    WebSocketClientProtocolHandshakeHandler handshakeTimeoutMillis(long handshakeTimeoutMillis) {
         this.handshakeTimeoutMillis = handshakeTimeoutMillis;
         return this;
     }
 
-    public void applyHandshakeTimeout() {
+    private void applyHandshakeTimeout() {
         final ChannelPromise localHandshakePromise = handshakePromise;
         final long handshakeTimeoutMillis = this.handshakeTimeoutMillis;
         if (handshakeTimeoutMillis <= 0 || localHandshakePromise.isDone()) {
@@ -131,7 +127,12 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         });
     }
 
-    public ChannelFuture getHandshakeFuture() {
+    /**
+     * This method is visible for testing.
+     *
+     * @return current handshake future
+     */
+    ChannelFuture getHandshakeFuture() {
         return handshakePromise;
     }
 }

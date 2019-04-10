@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -27,22 +26,18 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler.ServerHandshakeStateEvent;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.ThrowableUtil;
 
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.handler.codec.http.HttpUtil.*;
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.handler.codec.http.HttpUtil.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
@@ -156,16 +151,12 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         return protocol + "://" + host + path;
     }
 
-    public WebSocketServerProtocolHandshakeHandler handshakeTimeoutMillis(long handshakeTimeoutMillis) {
+    WebSocketServerProtocolHandshakeHandler handshakeTimeoutMillis(long handshakeTimeoutMillis) {
         this.handshakeTimeoutMillis = handshakeTimeoutMillis;
         return this;
     }
 
-    public ChannelFuture getHandshakeFuture() {
-        return handshakePromise;
-    }
-
-    public void applyHandshakeTimeout() {
+    private void applyHandshakeTimeout() {
         final ChannelPromise localHandshakePromise = handshakePromise;
         final long handshakeTimeoutMillis = this.handshakeTimeoutMillis;
         if (handshakeTimeoutMillis <= 0 || localHandshakePromise.isDone()) {
