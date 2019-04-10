@@ -144,9 +144,7 @@ public class WebSocketHandshakeHandOverTest {
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
                     clientReceivedHandshake = true;
-                }
-
-                if (evt == ClientHandshakeStateEvent.HANDSHAKE_TIMEOUT) {
+                } else if (evt == ClientHandshakeStateEvent.HANDSHAKE_TIMEOUT) {
                     clientHandshakeTimeout = true;
                 }
             }
