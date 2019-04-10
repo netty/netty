@@ -17,10 +17,13 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
@@ -30,6 +33,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.URI;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -39,6 +43,23 @@ public class WebSocketHandshakeHandOverTest {
     private WebSocketServerProtocolHandler.HandshakeComplete serverHandshakeComplete;
     private boolean clientReceivedHandshake;
     private boolean clientReceivedMessage;
+    private boolean serverReceivedCloseHandshake;
+    private boolean clientForceClosed;
+
+    private final class CloseNoOpServerProtocolHandler extends WebSocketServerProtocolHandler {
+        CloseNoOpServerProtocolHandler(String websocketPath) {
+            super(websocketPath, null, false);
+        }
+
+        @Override
+        protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, List<Object> out) throws Exception {
+            if (frame instanceof CloseWebSocketFrame) {
+                serverReceivedCloseHandshake = true;
+                return;
+            }
+            super.decode(ctx, frame, out);
+        }
+    }
 
     @Before
     public void setUp() {
@@ -46,6 +67,8 @@ public class WebSocketHandshakeHandOverTest {
         serverHandshakeComplete = null;
         clientReceivedHandshake = false;
         clientReceivedMessage = false;
+        serverReceivedCloseHandshake = false;
+        clientForceClosed = false;
     }
 
     @Test
@@ -95,6 +118,64 @@ public class WebSocketHandshakeHandOverTest {
         assertTrue(clientReceivedMessage);
     }
 
+    @Test(timeout = 10000)
+    public void testClientHandshakerForceClose() throws Exception {
+        final WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(
+                new URI("ws://localhost:1234/test"), WebSocketVersion.V13, null, true,
+                EmptyHttpHeaders.INSTANCE, Integer.MAX_VALUE, true, false, 20);
+
+        EmbeddedChannel serverChannel = createServerChannel(
+                new CloseNoOpServerProtocolHandler("/test"),
+                new SimpleChannelInboundHandler<Object>() {
+                    @Override
+                    protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    }
+                });
+
+        EmbeddedChannel clientChannel = createClientChannel(handshaker, new SimpleChannelInboundHandler<Object>() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
+                    ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            clientForceClosed = true;
+                        }
+                    });
+                    handshaker.close(ctx.channel(), new CloseWebSocketFrame());
+                }
+            }
+            @Override
+            protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+            }
+        });
+
+        // Transfer the handshake from the client to the server
+        transferAllDataWithMerge(clientChannel, serverChannel);
+        // Transfer the handshake from the server to client
+        transferAllDataWithMerge(serverChannel, clientChannel);
+
+        // Transfer closing handshake
+        transferAllDataWithMerge(clientChannel, serverChannel);
+        assertTrue(serverReceivedCloseHandshake);
+        // Should not be closed yet as we disabled closing the connection on the server
+        assertFalse(clientForceClosed);
+
+        while (!clientForceClosed) {
+            Thread.sleep(10);
+            // We need to run all pending tasks as the force close timeout is scheduled on the EventLoop.
+            clientChannel.runPendingTasks();
+        }
+
+        // clientForceClosed would be set to TRUE after any close,
+        // so check here that force close timeout was actually fired
+        assertTrue(handshaker.isForceCloseComplete());
+
+        // Both should be empty
+        assertFalse(serverChannel.finishAndReleaseAll());
+        assertFalse(clientChannel.finishAndReleaseAll());
+    }
+
     /**
      * Transfers all pending data from the source channel into the destination channel.<br>
      * Merges all data into a single buffer before transmission into the destination.
@@ -137,6 +218,16 @@ public class WebSocketHandshakeHandOverTest {
                 handler);
     }
 
+    private static EmbeddedChannel createClientChannel(WebSocketClientHandshaker handshaker,
+                                                       ChannelHandler handler) throws Exception {
+        return new EmbeddedChannel(
+                new HttpClientCodec(),
+                new HttpObjectAggregator(8192),
+                // Note that we're switching off close frames handling on purpose to test forced close on timeout.
+                new WebSocketClientProtocolHandler(handshaker, false, false),
+                handler);
+    }
+
     private static EmbeddedChannel createServerChannel(ChannelHandler handler) {
         return new EmbeddedChannel(
                 new HttpServerCodec(),
@@ -144,4 +235,14 @@ public class WebSocketHandshakeHandOverTest {
                 new WebSocketServerProtocolHandler("/test", "test-proto-1, test-proto-2", false),
                 handler);
     }
+
+    private static EmbeddedChannel createServerChannel(WebSocketServerProtocolHandler webSocketHandler,
+                                                       ChannelHandler handler) {
+        return new EmbeddedChannel(
+                new HttpServerCodec(),
+                new HttpObjectAggregator(8192),
+                webSocketHandler,
+                handler);
+    }
+
 }

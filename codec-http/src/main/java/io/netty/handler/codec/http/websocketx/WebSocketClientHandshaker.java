@@ -42,6 +42,9 @@ import io.netty.util.internal.ThrowableUtil;
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
 import java.util.Locale;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * Base class for web socket client handshake implementations
@@ -52,12 +55,22 @@ public abstract class WebSocketClientHandshaker {
 
     private static final String HTTP_SCHEME_PREFIX = HttpScheme.HTTP + "://";
     private static final String HTTPS_SCHEME_PREFIX = HttpScheme.HTTPS + "://";
+    protected static final int DEFAULT_FORCE_CLOSE_TIMEOUT_MILLIS = 10000;
 
     private final URI uri;
 
     private final WebSocketVersion version;
 
     private volatile boolean handshakeComplete;
+
+    private volatile long forceCloseTimeoutMillis = DEFAULT_FORCE_CLOSE_TIMEOUT_MILLIS;
+
+    private volatile int forceCloseInit;
+
+    private static final AtomicIntegerFieldUpdater<WebSocketClientHandshaker> FORCE_CLOSE_INIT_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(WebSocketClientHandshaker.class, "forceCloseInit");
+
+    private volatile boolean forceCloseComplete;
 
     private final String expectedSubprotocol;
 
@@ -84,11 +97,35 @@ public abstract class WebSocketClientHandshaker {
      */
     protected WebSocketClientHandshaker(URI uri, WebSocketVersion version, String subprotocol,
                                         HttpHeaders customHeaders, int maxFramePayloadLength) {
+        this(uri, version, subprotocol, customHeaders, maxFramePayloadLength, DEFAULT_FORCE_CLOSE_TIMEOUT_MILLIS);
+    }
+
+    /**
+     * Base constructor
+     *
+     * @param uri
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
+     * @param forceCloseTimeoutMillis
+     *            Close the connection if it was not closed by the server after timeout specified
+     */
+    protected WebSocketClientHandshaker(URI uri, WebSocketVersion version, String subprotocol,
+                                        HttpHeaders customHeaders, int maxFramePayloadLength,
+                                        long forceCloseTimeoutMillis) {
         this.uri = uri;
         this.version = version;
         expectedSubprotocol = subprotocol;
         this.customHeaders = customHeaders;
         this.maxFramePayloadLength = maxFramePayloadLength;
+        this.forceCloseTimeoutMillis = forceCloseTimeoutMillis;
     }
 
     /**
@@ -140,6 +177,29 @@ public abstract class WebSocketClientHandshaker {
 
     private void setActualSubprotocol(String actualSubprotocol) {
         this.actualSubprotocol = actualSubprotocol;
+    }
+
+    public long forceCloseTimeoutMillis() {
+        return forceCloseTimeoutMillis;
+    }
+
+    /**
+     * Flag to indicate if the closing handshake was initiated because of timeout.
+     * For testing only.
+     */
+    protected boolean isForceCloseComplete() {
+        return forceCloseComplete;
+    }
+
+    /**
+     * Sets timeout to close the connection if it was not closed by the server.
+     *
+     * @param forceCloseTimeoutMillis
+     *            Close the connection if it was not closed by the server after timeout specified
+     */
+    public WebSocketClientHandshaker setForceCloseTimeoutMillis(long forceCloseTimeoutMillis) {
+        this.forceCloseTimeoutMillis = forceCloseTimeoutMillis;
+        return this;
     }
 
     /**
@@ -414,7 +474,38 @@ public abstract class WebSocketClientHandshaker {
      */
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
         requireNonNull(channel, "channel");
-        return channel.writeAndFlush(frame, promise);
+
+        channel.writeAndFlush(frame, promise);
+        applyForceCloseTimeout(channel, promise);
+        return promise;
+    }
+
+    private void applyForceCloseTimeout(final Channel channel, ChannelFuture flushFuture) {
+        final long forceCloseTimeoutMillis = this.forceCloseTimeoutMillis;
+        final WebSocketClientHandshaker handshaker = this;
+        if (forceCloseTimeoutMillis <= 0 || !channel.isActive() || forceCloseInit != 0) {
+            return;
+        }
+
+        flushFuture.addListener(future -> {
+            // If flush operation failed, there is no reason to expect
+            // a server to receive CloseFrame. Thus this should be handled
+            // by the application separately.
+            // Also, close might be called twice from different threads.
+            if (future.isSuccess() && channel.isActive() &&
+                    FORCE_CLOSE_INIT_UPDATER.compareAndSet(handshaker, 0, 1)) {
+                final Future<?> forceCloseFuture = channel.eventLoop().schedule(() -> {
+                    if (channel.isActive()) {
+                        channel.close();
+                        forceCloseComplete = true;
+                    }
+                }, forceCloseTimeoutMillis, TimeUnit.MILLISECONDS);
+
+                channel.closeFuture().addListener(ignore -> {
+                    forceCloseFuture.cancel(false);
+                });
+            }
+        });
     }
 
     /**
