@@ -16,7 +16,7 @@
 package io.netty.channel;
 
 /**
- * Responsible to estimate size of a message. The size represent how much memory the message will ca. reserve in
+ * Responsible to estimate the size of a message. The size represents approximately how much memory the message will reserve in
  * memory.
  */
 public interface MessageSizeEstimator {
