@@ -75,6 +75,7 @@ static void netty_epoll_linuxsocket_setInterface(JNIEnv* env, jclass clazz, jint
     struct sockaddr_in6* interfaceIp6Addr;
 
     if (netty_unix_socket_initSockaddr(env, interfaceAddress, scopeId, 0, &interfaceAddr, &interfaceAddrSize) == -1) {
+        netty_unix_errors_throwIOException(env, "Could not init sockaddr");
         return;
     }
 
@@ -156,10 +157,12 @@ static void netty_epoll_linuxsocket_joinGroup(JNIEnv* env, jclass clazz, jint fd
     struct ip_mreq mreq;
 
     if (netty_unix_socket_initSockaddr(env, groupAddress, scopeId, 0, &groupAddr, &groupAddrSize) == -1) {
+        netty_unix_errors_throwIOException(env, "Could not init sockaddr");
         return;
     }
 
     if (netty_unix_socket_initSockaddr(env, interfaceAddress, scopeId, 0, &interfaceAddr, &interfaceAddrSize) == -1) {
+        netty_unix_errors_throwIOException(env, "Could not init sockaddr");
         return;
     }
 
@@ -172,6 +175,10 @@ static void netty_epoll_linuxsocket_joinGroup(JNIEnv* env, jclass clazz, jint fd
         netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq));
         break;
     case AF_INET6:
+        netty_unix_errors_throwIOException(env, "AF_INET6 not supported");
+        break;
+    default:
+        netty_unix_errors_throwIOException(env, "Address family not supported");
         break;
     }
 }
@@ -190,14 +197,17 @@ static void netty_epoll_linuxsocket_joinSsmGroup(JNIEnv* env, jclass clazz, jint
 
 
     if (netty_unix_socket_initSockaddr(env, groupAddress, scopeId, 0, &groupAddr, &groupAddrSize) == -1) {
+        netty_unix_errors_throwIOException(env, "Could not init sockaddr");
         return;
     }
 
     if (netty_unix_socket_initSockaddr(env, interfaceAddress, scopeId, 0, &interfaceAddr, &interfaceAddrSize) == -1) {
+        netty_unix_errors_throwIOException(env, "Could not init sockaddr");
         return;
     }
 
     if (netty_unix_socket_initSockaddr(env, sourceAddress, scopeId, 0, &sourceAddr, &sourceAddrSize) == -1) {
+        netty_unix_errors_throwIOException(env, "Could not init sockaddr");
         return;
     }
 
@@ -212,6 +222,10 @@ static void netty_epoll_linuxsocket_joinSsmGroup(JNIEnv* env, jclass clazz, jint
         netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, &mreq, sizeof(mreq));
         break;
     case AF_INET6:
+        netty_unix_errors_throwIOException(env, "AF_INET6 not supported");
+        break;
+    default:
+        netty_unix_errors_throwIOException(env, "Address family not supported");
         break;
     }
 }
@@ -227,10 +241,12 @@ static void netty_epoll_linuxsocket_leaveGroup(JNIEnv* env, jclass clazz, jint f
     struct ip_mreq mreq;
 
     if (netty_unix_socket_initSockaddr(env, groupAddress, scopeId, 0, &groupAddr, &groupAddrSize) == -1) {
+        netty_unix_errors_throwIOException(env, "Could not init sockaddr");
         return;
     }
 
     if (netty_unix_socket_initSockaddr(env, interfaceAddress, scopeId, 0, &interfaceAddr, &interfaceAddrSize) == -1) {
+        netty_unix_errors_throwIOException(env, "Could not init sockaddr");
         return;
     }
 
@@ -243,6 +259,10 @@ static void netty_epoll_linuxsocket_leaveGroup(JNIEnv* env, jclass clazz, jint f
         netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_DROP_MEMBERSHIP, &mreq, sizeof(mreq));
         break;
     case AF_INET6:
+        netty_unix_errors_throwIOException(env, "AF_INET6 not supported");
+        break;
+    default:
+        netty_unix_errors_throwIOException(env, "Address family not supported");
         break;
     }
 }
@@ -262,14 +282,17 @@ static void netty_epoll_linuxsocket_leaveSsmGroup(JNIEnv* env, jclass clazz, jin
 
 
     if (netty_unix_socket_initSockaddr(env, groupAddress, scopeId, 0, &groupAddr, &groupAddrSize) == -1) {
+        netty_unix_errors_throwIOException(env, "Could not init sockaddr");
         return;
     }
 
     if (netty_unix_socket_initSockaddr(env, interfaceAddress, scopeId, 0, &interfaceAddr, &interfaceAddrSize) == -1) {
+        netty_unix_errors_throwIOException(env, "Could not init sockaddr");
         return;
     }
 
     if (netty_unix_socket_initSockaddr(env, sourceAddress, scopeId, 0, &sourceAddr, &sourceAddrSize) == -1) {
+        netty_unix_errors_throwIOException(env, "Could not init sockaddr");
         return;
     }
 
@@ -284,6 +307,10 @@ static void netty_epoll_linuxsocket_leaveSsmGroup(JNIEnv* env, jclass clazz, jin
         netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_DROP_SOURCE_MEMBERSHIP, &mreq, sizeof(mreq));
         break;
     case AF_INET6:
+        netty_unix_errors_throwIOException(env, "AF_INET6 not supported");
+        break;
+    default:
+        netty_unix_errors_throwIOException(env, "Address family not supported");
         break;
     }
 }

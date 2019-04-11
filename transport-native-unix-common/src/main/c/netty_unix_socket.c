@@ -190,6 +190,10 @@ static void netty_unix_socket_initialize(JNIEnv* env, jclass clazz, jboolean ipv
     }
 }
 
+static jboolean netty_unix_socket_isIPv6Available(JNIEnv* env, jclass clazz) {
+    return socketType == AF_INET6;
+}
+
 static void netty_unix_socket_optionHandleError(JNIEnv* env, int err, char* method) {
     if (err == EBADF) {
         netty_unix_errors_throwClosedChannelException(env);
@@ -965,7 +969,8 @@ static const JNINativeMethod fixed_method_table[] = {
   { "getSoLinger", "(I)I", (void *) netty_unix_socket_getSoLinger },
   { "getTrafficClass", "(I)I", (void *) netty_unix_socket_getTrafficClass },
   { "getSoError", "(I)I", (void *) netty_unix_socket_getSoError },
-  { "initialize", "(Z)V", (void *) netty_unix_socket_initialize }
+  { "initialize", "(Z)V", (void *) netty_unix_socket_initialize },
+  { "isIPv6Available", "()Z", (void *) netty_unix_socket_isIPv6Available}
 };
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
 

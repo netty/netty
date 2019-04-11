@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.NativeInetAddress;
 import io.netty.channel.unix.PeerCredentials;
@@ -60,14 +61,13 @@ final class LinuxSocket extends Socket {
         setInterface(intValue(), a.address(), a.scopeId());
     }
 
-    void setNetworkInterface(NetworkInterface netInterface) throws IOException {
-        final NativeInetAddress i = NativeInetAddress.newInstance(deriveInetAddress(netInterface, false));
-        if (i.equals(INET_ANY)) {
-            final NativeInetAddress i6 = NativeInetAddress.newInstance(deriveInetAddress(netInterface, true));
-            setInterface(intValue(), i6.address(), i6.scopeId());
-        } else {
-            setInterface(intValue(), i.address(), i.scopeId());
+    void setNetworkInterface(NetworkInterface netInterface, InternetProtocolFamily family) throws IOException {
+        InetAddress address = deriveInetAddress(netInterface, family == InternetProtocolFamily.IPv6);
+        if (address.equals(family == InternetProtocolFamily.IPv4 ? INET6_ANY : INET_ANY)) {
+            throw new IOException("NetworkInterface does not support " + family);
         }
+        final NativeInetAddress nativeAddress = NativeInetAddress.newInstance(address);
+        setInterface(intValue(), nativeAddress.address(), nativeAddress.scopeId());
     }
 
     void joinGroup(InetAddress group, NetworkInterface netInterface, InetAddress source) throws IOException {
@@ -234,7 +234,7 @@ final class LinuxSocket extends Socket {
         return ioResult("sendfile", (int) res, SENDFILE_CONNECTION_RESET_EXCEPTION, SENDFILE_CLOSED_CHANNEL_EXCEPTION);
     }
 
-    private InetAddress deriveInetAddress(NetworkInterface netInterface, boolean ipv6) throws IOException {
+    private static InetAddress deriveInetAddress(NetworkInterface netInterface, boolean ipv6) {
         final InetAddress ipAny = ipv6 ? INET6_ANY : INET_ANY;
         if (netInterface != null) {
             final Enumeration<InetAddress> ias = netInterface.getInetAddresses();

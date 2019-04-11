@@ -406,6 +406,8 @@ public class Socket extends FileDescriptor {
         setTrafficClass(fd, trafficClass);
     }
 
+    public static native boolean isIPv6Available();
+
     @Override
     public String toString() {
         return "Socket{" +

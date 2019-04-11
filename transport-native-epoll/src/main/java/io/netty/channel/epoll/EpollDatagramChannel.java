@@ -27,9 +27,11 @@ import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.unix.DatagramSocketAddress;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.IovArray;
+import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.internal.StringUtil;
 
@@ -40,7 +42,6 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.PortUnreachableException;
 import java.net.SocketAddress;
-import java.net.SocketException;
 import java.nio.ByteBuffer;
 
 import static io.netty.channel.epoll.LinuxSocket.newSocketDgram;
@@ -58,20 +59,46 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             StringUtil.simpleClassName(InetSocketAddress.class) + ">, " +
             StringUtil.simpleClassName(ByteBuf.class) + ')';
 
+    final InternetProtocolFamily family;
     private final EpollDatagramChannelConfig config;
     private volatile boolean connected;
 
+    /**
+     * Create a new instance which selects the {@link InternetProtocolFamily} to use depending
+     * on the Operation Systems default which will be chosen.
+     */
     public EpollDatagramChannel() {
+        this(null);
+    }
+
+    /**
+     * Create a new instance using the given {@link InternetProtocolFamily}. If {@code null} is used it will depend
+     * on the Operation Systems default which will be chosen.
+     */
+    public EpollDatagramChannel(InternetProtocolFamily family) {
         super(newSocketDgram());
+        this.family = internetProtocolFamily(family);
         config = new EpollDatagramChannelConfig(this);
     }
 
-    public EpollDatagramChannel(int fd) {
-        this(new LinuxSocket(fd));
+    private static InternetProtocolFamily internetProtocolFamily(InternetProtocolFamily family) {
+        if (family == null) {
+            return Socket.isIPv6Available() ? InternetProtocolFamily.IPv6 : InternetProtocolFamily.IPv4;
+        }
+        return family;
     }
 
-    EpollDatagramChannel(LinuxSocket fd) {
+    /**
+     * Create a new instance which selects the {@link InternetProtocolFamily} to use depending
+     * on the Operation Systems default which will be chosen.
+     */
+    public EpollDatagramChannel(int fd) {
+        this(new LinuxSocket(fd), null);
+    }
+
+    private EpollDatagramChannel(LinuxSocket fd, InternetProtocolFamily family) {
         super(null, fd, true);
+        this.family = internetProtocolFamily(family);
         config = new EpollDatagramChannelConfig(this);
     }
 
