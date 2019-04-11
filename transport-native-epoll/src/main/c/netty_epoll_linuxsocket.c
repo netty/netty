@@ -292,6 +292,7 @@ static void netty_epoll_linuxsocket_setTcpMd5Sig(JNIEnv* env, jclass clazz, jint
     struct sockaddr_storage addr;
     socklen_t addrSize;
     if (netty_unix_socket_initSockaddr(env, address, scopeId, 0, &addr, &addrSize) == -1) {
+        netty_unix_errors_throwChannelExceptionError(env, "Could not init sockaddr");
         return;
     }
 
