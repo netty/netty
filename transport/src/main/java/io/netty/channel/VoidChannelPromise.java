@@ -17,7 +17,7 @@ package io.netty.channel;
 
 import static java.util.Objects.requireNonNull;
 
-import io.netty.util.concurrent.AbstractFuture;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.UnstableApi;
@@ -25,7 +25,7 @@ import io.netty.util.internal.UnstableApi;
 import java.util.concurrent.TimeUnit;
 
 @UnstableApi
-public final class VoidChannelPromise extends AbstractFuture<Void> implements ChannelPromise {
+public final class VoidChannelPromise implements ChannelPromise {
 
     private final Channel channel;
     // Will be null if we should not propagate exceptions through the pipeline on failure case.
@@ -49,6 +49,11 @@ public final class VoidChannelPromise extends AbstractFuture<Void> implements Ch
         } else {
             fireExceptionListener = null;
         }
+    }
+
+    @Override
+    public EventExecutor executor() {
+        return channel.eventLoop();
     }
 
     @Override

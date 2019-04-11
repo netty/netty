@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.PromiseNotificationUtil;
@@ -42,6 +43,11 @@ public final class DelegatingChannelPromiseNotifier implements ChannelPromise, C
     public DelegatingChannelPromiseNotifier(ChannelPromise delegate, boolean logNotifyFailure) {
         this.delegate = requireNonNull(delegate, "delegate");
         this.logNotifyFailure = logNotifyFailure;
+    }
+
+    @Override
+    public EventExecutor executor() {
+        return delegate.executor();
     }
 
     @Override

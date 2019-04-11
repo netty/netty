@@ -284,6 +284,11 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
 
         @Override
+        public EventExecutor executor() {
+            return future.executor();
+        }
+
+        @Override
         public long deadlineNanos() {
             return future.deadlineNanos();
         }

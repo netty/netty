@@ -17,6 +17,7 @@ package io.netty.channel.group;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
@@ -27,10 +28,15 @@ import java.util.concurrent.TimeUnit;
 final class VoidChannelGroupFuture implements ChannelGroupFuture {
 
     private static final Iterator<ChannelFuture> EMPTY = Collections.<ChannelFuture>emptyList().iterator();
-    private final ChannelGroup group;
+    private final DefaultChannelGroup group;
 
-    VoidChannelGroupFuture(ChannelGroup group) {
+    VoidChannelGroupFuture(DefaultChannelGroup group) {
         this.group = group;
+    }
+
+    @Override
+    public EventExecutor executor() {
+        return group.executor;
     }
 
     @Override

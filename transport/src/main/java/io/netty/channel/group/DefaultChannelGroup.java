@@ -45,7 +45,7 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     private static final AtomicInteger nextId = new AtomicInteger();
     private final String name;
-    private final EventExecutor executor;
+    final EventExecutor executor;
     private final ConcurrentMap<ChannelId, Channel> serverChannels = new ConcurrentHashMap<>();
     private final ConcurrentMap<ChannelId, Channel> nonServerChannels = new ConcurrentHashMap<>();
     private final ChannelFutureListener remover = future -> remove(future.channel());

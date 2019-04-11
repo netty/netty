@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
+public class DefaultPromise<V> implements Promise<V> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultPromise.class);
     private static final InternalLogger rejectedExecutionLogger =
             InternalLoggerFactory.getInstance(DefaultPromise.class.getName() + ".rejectedExecution");
@@ -47,6 +47,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     private volatile Object result;
     private final EventExecutor executor;
+
+    // It is fine to not make this volatile as even if we override the value in there it does not matter as
+    // DefaultFutureCompletionStage has no state itself and is just a wrapper around this DefaultPromise instance.
+    private DefaultFutureCompletionStage<V> stage;
+
     /**
      * One or more listeners. Can be a {@link GenericFutureListener} or a {@link DefaultFutureListeners}.
      * If {@code null}, it means either 1) no listeners were added yet or 2) all listeners were notified.
@@ -73,6 +78,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      */
     public DefaultPromise(EventExecutor executor) {
         this.executor = requireNonNull(executor, "executor");
+        stage = new DefaultFutureCompletionStage<>(this);
     }
 
     @Override
@@ -363,7 +369,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      * depth exceeds a threshold.
      * @return The executor used to notify listeners when this promise is complete.
      */
-    protected final EventExecutor executor() {
+    @Override
+    public final EventExecutor executor() {
         return executor;
     }
 
@@ -735,5 +742,14 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         } catch (Throwable t) {
             rejectedExecutionLogger.error("Failed to submit a listener notification task. Event loop shut down?", t);
         }
+    }
+
+    @Override
+    public FutureCompletionStage<V> asStage() {
+        DefaultFutureCompletionStage<V> stageAdapter = stage;
+        if (stageAdapter == null) {
+            stage = stageAdapter = new DefaultFutureCompletionStage<>(this);
+        }
+        return stageAdapter;
     }
 }
