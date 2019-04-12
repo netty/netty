@@ -69,7 +69,7 @@ public final class OpenSslClientContext extends OpenSslContext {
      *                            {@code null} to use the default.
      * @param keyStore the KeyStore this context should use
      */
-    public OpenSslClientContext(TrustManagerFactory trustManagerFactory, String keyStore) throws SSLException {
+    OpenSslClientContext(TrustManagerFactory trustManagerFactory, String keyStore) throws SSLException {
         this(null, trustManagerFactory, keyStore);
     }
 
@@ -134,10 +134,8 @@ public final class OpenSslClientContext extends OpenSslContext {
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
      * @param keyStore the keystore type that should be used
-     * @deprecated use {@link SslContextBuilder}
      */
-    @Deprecated
-    public OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory, Iterable<String> ciphers,
+    OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory, Iterable<String> ciphers,
                                 ApplicationProtocolConfig apn, long sessionCacheSize,
                                 long sessionTimeout, String keyStore)
             throws SSLException {

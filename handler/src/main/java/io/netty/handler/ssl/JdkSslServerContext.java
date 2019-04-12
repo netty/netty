@@ -75,10 +75,8 @@ public final class JdkSslServerContext extends JdkSslContext {
      * @param keyPassword the password of the {@code keyFile}.
      *                    {@code null} if it's not password-protected.
      * @param keyStore the used keystore type
-     * @deprecated use {@link SslContextBuilder}
      */
-    @Deprecated
-    public JdkSslServerContext(File certChainFile, File keyFile,
+    JdkSslServerContext(File certChainFile, File keyFile,
                                String keyPassword, String keyStore) throws SSLException {
         this(certChainFile, keyFile, keyPassword, null, IdentityCipherSuiteFilter.INSTANCE,
                 JdkDefaultApplicationProtocolNegotiator.INSTANCE, 0, 0, keyStore);
@@ -100,10 +98,8 @@ public final class JdkSslServerContext extends JdkSslContext {
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
      * @param keyStore the used keystore type
-     * @deprecated use {@link SslContextBuilder}
      */
-    @Deprecated
-    public JdkSslServerContext(
+    JdkSslServerContext(
             File certChainFile, File keyFile, String keyPassword,
             Iterable<String> ciphers, Iterable<String> nextProtocols,
             long sessionCacheSize, long sessionTimeout, String keyStore) throws SSLException {
@@ -289,7 +285,7 @@ public final class JdkSslServerContext extends JdkSslContext {
      *                       {@code 0} to use the default value.
      * @param keyStore the used keystore type
      */
-    public JdkSslServerContext(File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
+    JdkSslServerContext(File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout, String keyStore) throws SSLException {
@@ -364,7 +360,7 @@ public final class JdkSslServerContext extends JdkSslContext {
      *                        {@code 0} to use the default value.
      * @param keyStore the used keystore type
      */
-    public JdkSslServerContext(File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
+    JdkSslServerContext(File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
             File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout, String keyStore) throws SSLException {
