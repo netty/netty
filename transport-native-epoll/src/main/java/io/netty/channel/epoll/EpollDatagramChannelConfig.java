@@ -326,21 +326,12 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
 
     @Override
     public int getTimeToLive() {
-        try {
-            return ((EpollDatagramChannel) channel).socket.getTimeToLive();
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        return -1;
     }
 
     @Override
     public EpollDatagramChannelConfig setTimeToLive(int ttl) {
-        try {
-            ((EpollDatagramChannel) channel).socket.setTimeToLive(ttl);
-            return this;
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        throw new UnsupportedOperationException("Multicast not supported");
     }
 
     @Override
@@ -350,12 +341,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
 
     @Override
     public EpollDatagramChannelConfig setInterface(InetAddress interfaceAddress) {
-        try {
-            ((EpollDatagramChannel) channel).socket.setInterface(interfaceAddress);
-            return this;
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        throw new UnsupportedOperationException("Multicast not supported");
     }
 
     @Override
@@ -365,12 +351,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
 
     @Override
     public EpollDatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
-        try {
-            ((EpollDatagramChannel) channel).socket.setNetworkInterface(networkInterface);
-            return this;
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        throw new UnsupportedOperationException("Multicast not supported");
     }
 
     @Override
