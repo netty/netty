@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2019 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,18 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.kqueue;
+package io.netty.testsuite.transport.socket;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.socket.InternetProtocolFamily;
-import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.testsuite.transport.socket.DatagramUnicastTest;
 
-import java.util.List;
+public class DatagramMulticastIPv6Test extends DatagramMulticastTest {
 
-public class KQueueDatagramUnicastTest extends DatagramUnicastTest {
     @Override
-    protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
-        return KQueueSocketTestPermutation.INSTANCE.datagram(InternetProtocolFamily.IPv4);
+    protected InternetProtocolFamily internetProtocolFamily() {
+        return InternetProtocolFamily.IPv6;
     }
 }

@@ -99,14 +99,15 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
     }
 
     @Override
-    public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> datagram() {
+    public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(
+            final InternetProtocolFamily family) {
         // Make the list of Bootstrap factories.
         @SuppressWarnings("unchecked")
         List<BootstrapFactory<Bootstrap>> bfs = Arrays.asList(
                 () -> new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
                     @Override
                     public Channel newChannel(EventLoop eventLoop) {
-                        return new NioDatagramChannel(eventLoop, InternetProtocolFamily.IPv4);
+                        return new NioDatagramChannel(eventLoop, family);
                     }
 
                     @Override

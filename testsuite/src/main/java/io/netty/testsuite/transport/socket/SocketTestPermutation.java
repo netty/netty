@@ -100,13 +100,13 @@ public class SocketTestPermutation {
         return combo(sbfs, cbfs);
     }
 
-    public List<BootstrapComboFactory<Bootstrap, Bootstrap>> datagram() {
+    public List<BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(final InternetProtocolFamily family) {
         // Make the list of Bootstrap factories.
         List<BootstrapFactory<Bootstrap>> bfs = Collections.singletonList(
                 () -> new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
                     @Override
                     public Channel newChannel(EventLoop eventLoop) {
-                        return new NioDatagramChannel(eventLoop, InternetProtocolFamily.IPv4);
+                        return new NioDatagramChannel(eventLoop, family);
                     }
 
                     @Override

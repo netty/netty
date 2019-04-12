@@ -51,8 +51,6 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
             new MultithreadEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-KQueue-worker", true),
                     KQueueHandler.newFactory());
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueSocketTestPermutation.class);
-
     @Override
     public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {
 
@@ -87,14 +85,15 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     }
 
     @Override
-    public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> datagram() {
+    public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(
+            final InternetProtocolFamily family) {
         // Make the list of Bootstrap factories.
         @SuppressWarnings("unchecked")
         List<BootstrapFactory<Bootstrap>> bfs = Arrays.asList(
                 () -> new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
                     @Override
                     public Channel newChannel(EventLoop eventLoop) {
-                        return new NioDatagramChannel(eventLoop, InternetProtocolFamily.IPv4);
+                        return new NioDatagramChannel(eventLoop, family);
                     }
 
                     @Override
