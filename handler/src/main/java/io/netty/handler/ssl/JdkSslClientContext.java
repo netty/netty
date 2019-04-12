@@ -166,8 +166,10 @@ public final class JdkSslClientContext extends JdkSslContext {
             File certChainFile, TrustManagerFactory trustManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout, String keyStore) throws SSLException {
-        this(null, certChainFile, trustManagerFactory, ciphers, cipherFilter, apn,
-                sessionCacheSize, sessionTimeout, keyStore);
+            super(newSSLContext(null, toX509CertificatesInternal(certChainFile),
+                    trustManagerFactory, null, null,
+                    null, null, sessionCacheSize, sessionTimeout, keyStore), true,
+                    ciphers, cipherFilter, apn, ClientAuth.NONE, null, false);
     }
 
     /**
@@ -194,17 +196,7 @@ public final class JdkSslClientContext extends JdkSslContext {
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
         this(null, certChainFile, trustManagerFactory, ciphers, cipherFilter, apn,
-                sessionCacheSize, sessionTimeout, KeyStore.getDefaultType());
-    }
-
-    private JdkSslClientContext(Provider provider,
-                                File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
-                                Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
-                                long sessionCacheSize, long sessionTimeout, String keyStore) throws SSLException {
-        super(newSSLContext(provider, toX509CertificatesInternal(trustCertCollectionFile),
-                trustManagerFactory, null, null,
-                null, null, sessionCacheSize, sessionTimeout, keyStore), true,
-                ciphers, cipherFilter, apn, ClientAuth.NONE, null, false);
+                sessionCacheSize, sessionTimeout);
     }
 
     JdkSslClientContext(Provider provider,

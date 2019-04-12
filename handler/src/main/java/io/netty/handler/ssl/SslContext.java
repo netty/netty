@@ -1077,16 +1077,16 @@ public abstract class SslContext {
      * @param key a PKCS#8 private key
      * @param keyPasswordChars the password of the {@code keyFile}.
      *                    {@code null} if it's not password-protected.
-     * @param keyStore The KeyStore Type you want to use
+     * @param keyStoreType The KeyStore Type you want to use
      * @return generated {@link KeyStore}.
      */
-    static KeyStore buildKeyStore(X509Certificate[] certChain, PrivateKey key, char[] keyPasswordChars, String keyStore)
+    static KeyStore buildKeyStore(X509Certificate[] certChain, PrivateKey key, char[] keyPasswordChars, String keyStoreType)
             throws KeyStoreException, NoSuchAlgorithmException,
                    CertificateException, IOException {
-        if (keyStore == null) {
-            keyStore = KeyStore.getDefaultType();
+        if (keyStoreType == null) {
+            keyStoreType = KeyStore.getDefaultType();
         }
-        KeyStore ks = KeyStore.getInstance(keyStore);
+        KeyStore ks = KeyStore.getInstance(keyStoreType);
         ks.load(null, null);
         ks.setKeyEntry(ALIAS, key, keyPasswordChars, certChain);
         return ks;

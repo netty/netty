@@ -304,17 +304,6 @@ public final class OpenSslClientContext extends OpenSslContext {
 
     OpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
                          X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
-                         KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
-                         CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
-                         long sessionCacheSize, long sessionTimeout, boolean enableOcsp)
-            throws SSLException {
-        this(trustCertCollection, trustManagerFactory, keyCertChain, key,
-                keyPassword, keyManagerFactory, ciphers, cipherFilter,
-                apn, protocols, sessionCacheSize, sessionTimeout, enableOcsp, KeyStore.getDefaultType());
-    }
-
-    OpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
-                         X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
                                 KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
                                 CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
                                 long sessionCacheSize, long sessionTimeout, boolean enableOcsp, String keyStore)
