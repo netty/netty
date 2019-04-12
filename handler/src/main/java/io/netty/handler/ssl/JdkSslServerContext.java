@@ -61,8 +61,7 @@ public final class JdkSslServerContext extends JdkSslContext {
      * @deprecated use {@link SslContextBuilder}
      */
     @Deprecated
-    public JdkSslServerContext(File certChainFile, File keyFile,
-                               String keyPassword) throws SSLException {
+    public JdkSslServerContext(File certChainFile, File keyFile, String keyPassword) throws SSLException {
         this(certChainFile, keyFile, keyPassword, null, IdentityCipherSuiteFilter.INSTANCE,
                 JdkDefaultApplicationProtocolNegotiator.INSTANCE, 0, 0);
     }

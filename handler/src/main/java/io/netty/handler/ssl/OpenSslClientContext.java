@@ -113,8 +113,7 @@ public final class OpenSslClientContext extends OpenSslContext {
      * @deprecated use {@link SslContextBuilder}
      */
     @Deprecated
-    public OpenSslClientContext(File certChainFile,
-                                TrustManagerFactory trustManagerFactory) throws SSLException {
+    public OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory) throws SSLException {
         this(certChainFile, trustManagerFactory, null, null, null, null, null,
                 IdentityCipherSuiteFilter.INSTANCE, null, 0, 0, KeyStore.getDefaultType());
     }
@@ -137,8 +136,7 @@ public final class OpenSslClientContext extends OpenSslContext {
      */
     OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory, Iterable<String> ciphers,
                                 ApplicationProtocolConfig apn, long sessionCacheSize,
-                                long sessionTimeout, String keyStore)
-            throws SSLException {
+                                long sessionTimeout, String keyStore) throws SSLException {
         this(certChainFile, trustManagerFactory, null, null, null, null, ciphers, IdentityCipherSuiteFilter.INSTANCE,
                 apn, sessionCacheSize, sessionTimeout, keyStore);
     }

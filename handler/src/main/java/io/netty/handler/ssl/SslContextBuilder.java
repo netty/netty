@@ -164,6 +164,9 @@ public final class SslContextBuilder {
         return this;
     }
 
+    /**
+     * Set the KetSore type that should be used
+     */
     public SslContextBuilder keyStoreType(String keyStoreType) {
         this.keyStoreType = keyStoreType;
         return this;
