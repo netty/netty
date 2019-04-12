@@ -467,12 +467,16 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     private boolean runExistingTasksUntilBookend(Queue<Runnable> taskQueue) {
         Runnable task = pollTaskFrom(taskQueue);
+        // null is not expected because this method isn't called unless BOOKEND_TASK was inserted into the queue, and
+        // null elements are not permitted to be inserted into the queue.
         if (task == BOOKEND_TASK) {
             return false;
         }
         for (;;) {
             safeExecute(task);
             task = pollTaskFrom(taskQueue);
+            // null is not expected because this method isn't called unless BOOKEND_TASK was inserted into the queue,
+            // and null elements are not permitted to be inserted into the queue.
             if (task == BOOKEND_TASK) {
                 return true;
             }
@@ -481,6 +485,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     private boolean runExistingTasksUntilMaxTasks(Queue<Runnable> taskQueue) {
         Runnable task = pollTaskFrom(taskQueue);
+        // BOOKEND_TASK is not expected because this method isn't called unless BOOKEND_TASK fails to be inserted into
+        // the queue, and if was previously inserted we always drain all the elements from queue including BOOKEND_TASK.
         if (task == null) {
             return false;
         }
@@ -488,6 +494,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         do {
             safeExecute(task);
             task = pollTaskFrom(taskQueue);
+            // BOOKEND_TASK is not expected because this method isn't called unless BOOKEND_TASK fails to be inserted
+            // into the queue, and if was previously inserted we always drain all the elements from queue including
+            // BOOKEND_TASK.
             if (task == null) {
                 return true;
             }
