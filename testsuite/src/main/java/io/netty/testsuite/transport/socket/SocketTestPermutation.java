@@ -112,7 +112,7 @@ public class SocketTestPermutation {
         return list;
     }
 
-    public List<BootstrapComboFactory<Bootstrap, Bootstrap>> datagram() {
+    public List<BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(final InternetProtocolFamily family) {
         // Make the list of Bootstrap factories.
         List<BootstrapFactory<Bootstrap>> bfs = Arrays.asList(
                 new BootstrapFactory<Bootstrap>() {
@@ -121,7 +121,7 @@ public class SocketTestPermutation {
                         return new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
                             @Override
                             public Channel newChannel() {
-                                return new NioDatagramChannel(InternetProtocolFamily.IPv4);
+                                return new NioDatagramChannel(family);
                             }
 
                             @Override
