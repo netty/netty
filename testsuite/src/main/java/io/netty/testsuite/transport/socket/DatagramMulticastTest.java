@@ -36,7 +36,6 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
