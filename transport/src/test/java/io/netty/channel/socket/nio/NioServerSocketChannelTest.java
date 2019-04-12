@@ -16,7 +16,6 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
@@ -51,10 +50,10 @@ public class NioServerSocketChannelTest extends AbstractNioChannelTest<NioServer
 
     @Test
     public void testIsActiveFalseAfterClose()  {
-        NioServerSocketChannel serverSocketChannel = new NioServerSocketChannel();
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+        NioServerSocketChannel serverSocketChannel = new NioServerSocketChannel(group.next(), group);
         try {
-            group.register(serverSocketChannel).syncUninterruptibly();
+            serverSocketChannel.register().syncUninterruptibly();
             Channel channel = serverSocketChannel.bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
             Assert.assertTrue(channel.isActive());
             Assert.assertTrue(channel.isOpen());
