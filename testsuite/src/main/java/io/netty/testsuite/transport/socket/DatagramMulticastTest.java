@@ -23,12 +23,22 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.oio.OioDatagramChannel;
+import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.SocketUtils;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -72,7 +82,8 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         }
         DatagramChannel cc = (DatagramChannel) cb.bind().sync().channel();
 
-        String group = "230.0.0.1";
+        String group = internetProtocolFamily() == InternetProtocolFamily.IPv4 ?
+                "230.0.0.1" : "FF01:0:0:0:0:0:0:101";
         InetSocketAddress groupAddress = SocketUtils.socketAddress(group, addr.getPort());
 
         cc.joinGroup(groupAddress, NetUtil.LOOPBACK_IF).sync();
@@ -122,5 +133,26 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
             }
             return success;
         }
+    }
+
+    @Before
+    public void assumeInternetProtocolFamilySupported() {
+        Assume.assumeTrue(isSupported(internetProtocolFamily() == InternetProtocolFamily.IPv4 ?
+                Inet4Address.class : Inet6Address.class));
+    }
+
+    private static boolean isSupported(Class<? extends InetAddress> addressType) {
+        Enumeration<InetAddress> addresses = NetUtil.LOOPBACK_IF.getInetAddresses();
+        while (addresses.hasMoreElements()) {
+            if (addressType.isAssignableFrom(addresses.nextElement().getClass())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
+        return SocketTestPermutation.INSTANCE.datagram(internetProtocolFamily());
     }
 }
