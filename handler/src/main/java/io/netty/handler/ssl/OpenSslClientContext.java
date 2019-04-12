@@ -18,7 +18,6 @@ package io.netty.handler.ssl;
 import io.netty.internal.tcnative.SSL;
 
 import java.io.File;
-import java.security.Key;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
@@ -59,18 +58,6 @@ public final class OpenSslClientContext extends OpenSslContext {
     @Deprecated
     public OpenSslClientContext(File certChainFile) throws SSLException {
         this(certChainFile, null, KeyStore.getDefaultType());
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
-     *                            that verifies the certificates sent from servers.
-     *                            {@code null} to use the default.
-     * @param keyStore the KeyStore this context should use
-     */
-    OpenSslClientContext(TrustManagerFactory trustManagerFactory, String keyStore) throws SSLException {
-        this(null, trustManagerFactory, keyStore);
     }
 
     /**
@@ -132,29 +119,6 @@ public final class OpenSslClientContext extends OpenSslContext {
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
-     * @param keyStore the keystore type that should be used
-     */
-    OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory, Iterable<String> ciphers,
-                                ApplicationProtocolConfig apn, long sessionCacheSize,
-                                long sessionTimeout, String keyStore) throws SSLException {
-        this(certChainFile, trustManagerFactory, null, null, null, null, ciphers, IdentityCipherSuiteFilter.INSTANCE,
-                apn, sessionCacheSize, sessionTimeout, keyStore);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param certChainFile an X.509 certificate chain file in PEM format
-     * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
-     *                            that verifies the certificates sent from servers.
-     *                            {@code null} to use the default..
-     * @param ciphers the cipher suites to enable, in the order of preference.
-     *                {@code null} to use the default cipher suites.
-     * @param apn Provides a means to configure parameters related to application protocol negotiation.
-     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
-     *                         {@code 0} to use the default value.
-     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
-     *                       {@code 0} to use the default value.
      * @deprecated use {@link SslContextBuilder}
      */
     @Deprecated
@@ -164,30 +128,6 @@ public final class OpenSslClientContext extends OpenSslContext {
             throws SSLException {
         this(certChainFile, trustManagerFactory, null, null, null, null, ciphers, IdentityCipherSuiteFilter.INSTANCE,
                 apn, sessionCacheSize, sessionTimeout, KeyStore.getDefaultType());
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param certChainFile an X.509 certificate chain file in PEM format
-     * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
-     *                            that verifies the certificates sent from servers.
-     *                            {@code null} to use the default..
-     * @param ciphers the cipher suites to enable, in the order of preference.
-     *                {@code null} to use the default cipher suites.
-     * @param cipherFilter a filter to apply over the supplied list of ciphers
-     * @param apn Provides a means to configure parameters related to application protocol negotiation.
-     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
-     *                         {@code 0} to use the default value.
-     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
-     *                       {@code 0} to use the default value.
-     * @param keyStore the keystore type that should be used
-     */
-    OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory, Iterable<String> ciphers,
-                                CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
-                                long sessionCacheSize, long sessionTimeout, String keyStore) throws SSLException {
-        this(certChainFile, trustManagerFactory, null, null, null, null,
-             ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, keyStore);
     }
 
     /**
