@@ -162,7 +162,7 @@ public final class JdkSslClientContext extends JdkSslContext {
      *                       {@code 0} to use the default value.
      * @param keyStore the keyStore this context should use
      */
-    JdkSslClientContext(
+    private JdkSslClientContext(
             File certChainFile, TrustManagerFactory trustManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout, String keyStore) throws SSLException {
@@ -197,10 +197,10 @@ public final class JdkSslClientContext extends JdkSslContext {
                 sessionCacheSize, sessionTimeout, KeyStore.getDefaultType());
     }
 
-    JdkSslClientContext(Provider provider,
-        File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
-        Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
-        long sessionCacheSize, long sessionTimeout, String keyStore) throws SSLException {
+    private JdkSslClientContext(Provider provider,
+                                File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
+                                Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
+                                long sessionCacheSize, long sessionTimeout, String keyStore) throws SSLException {
         super(newSSLContext(provider, toX509CertificatesInternal(trustCertCollectionFile),
                 trustManagerFactory, null, null,
                 null, null, sessionCacheSize, sessionTimeout, keyStore), true,

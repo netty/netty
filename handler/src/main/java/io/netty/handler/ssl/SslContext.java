@@ -419,7 +419,6 @@ public abstract class SslContext {
      *                       {@code 0} to use the default value.
      * @param keyStore the keystore type that should  be used
      * @return a new server-side {@link SslContext}
-     * @deprecated Replaced by {@link SslContextBuilder}
      */
     static SslContext newServerContext(
             SslProvider provider,
@@ -433,7 +432,7 @@ public abstract class SslContext {
                                             toPrivateKey(keyFile, keyPassword),
                                             keyPassword, keyManagerFactory, ciphers, cipherFilter, apn,
                                             sessionCacheSize, sessionTimeout, ClientAuth.NONE, null,
-                                    false, false, keyStore);
+                                            false, false, keyStore);
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -1157,8 +1156,7 @@ public abstract class SslContext {
      * @param keyType The KeyStore Type you want to use
      * @return A {@link TrustManagerFactory} which contains the certificates in {@code certChainFile}
      */
-    @Deprecated
-    protected static TrustManagerFactory buildTrustManagerFactory(
+    static TrustManagerFactory buildTrustManagerFactory(
             File certChainFile, TrustManagerFactory trustManagerFactory, String keyType)
             throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException {
         X509Certificate[] x509Certs = toX509Certificates(certChainFile);
@@ -1204,12 +1202,6 @@ public abstract class SslContext {
             }
         }
         return x509Certs;
-    }
-
-    static TrustManagerFactory buildTrustManagerFactory(
-            X509Certificate[] certCollection, TrustManagerFactory trustManagerFactory)
-            throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException {
-        return buildTrustManagerFactory(certCollection, trustManagerFactory, KeyStore.getDefaultType());
     }
 
     static TrustManagerFactory buildTrustManagerFactory(
