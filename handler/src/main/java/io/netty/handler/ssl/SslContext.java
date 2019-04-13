@@ -1080,7 +1080,8 @@ public abstract class SslContext {
      * @param keyStoreType The KeyStore Type you want to use
      * @return generated {@link KeyStore}.
      */
-    static KeyStore buildKeyStore(X509Certificate[] certChain, PrivateKey key, char[] keyPasswordChars, String keyStoreType)
+    static KeyStore buildKeyStore(X509Certificate[] certChain, PrivateKey key,
+                                  char[] keyPasswordChars, String keyStoreType)
             throws KeyStoreException, NoSuchAlgorithmException,
                    CertificateException, IOException {
         if (keyStoreType == null) {
@@ -1205,9 +1206,12 @@ public abstract class SslContext {
     }
 
     static TrustManagerFactory buildTrustManagerFactory(
-            X509Certificate[] certCollection, TrustManagerFactory trustManagerFactory, String keyStore)
+            X509Certificate[] certCollection, TrustManagerFactory trustManagerFactory, String keyStoreType)
             throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException {
-        final KeyStore ks = KeyStore.getInstance(keyStore);
+        if (keyStoreType == null) {
+            keyStoreType = KeyStore.getDefaultType();
+        }
+        final KeyStore ks = KeyStore.getInstance(keyStoreType);
         ks.load(null, null);
 
         int i = 1;
@@ -1240,13 +1244,6 @@ public abstract class SslContext {
         } catch (CertificateException e) {
             throw new SSLException(e);
         }
-    }
-
-    static KeyManagerFactory buildKeyManagerFactory(X509Certificate[] certChain, PrivateKey key, String keyPassword,
-                                                    KeyManagerFactory kmf)
-            throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException,
-            CertificateException, IOException {
-        return buildKeyManagerFactory(certChain, key, keyPassword, kmf, KeyStore.getDefaultType());
     }
 
     static KeyManagerFactory buildKeyManagerFactory(X509Certificate[] certChain, PrivateKey key, String keyPassword,

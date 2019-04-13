@@ -45,7 +45,7 @@ public final class OpenSslClientContext extends OpenSslContext {
     public OpenSslClientContext() throws SSLException {
         this(null, null,
                 null, null, null, null,
-                null, IdentityCipherSuiteFilter.INSTANCE, null, 0, 0, KeyStore.getDefaultType());
+                null, IdentityCipherSuiteFilter.INSTANCE, null, 0, 0);
     }
 
     /**
@@ -57,7 +57,7 @@ public final class OpenSslClientContext extends OpenSslContext {
      */
     @Deprecated
     public OpenSslClientContext(File certChainFile) throws SSLException {
-        this(certChainFile, null, KeyStore.getDefaultType());
+        this(certChainFile, null);
     }
 
     /**
@@ -70,23 +70,7 @@ public final class OpenSslClientContext extends OpenSslContext {
      */
     @Deprecated
     public OpenSslClientContext(TrustManagerFactory trustManagerFactory) throws SSLException {
-        this(null, trustManagerFactory, KeyStore.getDefaultType());
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param certChainFile an X.509 certificate chain file in PEM format.
-     *                      {@code null} to use the system default
-     * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
-     *                            that verifies the certificates sent from servers.
-     *                            {@code null} to use the default.
-     * @param keyStore the keystore type that should be used
-     */
-    OpenSslClientContext(File certChainFile,
-                                TrustManagerFactory trustManagerFactory, String keyStore) throws SSLException {
-        this(certChainFile, trustManagerFactory, null, null, null, null, null,
-             IdentityCipherSuiteFilter.INSTANCE, null, 0, 0, keyStore);
+        this(null, trustManagerFactory);
     }
 
     /**
@@ -102,7 +86,7 @@ public final class OpenSslClientContext extends OpenSslContext {
     @Deprecated
     public OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory) throws SSLException {
         this(certChainFile, trustManagerFactory, null, null, null, null, null,
-                IdentityCipherSuiteFilter.INSTANCE, null, 0, 0, KeyStore.getDefaultType());
+                IdentityCipherSuiteFilter.INSTANCE, null, 0, 0);
     }
 
     /**
@@ -127,7 +111,7 @@ public final class OpenSslClientContext extends OpenSslContext {
                                 long sessionTimeout)
             throws SSLException {
         this(certChainFile, trustManagerFactory, null, null, null, null, ciphers, IdentityCipherSuiteFilter.INSTANCE,
-                apn, sessionCacheSize, sessionTimeout, KeyStore.getDefaultType());
+                apn, sessionCacheSize, sessionTimeout);
     }
 
     /**
@@ -152,50 +136,7 @@ public final class OpenSslClientContext extends OpenSslContext {
                                 CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
                                 long sessionCacheSize, long sessionTimeout) throws SSLException {
         this(certChainFile, trustManagerFactory, null, null, null, null,
-                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, KeyStore.getDefaultType());
-    }
-
-    /**
-     * Creates a new instance.
-     * @param trustCertCollectionFile an X.509 certificate collection file in PEM format.
-     *                      {@code null} to use the system default
-     * @param trustManagerFactory the {@link TrustManagerFactory} that provides the {@link TrustManager}s
-     *                            that verifies the certificates sent from servers.
-     *                            {@code null} to use the default or the results of parsing
-     *                            {@code trustCertCollectionFile}
-     * @param keyCertChainFile an X.509 certificate chain file in PEM format.
-     *                      This provides the public key for mutual authentication.
-     *                      {@code null} to use the system default
-     * @param keyFile a PKCS#8 private key file in PEM format.
-     *                      This provides the private key for mutual authentication.
-     *                      {@code null} for no mutual authentication.
-     * @param keyPassword the password of the {@code keyFile}.
-     *                    {@code null} if it's not password-protected.
-     *                    Ignored if {@code keyFile} is {@code null}.
-     * @param keyManagerFactory the {@link KeyManagerFactory} that provides the {@link javax.net.ssl.KeyManager}s
-     *                          that is used to encrypt data being sent to servers.
-     *                          {@code null} to use the default or the results of parsing
-     *                          {@code keyCertChainFile} and {@code keyFile}.
-     * @param ciphers the cipher suites to enable, in the order of preference.
-     *                {@code null} to use the default cipher suites.
-     * @param cipherFilter a filter to apply over the supplied list of ciphers
-     * @param apn Application Protocol Negotiator object.
-     * @param sessionCacheSize the size of the cache used for storing SSL session objects.
-     *                         {@code 0} to use the default value.
-     * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
-     *                       {@code 0} to use the default value.
-     * @param keyStore the keystore that should be used
-     */
-    OpenSslClientContext(File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
-                                File keyCertChainFile, File keyFile, String keyPassword,
-                                KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
-                                CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
-                                long sessionCacheSize, long sessionTimeout, String keyStore)
-            throws SSLException {
-        this(toX509CertificatesInternal(trustCertCollectionFile), trustManagerFactory,
-                toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
-                keyPassword, keyManagerFactory, ciphers, cipherFilter, apn, null, sessionCacheSize,
-                sessionTimeout, false, keyStore);
+                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
     }
 
     /**
