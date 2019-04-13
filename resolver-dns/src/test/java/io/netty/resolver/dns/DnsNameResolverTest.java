@@ -1233,6 +1233,15 @@ public class DnsNameResolverTest {
             } else {
                 assertEquals(ipv6Address, resolved.getHostAddress());
             }
+            InetAddress ipv4InetAddress = InetAddress.getByAddress("netty.com",
+                    InetAddress.getByName(ipv4Address).getAddress());
+            InetAddress ipv6InetAddress = InetAddress.getByAddress("netty.com",
+                    InetAddress.getByName(ipv6Address).getAddress());
+
+            List<InetAddress> resolvedAll = resolver.resolveAll("netty.com").syncUninterruptibly().getNow();
+            List<InetAddress> expected = types == ResolvedAddressTypes.IPV4_PREFERRED ?
+                    Arrays.asList(ipv4InetAddress, ipv6InetAddress) :  Arrays.asList(ipv6InetAddress, ipv4InetAddress);
+            assertEquals(expected, resolvedAll);
         } finally {
             nonCompliantDnsServer.stop();
         }
@@ -2611,5 +2620,4 @@ public class DnsNameResolverTest {
             }
         }
     }
-
 }
