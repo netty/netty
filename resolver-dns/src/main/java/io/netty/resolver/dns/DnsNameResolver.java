@@ -109,7 +109,7 @@ public class DnsNameResolver extends InetNameResolver {
     private static final int DEFAULT_NDOTS;
 
     static {
-        if (NetUtil.isIpV4StackPreferred()) {
+        if (NetUtil.LOCALHOST == NetUtil.LOCALHOST4 || NetUtil.isIpV4StackPreferred()) {
             DEFAULT_RESOLVE_ADDRESS_TYPES = ResolvedAddressTypes.IPV4_ONLY;
             LOCALHOST_ADDRESS = NetUtil.LOCALHOST4;
         } else {
