@@ -99,13 +99,13 @@ public class HttpRequestDecoderBenchmark extends AbstractMicrobenchmark {
             }
 
             // if header is done it should produce a HttpRequest
-            channel.writeInbound(Unpooled.wrappedBuffer(content, a, amount));
+            channel.writeInbound(Unpooled.wrappedBuffer(content, a, amount).asReadOnly());
             a += amount;
         }
 
         for (int i = CONTENT_LENGTH; i > 0; i --) {
             // Should produce HttpContent
-            channel.writeInbound(Unpooled.wrappedBuffer(content, content.length - i, 1));
+            channel.writeInbound(Unpooled.wrappedBuffer(content, content.length - i, 1).asReadOnly());
         }
     }
 }

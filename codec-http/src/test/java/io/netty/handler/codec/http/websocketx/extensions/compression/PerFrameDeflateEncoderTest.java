@@ -57,7 +57,7 @@ public class PerFrameDeflateEncoderTest {
         assertEquals(WebSocketExtension.RSV1 | WebSocketExtension.RSV3, compressedFrame.rsv());
 
         assertTrue(decoderChannel.writeInbound(compressedFrame.content()));
-        assertTrue(decoderChannel.writeInbound(Unpooled.wrappedBuffer(DeflateDecoder.FRAME_TAIL)));
+        assertTrue(decoderChannel.writeInbound(DeflateDecoder.FRAME_TAIL.duplicate()));
         ByteBuf uncompressedPayload = decoderChannel.readInbound();
         assertEquals(300, uncompressedPayload.readableBytes());
 
@@ -135,7 +135,7 @@ public class PerFrameDeflateEncoderTest {
         assertTrue(compressedFrame3.isFinalFragment());
 
         assertTrue(decoderChannel.writeInbound(compressedFrame1.content()));
-        assertTrue(decoderChannel.writeInbound(Unpooled.wrappedBuffer(DeflateDecoder.FRAME_TAIL)));
+        assertTrue(decoderChannel.writeInbound(DeflateDecoder.FRAME_TAIL.duplicate()));
         ByteBuf uncompressedPayload1 = decoderChannel.readInbound();
         byte[] finalPayload1 = new byte[100];
         uncompressedPayload1.readBytes(finalPayload1);
@@ -143,7 +143,7 @@ public class PerFrameDeflateEncoderTest {
         uncompressedPayload1.release();
 
         assertTrue(decoderChannel.writeInbound(compressedFrame2.content()));
-        assertTrue(decoderChannel.writeInbound(Unpooled.wrappedBuffer(DeflateDecoder.FRAME_TAIL)));
+        assertTrue(decoderChannel.writeInbound(DeflateDecoder.FRAME_TAIL.duplicate()));
         ByteBuf uncompressedPayload2 = decoderChannel.readInbound();
         byte[] finalPayload2 = new byte[100];
         uncompressedPayload2.readBytes(finalPayload2);
@@ -151,7 +151,7 @@ public class PerFrameDeflateEncoderTest {
         uncompressedPayload2.release();
 
         assertTrue(decoderChannel.writeInbound(compressedFrame3.content()));
-        assertTrue(decoderChannel.writeInbound(Unpooled.wrappedBuffer(DeflateDecoder.FRAME_TAIL)));
+        assertTrue(decoderChannel.writeInbound(DeflateDecoder.FRAME_TAIL.duplicate()));
         ByteBuf uncompressedPayload3 = decoderChannel.readInbound();
         byte[] finalPayload3 = new byte[100];
         uncompressedPayload3.readBytes(finalPayload3);
