@@ -332,10 +332,8 @@ public final class OpenSsl {
             SUPPORTED_PROTOCOLS_SET = Collections.unmodifiableSet(protocols);
             SUPPORTS_OCSP = doesSupportOcsp();
 
-            if (logger.isDebugEnabled()) {
-                logger.debug("Supported protocols (OpenSSL): {} ", SUPPORTED_PROTOCOLS_SET);
-                logger.debug("Default cipher suites (OpenSSL): {}", DEFAULT_CIPHERS);
-            }
+            logger.debug("Supported protocols (OpenSSL): {} ", SUPPORTED_PROTOCOLS_SET);
+            logger.debug("Default cipher suites (OpenSSL): {}", DEFAULT_CIPHERS);
         } else {
             DEFAULT_CIPHERS = Collections.emptyList();
             AVAILABLE_OPENSSL_CIPHER_SUITES = Collections.emptySet();

@@ -179,9 +179,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
             frameRsv = (b & 0x70) >> 4;
             frameOpcode = b & 0x0F;
 
-            if (logger.isDebugEnabled()) {
-                logger.debug("Decoding WebSocket Frame opCode={}", frameOpcode);
-            }
+            logger.debug("Decoding WebSocket Frame opCode={}", frameOpcode);
 
             state = State.READING_SECOND;
         case READING_SECOND:

@@ -144,9 +144,7 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
         byte[] sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII));
         String accept = WebSocketUtil.base64(sha1);
 
-        if (logger.isDebugEnabled()) {
-            logger.debug("WebSocket version 07 server handshake key: {}, response: {}.", key, accept);
-        }
+        logger.debug("WebSocket version 07 server handshake key: {}, response: {}.", key, accept);
 
         res.headers().add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);
         res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
@@ -156,9 +154,7 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
         if (subprotocols != null) {
             String selectedSubprotocol = selectSubprotocol(subprotocols);
             if (selectedSubprotocol == null) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Requested subprotocol(s) not supported: {}", subprotocols);
-                }
+                logger.debug("Requested subprotocol(s) not supported: {}", subprotocols);
             } else {
                 res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol);
             }

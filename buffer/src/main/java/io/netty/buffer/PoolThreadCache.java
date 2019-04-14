@@ -245,10 +245,8 @@ final class PoolThreadCache {
                     free(smallSubPageHeapCaches, finalizer) +
                     free(normalHeapCaches, finalizer);
 
-            if (numFreed > 0 && logger.isDebugEnabled()) {
-                logger.debug("Freed {} thread-local buffer(s) from thread: {}", numFreed,
-                        Thread.currentThread().getName());
-            }
+            logger.debug("Freed {} thread-local buffer(s) from thread: {}", numFreed,
+                    Thread.currentThread().getName());
 
             if (directArena != null) {
                 directArena.numThreadCaches.getAndDecrement();

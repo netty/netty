@@ -97,8 +97,6 @@ public class SocksPortUnificationServerHandler extends ByteToMessageDecoder {
     }
 
     private static void logUnknownVersion(ChannelHandlerContext ctx, byte versionVal) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("{} Unknown protocol version: {}", ctx.channel(), versionVal & 0xFF);
-        }
+        logger.debug("{} Unknown protocol version: {}", ctx.channel(), versionVal & 0xFF);
     }
 }

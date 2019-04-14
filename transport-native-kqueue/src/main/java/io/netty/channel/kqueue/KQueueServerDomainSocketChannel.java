@@ -79,9 +79,7 @@ public final class KQueueServerDomainSocketChannel extends AbstractKQueueServerC
                 // Delete the socket file if possible.
                 File socketFile = new File(local.path());
                 boolean success = socketFile.delete();
-                if (!success && logger.isDebugEnabled()) {
-                    logger.debug("Failed to delete a domain socket file: {}", local.path());
-                }
+                logger.debug("Delete a domain socket file [sucess:{}]: {}", success, local);
             }
         }
     }

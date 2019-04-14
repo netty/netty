@@ -204,11 +204,9 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
         byte[] sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII));
         expectedChallengeResponseString = WebSocketUtil.base64(sha1);
 
-        if (logger.isDebugEnabled()) {
-            logger.debug(
-                    "WebSocket version 07 client handshake key: {}, expected response: {}",
-                    key, expectedChallengeResponseString);
-        }
+        logger.debug(
+                "WebSocket version 07 client handshake key: {}, expected response: {}",
+                key, expectedChallengeResponseString);
 
         // Format request
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, upgradeUrl(wsURL));

@@ -508,9 +508,8 @@ public class TrafficCounter {
             // Enough interval time to compute shaping
             long time = sum * 1000 / limitTraffic - interval + pastDelay;
             if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Time: " + time + ':' + sum + ':' + interval + ':' + pastDelay);
-                }
+                logger.debug("Time: {}:{}:{}:{}", time, sum, interval, pastDelay);
+
                 if (time > maxTime && now + time - localReadingTime > maxTime) {
                     time = maxTime;
                 }
@@ -583,9 +582,8 @@ public class TrafficCounter {
             // Enough interval time to compute shaping
             long time = sum * 1000 / limitTraffic - interval + pastDelay;
             if (time > AbstractTrafficShapingHandler.MINIMAL_WAIT) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Time: " + time + ':' + sum + ':' + interval + ':' + pastDelay);
-                }
+                logger.debug("Time: {}:{}:{}:{}", time, sum, interval, pastDelay);
+
                 if (time > maxTime && now + time - localWritingTime > maxTime) {
                     time = maxTime;
                 }

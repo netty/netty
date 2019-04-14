@@ -1075,11 +1075,9 @@ public class SslHandler extends ByteToMessageDecoder {
         if (ignoreException(cause)) {
             // It is safe to ignore the 'connection reset by peer' or
             // 'broken pipe' error after sending close_notify.
-            if (logger.isDebugEnabled()) {
-                logger.debug(
-                        "{} Swallowing a harmless 'connection reset by peer / broken pipe' error that occurred " +
-                        "while writing close_notify in response to the peer's close_notify", ctx.channel(), cause);
-            }
+            logger.debug(
+                    "{} Swallowing a harmless 'connection reset by peer / broken pipe' error that occurred " +
+                    "while writing close_notify in response to the peer's close_notify", ctx.channel(), cause);
 
             // Close the connection explicitly just in case the transport
             // did not close the connection automatically.

@@ -112,9 +112,7 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
             query.addRecord(DnsSection.ADDITIONAL, optResource);
         }
 
-        if (logger.isDebugEnabled()) {
-            logger.debug("{} WRITE: {}, [{}: {}], {}", channel(), protocol(), id, nameServerAddr, question);
-        }
+        logger.debug("{} WRITE: {}, [{}: {}], {}", channel(), protocol(), id, nameServerAddr, question);
 
         sendQuery(query, flush, writePromise);
     }

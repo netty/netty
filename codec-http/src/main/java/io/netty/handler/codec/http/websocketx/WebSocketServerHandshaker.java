@@ -190,9 +190,8 @@ public abstract class WebSocketServerHandshaker {
     public final ChannelFuture handshake(Channel channel, FullHttpRequest req,
                                             HttpHeaders responseHeaders, final ChannelPromise promise) {
 
-        if (logger.isDebugEnabled()) {
-            logger.debug("{} WebSocket version {} server handshake", channel, version());
-        }
+        logger.debug("{} WebSocket version {} server handshake", channel, version());
+
         FullHttpResponse response = newHandshakeResponse(req, responseHeaders);
         ChannelPipeline p = channel.pipeline();
         if (p.get(HttpObjectAggregator.class) != null) {
@@ -269,9 +268,9 @@ public abstract class WebSocketServerHandshaker {
         if (req instanceof FullHttpRequest) {
             return handshake(channel, (FullHttpRequest) req, responseHeaders, promise);
         }
-        if (logger.isDebugEnabled()) {
-            logger.debug("{} WebSocket version {} server handshake", channel, version());
-        }
+
+        logger.debug("{} WebSocket version {} server handshake", channel, version());
+
         ChannelPipeline p = channel.pipeline();
         ChannelHandlerContext ctx = p.context(HttpRequestDecoder.class);
         if (ctx == null) {

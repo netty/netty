@@ -1170,9 +1170,7 @@ public class DnsNameResolver extends InetNameResolver {
                 final DatagramDnsResponse res = (DatagramDnsResponse) msg;
                 final int queryId = res.id();
 
-                if (logger.isDebugEnabled()) {
-                    logger.debug("{} RECEIVED: UDP [{}: {}], {}", ch, queryId, res.sender(), res);
-                }
+                logger.debug("{} RECEIVED: [{}: {}], {}", ch, queryId, res.sender(), res);
 
                 final DnsQueryContext qCtx = queryContextManager.get(res.sender(), queryId);
                 if (qCtx == null) {
@@ -1274,9 +1272,7 @@ public class DnsNameResolver extends InetNameResolver {
                                     }
                                 });
                             } else {
-                                if (logger.isDebugEnabled()) {
-                                    logger.debug("{} Unable to fallback to TCP [{}]", queryId, future.cause());
-                                }
+                                logger.debug("{} unable to fallback to TCP", queryId, future.cause());
 
                                 // TCP fallback failed, just use the truncated response.
                                 qCtx.finish(res);

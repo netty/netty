@@ -78,10 +78,8 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
         }
 
         if (!defaultNameServers.isEmpty()) {
-            if (logger.isDebugEnabled()) {
-                logger.debug(
-                        "Default DNS servers: {} (sun.net.dns.ResolverConfiguration)", defaultNameServers);
-            }
+            logger.debug(
+                    "Default DNS servers: {} (sun.net.dns.ResolverConfiguration)", defaultNameServers);
         } else {
             // Depending if IPv6 or IPv4 is used choose the correct DNS servers provided by google:
             // https://developers.google.com/speed/public-dns/docs/using

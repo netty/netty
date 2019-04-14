@@ -69,16 +69,14 @@ public final class DefaultChannelId implements ChannelId {
             if (processId < 0) {
                 processId = -1;
                 logger.warn("-Dio.netty.processId: {} (malformed)", customProcessId);
-            } else if (logger.isDebugEnabled()) {
-                logger.debug("-Dio.netty.processId: {} (user-set)", processId);
             }
+
+            logger.debug("-Dio.netty.processId: {} (user-set)", processId);
         }
 
         if (processId < 0) {
             processId = defaultProcessId();
-            if (logger.isDebugEnabled()) {
-                logger.debug("-Dio.netty.processId: {} (auto-detected)", processId);
-            }
+            logger.debug("-Dio.netty.processId: {} (auto-detected)", processId);
         }
 
         PROCESS_ID = processId;
