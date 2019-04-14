@@ -21,7 +21,7 @@ import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.spdy.SpdyHttpHeaders.Names;
 import io.netty.util.ReferenceCountUtil;
 
-import java.util.LinkedList;
+import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
 
@@ -33,7 +33,7 @@ import java.util.Queue;
 public class SpdyHttpResponseStreamIdHandler extends
         MessageToMessageCodec<Object, HttpMessage> {
     private static final Integer NO_ID = -1;
-    private final Queue<Integer> ids = new LinkedList<Integer>();
+    private final Queue<Integer> ids = new ArrayDeque<Integer>();
 
     @Override
     public boolean acceptInboundMessage(Object msg) throws Exception {
