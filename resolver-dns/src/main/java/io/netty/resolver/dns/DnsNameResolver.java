@@ -851,7 +851,7 @@ public class DnsNameResolver extends InetNameResolver {
         }
 
         if (!doResolveCached(hostname, additionals, promise, resolveCache)) {
-            doResolveUncached(hostname, additionals, promise, resolveCache);
+            doResolveUncached(hostname, additionals, promise, resolveCache, true);
         }
     }
 
@@ -905,9 +905,9 @@ public class DnsNameResolver extends InetNameResolver {
     private void doResolveUncached(String hostname,
                                    DnsRecord[] additionals,
                                    final Promise<InetAddress> promise,
-                                   DnsCache resolveCache) {
+                                   DnsCache resolveCache, boolean completeEarlyIfPossible) {
         final Promise<List<InetAddress>> allPromise = executor().newPromise();
-        doResolveAllUncached(hostname, additionals, allPromise, resolveCache);
+        doResolveAllUncached(hostname, additionals, allPromise, resolveCache, true);
         allPromise.addListener(new FutureListener<List<InetAddress>>() {
             @Override
             public void operationComplete(Future<List<InetAddress>> future) {
@@ -954,7 +954,7 @@ public class DnsNameResolver extends InetNameResolver {
         }
 
         if (!doResolveAllCached(hostname, additionals, promise, resolveCache, resolvedInternetProtocolFamilies)) {
-            doResolveAllUncached(hostname, additionals, promise, resolveCache);
+            doResolveAllUncached(hostname, additionals, promise, resolveCache, false);
         }
     }
 
@@ -997,33 +997,35 @@ public class DnsNameResolver extends InetNameResolver {
     private void doResolveAllUncached(final String hostname,
                                       final DnsRecord[] additionals,
                                       final Promise<List<InetAddress>> promise,
-                                      final DnsCache resolveCache) {
+                                      final DnsCache resolveCache,
+                                      final boolean completeEarlyIfPossible) {
         // Call doResolveUncached0(...) in the EventLoop as we may need to submit multiple queries which would need
         // to submit multiple Runnable at the end if we are not already on the EventLoop.
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            doResolveAllUncached0(hostname, additionals, promise, resolveCache);
+            doResolveAllUncached0(hostname, additionals, promise, resolveCache, completeEarlyIfPossible);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    doResolveAllUncached0(hostname, additionals, promise, resolveCache);
+                    doResolveAllUncached0(hostname, additionals, promise, resolveCache, completeEarlyIfPossible);
                 }
             });
         }
     }
 
     private void doResolveAllUncached0(String hostname,
-                                      DnsRecord[] additionals,
-                                      Promise<List<InetAddress>> promise,
-                                      DnsCache resolveCache) {
+                                       DnsRecord[] additionals,
+                                       Promise<List<InetAddress>> promise,
+                                       DnsCache resolveCache,
+                                       boolean completeEarlyIfPossible) {
 
         assert executor().inEventLoop();
 
         final DnsServerAddressStream nameServerAddrs =
                 dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
-        new DnsAddressResolveContext(this, hostname, additionals, nameServerAddrs,
-                                     resolveCache, authoritativeDnsServerCache).resolve(promise);
+        new DnsAddressResolveContext(this, hostname, additionals, nameServerAddrs, resolveCache,
+                authoritativeDnsServerCache, completeEarlyIfPossible).resolve(promise);
     }
 
     private static String hostname(String inetHost) {

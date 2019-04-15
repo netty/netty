@@ -31,13 +31,16 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
 
     private final DnsCache resolveCache;
     private final AuthoritativeDnsServerCache authoritativeDnsServerCache;
+    private final boolean completeEarlyIfPossible;
 
     DnsAddressResolveContext(DnsNameResolver parent, String hostname, DnsRecord[] additionals,
                              DnsServerAddressStream nameServerAddrs, DnsCache resolveCache,
-                             AuthoritativeDnsServerCache authoritativeDnsServerCache) {
+                             AuthoritativeDnsServerCache authoritativeDnsServerCache,
+                             boolean completeEarlyIfPossible) {
         super(parent, hostname, DnsRecord.CLASS_IN, parent.resolveRecordTypes(), additionals, nameServerAddrs);
         this.resolveCache = resolveCache;
         this.authoritativeDnsServerCache = authoritativeDnsServerCache;
+        this.completeEarlyIfPossible = completeEarlyIfPossible;
     }
 
     @Override
@@ -46,7 +49,7 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
                                                       DnsRecord[] additionals,
                                                       DnsServerAddressStream nameServerAddrs) {
         return new DnsAddressResolveContext(parent, hostname, additionals, nameServerAddrs, resolveCache,
-                authoritativeDnsServerCache);
+                authoritativeDnsServerCache, completeEarlyIfPossible);
     }
 
     @Override
@@ -58,6 +61,11 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
     List<InetAddress> filterResults(List<InetAddress> unfiltered) {
         Collections.sort(unfiltered, PreferredAddressTypeComparator.comparator(parent.preferredAddressType()));
         return unfiltered;
+    }
+
+    @Override
+    boolean isCompleteEarly(InetAddress resolved) {
+        return completeEarlyIfPossible && parent.preferredAddressType().addressType() == resolved.getClass();
     }
 
     @Override
