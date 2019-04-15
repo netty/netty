@@ -36,7 +36,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -83,12 +82,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private final Queue<Runnable> taskQueue;
 
     private volatile Thread thread;
+    private Thread nonVolatileThread; // == thread, only written from event loop
     @SuppressWarnings("unused")
     private volatile ThreadProperties threadProperties;
     private final Executor executor;
     private volatile boolean interrupted;
 
-    private final Semaphore threadLock = new Semaphore(0);
+    private final Object threadLock = new Object();
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
     private final boolean addTaskWakesUp;
     private final int maxPendingTasks;
@@ -493,6 +493,11 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         return thread == this.thread;
     }
 
+    @Override
+    public boolean inEventLoop() {
+        return Thread.currentThread() == nonVolatileThread;
+    }
+
     /**
      * Add a {@link Runnable} which will be executed on shutdown of this instance
      */
@@ -740,8 +745,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             throw new IllegalStateException("cannot await termination of the current thread");
         }
 
-        if (threadLock.tryAcquire(timeout, unit)) {
-            threadLock.release();
+        final long deadline = System.nanoTime() + unit.toNanos(timeout);
+        synchronized (threadLock) {
+            long remainingNanos;
+            while (!isTerminated() && (remainingNanos = deadline - System.nanoTime()) > 0L) {
+                threadLock.wait(remainingNanos / 1000000L, (int) (remainingNanos % 1000000L));
+            }
         }
 
         return isTerminated();
@@ -860,16 +869,20 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private static final long SCHEDULE_PURGE_INTERVAL = TimeUnit.SECONDS.toNanos(1);
 
     private void startThread() {
-        if (state == ST_NOT_STARTED) {
+        if (nonVolatileThread == null) {
             if (STATE_UPDATER.compareAndSet(this, ST_NOT_STARTED, ST_STARTED)) {
+                boolean success = false;
                 try {
                     doStartThread();
-                } catch (Throwable cause) {
-                    STATE_UPDATER.set(this, ST_NOT_STARTED);
-                    PlatformDependent.throwException(cause);
+                    success = true;
+                } finally {
+                    if (!success) {
+                        STATE_UPDATER.compareAndSet(this, ST_STARTED, ST_NOT_STARTED);
+                    }
                 }
             }
         }
+        // else we are certain that state != ST_NOT_STARTED
     }
 
     private boolean ensureThreadStarted(int oldState) {
@@ -895,9 +908,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         executor.execute(new Runnable() {
             @Override
             public void run() {
-                thread = Thread.currentThread();
+                thread = nonVolatileThread = Thread.currentThread();
                 if (interrupted) {
-                    thread.interrupt();
+                    nonVolatileThread.interrupt();
                 }
 
                 boolean success = false;
@@ -942,13 +955,15 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                             // See https://github.com/netty/netty/issues/6596.
                             FastThreadLocal.removeAll();
 
-                            STATE_UPDATER.set(SingleThreadEventExecutor.this, ST_TERMINATED);
-                            threadLock.release();
-                            if (!taskQueue.isEmpty()) {
-                                if (logger.isWarnEnabled()) {
-                                    logger.warn("An event executor terminated with " +
-                                            "non-empty task queue (" + taskQueue.size() + ')');
-                                }
+                            thread = nonVolatileThread = null;
+
+                            synchronized (threadLock) {
+                                STATE_UPDATER.set(SingleThreadEventExecutor.this, ST_TERMINATED);
+                                threadLock.notifyAll();
+                            }
+                            if (logger.isWarnEnabled() && !taskQueue.isEmpty()) {
+                                logger.warn("An event executor terminated with " +
+                                        "non-empty task queue (" + taskQueue.size() + ')');
                             }
                             terminationFuture.setSuccess(null);
                         }
