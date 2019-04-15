@@ -32,10 +32,15 @@ import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.MulticastSocket;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -51,6 +56,10 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     }
 
     public void testMulticast(Bootstrap sb, Bootstrap cb) throws Throwable {
+        NetworkInterface iface = multicastNetworkInterface();
+        Assume.assumeNotNull("No NetworkInterface found that supports multicast and " +
+                internetProtocolFamily(), iface);
+
         MulticastTestHandler mhandler = new MulticastTestHandler();
 
         sb.handler(new SimpleChannelInboundHandler<Object>() {
@@ -62,12 +71,12 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         cb.handler(mhandler);
 
-        sb.option(ChannelOption.IP_MULTICAST_IF, NetUtil.LOOPBACK_IF);
+        sb.option(ChannelOption.IP_MULTICAST_IF, iface);
         sb.option(ChannelOption.SO_REUSEADDR, true);
-        cb.option(ChannelOption.IP_MULTICAST_IF, NetUtil.LOOPBACK_IF);
+        cb.option(ChannelOption.IP_MULTICAST_IF, iface);
         cb.option(ChannelOption.SO_REUSEADDR, true);
 
-        Channel sc = sb.bind(newSocketAddress()).sync().channel();
+        Channel sc = sb.bind(newSocketAddress(iface)).sync().channel();
 
         InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
         cb.localAddress(addr.getPort());
@@ -81,17 +90,15 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         }
         DatagramChannel cc = (DatagramChannel) cb.bind().sync().channel();
 
-        String group = internetProtocolFamily() == InternetProtocolFamily.IPv4 ?
-                "230.0.0.1" : "FF01:0:0:0:0:0:0:101";
-        InetSocketAddress groupAddress = SocketUtils.socketAddress(group, addr.getPort());
+        InetSocketAddress groupAddress = SocketUtils.socketAddress(groupAddress(), addr.getPort());
 
-        cc.joinGroup(groupAddress, NetUtil.LOOPBACK_IF).sync();
+        cc.joinGroup(groupAddress, iface).sync();
 
         sc.writeAndFlush(new DatagramPacket(Unpooled.copyInt(1), groupAddress)).sync();
         assertTrue(mhandler.await());
 
         // leave the group
-        cc.leaveGroup(groupAddress, NetUtil.LOOPBACK_IF).sync();
+        cc.leaveGroup(groupAddress, iface).sync();
 
         // sleep a second to make sure we left the group
         Thread.sleep(1000);
@@ -134,24 +141,63 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         }
     }
 
-    @Before
-    public void assumeInternetProtocolFamilySupported() {
-        Assume.assumeTrue(isSupported(internetProtocolFamily() == InternetProtocolFamily.IPv4 ?
-                Inet4Address.class : Inet6Address.class));
-    }
-
-    private static boolean isSupported(Class<? extends InetAddress> addressType) {
-        Enumeration<InetAddress> addresses = NetUtil.LOOPBACK_IF.getInetAddresses();
-        while (addresses.hasMoreElements()) {
-            if (addressType.isAssignableFrom(addresses.nextElement().getClass())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
         return SocketTestPermutation.INSTANCE.datagram(internetProtocolFamily());
+    }
+
+    private InetSocketAddress newAnySocketAddress() throws UnknownHostException {
+        switch (internetProtocolFamily()) {
+            case IPv4:
+                return new InetSocketAddress(InetAddress.getByName("0.0.0.0"), 0);
+            case IPv6:
+                return new InetSocketAddress(InetAddress.getByName("::"), 0);
+            default:
+                throw new AssertionError();
+        }
+    }
+
+    private InetSocketAddress newSocketAddress(NetworkInterface iface) {
+        Enumeration<InetAddress> addresses = iface.getInetAddresses();
+        while (addresses.hasMoreElements()) {
+            InetAddress address = addresses.nextElement();
+            if (internetProtocolFamily().addressType().isAssignableFrom(address.getClass())) {
+                return new InetSocketAddress(address, 0);
+            }
+        }
+        throw new AssertionError();
+    }
+
+    private NetworkInterface multicastNetworkInterface() throws IOException {
+        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+        while (interfaces.hasMoreElements()) {
+            NetworkInterface iface = interfaces.nextElement();
+            if (iface.isUp() && iface.supportsMulticast()) {
+                Enumeration<InetAddress> addresses = iface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress address = addresses.nextElement();
+                    if (internetProtocolFamily().addressType().isAssignableFrom(address.getClass())) {
+                        MulticastSocket socket = new MulticastSocket(newAnySocketAddress());
+                        socket.setReuseAddress(true);
+                        socket.setNetworkInterface(iface);
+                        try {
+                            socket.send(new java.net.DatagramPacket(new byte[] { 1, 2, 3, 4 }, 4,
+                                    new InetSocketAddress(groupAddress(), 12345)));
+                            return iface;
+                        } catch (IOException ignore) {
+                            // Try the next interface
+                        } finally {
+                            socket.close();
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private String groupAddress() {
+        return internetProtocolFamily() == InternetProtocolFamily.IPv4 ?
+                "230.0.0.1" : "FF01:0:0:0:0:0:0:101";
     }
 }

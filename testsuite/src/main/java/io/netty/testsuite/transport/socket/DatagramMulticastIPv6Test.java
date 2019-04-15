@@ -16,15 +16,8 @@
 package io.netty.testsuite.transport.socket;
 
 import io.netty.channel.socket.InternetProtocolFamily;
-import org.junit.Ignore;
 
 public class DatagramMulticastIPv6Test extends DatagramMulticastTest {
-
-    @Ignore("Fails on some systems")
-    @Override
-    public void testMulticast() throws Throwable {
-        super.testMulticast();
-    }
 
     @Override
     protected InternetProtocolFamily internetProtocolFamily() {
