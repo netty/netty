@@ -1232,7 +1232,7 @@ abstract class DnsResolveContext<T> {
         void update(InetSocketAddress address, long ttl) {
             assert this.address == null || this.address.isUnresolved();
             this.address = address;
-            this.ttl = min(ttl, ttl);
+            this.ttl = min(this.ttl, ttl);
         }
 
         void update(InetSocketAddress address) {
