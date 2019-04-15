@@ -484,17 +484,9 @@ public final class ChannelOutboundBuffer {
     }
 
     private static ByteBuffer[] expandNioBufferArray(ByteBuffer[] array, int neededSpace, int size) {
-        int newCapacity = array.length;
-        do {
-            // double capacity until it is big enough
-            // See https://github.com/netty/netty/issues/1890
-            newCapacity <<= 1;
-
-            if (newCapacity < 0) {
-                throw new IllegalStateException();
-            }
-
-        } while (neededSpace > newCapacity);
+        int oldCapacity = array.length;
+        int newCapacity = oldCapacity + (oldCapacity >> 1);
+        newCapacity = Math.max(newCapacity, neededSpace);
 
         ByteBuffer[] newArray = new ByteBuffer[newCapacity];
         System.arraycopy(array, 0, newArray, 0, size);
