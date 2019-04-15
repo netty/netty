@@ -59,6 +59,11 @@ final class DnsRecordResolveContext extends DnsResolveContext<DnsRecord> {
     }
 
     @Override
+    boolean isCompleteEarly(DnsRecord resolved) {
+        return false;
+    }
+
+    @Override
     void cache(String hostname, DnsRecord[] additionals, DnsRecord result, DnsRecord convertedResult) {
         // Do not cache.
         // XXX: When we implement cache, we would need to retain the reference count of the result record.
