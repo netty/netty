@@ -19,7 +19,7 @@ import static io.netty.resolver.dns.DnsAddressDecoder.decodeAddress;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import io.netty.channel.EventLoop;
@@ -56,27 +56,8 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
 
     @Override
     List<InetAddress> filterResults(List<InetAddress> unfiltered) {
-        final Class<? extends InetAddress> inetAddressType = parent.preferredAddressType().addressType();
-        final int size = unfiltered.size();
-        int numExpected = 0;
-        for (int i = 0; i < size; i++) {
-            InetAddress address = unfiltered.get(i);
-            if (inetAddressType.isInstance(address)) {
-                numExpected++;
-            }
-        }
-        if (numExpected == size || numExpected == 0) {
-            // If all the results are the preferred type, or none of them are, then we don't need to do any filtering.
-            return unfiltered;
-        }
-        List<InetAddress> filtered = new ArrayList<InetAddress>(numExpected);
-        for (int i = 0; i < size; i++) {
-            InetAddress address = unfiltered.get(i);
-            if (inetAddressType.isInstance(address)) {
-                filtered.add(address);
-            }
-        }
-        return filtered;
+        Collections.sort(unfiltered, PreferredAddressTypeComparator.comparator(parent.preferredAddressType()));
+        return unfiltered;
     }
 
     @Override
