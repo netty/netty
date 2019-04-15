@@ -62,15 +62,6 @@ import static java.lang.Math.min;
 
 abstract class DnsResolveContext<T> {
 
-    private static final FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>> RELEASE_RESPONSE =
-            new FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>() {
-                @Override
-                public void operationComplete(Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future) {
-                    if (future.isSuccess()) {
-                        future.getNow().release();
-                    }
-                }
-            };
     private static final RuntimeException NXDOMAIN_QUERY_FAILED_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new RuntimeException("No answer found and NXDOMAIN response code returned"),
             DnsResolveContext.class,
@@ -107,6 +98,7 @@ abstract class DnsResolveContext<T> {
     private List<T> finalResult;
     private int allowedQueries;
     private boolean triedCNAME;
+    private boolean completeEarly;
 
     DnsResolveContext(DnsNameResolver parent,
                       String hostname, int dnsClass, DnsRecordType[] expectedTypes,
@@ -164,6 +156,8 @@ abstract class DnsResolveContext<T> {
      * account JDK semantics such as {@link NetUtil#isIpV6AddressesPreferred()}.
      */
     abstract List<T> filterResults(List<T> unfiltered);
+
+    abstract boolean isCompleteEarly(T resolved);
 
     /**
      * Caches a successful resolution.
@@ -329,7 +323,8 @@ abstract class DnsResolveContext<T> {
                        final boolean flush,
                        final Promise<List<T>> promise,
                        final Throwable cause) {
-        if (nameServerAddrStreamIndex >= nameServerAddrStream.size() || allowedQueries == 0 || promise.isCancelled()) {
+        if (completeEarly || nameServerAddrStreamIndex >= nameServerAddrStream.size() ||
+                allowedQueries == 0 || promise.isCancelled()) {
             tryToFinishResolve(nameServerAddrStream, nameServerAddrStreamIndex, question, queryLifecycleObserver,
                                promise, cause);
             return;
@@ -456,7 +451,7 @@ abstract class DnsResolveContext<T> {
                 public boolean clear(String hostname) {
                     return authoritativeDnsServerCache.clear(hostname);
                 }
-            }).resolve(resolverPromise);
+            }, false).resolve(resolverPromise);
         }
     }
 
@@ -695,21 +690,41 @@ abstract class DnsResolveContext<T> {
                 continue;
             }
 
-            // We want to ensure we do not have duplicates in finalResult as this may be unexpected.
-            //
-            // While using a LinkedHashSet or HashSet may sound like the perfect fit for this we will use an
-            // ArrayList here as duplicates should be found quite unfrequently in the wild and we dont want to pay
-            // for the extra memory copy and allocations in this cases later on.
-            if (finalResult == null) {
-                finalResult = new ArrayList<T>(8);
-                finalResult.add(converted);
-            } else if (!finalResult.contains(converted)) {
-                finalResult.add(converted);
+            boolean shouldRelease = false;
+            // Check if we did determine we wanted to complete early before. If this is the case we want to not
+            // include the result
+            if (!completeEarly) {
+                boolean completeEarly = isCompleteEarly(converted);
+                if (completeEarly) {
+                    this.completeEarly = true;
+                }
+                // We want to ensure we do not have duplicates in finalResult as this may be unexpected.
+                //
+                // While using a LinkedHashSet or HashSet may sound like the perfect fit for this we will use an
+                // ArrayList here as duplicates should be found quite unfrequently in the wild and we dont want to pay
+                // for the extra memory copy and allocations in this cases later on.
+                if (finalResult == null) {
+                    if (completeEarly) {
+                        finalResult = Collections.singletonList(converted);
+                    } else {
+                        finalResult = new ArrayList<T>(8);
+                        finalResult.add(converted);
+                    }
+                } else if (!finalResult.contains(converted)) {
+                    finalResult.add(converted);
+                } else {
+                    shouldRelease = true;
+                }
+            } else {
+                shouldRelease = true;
             }
 
             cache(hostname, additionals, r, converted);
             found = true;
 
+            if (shouldRelease) {
+                ReferenceCountUtil.release(converted);
+            }
             // Note that we do not break from the loop here, so we decode/cache all A/AAAA records.
         }
 
@@ -800,7 +815,7 @@ abstract class DnsResolveContext<T> {
                                     final Throwable cause) {
 
         // There are no queries left to try.
-        if (!queriesInProgress.isEmpty()) {
+        if (!completeEarly && !queriesInProgress.isEmpty()) {
             queryLifecycleObserver.queryCancelled(allowedQueries);
 
             // There are still some queries in process, we will try to notify once the next one finishes until
@@ -846,22 +861,24 @@ abstract class DnsResolveContext<T> {
     }
 
     private void finishResolve(Promise<List<T>> promise, Throwable cause) {
-        if (!queriesInProgress.isEmpty()) {
+        // If completeEarly was true we still want to continue processing the queries to ensure we still put everything
+        // in the cache eventually.
+        if (!completeEarly && !queriesInProgress.isEmpty()) {
             // If there are queries in progress, we should cancel it because we already finished the resolution.
             for (Iterator<Future<AddressedEnvelope<DnsResponse, InetSocketAddress>>> i = queriesInProgress.iterator();
                  i.hasNext();) {
                 Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f = i.next();
                 i.remove();
 
-                if (!f.cancel(false)) {
-                    f.addListener(RELEASE_RESPONSE);
-                }
+                f.cancel(false);
             }
         }
 
         if (finalResult != null) {
-            // Found at least one resolved record.
-            DnsNameResolver.trySuccess(promise, filterResults(finalResult));
+            if (!promise.isDone()) {
+                // Found at least one resolved record.
+                DnsNameResolver.trySuccess(promise, filterResults(finalResult));
+            }
             return;
         }
 
