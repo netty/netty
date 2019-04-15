@@ -164,7 +164,7 @@ public class DnsNameResolver extends InetNameResolver {
                 }
             }
         } catch (SocketException e) {
-            logger.debug("Unable to detect if any interface supports IPv6, assuming no", e);
+            logger.debug("Unable to detect if any interface supports IPv6, assuming IPv4-only", e);
             // ignore
         }
         return false;
