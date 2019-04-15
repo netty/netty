@@ -65,10 +65,13 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 
@@ -109,7 +112,7 @@ public class DnsNameResolver extends InetNameResolver {
     private static final int DEFAULT_NDOTS;
 
     static {
-        if (NetUtil.isIpV4StackPreferred()) {
+        if (NetUtil.isIpV4StackPreferred() || !anyInterfaceSupportsIpV6()) {
             DEFAULT_RESOLVE_ADDRESS_TYPES = ResolvedAddressTypes.IPV4_ONLY;
             LOCALHOST_ADDRESS = NetUtil.LOCALHOST4;
         } else {
@@ -143,6 +146,28 @@ public class DnsNameResolver extends InetNameResolver {
             ndots = UnixResolverDnsServerAddressStreamProvider.DEFAULT_NDOTS;
         }
         DEFAULT_NDOTS = ndots;
+    }
+
+    /**
+     * Returns {@code true} if any {@link NetworkInterface} supports {@code IPv6}, {@code false} otherwise.
+     */
+    private static boolean anyInterfaceSupportsIpV6() {
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface iface = interfaces.nextElement();
+                Enumeration<InetAddress> addresses = iface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    if (addresses.nextElement() instanceof Inet6Address) {
+                        return true;
+                    }
+                }
+            }
+        } catch (SocketException e) {
+            logger.debug("Unable to detect if any interface supports IPv6, assuming IPv4-only", e);
+            // ignore
+        }
+        return false;
     }
 
     @SuppressWarnings("unchecked")
