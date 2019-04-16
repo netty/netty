@@ -46,6 +46,7 @@ import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
@@ -1166,11 +1167,13 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                     promise.setSuccess();
                 } else {
                     Throwable error = wrapStreamClosedError(cause);
-                    if (error instanceof ClosedChannelException) {
+                    // To make it more consistent with AbstractChannel we handle all IOExceptions here.
+                    if (error instanceof IOException) {
                         if (config.isAutoClose()) {
                             // Close channel if needed.
                             closeForcibly();
                         } else {
+                            // TODO: Once Http2StreamChannel extends DuplexChannel we should call shutdownOutput(...)
                             outboundClosed = true;
                         }
                     }
