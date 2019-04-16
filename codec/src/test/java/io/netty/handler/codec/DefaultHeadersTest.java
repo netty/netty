@@ -129,6 +129,35 @@ public class DefaultHeadersTest {
         assertFalse(itr.hasNext());
     }
 
+    @Test(expected = IllegalStateException.class)
+    public void valuesItrRemoveThrowsWhenEmpty() {
+        TestDefaultHeaders headers = newInstance();
+        Iterator<CharSequence> itr = headers.valueIterator(of("name"));
+        itr.remove();
+    }
+
+    @Test
+    public void valuesItrRemoveThrowsAfterLastElement() {
+        TestDefaultHeaders headers = newInstance();
+        headers.add(of("name"), of("value1"));
+        assertEquals(1, headers.size());
+
+        List<CharSequence> values = new ArrayList<CharSequence>();
+        Iterator<CharSequence> itr = headers.valueIterator(of("name"));
+        while (itr.hasNext()) {
+            values.add(itr.next());
+            itr.remove();
+        }
+        assertEquals(1, values.size());
+        assertTrue(values.contains(of("value1")));
+        try {
+            itr.remove();
+            fail();
+        } catch (IllegalStateException ignored) {
+            // ignored
+        }
+    }
+
     @Test
     public void multipleValuesPerNameIteratorEmpty() {
         TestDefaultHeaders headers = newInstance();
