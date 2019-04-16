@@ -121,9 +121,47 @@ public class DefaultHeadersTest {
         Iterator<CharSequence> itr = headers.valueIterator(of("name"));
         while (itr.hasNext()) {
             values.add(itr.next());
+            itr.remove();
         }
         assertEquals(3, values.size());
+        assertEquals(0, headers.size());
+        assertTrue(headers.isEmpty());
         assertTrue(values.containsAll(asList(of("value1"), of("value2"), of("value3"))));
+        itr = headers.valueIterator(of("name"));
+        assertFalse(itr.hasNext());
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void valuesItrRemoveThrowsWhenEmpty() {
+        TestDefaultHeaders headers = newInstance();
+        assertEquals(0, headers.size());
+        assertTrue(headers.isEmpty());
+        Iterator<CharSequence> itr = headers.valueIterator(of("name"));
+        itr.remove();
+    }
+
+    @Test
+    public void valuesItrRemoveThrowsAfterLastElement() {
+        TestDefaultHeaders headers = newInstance();
+        headers.add(of("name"), of("value1"));
+        assertEquals(1, headers.size());
+
+        List<CharSequence> values = new ArrayList<CharSequence>();
+        Iterator<CharSequence> itr = headers.valueIterator(of("name"));
+        while (itr.hasNext()) {
+            values.add(itr.next());
+            itr.remove();
+        }
+        assertEquals(1, values.size());
+        assertEquals(0, headers.size());
+        assertTrue(headers.isEmpty());
+        assertTrue(values.contains(of("value1")));
+        try {
+            itr.remove();
+            fail();
+        } catch (IllegalStateException ignored) {
+            // ignored
+        }
     }
 
     @Test
