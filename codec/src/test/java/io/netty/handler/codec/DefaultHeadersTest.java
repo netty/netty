@@ -124,6 +124,8 @@ public class DefaultHeadersTest {
             itr.remove();
         }
         assertEquals(3, values.size());
+        assertEquals(0, headers.size());
+        assertTrue(headers.isEmpty());
         assertTrue(values.containsAll(asList(of("value1"), of("value2"), of("value3"))));
         itr = headers.valueIterator(of("name"));
         assertFalse(itr.hasNext());
@@ -132,6 +134,8 @@ public class DefaultHeadersTest {
     @Test(expected = IllegalStateException.class)
     public void valuesItrRemoveThrowsWhenEmpty() {
         TestDefaultHeaders headers = newInstance();
+        assertEquals(0, headers.size());
+        assertTrue(headers.isEmpty());
         Iterator<CharSequence> itr = headers.valueIterator(of("name"));
         itr.remove();
     }
@@ -149,6 +153,8 @@ public class DefaultHeadersTest {
             itr.remove();
         }
         assertEquals(1, values.size());
+        assertEquals(0, headers.size());
+        assertTrue(headers.isEmpty());
         assertTrue(values.contains(of("value1")));
         try {
             itr.remove();

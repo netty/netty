@@ -1019,6 +1019,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             entries[i] = entry.next;
         }
         entry.remove();
+        --size;
     }
 
     @SuppressWarnings("unchecked")
