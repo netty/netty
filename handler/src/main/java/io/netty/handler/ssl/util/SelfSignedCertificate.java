@@ -48,7 +48,7 @@ import java.util.Date;
  * It is purely for testing purposes, and thus it is very insecure.
  * It even uses an insecure pseudo-random generator for faster generation internally.
  * </p><p>
- * A X.509 certificate file and a RSA private key file are generated in a system's temporary directory using
+ * An X.509 certificate file and a RSA private key file are generated in a system's temporary directory using
  * {@link java.io.File#createTempFile(String, String)}, and they are deleted when the JVM exits using
  * {@link java.io.File#deleteOnExit()}.
  * </p><p>

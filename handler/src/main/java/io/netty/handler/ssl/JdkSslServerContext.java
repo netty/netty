@@ -106,7 +106,7 @@ public final class JdkSslServerContext extends JdkSslContext {
      * @param cipherFilter a filter to apply over the supplied list of ciphers
      * @param apn Provides a means to configure parameters related to application protocol negotiation.
      * @param sessionCacheSize the size of the cache used for storing SSL session objects.
-     *                         {@code 0} to use the default value.
+     *                        {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                        {@code 0} to use the default value.
      * @deprecated use {@link SslContextBuilder}

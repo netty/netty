@@ -1073,7 +1073,7 @@ public abstract class SslContext {
     /**
      * Generates a new {@link KeyStore}.
      *
-     * @param certChain a X.509 certificate chain
+     * @param certChain an X.509 certificate chain
      * @param key a PKCS#8 private key
      * @param keyPasswordChars the password of the {@code keyFile}.
      *                    {@code null} if it's not password-protected.
