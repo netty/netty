@@ -121,9 +121,12 @@ public class DefaultHeadersTest {
         Iterator<CharSequence> itr = headers.valueIterator(of("name"));
         while (itr.hasNext()) {
             values.add(itr.next());
+            itr.remove();
         }
         assertEquals(3, values.size());
         assertTrue(values.containsAll(asList(of("value1"), of("value2"), of("value3"))));
+        itr = headers.valueIterator(of("name"));
+        assertFalse(itr.hasNext());
     }
 
     @Test
