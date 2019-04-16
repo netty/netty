@@ -126,7 +126,7 @@ public final class OpenSslClientContext extends OpenSslContext {
      * @param sessionCacheSize the size of the cache used for storing SSL session objects.
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
-     *                         {@code 0} to use the default value.
+     *                       {@code 0} to use the default value.
      * @deprecated use {@link SslContextBuilder}
      */
     @Deprecated

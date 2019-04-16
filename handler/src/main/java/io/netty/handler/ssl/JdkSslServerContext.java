@@ -79,9 +79,9 @@ public final class JdkSslServerContext extends JdkSslContext {
      * @param nextProtocols the application layer protocols to accept, in the order of preference.
      *                      {@code null} to disable TLS NPN/ALPN extension.
      * @param sessionCacheSize the size of the cache used for storing SSL session objects.
-     *                         {@code 0} to use the default value.
+     *                       {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
-     *                         {@code 0} to use the default value.
+     *                       {@code 0} to use the default value.
      * @deprecated use {@link SslContextBuilder}
      */
     @Deprecated
@@ -134,7 +134,7 @@ public final class JdkSslServerContext extends JdkSslContext {
      * @param sessionCacheSize the size of the cache used for storing SSL session objects.
      *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
-     *                         {@code 0} to use the default value.
+     *                       {@code 0} to use the default value.
      * @deprecated use {@link SslContextBuilder}
      */
     @Deprecated
