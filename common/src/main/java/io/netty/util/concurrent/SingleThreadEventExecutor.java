@@ -495,6 +495,14 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     @Override
     public boolean inEventLoop() {
+        // This may appear to be racy at first glance but is safe. We might not read the "correct"
+        // thread from the non-volatile field, but we will see its value as == current thread
+        // if and only if we are the thread currently executing the event loop:
+        // - If we are the event loop thread then it will be set to us since it is set at the
+        //   beginning of the run() method
+        // - If we are not the event loop thread then no other thread can have set the value to
+        //   be our thread, and if we had set it previously we would have subsequently set
+        //   it to null prior to exiting the run() method
         return Thread.currentThread() == nonVolatileThread;
     }
 
