@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -99,6 +100,11 @@ public abstract class AbstractDnsRecord implements DnsRecord {
     @Override
     public long timeToLive() {
         return timeToLive;
+    }
+
+    @Override
+    public void decodeRdata(ByteBuf in, int length) {
+        // Skip
     }
 
     @Override
