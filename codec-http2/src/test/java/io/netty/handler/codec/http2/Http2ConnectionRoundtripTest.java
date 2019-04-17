@@ -112,6 +112,7 @@ public class Http2ConnectionRoundtripTest {
     private CountDownLatch dataLatch;
     private CountDownLatch trailersLatch;
     private CountDownLatch goAwayLatch;
+    private CountDownLatch goAwayEventLatch;
 
     @Before
     public void setup() throws Exception {
@@ -194,6 +195,14 @@ public class Http2ConnectionRoundtripTest {
         });
 
         assertTrue(latch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
+    }
+
+    @Test
+    public void goAwaySentUserEvent() throws Exception {
+        bootstrapEnv(1, 2, 1, 0, 0, 1);
+
+        serverConnectedChannel.close();
+        goAwayEventLatch.await();
     }
 
     @Test
@@ -1180,12 +1189,19 @@ public class Http2ConnectionRoundtripTest {
 
     private void bootstrapEnv(int dataCountDown, int settingsAckCount,
             int requestCountDown, int trailersCountDown, int goAwayCountDown) throws Exception {
+        bootstrapEnv(dataCountDown, settingsAckCount, requestCountDown, trailersCountDown, goAwayCountDown, -1);
+    }
+
+    private void bootstrapEnv(int dataCountDown, int settingsAckCount,
+            int requestCountDown, int trailersCountDown, int goAwayCountDown, int goAwayLatchCountDown)
+            throws Exception {
         final CountDownLatch prefaceWrittenLatch = new CountDownLatch(1);
         requestLatch = new CountDownLatch(requestCountDown);
         serverSettingsAckLatch = new CountDownLatch(settingsAckCount);
         dataLatch = new CountDownLatch(dataCountDown);
         trailersLatch = new CountDownLatch(trailersCountDown);
         goAwayLatch = goAwayCountDown > 0 ? new CountDownLatch(goAwayCountDown) : requestLatch;
+        goAwayEventLatch = goAwayLatchCountDown > 0 ? new CountDownLatch(goAwayCountDown) : new CountDownLatch(1);
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
@@ -1207,6 +1223,15 @@ public class Http2ConnectionRoundtripTest {
                         .validateHeaders(false)
                         .build());
                 p.addLast(serverHandlerRef.get());
+                p.addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                        if (evt instanceof Http2GoAwayWriteEvent) {
+                            goAwayEventLatch.countDown();
+                        }
+                        ctx.fireUserEventTriggered(evt);
+                    }
+                });
                 serverInitLatch.countDown();
             }
         });

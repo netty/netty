@@ -818,6 +818,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             return promise;
         }
 
+        // The GO_AWAY may be the result of an internal error, or user generated (and they may not know the stream ID).
+        // We fire this event in the pipeline so the application has visibility that the connection is shutting down.
+        ctx.fireUserEventTriggered(new Http2GoAwayWriteEvent(lastStreamId, errorCode));
+
         // Need to retain before we write the buffer because if we do it after the refCnt could already be 0 and
         // result in an IllegalRefCountException.
         debugData.retain();
