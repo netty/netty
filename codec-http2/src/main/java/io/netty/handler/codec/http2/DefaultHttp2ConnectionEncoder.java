@@ -25,6 +25,7 @@ import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregato
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Queue;
 
 import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
@@ -46,7 +47,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     private Http2LifecycleManager lifecycleManager;
     // We prefer ArrayDeque to LinkedList because later will produce more GC.
     // This initial capacity is plenty for SETTINGS traffic.
-    private final ArrayDeque<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<Http2Settings>(4);
+    private final Deque<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<Http2Settings>(4);
     private Queue<Http2Settings> outstandingRemoteSettingsQueue;
 
     public DefaultHttp2ConnectionEncoder(Http2Connection connection, Http2FrameWriter frameWriter) {

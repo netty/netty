@@ -23,6 +23,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import java.util.Queue;
 
@@ -59,7 +60,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private final Http2FrameReader frameReader;
     private Http2FrameListener listener;
     private final Http2PromisedRequestVerifier requestVerifier;
-    private final ArrayDeque<Http2Settings> outstandingRemoteSettingsQueue;
+    private final Deque<Http2Settings> outstandingRemoteSettingsQueue;
 
     public DefaultHttp2ConnectionDecoder(Http2Connection connection,
                                          Http2ConnectionEncoder encoder,
@@ -105,8 +106,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     /**
      * Get the queue that retains SETTINGS frames received from the remote peer.
      *
-     * @return the queue that retains SETTINGS frames received from the remote peer. This maybe {@code null} if ACKs are
-     * sent synchronously.
+     * @return the queue that retains SETTINGS frames received from the remote peer. This may be {@code null} if ACKs
+     * are sent synchronously.
      */
     public final Queue<Http2Settings> outstandingRemoteSettingsQueue() {
         return outstandingRemoteSettingsQueue;
