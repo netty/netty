@@ -1764,7 +1764,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             return this; // Nothing to discard
         }
         Component la = lastAccessed;
-        if (la != null && la.endOffset < readerIndex) {
+        if (la != null && la.endOffset <= readerIndex) {
             lastAccessed = null;
         }
         removeCompRange(0, firstComponentId);
@@ -1820,7 +1820,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             c.slice = slice.slice(trimmedBytes, c.length());
         }
         Component la = lastAccessed;
-        if (la != null && la.endOffset < readerIndex) {
+        if (la != null && la.endOffset <= readerIndex) {
             lastAccessed = null;
         }
 

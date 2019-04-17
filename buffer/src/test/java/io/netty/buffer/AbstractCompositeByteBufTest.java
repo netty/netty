@@ -1443,4 +1443,70 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertTrue(buf.release());
     }
 
+    @Test
+    public void testDiscardSomeReadBytesCorrectlyUpdatesLastAccessed() {
+        testDiscardCorrectlyUpdatesLastAccessed(true);
+    }
+
+    @Test
+    public void testDiscardReadBytesCorrectlyUpdatesLastAccessed() {
+        testDiscardCorrectlyUpdatesLastAccessed(false);
+    }
+
+    private static void testDiscardCorrectlyUpdatesLastAccessed(boolean discardSome) {
+        CompositeByteBuf cbuf = compositeBuffer();
+        List<ByteBuf> buffers = new ArrayList<ByteBuf>(4);
+        for (int i = 0; i < 4; i++) {
+            ByteBuf buf = buffer().writeInt(i);
+            cbuf.addComponent(true, buf);
+            buffers.add(buf);
+        }
+
+        // Skip the first 2 bytes which means even if we call discard*ReadBytes() later we can no drop the first
+        // component as it is still used.
+        cbuf.skipBytes(2);
+        if (discardSome) {
+            cbuf.discardSomeReadBytes();
+        } else {
+            cbuf.discardReadBytes();
+        }
+        assertEquals(4, cbuf.numComponents());
+
+        // Now skip 3 bytes which means we should be able to drop the first component on the next discard*ReadBytes()
+        // call.
+        cbuf.skipBytes(3);
+
+        if (discardSome) {
+            cbuf.discardSomeReadBytes();
+        } else {
+            cbuf.discardReadBytes();
+        }
+        assertEquals(3, cbuf.numComponents());
+        // Now skip again 3 bytes which should bring our readerIndex == start of the 3 component.
+        cbuf.skipBytes(3);
+
+        // Read one int (4 bytes) which should bring our readerIndex == start of the 4 component.
+        assertEquals(2, cbuf.readInt());
+        if (discardSome) {
+            cbuf.discardSomeReadBytes();
+        } else {
+            cbuf.discardReadBytes();
+        }
+
+        // Now all except the last component should have been dropped / released.
+        assertEquals(1, cbuf.numComponents());
+        assertEquals(3, cbuf.readInt());
+        if (discardSome) {
+            cbuf.discardSomeReadBytes();
+        } else {
+            cbuf.discardReadBytes();
+        }
+        assertEquals(0, cbuf.numComponents());
+
+        // These should have been released already.
+        for (ByteBuf buffer: buffers) {
+            assertEquals(0, buffer.refCnt());
+        }
+        assertTrue(cbuf.release());
+    }
 }
