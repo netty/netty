@@ -27,6 +27,8 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.NetUtil;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -89,6 +91,7 @@ public class Http2MultiplexCodecTransportTest {
                         if (msg instanceof Http2SettingsAckFrame) {
                             serverAckLatch.countDown();
                         }
+                        ReferenceCountUtil.release(msg);
                     }
                 });
             }
@@ -109,6 +112,7 @@ public class Http2MultiplexCodecTransportTest {
                         if (msg instanceof Http2SettingsFrame) {
                             clientSettingsLatch.countDown();
                         }
+                        ReferenceCountUtil.release(msg);
                     }
                 });
             }
