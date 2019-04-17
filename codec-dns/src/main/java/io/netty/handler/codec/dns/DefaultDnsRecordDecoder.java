@@ -29,7 +29,6 @@ import static io.netty.handler.codec.dns.util.DnsNameLabelUtil.decodeName;
 @UnstableApi
 public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
 
-
     /**
      * Creates a new instance.
      */
