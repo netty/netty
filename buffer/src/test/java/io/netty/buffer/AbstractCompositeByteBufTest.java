@@ -1458,7 +1458,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         List<ByteBuf> buffers = new ArrayList<ByteBuf>(4);
         for (int i = 0; i < 4; i++) {
             ByteBuf buf = buffer().writeInt(i);
-            cbuf.capacity(cbuf.writerIndex()).addComponent(true, buf);
+            cbuf.addComponent(true, buf);
             buffers.add(buf);
         }
 
