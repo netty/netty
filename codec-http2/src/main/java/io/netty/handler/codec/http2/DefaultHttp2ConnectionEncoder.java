@@ -25,7 +25,6 @@ import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregato
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.Queue;
 
 import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
@@ -47,7 +46,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     private Http2LifecycleManager lifecycleManager;
     // We prefer ArrayDeque to LinkedList because later will produce more GC.
     // This initial capacity is plenty for SETTINGS traffic.
-    private final Deque<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<Http2Settings>(4);
+    private final Queue<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<Http2Settings>(4);
     private Queue<Http2Settings> outstandingRemoteSettingsQueue;
 
     public DefaultHttp2ConnectionEncoder(Http2Connection connection, Http2FrameWriter frameWriter) {
@@ -299,14 +298,21 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         frameWriter.writeSettingsAck(ctx, aggregator);
 
         Http2Settings settings = outstandingRemoteSettingsQueue.poll();
+        // We create a "new promise" to make sure that status from both the write and the application are taken into
+        // account independently.
+        ChannelPromise applySettingsPromise = aggregator.newPromise();
         if (settings == null) {
-            aggregator.setFailure(connectionError(PROTOCOL_ERROR,
+            applySettingsPromise.setFailure(connectionError(PROTOCOL_ERROR,
                     "SETTINGS ACK sent with no pending SETTINGS frame"));
+            // We don't propagate the failure to lifecycleManager because this is an unsolicited ACK from the local
+            // application. From the protocol perspective this isn't necessarily a problem as there is no
+            // "invalid frame" or protocol inconsistencies.
         } else {
             try {
                 remoteSettings(settings);
+                applySettingsPromise.setSuccess();
             } catch (Throwable e) {
-                aggregator.setFailure(e);
+                applySettingsPromise.setFailure(e);
                 lifecycleManager.onError(ctx, true, e);
             }
         }

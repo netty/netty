@@ -28,7 +28,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -122,7 +121,7 @@ public class Http2MultiplexCodecTransportTest {
         serverConnectedChannel = serverConnectedChannelRef.get();
 
         serverConnectedChannel.writeAndFlush(new DefaultHttp2SettingsFrame(new Http2Settings()
-                .maxConcurrentStreams(10)));
+                .maxConcurrentStreams(10))).sync();
 
         clientSettingsLatch.await();
 
@@ -131,8 +130,8 @@ public class Http2MultiplexCodecTransportTest {
 
         // We expect 2 settings frames, the initial settings frame during connection establishment and the setting frame
         // written in this test. We should ack both of these settings frames.
-        clientChannel.write(DefaultHttp2SettingsAckFrame.INSTANCE);
-        clientChannel.writeAndFlush(DefaultHttp2SettingsAckFrame.INSTANCE);
+        clientChannel.writeAndFlush(DefaultHttp2SettingsAckFrame.INSTANCE).sync();
+        clientChannel.writeAndFlush(DefaultHttp2SettingsAckFrame.INSTANCE).sync();
 
         serverAckLatch.await();
     }

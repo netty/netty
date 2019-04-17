@@ -23,7 +23,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.List;
 import java.util.Queue;
 
@@ -60,7 +59,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private final Http2FrameReader frameReader;
     private Http2FrameListener listener;
     private final Http2PromisedRequestVerifier requestVerifier;
-    private final Deque<Http2Settings> outstandingRemoteSettingsQueue;
+    private final Queue<Http2Settings> outstandingRemoteSettingsQueue;
 
     public DefaultHttp2ConnectionDecoder(Http2Connection connection,
                                          Http2ConnectionEncoder encoder,
