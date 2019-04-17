@@ -21,9 +21,11 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.CoalescingBufferQueue;
 import io.netty.handler.codec.http.HttpStatusClass;
+import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
+import java.util.Queue;
 
 import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
@@ -45,6 +47,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     // We prefer ArrayDeque to LinkedList because later will produce more GC.
     // This initial capacity is plenty for SETTINGS traffic.
     private final ArrayDeque<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<Http2Settings>(4);
+    private Queue<Http2Settings> outstandingRemoteSettingsQueue;
 
     public DefaultHttp2ConnectionEncoder(Http2Connection connection, Http2FrameWriter frameWriter) {
         this.connection = checkNotNull(connection, "connection");
@@ -52,6 +55,16 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         if (connection.remote().flowController() == null) {
             connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection));
         }
+    }
+
+    /**
+     * Set the queue that retains SETTINGS frames received from the remote peer. This will be used when sending
+     * SETTING(ack) frames to apply the settings locally.
+     *
+     * @param outstandingRemoteSettingsQueue the queue that retains SETTINGS frames received from the remote peer.
+     */
+    public final void outstandingRemoteSettingsQueue(Queue<Http2Settings> outstandingRemoteSettingsQueue) {
+        this.outstandingRemoteSettingsQueue = outstandingRemoteSettingsQueue;
     }
 
     @Override
@@ -274,7 +287,29 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
     @Override
     public ChannelFuture writeSettingsAck(ChannelHandlerContext ctx, ChannelPromise promise) {
-        return frameWriter.writeSettingsAck(ctx, promise);
+        if (outstandingRemoteSettingsQueue == null) {
+            return frameWriter.writeSettingsAck(ctx, promise);
+        }
+        SimpleChannelPromiseAggregator aggregator = new SimpleChannelPromiseAggregator(promise, ctx.channel(),
+                ctx.executor());
+        // Acknowledge receipt of the settings. We should do this before we process the settings to ensure our
+        // remote peer applies these settings before any subsequent frames that we may send which depend upon
+        // these new settings. See https://github.com/netty/netty/issues/6520.
+        frameWriter.writeSettingsAck(ctx, aggregator);
+
+        Http2Settings settings = outstandingRemoteSettingsQueue.poll();
+        if (settings == null) {
+            aggregator.setFailure(connectionError(PROTOCOL_ERROR,
+                    "SETTINGS ACK sent with no pending SETTINGS frame"));
+        } else {
+            try {
+                remoteSettings(settings);
+            } catch (Throwable e) {
+                aggregator.setFailure(e);
+                lifecycleManager.onError(ctx, true, e);
+            }
+        }
+        return aggregator.doneAllocatingPromises();
     }
 
     @Override

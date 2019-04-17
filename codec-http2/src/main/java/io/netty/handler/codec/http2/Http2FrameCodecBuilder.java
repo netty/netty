@@ -158,11 +158,12 @@ public class Http2FrameCodecBuilder extends
                 frameWriter = new Http2OutboundFrameLogger(frameWriter, frameLogger());
                 frameReader = new Http2InboundFrameLogger(frameReader, frameLogger());
             }
-            Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
-            if (encoderEnforceMaxConcurrentStreams()) {
-                encoder = new StreamBufferingEncoder(encoder);
-            }
-            Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader);
+            DefaultHttp2ConnectionEncoder defaultEncoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
+            Http2ConnectionEncoder encoder = encoderEnforceMaxConcurrentStreams() ?
+                    new StreamBufferingEncoder(defaultEncoder) : defaultEncoder;
+            DefaultHttp2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader,
+                    promisedRequestVerifier(), isAutoAckSettings());
+            defaultEncoder.outstandingRemoteSettingsQueue(decoder.outstandingRemoteSettingsQueue());
 
             return build(decoder, encoder, initialSettings());
         }

@@ -46,12 +46,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static io.netty.util.ReferenceCountUtil.release;
 import static io.netty.handler.codec.http2.Http2TestUtil.anyChannelPromise;
 import static io.netty.handler.codec.http2.Http2TestUtil.anyHttp2Settings;
 import static io.netty.handler.codec.http2.Http2TestUtil.assertEqualsAndRelease;
 import static io.netty.handler.codec.http2.Http2TestUtil.bb;
-
+import static io.netty.util.ReferenceCountUtil.release;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -107,6 +106,8 @@ public class Http2MultiplexCodecTest {
 
         Http2SettingsFrame settingsFrame = parentChannel.readInbound();
         assertNotNull(settingsFrame);
+        Http2SettingsAckFrame settingsAckFrame = parentChannel.readInbound();
+        assertNotNull(settingsAckFrame);
 
         // Handshake
         verify(frameWriter).writeSettings(eqMultiplexCodecCtx(),
