@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -82,4 +83,12 @@ public interface DnsRecord {
      * Returns the time to live after reading for this resource record.
      */
     long timeToLive();
+
+    /**
+     * Decodes the record data.
+     *
+     * @param in full dns packet content
+     * @param length record data length
+     */
+    void decodeRdata(ByteBuf in, int length);
 }
