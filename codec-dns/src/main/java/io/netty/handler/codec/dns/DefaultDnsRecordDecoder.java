@@ -20,7 +20,7 @@ import io.netty.handler.codec.dns.rdata.DnsRDataRecordDecoder;
 import io.netty.handler.codec.dns.rdata.DnsRDataRecordDecoders;
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.handler.codec.dns.util.DnsNameLabelUtil.*;
+import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
 
 /**
  * The default {@link DnsRecordDecoder} implementation.
@@ -37,7 +37,7 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
 
     @Override
     public final DnsQuestion decodeQuestion(ByteBuf in) throws Exception {
-        String name = decodeName(in);
+        String name = decodeDomainName(in);
         DnsRecordType type = DnsRecordType.valueOf(in.readUnsignedShort());
         int qClass = in.readUnsignedShort();
         return new DefaultDnsQuestion(name, type, qClass);
@@ -46,7 +46,7 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
     @Override
     public final <T extends DnsRecord> T decodeRecord(ByteBuf in) throws Exception {
         final int startOffset = in.readerIndex();
-        final String name = decodeName(in);
+        final String name = decodeDomainName(in);
 
         final int endOffset = in.writerIndex();
         if (endOffset - startOffset < 10) {
@@ -110,7 +110,7 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
      * @return the domain name for an entry
      */
     protected String decodeName0(ByteBuf in) {
-        return decodeName(in);
+        return decodeDomainName(in);
     }
 
 }

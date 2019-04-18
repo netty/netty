@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.dns.record.DnsCNAMERecord;
 import io.netty.handler.codec.dns.record.DnsPTRRecord;
-import io.netty.handler.codec.dns.util.DnsNameLabelUtil;
+import io.netty.handler.codec.dns.util.DnsDecodeUtil;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -108,11 +108,11 @@ public class DefaultDnsRecordDecoderTest {
         ByteBuf buffer = Unpooled.wrappedBuffer(rfcExample);
         try {
             // First lets test that our utility function can correctly handle index references and decompression.
-            String plainName = DnsNameLabelUtil.decodeName(buffer.duplicate());
+            String plainName = DnsDecodeUtil.decodeDomainName(buffer.duplicate());
             assertEquals("F.ISI.ARPA.", plainName);
-            String uncompressedPlainName = DnsNameLabelUtil.decodeName(buffer.duplicate().setIndex(16, 20));
+            String uncompressedPlainName = DnsDecodeUtil.decodeDomainName(buffer.duplicate().setIndex(16, 20));
             assertEquals(plainName, uncompressedPlainName);
-            String uncompressedIndexedName = DnsNameLabelUtil.decodeName(buffer.duplicate().setIndex(12, 20));
+            String uncompressedIndexedName = DnsDecodeUtil.decodeDomainName(buffer.duplicate().setIndex(12, 20));
             assertEquals("FOO." + plainName, uncompressedIndexedName);
 
             // Now lets make sure out object parsing produces the same results for non PTR type (just use CNAME).

@@ -21,18 +21,24 @@ import io.netty.handler.codec.dns.DnsRecordType;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
-/**
- * Dns {@link DnsRecordType#PTR} record.
- */
-public class DnsPTRRecord extends AbstractDnsRecord {
-    private final String ptr;
+public class DNSRPRecord extends AbstractDnsRecord {
+    // A domain name that specifies the mailbox for the responsible person.
+    private final String mbox;
 
-    public DnsPTRRecord(String name, int dnsClass, long timeToLive, String ptr) {
-        super(name, DnsRecordType.PTR, dnsClass, timeToLive);
-        this.ptr = checkNotNull(ptr, "ptr");
+    // A domain name for which TXT RR's exist
+    private final String txt;
+
+    public DNSRPRecord(String name, int dnsClass, long timeToLive, String mbox, String txt) {
+        super(name, DnsRecordType.RP, dnsClass, timeToLive);
+        this.mbox = checkNotNull(mbox, "mbox");
+        this.txt = checkNotNull(txt, "txt");
     }
 
-    public String ptr() {
-        return ptr;
+    public String mbox() {
+        return mbox;
+    }
+
+    public String txt() {
+        return txt;
     }
 }

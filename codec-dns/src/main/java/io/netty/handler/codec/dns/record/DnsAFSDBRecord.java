@@ -22,17 +22,27 @@ import io.netty.handler.codec.dns.DnsRecordType;
 import static io.netty.util.internal.ObjectUtil.*;
 
 /**
- * Dns {@link DnsRecordType#PTR} record.
+ * Dns {@link DnsRecordType#AFSDB} record.
  */
-public class DnsPTRRecord extends AbstractDnsRecord {
-    private final String ptr;
+public class DnsAFSDBRecord extends AbstractDnsRecord {
+    // The subtype field is a 16 bit integer
+    private final short subtype;
 
-    public DnsPTRRecord(String name, int dnsClass, long timeToLive, String ptr) {
-        super(name, DnsRecordType.PTR, dnsClass, timeToLive);
-        this.ptr = checkNotNull(ptr, "ptr");
+    //The hostname field is a domain name of a host that has a server for the cell named by the owner name of the RR.
+    private final String hostname;
+
+    public DnsAFSDBRecord(String name, int dnsClass, long timeToLive, short subtype,
+                          String hostname) {
+        super(name, DnsRecordType.AFSDB, dnsClass, timeToLive);
+        this.subtype = subtype;
+        this.hostname = checkNotNull(hostname, "hostname");
     }
 
-    public String ptr() {
-        return ptr;
+    public short subtype() {
+        return subtype;
+    }
+
+    public String hostname() {
+        return hostname;
     }
 }

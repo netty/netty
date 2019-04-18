@@ -18,14 +18,18 @@ package io.netty.handler.codec.dns.rdata;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.dns.record.DnsNSRecord;
-import io.netty.handler.codec.dns.util.DnsNameLabelUtil;
 
+import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
+
+/**
+ * Decoder for {@link DnsNSRecord}.
+ */
 public class DnsNSRecordDecoder implements DnsRDataRecordDecoder<DnsNSRecord> {
     public static final DnsNSRecordDecoder DEFAULT = new DnsNSRecordDecoder();
 
     @Override
     public DnsNSRecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
-        String ns = DnsNameLabelUtil.decodeName(rData);
+        String ns = decodeDomainName(rData);
         return new DnsNSRecord(name, dnsClass, timeToLive, ns);
     }
 }

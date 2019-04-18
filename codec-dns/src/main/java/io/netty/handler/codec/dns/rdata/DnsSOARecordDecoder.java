@@ -19,15 +19,20 @@ package io.netty.handler.codec.dns.rdata;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.dns.record.DnsSOARecord;
-import io.netty.handler.codec.dns.util.DnsNameLabelUtil;
+import io.netty.handler.codec.dns.util.DnsDecodeUtil;
 
+import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
+
+/**
+ * Decoder for {@link DnsSOARecord}.
+ */
 public class DnsSOARecordDecoder implements DnsRDataRecordDecoder<DnsSOARecord> {
     public static final DnsSOARecordDecoder DEFAULT = new DnsSOARecordDecoder();
 
     @Override
     public DnsSOARecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
-        String ns = DnsNameLabelUtil.decodeName(rData);
-        String mailboxNs = DnsNameLabelUtil.decodeName(rData);
+        String ns = decodeDomainName(rData);
+        String mailboxNs = decodeDomainName(rData);
         if (!rData.isReadable(Integer.BYTES)) {
             throw new CorruptedFrameException("illegal soa serial length");
         }
@@ -45,9 +50,4 @@ public class DnsSOARecordDecoder implements DnsRDataRecordDecoder<DnsSOARecord> 
                                 serial, refresh, retry, expire, minttl);
     }
 
-    private void checkIntReadable(ByteBuf rData, String fieldName) {
-        if (!rData.isReadable(Integer.BYTES)) {
-            throw new CorruptedFrameException("illegal " + fieldName + " serial length");
-        }
-    }
 }
