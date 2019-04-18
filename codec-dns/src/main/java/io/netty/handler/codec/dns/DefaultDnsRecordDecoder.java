@@ -16,7 +16,8 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.record.DnsRecordFactory;
+import io.netty.handler.codec.dns.rdata.DnsRDataRecordDecoder;
+import io.netty.handler.codec.dns.rdata.DnsRDataRecordDecoders;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.dns.util.DnsNameLabelUtil.*;
@@ -93,7 +94,11 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
         // indexes un-obstructed, and thus we cannot use a slice here.
         // See https://www.ietf.org/rfc/rfc1035 [4.1.4. Message compression]
         ByteBuf rData = in.retainedDuplicate().setIndex(offset, offset + length);
-        return DnsRecordFactory.getInstance().dnsRecord(name, type, dnsClass, timeToLive, rData);
+        DnsRDataRecordDecoder<? extends DnsRecord> rDataRecordDecoder = DnsRDataRecordDecoders.rDataDecoder(type);
+        if (rDataRecordDecoder != null) {
+            return rDataRecordDecoder.decodeRecordWithHeader(name, dnsClass, timeToLive, rData);
+        }
+        return new DefaultDnsRawRecord(name, type, dnsClass, timeToLive, rData);
     }
 
     /**

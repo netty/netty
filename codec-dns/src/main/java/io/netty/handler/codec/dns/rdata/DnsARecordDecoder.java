@@ -18,34 +18,28 @@ package io.netty.handler.codec.dns.rdata;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.handler.codec.dns.record.DnsARecord;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-public class DnsARdataDecoder implements DnsRdataDecoder<InetAddress> {
-    public static final DnsARdataDecoder DEFAULT = new DnsARdataDecoder();
+public class DnsARecordDecoder implements DnsRDataRecordDecoder<DnsARecord> {
+    public static final DnsARecordDecoder DEFAULT = new DnsARecordDecoder();
     private static final int IPV4_LEN = 4;
 
-    /**
-     * Decode record data to {@link InetAddress}.
-     *
-     * @param in record data
-     *
-     * @return ipv4 address
-     *
-     * @throws CorruptedFrameException if the record data frame is illegal
-     */
     @Override
-    public InetAddress decodeRdata(ByteBuf in) {
-        if (in.readableBytes() < IPV4_LEN) {
+    public DnsARecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
+        if (rData.readableBytes() < IPV4_LEN) {
             throw new CorruptedFrameException("illegal ipv4 length");
         }
-        byte[] address = new byte[IPV4_LEN];
-        in.readBytes(address);
+        byte[] addressBytes = new byte[IPV4_LEN];
+        rData.readBytes(addressBytes);
+        InetAddress address;
         try {
-            return InetAddress.getByAddress(address);
+            address = InetAddress.getByAddress(addressBytes);
         } catch (UnknownHostException e) {
             throw new CorruptedFrameException("unknown ipv4 host", e);
         }
+        return new DnsARecord(name, dnsClass, timeToLive, address);
     }
 }

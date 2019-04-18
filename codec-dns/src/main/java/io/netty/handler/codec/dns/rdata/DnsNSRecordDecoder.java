@@ -17,20 +17,15 @@
 package io.netty.handler.codec.dns.rdata;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.dns.record.DnsNSRecord;
 import io.netty.handler.codec.dns.util.DnsNameLabelUtil;
 
-public class DnsTextRdataDecoder implements DnsRdataDecoder<String> {
-    public static final DnsTextRdataDecoder DEFAULT = new DnsTextRdataDecoder();
+public class DnsNSRecordDecoder implements DnsRDataRecordDecoder<DnsNSRecord> {
+    public static final DnsNSRecordDecoder DEFAULT = new DnsNSRecordDecoder();
 
-    /**
-     * Decode dns record data to text presentation.
-     *
-     * @param in record data
-     *
-     * @return text presentation
-     */
     @Override
-    public String decodeRdata(ByteBuf in) {
-        return DnsNameLabelUtil.decodeName(in);
+    public DnsNSRecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
+        String ns = DnsNameLabelUtil.decodeName(rData);
+        return new DnsNSRecord(name, dnsClass, timeToLive, ns);
     }
 }

@@ -18,34 +18,28 @@ package io.netty.handler.codec.dns.rdata;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.handler.codec.dns.record.DnsAAAARecord;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-public class DnsAAAARdataDecoder implements DnsRdataDecoder<InetAddress> {
-    public static final DnsAAAARdataDecoder DEFAULT = new DnsAAAARdataDecoder();
+public class DnsAAAARecordDecoder implements DnsRDataRecordDecoder<DnsAAAARecord> {
+    public static final DnsAAAARecordDecoder DEFAULT = new DnsAAAARecordDecoder();
     private static final int IPV6_LEN = 16;
 
-    /**
-     * Decode record data to {@link InetAddress}.
-     *
-     * @param in record data
-     *
-     * @return ipv6 address
-     *
-     * @throws CorruptedFrameException if the record data frame is illegal
-     */
     @Override
-    public InetAddress decodeRdata(ByteBuf in) {
-        if (in.readableBytes() < IPV6_LEN) {
+    public DnsAAAARecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
+        if (rData.readableBytes() < IPV6_LEN) {
             throw new CorruptedFrameException("illegal ipv6 length");
         }
-        byte[] address = new byte[IPV6_LEN];
-        in.readBytes(address);
+        byte[] addressBytes = new byte[IPV6_LEN];
+        rData.readBytes(addressBytes);
+        InetAddress address;
         try {
-            return InetAddress.getByAddress(address);
+            address = InetAddress.getByAddress(addressBytes);
         } catch (UnknownHostException e) {
             throw new CorruptedFrameException("unknown ipv6 host", e);
         }
+        return new DnsAAAARecord(name, dnsClass, timeToLive, address);
     }
 }
