@@ -757,7 +757,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         synchronized (threadLock) {
             long remainingNanos;
             while (!isTerminated() && (remainingNanos = deadline - System.nanoTime()) > 0L) {
-                threadLock.wait(remainingNanos / 1000000L, (int) (remainingNanos % 1000000L));
+                TimeUnit.NANOSECONDS.timedWait(threadLock, remainingNanos);
             }
         }
 
@@ -965,8 +965,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
                             thread = nonVolatileThread = null;
 
+                            STATE_UPDATER.set(SingleThreadEventExecutor.this, ST_TERMINATED);
                             synchronized (threadLock) {
-                                STATE_UPDATER.set(SingleThreadEventExecutor.this, ST_TERMINATED);
                                 threadLock.notifyAll();
                             }
                             if (logger.isWarnEnabled() && !taskQueue.isEmpty()) {
