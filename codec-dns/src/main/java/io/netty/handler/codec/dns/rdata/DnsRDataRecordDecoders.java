@@ -31,8 +31,13 @@ public final class DnsRDataRecordDecoders {
         DECODERS.put(DnsRecordType.NS, DnsNSRecordDecoder.DEFAULT);
         DECODERS.put(DnsRecordType.CNAME, DnsCNAMERecordDecoder.DEFAULT);
         DECODERS.put(DnsRecordType.SOA, DnsSOARecordDecoder.DEFAULT);
-        DECODERS.put(DnsRecordType.AAAA, DnsAAAARecordDecoder.DEFAULT);
         DECODERS.put(DnsRecordType.PTR, DnsPTRRecordDecoder.DEFAULT);
+        DECODERS.put(DnsRecordType.MX, DnsMXRecordDecoder.DEFAULT);
+        DECODERS.put(DnsRecordType.TXT, DnsTXTRecordDecoder.DEFAULT);
+        DECODERS.put(DnsRecordType.RP, DnsRPRecordDecoder.DEFAULT);
+        DECODERS.put(DnsRecordType.AFSDB, DnsAFSDBRecordDecoder.DEFAULT);
+        DECODERS.put(DnsRecordType.SIG, DnsSIGRecordDecoder.DEFAULT);
+        DECODERS.put(DnsRecordType.AAAA, DnsAAAARecordDecoder.DEFAULT);
     }
 
     private DnsRDataRecordDecoders() {

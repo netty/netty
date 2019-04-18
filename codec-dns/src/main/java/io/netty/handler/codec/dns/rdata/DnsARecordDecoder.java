@@ -23,15 +23,18 @@ import io.netty.handler.codec.dns.record.DnsARecord;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
+
+/**
+ * Decoder for {@link DnsARecord}.
+ */
 public class DnsARecordDecoder implements DnsRDataRecordDecoder<DnsARecord> {
     public static final DnsARecordDecoder DEFAULT = new DnsARecordDecoder();
     private static final int IPV4_LEN = 4;
 
     @Override
     public DnsARecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
-        if (rData.readableBytes() < IPV4_LEN) {
-            throw new CorruptedFrameException("illegal ipv4 length");
-        }
+        checkReadable(rData, IPV4_LEN, "ipv4");
         byte[] addressBytes = new byte[IPV4_LEN];
         rData.readBytes(addressBytes);
         InetAddress address;

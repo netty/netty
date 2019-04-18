@@ -17,19 +17,18 @@
 package io.netty.handler.codec.dns.rdata;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.record.DnsCNAMERecord;
+import io.netty.handler.codec.dns.record.DNSRPRecord;
 
 import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
 
-/**
- * Decoder for {@link DnsCNAMERecord}.
- */
-public class DnsCNAMERecordDecoder implements DnsRDataRecordDecoder<DnsCNAMERecord> {
-    public static final DnsCNAMERecordDecoder DEFAULT = new DnsCNAMERecordDecoder();
+public class DnsRPRecordDecoder implements DnsRDataRecordDecoder<DNSRPRecord> {
+    public static final DnsRPRecordDecoder DEFAULT = new DnsRPRecordDecoder();
 
     @Override
-    public DnsCNAMERecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
-        String target = decodeDomainName(rData);
-        return new DnsCNAMERecord(name, dnsClass, timeToLive, target);
+    public DNSRPRecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
+        String mbox = decodeDomainName(rData);
+        String txt = decodeDomainName(rData);
+        return new DNSRPRecord(name, dnsClass, timeToLive, mbox, txt);
     }
 }
+

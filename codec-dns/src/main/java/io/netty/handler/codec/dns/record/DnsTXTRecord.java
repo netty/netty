@@ -14,22 +14,26 @@
  * under the License.
  */
 
-package io.netty.handler.codec.dns.rdata;
+package io.netty.handler.codec.dns.record;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.record.DnsCNAMERecord;
+import io.netty.handler.codec.dns.AbstractDnsRecord;
+import io.netty.handler.codec.dns.DnsRecordType;
 
-import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
- * Decoder for {@link DnsCNAMERecord}.
+ * Dns {@link DnsRecordType#TXT} record.
  */
-public class DnsCNAMERecordDecoder implements DnsRDataRecordDecoder<DnsCNAMERecord> {
-    public static final DnsCNAMERecordDecoder DEFAULT = new DnsCNAMERecordDecoder();
+public class DnsTXTRecord extends AbstractDnsRecord {
+    // One or more <character-string>s.
+    private final String txt;
 
-    @Override
-    public DnsCNAMERecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
-        String target = decodeDomainName(rData);
-        return new DnsCNAMERecord(name, dnsClass, timeToLive, target);
+    public DnsTXTRecord(String name, int dnsClass, long timeToLive, String txt) {
+        super(name, DnsRecordType.TXT, dnsClass, timeToLive);
+        this.txt = checkNotNull(txt, "txt");
+    }
+
+    public String txt() {
+        return txt;
     }
 }

@@ -21,18 +21,30 @@ import io.netty.handler.codec.dns.DnsRecordType;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
-/**
- * Dns {@link DnsRecordType#PTR} record.
- */
-public class DnsPTRRecord extends AbstractDnsRecord {
-    private final String ptr;
 
-    public DnsPTRRecord(String name, int dnsClass, long timeToLive, String ptr) {
-        super(name, DnsRecordType.PTR, dnsClass, timeToLive);
-        this.ptr = checkNotNull(ptr, "ptr");
+/**
+ * Dns {@link DnsRecordType#MX} record.
+ */
+public class DnsMXRecord extends AbstractDnsRecord {
+    // A 16 bit integer which specifies the preference given to this RR among
+    // others at the same owner.  Lower values are preferred.
+    private final short preference;
+
+    //A <domain-name> which specifies a host willing to act asa mail exchange for the owner name.
+    private final String exchange;
+
+    public DnsMXRecord(String name, int dnsClass, long timeToLive, short preference,
+                       String exchange) {
+        super(name, DnsRecordType.MX, dnsClass, timeToLive);
+        this.preference = preference;
+        this.exchange = checkNotNull(exchange, "exchange");
     }
 
-    public String ptr() {
-        return ptr;
+    public short preference() {
+        return preference;
+    }
+
+    public String exchange() {
+        return exchange;
     }
 }

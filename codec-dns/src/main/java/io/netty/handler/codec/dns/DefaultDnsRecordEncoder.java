@@ -21,7 +21,8 @@ import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.handler.codec.dns.util.DnsNameLabelUtil.ROOT;
+import static io.netty.handler.codec.dns.util.DnsDecodeUtil.ROOT;
+
 /**
  * The default {@link DnsRecordEncoder} implementation.
  *

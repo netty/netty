@@ -18,12 +18,15 @@ package io.netty.handler.codec.dns.util;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.handler.codec.base64.Base64;
 import io.netty.util.CharsetUtil;
 
-public final class DnsNameLabelUtil {
+import java.nio.charset.Charset;
+
+public final class DnsDecodeUtil {
     public static final String ROOT = ".";
 
-    private DnsNameLabelUtil() {
+    private DnsDecodeUtil() {
         // Private constructor for util class
     }
 
@@ -35,7 +38,7 @@ public final class DnsNameLabelUtil {
      *
      * @return the domain name for an entry
      */
-    public static String decodeName(ByteBuf in) {
+    public static String decodeDomainName(ByteBuf in) {
         int position = -1;
         int checked = 0;
         final int end = in.writerIndex();
@@ -100,5 +103,27 @@ public final class DnsNameLabelUtil {
         }
 
         return name.toString();
+    }
+
+    public static String decodeStringBase64(ByteBuf in) {
+        return Base64.decode(in).toString(Charset.forName("utf-8"));
+    }
+
+    public static void checkByteReadable(ByteBuf in, String fieldName) {
+        checkReadable(in, Byte.BYTES, fieldName);
+    }
+
+    public static void checkShortReadable(ByteBuf in, String fieldName) {
+        checkReadable(in, Short.BYTES, fieldName);
+    }
+
+    public static void checkIntReadable(ByteBuf in, String fieldName) {
+        checkReadable(in, Integer.BYTES, fieldName);
+    }
+
+    public static void checkReadable(ByteBuf in, int size, String fieldName) {
+        if (!in.isReadable(size)) {
+            throw new CorruptedFrameException("illgal " + fieldName + " length");
+        }
     }
 }
