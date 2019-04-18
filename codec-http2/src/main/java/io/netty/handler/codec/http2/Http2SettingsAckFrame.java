@@ -22,6 +22,8 @@ package io.netty.handler.codec.http2;
  * order, so this ACK will apply to the earliest received and not yet ACKed {@link Http2SettingsFrame} frame.
  */
 public interface Http2SettingsAckFrame extends Http2Frame {
+    Http2SettingsAckFrame INSTANCE = new DefaultHttp2SettingsAckFrame();
+
     @Override
     String name();
 }

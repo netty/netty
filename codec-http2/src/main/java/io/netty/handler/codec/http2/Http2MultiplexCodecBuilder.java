@@ -171,8 +171,8 @@ public class Http2MultiplexCodecBuilder
     }
 
     @Override
-    public Http2MultiplexCodecBuilder autoAckSettings(boolean autoAckSettings) {
-        return super.autoAckSettings(autoAckSettings);
+    public Http2MultiplexCodecBuilder autoAckSettingsFrame(boolean autoAckSettings) {
+        return super.autoAckSettingsFrame(autoAckSettings);
     }
 
     @Override
@@ -195,7 +195,7 @@ public class Http2MultiplexCodecBuilder
             Http2ConnectionEncoder encoder = encoderEnforceMaxConcurrentStreams() ?
                     new StreamBufferingEncoder(defaultEncoder) : defaultEncoder;
             DefaultHttp2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader,
-                    promisedRequestVerifier(), isAutoAckSettings());
+                    promisedRequestVerifier(), isAutoAckSettingsFrame());
             defaultEncoder.outstandingRemoteSettingsQueue(decoder.outstandingRemoteSettingsQueue());
 
             return build(decoder, encoder, initialSettings());

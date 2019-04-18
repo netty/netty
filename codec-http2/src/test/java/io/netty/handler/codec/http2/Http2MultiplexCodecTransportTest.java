@@ -67,7 +67,8 @@ public class Http2MultiplexCodecTransportTest {
     @Test(timeout = 10000)
     public void asyncSettingsAck() throws InterruptedException {
         // The client expects 2 settings frames. One from the connection setup and one from this test.
-        final CountDownLatch serverAckLatch = new CountDownLatch(2);
+        final CountDownLatch serverAckOneLatch = new CountDownLatch(1);
+        final CountDownLatch serverAckAllLatch = new CountDownLatch(2);
         final CountDownLatch clientSettingsLatch = new CountDownLatch(2);
         final CountDownLatch serverConnectedChannelLatch = new CountDownLatch(1);
         final AtomicReference<Channel> serverConnectedChannelRef = new AtomicReference<Channel>();
@@ -88,7 +89,8 @@ public class Http2MultiplexCodecTransportTest {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         if (msg instanceof Http2SettingsAckFrame) {
-                            serverAckLatch.countDown();
+                            serverAckOneLatch.countDown();
+                            serverAckAllLatch.countDown();
                         }
                         ReferenceCountUtil.release(msg);
                     }
@@ -104,7 +106,7 @@ public class Http2MultiplexCodecTransportTest {
             @Override
             protected void initChannel(Channel ch) {
                 ch.pipeline().addLast(Http2MultiplexCodecBuilder
-                        .forClient(new HttpInboundHandler()).autoAckSettings(false).build());
+                        .forClient(new HttpInboundHandler()).autoAckSettingsFrame(false).build());
                 ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -126,14 +128,14 @@ public class Http2MultiplexCodecTransportTest {
         clientSettingsLatch.await();
 
         // We expect a timeout here because we want to asynchronously generate the SETTINGS ACK below.
-        assertFalse(serverAckLatch.await(300, MILLISECONDS));
+        assertFalse(serverAckOneLatch.await(300, MILLISECONDS));
 
         // We expect 2 settings frames, the initial settings frame during connection establishment and the setting frame
         // written in this test. We should ack both of these settings frames.
-        clientChannel.writeAndFlush(DefaultHttp2SettingsAckFrame.INSTANCE).sync();
-        clientChannel.writeAndFlush(DefaultHttp2SettingsAckFrame.INSTANCE).sync();
+        clientChannel.writeAndFlush(Http2SettingsAckFrame.INSTANCE).sync();
+        clientChannel.writeAndFlush(Http2SettingsAckFrame.INSTANCE).sync();
 
-        serverAckLatch.await();
+        serverAckAllLatch.await();
     }
 
     @ChannelHandler.Sharable

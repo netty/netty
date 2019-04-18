@@ -20,13 +20,7 @@ import io.netty.util.internal.StringUtil;
 /**
  * The default {@link Http2SettingsAckFrame} implementation.
  */
-public final class DefaultHttp2SettingsAckFrame implements Http2SettingsAckFrame {
-    public static final Http2SettingsAckFrame INSTANCE = new DefaultHttp2SettingsAckFrame();
-
-    private DefaultHttp2SettingsAckFrame() {
-        // singleton
-    }
-
+final class DefaultHttp2SettingsAckFrame implements Http2SettingsAckFrame {
     @Override
     public String name() {
         return "SETTINGS(ACK)";

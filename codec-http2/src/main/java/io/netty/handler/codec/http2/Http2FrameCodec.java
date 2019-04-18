@@ -576,7 +576,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         @Override
         public void onSettingsAckRead(ChannelHandlerContext ctx) {
-            onHttp2Frame(ctx, DefaultHttp2SettingsAckFrame.INSTANCE);
+            onHttp2Frame(ctx, Http2SettingsAckFrame.INSTANCE);
         }
 
         @Override

@@ -106,7 +106,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private Boolean encoderIgnoreMaxHeaderListSize;
     private int initialHuffmanDecodeCapacity = DEFAULT_INITIAL_HUFFMAN_DECODE_CAPACITY;
     private Http2PromisedRequestVerifier promisedRequestVerifier = ALWAYS_VERIFY;
-    private boolean autoAckSettings = true;
+    private boolean autoAckSettingsFrame = true;
 
     /**
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
@@ -375,6 +375,10 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         return self();
     }
 
+    /**
+     * Get the {@link Http2PromisedRequestVerifier} to use.
+     * @return the {@link Http2PromisedRequestVerifier} to use.
+     */
     protected Http2PromisedRequestVerifier promisedRequestVerifier() {
         return promisedRequestVerifier;
     }
@@ -383,14 +387,18 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * Determine if settings frame should automatically be acknowledged and applied.
      * @return this.
      */
-    protected B autoAckSettings(boolean autoAckSettings) {
-        enforceNonCodecConstraints("autoAckSettings");
-        this.autoAckSettings = autoAckSettings;
+    protected B autoAckSettingsFrame(boolean autoAckSettings) {
+        enforceNonCodecConstraints("autoAckSettingsFrame");
+        this.autoAckSettingsFrame = autoAckSettings;
         return self();
     }
 
-    protected boolean isAutoAckSettings() {
-        return autoAckSettings;
+    /**
+     * Determine if the SETTINGS frames should be automatically acknowledged and applied.
+     * @return {@code true} if the SETTINGS frames should be automatically acknowledged and applied.
+     */
+    protected boolean isAutoAckSettingsFrame() {
+        return autoAckSettingsFrame;
     }
 
     /**
@@ -440,7 +448,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         }
 
         DefaultHttp2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
-                promisedRequestVerifier(), isAutoAckSettings());
+                promisedRequestVerifier(), isAutoAckSettingsFrame());
         defaultEncoder.outstandingRemoteSettingsQueue(decoder.outstandingRemoteSettingsQueue());
         return buildFromCodec(decoder, encoder);
     }

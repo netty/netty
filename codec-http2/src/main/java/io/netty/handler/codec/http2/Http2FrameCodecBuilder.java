@@ -162,7 +162,7 @@ public class Http2FrameCodecBuilder extends
             Http2ConnectionEncoder encoder = encoderEnforceMaxConcurrentStreams() ?
                     new StreamBufferingEncoder(defaultEncoder) : defaultEncoder;
             DefaultHttp2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader,
-                    promisedRequestVerifier(), isAutoAckSettings());
+                    promisedRequestVerifier(), isAutoAckSettingsFrame());
             defaultEncoder.outstandingRemoteSettingsQueue(decoder.outstandingRemoteSettingsQueue());
 
             return build(decoder, encoder, initialSettings());
