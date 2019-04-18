@@ -82,9 +82,4 @@ public interface DnsRecord {
      * Returns the time to live after reading for this resource record.
      */
     long timeToLive();
-
-    /**
-     * Decodes the record data.
-     */
-    void decodeRdata();
 }

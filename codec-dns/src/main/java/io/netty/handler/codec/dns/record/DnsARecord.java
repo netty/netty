@@ -16,26 +16,25 @@
 
 package io.netty.handler.codec.dns.record;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.DefaultDnsRawRecord;
+import io.netty.handler.codec.dns.AbstractDnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
-import io.netty.handler.codec.dns.rdata.DnsARdataDecoder;
 
 import java.net.InetAddress;
 
-public class DnsARecord extends DefaultDnsRawRecord {
-    private InetAddress address;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-    public DnsARecord(String name, int dnsClass, long timeToLive, ByteBuf content) {
-        super(name, DnsRecordType.A, dnsClass, timeToLive, content);
+/**
+ * Dns {@link DnsRecordType#A} record.
+ */
+public class DnsARecord extends AbstractDnsRecord {
+    private final InetAddress address;
+
+    public DnsARecord(String name, int dnsClass, long timeToLive, InetAddress address) {
+        super(name, DnsRecordType.A, dnsClass, timeToLive);
+        this.address = checkNotNull(address, "address");
     }
 
     public InetAddress address() {
         return address;
-    }
-
-    @Override
-    public void decodeRdata() {
-        address = DnsARdataDecoder.DEFAULT.decodeRdata(content());
     }
 }

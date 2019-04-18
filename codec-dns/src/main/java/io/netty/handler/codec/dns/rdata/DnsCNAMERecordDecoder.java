@@ -14,25 +14,18 @@
  * under the License.
  */
 
-package io.netty.handler.codec.dns.record;
+package io.netty.handler.codec.dns.rdata;
 
-import io.netty.handler.codec.dns.AbstractDnsRecord;
-import io.netty.handler.codec.dns.DnsRecordType;
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.dns.record.DnsCNAMERecord;
+import io.netty.handler.codec.dns.util.DnsNameLabelUtil;
 
-import static io.netty.util.internal.ObjectUtil.*;
+public class DnsCNAMERecordDecoder implements DnsRDataRecordDecoder<DnsCNAMERecord> {
+    public static final DnsCNAMERecordDecoder DEFAULT = new DnsCNAMERecordDecoder();
 
-/**
- * Dns {@link DnsRecordType#PTR} record
- */
-public class DnsPTRRecord extends AbstractDnsRecord {
-    private final String ptr;
-
-    public DnsPTRRecord(String name, int dnsClass, long timeToLive, String ptr) {
-        super(name, DnsRecordType.PTR, dnsClass, timeToLive);
-        this.ptr = checkNotNull(ptr, "ptr");
-    }
-
-    public String ptr() {
-        return ptr;
+    @Override
+    public DnsCNAMERecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
+        String target = DnsNameLabelUtil.decodeName(rData);
+        return new DnsCNAMERecord(name, dnsClass, timeToLive, target);
     }
 }

@@ -17,17 +17,21 @@
 package io.netty.handler.codec.dns.rdata;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.handler.codec.dns.DnsRecord;
 
-public interface DnsRdataDecoder<T> {
+/**
+ * Decodes dns record data with record header.
+ */
+public interface DnsRDataRecordDecoder<T extends DnsRecord> {
     /**
-     * Decode dns record data to expected type.
+     * Decodes the dns record data with record header.
      *
-     * @param in record data
+     * @param name header name
+     * @param dnsClass header dns class
+     * @param timeToLive header time to live
+     * @param rData record data
      *
-     * @return decoded object
-     *
-     * @throws CorruptedFrameException if the record data is illegal
+     * @return deocoded record
      */
-    T decodeRdata(ByteBuf in);
+    T decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData);
 }

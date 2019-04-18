@@ -103,11 +103,6 @@ public abstract class AbstractDnsRecord implements DnsRecord {
     }
 
     @Override
-    public void decodeRdata() {
-        // Skip
-    }
-
-    @Override
     public boolean equals(Object obj) {
         if (this == obj) {
             return true;

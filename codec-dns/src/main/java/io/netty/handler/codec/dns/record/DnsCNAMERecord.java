@@ -16,24 +16,23 @@
 
 package io.netty.handler.codec.dns.record;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.DefaultDnsRawRecord;
+import io.netty.handler.codec.dns.AbstractDnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
-import io.netty.handler.codec.dns.rdata.DnsTextRdataDecoder;
 
-public class DnsCNAMERecord extends DefaultDnsRawRecord {
-    private String target;
+import static io.netty.util.internal.ObjectUtil.*;
 
-    public DnsCNAMERecord(String name, int dnsClass, long timeToLive, ByteBuf content) {
-        super(name, DnsRecordType.CNAME, dnsClass, timeToLive, content);
+/**
+ * Dns {@link DnsRecordType#CNAME} record.
+ */
+public class DnsCNAMERecord extends AbstractDnsRecord {
+    private final String target;
+
+    public DnsCNAMERecord(String name, int dnsClass, long timeToLive, String target) {
+        super(name, DnsRecordType.CNAME, dnsClass, timeToLive);
+        this.target = checkNotNull(target, "target");
     }
 
     public String target() {
         return target;
-    }
-
-    @Override
-    public void decodeRdata() {
-        target = DnsTextRdataDecoder.DEFAULT.decodeRdata(content());
     }
 }
