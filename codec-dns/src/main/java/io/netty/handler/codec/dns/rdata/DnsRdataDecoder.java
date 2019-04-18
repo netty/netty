@@ -24,11 +24,10 @@ public interface DnsRdataDecoder<T> {
      * Decode dns record data to expected type.
      *
      * @param in record data
-     * @param length record data length
      *
      * @return decoded object
      *
      * @throws CorruptedFrameException if the record data is illegal
      */
-    T decodeRdata(ByteBuf in, int length);
+    T decodeRdata(ByteBuf in);
 }

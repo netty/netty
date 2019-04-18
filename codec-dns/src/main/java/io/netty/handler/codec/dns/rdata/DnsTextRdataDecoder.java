@@ -26,12 +26,11 @@ public class DnsTextRdataDecoder implements DnsRdataDecoder<String> {
      * Decode dns record data to text presentation.
      *
      * @param in record data
-     * @param length record data length
      *
      * @return text presentation
      */
     @Override
-    public String decodeRdata(ByteBuf in, @SuppressWarnings("unused") int length) {
+    public String decodeRdata(ByteBuf in) {
         return DnsNameLabelUtil.decodeName(in);
     }
 }

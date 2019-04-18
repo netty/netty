@@ -70,9 +70,7 @@ public final class DnsRecordFactory {
         return INSTANCE;
     }
 
-    public DnsRecord dnsRecord(String name, DnsRecordType type, int dnsClass, long timeToLive,
-                               ByteBuf in, int offset, int length) {
-        ByteBuf rData = in.retainedDuplicate().setIndex(offset, offset + length);
+    public DnsRecord dnsRecord(String name, DnsRecordType type, int dnsClass, long timeToLive, ByteBuf rData) {
         DnsRecordSupplier supplier = RECORD_SUPPLIERS.get(type);
         DnsRecord record;
         if (supplier != null) {
@@ -80,9 +78,7 @@ public final class DnsRecordFactory {
         } else {
             record = new DefaultDnsRawRecord(name, type, dnsClass, timeToLive, rData);
         }
-        ByteBuf dupIn = in.retainedDuplicate();
-        record.decodeRdata(dupIn, length);
-        in.release();
+        record.decodeRdata();
         return record;
     }
 

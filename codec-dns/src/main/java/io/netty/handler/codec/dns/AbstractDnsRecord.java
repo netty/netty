@@ -103,7 +103,7 @@ public abstract class AbstractDnsRecord implements DnsRecord {
     }
 
     @Override
-    public void decodeRdata(ByteBuf in, int length) {
+    public void decodeRdata() {
         // Skip
     }
 

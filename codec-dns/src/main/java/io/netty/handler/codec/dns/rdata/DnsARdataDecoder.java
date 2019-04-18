@@ -30,14 +30,13 @@ public class DnsARdataDecoder implements DnsRdataDecoder<InetAddress> {
      * Decode record data to {@link InetAddress}.
      *
      * @param in record data
-     * @param length record data length
      *
      * @return ipv4 address
      *
      * @throws CorruptedFrameException if the record data frame is illegal
      */
     @Override
-    public InetAddress decodeRdata(ByteBuf in, int length) {
+    public InetAddress decodeRdata(ByteBuf in) {
         if (in.readableBytes() < IPV4_LEN) {
             throw new CorruptedFrameException("illegal ipv4 length");
         }

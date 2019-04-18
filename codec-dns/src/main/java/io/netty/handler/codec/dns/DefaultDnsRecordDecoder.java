@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.dns.record.DnsRecordFactory;
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.handler.codec.dns.util.DnsNameLabelUtil.decodeName;
+import static io.netty.handler.codec.dns.util.DnsNameLabelUtil.*;
 
 /**
  * The default {@link DnsRecordDecoder} implementation.
@@ -88,7 +88,12 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
     protected DnsRecord decodeRecord(
             String name, DnsRecordType type, int dnsClass, long timeToLive,
             ByteBuf in, int offset, int length) throws Exception {
-        return DnsRecordFactory.getInstance().dnsRecord(name, type, dnsClass, timeToLive, in, offset, length);
+        // DNS message compression means that domain names may contain "pointers" to other positions in the packet
+        // to build a full message. This means the indexes are meaningful and we need the ability to reference the
+        // indexes un-obstructed, and thus we cannot use a slice here.
+        // See https://www.ietf.org/rfc/rfc1035 [4.1.4. Message compression]
+        ByteBuf rData = in.retainedDuplicate().setIndex(offset, offset + length);
+        return DnsRecordFactory.getInstance().dnsRecord(name, type, dnsClass, timeToLive, rData);
     }
 
     /**

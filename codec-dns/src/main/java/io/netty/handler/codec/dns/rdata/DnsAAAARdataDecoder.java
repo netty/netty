@@ -30,15 +30,14 @@ public class DnsAAAARdataDecoder implements DnsRdataDecoder<InetAddress> {
      * Decode record data to {@link InetAddress}.
      *
      * @param in record data
-     * @param length record data length
      *
      * @return ipv6 address
      *
      * @throws CorruptedFrameException if the record data frame is illegal
      */
     @Override
-    public InetAddress decodeRdata(ByteBuf in, int length) {
-        if (in.readableBytes() < length) {
+    public InetAddress decodeRdata(ByteBuf in) {
+        if (in.readableBytes() < IPV6_LEN) {
             throw new CorruptedFrameException("illegal ipv6 length");
         }
         byte[] address = new byte[IPV6_LEN];
