@@ -17,6 +17,7 @@ package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.dns.record.DnsCNAMERecord;
 import io.netty.handler.codec.dns.record.DnsPTRRecord;
 import io.netty.handler.codec.dns.util.DnsNameLabelUtil;
 import org.junit.Test;
@@ -100,6 +101,7 @@ public class DefaultDnsRecordDecoderTest {
                 (byte) 0xC0, 0, // this is 20 in the example
                 (byte) 0xC0, 6, // this is 26 in the example
         };
+        DnsCNAMERecord dnsCNAMERecord = null;
         DefaultDnsRawRecord rawPlainRecord = null;
         DefaultDnsRawRecord rawUncompressedRecord = null;
         DefaultDnsRawRecord rawUncompressedIndexedRecord = null;
@@ -114,21 +116,20 @@ public class DefaultDnsRecordDecoderTest {
             assertEquals("FOO." + plainName, uncompressedIndexedName);
 
             // Now lets make sure out object parsing produces the same results for non PTR type (just use CNAME).
-            rawPlainRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
+            dnsCNAMERecord = (DnsCNAMERecord) decoder.decodeRecord(
                     plainName, DnsRecordType.CNAME, DnsRecord.CLASS_IN, 60, buffer, 0, 11);
-            assertEquals(plainName, rawPlainRecord.name());
-            assertEquals(plainName, DnsNameLabelUtil.decodeName(rawPlainRecord.content()));
+            assertEquals(plainName, dnsCNAMERecord.name());
+            assertEquals(plainName, dnsCNAMERecord.target());
 
-            rawUncompressedRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
+            dnsCNAMERecord = (DnsCNAMERecord) decoder.decodeRecord(
                     uncompressedPlainName, DnsRecordType.CNAME, DnsRecord.CLASS_IN, 60, buffer, 16, 4);
-            assertEquals(uncompressedPlainName, rawUncompressedRecord.name());
-            assertEquals(uncompressedPlainName, DnsNameLabelUtil.decodeName(rawUncompressedRecord.content()));
+            assertEquals(uncompressedPlainName, dnsCNAMERecord.name());
+            assertEquals(uncompressedPlainName, dnsCNAMERecord.target());
 
-            rawUncompressedIndexedRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
+            dnsCNAMERecord = (DnsCNAMERecord) decoder.decodeRecord(
                     uncompressedIndexedName, DnsRecordType.CNAME, DnsRecord.CLASS_IN, 60, buffer, 12, 8);
-            assertEquals(uncompressedIndexedName, rawUncompressedIndexedRecord.name());
-            assertEquals(uncompressedIndexedName,
-                         DnsNameLabelUtil.decodeName(rawUncompressedIndexedRecord.content()));
+            assertEquals(uncompressedIndexedName, dnsCNAMERecord.name());
+            assertEquals(uncompressedIndexedName, dnsCNAMERecord.target());
 
             // Now lets make sure out object parsing produces the same results for PTR type.
             buffer.readerIndex(0);

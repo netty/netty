@@ -35,7 +35,7 @@ public class DnsAAAARecord extends DefaultDnsRawRecord {
     }
 
     @Override
-    public void decodeRdata(ByteBuf in, int length) {
-        address = DnsAAAARdataDecoder.DEFAULT.decodeRdata(in, length);
+    public void decodeRdata() {
+        address = DnsAAAARdataDecoder.DEFAULT.decodeRdata(content());
     }
 }

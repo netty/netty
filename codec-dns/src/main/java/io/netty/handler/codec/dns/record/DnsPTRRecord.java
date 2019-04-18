@@ -24,8 +24,7 @@ import io.netty.handler.codec.dns.rdata.DnsTextRdataDecoder;
 public class DnsPTRRecord extends DefaultDnsRawRecord {
     private String ptr;
 
-    public DnsPTRRecord(String name, int dnsClass, long timeToLive,
-                        ByteBuf content) {
+    public DnsPTRRecord(String name, int dnsClass, long timeToLive, ByteBuf content) {
         super(name, DnsRecordType.PTR, dnsClass, timeToLive, content);
     }
 
@@ -34,7 +33,7 @@ public class DnsPTRRecord extends DefaultDnsRawRecord {
     }
 
     @Override
-    public void decodeRdata(ByteBuf in, int length) {
-        ptr = DnsTextRdataDecoder.DEFAULT.decodeRdata(in, length);
+    public void decodeRdata() {
+        ptr = DnsTextRdataDecoder.DEFAULT.decodeRdata(content());
     }
 }

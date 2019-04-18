@@ -33,7 +33,7 @@ public class DnsNSRecord extends DefaultDnsRawRecord {
     }
 
     @Override
-    public void decodeRdata(ByteBuf in, int length) {
-        ns = DnsTextRdataDecoder.DEFAULT.decodeRdata(in, length);
+    public void decodeRdata() {
+        ns = DnsTextRdataDecoder.DEFAULT.decodeRdata(content());
     }
 }
