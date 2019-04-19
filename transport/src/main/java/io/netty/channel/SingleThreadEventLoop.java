@@ -19,6 +19,7 @@ import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -133,6 +134,32 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     @Override
     protected void afterRunningAllTasks() {
         runAllTasksFrom(tailTasks);
+    }
+
+    @Override
+    public long submittedTasks() {
+        final long tasks = super.submittedTasks();
+        if (tasks < 0) {
+            return UNSUPPORTED;
+        }
+        final long producedTailTasks = PlatformDependent.currentProducerIndex(tailTasks);
+        if (producedTailTasks < 0) {
+            return UNSUPPORTED;
+        }
+        return tasks + producedTailTasks;
+    }
+
+    @Override
+    public long completedTasks() {
+        final long tasks = super.completedTasks();
+        if (tasks < 0) {
+            return UNSUPPORTED;
+        }
+        final long consumedTailTasks = PlatformDependent.currentConsumerIndex(tailTasks);
+        if (consumedTailTasks < 0) {
+            return UNSUPPORTED;
+        }
+        return tasks + consumedTailTasks;
     }
 
     @Override

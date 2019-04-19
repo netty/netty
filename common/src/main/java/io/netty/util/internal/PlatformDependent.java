@@ -16,11 +16,13 @@
 package io.netty.util.internal;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.ObservableTaskConsumer;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.jctools.queues.MpscArrayQueue;
 import org.jctools.queues.MpscChunkedArrayQueue;
 import org.jctools.queues.MpscUnboundedArrayQueue;
+import org.jctools.queues.QueueProgressIndicators;
 import org.jctools.queues.SpscLinkedQueue;
 import org.jctools.queues.atomic.MpscAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscChunkedAtomicArrayQueue;
@@ -982,6 +984,40 @@ public final class PlatformDependent {
             return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscUnboundedArrayQueue<T>(MPSC_CHUNK_SIZE)
                                                 : new MpscUnboundedAtomicArrayQueue<T>(MPSC_CHUNK_SIZE);
         }
+    }
+
+    /**
+     * This method has no concurrent visibility semantics. The value returned may be negative. Under normal
+     * circumstances 2 consecutive calls to this method can offer an idea of progress made by producer threads by
+     * subtracting the 2 results though in extreme cases (if producers have progressed by more than 2^64) this may also
+     * fail.<br/> This value will normally indicate number of elements passed into the queue, but may under some
+     * circumstances be a derivative of that figure. This method should not be used to derive size or emptiness.
+     *
+     * @return the current value of the producer progress index
+     */
+    @UnstableApi
+    public static long currentProducerIndex(Queue<?> q) {
+        if (q instanceof QueueProgressIndicators) {
+            return ((QueueProgressIndicators) q).currentProducerIndex();
+        }
+        return ObservableTaskConsumer.UNSUPPORTED;
+    }
+
+    /**
+     * This method has no concurrent visibility semantics. The value returned may be negative. Under normal
+     * circumstances 2 consecutive calls to this method can offer an idea of progress made by consumer threads by
+     * subtracting the 2 results though in extreme cases (if consumers have progressed by more than 2^64) this may also
+     * fail.<br/> This value will normally indicate number of elements taken out of the queue, but may under some
+     * circumstances be a derivative of that figure. This method should not be used to derive size or emptiness.
+     *
+     * @return the current value of the consumer progress index
+     */
+    @UnstableApi
+    public static long currentConsumerIndex(Queue<?> q) {
+        if (q instanceof QueueProgressIndicators) {
+            return ((QueueProgressIndicators) q).currentConsumerIndex();
+        }
+        return ObservableTaskConsumer.UNSUPPORTED;
     }
 
     /**
