@@ -480,7 +480,7 @@ public class JdkSslContext extends SslContext {
      * and a certificate chain.
      * @param certChainFile an X.509 certificate chain file in PEM format
      * @param keyAlgorithm the standard name of the requested algorithm. See the Java Secure Socket Extension
-     * Reference Guide for information about standard algorithm names.
+     *                    Reference Guide for information about standard algorithm names.
      * @param keyFile a PKCS#8 private key file in PEM format
      * @param keyPassword the password of the {@code keyFile}.
      *                    {@code null} if it's not password-protected.
@@ -502,9 +502,9 @@ public class JdkSslContext extends SslContext {
     /**
      * Build a {@link KeyManagerFactory} based upon a key algorithm, key file, key file password,
      * and a certificate chain.
-     * @param certChainFile an X.509 certificate chain file in PEM format
+     * @param certChainFile an buildKeyManagerFactory X.509 certificate chain file in PEM format
      * @param keyAlgorithm the standard name of the requested algorithm. See the Java Secure Socket Extension
-     * Reference Guide for information about standard algorithm names.
+     *                    Reference Guide for information about standard algorithm names.
      * @param keyFile a PKCS#8 private key file in PEM format
      * @param keyPassword the password of the {@code keyFile}.
      *                    {@code null} if it's not password-protected.
