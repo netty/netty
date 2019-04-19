@@ -15,9 +15,9 @@
  */
 
 /**
- * DNS record data codecs.
+ * {@link io.netty.handler.codec.dns.DnsRecordType#OPT} record data options
  */
 @UnstableApi
-package io.netty.handler.codec.dns.rdata;
+package io.netty.handler.codec.dns.record.opt;
 
 import io.netty.util.internal.UnstableApi;

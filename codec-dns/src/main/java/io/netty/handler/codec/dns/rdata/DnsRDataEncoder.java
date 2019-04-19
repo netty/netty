@@ -17,19 +17,19 @@
 package io.netty.handler.codec.dns.rdata;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.record.DnsPTRRecord;
-
-import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
+import io.netty.handler.codec.dns.DnsRecord;
 
 /**
- * Decoder for {@link DnsPTRRecord}.
+ * Dns rdata encoder.
+ *
+ * @param <T> dns reocrd
  */
-public class DnsPTRRecordDecoder implements DnsRDataRecordDecoder<DnsPTRRecord> {
-    public static final DnsPTRRecordDecoder DEFAULT = new DnsPTRRecordDecoder();
-
-    @Override
-    public DnsPTRRecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
-        String ptr = decodeDomainName(rData);
-        return new DnsPTRRecord(name, dnsClass, timeToLive, ptr);
-    }
+public interface DnsRDataEncoder<T extends DnsRecord> {
+    /**
+     * Encodes dns record data.
+     *
+     * @param record record to be encode
+     * @param out output buffer
+     */
+    void encodeRData(T record, ByteBuf out);
 }

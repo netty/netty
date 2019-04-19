@@ -18,10 +18,12 @@ package io.netty.handler.codec.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
+import io.netty.handler.codec.dns.rdata.DnsRDataCodecs;
+import io.netty.handler.codec.dns.rdata.DnsRDataEncoder;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.handler.codec.dns.util.DnsDecodeUtil.ROOT;
+import static io.netty.handler.codec.dns.util.DnsEncodeUtil.*;
 
 /**
  * The default {@link DnsRecordEncoder} implementation.
@@ -35,11 +37,12 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
     /**
      * Creates a new instance.
      */
-    protected DefaultDnsRecordEncoder() { }
+    protected DefaultDnsRecordEncoder() {
+    }
 
     @Override
     public final void encodeQuestion(DnsQuestion question, ByteBuf out) throws Exception {
-        encodeName(question.name(), out);
+        encodeDomainName(question.name(), out);
         out.writeShort(question.type().intValue());
         out.writeShort(question.dnsClass());
     }
@@ -48,38 +51,42 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
     public void encodeRecord(DnsRecord record, ByteBuf out) throws Exception {
         if (record instanceof DnsQuestion) {
             encodeQuestion((DnsQuestion) record, out);
-        } else if (record instanceof DnsPtrRecord) {
-            encodePtrRecord((DnsPtrRecord) record, out);
-        } else if (record instanceof DnsOptEcsRecord) {
-            encodeOptEcsRecord((DnsOptEcsRecord) record, out);
-        } else if (record instanceof DnsOptPseudoRecord) {
-            encodeOptPseudoRecord((DnsOptPseudoRecord) record, out);
+            return;
+        }
+
+        // Encode the part of header
+        encodeRecordHeader(record, out);
+        int rDataOffset = out.writerIndex();
+
+        // Encode the rdata
+        DnsRDataEncoder encoder = DnsRDataCodecs.rDataEncoder(record.type());
+        if (encoder != null) {
+            encoder.encodeRData(record, out);
         } else if (record instanceof DnsRawRecord) {
-            encodeRawRecord((DnsRawRecord) record, out);
+            DnsRawRecord rawRecord = (DnsRawRecord) record;
+            out.writeBytes(rawRecord.content());
         } else {
             throw new UnsupportedMessageTypeException(StringUtil.simpleClassName(record));
         }
+
+        // Write rdata length
+        int rDataContentLength = out.writerIndex() - rDataOffset;
+        int rDataEnd = out.writerIndex();
+        out.writerIndex(rDataOffset - Short.BYTES)
+           .writeShort(rDataContentLength)
+           .writerIndex(rDataEnd);
     }
 
-    private void encodeRecord0(DnsRecord record, ByteBuf out) throws Exception {
-        encodeName(record.name(), out);
+    private void encodeRecordHeader(DnsRecord record, ByteBuf out) throws Exception {
+        encodeDomainName(record.name(), out);
         out.writeShort(record.type().intValue());
         out.writeShort(record.dnsClass());
         out.writeInt((int) record.timeToLive());
-    }
-
-    private void encodePtrRecord(DnsPtrRecord record, ByteBuf out) throws Exception {
-        encodeRecord0(record, out);
-        encodeName(record.hostname(), out);
-    }
-
-    private void encodeOptPseudoRecord(DnsOptPseudoRecord record, ByteBuf out) throws Exception {
-        encodeRecord0(record, out);
         out.writeShort(0);
     }
 
     private void encodeOptEcsRecord(DnsOptEcsRecord record, ByteBuf out) throws Exception {
-        encodeRecord0(record, out);
+        encodeRecordHeader(record, out);
 
         int sourcePrefixLength = record.sourcePrefixLength();
         int scopePrefixLength = record.scopePrefixLength();
@@ -89,20 +96,20 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         int addressBits = bytes.length << 3;
         if (addressBits < sourcePrefixLength || sourcePrefixLength < 0) {
             throw new IllegalArgumentException(sourcePrefixLength + ": " +
-                    sourcePrefixLength + " (expected: 0 >= " + addressBits + ')');
+                                               sourcePrefixLength + " (expected: 0 >= " + addressBits + ')');
         }
 
         // See http://www.iana.org/assignments/address-family-numbers/address-family-numbers.xhtml
-        final short addressNumber = (short) (bytes.length == 4 ?
+        final short addressNumber = (short) (bytes.length == 4?
                 InternetProtocolFamily.IPv4.addressNumber() : InternetProtocolFamily.IPv6.addressNumber());
         int payloadLength = calculateEcsAddressLength(sourcePrefixLength, lowOrderBitsToPreserve);
 
         int fullPayloadLength = 2 + // OPTION-CODE
-                2 + // OPTION-LENGTH
-                2 + // FAMILY
-                1 + // SOURCE PREFIX-LENGTH
-                1 + // SCOPE PREFIX-LENGTH
-                payloadLength; //  ADDRESS...
+                                2 + // OPTION-LENGTH
+                                2 + // FAMILY
+                                1 + // SOURCE PREFIX-LENGTH
+                                1 + // SCOPE PREFIX-LENGTH
+                                payloadLength; //  ADDRESS...
 
         out.writeShort(fullPayloadLength);
         out.writeShort(8); // This is the defined type for ECS.
@@ -126,21 +133,7 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
 
     // Package-Private for testing
     static int calculateEcsAddressLength(int sourcePrefixLength, int lowOrderBitsToPreserve) {
-        return (sourcePrefixLength >>> 3) + (lowOrderBitsToPreserve != 0 ? 1 : 0);
-    }
-
-    private void encodeRawRecord(DnsRawRecord record, ByteBuf out) throws Exception {
-        encodeRecord0(record, out);
-
-        ByteBuf content = record.content();
-        int contentLen = content.readableBytes();
-
-        out.writeShort(contentLen);
-        out.writeBytes(content, content.readerIndex(), contentLen);
-    }
-
-    protected void encodeName(String name, ByteBuf buf) throws Exception {
-        DnsCodecUtil.encodeDomainName(name, buf);
+        return (sourcePrefixLength >>> 3) + (lowOrderBitsToPreserve != 0? 1 : 0);
     }
 
     private static byte padWithZeros(byte b, int lowOrderBitsToPreserve) {

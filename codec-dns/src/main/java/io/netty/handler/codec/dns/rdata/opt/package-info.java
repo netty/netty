@@ -14,24 +14,10 @@
  * under the License.
  */
 
-package io.netty.handler.codec.dns.rdata;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.DnsRecord;
-
 /**
- * Decodes dns record data with record header.
+ * {@link io.netty.handler.codec.dns.DnsRecordType#OPT} record data option codecs
  */
-public interface DnsRDataRecordDecoder<T extends DnsRecord> {
-    /**
-     * Decodes the dns record data with record header.
-     *
-     * @param name header name
-     * @param dnsClass header dns class
-     * @param timeToLive header time to live
-     * @param rData record data
-     *
-     * @return deocoded record
-     */
-    T decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData);
-}
+@UnstableApi
+package io.netty.handler.codec.dns.rdata.opt;
+
+import io.netty.util.internal.UnstableApi;

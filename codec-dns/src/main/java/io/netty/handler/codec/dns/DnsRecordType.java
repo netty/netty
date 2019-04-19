@@ -205,7 +205,7 @@ public class DnsRecordType implements Comparable<DnsRecordType> {
     public static final DnsRecordType DNSKEY = new DnsRecordType(0x0030, "DNSKEY");
 
     /**
-     * DHCP identifier record RFC 4701 Used in conjunction with the FQDN option
+     * DHCP identifier record RFC 4701 Used in conjunction with the FQDN optionCode
      * to DHCP.
      */
     public static final DnsRecordType DHCID = new DnsRecordType(0x0031, "DHCID");

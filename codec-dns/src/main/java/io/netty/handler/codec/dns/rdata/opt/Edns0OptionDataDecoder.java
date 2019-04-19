@@ -14,22 +14,11 @@
  * under the License.
  */
 
-package io.netty.handler.codec.dns.rdata;
+package io.netty.handler.codec.dns.rdata.opt;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.record.DnsNSRecord;
+import io.netty.handler.codec.dns.record.opt.Edns0Option;
 
-import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
-
-/**
- * Decoder for {@link DnsNSRecord}.
- */
-public class DnsNSRecordDecoder implements DnsRDataRecordDecoder<DnsNSRecord> {
-    public static final DnsNSRecordDecoder DEFAULT = new DnsNSRecordDecoder();
-
-    @Override
-    public DnsNSRecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
-        String ns = decodeDomainName(rData);
-        return new DnsNSRecord(name, dnsClass, timeToLive, ns);
-    }
+public interface Edns0OptionDataDecoder<T extends Edns0Option> {
+    T decodeOptionData(ByteBuf optionData);
 }

@@ -17,21 +17,25 @@
 package io.netty.handler.codec.dns.rdata;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.record.DnsMXRecord;
+import io.netty.handler.codec.dns.record.DnsNSRecord;
 
 import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
+import static io.netty.handler.codec.dns.util.DnsEncodeUtil.*;
 
 /**
- * Decoder for {@link DnsMXRecord}.
+ * Codec for {@link DnsNSRecord}.
  */
-public class DnsMXRecordDecoder implements DnsRDataRecordDecoder<DnsMXRecord> {
-    public static final DnsMXRecordDecoder DEFAULT = new DnsMXRecordDecoder();
+public class DnsNSRDataCodec implements DnsRDataCodec<DnsNSRecord> {
+    public static final DnsNSRDataCodec DEFAULT = new DnsNSRDataCodec();
 
     @Override
-    public DnsMXRecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
-        checkShortReadable(rData, "preference");
-        short preference = rData.readShort();
-        String exchange = decodeDomainName(rData);
-        return new DnsMXRecord(name, dnsClass, timeToLive, preference, exchange);
+    public DnsNSRecord decodeRData(String name, int dnsClass, long timeToLive, ByteBuf rData) {
+        String ns = decodeDomainName(rData);
+        return new DnsNSRecord(name, dnsClass, timeToLive, ns);
+    }
+
+    @Override
+    public void encodeRData(DnsNSRecord record, ByteBuf out) {
+        encodeDomainName(record.ns(), out);
     }
 }

@@ -17,21 +17,28 @@
 package io.netty.handler.codec.dns.rdata;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.record.DnsAFSDBRecord;
+import io.netty.handler.codec.dns.record.DNSRPRecord;
 
 import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
+import static io.netty.handler.codec.dns.util.DnsEncodeUtil.*;
 
 /**
- * Decoder for {@link DnsAFSDBRecord}.
+ * Codec for {@link DNSRPRecord}
  */
-public class DnsAFSDBRecordDecoder implements DnsRDataRecordDecoder<DnsAFSDBRecord> {
-    public static final DnsAFSDBRecordDecoder DEFAULT = new DnsAFSDBRecordDecoder();
+public class DnsRPRDataCodec implements DnsRDataCodec<DNSRPRecord> {
+    public static final DnsRPRDataCodec DEFAULT = new DnsRPRDataCodec();
 
     @Override
-    public DnsAFSDBRecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
-        checkIntReadable(rData, "subtype");
-        short subtype = rData.readShort();
-        String hostname = decodeDomainName(rData);
-        return new DnsAFSDBRecord(name, dnsClass, timeToLive, subtype, hostname);
+    public DNSRPRecord decodeRData(String name, int dnsClass, long timeToLive, ByteBuf rData) {
+        String mbox = decodeDomainName(rData);
+        String txt = decodeDomainName(rData);
+        return new DNSRPRecord(name, dnsClass, timeToLive, mbox, txt);
+    }
+
+    @Override
+    public void encodeRData(DNSRPRecord record, ByteBuf out) {
+        encodeDomainName(record.mbox(), out);
+        encodeDomainName(record.txt(), out);
     }
 }
+

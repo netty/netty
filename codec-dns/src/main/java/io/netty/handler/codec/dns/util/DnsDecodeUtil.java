@@ -25,6 +25,8 @@ import java.nio.charset.Charset;
 
 public final class DnsDecodeUtil {
     public static final String ROOT = ".";
+    public static final int IPV6_LEN = 16;
+    public static final int IPV4_LEN = 4;
 
     private DnsDecodeUtil() {
         // Private constructor for util class
@@ -115,6 +117,10 @@ public final class DnsDecodeUtil {
 
     public static void checkShortReadable(ByteBuf in, String fieldName) {
         checkReadable(in, Short.BYTES, fieldName);
+    }
+
+    public static void checkLongReadable(ByteBuf in, String fieldName) {
+        checkReadable(in, Long.BYTES, fieldName);
     }
 
     public static void checkIntReadable(ByteBuf in, String fieldName) {

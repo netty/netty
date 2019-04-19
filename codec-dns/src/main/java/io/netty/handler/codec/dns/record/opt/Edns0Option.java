@@ -14,10 +14,21 @@
  * under the License.
  */
 
-/**
- * DNS record data codecs.
- */
-@UnstableApi
-package io.netty.handler.codec.dns.rdata;
+package io.netty.handler.codec.dns.record.opt;
 
-import io.netty.util.internal.UnstableApi;
+public interface Edns0Option {
+    // EDNS0 option code code
+    short OPTION_CODE_EDNS0_LLQ = 0x1;
+    short OPTION_CODE_EDNS0_UL = 0x2;
+    short OPTION_CODE_EDNS0_NSID = 0x3;
+    short OPTION_CODE_EDNS0_DAU = 0x5;
+    short OPTION_CODE_EDNS0_DHU = 0x6;
+    short OPTION_CODE_EDNS0_N3U = 0x7;
+    short OPTION_CODE_EDNS0_SUBNET = 0x8;
+    short OPTION_CODE_EDNS0_EXPIRE = 0x9;
+    short OPTION_CODE_EDNS0_COOKIE = 0xa;
+    short OPTION_CODE_EDNS0_TCPKEEPALIVE = 0xb;
+    short OPTION_CODE_EDNS0_PADDING = 0xc;
+
+    short optionCode();
+}

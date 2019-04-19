@@ -16,20 +16,7 @@
 
 package io.netty.handler.codec.dns.rdata;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.record.DnsTXTRecord;
+import io.netty.handler.codec.dns.DnsRecord;
 
-import java.nio.charset.Charset;
-
-/**
- * Decoder for {@link DnsTXTRecord}.
- */
-public class DnsTXTRecordDecoder implements DnsRDataRecordDecoder<DnsTXTRecord> {
-    public static final DnsTXTRecordDecoder DEFAULT = new DnsTXTRecordDecoder();
-
-    @Override
-    public DnsTXTRecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
-        String txt = rData.toString(Charset.forName("utf-8"));
-        return new DnsTXTRecord(name, dnsClass, timeToLive, txt);
-    }
+public interface DnsRDataCodec<T extends DnsRecord> extends DnsRDataDecoder<T>, DnsRDataEncoder<T> {
 }

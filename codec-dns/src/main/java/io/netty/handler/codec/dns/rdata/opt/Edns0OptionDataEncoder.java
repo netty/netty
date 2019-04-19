@@ -14,10 +14,11 @@
  * under the License.
  */
 
-/**
- * DNS record data codecs.
- */
-@UnstableApi
-package io.netty.handler.codec.dns.rdata;
+package io.netty.handler.codec.dns.rdata.opt;
 
-import io.netty.util.internal.UnstableApi;
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.dns.record.opt.Edns0Option;
+
+public interface Edns0OptionDataEncoder<T extends Edns0Option> {
+    void encodeOptionData(T option, ByteBuf out);
+}

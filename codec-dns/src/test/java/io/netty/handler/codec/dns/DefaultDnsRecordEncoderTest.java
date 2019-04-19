@@ -18,6 +18,7 @@ package io.netty.handler.codec.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.handler.codec.dns.util.DnsEncodeUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
@@ -60,7 +61,7 @@ public class DefaultDnsRecordEncoderTest {
         ByteBuf out = Unpooled.buffer();
         ByteBuf expectedBuf = Unpooled.wrappedBuffer(expected);
         try {
-            encoder.encodeName(name, out);
+            DnsEncodeUtil.encodeDomainName(name, out);
             assertEquals(expectedBuf, out);
         } finally {
             out.release();

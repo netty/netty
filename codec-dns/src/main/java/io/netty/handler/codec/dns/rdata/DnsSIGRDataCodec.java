@@ -20,15 +20,16 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.dns.record.DnsSIGRecord;
 
 import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
+import static io.netty.handler.codec.dns.util.DnsEncodeUtil.*;
 
 /**
- * Decoder for {@link DnsSIGRecord}.
+ * Codec for {@link DnsSIGRecord}.
  */
-public class DnsSIGRecordDecoder implements DnsRDataRecordDecoder<DnsSIGRecord> {
-    public static final DnsSIGRecordDecoder DEFAULT = new DnsSIGRecordDecoder();
+public class DnsSIGRDataCodec implements DnsRDataCodec<DnsSIGRecord> {
+    public static final DnsSIGRDataCodec DEFAULT = new DnsSIGRDataCodec();
 
     @Override
-    public DnsSIGRecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
+    public DnsSIGRecord decodeRData(String name, int dnsClass, long timeToLive, ByteBuf rData) {
         checkShortReadable(rData, "typeCovered");
         short typeCovered = rData.readShort();
         checkByteReadable(rData, "algorithem");
@@ -47,5 +48,18 @@ public class DnsSIGRecordDecoder implements DnsRDataRecordDecoder<DnsSIGRecord> 
         String signature = decodeStringBase64(rData);
         return new DnsSIGRecord(name, dnsClass, timeToLive, typeCovered, algorithem, labels, originalTTL, expiration,
                                 inception, keyTag, signerName, signature);
+    }
+
+    @Override
+    public void encodeRData(DnsSIGRecord record, ByteBuf out) {
+        out.writeShort(record.typeCovered())
+           .writeByte(record.algorithem())
+           .writeByte(record.labels())
+           .writeInt(record.originalTTL())
+           .writeInt(record.expiration())
+           .writeInt(record.inception())
+           .writeShort(record.keyTag());
+        encodeDomainName(record.signerName(), out);
+        encodeDomainName(record.signature(), out);
     }
 }

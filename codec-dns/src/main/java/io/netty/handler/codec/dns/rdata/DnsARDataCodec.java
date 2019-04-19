@@ -26,14 +26,14 @@ import java.net.UnknownHostException;
 import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
 
 /**
- * Decoder for {@link DnsARecord}.
+ * Codec for {@link DnsARecord}.
  */
-public class DnsARecordDecoder implements DnsRDataRecordDecoder<DnsARecord> {
-    public static final DnsARecordDecoder DEFAULT = new DnsARecordDecoder();
+public class DnsARDataCodec implements DnsRDataCodec<DnsARecord> {
+    public static final DnsARDataCodec DEFAULT = new DnsARDataCodec();
     private static final int IPV4_LEN = 4;
 
     @Override
-    public DnsARecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
+    public DnsARecord decodeRData(String name, int dnsClass, long timeToLive, ByteBuf rData) {
         checkReadable(rData, IPV4_LEN, "ipv4");
         byte[] addressBytes = new byte[IPV4_LEN];
         rData.readBytes(addressBytes);
@@ -44,5 +44,10 @@ public class DnsARecordDecoder implements DnsRDataRecordDecoder<DnsARecord> {
             throw new CorruptedFrameException("unknown ipv4 host", e);
         }
         return new DnsARecord(name, dnsClass, timeToLive, address);
+    }
+
+    @Override
+    public void encodeRData(DnsARecord record, ByteBuf out) {
+        out.writeBytes(record.address().getAddress());
     }
 }

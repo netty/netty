@@ -26,14 +26,13 @@ import java.net.UnknownHostException;
 import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
 
 /**
- * Decoder for {@link DnsAAAARecord}.
+ * Codec for {@link DnsAAAARecord}.
  */
-public class DnsAAAARecordDecoder implements DnsRDataRecordDecoder<DnsAAAARecord> {
-    public static final DnsAAAARecordDecoder DEFAULT = new DnsAAAARecordDecoder();
-    private static final int IPV6_LEN = 16;
+public class DnsAAAARDataCodec implements DnsRDataCodec<DnsAAAARecord> {
+    public static final DnsAAAARDataCodec DEFAULT = new DnsAAAARDataCodec();
 
     @Override
-    public DnsAAAARecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
+    public DnsAAAARecord decodeRData(String name, int dnsClass, long timeToLive, ByteBuf rData) {
         checkReadable(rData, IPV6_LEN, "ipv6");
         byte[] addressBytes = new byte[IPV6_LEN];
         rData.readBytes(addressBytes);
@@ -44,5 +43,10 @@ public class DnsAAAARecordDecoder implements DnsRDataRecordDecoder<DnsAAAARecord
             throw new CorruptedFrameException("unknown ipv6 host", e);
         }
         return new DnsAAAARecord(name, dnsClass, timeToLive, address);
+    }
+
+    @Override
+    public void encodeRData(DnsAAAARecord record, ByteBuf out) {
+        out.writeBytes(record.address().getAddress());
     }
 }

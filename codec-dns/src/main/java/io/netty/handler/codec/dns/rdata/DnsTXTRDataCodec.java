@@ -17,19 +17,24 @@
 package io.netty.handler.codec.dns.rdata;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.record.DnsCNAMERecord;
+import io.netty.handler.codec.dns.record.DnsTXTRecord;
 
-import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
+import java.nio.charset.Charset;
 
 /**
- * Decoder for {@link DnsCNAMERecord}.
+ * Decoder for {@link DnsTXTRecord}.
  */
-public class DnsCNAMERecordDecoder implements DnsRDataRecordDecoder<DnsCNAMERecord> {
-    public static final DnsCNAMERecordDecoder DEFAULT = new DnsCNAMERecordDecoder();
+public class DnsTXTRDataCodec implements DnsRDataCodec<DnsTXTRecord> {
+    public static final DnsTXTRDataCodec DEFAULT = new DnsTXTRDataCodec();
 
     @Override
-    public DnsCNAMERecord decodeRecordWithHeader(String name, int dnsClass, long timeToLive, ByteBuf rData) {
-        String target = decodeDomainName(rData);
-        return new DnsCNAMERecord(name, dnsClass, timeToLive, target);
+    public DnsTXTRecord decodeRData(String name, int dnsClass, long timeToLive, ByteBuf rData) {
+        String txt = rData.toString(Charset.forName("utf-8"));
+        return new DnsTXTRecord(name, dnsClass, timeToLive, txt);
+    }
+
+    @Override
+    public void encodeRData(DnsTXTRecord record, ByteBuf out) {
+        out.writeCharSequence(record.txt(), Charset.forName("utf-8"));
     }
 }
