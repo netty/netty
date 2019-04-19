@@ -20,8 +20,7 @@ import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.kqueue.KQueueEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import io.netty.util.concurrent.DefaultEventExecutor;
-import io.netty.util.internal.PlatformDependent;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -34,139 +33,16 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 @State(Scope.Benchmark)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
 
-    /**
-     * This executor is useful as the best burst latency performer because it won't go to sleep and won't be hit by the
-     * cost of being awaken on both offer/consumer side.
-     */
-    private static final class SpinExecutorService implements ExecutorService {
-
-        private static final Runnable POISON_PILL = new Runnable() {
-            @Override
-            public void run() {
-            }
-        };
-        private final Queue<Runnable> tasks;
-        private final AtomicBoolean poisoned = new AtomicBoolean();
-        private final Thread executorThread;
-
-        SpinExecutorService(int maxTasks) {
-            tasks = PlatformDependent.newFixedMpscQueue(maxTasks);
-            executorThread = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    final Queue<Runnable> tasks = SpinExecutorService.this.tasks;
-                    Runnable task;
-                    while ((task = tasks.poll()) != POISON_PILL) {
-                        if (task != null) {
-                            task.run();
-                        }
-                    }
-                }
-            });
-            executorThread.start();
-        }
-
-        @Override
-        public void shutdown() {
-            if (poisoned.compareAndSet(false, true)) {
-                while (!tasks.offer(POISON_PILL)) {
-                    // Just try again
-                }
-                try {
-                    executorThread.join();
-                } catch (InterruptedException e) {
-                    //We're quite trusty :)
-                }
-            }
-        }
-
-        @Override
-        public List<Runnable> shutdownNow() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean isShutdown() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean isTerminated() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> Future<T> submit(Callable<T> task) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> Future<T> submit(Runnable task, T result) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Future<?> submit(Runnable task) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks) throws InterruptedException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-                throws InterruptedException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> T invokeAny(Collection<? extends Callable<T>> tasks)
-                throws InterruptedException, ExecutionException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-                throws InterruptedException, ExecutionException, TimeoutException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void execute(Runnable command) {
-            if (!tasks.offer(command)) {
-                throw new RejectedExecutionException(
-                        "If that happens, there is something wrong with the available capacity/burst size");
-            }
-        }
-    }
-
     private enum ExecutorType {
-        spinning,
         defaultEventExecutor,
         juc,
         nioEventLoop,
@@ -176,60 +52,48 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
 
     @Param({ "1", "10" })
     private int burstLength;
-    @Param({ "spinning", "epollEventLoop", "nioEventLoop", "defaultEventExecutor", "juc", "kqueueEventLoop" })
+    @Param({ "epollEventLoop", "nioEventLoop", "defaultEventExecutor", "juc", "kqueueEventLoop" })
     private String executorType;
     @Param({ "0", "10" })
     private int work;
+    @Param({ "1", "2" })
+    private int consumers;
 
     private ExecutorService executor;
-    private ExecutorService executorToShutdown;
 
     @Setup
     public void setup() {
         ExecutorType type = ExecutorType.valueOf(executorType);
         switch (type) {
-        case spinning:
-            //The case with 3 producers can have a peak of 3*burstLength offers:
-            //4 is to leave some room between the offers and 1024 is to leave some room
-            //between producer/consumer when work is > 0 and 1 producer.
-            //If work = 0 then the task queue is supposed to be near empty most of the time.
-            executor = new SpinExecutorService(Math.min(1024, burstLength * 4));
-            executorToShutdown = executor;
-            break;
         case defaultEventExecutor:
-            executor = new DefaultEventExecutor();
-            executorToShutdown = executor;
+            executor = new DefaultEventExecutorGroup(consumers);
             break;
         case juc:
             executor = Executors.newSingleThreadScheduledExecutor();
-            executorToShutdown = executor;
             break;
         case nioEventLoop:
-            NioEventLoopGroup nioEventLoopGroup = new NioEventLoopGroup(1);
+            NioEventLoopGroup nioEventLoopGroup = new NioEventLoopGroup(consumers);
             nioEventLoopGroup.setIoRatio(1);
-            executor = nioEventLoopGroup.next();
-            executorToShutdown = nioEventLoopGroup;
+            executor = nioEventLoopGroup;
             break;
         case epollEventLoop:
             Epoll.ensureAvailability();
-            EpollEventLoopGroup epollEventLoopGroup = new EpollEventLoopGroup(1);
+            EpollEventLoopGroup epollEventLoopGroup = new EpollEventLoopGroup(consumers);
             epollEventLoopGroup.setIoRatio(1);
-            executor = epollEventLoopGroup.next();
-            executorToShutdown = epollEventLoopGroup;
+            executor = epollEventLoopGroup;
             break;
         case kqueueEventLoop:
             KQueue.ensureAvailability();
-            KQueueEventLoopGroup kQueueEventLoopGroup = new KQueueEventLoopGroup(1);
+            KQueueEventLoopGroup kQueueEventLoopGroup = new KQueueEventLoopGroup(consumers);
             kQueueEventLoopGroup.setIoRatio(1);
-            executor = kQueueEventLoopGroup.next();
-            executorToShutdown = kQueueEventLoopGroup;
+            executor = kQueueEventLoopGroup;
             break;
         }
     }
 
     @TearDown
     public void tearDown() {
-        executorToShutdown.shutdown();
+        executor.shutdown();
     }
 
     @State(Scope.Thread)
@@ -246,30 +110,52 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
 
         @Setup
         public void setup(BurstCostExecutorsBenchmark bench) {
+            final int consumers = bench.consumers;
             final int work = bench.work;
-            if (work > 0) {
-                completeTask = new Runnable() {
-                    @Override
-                    public void run() {
-                        Blackhole.consumeCPU(work);
-                        //We can avoid the full barrier cost of a volatile set given that the
-                        //benchmark is focusing on executors with a single threaded consumer:
-                        //it would reduce the cost on consumer side while allowing to focus just
-                        //to the threads hand-off/wake-up cost
-                        DONE_UPDATER.lazySet(PerThreadState.this, completed + 1);
-                    }
-                };
+            //we are forced to create different versions of this Runnable, because we can't use lambdas:
+            //lambdas would allow work and consumers fields to be trusted by the JVM if passed through capturing
+            if (consumers == 1) {
+                if (work > 0) {
+                    completeTask = new Runnable() {
+                        @Override
+                        public void run() {
+                            Blackhole.consumeCPU(work);
+                            //We can avoid the full barrier cost of a volatile set when the
+                            //benchmark is focusing on executors with a single threaded consumer:
+                            //it would reduce the cost on consumer side while allowing to focus just
+                            //to the threads hand-off/wake-up cost
+                            DONE_UPDATER.lazySet(PerThreadState.this, completed + 1);
+                        }
+                    };
+                } else {
+                    completeTask = new Runnable() {
+                        @Override
+                        public void run() {
+                            //We can avoid the full barrier cost of a volatile set when the
+                            //benchmark is focusing on executors with a single threaded consumer:
+                            //it would reduce the cost on consumer side while allowing to focus just
+                            //to the threads hand-off/wake-up cost
+                            DONE_UPDATER.lazySet(PerThreadState.this, completed + 1);
+                        }
+                    };
+                }
             } else {
-                completeTask = new Runnable() {
-                    @Override
-                    public void run() {
-                        //We can avoid the full barrier cost of a volatile set given that the
-                        //benchmark is focusing on executors with a single threaded consumer:
-                        //it would reduce the cost on consumer side while allowing to focus just
-                        //to the threads hand-off/wake-up cost
-                        DONE_UPDATER.lazySet(PerThreadState.this, completed + 1);
-                    }
-                };
+                if (work > 0) {
+                    completeTask = new Runnable() {
+                        @Override
+                        public void run() {
+                            Blackhole.consumeCPU(work);
+                            DONE_UPDATER.getAndIncrement(PerThreadState.this);
+                        }
+                    };
+                } else {
+                    completeTask = new Runnable() {
+                        @Override
+                        public void run() {
+                            DONE_UPDATER.getAndIncrement(PerThreadState.this);
+                        }
+                    };
+                }
             }
         }
 
@@ -297,23 +183,16 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    @BenchmarkMode(Mode.SampleTime)
+    @BenchmarkMode(Mode.AverageTime)
     @Threads(1)
     public int test1Producer(final PerThreadState state) {
         return executeBurst(state);
     }
 
     @Benchmark
-    @BenchmarkMode(Mode.SampleTime)
+    @BenchmarkMode(Mode.AverageTime)
     @Threads(2)
     public int test2Producers(final PerThreadState state) {
-        return executeBurst(state);
-    }
-
-    @Benchmark
-    @BenchmarkMode(Mode.SampleTime)
-    @Threads(3)
-    public int test3Producers(final PerThreadState state) {
         return executeBurst(state);
     }
 

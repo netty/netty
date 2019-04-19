@@ -32,6 +32,9 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
     @SuppressWarnings("unchecked")
     @Override
     public EventExecutorChooser newChooser(EventExecutor[] executors) {
+        if (executors.length == 1) {
+            return new SingleEventExecutorChooser(executors);
+        }
         if (isPowerOfTwo(executors.length)) {
             return new PowerOfTwoEventExecutorChooser(executors);
         } else {
@@ -41,6 +44,19 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
 
     private static boolean isPowerOfTwo(int val) {
         return (val & -val) == val;
+    }
+
+    private static final class SingleEventExecutorChooser implements EventExecutorChooser {
+        private final EventExecutor executor;
+
+        SingleEventExecutorChooser(EventExecutor[] executors) {
+            this.executor = executors[0];
+        }
+
+        @Override
+        public EventExecutor next() {
+            return executor;
+        }
     }
 
     private static final class PowerOfTwoEventExecutorChooser implements EventExecutorChooser {
@@ -53,7 +69,10 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
 
         @Override
         public EventExecutor next() {
-            return executors[idx.getAndIncrement() & executors.length - 1];
+            final AtomicInteger idx = this.idx;
+            final EventExecutor[] executors = this.executors;
+            final int executorsMask = executors.length - 1;
+            return executors[idx.getAndIncrement() & executorsMask];
         }
     }
 
@@ -67,7 +86,10 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
 
         @Override
         public EventExecutor next() {
-            return executors[Math.abs(idx.getAndIncrement() % executors.length)];
+            final AtomicInteger idx = this.idx;
+            final EventExecutor[] executors = this.executors;
+            final int executorsLength = executors.length;
+            return executors[Math.abs(idx.getAndIncrement() % executorsLength)];
         }
     }
 }
