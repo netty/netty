@@ -16,6 +16,7 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.ObservableTaskConsumerUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
@@ -38,7 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * executors of type {@link OrderedEventExecutor}.
  */
 @UnstableApi
-public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
+public final class NonStickyEventExecutorGroup implements EventExecutorGroup, ObservableTaskConsumer {
     private final EventExecutorGroup group;
     private final int maxTaskExecutePerRun;
 
@@ -69,6 +70,16 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
             }
         }
         return group;
+    }
+
+    @Override
+    public long submittedTasks() {
+        return ObservableTaskConsumerUtil.submittedTasks(group);
+    }
+
+    @Override
+    public long completedTasks() {
+        return ObservableTaskConsumerUtil.completedTasks(group);
     }
 
     private NonStickyOrderedEventExecutor newExecutor(EventExecutor executor) {
@@ -212,7 +223,7 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
     }
 
     private static final class NonStickyOrderedEventExecutor extends AbstractEventExecutor
-            implements Runnable, OrderedEventExecutor {
+            implements Runnable, OrderedEventExecutor, ObservableTaskConsumer {
         private final EventExecutor executor;
         private final Queue<Runnable> tasks = PlatformDependent.newMpscQueue();
 
@@ -227,6 +238,16 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
             super(executor);
             this.executor = executor;
             this.maxTaskExecutePerRun = maxTaskExecutePerRun;
+        }
+
+        @Override
+        public long submittedTasks() {
+            return PlatformDependent.currentProducerIndex(tasks);
+        }
+
+        @Override
+        public long completedTasks() {
+            return PlatformDependent.currentConsumerIndex(tasks);
         }
 
         @Override
