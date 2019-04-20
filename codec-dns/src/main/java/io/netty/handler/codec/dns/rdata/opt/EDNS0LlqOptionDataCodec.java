@@ -17,15 +17,15 @@
 package io.netty.handler.codec.dns.rdata.opt;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.record.opt.Edns0LlqOption;
+import io.netty.handler.codec.dns.record.opt.EDNS0LlqOption;
 
 import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
 
-public class Edns0LlqOptionDataCodec implements Edns0OptionDataCodec<Edns0LlqOption> {
-    public static final Edns0LlqOptionDataCodec DEFAULT = new Edns0LlqOptionDataCodec();
+public class EDNS0LlqOptionDataCodec implements EDNS0OptionDataCodec<EDNS0LlqOption> {
+    public static final EDNS0LlqOptionDataCodec DEFAULT = new EDNS0LlqOptionDataCodec();
 
     @Override
-    public Edns0LlqOption decodeOptionData(ByteBuf optionData) {
+    public EDNS0LlqOption decodeOptionData(ByteBuf optionData) {
         checkShortReadable(optionData, "version");
         short version = optionData.readShort();
         checkShortReadable(optionData, "opcode");
@@ -36,11 +36,11 @@ public class Edns0LlqOptionDataCodec implements Edns0OptionDataCodec<Edns0LlqOpt
         long id = optionData.readLong();
         checkIntReadable(optionData, "lease life");
         int leaseLife = optionData.readInt();
-        return new Edns0LlqOption(version, opcode, errCode, id, leaseLife);
+        return new EDNS0LlqOption(version, opcode, errCode, id, leaseLife);
     }
 
     @Override
-    public void encodeOptionData(Edns0LlqOption option, ByteBuf out) {
+    public void encodeOptionData(EDNS0LlqOption option, ByteBuf out) {
         out.writeShort(option.version())
            .writeShort(option.opcode())
            .writeShort(option.errCode())

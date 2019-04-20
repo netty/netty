@@ -18,7 +18,7 @@ package io.netty.handler.codec.dns.record;
 
 import io.netty.handler.codec.dns.AbstractDnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
-import io.netty.handler.codec.dns.record.opt.Edns0Option;
+import io.netty.handler.codec.dns.record.opt.EDNS0Option;
 
 import java.util.Collections;
 import java.util.List;
@@ -29,14 +29,14 @@ import static io.netty.util.internal.ObjectUtil.*;
  * Dns {@link DnsRecordType#OPT} record.
  */
 public class DnsOPTRecord extends AbstractDnsRecord {
-    private final List<Edns0Option> options;
+    private final List<EDNS0Option> options;
 
-    public DnsOPTRecord(String name, int dnsClass, long timeToLive, List<Edns0Option> options) {
+    public DnsOPTRecord(String name, int dnsClass, long timeToLive, List<EDNS0Option> options) {
         super(name, DnsRecordType.OPT, dnsClass, timeToLive);
         this.options = Collections.unmodifiableList(checkNotNull(options, "options"));
     }
 
-    public List<Edns0Option> options() {
+    public List<EDNS0Option> options() {
         return options;
     }
 }

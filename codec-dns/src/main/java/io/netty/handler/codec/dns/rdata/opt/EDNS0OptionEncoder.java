@@ -17,10 +17,10 @@
 package io.netty.handler.codec.dns.rdata.opt;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.record.opt.Edns0Option;
+import io.netty.handler.codec.dns.record.opt.EDNS0Option;
 
-public interface Edns0OptionEncoder {
-    Edns0OptionEncoder DEFAULT = new DefaultEdns0OptionEncoder();
+public interface EDNS0OptionEncoder {
+    EDNS0OptionEncoder DEFAULT = new DefaultEDNS0OptionEncoder();
 
-    void encodeOption(Edns0Option option, ByteBuf out);
+    void encodeOption(EDNS0Option option, ByteBuf out);
 }

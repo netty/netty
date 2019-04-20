@@ -21,14 +21,14 @@ package io.netty.handler.codec.dns.record.opt;
  * Extension Mechanisms for DNS (EDNS0) <a href="https://tools.ietf.org/html/draft-sekar-dns-llq-01">long lived
  * queries</a> option
  */
-public class Edns0LlqOption implements Edns0Option {
+public class EDNS0LlqOption implements EDNS0Option {
     private final short version;
     private final short opcode;
     private final short errCode;
     private final long id;
     private final int leaseLife;
 
-    public Edns0LlqOption(short version, short opcode, short errCode, long id, int leaseLife) {
+    public EDNS0LlqOption(short version, short opcode, short errCode, long id, int leaseLife) {
         this.version = version;
         this.opcode = opcode;
         this.errCode = errCode;
@@ -38,7 +38,7 @@ public class Edns0LlqOption implements Edns0Option {
 
     @Override
     public short optionCode() {
-        return Edns0Option.OPTION_CODE_EDNS0_LLQ;
+        return EDNS0Option.OPTION_CODE_EDNS0_LLQ;
     }
 
     public short version() {

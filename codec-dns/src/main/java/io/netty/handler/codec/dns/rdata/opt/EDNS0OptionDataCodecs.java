@@ -16,34 +16,33 @@
 
 package io.netty.handler.codec.dns.rdata.opt;
 
-import io.netty.handler.codec.dns.record.opt.Edns0Option;
-import io.netty.handler.codec.dns.rdata.opt.DefaultEdns0OptionDecoder.Edns0SubnetOptionDataCodec;
+import io.netty.handler.codec.dns.record.opt.EDNS0Option;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public final class Edns0OptionDataCodecs {
-    private static final Map<Short, Edns0OptionDataCodec<? extends Edns0Option>> CODECS =
-            new HashMap<Short, Edns0OptionDataCodec<? extends Edns0Option>>();
+public final class EDNS0OptionDataCodecs {
+    private static final Map<Short, EDNS0OptionDataCodec<? extends EDNS0Option>> CODECS =
+            new HashMap<Short, EDNS0OptionDataCodec<? extends EDNS0Option>>();
 
     static {
-        CODECS.put(Edns0Option.OPTION_CODE_EDNS0_LLQ, Edns0LlqOptionDataCodec.DEFAULT);
-        CODECS.put(Edns0Option.OPTION_CODE_EDNS0_SUBNET, Edns0SubnetOptionDataCodec.DEFAULT);
+        CODECS.put(EDNS0Option.OPTION_CODE_EDNS0_LLQ, EDNS0LlqOptionDataCodec.DEFAULT);
+        CODECS.put(EDNS0Option.OPTION_CODE_EDNS0_SUBNET, EDNS0SubnetOptionDataCodec.DEFAULT);
     }
 
-    private Edns0OptionDataCodecs() {
+    private EDNS0OptionDataCodecs() {
         // Private constructor for factory class
     }
 
-    public static Edns0OptionDataDecoder<? extends Edns0Option> optionDataDecoder(short type) {
+    public static EDNS0OptionDataDecoder<? extends EDNS0Option> optionDataDecoder(short type) {
         return CODECS.get(type);
     }
 
-    public static Edns0OptionDataEncoder<? extends Edns0Option> optionDataEncoder(short type) {
+    public static EDNS0OptionDataEncoder<? extends EDNS0Option> optionDataEncoder(short type) {
         return CODECS.get(type);
     }
 
-    public static Edns0OptionDataCodec<? extends Edns0Option> optionDataCodec(short type) {
+    public static EDNS0OptionDataCodec<? extends EDNS0Option> optionDataCodec(short type) {
         return CODECS.get(type);
     }
 }

@@ -17,10 +17,10 @@
 package io.netty.handler.codec.dns.rdata;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.rdata.opt.Edns0OptionDecoder;
-import io.netty.handler.codec.dns.rdata.opt.Edns0OptionEncoder;
+import io.netty.handler.codec.dns.rdata.opt.EDNS0OptionDecoder;
+import io.netty.handler.codec.dns.rdata.opt.EDNS0OptionEncoder;
 import io.netty.handler.codec.dns.record.DnsOPTRecord;
-import io.netty.handler.codec.dns.record.opt.Edns0Option;
+import io.netty.handler.codec.dns.record.opt.EDNS0Option;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -33,19 +33,19 @@ public class DnsOPTRDataCodec implements DnsRDataCodec<DnsOPTRecord> {
 
     @Override
     public DnsOPTRecord decodeRData(String name, int dnsClass, long timeToLive, ByteBuf rData) {
-        List<Edns0Option> edns0Options = new LinkedList<Edns0Option>();
+        List<EDNS0Option> EDNS0Options = new LinkedList<EDNS0Option>();
         while (rData.isReadable()) {
-            Edns0Option option = Edns0OptionDecoder.DEFAULT.decodeOption(rData);
-            edns0Options.add(option);
+            EDNS0Option option = EDNS0OptionDecoder.DEFAULT.decodeOption(rData);
+            EDNS0Options.add(option);
         }
-        return new DnsOPTRecord(name, dnsClass, timeToLive, edns0Options);
+        return new DnsOPTRecord(name, dnsClass, timeToLive, EDNS0Options);
     }
 
     @Override
     public void encodeRData(DnsOPTRecord record, ByteBuf out) {
-        List<Edns0Option> options = record.options();
-        for (Edns0Option option : options) {
-            Edns0OptionEncoder.DEFAULT.encodeOption(option, out);
+        List<EDNS0Option> options = record.options();
+        for (EDNS0Option option : options) {
+            EDNS0OptionEncoder.DEFAULT.encodeOption(option, out);
         }
     }
 }

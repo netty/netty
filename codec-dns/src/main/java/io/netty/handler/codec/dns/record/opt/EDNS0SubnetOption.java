@@ -23,13 +23,13 @@ import static io.netty.util.internal.ObjectUtil.*;
 /**
  * Extension Mechanisms for DNS (EDNS0) <a href="https://tools.ietf.org/html/rfc7871">client subnet</a> option
  */
-public class Edns0SubnetOption implements Edns0Option {
+public class EDNS0SubnetOption implements EDNS0Option {
     private final short family;
     private final byte sourcePrefixLength;
     private final byte scopePrefixLength;
     private final InetAddress address;
 
-    public Edns0SubnetOption(short family, byte sourcePrefixLength, byte scopePrefixLength, InetAddress address) {
+    public EDNS0SubnetOption(short family, byte sourcePrefixLength, byte scopePrefixLength, InetAddress address) {
         this.family = family;
         this.sourcePrefixLength = sourcePrefixLength;
         this.scopePrefixLength = scopePrefixLength;
@@ -38,7 +38,7 @@ public class Edns0SubnetOption implements Edns0Option {
 
     @Override
     public short optionCode() {
-        return Edns0Option.OPTION_CODE_EDNS0_SUBNET;
+        return EDNS0Option.OPTION_CODE_EDNS0_SUBNET;
     }
 
     public short family() {

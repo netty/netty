@@ -18,17 +18,17 @@ package io.netty.handler.codec.dns.rdata.opt;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
-import io.netty.handler.codec.dns.record.opt.Edns0Option;
+import io.netty.handler.codec.dns.record.opt.EDNS0Option;
 
-public class DefaultEdns0OptionEncoder implements Edns0OptionEncoder {
+public class DefaultEDNS0OptionEncoder implements EDNS0OptionEncoder {
 
     @Override
-    public void encodeOption(Edns0Option option, ByteBuf out) {
+    public void encodeOption(EDNS0Option option, ByteBuf out) {
         out.writeShort(option.optionCode());
         out.writeShort(0);
         int optionDataOffset = out.writerIndex();
 
-        Edns0OptionDataEncoder optionDataEncoder = Edns0OptionDataCodecs.optionDataEncoder(option.optionCode());
+        EDNS0OptionDataEncoder optionDataEncoder = EDNS0OptionDataCodecs.optionDataEncoder(option.optionCode());
         if (optionDataEncoder == null) {
             throw new UnsupportedMessageTypeException("option code: " + option.optionCode());
         }

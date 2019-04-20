@@ -17,11 +17,8 @@
 package io.netty.handler.codec.dns.rdata.opt;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.record.opt.Edns0Option;
+import io.netty.handler.codec.dns.record.opt.EDNS0Option;
 
-public interface Edns0OptionDecoder {
-
-    Edns0OptionDecoder DEFAULT = new DefaultEdns0OptionDecoder();
-
-    Edns0Option decodeOption(ByteBuf in);
+public interface EDNS0OptionDataDecoder<T extends EDNS0Option> {
+    T decodeOptionData(ByteBuf optionData);
 }

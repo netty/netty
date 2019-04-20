@@ -16,9 +16,8 @@
 
 package io.netty.handler.codec.dns.rdata.opt;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.record.opt.Edns0Option;
+import io.netty.handler.codec.dns.record.opt.EDNS0Option;
 
-public interface Edns0OptionDataEncoder<T extends Edns0Option> {
-    void encodeOptionData(T option, ByteBuf out);
+public interface EDNS0OptionDataCodec<T extends EDNS0Option>
+        extends EDNS0OptionDataDecoder<T>, EDNS0OptionDataEncoder<T> {
 }
