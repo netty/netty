@@ -449,7 +449,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 // If it was removed, it is not safe to continue to operate on the buffer.
                 //
                 // See https://github.com/netty/netty/issues/1664
-                if (ctx.isRemoved()) {
+                if (isRemoved()) {
                     break;
                 }
 
