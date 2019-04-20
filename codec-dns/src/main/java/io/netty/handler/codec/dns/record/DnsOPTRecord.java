@@ -39,4 +39,27 @@ public class DnsOPTRecord extends AbstractDnsRecord {
     public List<EDNS0Option> options() {
         return options;
     }
+
+
+    public byte extendedRcode() {
+        return (byte) ((int) timeToLive() >> 24 & 0xff);
+    }
+
+    public byte version() {
+        return (byte) ((int) timeToLive() >> 16 & 0xff);
+    }
+
+    public short flags() {
+        return (short) ((short) timeToLive() & 0xffff);
+    }
+
+    public short udpSize() {
+        return (short) dnsClass();
+    }
+
+    public boolean isDo() {
+        short doMask = (short) (1 << 15);
+        return (flags() & doMask) == doMask;
+    }
+
 }

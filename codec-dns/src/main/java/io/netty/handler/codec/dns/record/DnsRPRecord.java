@@ -21,14 +21,14 @@ import io.netty.handler.codec.dns.DnsRecordType;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
-public class DNSRPRecord extends AbstractDnsRecord {
+public class DnsRPRecord extends AbstractDnsRecord {
     // A domain name that specifies the mailbox for the responsible person.
     private final String mbox;
 
     // A domain name for which TXT RR's exist
     private final String txt;
 
-    public DNSRPRecord(String name, int dnsClass, long timeToLive, String mbox, String txt) {
+    public DnsRPRecord(String name, int dnsClass, long timeToLive, String mbox, String txt) {
         super(name, DnsRecordType.RP, dnsClass, timeToLive);
         this.mbox = checkNotNull(mbox, "mbox");
         this.txt = checkNotNull(txt, "txt");

@@ -17,136 +17,244 @@ package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.socket.InternetProtocolFamily;
-import io.netty.handler.codec.dns.util.DnsEncodeUtil;
-import io.netty.util.internal.PlatformDependent;
+import io.netty.handler.codec.dns.record.DnsAFSDBRecord;
+import io.netty.handler.codec.dns.record.DnsARecord;
+import io.netty.handler.codec.dns.record.DnsCNAMERecord;
+import io.netty.handler.codec.dns.record.DnsMXRecord;
+import io.netty.handler.codec.dns.record.DnsNSRecord;
+import io.netty.handler.codec.dns.record.DnsOPTRecord;
+import io.netty.handler.codec.dns.record.DnsPTRRecord;
+import io.netty.handler.codec.dns.record.DnsRPRecord;
+import io.netty.handler.codec.dns.record.DnsSIGRecord;
+import io.netty.handler.codec.dns.record.DnsTXTRecord;
+import io.netty.handler.codec.dns.record.opt.EDNS0LlqOption;
+import io.netty.handler.codec.dns.record.opt.EDNS0Option;
+import io.netty.handler.codec.dns.record.opt.EDNS0SubnetOption;
 import io.netty.util.internal.SocketUtils;
-import io.netty.util.internal.StringUtil;
 import org.junit.Test;
 
 import java.net.InetAddress;
+import java.util.LinkedList;
+import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class DefaultDnsRecordEncoderTest {
+    private static final String NAME = "netty.io.";
+    private static final int DNS_CLASS = DnsRecord.CLASS_IN;
+    private static final long TTL = 60L;
+    private static final ByteBuf ENCODE_HEADER = Unpooled.wrappedBuffer(
+            new byte[] {                                         // field     offset  length
+                    5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0,  // name      0       10
+                    0, 0,                                        // type      10      2
+                    0, 1,                                        // class     12      2
+                    0, 0, 0, 60,                                 // ttl       14      4
+                    0, 0,                                        // rdlength  18      2
+                    0, 0, 0, 0                                   // rdata     20      <rdlength>
+            });
 
     @Test
-    public void testEncodeName() throws Exception {
-        testEncodeName(new byte[] { 5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0 }, "netty.io.");
+    public void testEncodeARecord() throws Exception {
+        byte[] addressBytes = { 1, 2, 3, 4 };
+        InetAddress address = InetAddress.getByAddress(addressBytes);
+        DnsARecord aRecord = new DnsARecord(NAME, DNS_CLASS, TTL, address);
+        ByteBuf out = Unpooled.buffer(64);
+        testEncodeRecord(aRecord, out);
+
+        byte[] actualAddressBytes = new byte[addressBytes.length];
+        out.readBytes(actualAddressBytes);
+        assertArrayEquals(addressBytes, actualAddressBytes);
+        out.release();
     }
 
     @Test
-    public void testEncodeNameWithoutTerminator() throws Exception {
-        testEncodeName(new byte[] { 5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0 }, "netty.io");
+    public void testEncodeNSRecord() throws Exception {
+        String ns = "example.com";
+        byte[] nsBytes = { 7, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 3, 'c', 'o', 'm', 0 };
+        DnsNSRecord record = new DnsNSRecord(NAME, DNS_CLASS, TTL, ns);
+        ByteBuf out = Unpooled.buffer(64);
+        testEncodeRecord(record, out);
+        byte[] actualNsBytes = new byte[nsBytes.length];
+        out.readBytes(actualNsBytes);
+        assertArrayEquals(nsBytes, actualNsBytes);
     }
 
     @Test
-    public void testEncodeNameWithExtraTerminator() throws Exception {
-        testEncodeName(new byte[] { 5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0 }, "netty.io..");
+    public void testEncodeCNAMERecord() throws Exception {
+        String cname = "example.com";
+        byte[] cnameBytes = { 7, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 3, 'c', 'o', 'm', 0 };
+        DnsCNAMERecord record = new DnsCNAMERecord(NAME, DNS_CLASS, TTL, cname);
+        ByteBuf out = Unpooled.buffer(64);
+        testEncodeRecord(record, out);
+        byte[] actualCnameBytes = new byte[cnameBytes.length];
+        out.readBytes(actualCnameBytes);
+        assertArrayEquals(cnameBytes, actualCnameBytes);
     }
 
-    // Test for https://github.com/netty/netty/issues/5014
     @Test
-    public void testEncodeEmptyName() throws Exception {
-        testEncodeName(new byte[] { 0 }, StringUtil.EMPTY_STRING);
+    public void testEncodePTRRecord() throws Exception {
+        String ptr = "example.com";
+        byte[] ptrBytes = { 7, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 3, 'c', 'o', 'm', 0 };
+        DnsPTRRecord record = new DnsPTRRecord(NAME, DNS_CLASS, TTL, ptr);
+        ByteBuf out = Unpooled.buffer(64);
+        testEncodeRecord(record, out);
+        byte[] actualPtrBytes = new byte[ptrBytes.length];
+        out.readBytes(actualPtrBytes);
+        assertArrayEquals(ptrBytes, actualPtrBytes);
     }
 
     @Test
-    public void testEncodeRootName() throws Exception {
-        testEncodeName(new byte[] { 0 }, ".");
+    public void testEncodeMXRecord() throws Exception {
+        short preference = 1;
+        String exchange = "example.com";
+        DnsMXRecord record = new DnsMXRecord(NAME, DNS_CLASS, TTL, preference, exchange);
+        ByteBuf out = Unpooled.buffer(64);
+        testEncodeRecord(record, out);
+        byte[] expectedMXBytes = { 0, 1, 7, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 3, 'c', 'o', 'm', 0 };
+        byte[] actualMXBytes = new byte[expectedMXBytes.length];
+        out.readBytes(actualMXBytes);
+        assertArrayEquals(expectedMXBytes, actualMXBytes);
     }
 
-    private static void testEncodeName(byte[] expected, String name) throws Exception {
-        DefaultDnsRecordEncoder encoder = new DefaultDnsRecordEncoder();
-        ByteBuf out = Unpooled.buffer();
-        ByteBuf expectedBuf = Unpooled.wrappedBuffer(expected);
-        try {
-            DnsEncodeUtil.encodeDomainName(name, out);
-            assertEquals(expectedBuf, out);
-        } finally {
-            out.release();
-            expectedBuf.release();
+    @Test
+    public void testEncodeTXTRecord() throws Exception {
+        String txt = "nyan";
+        DnsTXTRecord record = new DnsTXTRecord(NAME, DNS_CLASS, TTL, txt);
+        ByteBuf out = Unpooled.buffer(64);
+        testEncodeRecord(record, out);
+        byte[] expectedTxtBytes = { 'n', 'y', 'a', 'n' };
+        byte[] actualTxtBytes = new byte[expectedTxtBytes.length];
+        out.readBytes(actualTxtBytes);
+        assertArrayEquals(expectedTxtBytes, actualTxtBytes);
+    }
+
+    @Test
+    public void testDecodeRPRecord() throws Exception {
+        String mBox = "netty.io";
+        String txt = "example.com";
+        DnsRPRecord record = new DnsRPRecord(NAME, DNS_CLASS, TTL, mBox, txt);
+        ByteBuf out = Unpooled.buffer(64);
+        testEncodeRecord(record, out);
+        byte[] expectedRPBytes = {
+                5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0, // mbox
+                7, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 3, 'c', 'o', 'm', 0// txt
+        };
+        byte[] actualRPBytes = new byte[expectedRPBytes.length];
+        out.readBytes(actualRPBytes);
+        assertArrayEquals(expectedRPBytes, actualRPBytes);
+    }
+
+    @Test
+    public void testEncodeAFSDBRecord() throws Exception {
+        short subtype = 1;
+        String hostname = "netty.io";
+        DnsAFSDBRecord afsdbRecord = new DnsAFSDBRecord(NAME, DNS_CLASS, TTL, subtype, hostname);
+        ByteBuf out = Unpooled.buffer(64);
+        testEncodeRecord(afsdbRecord, out);
+        byte[] expectedAFSDBBytes = {
+                0, 1,  // subtype
+                5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0 // hostname
+        };
+        byte[] actualAFSDBBytes = new byte[expectedAFSDBBytes.length];
+        out.readBytes(actualAFSDBBytes);
+        assertArrayEquals(expectedAFSDBBytes, actualAFSDBBytes);
+    }
+
+    @Test
+    public void testEncodeSIGRecord() throws Exception {
+        short typeCovered = 1;
+        byte algorithem = 1;
+        byte lables = 2;
+        int originalTTL = 60;
+        int expiration = 10;
+        int inception = 10;
+        short keyTag = 11;
+        String signerName = "netty.io";
+        String signature = "signature";
+
+        DnsSIGRecord sigRecord =
+                new DnsSIGRecord(NAME, DNS_CLASS, TTL, typeCovered, algorithem, lables, originalTTL, expiration,
+                                 inception, keyTag, signerName, signature);
+        ByteBuf out = Unpooled.buffer(64);
+        testEncodeRecord(sigRecord, out);
+        byte[] expectedSigBytes = {
+                0, 1, // type covered
+                1, // algorithem
+                2, // lables
+                0, 0, 0, 60, // ttl
+                0, 0, 0, 10, // expiration
+                0, 0, 0, 10, // inception
+                0, 11,// key tag
+                5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0, // signer's name
+                'c', '2', 'l', 'n', 'b', 'm', 'F', '0', 'd', 'X', 'J', 'l'// signature base64 encode -> c2lnbmF0dXJl
+        };
+        byte[] actualSigBytes = new byte[expectedSigBytes.length];
+        out.readBytes(actualSigBytes);
+        assertArrayEquals(expectedSigBytes, actualSigBytes);
+    }
+
+
+    @Test
+    public void testEncodeAAAARecord() throws Exception {
+        byte[] addressBytes = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+        InetAddress address = InetAddress.getByAddress(addressBytes);
+        DnsARecord record = new DnsARecord(NAME, DNS_CLASS, TTL, address);
+        ByteBuf out = Unpooled.buffer(64);
+        testEncodeRecord(record, out);
+        byte[] actualAddressBytes = new byte[addressBytes.length];
+        out.readBytes(actualAddressBytes);
+        assertArrayEquals(addressBytes, actualAddressBytes);
+    }
+
+    @Test
+    public void testEncodeOPTRecord() throws Exception {
+        short dnsClass = 512; // udp size 512
+        int ttl = 0x1028000; // extension code 1, version 2, is do true
+        List<EDNS0Option> options = new LinkedList<EDNS0Option>();
+        options.add(new EDNS0LlqOption((short) 1, (short) 1, (short) 2, 1, 60));
+        options.add(new EDNS0SubnetOption((short) 1, (byte) 8, (byte) 8, SocketUtils.addressByName("1.2.3.4")));
+        DnsOPTRecord record = new DnsOPTRecord(NAME, dnsClass, ttl, options);
+        ByteBuf out = Unpooled.buffer(64);
+        testEncodeRecord(record, out);
+        byte[] expectedBytes = {
+                // option long live queries
+                0, 1, // option code
+                0, 18, // option length
+                0, 1, // version
+                0, 1, // op code
+                0, 2, // error code
+                0, 0, 0, 0, 0, 0, 0, 1, // id
+                0, 0, 0, 60, // lease life
+                // option client subnet
+                0, 8, // option code
+                0, 8, // option length
+                0, 1, // family ipv4
+                8, // source prefix length
+                8, // scope prefix length
+                1, 2, 3, 4 // address
+        };
+        byte[] actualBytes = new byte[expectedBytes.length];
+        out.readBytes(actualBytes);
+        assertArrayEquals(expectedBytes, actualBytes);
+    }
+
+    private static void testEncodeRecord(DnsRecord record, ByteBuf out) throws Exception {
+        DnsRecordEncoder encoder = new DefaultDnsRecordEncoder();
+        encoder.encodeRecord(record, out);
+        DnsRecordType type = record.type();
+        // Compare name field
+        for (int i = 0; i < 10; i++) {
+            assertEquals(ENCODE_HEADER.getByte(i), out.getByte(i));
         }
-    }
-
-    @Test
-    public void testOptEcsRecordIpv4() throws Exception {
-        testOptEcsRecordIp(SocketUtils.addressByName("1.2.3.4"));
-        testOptEcsRecordIp(SocketUtils.addressByName("1.2.3.255"));
-    }
-
-    @Test
-    public void testOptEcsRecordIpv6() throws Exception {
-        testOptEcsRecordIp(SocketUtils.addressByName("::0"));
-        testOptEcsRecordIp(SocketUtils.addressByName("::FF"));
-    }
-
-    private static void testOptEcsRecordIp(InetAddress address) throws Exception {
-        int addressBits = address.getAddress().length * Byte.SIZE;
-        for (int i = 0; i <= addressBits; ++i) {
-            testIp(address, i);
-        }
-    }
-
-    private static void testIp(InetAddress address, int prefix) throws Exception {
-        int lowOrderBitsToPreserve = prefix % Byte.SIZE;
-
-        ByteBuf addressPart = Unpooled.wrappedBuffer(address.getAddress(), 0,
-                DefaultDnsRecordEncoder.calculateEcsAddressLength(prefix, lowOrderBitsToPreserve));
-
-        if (lowOrderBitsToPreserve > 0) {
-            // Pad the leftover of the last byte with zeros.
-            int idx = addressPart.writerIndex() - 1;
-            byte lastByte = addressPart.getByte(idx);
-            int paddingMask = ~((1 << (8 - lowOrderBitsToPreserve)) - 1);
-            addressPart.setByte(idx, lastByte & paddingMask);
-        }
-
-        int payloadSize = nextInt(Short.MAX_VALUE);
-        int extendedRcode = nextInt(Byte.MAX_VALUE * 2); // Unsigned
-        int version = nextInt(Byte.MAX_VALUE * 2); // Unsigned
-
-        DefaultDnsRecordEncoder encoder = new DefaultDnsRecordEncoder();
-        ByteBuf out = Unpooled.buffer();
-        try {
-            DnsOptEcsRecord record = new DefaultDnsOptEcsRecord(
-                    payloadSize, extendedRcode, version, prefix, address.getAddress());
-            encoder.encodeRecord(record, out);
-
-            assertEquals(0, out.readByte()); // Name
-            assertEquals(DnsRecordType.OPT.intValue(), out.readUnsignedShort()); // Opt
-            assertEquals(payloadSize, out.readUnsignedShort()); // payload
-            assertEquals(record.timeToLive(), out.getUnsignedInt(out.readerIndex()));
-
-            // Read unpacked TTL.
-            assertEquals(extendedRcode, out.readUnsignedByte());
-            assertEquals(version, out.readUnsignedByte());
-            assertEquals(extendedRcode, record.extendedRcode());
-            assertEquals(version, record.version());
-            assertEquals(0, record.flags());
-
-            assertEquals(0, out.readShort());
-
-            int payloadLength = out.readUnsignedShort();
-            assertEquals(payloadLength, out.readableBytes());
-
-            assertEquals(8, out.readShort()); // As defined by RFC.
-
-            int rdataLength = out.readUnsignedShort();
-            assertEquals(rdataLength, out.readableBytes());
-
-            assertEquals((short) InternetProtocolFamily.of(address).addressNumber(), out.readShort());
-
-            assertEquals(prefix, out.readUnsignedByte());
-            assertEquals(0, out.readUnsignedByte()); // This must be 0 for requests.
-            assertEquals(addressPart, out);
-        } finally {
-            addressPart.release();
-            out.release();
-        }
-    }
-
-    private static int nextInt(int max) {
-        return PlatformDependent.threadLocalRandom().nextInt(max);
+        // Compare type
+        assertEquals(type.intValue(), out.getShort(10));
+        // Compare dns class
+        assertEquals(record.dnsClass(), out.getShort(12));
+        // Compare ttl
+        assertEquals(record.timeToLive(), out.getInt(14));
+        // Compare length
+        int rdLength = out.writerIndex() - 20;
+        assertEquals(rdLength, out.getShort(18));
+        out.readerIndex(20);
     }
 }

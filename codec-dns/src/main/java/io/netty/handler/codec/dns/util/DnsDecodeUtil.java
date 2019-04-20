@@ -17,6 +17,7 @@
 package io.netty.handler.codec.dns.util;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.util.CharsetUtil;
@@ -109,6 +110,11 @@ public final class DnsDecodeUtil {
 
     public static String decodeStringBase64(ByteBuf in) {
         return Base64.decode(in).toString(Charset.forName("utf-8"));
+    }
+
+    public static void encodeStringBase64(String str, ByteBuf out) {
+        byte[] bytes = str.getBytes(Charset.forName("utf-8"));
+        out.writeBytes(Base64.encode(Unpooled.wrappedBuffer(bytes)));
     }
 
     public static void checkByteReadable(ByteBuf in, String fieldName) {

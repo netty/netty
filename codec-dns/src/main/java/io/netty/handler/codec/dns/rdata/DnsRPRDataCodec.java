@@ -17,26 +17,26 @@
 package io.netty.handler.codec.dns.rdata;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.record.DNSRPRecord;
+import io.netty.handler.codec.dns.record.DnsRPRecord;
 
 import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
 import static io.netty.handler.codec.dns.util.DnsEncodeUtil.*;
 
 /**
- * Codec for {@link DNSRPRecord}
+ * Codec for {@link DnsRPRecord}
  */
-public class DnsRPRDataCodec implements DnsRDataCodec<DNSRPRecord> {
+public class DnsRPRDataCodec implements DnsRDataCodec<DnsRPRecord> {
     public static final DnsRPRDataCodec DEFAULT = new DnsRPRDataCodec();
 
     @Override
-    public DNSRPRecord decodeRData(String name, int dnsClass, long timeToLive, ByteBuf rData) {
+    public DnsRPRecord decodeRData(String name, int dnsClass, long timeToLive, ByteBuf rData) {
         String mbox = decodeDomainName(rData);
         String txt = decodeDomainName(rData);
-        return new DNSRPRecord(name, dnsClass, timeToLive, mbox, txt);
+        return new DnsRPRecord(name, dnsClass, timeToLive, mbox, txt);
     }
 
     @Override
-    public void encodeRData(DNSRPRecord record, ByteBuf out) {
+    public void encodeRData(DnsRPRecord record, ByteBuf out) {
         encodeDomainName(record.mbox(), out);
         encodeDomainName(record.txt(), out);
     }

@@ -60,6 +60,6 @@ public class DnsSIGRDataCodec implements DnsRDataCodec<DnsSIGRecord> {
            .writeInt(record.inception())
            .writeShort(record.keyTag());
         encodeDomainName(record.signerName(), out);
-        encodeDomainName(record.signature(), out);
+        encodeStringBase64(record.signature(), out);
     }
 }
