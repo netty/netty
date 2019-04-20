@@ -93,12 +93,12 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
         // to build a full message. This means the indexes are meaningful and we need the ability to reference the
         // indexes un-obstructed, and thus we cannot use a slice here.
         // See https://www.ietf.org/rfc/rfc1035 [4.1.4. Message compression]
-        ByteBuf rData = in.retainedDuplicate().setIndex(offset, offset + length);
+        ByteBuf rData = in.duplicate().setIndex(offset, offset + length);
         DnsRDataDecoder<? extends DnsRecord> rDataDecoder = DnsRDataCodecs.rDataDecoder(type);
         if (rDataDecoder != null) {
             return rDataDecoder.decodeRData(name, dnsClass, timeToLive, rData);
         }
-        return new DefaultDnsRawRecord(name, type, dnsClass, timeToLive, rData);
+        return new DefaultDnsRawRecord(name, type, dnsClass, timeToLive, rData.retain());
     }
 
     /**

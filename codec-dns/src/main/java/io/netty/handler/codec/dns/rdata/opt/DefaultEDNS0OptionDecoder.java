@@ -31,7 +31,7 @@ public class DefaultEDNS0OptionDecoder implements EDNS0OptionDecoder {
             throw new UnsupportedMessageTypeException("option code: " + optionCode);
         }
         int offset = in.readerIndex();
-        ByteBuf optionData = in.retainedDuplicate().setIndex(offset, offset + optionLength);
+        ByteBuf optionData = in.duplicate().setIndex(offset, offset + optionLength);
         EDNS0Option option = optionDataDecoder.decodeOptionData(optionData);
         in.readerIndex(offset + optionLength);
         return option;
