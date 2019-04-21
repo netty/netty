@@ -61,12 +61,12 @@ public final class DnsEncodeUtil {
     /**
      * Get the cidr mask address by current inet address and mask length.
      *
-     * @param inetAddress inet address, such as 1.2.3.4
-     * @param maskLength cidr mask length, such as 24
+     * @param inetAddress inet address, such as {@code 1.2.3.4}
+     * @param maskLength cidr mask length, such as {@code 24}
      *
      * @return subnet inet address
      */
-    public static InetAddress cidrMaskAddress(InetAddress inetAddress, byte maskLength) {
+    public static InetAddress cidrMaskAddress(InetAddress inetAddress, int maskLength) {
         byte[] address = inetAddress.getAddress();
         int addressLength = address.length;
         for (int i = 0; i < addressLength; i++) {

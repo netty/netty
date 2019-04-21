@@ -30,11 +30,37 @@ import static io.netty.util.internal.ObjectUtil.*;
  * Dns {@link DnsRecordType#OPT} record.
  */
 public class DnsOPTRecord extends AbstractDnsRecord {
+    private static final short DO_MASK = (short) (1 << 15);
     private final List<EDNS0Option> options;
+    private final byte extendedRcode;
+    private final byte version;
+    private final short flags;
+    private final short udpSize;
+    private final boolean isDo;
 
     public DnsOPTRecord(String name, int dnsClass, long timeToLive, List<EDNS0Option> options) {
         super(name, DnsRecordType.OPT, dnsClass, timeToLive);
+        extendedRcode = (byte) ((int) timeToLive() >> 24 & 0xff);
+        version = (byte) ((int) timeToLive() >> 16 & 0xff);
+        flags = (short) ((short) timeToLive() & 0xffff);
+        udpSize = (short) dnsClass();
+        isDo = (flags & DO_MASK) == DO_MASK;
         this.options = Collections.unmodifiableList(checkNotNull(options, "options"));
+    }
+
+    public DnsOPTRecord(String name, int extendedRcode, int version,
+                        int udpSize, boolean isDo, List<EDNS0Option> options) {
+        super(name, DnsRecordType.OPT, udpSize, extendedRcode << 24 & version << 16 & (isDo? 1 << 15 : 0));
+        this.options = Collections.unmodifiableList(checkNotNull(options, "options"));
+        this.extendedRcode = (byte) extendedRcode;
+        this.version = (byte) version;
+        this.udpSize = (short) udpSize;
+        this.isDo = isDo;
+        flags = (short) (isDo? 1 << 15 : 0);
+    }
+
+    public DnsOPTRecord(int udpSize, boolean isDo, List<EDNS0Option> options) {
+        this(".", 0, 0, udpSize, isDo, options);
     }
 
     public List<EDNS0Option> options() {
@@ -43,24 +69,23 @@ public class DnsOPTRecord extends AbstractDnsRecord {
 
 
     public byte extendedRcode() {
-        return (byte) ((int) timeToLive() >> 24 & 0xff);
+        return extendedRcode;
     }
 
     public byte version() {
-        return (byte) ((int) timeToLive() >> 16 & 0xff);
+        return version;
     }
 
     public short flags() {
-        return (short) ((short) timeToLive() & 0xffff);
+        return flags;
     }
 
     public short udpSize() {
-        return (short) dnsClass();
+        return udpSize;
     }
 
     public boolean isDo() {
-        short doMask = (short) (1 << 15);
-        return (flags() & doMask) == doMask;
+        return isDo;
     }
 
     @Override
@@ -71,7 +96,7 @@ public class DnsOPTRecord extends AbstractDnsRecord {
     final StringBuilder toStringBuilder() {
         // Format options
         StringBuilder optionBuilder = new StringBuilder(32);
-        optionBuilder.append("[");
+        optionBuilder.append('[');
         for (EDNS0Option option : options) {
             optionBuilder.append(option.optionCode());
             optionBuilder.append(", ");
@@ -81,13 +106,13 @@ public class DnsOPTRecord extends AbstractDnsRecord {
         } else {
             optionBuilder.append("<EMPTY>");
         }
-        optionBuilder.append("]");
+        optionBuilder.append(']');
 
         return new StringBuilder(64)
                 .append(StringUtil.simpleClassName(this))
                 .append('(')
                 .append("OPT flags:")
-                .append(isDo()? "Do" : "")
+                .append(isDo()? " do" : "")
                 .append(" version:")
                 .append(version())
                 .append(" extendedRecode:")

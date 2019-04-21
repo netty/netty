@@ -48,10 +48,10 @@ public class EDNS0SubnetOption implements EDNS0Option {
     private final byte scopePrefixLength;
     private final InetAddress address;
 
-    public EDNS0SubnetOption(short family, byte sourcePrefixLength, byte scopePrefixLength, InetAddress address) {
-        this.family = family;
-        this.sourcePrefixLength = sourcePrefixLength;
-        this.scopePrefixLength = scopePrefixLength;
+    public EDNS0SubnetOption(int family, int sourcePrefixLength, int scopePrefixLength, InetAddress address) {
+        this.family = (short) family;
+        this.sourcePrefixLength = (byte) sourcePrefixLength;
+        this.scopePrefixLength = (byte) scopePrefixLength;
         this.address = checkNotNull(address, "address");
     }
 
@@ -60,15 +60,15 @@ public class EDNS0SubnetOption implements EDNS0Option {
         return EDNS0OptionCode.SUBNET;
     }
 
-    public short family() {
+    public int family() {
         return family;
     }
 
-    public byte sourcePrefixLength() {
+    public int sourcePrefixLength() {
         return sourcePrefixLength;
     }
 
-    public byte scopePrefixLength() {
+    public int scopePrefixLength() {
         return scopePrefixLength;
     }
 
