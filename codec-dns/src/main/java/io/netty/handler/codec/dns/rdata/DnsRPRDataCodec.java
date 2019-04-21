@@ -23,7 +23,7 @@ import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
 import static io.netty.handler.codec.dns.util.DnsEncodeUtil.*;
 
 /**
- * Codec for {@link DnsRPRecord}
+ * Codec for {@link DnsRPRecord}.
  */
 public class DnsRPRDataCodec implements DnsRDataCodec<DnsRPRecord> {
     public static final DnsRPRDataCodec DEFAULT = new DnsRPRDataCodec();

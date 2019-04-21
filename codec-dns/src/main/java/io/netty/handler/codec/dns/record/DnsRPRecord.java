@@ -41,4 +41,9 @@ public class DnsRPRecord extends AbstractDnsRecord {
     public String txt() {
         return txt;
     }
+
+    @Override
+    protected String readableRDataStr() {
+        return mbox + ", " + txt;
+    }
 }

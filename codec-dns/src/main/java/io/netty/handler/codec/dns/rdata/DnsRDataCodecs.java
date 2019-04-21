@@ -23,7 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Dns rdata codec set.
+ * DnsRDataCodecs is a factory class that provides the ability to get RData codecs by dns record type.
  */
 public final class DnsRDataCodecs {
     private static final Map<DnsRecordType, DnsRDataCodec<? extends DnsRecord>> CODECS =

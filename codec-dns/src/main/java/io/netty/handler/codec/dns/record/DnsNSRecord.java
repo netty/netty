@@ -19,7 +19,7 @@ package io.netty.handler.codec.dns.record;
 import io.netty.handler.codec.dns.AbstractDnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * Dns {@link DnsRecordType#NS} record.
@@ -33,6 +33,11 @@ public class DnsNSRecord extends AbstractDnsRecord {
     }
 
     public String ns() {
+        return ns;
+    }
+
+    @Override
+    protected String readableRDataStr() {
         return ns;
     }
 }

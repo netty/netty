@@ -18,8 +18,27 @@ package io.netty.handler.codec.dns.record.opt;
 
 
 /**
- * Extension Mechanisms for DNS (EDNS0) <a href="https://tools.ietf.org/html/draft-sekar-dns-llq-01">long lived
- * queries</a> option
+ * EDNS0 long live queries option
+ * <p>
+ * RDATA Format:
+ * <pre>
+ *   Field Name        Field Type     Description
+ *   ---------------------------------------------------------------------
+ *   OPTION-CODE       u_int16_t      LLQ
+ *   OPTION-LENGTH     u_int16_t      Length of following fields, as
+ *                                    appropriate
+ *   VERSION           u_int16_t      Version of LLQ protocol implemented
+ *   LLQ-OPCODE        u_int16_t      Identifies LLQ operation
+ *   ERROR-CODE        u_int16_t      Identifies LLQ errors
+ *   LLQ-ID            u_int64_t      Identifier for an LLQ
+ *   LEASE-LIFE        u_int32_t      Requested or granted life of LLQ, in
+ *                                    seconds
+ * </pre>
+ * <p>
+ * {@link EDNS0LlqOption} define the LLQ option frame.
+ *
+ * @see <a href="https://tools.ietf.org/html/draft-sekar-dns-llq-01">:w
+ * https://tools.ietf.org/html/draft-sekar-dns-llq-01</a>
  */
 public class EDNS0LlqOption implements EDNS0Option {
     private final short version;
@@ -37,8 +56,8 @@ public class EDNS0LlqOption implements EDNS0Option {
     }
 
     @Override
-    public short optionCode() {
-        return EDNS0Option.OPTION_CODE_EDNS0_LLQ;
+    public EDNS0OptionCode optionCode() {
+        return EDNS0OptionCode.LLQ;
     }
 
     public short version() {

@@ -35,4 +35,9 @@ public class DnsPTRRecord extends AbstractDnsRecord {
     public String ptr() {
         return ptr;
     }
+
+    @Override
+    protected String readableRDataStr() {
+        return ptr;
+    }
 }

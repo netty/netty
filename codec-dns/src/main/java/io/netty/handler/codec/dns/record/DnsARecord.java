@@ -21,7 +21,7 @@ import io.netty.handler.codec.dns.DnsRecordType;
 
 import java.net.InetAddress;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * Dns {@link DnsRecordType#A} record.
@@ -36,5 +36,10 @@ public class DnsARecord extends AbstractDnsRecord {
 
     public InetAddress address() {
         return address;
+    }
+
+    @Override
+    protected String readableRDataStr() {
+        return address.toString();
     }
 }

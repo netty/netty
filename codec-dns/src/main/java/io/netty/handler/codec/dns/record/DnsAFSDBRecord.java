@@ -45,4 +45,9 @@ public class DnsAFSDBRecord extends AbstractDnsRecord {
     public String hostname() {
         return hostname;
     }
+
+    @Override
+    protected String readableRDataStr() {
+        return subtype + ", " + hostname;
+    }
 }

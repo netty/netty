@@ -21,7 +21,26 @@ import java.net.InetAddress;
 import static io.netty.util.internal.ObjectUtil.*;
 
 /**
- * Extension Mechanisms for DNS (EDNS0) <a href="https://tools.ietf.org/html/rfc7871">client subnet</a> option
+ * EDNS0 client subnet option, The option is structured as follows:
+ *
+ * <pre>
+ *                +0 (MSB)                            +1 (LSB)
+ *     +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ *  0: |                          OPTION-CODE                          |
+ *     +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ *  2: |                         OPTION-LENGTH                         |
+ *     +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ *  4: |                            FAMILY                             |
+ *     +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ *  6: |     SOURCE PREFIX-LENGTH      |     SCOPE PREFIX-LENGTH       |
+ *     +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ *  8: |                           ADDRESS...                          /
+ *     +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ * </pre>
+ * <p>
+ * {@link EDNS0SubnetOption} define the subnet option frame.
+ *
+ * @see <a href="https://tools.ietf.org/html/rfc7871">https://tools.ietf.org/html/rfc7871</a>
  */
 public class EDNS0SubnetOption implements EDNS0Option {
     private final short family;
@@ -37,8 +56,8 @@ public class EDNS0SubnetOption implements EDNS0Option {
     }
 
     @Override
-    public short optionCode() {
-        return EDNS0Option.OPTION_CODE_EDNS0_SUBNET;
+    public EDNS0OptionCode optionCode() {
+        return EDNS0OptionCode.SUBNET;
     }
 
     public short family() {

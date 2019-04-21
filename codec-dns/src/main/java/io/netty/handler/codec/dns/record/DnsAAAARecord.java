@@ -37,4 +37,9 @@ public class DnsAAAARecord extends AbstractDnsRecord {
     public InetAddress address() {
         return address;
     }
+
+    @Override
+    protected String readableRDataStr() {
+        return address.toString();
+    }
 }

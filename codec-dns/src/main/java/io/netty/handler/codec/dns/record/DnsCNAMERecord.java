@@ -35,4 +35,9 @@ public class DnsCNAMERecord extends AbstractDnsRecord {
     public String target() {
         return target;
     }
+
+    @Override
+    protected String readableRDataStr() {
+        return target;
+    }
 }

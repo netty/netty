@@ -19,8 +19,17 @@ package io.netty.handler.codec.dns.rdata.opt;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.dns.record.opt.EDNS0Option;
 
+/**
+ * EDNS0OptionEncoder is responsible for encoding an EDNS0 Option in RData.
+ */
 public interface EDNS0OptionEncoder {
     EDNS0OptionEncoder DEFAULT = new DefaultEDNS0OptionEncoder();
 
+    /**
+     * Encode an EDNS0 option.
+     *
+     * @param option {@link EDNS0Option}
+     * @param out output byte buffer
+     */
     void encodeOption(EDNS0Option option, ByteBuf out);
 }

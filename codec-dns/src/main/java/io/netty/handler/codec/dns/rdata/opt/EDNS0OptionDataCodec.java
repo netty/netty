@@ -18,6 +18,11 @@ package io.netty.handler.codec.dns.rdata.opt;
 
 import io.netty.handler.codec.dns.record.opt.EDNS0Option;
 
+/**
+ * EDNS0 option data codec.
+ *
+ * @param <T> option that extends the {@link EDNS0Option}
+ */
 public interface EDNS0OptionDataCodec<T extends EDNS0Option>
         extends EDNS0OptionDataDecoder<T>, EDNS0OptionDataEncoder<T> {
 }

@@ -17,8 +17,23 @@
 package io.netty.handler.codec.dns.rdata.opt;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.dns.record.opt.EDNS0Option;
 
+/**
+ * EDNS0OptionDataDecoder is responsible for decoding an EDNS0 option's data to {@link EDNS0Option}.
+ *
+ * @param <T> option that extends the superclass {@link EDNS0Option}
+ */
 public interface EDNS0OptionDataDecoder<T extends EDNS0Option> {
+    /**
+     * Decoding an EDNS0 option's data.
+     *
+     * @param optionData option data byte buffer
+     *
+     * @return decoded option
+     *
+     * @throws CorruptedFrameException if option data frame is broken
+     */
     T decodeOptionData(ByteBuf optionData);
 }

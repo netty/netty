@@ -36,4 +36,9 @@ public class DnsTXTRecord extends AbstractDnsRecord {
     public String txt() {
         return txt;
     }
+
+    @Override
+    protected String readableRDataStr() {
+        return txt;
+    }
 }

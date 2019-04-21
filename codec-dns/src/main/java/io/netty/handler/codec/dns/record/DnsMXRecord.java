@@ -47,4 +47,9 @@ public class DnsMXRecord extends AbstractDnsRecord {
     public String exchange() {
         return exchange;
     }
+
+    @Override
+    protected String readableRDataStr() {
+        return preference + ", " + exchange;
+    }
 }

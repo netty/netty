@@ -25,6 +25,9 @@ import java.net.UnknownHostException;
 
 import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
 
+/**
+ * EDNS option data codec for {@link EDNS0SubnetOption}.
+ */
 public class EDNS0SubnetOptionDataCodec implements EDNS0OptionDataCodec<EDNS0SubnetOption> {
     public static final EDNS0SubnetOptionDataCodec DEFAULT = new EDNS0SubnetOptionDataCodec();
 

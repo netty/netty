@@ -21,6 +21,9 @@ import io.netty.handler.codec.dns.record.opt.EDNS0LlqOption;
 
 import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
 
+/**
+ * EDNS option data codec for {@link EDNS0LlqOption}.
+ */
 public class EDNS0LlqOptionDataCodec implements EDNS0OptionDataCodec<EDNS0LlqOption> {
     public static final EDNS0LlqOptionDataCodec DEFAULT = new EDNS0LlqOptionDataCodec();
 

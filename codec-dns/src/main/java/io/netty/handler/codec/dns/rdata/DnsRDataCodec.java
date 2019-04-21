@@ -18,5 +18,10 @@ package io.netty.handler.codec.dns.rdata;
 
 import io.netty.handler.codec.dns.DnsRecord;
 
+/**
+ * Dns record data codec.
+ *
+ * @param <T> dns record that extends superclass {@link DnsRecord}
+ */
 public interface DnsRDataCodec<T extends DnsRecord> extends DnsRDataDecoder<T>, DnsRDataEncoder<T> {
 }

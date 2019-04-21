@@ -17,22 +17,36 @@
 package io.netty.handler.codec.dns.rdata.opt;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.dns.record.opt.EDNS0Option;
+import io.netty.handler.codec.dns.record.opt.EDNS0OptionCode;
+import io.netty.handler.codec.dns.record.opt.EDNS0RawOption;
 
+import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
+
+/**
+ * Default EDNS0 option decoder.
+ */
 public class DefaultEDNS0OptionDecoder implements EDNS0OptionDecoder {
     @Override
     public EDNS0Option decodeOption(ByteBuf in) {
-        short optionCode = in.readShort();
+        checkShortReadable(in, "option code");
+        short code = in.readShort();
+        checkShortReadable(in, "option length");
         short optionLength = in.readShort();
-        EDNS0OptionDataDecoder<? extends EDNS0Option> optionDataDecoder =
-                EDNS0OptionDataCodecs.optionDataDecoder(optionCode);
-        if (optionDataDecoder == null) {
-            throw new UnsupportedMessageTypeException("option code: " + optionCode);
-        }
+        EDNS0OptionCode optionCode = EDNS0OptionCode.valueOf(code);
+
         int offset = in.readerIndex();
         ByteBuf optionData = in.duplicate().setIndex(offset, offset + optionLength);
-        EDNS0Option option = optionDataDecoder.decodeOptionData(optionData);
+
+        EDNS0OptionDataDecoder<? extends EDNS0Option> optionDataDecoder =
+                EDNS0OptionDataCodecs.optionDataDecoder(optionCode);
+
+        EDNS0Option option;
+        if (optionDataDecoder != null) { // Supported option
+            option = optionDataDecoder.decodeOptionData(optionData);
+        } else {  // Not supported option
+            option = new EDNS0RawOption(optionCode, optionData.retain());
+        }
         in.readerIndex(offset + optionLength);
         return option;
     }

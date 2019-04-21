@@ -21,8 +21,7 @@ import io.netty.util.internal.UnstableApi;
 
 import java.net.IDN;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * A skeletal implementation of {@link DnsRecord}.
@@ -53,14 +52,14 @@ public abstract class AbstractDnsRecord implements DnsRecord {
      * @param name the domain name
      * @param type the type of the record
      * @param dnsClass the class of the record, usually one of the following:
-     *                 <ul>
-     *                     <li>{@link #CLASS_IN}</li>
-     *                     <li>{@link #CLASS_CSNET}</li>
-     *                     <li>{@link #CLASS_CHAOS}</li>
-     *                     <li>{@link #CLASS_HESIOD}</li>
-     *                     <li>{@link #CLASS_NONE}</li>
-     *                     <li>{@link #CLASS_ANY}</li>
-     *                 </ul>
+     * <ul>
+     * <li>{@link #CLASS_IN}</li>
+     * <li>{@link #CLASS_CSNET}</li>
+     * <li>{@link #CLASS_CHAOS}</li>
+     * <li>{@link #CLASS_HESIOD}</li>
+     * <li>{@link #CLASS_NONE}</li>
+     * <li>{@link #CLASS_ANY}</li>
+     * </ul>
      * @param timeToLive the TTL value of the record
      */
     protected AbstractDnsRecord(String name, DnsRecordType type, int dnsClass, long timeToLive) {
@@ -100,6 +99,15 @@ public abstract class AbstractDnsRecord implements DnsRecord {
     @Override
     public long timeToLive() {
         return timeToLive;
+    }
+
+    /**
+     * Pretty dump the record data to human reable content.
+     *
+     * @return record data str presentation
+     */
+    protected String readableRDataStr() {
+        return "";
     }
 
     @Override
@@ -147,6 +155,8 @@ public abstract class AbstractDnsRecord implements DnsRecord {
         DnsMessageUtil.appendRecordClass(buf, dnsClass())
                       .append(' ')
                       .append(type().name())
+                      .append(' ')
+                      .append(readableRDataStr())
                       .append(')');
 
         return buf.toString();

@@ -19,6 +19,7 @@ package io.netty.handler.codec.dns.record;
 import io.netty.handler.codec.dns.AbstractDnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.record.opt.EDNS0Option;
+import io.netty.util.internal.StringUtil;
 
 import java.util.Collections;
 import java.util.List;
@@ -60,6 +61,42 @@ public class DnsOPTRecord extends AbstractDnsRecord {
     public boolean isDo() {
         short doMask = (short) (1 << 15);
         return (flags() & doMask) == doMask;
+    }
+
+    @Override
+    public String toString() {
+        return toStringBuilder().toString();
+    }
+
+    final StringBuilder toStringBuilder() {
+        // Format options
+        StringBuilder optionBuilder = new StringBuilder(32);
+        optionBuilder.append("[");
+        for (EDNS0Option option : options) {
+            optionBuilder.append(option.optionCode());
+            optionBuilder.append(", ");
+        }
+        if (!options.isEmpty()) {
+            optionBuilder.delete(optionBuilder.length() - 2, optionBuilder.length());
+        } else {
+            optionBuilder.append("<EMPTY>");
+        }
+        optionBuilder.append("]");
+
+        return new StringBuilder(64)
+                .append(StringUtil.simpleClassName(this))
+                .append('(')
+                .append("OPT flags:")
+                .append(isDo()? "Do" : "")
+                .append(" version:")
+                .append(version())
+                .append(" extendedRecode:")
+                .append(extendedRcode())
+                .append(" udp:")
+                .append(dnsClass())
+                .append(" options:")
+                .append(optionBuilder)
+                .append(')');
     }
 
 }
