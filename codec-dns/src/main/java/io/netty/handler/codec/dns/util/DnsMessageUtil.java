@@ -13,9 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.dns;
+package io.netty.handler.codec.dns.util;
 
 import io.netty.channel.AddressedEnvelope;
+import io.netty.handler.codec.dns.DnsMessage;
+import io.netty.handler.codec.dns.DnsQuery;
+import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.handler.codec.dns.DnsResponse;
+import io.netty.handler.codec.dns.DnsSection;
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
@@ -23,21 +28,21 @@ import java.net.SocketAddress;
 /**
  * Provides some utility methods for DNS message implementations.
  */
-final class DnsMessageUtil {
+public final class DnsMessageUtil {
 
-    static StringBuilder appendQuery(StringBuilder buf, DnsQuery query) {
+    public static StringBuilder appendQuery(StringBuilder buf, DnsQuery query) {
         appendQueryHeader(buf, query);
         appendAllRecords(buf, query);
         return buf;
     }
 
-    static StringBuilder appendResponse(StringBuilder buf, DnsResponse response) {
+    public static StringBuilder appendResponse(StringBuilder buf, DnsResponse response) {
         appendResponseHeader(buf, response);
         appendAllRecords(buf, response);
         return buf;
     }
 
-    static StringBuilder appendRecordClass(StringBuilder buf, int dnsClass) {
+    public static StringBuilder appendRecordClass(StringBuilder buf, int dnsClass) {
         final String name;
         switch (dnsClass &= 0xFFFF) {
         case DnsRecord.CLASS_IN:
@@ -72,14 +77,14 @@ final class DnsMessageUtil {
         return buf;
     }
 
-    private static void appendQueryHeader(StringBuilder buf, DnsQuery msg) {
+    public static void appendQueryHeader(StringBuilder buf, DnsQuery msg) {
         buf.append(StringUtil.simpleClassName(msg))
            .append('(');
 
         appendAddresses(buf, msg)
-           .append(msg.id())
-           .append(", ")
-           .append(msg.opCode());
+                .append(msg.id())
+                .append(", ")
+                .append(msg.opCode());
 
         if (msg.isRecursionDesired()) {
             buf.append(", RD");
@@ -96,12 +101,12 @@ final class DnsMessageUtil {
            .append('(');
 
         appendAddresses(buf, msg)
-           .append(msg.id())
-           .append(", ")
-           .append(msg.opCode())
-           .append(", ")
-           .append(msg.code())
-           .append(',');
+                .append(msg.id())
+                .append(", ")
+                .append(msg.opCode())
+                .append(", ")
+                .append(msg.code())
+                .append(',');
 
         boolean hasComma = true;
         if (msg.isRecursionDesired()) {
@@ -170,12 +175,13 @@ final class DnsMessageUtil {
 
     private static void appendRecords(StringBuilder buf, DnsMessage message, DnsSection section) {
         final int count = message.count(section);
-        for (int i = 0; i < count; i ++) {
+        for (int i = 0; i < count; i++) {
             buf.append(StringUtil.NEWLINE)
                .append(StringUtil.TAB)
                .append(message.<DnsRecord>recordAt(section, i));
         }
     }
 
-    private DnsMessageUtil() { }
+    private DnsMessageUtil() {
+    }
 }

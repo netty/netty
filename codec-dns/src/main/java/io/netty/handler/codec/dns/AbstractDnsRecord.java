@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.dns;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.dns.util.DnsMessageUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
