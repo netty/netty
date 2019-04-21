@@ -24,6 +24,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
+import static io.netty.handler.codec.dns.util.DnsEncodeUtil.*;
 
 /**
  * EDNS option data codec for {@link EDNS0SubnetOption}.
@@ -50,7 +51,7 @@ public class EDNS0SubnetOptionDataCodec implements EDNS0OptionDataCodec<EDNS0Sub
                 address = InetAddress.getByAddress(new byte[] { 0, 0, 0, 0 });
                 break;
             case 1: // Address family ipv4
-                if (sourcePrefixLength > IPV4_LEN * 8 || scopePrefixLength > IPV4_LEN * 8) {
+                if (sourcePrefixLength > IPV4_LEN << 3 || scopePrefixLength > IPV4_LEN << 3) {
                     throw new CorruptedFrameException("bad netmask");
                 }
                 byte[] addressIpv4Bytes = new byte[IPV4_LEN];
@@ -59,10 +60,10 @@ public class EDNS0SubnetOptionDataCodec implements EDNS0OptionDataCodec<EDNS0Sub
                 address = InetAddress.getByAddress(addressIpv4Bytes);
                 break;
             case 2: // Address family ipv6
-                if (sourcePrefixLength > IPV6_LEN * 8 || scopePrefixLength > IPV6_LEN * 8) {
+                if (sourcePrefixLength > IPV6_LEN << 3 || scopePrefixLength > IPV6_LEN << 3) {
                     throw new CorruptedFrameException("bad netmask");
                 }
-                byte[] addressIpv6Bytes = new byte[IPV4_LEN];
+                byte[] addressIpv6Bytes = new byte[IPV6_LEN];
                 checkReadable(optionData, IPV6_LEN, "ipv6 address");
                 optionData.readBytes(addressIpv6Bytes);
                 address = InetAddress.getByAddress(addressIpv6Bytes);
@@ -90,24 +91,30 @@ public class EDNS0SubnetOptionDataCodec implements EDNS0OptionDataCodec<EDNS0Sub
             }
             break;
         case 1:
-            if (option.sourcePrefixLength() > IPV4_LEN * 8) {
+            // scopr prefix length must be 0 in query
+            if (option.sourcePrefixLength() > IPV4_LEN << 3) {
                 throw new CorruptedFrameException("bad netmask");
             }
 
             if (option.address().getAddress().length != IPV4_LEN) {
                 throw new CorruptedFrameException("bad ipv4 address");
             }
-            out.writeBytes(option.address().getAddress());
+            InetAddress ipv4Subnet = cidrMaskAddress(option.address(), option.sourcePrefixLength());
+            int ipv4NeedLength = option.sourcePrefixLength() + 8 - 1 >> 3;
+            out.writeBytes(ipv4Subnet.getAddress(), 0, ipv4NeedLength);
             break;
         case 2:
-            if (option.sourcePrefixLength() > IPV6_LEN * 8) {
+            // scopr prefix length must be 0 in query
+            if (option.sourcePrefixLength() > IPV6_LEN << 3) {
                 throw new CorruptedFrameException("bad netmask");
             }
 
             if (option.address().getAddress().length != IPV6_LEN) {
                 throw new CorruptedFrameException("bad ipv6 address");
             }
-            out.writeBytes(option.address().getAddress());
+            InetAddress ipv6Subnet = cidrMaskAddress(option.address(), option.sourcePrefixLength());
+            int ipv6NeedLength = option.sourcePrefixLength() + 8 - 1 >> 3;
+            out.writeBytes(ipv6Subnet.getAddress(), 0, ipv6NeedLength);
             break;
         default:
             throw new CorruptedFrameException("bad address family");

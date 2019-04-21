@@ -212,7 +212,7 @@ public class DefaultDnsRecordEncoderTest {
         int ttl = 0x1028000; // extension code 1, version 2, is do true
         List<EDNS0Option> options = new LinkedList<EDNS0Option>();
         options.add(new EDNS0LlqOption((short) 1, (short) 1, (short) 2, 1, 60));
-        options.add(new EDNS0SubnetOption((short) 1, (byte) 8, (byte) 8, SocketUtils.addressByName("1.2.3.4")));
+        options.add(new EDNS0SubnetOption((short) 1, (byte) 24, (byte) 0, SocketUtils.addressByName("1.2.3.4")));
         DnsOPTRecord record = new DnsOPTRecord(NAME, dnsClass, ttl, options);
         ByteBuf out = Unpooled.buffer(64);
         testEncodeRecord(record, out);
@@ -227,11 +227,11 @@ public class DefaultDnsRecordEncoderTest {
                 0, 0, 0, 60, // lease life
                 // option client subnet
                 0, 8, // option code
-                0, 8, // option length
+                0, 7, // option length
                 0, 1, // family ipv4
-                8, // source prefix length
-                8, // scope prefix length
-                1, 2, 3, 4 // address
+                24, // source prefix length
+                0, // scope prefix length
+                1, 2, 3, // address 1.2.3.4/24
         };
         byte[] actualBytes = new byte[expectedBytes.length];
         out.readBytes(actualBytes);

@@ -18,6 +18,10 @@ package io.netty.handler.codec.dns.util;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.handler.codec.CorruptedFrameException;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
 
@@ -53,4 +57,31 @@ public final class DnsEncodeUtil {
 
         out.writeByte(0); // marks end of name field
     }
+
+    /**
+     * Get the cidr mask address by current inet address and mask length.
+     *
+     * @param inetAddress inet address, such as 1.2.3.4
+     * @param maskLength cidr mask length, such as 24
+     *
+     * @return subnet inet address
+     */
+    public static InetAddress cidrMaskAddress(InetAddress inetAddress, byte maskLength) {
+        byte[] address = inetAddress.getAddress();
+        int addressLength = address.length;
+        for (int i = 0; i < addressLength; i++) {
+            if (maskLength >= Byte.SIZE) {
+                maskLength -= Byte.SIZE;
+                continue;
+            }
+            address[i] &= ~(0xff >> maskLength);
+            maskLength = 0;
+        }
+        try {
+            return InetAddress.getByAddress(address);
+        } catch (UnknownHostException e) {
+            throw new CorruptedFrameException("unknown host");
+        }
+    }
+
 }
