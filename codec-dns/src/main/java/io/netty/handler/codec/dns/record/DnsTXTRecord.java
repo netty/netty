@@ -19,6 +19,9 @@ package io.netty.handler.codec.dns.record;
 import io.netty.handler.codec.dns.AbstractDnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 
+import java.util.Collections;
+import java.util.List;
+
 import static io.netty.util.internal.ObjectUtil.*;
 
 /**
@@ -26,19 +29,23 @@ import static io.netty.util.internal.ObjectUtil.*;
  */
 public class DnsTXTRecord extends AbstractDnsRecord {
     // One or more <character-string>s.
-    private final String txt;
+    private final List<String> txt;
 
-    public DnsTXTRecord(String name, int dnsClass, long timeToLive, String txt) {
+    public DnsTXTRecord(String name, int dnsClass, long timeToLive, List<String> txt) {
         super(name, DnsRecordType.TXT, dnsClass, timeToLive);
-        this.txt = checkNotNull(txt, "txt");
+        this.txt = Collections.unmodifiableList(checkNotNull(txt, "txt"));
     }
 
-    public String txt() {
+    public List<String> txt() {
         return txt;
     }
 
     @Override
     protected String readableRDataStr() {
-        return txt;
+        StringBuilder builder = new StringBuilder(32);
+        for (String s : txt) {
+            builder.append(s);
+        }
+        return builder.toString();
     }
 }

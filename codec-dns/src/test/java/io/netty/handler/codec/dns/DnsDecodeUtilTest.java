@@ -72,6 +72,7 @@ public class DnsDecodeUtilTest {
         ByteBuf raw = Unpooled.wrappedBuffer(compressedDomainName);
         testDecodeDomainName0("F.ISI.ARPA.", raw.retainedDuplicate());
         testDecodeDomainName0("FOO.F.ISI.ARPA.", raw.retainedDuplicate().setIndex(12, raw.writerIndex()));
+        raw.release();
     }
 
 

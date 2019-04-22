@@ -34,6 +34,7 @@ import io.netty.util.internal.SocketUtils;
 import org.junit.Test;
 
 import java.net.InetAddress;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -77,6 +78,7 @@ public class DefaultDnsRecordEncoderTest {
         byte[] actualNsBytes = new byte[nsBytes.length];
         out.readBytes(actualNsBytes);
         assertArrayEquals(nsBytes, actualNsBytes);
+        out.release();
     }
 
     @Test
@@ -89,6 +91,7 @@ public class DefaultDnsRecordEncoderTest {
         byte[] actualCnameBytes = new byte[cnameBytes.length];
         out.readBytes(actualCnameBytes);
         assertArrayEquals(cnameBytes, actualCnameBytes);
+        out.release();
     }
 
     @Test
@@ -101,6 +104,7 @@ public class DefaultDnsRecordEncoderTest {
         byte[] actualPtrBytes = new byte[ptrBytes.length];
         out.readBytes(actualPtrBytes);
         assertArrayEquals(ptrBytes, actualPtrBytes);
+        out.release();
     }
 
     @Test
@@ -114,22 +118,24 @@ public class DefaultDnsRecordEncoderTest {
         byte[] actualMXBytes = new byte[expectedMXBytes.length];
         out.readBytes(actualMXBytes);
         assertArrayEquals(expectedMXBytes, actualMXBytes);
+        out.release();
     }
 
     @Test
     public void testEncodeTXTRecord() throws Exception {
-        String txt = "nyan";
+        List<String> txt = Arrays.asList("nyan", "aaa");
         DnsTXTRecord record = new DnsTXTRecord(NAME, DNS_CLASS, TTL, txt);
         ByteBuf out = Unpooled.buffer(64);
         testEncodeRecord(record, out);
-        byte[] expectedTxtBytes = { 'n', 'y', 'a', 'n' };
+        byte[] expectedTxtBytes = { 4, 'n', 'y', 'a', 'n', 3, 'a', 'a', 'a' };
         byte[] actualTxtBytes = new byte[expectedTxtBytes.length];
         out.readBytes(actualTxtBytes);
         assertArrayEquals(expectedTxtBytes, actualTxtBytes);
+        out.release();
     }
 
     @Test
-    public void testDecodeRPRecord() throws Exception {
+    public void testEncodeRPRecord() throws Exception {
         String mBox = "netty.io";
         String txt = "example.com";
         DnsRPRecord record = new DnsRPRecord(NAME, DNS_CLASS, TTL, mBox, txt);
@@ -142,6 +148,7 @@ public class DefaultDnsRecordEncoderTest {
         byte[] actualRPBytes = new byte[expectedRPBytes.length];
         out.readBytes(actualRPBytes);
         assertArrayEquals(expectedRPBytes, actualRPBytes);
+        out.release();
     }
 
     @Test
@@ -158,6 +165,7 @@ public class DefaultDnsRecordEncoderTest {
         byte[] actualAFSDBBytes = new byte[expectedAFSDBBytes.length];
         out.readBytes(actualAFSDBBytes);
         assertArrayEquals(expectedAFSDBBytes, actualAFSDBBytes);
+        out.release();
     }
 
     @Test
@@ -191,6 +199,7 @@ public class DefaultDnsRecordEncoderTest {
         byte[] actualSigBytes = new byte[expectedSigBytes.length];
         out.readBytes(actualSigBytes);
         assertArrayEquals(expectedSigBytes, actualSigBytes);
+        out.release();
     }
 
 
@@ -204,6 +213,7 @@ public class DefaultDnsRecordEncoderTest {
         byte[] actualAddressBytes = new byte[addressBytes.length];
         out.readBytes(actualAddressBytes);
         assertArrayEquals(addressBytes, actualAddressBytes);
+        out.release();
     }
 
     @Test
@@ -212,7 +222,8 @@ public class DefaultDnsRecordEncoderTest {
         int ttl = 0x1028000; // extension code 1, version 2, is do true
         List<EDNS0Option> options = new LinkedList<EDNS0Option>();
         options.add(new EDNS0LlqOption((short) 1, (short) 1, (short) 2, 1, 60));
-        options.add(new EDNS0SubnetOption((short) 1, (byte) 24, (byte) 0, SocketUtils.addressByName("1.2.3.4")));
+        options.add(new EDNS0SubnetOption(1, 24, 0,
+                                          SocketUtils.addressByName("1.2.3.4")));
         DnsOPTRecord record = new DnsOPTRecord(NAME, dnsClass, ttl, options);
         ByteBuf out = Unpooled.buffer(64);
         testEncodeRecord(record, out);
@@ -236,6 +247,7 @@ public class DefaultDnsRecordEncoderTest {
         byte[] actualBytes = new byte[expectedBytes.length];
         out.readBytes(actualBytes);
         assertArrayEquals(expectedBytes, actualBytes);
+        out.release();
     }
 
     private static void testEncodeRecord(DnsRecord record, ByteBuf out) throws Exception {

@@ -34,6 +34,8 @@ import io.netty.handler.codec.dns.record.opt.EDNS0LlqOption;
 import io.netty.handler.codec.dns.record.opt.EDNS0SubnetOption;
 import org.junit.Test;
 
+import java.util.Arrays;
+
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
@@ -110,13 +112,13 @@ public class DefaultDnsRecordDecoderTest {
 
     @Test
     public void testDecodeTXTRecord() throws Exception {
-        byte[] txtBytes = { 'n', 'y', 'a', 'n' };
+        byte[] txtBytes = { 4, 'n', 'y', 'a', 'n', 3, 'a', 'a', 'a' };
         ByteBuf rData = Unpooled.wrappedBuffer(txtBytes);
         DnsRecord record =
                 testDecodeRecord(DEFAULT_NAME, DnsRecordType.TXT, DEFAULT_DNS_CLASS, DEFAULT_TIME_TO_LIVE, rData);
         assertThat(record, instanceOf(DnsTXTRecord.class));
         DnsTXTRecord txtRecord = (DnsTXTRecord) record;
-        assertEquals("nyan", txtRecord.txt());
+        assertEquals(Arrays.asList("nyan", "aaa"), txtRecord.txt());
     }
 
     @Test
