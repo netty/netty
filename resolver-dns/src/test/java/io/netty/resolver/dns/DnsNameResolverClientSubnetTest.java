@@ -18,15 +18,18 @@ package io.netty.resolver.dns;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.handler.codec.dns.DefaultDnsOptEcsRecord;
 import io.netty.handler.codec.dns.DnsRecord;
-import io.netty.util.internal.SocketUtils;
+import io.netty.handler.codec.dns.record.DnsOPTRecord;
+import io.netty.handler.codec.dns.record.opt.EDNS0Option;
+import io.netty.handler.codec.dns.record.opt.EDNS0SubnetOption;
 import io.netty.util.concurrent.Future;
+import io.netty.util.internal.SocketUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.InetAddress;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -39,16 +42,19 @@ public class DnsNameResolverClientSubnetTest {
     public void testSubnetQuery() throws Exception {
         EventLoopGroup group = new NioEventLoopGroup(1);
         DnsNameResolver resolver = newResolver(group).build();
+        EDNS0SubnetOption subnetOption = new EDNS0SubnetOption(
+                1, 24, 0, SocketUtils.addressByName("157.88.0.0"));
+        List<EDNS0Option> edns0Options = new LinkedList<EDNS0Option>();
+        edns0Options.add(subnetOption);
         try {
             // Same as:
-            // # /.bind-9.9.3-edns/bin/dig @ns1.google.com www.google.es +client=157.88.0.0/24
-            Future<List<InetAddress>> future = resolver.resolveAll("www.google.es",
-                    Collections.<DnsRecord>singleton(
+            // # /.bind-9.9.3-edns/bin/dig @ns1.google.com google.com +client=157.88.0.0/24
+            Future<List<InetAddress>> future =
+                    resolver.resolveAll("google.com", Collections.<DnsRecord>singleton(
                             // Suggest max payload size of 1024
                             // 157.88.0.0 / 24
-                            new DefaultDnsOptEcsRecord(1024, 24,
-                                                       SocketUtils.addressByName("157.88.0.0").getAddress())));
-            for (InetAddress address: future.syncUninterruptibly().getNow()) {
+                            new DnsOPTRecord(1024, false, edns0Options)));
+            for (InetAddress address : future.syncUninterruptibly().getNow()) {
                 System.err.println(address);
             }
         } finally {

@@ -39,6 +39,8 @@ import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsSection;
+import io.netty.handler.codec.dns.record.DnsMXRecord;
+import io.netty.handler.codec.dns.record.DnsTXTRecord;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.CharsetUtil;
@@ -626,7 +628,7 @@ public class DnsNameResolverTest {
                 assertThat(mxList.size(), is(greaterThan(0)));
                 StringBuilder buf = new StringBuilder();
                 for (DnsRecord r : mxList) {
-                    ByteBuf recordContent = ((ByteBufHolder) r).content();
+                    DnsMXRecord mxRecord = (DnsMXRecord) r;
 
                     buf.append(StringUtil.NEWLINE);
                     buf.append('\t');
@@ -634,9 +636,9 @@ public class DnsNameResolverTest {
                     buf.append(' ');
                     buf.append(r.type().name());
                     buf.append(' ');
-                    buf.append(recordContent.readUnsignedShort());
+                    buf.append(mxRecord.preference());
                     buf.append(' ');
-                    buf.append(DnsResolveContext.decodeDomainName(recordContent));
+                    buf.append(mxRecord.exchange());
                 }
 
                 logger.info("{} has the following MX records:{}", hostname, buf);
@@ -825,6 +827,7 @@ public class DnsNameResolverTest {
             DnsNameResolverBuilder builder = newResolver()
                     .recursionDesired(true)
                     .maxQueriesPerResolve(16)
+                    .queryTimeoutMillis(500000)
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
             if (ipv4Preferred) {
                 builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED);
@@ -998,7 +1001,7 @@ public class DnsNameResolverTest {
                 assertThat(mxList.size(), is(greaterThan(0)));
                 StringBuilder buf = new StringBuilder();
                 for (DnsRecord r : mxList) {
-                    ByteBuf recordContent = ((ByteBufHolder) r).content();
+                    DnsMXRecord mxRecord = (DnsMXRecord) r;
 
                     buf.append(StringUtil.NEWLINE);
                     buf.append('\t');
@@ -1006,9 +1009,9 @@ public class DnsNameResolverTest {
                     buf.append(' ');
                     buf.append(r.type().name());
                     buf.append(' ');
-                    buf.append(recordContent.readUnsignedShort());
+                    buf.append(mxRecord.preference());
                     buf.append(' ');
-                    buf.append(DnsResolveContext.decodeDomainName(recordContent));
+                    buf.append(mxRecord.exchange());
 
                     ReferenceCountUtil.release(r);
                 }
@@ -2545,19 +2548,10 @@ public class DnsNameResolverTest {
     }
 
     private static List<String> decodeTxt(DnsRecord record) {
-        if (!(record instanceof DnsRawRecord)) {
+        if (!(record instanceof DnsTXTRecord)) {
             return Collections.emptyList();
         }
-        List<String> list = new ArrayList<String>();
-        ByteBuf data = ((DnsRawRecord) record).content();
-        int idx = data.readerIndex();
-        int wIdx = data.writerIndex();
-        while (idx < wIdx) {
-            int len = data.getUnsignedByte(idx++);
-            list.add(data.toString(idx, len, CharsetUtil.UTF_8));
-            idx += len;
-        }
-        return list;
+        return ((DnsTXTRecord) record).txt();
     }
 
     @Test

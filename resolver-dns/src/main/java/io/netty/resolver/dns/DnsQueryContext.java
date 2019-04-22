@@ -20,7 +20,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.dns.AbstractDnsOptPseudoRrRecord;
 import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
@@ -48,7 +47,6 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
     private final int id;
     private final DnsQuestion question;
     private final DnsRecord[] additionals;
-    private final DnsRecord optResource;
     private final InetSocketAddress nameServerAddr;
 
     private final boolean recursionDesired;
@@ -59,7 +57,6 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
                     DnsQuestion question,
                     DnsRecord[] additionals,
                     Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
-
         this.parent = checkNotNull(parent, "parent");
         this.nameServerAddr = checkNotNull(nameServerAddr, "nameServerAddr");
         this.question = checkNotNull(question, "question");
@@ -70,14 +67,6 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
 
         // Ensure we remove the id from the QueryContextManager once the query completes.
         promise.addListener(this);
-
-        if (parent.isOptResourceEnabled()) {
-            optResource = new AbstractDnsOptPseudoRrRecord(parent.maxPayloadSize(), 0, 0) {
-                // We may want to remove this in the future and let the user just specify the opt record in the query.
-            };
-        } else {
-            optResource = null;
-        }
     }
 
     InetSocketAddress nameServerAddr() {
@@ -107,10 +96,6 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
 
         for (DnsRecord record: additionals) {
             query.addRecord(DnsSection.ADDITIONAL, record);
-        }
-
-        if (optResource != null) {
-            query.addRecord(DnsSection.ADDITIONAL, optResource);
         }
 
         if (logger.isDebugEnabled()) {

@@ -15,14 +15,14 @@
  */
 package io.netty.resolver.dns;
 
+import io.netty.handler.codec.dns.DnsRawRecord;
+import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.handler.codec.dns.record.DnsAAAARecord;
+import io.netty.handler.codec.dns.record.DnsARecord;
+
 import java.net.IDN;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.handler.codec.dns.DnsRawRecord;
-import io.netty.handler.codec.dns.DnsRecord;
 
 /**
  * Decodes an {@link InetAddress} from an A or AAAA {@link DnsRawRecord}.
@@ -39,29 +39,27 @@ final class DnsAddressDecoder {
      * @param name the host name of the decoded address
      * @param decodeIdn whether to convert {@code name} to a unicode host name
      *
-     * @return the {@link InetAddress}, or {@code null} if {@code record} is not a {@link DnsRawRecord} or
-     *         its content is malformed
+     * @return the {@link InetAddress}, or {@code null} if {@code record} is not a {@link DnsRawRecord} or its content
+     * is malformed
      */
     static InetAddress decodeAddress(DnsRecord record, String name, boolean decodeIdn) {
-        if (!(record instanceof DnsRawRecord)) {
+        InetAddress inetAddress;
+        if (record instanceof DnsARecord) {
+            inetAddress = ((DnsARecord) record).address();
+        } else if (record instanceof DnsAAAARecord) {
+            inetAddress = ((DnsAAAARecord) record).address();
+        } else {
             return null;
         }
-        final ByteBuf content = ((ByteBufHolder) record).content();
-        final int contentLen = content.readableBytes();
-        if (contentLen != INADDRSZ4 && contentLen != INADDRSZ6) {
-            return null;
-        }
-
-        final byte[] addrBytes = new byte[contentLen];
-        content.getBytes(content.readerIndex(), addrBytes);
 
         try {
-            return InetAddress.getByAddress(decodeIdn ? IDN.toUnicode(name) : name, addrBytes);
+            return InetAddress.getByAddress(decodeIdn? IDN.toUnicode(name) : name, inetAddress.getAddress());
         } catch (UnknownHostException e) {
             // Should never reach here.
             throw new Error(e);
         }
     }
 
-    private DnsAddressDecoder() { }
+    private DnsAddressDecoder() {
+    }
 }
