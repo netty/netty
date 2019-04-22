@@ -188,14 +188,20 @@ public final class EDNS0OptionCode {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
+
         EDNS0OptionCode that = (EDNS0OptionCode) o;
-        return code == that.code &&
-               Objects.equals(name, that.name);
+
+        if (code != that.code) {
+            return false;
+        }
+        return name != null? name.equals(that.name) : that.name == null;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(code, name);
+        int result = code;
+        result = 31 * result + (name != null? name.hashCode() : 0);
+        return result;
     }
 
     @Override
