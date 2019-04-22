@@ -192,7 +192,7 @@ public class DefaultDnsRecordEncoderTest {
                 0, 0, 0, 60, // ttl
                 0, 0, 0, 10, // expiration
                 0, 0, 0, 10, // inception
-                0, 11,// key tag
+                0, 11, // key tag
                 5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0, // signer's name
                 'c', '2', 'l', 'n', 'b', 'm', 'F', '0', 'd', 'X', 'J', 'l'// signature base64 encode -> c2lnbmF0dXJl
         };
@@ -201,7 +201,6 @@ public class DefaultDnsRecordEncoderTest {
         assertArrayEquals(expectedSigBytes, actualSigBytes);
         out.release();
     }
-
 
     @Test
     public void testEncodeAAAARecord() throws Exception {

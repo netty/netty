@@ -51,7 +51,6 @@ public class DnsEncodeUtilTest {
         testEncodeDomainName0(new byte[] { 0 }, ".");
     }
 
-
     private static void testEncodeDomainName0(byte[] expected, String name) throws Exception {
         ByteBuf out = Unpooled.buffer();
         ByteBuf expectedBuf = Unpooled.wrappedBuffer(expected);

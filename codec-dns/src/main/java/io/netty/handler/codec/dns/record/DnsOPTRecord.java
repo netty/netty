@@ -67,7 +67,6 @@ public class DnsOPTRecord extends AbstractDnsRecord {
         return options;
     }
 
-
     public byte extendedRcode() {
         return extendedRcode;
     }

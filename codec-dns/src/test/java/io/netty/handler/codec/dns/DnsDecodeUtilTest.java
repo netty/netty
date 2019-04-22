@@ -75,7 +75,6 @@ public class DnsDecodeUtilTest {
         raw.release();
     }
 
-
     private static void testDecodeDomainName0(String expected, ByteBuf buffer) {
         try {
             assertEquals(expected, DnsDecodeUtil.decodeDomainName(buffer));

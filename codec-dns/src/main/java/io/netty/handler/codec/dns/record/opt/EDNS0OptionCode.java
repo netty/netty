@@ -107,7 +107,6 @@ public final class EDNS0OptionCode {
      */
     public static final EDNS0OptionCode PADDING = new EDNS0OptionCode(0xc, "PADDING");
 
-
     /**
      * CHAIN Query Requests in DNS.
      *

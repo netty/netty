@@ -159,9 +159,9 @@ public class DefaultDnsRecordDecoderTest {
                 0, 0, 0, 60, // ttl
                 0, 0, 0, 10, // expiration
                 0, 0, 0, 10, // inception
-                0, 11,// key tag
+                0, 11, // key tag
                 5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0, // signer's name
-                'c', '2', 'l', 'n', 'b', 'm', 'F', '0', 'd', 'X', 'J', 'l'// signature base64 encode -> c2lnbmF0dXJl
+                'c', '2', 'l', 'n', 'b', 'm', 'F', '0', 'd', 'X', 'J', 'l', // signature base64 encode -> c2lnbmF0dXJl
         };
         ByteBuf rData = Unpooled.wrappedBuffer(sigBytes);
         DnsRecord record =
@@ -196,7 +196,6 @@ public class DefaultDnsRecordDecoderTest {
         ByteBuf rData = Unpooled.wrappedBuffer(addressBytes);
         testDecodeRecord(DEFAULT_NAME, DnsRecordType.AAAA, DEFAULT_DNS_CLASS, DEFAULT_TIME_TO_LIVE, rData);
     }
-
 
     @Test
     public void testDecodeOPTRecord() throws Exception {
@@ -244,7 +243,6 @@ public class DefaultDnsRecordDecoderTest {
         assertEquals(8, subnetOption.scopePrefixLength());
         assertArrayEquals(subnetOption.address().getAddress(), new byte[] { 1, 2, 3, 4 });
     }
-
 
     public DnsRecord testDecodeRecord(String name, DnsRecordType type, int dnsClass, long timeToLive, ByteBuf rData)
             throws Exception {
