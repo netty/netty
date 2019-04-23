@@ -36,6 +36,9 @@ public class AIOServerHandler implements CompletionHandler<AsynchronousSocketCha
      */
     @Override
     public void completed(AsynchronousSocketChannel asynSocketChannel, AIOServer attachment) {
+        //得到和调用方asynServerSocketChannel.accept(this, new AIOServerHandler());是相同的AIOServer对象
+        System.out.println("attachment.hashCode() = " + attachment.hashCode());
+
         // 当有下一个客户端接入的时候 直接调用Server的accept方法，这样反复执行下去，保证多个客户端都可以阻塞
         attachment.asynServerSocketChannel.accept(attachment, this);
         read(asynSocketChannel);

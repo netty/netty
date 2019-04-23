@@ -30,13 +30,14 @@ public class AIOServer {
             //创建线程池
             executorService = Executors.newCachedThreadPool();
             //创建线程通道
-            threadGroup=AsynchronousChannelGroup.withCachedThreadPool(executorService,1);
+            threadGroup = AsynchronousChannelGroup.withCachedThreadPool(executorService, 1);
             //创建服务器通道
             asynServerSocketChannel = AsynchronousServerSocketChannel.open(threadGroup);
             //进行绑定
             asynServerSocketChannel.bind(new InetSocketAddress(port));
             System.out.println("server start , port : " + port);
             //等待客户端请求
+            System.out.println("this.getClass().getName():" + this.getClass().getName());
             asynServerSocketChannel.accept(this, new AIOServerHandler());
             // 一直阻塞 不让服务器停止，真实环境是在tomcat下运行，所以不需要这行代码
             Thread.sleep(Integer.MAX_VALUE);
@@ -49,6 +50,7 @@ public class AIOServer {
 
     public static void main(String[] args) {
         AIOServer aioServer = new AIOServer();
+        System.out.println("aioServer.hashCode() = " + aioServer.hashCode());
         aioServer.start(9999);
     }
 }
