@@ -145,23 +145,48 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf capacity(int newCapacity) {
-        checkNewCapacity(newCapacity);
+        return capacity(newCapacity, false);
+    }
+
+    @Override
+    public boolean capacityAndDiscard(int newCapacity) {
+        capacity(newCapacity, true);
+        return true;
+    }
+
+    private ByteBuf capacity(int newCapacity, boolean discard) {
         int oldCapacity = capacity;
         if (newCapacity == oldCapacity) {
+            if (discard) {
+                return discardReadBytes();
+            }
+            ensureAccessible();
             return this;
         }
+        checkNewCapacity(newCapacity);
         int bytesToCopy;
-        if (newCapacity > oldCapacity) {
+        int oldOffset = 0;
+        if (discard) {
+            int readerIndex = readerIndex();
+            if (readerIndex != 0) {
+                adjustMarkers(readerIndex);
+                oldOffset = readerIndex;
+            }
+            bytesToCopy = Math.min(writerIndex() - readerIndex, newCapacity);
+            setIndex0(0, bytesToCopy);
+        } else if (newCapacity > oldCapacity) {
             bytesToCopy = oldCapacity;
         } else {
             trimIndicesToCapacity(newCapacity);
             bytesToCopy = newCapacity;
         }
-        ByteBuffer oldBuffer = buffer;
         ByteBuffer newBuffer = allocateDirect(newCapacity);
-        oldBuffer.position(0).limit(bytesToCopy);
-        newBuffer.position(0).limit(bytesToCopy);
-        newBuffer.put(oldBuffer).clear();
+        if (bytesToCopy > 0) {
+            ByteBuffer oldBuffer = buffer;
+            oldBuffer.position(oldOffset).limit(bytesToCopy);
+            newBuffer.position(0).limit(bytesToCopy);
+            newBuffer.put(oldBuffer).clear();
+        }
         setByteBuffer(newBuffer, true);
         return this;
     }

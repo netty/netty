@@ -93,7 +93,20 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
     @Override
     public final ByteBuf capacity(int newCapacity) {
+        return capacity(newCapacity, false);
+    }
+
+    @Override
+    public boolean capacityAndDiscard(int newCapacity) {
+        capacity(newCapacity, true);
+        return true;
+    }
+
+    private ByteBuf capacity(int newCapacity, boolean discard) {
         if (newCapacity == length) {
+            if (discard) {
+                return discardReadBytes();
+            }
             ensureAccessible();
             return this;
         }
@@ -102,11 +115,17 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             // If the request capacity does not require reallocation, just update the length of the memory.
             if (newCapacity > length) {
                 if (newCapacity <= maxLength) {
+                    if (discard) {
+                        discardReadBytes();
+                    }
                     length = newCapacity;
                     return this;
                 }
             } else if (newCapacity > maxLength >>> 1 &&
                     (maxLength > 512 || newCapacity > maxLength - 16)) {
+                if (discard) {
+                    discardReadBytes();
+                }
                 // here newCapacity < length
                 length = newCapacity;
                 trimIndicesToCapacity(newCapacity);
@@ -115,7 +134,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         }
 
         // Reallocation required.
-        chunk.arena.reallocate(this, newCapacity, true);
+        chunk.arena.reallocate(this, newCapacity, true, discard);
         return this;
     }
 

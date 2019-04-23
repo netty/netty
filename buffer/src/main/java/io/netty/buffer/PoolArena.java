@@ -378,11 +378,14 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         return delta == 0 ? reqCapacity : reqCapacity + directMemoryCacheAlignment - delta;
     }
 
-    void reallocate(PooledByteBuf<T> buf, int newCapacity, boolean freeOldMemory) {
+    void reallocate(PooledByteBuf<T> buf, int newCapacity, boolean freeOldMemory, boolean discard) {
         assert newCapacity >= 0 && newCapacity <= buf.maxCapacity();
 
         int oldCapacity = buf.length;
         if (oldCapacity == newCapacity) {
+            if (discard && buf.readerIndex() != 0) {
+                buf.discardReadBytes();
+            }
             return;
         }
 
@@ -396,7 +399,15 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         // This does not touch buf's reader/writer indices
         allocate(parent.threadCache(), buf, newCapacity);
         int bytesToCopy;
-        if (newCapacity > oldCapacity) {
+        if (discard) {
+            int readerIndex = buf.readerIndex();
+            if (readerIndex != 0) {
+                buf.adjustMarkers(readerIndex);
+                oldOffset += readerIndex;
+            }
+            bytesToCopy = Math.min(buf.writerIndex() - readerIndex, newCapacity);
+            buf.setIndex0(0, bytesToCopy);
+        } else if (newCapacity > oldCapacity) {
             bytesToCopy = oldCapacity;
         } else {
             buf.trimIndicesToCapacity(newCapacity);

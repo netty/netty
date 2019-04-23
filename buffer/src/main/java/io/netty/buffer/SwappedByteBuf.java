@@ -89,6 +89,11 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public boolean capacityAndDiscard(int newCapacity) {
+        return buf.capacityAndDiscard(newCapacity);
+    }
+
+    @Override
     public int maxCapacity() {
         return buf.maxCapacity();
     }
