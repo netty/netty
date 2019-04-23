@@ -196,7 +196,7 @@ public class Http2MultiplexCodecBuilder
                     new StreamBufferingEncoder(defaultEncoder) : defaultEncoder;
             DefaultHttp2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader,
                     promisedRequestVerifier(), isAutoAckSettingsFrame());
-            defaultEncoder.outstandingRemoteSettingsQueue(decoder.outstandingRemoteSettingsQueue());
+            defaultEncoder.outstandingRemoteSettingsQueue(decoder);
 
             return build(decoder, encoder, initialSettings());
         }

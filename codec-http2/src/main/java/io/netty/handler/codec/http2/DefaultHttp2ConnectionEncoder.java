@@ -22,6 +22,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.CoalescingBufferQueue;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
@@ -47,11 +48,12 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
     // We prefer ArrayDeque to LinkedList because later will produce more GC.
     // This initial capacity is plenty for SETTINGS traffic.
     private final Queue<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<Http2Settings>(4);
-    private Queue<Http2Settings> outstandingRemoteSettingsQueue;
+    private Http2SettingReceivedSupplier remoteSettingsSupplier;
 
     public DefaultHttp2ConnectionEncoder(Http2Connection connection, Http2FrameWriter frameWriter) {
         this.connection = checkNotNull(connection, "connection");
         this.frameWriter = checkNotNull(frameWriter, "frameWriter");
+        remoteSettingsSupplier = EmptyHttp2SettingsReceivedSupplier.INSTANCE;
         if (connection.remote().flowController() == null) {
             connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection));
         }
@@ -61,10 +63,10 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
      * Set the queue that retains SETTINGS frames received from the remote peer. This will be used when sending
      * SETTING(ack) frames to apply the settings locally.
      *
-     * @param outstandingRemoteSettingsQueue the queue that retains SETTINGS frames received from the remote peer.
+     * @param remoteSettingsSupplier the queue that retains SETTINGS frames received from the remote peer.
      */
-    public final void outstandingRemoteSettingsQueue(Queue<Http2Settings> outstandingRemoteSettingsQueue) {
-        this.outstandingRemoteSettingsQueue = outstandingRemoteSettingsQueue;
+    public final void outstandingRemoteSettingsQueue(Http2SettingReceivedSupplier remoteSettingsSupplier) {
+        this.remoteSettingsSupplier = ObjectUtil.checkNotNull(remoteSettingsSupplier, "remoteSettingsSupplier");
     }
 
     @Override
@@ -287,7 +289,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
     @Override
     public ChannelFuture writeSettingsAck(ChannelHandlerContext ctx, ChannelPromise promise) {
-        if (outstandingRemoteSettingsQueue == null) {
+        Http2Settings settings = remoteSettingsSupplier.pollReceivedSettings();
+        if (settings == null) {
             return frameWriter.writeSettingsAck(ctx, promise);
         }
         SimpleChannelPromiseAggregator aggregator = new SimpleChannelPromiseAggregator(promise, ctx.channel(),
@@ -297,24 +300,15 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
         // these new settings. See https://github.com/netty/netty/issues/6520.
         frameWriter.writeSettingsAck(ctx, aggregator);
 
-        Http2Settings settings = outstandingRemoteSettingsQueue.poll();
         // We create a "new promise" to make sure that status from both the write and the application are taken into
         // account independently.
         ChannelPromise applySettingsPromise = aggregator.newPromise();
-        if (settings == null) {
-            applySettingsPromise.setFailure(connectionError(PROTOCOL_ERROR,
-                    "SETTINGS ACK sent with no pending SETTINGS frame"));
-            // We don't propagate the failure to lifecycleManager because this is an unsolicited ACK from the local
-            // application. From the protocol perspective this isn't necessarily a problem as there is no
-            // "invalid frame" or protocol inconsistencies.
-        } else {
-            try {
-                remoteSettings(settings);
-                applySettingsPromise.setSuccess();
-            } catch (Throwable e) {
-                applySettingsPromise.setFailure(e);
-                lifecycleManager.onError(ctx, true, e);
-            }
+        try {
+            remoteSettings(settings);
+            applySettingsPromise.setSuccess();
+        } catch (Throwable e) {
+            applySettingsPromise.setFailure(e);
+            lifecycleManager.onError(ctx, true, e);
         }
         return aggregator.doneAllocatingPromises();
     }

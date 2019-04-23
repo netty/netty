@@ -50,7 +50,7 @@ import static java.lang.Math.min;
  * {@link Http2LocalFlowController}
  */
 @UnstableApi
-public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
+public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder, Http2SettingReceivedSupplier {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultHttp2ConnectionDecoder.class);
     private Http2FrameListener internalFrameListener = new PrefaceFrameListener();
     private final Http2Connection connection;
@@ -82,8 +82,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
      *                    h2 semantics on top of the frames.
      * @param requestVerifier Determines if push promised streams are valid.
      * @param autoAckSettings {@code false} to disable automatically applying and sending settings acknowledge frame.
-     * In this case see see {@link #outstandingRemoteSettingsQueue()} which is expected to be consumed by the
-     * @link Http2ConnectionEncoder} when writting the SETTINGS ACKs.
+     * In this case see see {@link #pollReceivedSettings()} which is expected to be consumed by the
+     * {@link Http2ConnectionEncoder} when writting the SETTINGS ACKs.
      * {@code true} to enable automatically applying and sending settings acknowledge frame.
      */
     public DefaultHttp2ConnectionDecoder(Http2Connection connection,
@@ -100,16 +100,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             connection.local().flowController(new DefaultHttp2LocalFlowController(connection));
         }
         connection.local().flowController().frameWriter(encoder.frameWriter());
-    }
-
-    /**
-     * Get the queue that retains SETTINGS frames received from the remote peer.
-     *
-     * @return the queue that retains SETTINGS frames received from the remote peer. This may be {@code null} if ACKs
-     * are sent synchronously.
-     */
-    public final Queue<Http2Settings> outstandingRemoteSettingsQueue() {
-        return outstandingRemoteSettingsQueue;
     }
 
     @Override
@@ -199,6 +189,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     void onUnknownFrame0(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
             ByteBuf payload) throws Http2Exception {
         listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
+    }
+
+    @Override
+    public Http2Settings pollReceivedSettings() {
+        return outstandingRemoteSettingsQueue == null ? null : outstandingRemoteSettingsQueue.poll();
     }
 
     /**
