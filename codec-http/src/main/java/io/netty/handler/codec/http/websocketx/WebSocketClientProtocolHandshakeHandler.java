@@ -36,12 +36,17 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
             "channelActive(...)");
 
     private final WebSocketClientHandshaker handshaker;
-    private volatile long handshakeTimeoutMillis;
+    private final long handshakeTimeoutMillis;
     private volatile ChannelHandlerContext ctx;
     private volatile ChannelPromise handshakePromise;
 
     WebSocketClientProtocolHandshakeHandler(WebSocketClientHandshaker handshaker) {
+        this(handshaker, 10000);
+    }
+
+    WebSocketClientProtocolHandshakeHandler(WebSocketClientHandshaker handshaker, long handshakeTimeoutMillis) {
         this.handshaker = handshaker;
+        this.handshakeTimeoutMillis = handshakeTimeoutMillis;
     }
 
     @Override
@@ -91,14 +96,8 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         }
     }
 
-    WebSocketClientProtocolHandshakeHandler handshakeTimeoutMillis(long handshakeTimeoutMillis) {
-        this.handshakeTimeoutMillis = handshakeTimeoutMillis;
-        return this;
-    }
-
     private void applyHandshakeTimeout() {
         final ChannelPromise localHandshakePromise = handshakePromise;
-        final long handshakeTimeoutMillis = this.handshakeTimeoutMillis;
         if (handshakeTimeoutMillis <= 0 || localHandshakePromise.isDone()) {
             return;
         }

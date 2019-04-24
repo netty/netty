@@ -49,29 +49,46 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
             WebSocketServerProtocolHandshakeHandler.class,
             "channelRead(...)");
 
+    private static final long DEFAULT_HANDSHAKE_TIMEOUT = 10000L;
+
     private final String websocketPath;
     private final String subprotocols;
     private final boolean allowExtensions;
     private final int maxFramePayloadSize;
     private final boolean allowMaskMismatch;
     private final boolean checkStartsWith;
-    private volatile long handshakeTimeoutMillis;
+    private final long handshakeTimeoutMillis;
     private volatile ChannelHandlerContext ctx;
     private volatile ChannelPromise handshakePromise;
 
     WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
             boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch) {
-        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch, false);
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch, DEFAULT_HANDSHAKE_TIMEOUT);
+    }
+
+    WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
+                                            boolean allowExtensions, int maxFrameSize,
+                                            boolean allowMaskMismatch, long handshakeTimeoutMillis) {
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch,
+             false, handshakeTimeoutMillis);
     }
 
     WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
             boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch, boolean checkStartsWith) {
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch,
+             checkStartsWith, DEFAULT_HANDSHAKE_TIMEOUT);
+    }
+
+    WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
+                                            boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch,
+                                            boolean checkStartsWith, long handshakeTimeoutMillis) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
         maxFramePayloadSize = maxFrameSize;
         this.allowMaskMismatch = allowMaskMismatch;
         this.checkStartsWith = checkStartsWith;
+        this.handshakeTimeoutMillis = handshakeTimeoutMillis;
     }
 
     @Override
@@ -149,11 +166,6 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         }
         String host = req.headers().get(HttpHeaderNames.HOST);
         return protocol + "://" + host + path;
-    }
-
-    WebSocketServerProtocolHandshakeHandler handshakeTimeoutMillis(long handshakeTimeoutMillis) {
-        this.handshakeTimeoutMillis = handshakeTimeoutMillis;
-        return this;
     }
 
     private void applyHandshakeTimeout() {

@@ -313,8 +313,7 @@ public class WebSocketHandshakeHandOverTest {
                 new HttpObjectAggregator(8192),
                 new WebSocketClientProtocolHandler(new URI("ws://localhost:1234/test"),
                                                    WebSocketVersion.V13, "test-proto-2",
-                                                   false, null, 65536)
-                        .handshakeTimeoutMillis(timeoutMillis),
+                                                   false, null, 65536, timeoutMillis),
                 handler);
     }
 }

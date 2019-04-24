@@ -102,48 +102,93 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     private static final AttributeKey<WebSocketServerHandshaker> HANDSHAKER_ATTR_KEY =
             AttributeKey.valueOf(WebSocketServerHandshaker.class, "HANDSHAKER");
 
+    private static final long DEFAULT_HANDSHAKE_TIMEOUT = 10000L;
+
     private final String websocketPath;
     private final String subprotocols;
     private final boolean allowExtensions;
     private final int maxFramePayloadLength;
     private final boolean allowMaskMismatch;
     private final boolean checkStartsWith;
-    private volatile long handshakeTimeoutMillis = 10000;
+    private final long handshakeTimeoutMillis;
 
     public WebSocketServerProtocolHandler(String websocketPath) {
+        this(websocketPath, DEFAULT_HANDSHAKE_TIMEOUT);
+    }
+
+    public WebSocketServerProtocolHandler(String websocketPath, long handshakeTimeoutMillis) {
         this(websocketPath, null, false);
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, boolean checkStartsWith) {
-        this(websocketPath, null, false, 65536, false, checkStartsWith);
+        this(websocketPath, checkStartsWith, DEFAULT_HANDSHAKE_TIMEOUT);
+    }
+
+    public WebSocketServerProtocolHandler(String websocketPath, boolean checkStartsWith, long handshakeTimeoutMillis) {
+        this(websocketPath, null, false, 65536, false, checkStartsWith, handshakeTimeoutMillis);
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols) {
-        this(websocketPath, subprotocols, false);
+        this(websocketPath, subprotocols, DEFAULT_HANDSHAKE_TIMEOUT);
+    }
+
+    public WebSocketServerProtocolHandler(String websocketPath, String subprotocols, long handshakeTimeoutMillis) {
+        this(websocketPath, subprotocols, false, handshakeTimeoutMillis);
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols, boolean allowExtensions) {
-        this(websocketPath, subprotocols, allowExtensions, 65536);
+        this(websocketPath, subprotocols, allowExtensions, DEFAULT_HANDSHAKE_TIMEOUT);
+    }
+
+    public WebSocketServerProtocolHandler(String websocketPath, String subprotocols, boolean allowExtensions,
+                                          long handshakeTimeoutMillis) {
+        this(websocketPath, subprotocols, allowExtensions, 65536, handshakeTimeoutMillis);
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
                                           boolean allowExtensions, int maxFrameSize) {
-        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, false);
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, DEFAULT_HANDSHAKE_TIMEOUT);
+    }
+
+    public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
+                                          boolean allowExtensions, int maxFrameSize, long handshakeTimeoutMillis) {
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, false, handshakeTimeoutMillis);
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
             boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch) {
-        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch, false);
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch, DEFAULT_HANDSHAKE_TIMEOUT);
+    }
+
+    public WebSocketServerProtocolHandler(String websocketPath, String subprotocols, boolean allowExtensions,
+                                          int maxFrameSize, boolean allowMaskMismatch, long handshakeTimeoutMillis) {
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch, false,
+             handshakeTimeoutMillis);
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
             boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch, boolean checkStartsWith) {
-        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch, checkStartsWith, true);
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch, checkStartsWith,
+             DEFAULT_HANDSHAKE_TIMEOUT);
+    }
+
+    public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
+                                          boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch,
+                                          boolean checkStartsWith, long handshakeTimeoutMillis) {
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch, checkStartsWith, true,
+             handshakeTimeoutMillis);
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
                                           boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch,
                                           boolean checkStartsWith, boolean dropPongFrames) {
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch, checkStartsWith,
+             dropPongFrames, DEFAULT_HANDSHAKE_TIMEOUT);
+    }
+
+    public WebSocketServerProtocolHandler(String websocketPath, String subprotocols, boolean allowExtensions,
+                                          int maxFrameSize, boolean allowMaskMismatch, boolean checkStartsWith,
+                                          boolean dropPongFrames, long handshakeTimeoutMillis) {
         super(dropPongFrames);
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
@@ -151,6 +196,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         maxFramePayloadLength = maxFrameSize;
         this.allowMaskMismatch = allowMaskMismatch;
         this.checkStartsWith = checkStartsWith;
+        this.handshakeTimeoutMillis = handshakeTimeoutMillis;
     }
 
     @Override
@@ -159,9 +205,11 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         if (cp.get(WebSocketServerProtocolHandshakeHandler.class) == null) {
             // Add the WebSocketHandshakeHandler before this one.
             ctx.pipeline().addBefore(ctx.name(), WebSocketServerProtocolHandshakeHandler.class.getName(),
-                    new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols,
-                            allowExtensions, maxFramePayloadLength, allowMaskMismatch, checkStartsWith)
-                            .handshakeTimeoutMillis(handshakeTimeoutMillis));
+                                     new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols,
+                                                                                 allowExtensions, maxFramePayloadLength,
+                                                                                 allowMaskMismatch,
+                                                                                 checkStartsWith,
+                                                                                 handshakeTimeoutMillis));
         }
         if (cp.get(Utf8FrameValidator.class) == null) {
             // Add the UFT8 checking before this one.
@@ -219,10 +267,5 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
                 }
             }
         };
-    }
-
-    public WebSocketServerProtocolHandler handshakeTimeoutMillis(long handshakeTimeoutMillis) {
-        this.handshakeTimeoutMillis = handshakeTimeoutMillis;
-        return this;
     }
 }
