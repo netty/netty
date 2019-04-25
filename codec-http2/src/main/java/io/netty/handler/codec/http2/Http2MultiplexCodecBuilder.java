@@ -71,6 +71,14 @@ public class Http2MultiplexCodecBuilder
         return new Http2MultiplexCodecBuilder(true, childHandler);
     }
 
+    public Http2MultiplexCodecBuilder withUpgradeStreamHandler(ChannelHandler upgradeStreamHandler) {
+        if (this.isServer()) {
+            throw new IllegalArgumentException("Server codecs don't use an extra handler for the upgrade stream");
+        }
+        this.upgradeStreamHandler = upgradeStreamHandler;
+        return this;
+    }
+
     @Override
     public Http2Settings initialSettings() {
         return super.initialSettings();
@@ -89,14 +97,6 @@ public class Http2MultiplexCodecBuilder
     @Override
     public Http2MultiplexCodecBuilder gracefulShutdownTimeoutMillis(long gracefulShutdownTimeoutMillis) {
         return super.gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis);
-    }
-
-    public Http2MultiplexCodecBuilder withUpgradeStreamHandler(ChannelHandler upgradeStreamHandler) {
-        if (this.isServer()) {
-            throw new IllegalArgumentException("Server codecs don't use an extra handler for the upgrade stream");
-        }
-        this.upgradeStreamHandler = upgradeStreamHandler;
-        return this;
     }
 
     @Override
@@ -171,6 +171,11 @@ public class Http2MultiplexCodecBuilder
     }
 
     @Override
+    public Http2MultiplexCodecBuilder decoupleCloseAndGoAway(boolean decoupleCloseAndGoAway) {
+        return super.decoupleCloseAndGoAway(decoupleCloseAndGoAway);
+    }
+
+    @Override
     public Http2MultiplexCodec build() {
         Http2FrameWriter frameWriter = this.frameWriter;
         if (frameWriter != null) {
@@ -201,6 +206,9 @@ public class Http2MultiplexCodecBuilder
     @Override
     protected Http2MultiplexCodec build(
             Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder, Http2Settings initialSettings) {
-        return new Http2MultiplexCodec(encoder, decoder, initialSettings, childHandler, upgradeStreamHandler);
+        Http2MultiplexCodec codec = new Http2MultiplexCodec(encoder, decoder, initialSettings, childHandler,
+                upgradeStreamHandler, decoupleCloseAndGoAway());
+        codec.gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis());
+        return codec;
     }
 }

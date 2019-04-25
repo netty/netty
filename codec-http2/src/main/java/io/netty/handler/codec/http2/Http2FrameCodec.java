@@ -159,8 +159,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     private final IntObjectMap<DefaultHttp2FrameStream> frameStreamToInitializeMap =
             new IntObjectHashMap<DefaultHttp2FrameStream>(8);
 
-    Http2FrameCodec(Http2ConnectionEncoder encoder, Http2ConnectionDecoder decoder, Http2Settings initialSettings) {
-        super(decoder, encoder, initialSettings);
+    Http2FrameCodec(Http2ConnectionEncoder encoder, Http2ConnectionDecoder decoder, Http2Settings initialSettings,
+                    boolean decoupleCloseAndGoAway) {
+        super(decoder, encoder, initialSettings, decoupleCloseAndGoAway);
 
         decoder.frameListener(new FrameListener());
         connection().addListener(new ConnectionListener());
@@ -502,7 +503,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     void onHttp2UnknownStreamError(@SuppressWarnings("unused") ChannelHandlerContext ctx, Throwable cause,
                                    Http2Exception.StreamException streamException) {
         // Just log....
-        LOG.warn("Stream exception thrown for unkown stream {}.", streamException.streamId(), cause);
+        LOG.warn("Stream exception thrown for unknown stream {}.", streamException.streamId(), cause);
     }
 
     @Override

@@ -139,6 +139,11 @@ public class Http2FrameCodecBuilder extends
         return super.initialHuffmanDecodeCapacity(initialHuffmanDecodeCapacity);
     }
 
+    @Override
+    public Http2FrameCodecBuilder decoupleCloseAndGoAway(boolean decoupleCloseAndGoAway) {
+        return super.decoupleCloseAndGoAway(decoupleCloseAndGoAway);
+    }
+
     /**
      * Build a {@link Http2FrameCodec} object.
      */
@@ -173,6 +178,8 @@ public class Http2FrameCodecBuilder extends
     @Override
     protected Http2FrameCodec build(
             Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder, Http2Settings initialSettings) {
-        return new Http2FrameCodec(encoder, decoder, initialSettings);
+        Http2FrameCodec codec = new Http2FrameCodec(encoder, decoder, initialSettings, decoupleCloseAndGoAway());
+        codec.gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis());
+        return codec;
     }
 }
