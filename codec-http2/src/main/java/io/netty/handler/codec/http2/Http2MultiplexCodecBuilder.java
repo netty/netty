@@ -166,6 +166,11 @@ public class Http2MultiplexCodecBuilder
     }
 
     @Override
+    public Http2MultiplexCodecBuilder autoAckSettingsFrame(boolean autoAckSettings) {
+        return super.autoAckSettingsFrame(autoAckSettings);
+    }
+
+    @Override
     public Http2MultiplexCodec build() {
         Http2FrameWriter frameWriter = this.frameWriter;
         if (frameWriter != null) {
@@ -185,7 +190,8 @@ public class Http2MultiplexCodecBuilder
             if (encoderEnforceMaxConcurrentStreams()) {
                 encoder = new StreamBufferingEncoder(encoder);
             }
-            Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader);
+            Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader,
+                    promisedRequestVerifier(), isAutoAckSettingsFrame());
 
             return build(decoder, encoder, initialSettings());
         }

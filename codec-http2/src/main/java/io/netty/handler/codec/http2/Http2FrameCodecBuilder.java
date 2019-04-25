@@ -162,7 +162,8 @@ public class Http2FrameCodecBuilder extends
             if (encoderEnforceMaxConcurrentStreams()) {
                 encoder = new StreamBufferingEncoder(encoder);
             }
-            Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader);
+            Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader,
+                    promisedRequestVerifier(), isAutoAckSettingsFrame());
 
             return build(decoder, encoder, initialSettings());
         }
