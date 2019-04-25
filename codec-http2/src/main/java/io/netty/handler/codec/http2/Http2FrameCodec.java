@@ -297,6 +297,10 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             encoder().writePing(ctx, frame.ack(), frame.content(), promise);
         } else if (msg instanceof Http2SettingsFrame) {
             encoder().writeSettings(ctx, ((Http2SettingsFrame) msg).settings(), promise);
+        } else if (msg instanceof Http2SettingsAckFrame) {
+            // In the event of manual SETTINGS ACK is is assumed the encoder will apply the earliest received but not
+            // yet ACKed settings.
+            encoder().writeSettingsAck(ctx, promise);
         } else if (msg instanceof Http2GoAwayFrame) {
             writeGoAwayFrame(ctx, (Http2GoAwayFrame) msg, promise);
         } else if (msg instanceof Http2UnknownFrame) {
@@ -572,7 +576,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         @Override
         public void onSettingsAckRead(ChannelHandlerContext ctx) {
-            // TODO: Maybe handle me
+            onHttp2Frame(ctx, Http2SettingsAckFrame.INSTANCE);
         }
 
         @Override

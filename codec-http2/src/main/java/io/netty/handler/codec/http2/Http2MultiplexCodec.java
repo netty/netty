@@ -1119,7 +1119,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                             }
                             return;
                         }
-                    } else  {
+                    } else {
                         String msgStr = msg.toString();
                         ReferenceCountUtil.release(msg);
                         promise.setFailure(new IllegalArgumentException(
