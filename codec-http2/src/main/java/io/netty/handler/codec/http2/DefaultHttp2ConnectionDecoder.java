@@ -22,9 +22,7 @@ import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.ArrayDeque;
 import java.util.List;
-import java.util.Queue;
 
 import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
@@ -50,7 +48,7 @@ import static java.lang.Math.min;
  * {@link Http2LocalFlowController}
  */
 @UnstableApi
-public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder, Http2SettingReceivedSupplier {
+public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultHttp2ConnectionDecoder.class);
     private Http2FrameListener internalFrameListener = new PrefaceFrameListener();
     private final Http2Connection connection;
@@ -59,7 +57,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder, Ht
     private final Http2FrameReader frameReader;
     private Http2FrameListener listener;
     private final Http2PromisedRequestVerifier requestVerifier;
-    private final Queue<Http2Settings> outstandingRemoteSettingsQueue;
+    private final Http2SettingsReceivedConsumer settingsReceivedConsumer;
 
     public DefaultHttp2ConnectionDecoder(Http2Connection connection,
                                          Http2ConnectionEncoder encoder,
@@ -82,8 +80,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder, Ht
      *                    h2 semantics on top of the frames.
      * @param requestVerifier Determines if push promised streams are valid.
      * @param autoAckSettings {@code false} to disable automatically applying and sending settings acknowledge frame.
-     *   In this case see see {@link #pollReceivedSettings()} which is expected to be consumed by the
-     * {@link Http2ConnectionEncoder} when writting the SETTINGS ACKs.
+     *  The {@code Http2ConnectionEncoder} is expected to be an instance of {@link Http2SettingsReceivedConsumer} and
+     *  will apply the earliest received but not yet ACKed SETTINGS when writing the SETTINGS ACKs.
      * {@code true} to enable automatically applying and sending settings acknowledge frame.
      */
     public DefaultHttp2ConnectionDecoder(Http2Connection connection,
@@ -91,7 +89,15 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder, Ht
                                          Http2FrameReader frameReader,
                                          Http2PromisedRequestVerifier requestVerifier,
                                          boolean autoAckSettings) {
-        outstandingRemoteSettingsQueue = autoAckSettings ? null : new ArrayDeque<Http2Settings>(2);
+        if (autoAckSettings) {
+            settingsReceivedConsumer = null;
+        } else {
+            if (!(encoder instanceof Http2SettingsReceivedConsumer)) {
+                throw new IllegalArgumentException("disabling autoAckSettings requires the encoder to be a " +
+                        Http2SettingsReceivedConsumer.class);
+            }
+            settingsReceivedConsumer = (Http2SettingsReceivedConsumer) encoder;
+        }
         this.connection = checkNotNull(connection, "connection");
         this.frameReader = checkNotNull(frameReader, "frameReader");
         this.encoder = checkNotNull(encoder, "encoder");
@@ -189,11 +195,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder, Ht
     void onUnknownFrame0(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
             ByteBuf payload) throws Http2Exception {
         listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
-    }
-
-    @Override
-    public Http2Settings pollReceivedSettings() {
-        return outstandingRemoteSettingsQueue == null ? null : outstandingRemoteSettingsQueue.poll();
     }
 
     /**
@@ -438,7 +439,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder, Ht
 
         @Override
         public void onSettingsRead(final ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
-            if (outstandingRemoteSettingsQueue == null) {
+            if (settingsReceivedConsumer == null) {
                 // Acknowledge receipt of the settings. We should do this before we process the settings to ensure our
                 // remote peer applies these settings before any subsequent frames that we may send which depend upon
                 // these new settings. See https://github.com/netty/netty/issues/6520.
@@ -446,7 +447,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder, Ht
 
                 encoder.remoteSettings(settings);
             } else {
-                outstandingRemoteSettingsQueue.add(settings);
+                settingsReceivedConsumer.consumeReceivedSettings(settings);
             }
 
             listener.onSettingsRead(ctx, settings);

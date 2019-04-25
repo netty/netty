@@ -22,7 +22,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.CoalescingBufferQueue;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
@@ -30,6 +29,7 @@ import java.util.Queue;
 
 import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -41,32 +41,21 @@ import static java.lang.Math.min;
  * Default implementation of {@link Http2ConnectionEncoder}.
  */
 @UnstableApi
-public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
+public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Http2SettingsReceivedConsumer {
     private final Http2FrameWriter frameWriter;
     private final Http2Connection connection;
     private Http2LifecycleManager lifecycleManager;
     // We prefer ArrayDeque to LinkedList because later will produce more GC.
     // This initial capacity is plenty for SETTINGS traffic.
     private final Queue<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<Http2Settings>(4);
-    private Http2SettingReceivedSupplier remoteSettingsSupplier;
+    private Queue<Http2Settings> outstandingRemoteSettingsQueue;
 
     public DefaultHttp2ConnectionEncoder(Http2Connection connection, Http2FrameWriter frameWriter) {
         this.connection = checkNotNull(connection, "connection");
         this.frameWriter = checkNotNull(frameWriter, "frameWriter");
-        remoteSettingsSupplier = EmptyHttp2SettingsReceivedSupplier.INSTANCE;
         if (connection.remote().flowController() == null) {
             connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection));
         }
-    }
-
-    /**
-     * Set the queue that retains SETTINGS frames received from the remote peer. This will be used when sending
-     * SETTING(ack) frames to apply the settings locally.
-     *
-     * @param remoteSettingsSupplier the queue that retains SETTINGS frames received from the remote peer.
-     */
-    public final void outstandingRemoteSettingsQueue(Http2SettingReceivedSupplier remoteSettingsSupplier) {
-        this.remoteSettingsSupplier = ObjectUtil.checkNotNull(remoteSettingsSupplier, "remoteSettingsSupplier");
     }
 
     @Override
@@ -289,9 +278,13 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
 
     @Override
     public ChannelFuture writeSettingsAck(ChannelHandlerContext ctx, ChannelPromise promise) {
-        Http2Settings settings = remoteSettingsSupplier.pollReceivedSettings();
-        if (settings == null) {
+        if (outstandingRemoteSettingsQueue == null) {
             return frameWriter.writeSettingsAck(ctx, promise);
+        }
+        Http2Settings settings = outstandingRemoteSettingsQueue.poll();
+        if (settings == null) {
+            return promise.setFailure(new Http2Exception(INTERNAL_ERROR, "attempted to write a SETTINGS ACK with no " +
+                    " pending SETTINGS"));
         }
         SimpleChannelPromiseAggregator aggregator = new SimpleChannelPromiseAggregator(promise, ctx.channel(),
                 ctx.executor());
@@ -401,6 +394,14 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder {
             throw new IllegalArgumentException(message);
         }
         return stream;
+    }
+
+    @Override
+    public void consumeReceivedSettings(Http2Settings settings) {
+        if (outstandingRemoteSettingsQueue == null) {
+            outstandingRemoteSettingsQueue = new ArrayDeque<Http2Settings>(2);
+        }
+        outstandingRemoteSettingsQueue.add(settings);
     }
 
     /**

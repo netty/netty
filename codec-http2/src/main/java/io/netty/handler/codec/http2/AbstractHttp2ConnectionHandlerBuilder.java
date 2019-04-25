@@ -432,8 +432,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
             writer = new Http2OutboundFrameLogger(writer, frameLogger);
         }
 
-        DefaultHttp2ConnectionEncoder defaultEncoder = new DefaultHttp2ConnectionEncoder(connection, writer);
-        Http2ConnectionEncoder encoder = defaultEncoder;
+        Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, writer);
         boolean encoderEnforceMaxConcurrentStreams = encoderEnforceMaxConcurrentStreams();
 
         if (encoderEnforceMaxConcurrentStreams) {
@@ -449,7 +448,6 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
 
         DefaultHttp2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
                 promisedRequestVerifier(), isAutoAckSettingsFrame());
-        defaultEncoder.outstandingRemoteSettingsQueue(decoder);
         return buildFromCodec(decoder, encoder);
     }
 
