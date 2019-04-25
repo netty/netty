@@ -166,11 +166,6 @@ public class Http2MultiplexCodecBuilder
     }
 
     @Override
-    public Http2MultiplexCodecBuilder promisedRequestVerifier(Http2PromisedRequestVerifier promisedRequestVerifier) {
-        return super.promisedRequestVerifier(promisedRequestVerifier);
-    }
-
-    @Override
     public Http2MultiplexCodecBuilder autoAckSettingsFrame(boolean autoAckSettings) {
         return super.autoAckSettingsFrame(autoAckSettings);
     }

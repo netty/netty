@@ -82,7 +82,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder, Ht
      *                    h2 semantics on top of the frames.
      * @param requestVerifier Determines if push promised streams are valid.
      * @param autoAckSettings {@code false} to disable automatically applying and sending settings acknowledge frame.
-     * In this case see see {@link #pollReceivedSettings()} which is expected to be consumed by the
+     *   In this case see see {@link #pollReceivedSettings()} which is expected to be consumed by the
      * {@link Http2ConnectionEncoder} when writting the SETTINGS ACKs.
      * {@code true} to enable automatically applying and sending settings acknowledge frame.
      */
