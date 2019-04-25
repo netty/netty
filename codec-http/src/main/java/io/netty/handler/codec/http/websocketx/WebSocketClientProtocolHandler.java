@@ -23,6 +23,8 @@ import io.netty.handler.codec.http.HttpHeaders;
 import java.net.URI;
 import java.util.List;
 
+import static io.netty.util.internal.ObjectUtil.*;
+
 /**
  * This handler does all the heavy lifting for you to run a websocket client.
  *
@@ -38,7 +40,7 @@ import java.util.List;
  * {@link ClientHandshakeStateEvent#HANDSHAKE_ISSUED} or {@link ClientHandshakeStateEvent#HANDSHAKE_COMPLETE}.
  */
 public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
-    private static final long DEFAULT_HANDSHAKE_TIMEOUT = 10000L;
+    private static final long DEFAULT_HANDSHAKE_TIMEOUT_MS = 10000L;
 
     private final WebSocketClientHandshaker handshaker;
     private final boolean handleCloseFrames;
@@ -100,7 +102,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
                                           int maxFramePayloadLength, boolean handleCloseFrames,
                                           boolean performMasking, boolean allowMaskMismatch) {
         this(webSocketURL, version, subprotocol, allowExtensions, customHeaders,
-             maxFramePayloadLength, handleCloseFrames, performMasking, allowMaskMismatch, DEFAULT_HANDSHAKE_TIMEOUT);
+             maxFramePayloadLength, handleCloseFrames, performMasking, allowMaskMismatch, DEFAULT_HANDSHAKE_TIMEOUT_MS);
     }
 
     /**
@@ -161,7 +163,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
                                                    boolean allowExtensions, HttpHeaders customHeaders,
                                                    int maxFramePayloadLength, boolean handleCloseFrames) {
         this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength,
-             handleCloseFrames, DEFAULT_HANDSHAKE_TIMEOUT);
+             handleCloseFrames, DEFAULT_HANDSHAKE_TIMEOUT_MS);
     }
 
     /**
@@ -210,7 +212,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
                                           boolean allowExtensions, HttpHeaders customHeaders,
                                           int maxFramePayloadLength) {
         this(webSocketURL, version, subprotocol,
-             allowExtensions, customHeaders, maxFramePayloadLength, DEFAULT_HANDSHAKE_TIMEOUT);
+             allowExtensions, customHeaders, maxFramePayloadLength, DEFAULT_HANDSHAKE_TIMEOUT_MS);
     }
 
     /**
@@ -248,7 +250,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      *            {@code true} if close frames should not be forwarded and just close the channel
      */
     public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker, boolean handleCloseFrames) {
-        this(handshaker, handleCloseFrames, DEFAULT_HANDSHAKE_TIMEOUT);
+        this(handshaker, handleCloseFrames, DEFAULT_HANDSHAKE_TIMEOUT_MS);
     }
 
     /**
@@ -281,7 +283,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      */
     public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker, boolean handleCloseFrames,
                                           boolean dropPongFrames) {
-        this(handshaker, handleCloseFrames, dropPongFrames, DEFAULT_HANDSHAKE_TIMEOUT);
+        this(handshaker, handleCloseFrames, dropPongFrames, DEFAULT_HANDSHAKE_TIMEOUT_MS);
     }
 
     /**
@@ -303,7 +305,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
         super(dropPongFrames);
         this.handshaker = handshaker;
         this.handleCloseFrames = handleCloseFrames;
-        this.handshakeTimeoutMillis = handshakeTimeoutMillis;
+        this.handshakeTimeoutMillis = checkPositive(handshakeTimeoutMillis, "handshakeTimeoutMillis");
     }
 
     /**
@@ -314,7 +316,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      *            was established to the remote peer.
      */
     public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker) {
-        this(handshaker, DEFAULT_HANDSHAKE_TIMEOUT);
+        this(handshaker, DEFAULT_HANDSHAKE_TIMEOUT_MS);
     }
 
     /**

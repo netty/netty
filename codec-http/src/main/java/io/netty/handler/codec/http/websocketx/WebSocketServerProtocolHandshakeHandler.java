@@ -39,6 +39,7 @@ import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpUtil.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * Handles the HTTP handshake (the HTTP Upgrade request) for {@link WebSocketServerProtocolHandler}.
@@ -49,7 +50,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
             WebSocketServerProtocolHandshakeHandler.class,
             "channelRead(...)");
 
-    private static final long DEFAULT_HANDSHAKE_TIMEOUT = 10000L;
+    private static final long DEFAULT_HANDSHAKE_TIMEOUT_MS = 10000L;
 
     private final String websocketPath;
     private final String subprotocols;
@@ -58,12 +59,13 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     private final boolean allowMaskMismatch;
     private final boolean checkStartsWith;
     private final long handshakeTimeoutMillis;
-    private volatile ChannelHandlerContext ctx;
-    private volatile ChannelPromise handshakePromise;
+    private ChannelHandlerContext ctx;
+    private ChannelPromise handshakePromise;
 
     WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
             boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch) {
-        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch, DEFAULT_HANDSHAKE_TIMEOUT);
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch,
+             DEFAULT_HANDSHAKE_TIMEOUT_MS);
     }
 
     WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
@@ -76,7 +78,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
             boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch, boolean checkStartsWith) {
         this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch,
-             checkStartsWith, DEFAULT_HANDSHAKE_TIMEOUT);
+             checkStartsWith, DEFAULT_HANDSHAKE_TIMEOUT_MS);
     }
 
     WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
@@ -88,7 +90,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         maxFramePayloadSize = maxFrameSize;
         this.allowMaskMismatch = allowMaskMismatch;
         this.checkStartsWith = checkStartsWith;
-        this.handshakeTimeoutMillis = handshakeTimeoutMillis;
+        this.handshakeTimeoutMillis = checkPositive(handshakeTimeoutMillis, "handshakeTimeoutMillis");
     }
 
     @Override

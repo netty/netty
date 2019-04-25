@@ -29,24 +29,27 @@ import io.netty.util.internal.ThrowableUtil;
 
 import java.util.concurrent.TimeUnit;
 
+import static io.netty.util.internal.ObjectUtil.*;
+
 class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapter {
     private static final WebSocketHandshakeException HANDSHAKE_TIMED_OUT_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new WebSocketHandshakeException("handshake timed out"),
             WebSocketClientProtocolHandshakeHandler.class,
             "channelActive(...)");
+    private static final long DEFAULT_HANDSHAKE_TIMEOUT_MS = 10000L;
 
     private final WebSocketClientHandshaker handshaker;
     private final long handshakeTimeoutMillis;
-    private volatile ChannelHandlerContext ctx;
-    private volatile ChannelPromise handshakePromise;
+    private ChannelHandlerContext ctx;
+    private ChannelPromise handshakePromise;
 
     WebSocketClientProtocolHandshakeHandler(WebSocketClientHandshaker handshaker) {
-        this(handshaker, 10000);
+        this(handshaker, DEFAULT_HANDSHAKE_TIMEOUT_MS);
     }
 
     WebSocketClientProtocolHandshakeHandler(WebSocketClientHandshaker handshaker, long handshakeTimeoutMillis) {
         this.handshaker = handshaker;
-        this.handshakeTimeoutMillis = handshakeTimeoutMillis;
+        this.handshakeTimeoutMillis = checkPositive(handshakeTimeoutMillis, "handshakeTimeoutMillis");
     }
 
     @Override
