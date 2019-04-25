@@ -110,24 +110,50 @@ public class DefaultHeadersTest {
     }
 
     @Test
-    public void multipleValuesPerNameIterator() {
+    public void multipleValuesPerNameIteratorWithOtherNames() {
         TestDefaultHeaders headers = newInstance();
-        headers.add(of("name"), of("value1"));
-        headers.add(of("name"), of("value2"));
-        headers.add(of("name"), of("value3"));
-        assertEquals(3, headers.size());
+        headers.add(of("name1"), of("value1"));
+        headers.add(of("name1"), of("value2"));
+        headers.add(of("name2"), of("value4"));
+        headers.add(of("name1"), of("value3"));
+        assertEquals(4, headers.size());
 
         List<CharSequence> values = new ArrayList<CharSequence>();
-        Iterator<CharSequence> itr = headers.valueIterator(of("name"));
+        Iterator<CharSequence> itr = headers.valueIterator(of("name1"));
         while (itr.hasNext()) {
             values.add(itr.next());
             itr.remove();
         }
         assertEquals(3, values.size());
+        assertEquals(1, headers.size());
+        assertFalse(headers.isEmpty());
+        assertTrue(values.containsAll(asList(of("value1"), of("value2"), of("value3"))));
+        itr = headers.valueIterator(of("name1"));
+        assertFalse(itr.hasNext());
+        itr = headers.valueIterator(of("name2"));
+        assertTrue(itr.hasNext());
+        assertEquals(of("value4"), itr.next());
+        assertFalse(itr.hasNext());
+    }
+
+    @Test
+    public void multipleValuesPerNameIterator() {
+        TestDefaultHeaders headers = newInstance();
+        headers.add(of("name1"), of("value1"));
+        headers.add(of("name1"), of("value2"));
+        assertEquals(2, headers.size());
+
+        List<CharSequence> values = new ArrayList<CharSequence>();
+        Iterator<CharSequence> itr = headers.valueIterator(of("name1"));
+        while (itr.hasNext()) {
+            values.add(itr.next());
+            itr.remove();
+        }
+        assertEquals(2, values.size());
         assertEquals(0, headers.size());
         assertTrue(headers.isEmpty());
-        assertTrue(values.containsAll(asList(of("value1"), of("value2"), of("value3"))));
-        itr = headers.valueIterator(of("name"));
+        assertTrue(values.containsAll(asList(of("value1"), of("value2"))));
+        itr = headers.valueIterator(of("name1"));
         assertFalse(itr.hasNext());
     }
 
