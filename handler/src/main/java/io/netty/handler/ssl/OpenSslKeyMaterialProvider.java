@@ -120,7 +120,7 @@ class OpenSslKeyMaterialProvider {
 
             OpenSslKeyMaterial keyMaterial;
             if (key instanceof OpenSslPrivateKey) {
-                keyMaterial = ((OpenSslPrivateKey) key).toKeyMaterial(chain, certificates);
+                keyMaterial = ((OpenSslPrivateKey) key).newKeyMaterial(chain, certificates);
             } else {
                 pkeyBio = toBIO(allocator, key);
                 pkey = key == null ? 0 : SSL.parsePrivateKey(pkeyBio, password);
