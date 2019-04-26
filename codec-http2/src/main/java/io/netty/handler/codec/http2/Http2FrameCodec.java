@@ -35,8 +35,11 @@ import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import static io.netty.buffer.ByteBufUtil.writeAscii;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
+import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
+import static java.lang.Integer.MAX_VALUE;
 
 /**
  * <p><em>This API is very immature.</em> The Http2Connection-based API is currently preferred over this API.
@@ -343,8 +346,8 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         int lastStreamCreated = connection().remote().lastStreamCreated();
         long lastStreamId = lastStreamCreated + ((long) frame.extraStreamIds()) * 2;
         // Check if the computation overflowed.
-        if (lastStreamId > Integer.MAX_VALUE) {
-            lastStreamId = Integer.MAX_VALUE;
+        if (lastStreamId > MAX_VALUE) {
+            lastStreamId = MAX_VALUE;
         }
         goAway(ctx, (int) lastStreamId, frame.errorCode(), frame.content(), promise);
     }
@@ -361,6 +364,11 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             final int streamId = connection.local().incrementAndGetNextStreamId();
             if (streamId < 0) {
                 promise.setFailure(new Http2NoMoreStreamIdsException());
+
+                // Simulate a GOAWAY being received due to stream exhaustion on this connection. We use the maximum
+                // valid stream ID for the current peer.
+                onHttp2Frame(ctx, new DefaultHttp2GoAwayFrame(connection.isServer() ? MAX_VALUE : MAX_VALUE - 1,
+                        NO_ERROR.code(), writeAscii(ctx.alloc(), "Stream IDs exhausted on local stream creation")));
                 return;
             }
             stream.id = streamId;
