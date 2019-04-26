@@ -125,6 +125,7 @@ final class OpenSslPrivateKey extends AbstractReferenceCounted implements Privat
             this.certificateChain = certificateChain;
             this.x509CertificateChain = x509CertificateChain == null ?
                     EmptyArrays.EMPTY_X509_CERTIFICATES : x509CertificateChain;
+            this.retain();
         }
 
         @Override
