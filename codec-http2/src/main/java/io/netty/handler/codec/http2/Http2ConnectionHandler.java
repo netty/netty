@@ -667,7 +667,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         } else {
             future.addListener(new ClosingChannelFutureListener(ctx, promise));
         }
-        ctx.flush();
     }
 
     /**
