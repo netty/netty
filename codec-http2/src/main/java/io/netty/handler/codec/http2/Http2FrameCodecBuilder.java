@@ -31,6 +31,8 @@ public class Http2FrameCodecBuilder extends
 
     Http2FrameCodecBuilder(boolean server) {
         server(server);
+        // For backwards compatibility we should disable to timeout by default at this layer.
+        gracefulShutdownTimeoutMillis(0);
     }
 
     /**

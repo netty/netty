@@ -35,6 +35,8 @@ public class Http2MultiplexCodecBuilder
     Http2MultiplexCodecBuilder(boolean server, ChannelHandler childHandler) {
         server(server);
         this.childHandler = checkSharable(checkNotNull(childHandler, "childHandler"));
+        // For backwards compatibility we should disable to timeout by default at this layer.
+        gracefulShutdownTimeoutMillis(0);
     }
 
     private static ChannelHandler checkSharable(ChannelHandler handler) {
