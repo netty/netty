@@ -282,6 +282,17 @@ public class EmbeddedChannelTest {
     }
 
     @Test
+    public void testHasNoDisconnectSkipDisconnect() throws InterruptedException {
+        EmbeddedChannel channel = new EmbeddedChannel(false, new ChannelOutboundHandlerAdapter() {
+            @Override
+            public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+                promise.tryFailure(new Throwable());
+            }
+        });
+        assertFalse(channel.disconnect().isSuccess());
+    }
+
+    @Test
     public void testFinishAndReleaseAll() {
         ByteBuf in = Unpooled.buffer();
         ByteBuf out = Unpooled.buffer();

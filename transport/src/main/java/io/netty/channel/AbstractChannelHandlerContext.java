@@ -555,6 +555,11 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public ChannelFuture disconnect(final ChannelPromise promise) {
+        if (!channel().metadata().hasDisconnect()) {
+            // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
+            // So far, UDP/IP is the only transport that has such behavior.
+            return close(promise);
+        }
         if (isNotValidPromise(promise, false)) {
             // cancelled
             return promise;
@@ -563,22 +568,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_DISCONNECT);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
-            // So far, UDP/IP is the only transport that has such behavior.
-            if (!channel().metadata().hasDisconnect()) {
-                next.invokeClose(promise);
-            } else {
-                next.invokeDisconnect(promise);
-            }
+            next.invokeDisconnect(promise);
         } else {
             safeExecute(executor, new Runnable() {
                 @Override
                 public void run() {
-                    if (!channel().metadata().hasDisconnect()) {
-                        next.invokeClose(promise);
-                    } else {
-                        next.invokeDisconnect(promise);
-                    }
+                    next.invokeDisconnect(promise);
                 }
             }, promise, null);
         }
