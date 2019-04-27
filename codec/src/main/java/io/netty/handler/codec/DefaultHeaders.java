@@ -1007,14 +1007,18 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         return value;
     }
 
-    private void remove0(HeaderEntry<K, V> entry) {
+    private HeaderEntry<K, V> remove0(HeaderEntry<K, V> entry, HeaderEntry<K, V> previous) {
         int i = index(entry.hash);
         HeaderEntry<K, V> e = entries[i];
         if (e == entry) {
             entries[i] = entry.next;
+            previous = entries[i];
+        } else {
+            previous.next = entry.next;
         }
         entry.remove();
         --size;
+        return previous;
     }
 
     @SuppressWarnings("unchecked")
@@ -1060,6 +1064,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     private final class ValueIterator implements Iterator<V> {
         private final K name;
         private final int hash;
+        private HeaderEntry<K, V> removalPrevious;
         private HeaderEntry<K, V> previous;
         private HeaderEntry<K, V> next;
 
@@ -1079,6 +1084,9 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             if (!hasNext()) {
                 throw new NoSuchElementException();
             }
+            if (previous != null) {
+                removalPrevious = previous;
+            }
             previous = next;
             calculateNext(next.next);
             return previous.value;
@@ -1089,7 +1097,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             if (previous == null) {
                 throw new IllegalStateException();
             }
-            remove0(previous);
+            removalPrevious = remove0(previous, removalPrevious);
             previous = null;
         }
 
