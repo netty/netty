@@ -55,6 +55,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
+import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 import static io.netty.handler.codec.http2.Http2TestUtil.anyChannelPromise;
 import static io.netty.handler.codec.http2.Http2TestUtil.anyHttp2Settings;
 import static io.netty.handler.codec.http2.Http2TestUtil.assertEqualsAndRelease;
@@ -303,9 +304,9 @@ public class Http2FrameCodecTest {
         Http2HeadersFrame actualHeaders = inboundHandler.readInbound();
         assertEquals(expectedHeaders.stream(actualHeaders.stream()), actualHeaders);
 
-        frameInboundWriter.writeInboundRstStream(3, Http2Error.NO_ERROR.code());
+        frameInboundWriter.writeInboundRstStream(3, NO_ERROR.code());
 
-        Http2ResetFrame expectedRst = new DefaultHttp2ResetFrame(Http2Error.NO_ERROR).stream(actualHeaders.stream());
+        Http2ResetFrame expectedRst = new DefaultHttp2ResetFrame(NO_ERROR).stream(actualHeaders.stream());
         Http2ResetFrame actualRst = inboundHandler.readInbound();
         assertEquals(expectedRst, actualRst);
 
@@ -322,12 +323,12 @@ public class Http2FrameCodecTest {
         ByteBuf debugData = bb("debug");
         ByteBuf expected = debugData.copy();
 
-        Http2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(Http2Error.NO_ERROR.code(), debugData);
+        Http2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(NO_ERROR.code(), debugData);
         goAwayFrame.setExtraStreamIds(2);
 
         channel.writeOutbound(goAwayFrame);
         verify(frameWriter).writeGoAway(eqFrameCodecCtx(), eq(7),
-                eq(Http2Error.NO_ERROR.code()), eq(expected), anyChannelPromise());
+                eq(NO_ERROR.code()), eq(expected), anyChannelPromise());
         assertEquals(1, debugData.refCnt());
         assertEquals(State.OPEN, stream.state());
         assertTrue(channel.isActive());
@@ -338,8 +339,8 @@ public class Http2FrameCodecTest {
     @Test
     public void receiveGoaway() throws Exception {
         ByteBuf debugData = bb("foo");
-        frameInboundWriter.writeInboundGoAway(2, Http2Error.NO_ERROR.code(), debugData);
-        Http2GoAwayFrame expectedFrame = new DefaultHttp2GoAwayFrame(2, Http2Error.NO_ERROR.code(), bb("foo"));
+        frameInboundWriter.writeInboundGoAway(2, NO_ERROR.code(), debugData);
+        Http2GoAwayFrame expectedFrame = new DefaultHttp2GoAwayFrame(2, NO_ERROR.code(), bb("foo"));
         Http2GoAwayFrame actualFrame = inboundHandler.readInbound();
 
         assertEqualsAndRelease(expectedFrame, actualFrame);
@@ -385,13 +386,13 @@ public class Http2FrameCodecTest {
         assertEquals(State.OPEN, stream.state());
 
         ByteBuf debugData = bb("debug");
-        Http2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(Http2Error.NO_ERROR.code(), debugData.slice());
+        Http2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(NO_ERROR.code(), debugData.slice());
         goAwayFrame.setExtraStreamIds(Integer.MAX_VALUE);
 
         channel.writeOutbound(goAwayFrame);
         // When the last stream id computation overflows, the last stream id should just be set to 2^31 - 1.
         verify(frameWriter).writeGoAway(eqFrameCodecCtx(), eq(Integer.MAX_VALUE),
-                eq(Http2Error.NO_ERROR.code()), eq(debugData), anyChannelPromise());
+                eq(NO_ERROR.code()), eq(debugData), anyChannelPromise());
         assertEquals(1, debugData.refCnt());
         assertEquals(State.OPEN, stream.state());
         assertTrue(channel.isActive());
@@ -675,6 +676,11 @@ public class Http2FrameCodecTest {
         ChannelPromise writePromise = channel.newPromise();
         channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream), writePromise);
 
+        Http2GoAwayFrame goAwayFrame = inboundHandler.readInbound();
+        assertNotNull(goAwayFrame);
+        assertEquals(NO_ERROR.code(), goAwayFrame.errorCode());
+        assertEquals(Integer.MAX_VALUE, goAwayFrame.lastStreamId());
+        goAwayFrame.release();
         assertThat(writePromise.cause(), instanceOf(Http2NoMoreStreamIdsException.class));
     }
 
