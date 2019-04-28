@@ -455,6 +455,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     @Override
     public ChannelFuture disconnect(final ChannelPromise promise) {
+        if (!channel().metadata().hasDisconnect()) {
+            // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
+            // So far, UDP/IP is the only transport that has such behavior.
+            return close(promise);
+        }
+
         if (isNotValidPromise(promise, false)) {
             // cancelled
             return promise;
@@ -462,23 +468,9 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
-            // So far, UDP/IP is the only transport that has such behavior.
-            if (!channel().metadata().hasDisconnect()) {
-                findAndInvokeClose(promise);
-            } else {
-                findAndInvokeDisconnect(promise);
-            }
+            findAndInvokeDisconnect(promise);
         } else {
-            safeExecute(executor, () -> {
-                // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
-                // So far, UDP/IP is the only transport that has such behavior.
-                if (!channel().metadata().hasDisconnect()) {
-                    findAndInvokeClose(promise);
-                } else {
-                    findAndInvokeDisconnect(promise);
-                }
-            }, promise, null);
+            safeExecute(executor, () -> findAndInvokeDisconnect(promise), promise, null);
         }
         return promise;
     }
