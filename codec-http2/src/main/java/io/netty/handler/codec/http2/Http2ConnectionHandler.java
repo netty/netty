@@ -837,9 +837,9 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             });
         }
         // if closeListener != null this means we have already initiated graceful closure. doGracefulShutdown will apply
-        // the gracefulShutdownTimeoutMillis on each invocation, and it is possible the timeout value was changed
-        // since the last time we invoked doGracefulShutdown, so we call it again.
-        if (errorCode == NO_ERROR.code()) {
+        // the gracefulShutdownTimeoutMillis on each invocation, however we only care to apply the timeout on the
+        // start of graceful shutdown.
+        if (errorCode == NO_ERROR.code() && closeListener == null) {
             doGracefulShutdown(ctx, future, null);
         }
 
