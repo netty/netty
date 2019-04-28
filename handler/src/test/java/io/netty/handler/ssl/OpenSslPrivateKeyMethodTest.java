@@ -313,11 +313,22 @@ public class OpenSslPrivateKeyMethodTest {
     }
 
     @Test
-    public void testPrivateKeyMethodFails() throws Exception {
+    public void testPrivateKeyMethodFailsBecauseOfException() throws Exception {
+        testPrivateKeyMethodFails(false);
+    }
+
+    @Test
+    public void testPrivateKeyMethodFailsBecauseOfNull() throws Exception {
+        testPrivateKeyMethodFails(true);
+    }
+    private void testPrivateKeyMethodFails(final boolean returnNull) throws Exception {
         final SslContext sslServerContext = buildServerContext(new OpenSslPrivateKeyMethod() {
             @Override
             public byte[] sign(SSLEngine engine, int signatureAlgorithm, byte[] input) throws Exception {
                 assertThread();
+                if (returnNull) {
+                    return null;
+                }
                 throw new SignatureException();
             }
 
