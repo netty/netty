@@ -20,10 +20,10 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.pool.FixedChannelPool.AcquireTimeoutAction;
 import io.netty.util.concurrent.Future;
@@ -43,7 +43,7 @@ public class FixedChannelPoolTest {
 
     @BeforeClass
     public static void createEventLoop() {
-        group = new LocalEventLoopGroup();
+        group = new DefaultEventLoopGroup();
     }
 
     @AfterClass
@@ -88,7 +88,7 @@ public class FixedChannelPoolTest {
         assertSame(channel, channel2);
         assertEquals(1, handler.channelCount());
 
-        assertEquals(1, handler.acquiredCount());
+        assertEquals(2, handler.acquiredCount());
         assertEquals(1, handler.releasedCount());
 
         sc.close().syncUninterruptibly();

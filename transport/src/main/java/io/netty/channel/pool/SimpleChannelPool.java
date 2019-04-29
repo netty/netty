@@ -206,9 +206,10 @@ public class SimpleChannelPool implements ChannelPool {
         return promise;
     }
 
-    private void notifyConnect(ChannelFuture future, Promise<Channel> promise) {
+    private void notifyConnect(ChannelFuture future, Promise<Channel> promise) throws Exception {
         if (future.isSuccess()) {
             Channel channel = future.channel();
+            handler.channelAcquired(channel);
             if (!promise.trySuccess(channel)) {
                 // Promise was completed in the meantime (like cancelled), just release the channel again
                 release(channel);
