@@ -79,6 +79,8 @@
       </activation>
       <properties>
         <skipNativeImageTestsuite>false</skipNativeImageTestsuite>
+        <forbiddenapis.skip>true</forbiddenapis.skip>
+        <testJvm/>
       </properties>
     </profile>
     <!-- JDK13 -->
@@ -307,7 +309,8 @@
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.6.2</log4j2.version>
     <enforcer.plugin.version>1.4.1</enforcer.plugin.version>
-    <testJavaHome>${env.JAVA_HOME}</testJavaHome>
+    <testJavaHome>${java.home}</testJavaHome>
+    <testJvm>${testJavaHome}/bin/java</testJvm>
     <skipOsgiTestsuite>false</skipOsgiTestsuite>
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
@@ -986,7 +989,7 @@
               <value>io.netty.build.junit.TimedOutTestsListener</value>
             </property>
           </properties>
-          <jvm>${testJavaHome}/bin/java</jvm>
+          <jvm>${testJvm}</jvm>
            <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 --> 
           <trimStackTrace>false</trimStackTrace>
         </configuration>
