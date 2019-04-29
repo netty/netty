@@ -741,7 +741,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     @Override
     protected void wakeup(boolean inEventLoop) {
-        if (!inEventLoop && wakenUp.compareAndSet(false, true)) {
+        if (!inEventLoop && !wakenUp.get() && wakenUp.compareAndSet(false, true)) {
             selector.wakeup();
         }
     }
