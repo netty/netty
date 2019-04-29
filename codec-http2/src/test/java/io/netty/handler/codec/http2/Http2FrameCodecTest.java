@@ -219,7 +219,7 @@ public class Http2FrameCodecTest {
         Http2Connection conn = new DefaultHttp2Connection(true);
         Http2ConnectionEncoder enc = new DefaultHttp2ConnectionEncoder(conn, new DefaultHttp2FrameWriter());
         Http2ConnectionDecoder dec = new DefaultHttp2ConnectionDecoder(conn, enc, new DefaultHttp2FrameReader());
-        Http2FrameCodec codec = new Http2FrameCodec(enc, dec, new Http2Settings());
+        Http2FrameCodec codec = new Http2FrameCodec(enc, dec, new Http2Settings(), false);
         EmbeddedChannel em = new EmbeddedChannel(codec);
 
         // We call #consumeBytes on a stream id which has not been seen yet to emulate the case
@@ -323,15 +323,15 @@ public class Http2FrameCodecTest {
         ByteBuf debugData = bb("debug");
         ByteBuf expected = debugData.copy();
 
-        Http2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(NO_ERROR.code(), debugData);
+        Http2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(NO_ERROR.code(),
+                debugData.retainedDuplicate());
         goAwayFrame.setExtraStreamIds(2);
 
         channel.writeOutbound(goAwayFrame);
         verify(frameWriter).writeGoAway(eqFrameCodecCtx(), eq(7),
                 eq(NO_ERROR.code()), eq(expected), anyChannelPromise());
-        assertEquals(1, debugData.refCnt());
-        assertEquals(State.OPEN, stream.state());
-        assertTrue(channel.isActive());
+        assertEquals(State.CLOSED, stream.state());
+        assertFalse(channel.isActive());
         expected.release();
         debugData.release();
     }
@@ -386,16 +386,17 @@ public class Http2FrameCodecTest {
         assertEquals(State.OPEN, stream.state());
 
         ByteBuf debugData = bb("debug");
-        Http2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(NO_ERROR.code(), debugData.slice());
+        Http2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(NO_ERROR.code(),
+                debugData.retainedDuplicate());
         goAwayFrame.setExtraStreamIds(Integer.MAX_VALUE);
 
         channel.writeOutbound(goAwayFrame);
         // When the last stream id computation overflows, the last stream id should just be set to 2^31 - 1.
         verify(frameWriter).writeGoAway(eqFrameCodecCtx(), eq(Integer.MAX_VALUE),
                 eq(NO_ERROR.code()), eq(debugData), anyChannelPromise());
-        assertEquals(1, debugData.refCnt());
-        assertEquals(State.OPEN, stream.state());
-        assertTrue(channel.isActive());
+        debugData.release();
+        assertEquals(State.CLOSED, stream.state());
+        assertFalse(channel.isActive());
     }
 
     @Test

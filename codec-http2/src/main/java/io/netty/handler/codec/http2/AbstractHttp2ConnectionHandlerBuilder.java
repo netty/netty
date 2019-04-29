@@ -16,6 +16,7 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.channel.Channel;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty.util.internal.UnstableApi;
 
@@ -83,6 +84,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private Http2Settings initialSettings = Http2Settings.defaultSettings();
     private Http2FrameListener frameListener;
     private long gracefulShutdownTimeoutMillis = Http2CodecUtil.DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
+    private boolean decoupleCloseAndGoAway;
 
     // The property that will prohibit connection() and codec() if set by server(),
     // because this property is used only when this builder creates a Http2Connection.
@@ -399,6 +401,24 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected boolean isAutoAckSettingsFrame() {
         return autoAckSettingsFrame;
+    }
+
+    /**
+     * Determine if the {@link Channel#close()} should be coupled with goaway and graceful close.
+     * @param decoupleCloseAndGoAway {@code true} to make {@link Channel#close()} directly close the underlying
+     *   transport, and not attempt graceful closure via GOAWAY.
+     * @return {@code this}.
+     */
+    protected B decoupleCloseAndGoAway(boolean decoupleCloseAndGoAway) {
+        this.decoupleCloseAndGoAway = decoupleCloseAndGoAway;
+        return self();
+    }
+
+    /**
+     * Determine if the {@link Channel#close()} should be coupled with goaway and graceful close.
+     */
+    protected boolean decoupleCloseAndGoAway() {
+        return decoupleCloseAndGoAway;
     }
 
     /**
