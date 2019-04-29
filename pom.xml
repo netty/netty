@@ -68,6 +68,19 @@
   </developers>
 
   <profiles>
+    <!-- Detect if we use GraalVM and if so enable the native image testsuite -->
+    <profile>
+      <id>graal</id>
+      <activation>
+        <file>
+          <!-- GraalVM Component Updater should exists when using GraalVM-->
+          <exists>${java.home}/bin/native-image</exists>
+        </file>
+      </activation>
+      <properties>
+        <skipNativeImageTestsuite>false</skipNativeImageTestsuite>
+      </properties>
+    </profile>
     <!-- JDK13 -->
     <profile>
       <id>java13</id>
@@ -299,6 +312,9 @@
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
     <skipJapicmp>false</skipJapicmp>
+    <graalvm.version>1.0.0-rc15</graalvm.version>
+    <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
+    <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
   </properties>
 
   <modules>
@@ -337,6 +353,7 @@
     <module>testsuite-http2</module>
     <module>testsuite-osgi</module>
     <module>testsuite-shading</module>
+    <module>testsuite-native-image</module>
     <module>microbench</module>
     <module>bom</module>
   </modules>
