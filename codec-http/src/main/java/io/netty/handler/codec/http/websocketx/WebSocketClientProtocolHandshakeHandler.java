@@ -105,7 +105,7 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
             return;
         }
 
-        final ScheduledFuture<?> timeoutFuture = ctx.executor().schedule(new Runnable() {
+        final Future<?> timeoutFuture = ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {
                 if (localHandshakePromise.isDone()) {
