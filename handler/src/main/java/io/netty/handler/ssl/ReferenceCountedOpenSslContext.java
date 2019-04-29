@@ -37,6 +37,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.security.AccessController;
 import java.security.PrivateKey;
 import java.security.PrivilegedAction;
+import java.security.SignatureException;
 import java.security.cert.CertPathValidatorException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateExpiredException;
@@ -931,7 +932,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         public byte[] sign(long ssl, int signatureAlgorithm, byte[] digest) throws Exception {
             ReferenceCountedOpenSslEngine engine = retrieveEngine(ssl);
             try {
-                return keyMethod.sign(engine, signatureAlgorithm, digest);
+                return verifyResult(keyMethod.sign(engine, signatureAlgorithm, digest));
             } catch (Exception e) {
                 engine.initHandshakeException(e);
                 throw e;
@@ -942,11 +943,18 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         public byte[] decrypt(long ssl, byte[] input) throws Exception {
             ReferenceCountedOpenSslEngine engine = retrieveEngine(ssl);
             try {
-                return keyMethod.decrypt(engine, input);
+                return verifyResult(keyMethod.decrypt(engine, input));
             } catch (Exception e) {
                 engine.initHandshakeException(e);
                 throw e;
             }
+        }
+
+        private static byte[] verifyResult(byte[] result) throws SignatureException {
+            if (result == null) {
+                throw new SignatureException();
+            }
+            return result;
         }
     }
 }
