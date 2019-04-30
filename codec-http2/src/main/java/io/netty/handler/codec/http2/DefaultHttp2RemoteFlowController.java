@@ -173,6 +173,13 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         return monitor.isWritable(state(stream));
     }
 
+    /**
+     * Get the amount of bytes this stream has pending to send.
+     */
+    public long pendingBytes(Http2Stream stream) {
+        return state(stream).pendingBytes();
+    }
+
     @Override
     public void channelWritabilityChanged() throws Http2Exception {
         monitor.channelWritabilityChange();

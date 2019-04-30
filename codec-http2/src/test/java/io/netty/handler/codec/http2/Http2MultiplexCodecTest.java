@@ -666,6 +666,7 @@ public class Http2MultiplexCodecTest {
 
     @Test
     public void outboundFlowControlWritability() {
+        int dataLength = 16 * 1024 * 1024;
         Http2StreamChannel childChannel = newOutboundStream(new ChannelInboundHandlerAdapter());
         assertTrue(childChannel.isActive());
 
@@ -676,9 +677,19 @@ public class Http2MultiplexCodecTest {
         // Test for initial window size
         assertEquals(initialRemoteStreamWindow, childChannel.config().getWriteBufferHighWaterMark());
 
+        assertEquals(initialRemoteStreamWindow, childChannel.bytesBeforeUnwritable());
+        assertEquals(0, childChannel.bytesBeforeWritable());
         assertTrue(childChannel.isWritable());
-        childChannel.write(new DefaultHttp2DataFrame(Unpooled.buffer().writeZero(16 * 1024 * 1024)));
+        childChannel.write(new DefaultHttp2DataFrame(Unpooled.buffer().writeZero(dataLength)));
+        assertEquals(0, childChannel.bytesBeforeUnwritable());
+
+        assertEquals(0, parentChannel.bytesBeforeWritable());
+        assertEquals(dataLength, childChannel.bytesBeforeWritable());
+
+        assertEquals(0, parentChannel.bytesBeforeWritable());
         assertFalse(childChannel.isWritable());
+
+        childChannel.flush();
     }
 
     @Test

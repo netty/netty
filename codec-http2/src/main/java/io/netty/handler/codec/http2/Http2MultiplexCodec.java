@@ -580,14 +580,33 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
         @Override
         public long bytesBeforeUnwritable() {
-            // TODO: Do a proper impl
-            return config().getWriteBufferHighWaterMark();
+            Http2Stream s = stream.stream;
+            if (s == null || !isWritable()) {
+                return 0;
+            }
+            // This is a bit racy as the FlowController is generally speaking not thread-safe. That said
+            // This should still give some idea about how big the window still is for a stream.
+            //
+            // TODO: Should we also take the connection stream window into account here or is it good enough ?
+            return connection().remote().flowController().windowSize(s);
         }
 
         @Override
         public long bytesBeforeWritable() {
-            // TODO: Do a proper impl
-            return 0;
+            Http2Stream s = stream.stream;
+            if (s == null || isWritable()) {
+                return 0;
+            }
+
+            Http2RemoteFlowController flowController = connection().remote().flowController();
+            if (flowController instanceof DefaultHttp2RemoteFlowController) {
+                // This is a bit racy as the FlowController is generally speaking not thread-safe. That said
+                // This should still give some idea about how big the window still is for a stream.
+                return ((DefaultHttp2RemoteFlowController) flowController).pendingBytes(s);
+            }
+            // We really dont know when the remote peer will open up the window again so just return something
+            // positive.
+            return 128;
         }
 
         @Override
