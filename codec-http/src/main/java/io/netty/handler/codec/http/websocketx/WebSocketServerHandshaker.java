@@ -33,6 +33,7 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -56,7 +57,7 @@ public abstract class WebSocketServerHandshaker {
 
     private final WebSocketVersion version;
 
-    private final int maxFramePayloadLength;
+    private final WebSocketDecoderConfig decoderConfig;
 
     private String selectedSubprotocol;
 
@@ -81,6 +82,26 @@ public abstract class WebSocketServerHandshaker {
     protected WebSocketServerHandshaker(
             WebSocketVersion version, String uri, String subprotocols,
             int maxFramePayloadLength) {
+        this(version, uri, subprotocols, WebSocketDecoderConfig.newBuilder()
+            .maxFramePayloadLength(maxFramePayloadLength)
+            .build());
+    }
+
+    /**
+     * Constructor specifying the destination web socket location
+     *
+     * @param version
+     *            the protocol version
+     * @param uri
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param subprotocols
+     *            CSV of supported protocols. Null if sub protocols not supported.
+     * @param decoderConfig
+     *            Frames decoder configuration.
+     */
+    protected WebSocketServerHandshaker(
+            WebSocketVersion version, String uri, String subprotocols, WebSocketDecoderConfig decoderConfig) {
         this.version = version;
         this.uri = uri;
         if (subprotocols != null) {
@@ -92,7 +113,7 @@ public abstract class WebSocketServerHandshaker {
         } else {
             this.subprotocols = EmptyArrays.EMPTY_STRINGS;
         }
-        this.maxFramePayloadLength = maxFramePayloadLength;
+        this.decoderConfig = ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
     }
 
     /**
@@ -124,7 +145,16 @@ public abstract class WebSocketServerHandshaker {
      * @return The maximum length for a frame's payload
      */
     public int maxFramePayloadLength() {
-        return maxFramePayloadLength;
+        return decoderConfig.maxFramePayloadLength();
+    }
+
+    /**
+     * Gets this decoder configuration.
+     *
+     * @return This decoder configuration.
+     */
+    public WebSocketDecoderConfig decoderConfig() {
+        return decoderConfig;
     }
 
     /**

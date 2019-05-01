@@ -26,6 +26,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.util.internal.ObjectUtil;
 
 import static io.netty.handler.codec.http.HttpUtil.*;
 import static io.netty.handler.codec.http.HttpMethod.*;
@@ -39,24 +40,15 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
 
     private final String websocketPath;
     private final String subprotocols;
-    private final boolean allowExtensions;
-    private final int maxFramePayloadSize;
-    private final boolean allowMaskMismatch;
     private final boolean checkStartsWith;
+    private final WebSocketDecoderConfig decoderConfig;
 
     WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
-            boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch) {
-        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch, false);
-    }
-
-    WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
-            boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch, boolean checkStartsWith) {
+            boolean checkStartsWith, WebSocketDecoderConfig decoderConfig) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
-        this.allowExtensions = allowExtensions;
-        maxFramePayloadSize = maxFrameSize;
-        this.allowMaskMismatch = allowMaskMismatch;
         this.checkStartsWith = checkStartsWith;
+        this.decoderConfig = ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
     }
 
     @Override
@@ -74,8 +66,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
             }
 
             final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
-                    getWebSocketLocation(ctx.pipeline(), req, websocketPath), subprotocols,
-                            allowExtensions, maxFramePayloadSize, allowMaskMismatch);
+                    getWebSocketLocation(ctx.pipeline(), req, websocketPath), subprotocols, decoderConfig);
             final WebSocketServerHandshaker handshaker = wsFactory.newHandshaker(req);
             if (handshaker == null) {
                 WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());

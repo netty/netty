@@ -54,6 +54,65 @@ public class WebSocket08EncoderDecoderTest {
     }
 
     @Test
+    public void testWebSocketProtocolViolation() {
+        // Given
+        initTestData();
+
+        int maxPayloadLength = 255;
+        String errorMessage = "Max frame length of " + maxPayloadLength + " has been exceeded.";
+        WebSocketCloseStatus expectedStatus = WebSocketCloseStatus.MESSAGE_TOO_BIG;
+
+        // With auto-close
+        WebSocketDecoderConfig config = WebSocketDecoderConfig.newBuilder()
+            .maxFramePayloadLength(maxPayloadLength)
+            .closeOnProtocolViolation(true)
+            .build();
+        EmbeddedChannel inChannel = new EmbeddedChannel(new WebSocket08FrameDecoder(config));
+        EmbeddedChannel outChannel = new EmbeddedChannel(new WebSocket08FrameEncoder(true));
+
+        executeProtocolViolationTest(outChannel, inChannel, maxPayloadLength + 1, expectedStatus, errorMessage);
+
+        CloseWebSocketFrame response = inChannel.readOutbound();
+        Assert.assertNotNull(response);
+        Assert.assertEquals(expectedStatus.code(), response.statusCode());
+        Assert.assertEquals(errorMessage, response.reasonText());
+
+        // Without auto-close
+        config = WebSocketDecoderConfig.newBuilder()
+            .maxFramePayloadLength(maxPayloadLength)
+            .closeOnProtocolViolation(false)
+            .build();
+        inChannel = new EmbeddedChannel(new WebSocket08FrameDecoder(config));
+        outChannel = new EmbeddedChannel(new WebSocket08FrameEncoder(true));
+
+        executeProtocolViolationTest(outChannel, inChannel, maxPayloadLength + 1, expectedStatus, errorMessage);
+
+        response = inChannel.readOutbound();
+        Assert.assertNull(response);
+
+        // Release test data
+        binTestData.release();
+    }
+
+    private void executeProtocolViolationTest(EmbeddedChannel outChannel, EmbeddedChannel inChannel,
+            int testDataLength, WebSocketCloseStatus expectedStatus, String errorMessage) {
+        CorruptedWebSocketFrameException corrupted = null;
+
+        try {
+            testBinaryWithLen(outChannel, inChannel, testDataLength);
+        } catch (CorruptedWebSocketFrameException e) {
+            corrupted = e;
+        }
+
+        BinaryWebSocketFrame exceedingFrame = inChannel.readInbound();
+        Assert.assertNull(exceedingFrame);
+
+        Assert.assertNotNull(corrupted);
+        Assert.assertEquals(expectedStatus, corrupted.getCloseStatus());
+        Assert.assertEquals(errorMessage, corrupted.getMessage());
+    }
+
+    @Test
     public void testWebSocketEncodingAndDecoding() {
         initTestData();
 
@@ -108,16 +167,7 @@ public class WebSocket08EncoderDecoderTest {
         String testStr = strTestData.substring(0, testDataLength);
         outChannel.writeOutbound(new TextWebSocketFrame(testStr));
 
-        // Transfer encoded data into decoder
-        // Loop because there might be multiple frames (gathering write)
-        while (true) {
-            ByteBuf encoded = outChannel.readOutbound();
-            if (encoded != null) {
-                inChannel.writeInbound(encoded);
-            } else {
-                break;
-            }
-        }
+        transfer(outChannel, inChannel);
 
         Object decoded = inChannel.readInbound();
         Assert.assertNotNull(decoded);
@@ -132,16 +182,7 @@ public class WebSocket08EncoderDecoderTest {
         binTestData.setIndex(0, testDataLength); // Send only len bytes
         outChannel.writeOutbound(new BinaryWebSocketFrame(binTestData));
 
-        // Transfer encoded data into decoder
-        // Loop because there might be multiple frames (gathering write)
-        while (true) {
-            ByteBuf encoded = outChannel.readOutbound();
-            if (encoded != null) {
-                inChannel.writeInbound(encoded);
-            } else {
-                break;
-            }
-        }
+        transfer(outChannel, inChannel);
 
         Object decoded = inChannel.readInbound();
         Assert.assertNotNull(decoded);
@@ -153,5 +194,17 @@ public class WebSocket08EncoderDecoderTest {
             Assert.assertEquals(binTestData.getByte(i), binFrame.content().getByte(i));
         }
         binFrame.release();
+    }
+
+    private void transfer(EmbeddedChannel outChannel, EmbeddedChannel inChannel) {
+        // Transfer encoded data into decoder
+        // Loop because there might be multiple frames (gathering write)
+        while (true) {
+            ByteBuf encoded = outChannel.readOutbound();
+            if (encoded == null) {
+                return;
+            }
+            inChannel.writeInbound(encoded);
+        }
     }
 }

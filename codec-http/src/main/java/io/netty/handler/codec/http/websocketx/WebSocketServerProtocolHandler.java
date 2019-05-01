@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.AttributeKey;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.List;
 
@@ -99,10 +100,8 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
 
     private final String websocketPath;
     private final String subprotocols;
-    private final boolean allowExtensions;
-    private final int maxFramePayloadLength;
-    private final boolean allowMaskMismatch;
     private final boolean checkStartsWith;
+    private final WebSocketDecoderConfig decoderConfig;
 
     public WebSocketServerProtocolHandler(String websocketPath) {
         this(websocketPath, null, false);
@@ -138,13 +137,20 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols,
                                           boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch,
                                           boolean checkStartsWith, boolean dropPongFrames) {
+        this(websocketPath, subprotocols, checkStartsWith, dropPongFrames, WebSocketDecoderConfig.newBuilder()
+            .maxFramePayloadLength(maxFrameSize)
+            .allowMaskMismatch(allowMaskMismatch)
+            .allowExtensions(allowExtensions)
+            .build());
+    }
+
+    public WebSocketServerProtocolHandler(String websocketPath, String subprotocols, boolean checkStartsWith,
+                                          boolean dropPongFrames, WebSocketDecoderConfig decoderConfig) {
         super(dropPongFrames);
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
-        this.allowExtensions = allowExtensions;
-        maxFramePayloadLength = maxFrameSize;
-        this.allowMaskMismatch = allowMaskMismatch;
         this.checkStartsWith = checkStartsWith;
+        this.decoderConfig = ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
     }
 
     @Override
@@ -153,8 +159,8 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         if (cp.get(WebSocketServerProtocolHandshakeHandler.class) == null) {
             // Add the WebSocketHandshakeHandler before this one.
             ctx.pipeline().addBefore(ctx.name(), WebSocketServerProtocolHandshakeHandler.class.getName(),
-                    new WebSocketServerProtocolHandshakeHandler(websocketPath, subprotocols,
-                            allowExtensions, maxFramePayloadLength, allowMaskMismatch, checkStartsWith));
+                    new WebSocketServerProtocolHandshakeHandler(
+                        websocketPath, subprotocols, checkStartsWith, decoderConfig));
         }
         if (cp.get(Utf8FrameValidator.class) == null) {
             // Add the UFT8 checking before this one.

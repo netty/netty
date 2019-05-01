@@ -37,9 +37,6 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
 
     public static final String WEBSOCKET_07_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-    private final boolean allowExtensions;
-    private final boolean allowMaskMismatch;
-
     /**
      * Constructor specifying the destination web socket location
      *
@@ -79,9 +76,21 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
     public WebSocketServerHandshaker07(
             String webSocketURL, String subprotocols, boolean allowExtensions, int maxFramePayloadLength,
             boolean allowMaskMismatch) {
-        super(WebSocketVersion.V07, webSocketURL, subprotocols, maxFramePayloadLength);
-        this.allowExtensions = allowExtensions;
-        this.allowMaskMismatch = allowMaskMismatch;
+        this(webSocketURL, subprotocols, WebSocketDecoderConfig.newBuilder()
+            .allowExtensions(allowExtensions)
+            .maxFramePayloadLength(maxFramePayloadLength)
+            .allowMaskMismatch(allowMaskMismatch)
+            .build());
+    }
+
+    /**
+     * Constructor specifying the destination web socket location
+     *
+     * @param decoderConfig
+     *            Frames decoder configuration.
+     */
+    public WebSocketServerHandshaker07(String webSocketURL, String subprotocols, WebSocketDecoderConfig decoderConfig) {
+        super(WebSocketVersion.V07, webSocketURL, subprotocols, decoderConfig);
     }
 
     /**
@@ -159,7 +168,7 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
 
     @Override
     protected WebSocketFrameDecoder newWebsocketDecoder() {
-        return new WebSocket07FrameDecoder(true, allowExtensions, maxFramePayloadLength(), allowMaskMismatch);
+        return new WebSocket07FrameDecoder(decoderConfig());
     }
 
     @Override

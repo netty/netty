@@ -91,6 +91,21 @@ public class WebSocket13FrameDecoder extends WebSocket08FrameDecoder {
      */
     public WebSocket13FrameDecoder(boolean expectMaskedFrames, boolean allowExtensions, int maxFramePayloadLength,
                                    boolean allowMaskMismatch) {
-        super(expectMaskedFrames, allowExtensions, maxFramePayloadLength, allowMaskMismatch);
+        this(WebSocketDecoderConfig.newBuilder()
+            .expectMaskedFrames(expectMaskedFrames)
+            .allowExtensions(allowExtensions)
+            .maxFramePayloadLength(maxFramePayloadLength)
+            .allowMaskMismatch(allowMaskMismatch)
+            .build());
+    }
+
+    /**
+     * Constructor
+     *
+     * @param decoderConfig
+     *            Frames decoder configuration.
+     */
+    public WebSocket13FrameDecoder(WebSocketDecoderConfig decoderConfig) {
+        super(decoderConfig);
     }
 }
