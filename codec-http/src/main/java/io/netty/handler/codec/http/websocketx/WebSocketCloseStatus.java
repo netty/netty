@@ -20,10 +20,12 @@ package io.netty.handler.codec.http.websocketx;
  * <pre>
  *
  * RFC-6455 The WebSocket Protocol, December 2011:
- * <a href="https://tools.ietf.org/html/rfc6455#section-7.4.1">https://tools.ietf.org/html/rfc6455#section-7.4.1</a>
+ * <a href="https://tools.ietf.org/html/rfc6455#section-7.4.1"
+ *         >https://tools.ietf.org/html/rfc6455#section-7.4.1</a>
  *
  * WebSocket Protocol Registries, April 2019:
- * <a href="https://www.iana.org/assignments/websocket/websocket.xhtml#close-code-number">https://www.iana.org/assignments/websocket/websocket.xhtml</a>
+ * <a href="https://www.iana.org/assignments/websocket/websocket.xhtml#close-code-number"
+ *         >https://www.iana.org/assignments/websocket/websocket.xhtml</a>
  *
  * 7.4.1.  Defined Status Codes
  *
@@ -166,18 +168,41 @@ package io.netty.handler.codec.http.websocketx;
  */
 public final class WebSocketCloseStatus implements Comparable<WebSocketCloseStatus> {
 
-    public static final WebSocketCloseStatus NORMAL_CLOSURE = new WebSocketCloseStatus(1000, "Bye");
-    public static final WebSocketCloseStatus ENDPOINT_UNAVAILABLE = new WebSocketCloseStatus(1001, "Endpoint unavailable");
-    public static final WebSocketCloseStatus PROTOCOL_ERROR = new WebSocketCloseStatus(1002, "Protocol error");
-    public static final WebSocketCloseStatus INVALID_MESSAGE_TYPE = new WebSocketCloseStatus(1003, "Invalid message type");
-    public static final WebSocketCloseStatus INVALID_PAYLOAD_DATA = new WebSocketCloseStatus(1007, "Invalid payload data");
-    public static final WebSocketCloseStatus POLICY_VIOLATION = new WebSocketCloseStatus(1008, "Policy violation");
-    public static final WebSocketCloseStatus MESSAGE_TOO_BIG = new WebSocketCloseStatus(1009, "Message too big");
-    public static final WebSocketCloseStatus MANDATORY_EXTENSION = new WebSocketCloseStatus(1010, "Mandatory extension");
-    public static final WebSocketCloseStatus INTERNAL_SERVER_ERROR = new WebSocketCloseStatus(1011, "Internal server error");
-    public static final WebSocketCloseStatus SERVICE_RESTART = new WebSocketCloseStatus(1012, "Service Restart");
-    public static final WebSocketCloseStatus TRY_AGAIN_LATER = new WebSocketCloseStatus(1013, "Try Again Later");
-    public static final WebSocketCloseStatus BAD_GATEWAY = new WebSocketCloseStatus(1014, "Bad Gateway");
+    public static final WebSocketCloseStatus NORMAL_CLOSURE =
+        new WebSocketCloseStatus(1000, "Bye");
+
+    public static final WebSocketCloseStatus ENDPOINT_UNAVAILABLE =
+        new WebSocketCloseStatus(1001, "Endpoint unavailable");
+
+    public static final WebSocketCloseStatus PROTOCOL_ERROR =
+        new WebSocketCloseStatus(1002, "Protocol error");
+
+    public static final WebSocketCloseStatus INVALID_MESSAGE_TYPE =
+        new WebSocketCloseStatus(1003, "Invalid message type");
+
+    public static final WebSocketCloseStatus INVALID_PAYLOAD_DATA =
+        new WebSocketCloseStatus(1007, "Invalid payload data");
+
+    public static final WebSocketCloseStatus POLICY_VIOLATION =
+        new WebSocketCloseStatus(1008, "Policy violation");
+
+    public static final WebSocketCloseStatus MESSAGE_TOO_BIG =
+        new WebSocketCloseStatus(1009, "Message too big");
+
+    public static final WebSocketCloseStatus MANDATORY_EXTENSION =
+        new WebSocketCloseStatus(1010, "Mandatory extension");
+
+    public static final WebSocketCloseStatus INTERNAL_SERVER_ERROR =
+        new WebSocketCloseStatus(1011, "Internal server error");
+
+    public static final WebSocketCloseStatus SERVICE_RESTART =
+        new WebSocketCloseStatus(1012, "Service Restart");
+
+    public static final WebSocketCloseStatus TRY_AGAIN_LATER =
+        new WebSocketCloseStatus(1013, "Try Again Later");
+
+    public static final WebSocketCloseStatus BAD_GATEWAY =
+        new WebSocketCloseStatus(1014, "Bad Gateway");
 
     // 1004, 1005, 1006, 1015 are reserved and should never be used by user
     //public static final WebSocketCloseStatus SPECIFIC_MEANING = register(1004, "...");
