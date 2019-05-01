@@ -175,7 +175,11 @@ class EpollEventLoop extends SingleThreadEventLoop {
         assert inEventLoop();
         int fd = ch.socket.intValue();
         Native.epollCtlAdd(epollFd.intValue(), fd, ch.flags);
-        channels.put(fd, ch);
+        AbstractEpollChannel old = channels.put(fd, ch);
+
+        // We either expect to have no Channel in the map with the same FD or that the FD of the old Channel is already
+        // closed.
+        assert old == null || !old.isOpen();
     }
 
     /**
@@ -191,14 +195,19 @@ class EpollEventLoop extends SingleThreadEventLoop {
      */
     void remove(AbstractEpollChannel ch) throws IOException {
         assert inEventLoop();
+        int fd = ch.socket.intValue();
 
-        if (ch.isOpen()) {
-            int fd = ch.socket.intValue();
-            if (channels.remove(fd) != null) {
-                // Remove the epoll. This is only needed if it's still open as otherwise it will be automatically
-                // removed once the file-descriptor is closed.
-                Native.epollCtlDel(epollFd.intValue(), ch.fd().intValue());
-            }
+        AbstractEpollChannel old = channels.remove(fd);
+        if (old != null && old != ch) {
+            // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
+            channels.put(fd, old);
+
+            // If we found another Channel in the map that is mapped to the same FD the given Channel MUST be closed.
+            assert !ch.isOpen();
+        } else if (ch.isOpen()) {
+            // Remove the epoll. This is only needed if it's still open as otherwise it will be automatically
+            // removed once the file-descriptor is closed.
+            Native.epollCtlDel(epollFd.intValue(), fd);
         }
     }
 
@@ -380,11 +389,12 @@ class EpollEventLoop extends SingleThreadEventLoop {
         } catch (IOException ignore) {
             // ignore on close
         }
+
         // Using the intermediate collection to prevent ConcurrentModificationException.
         // In the `close()` method, the channel is deleted from `channels` map.
         AbstractEpollChannel[] localChannels = channels.values().toArray(new AbstractEpollChannel[0]);
 
-        for (AbstractEpollChannel ch : localChannels) {
+        for (AbstractEpollChannel ch: localChannels) {
             ch.unsafe().close(ch.unsafe().voidPromise());
         }
     }
