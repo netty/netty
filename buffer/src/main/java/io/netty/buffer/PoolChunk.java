@@ -173,7 +173,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         }
 
         subpages = newSubpageArray(maxSubpageAllocs);
-        cachedNioBuffers = new ArrayDeque<ByteBuffer>(8);
+        cachedNioBuffers = arena.cacheNioBuffers() ? new ArrayDeque<ByteBuffer>(8) : null;
     }
 
     /** Creates a special chunk that is not pooled. */

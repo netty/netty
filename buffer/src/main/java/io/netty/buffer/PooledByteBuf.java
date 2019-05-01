@@ -58,13 +58,17 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
         this.chunk = chunk;
         memory = chunk.memory;
-        tmpNioBuf = nioBuffer;
+        initInternalNioBuffer(nioBuffer);
         allocator = chunk.arena.parent;
         this.cache = cache;
         this.handle = handle;
         this.offset = offset;
         this.length = length;
         this.maxLength = maxLength;
+    }
+
+    void initInternalNioBuffer(ByteBuffer fromPoolCache) {
+        tmpNioBuf = fromPoolCache;
     }
 
     /**
@@ -168,11 +172,17 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             final long handle = this.handle;
             this.handle = -1;
             memory = null;
-            chunk.arena.free(chunk, tmpNioBuf, handle, maxLength, cache);
-            tmpNioBuf = null;
+            ByteBuffer nioBufToReturn = maybeRecycleInternalNioBuffer();
+            chunk.arena.free(chunk, nioBufToReturn, handle, maxLength, cache);
             chunk = null;
             recycle();
         }
+    }
+
+    ByteBuffer maybeRecycleInternalNioBuffer() {
+        ByteBuffer nioBufToReturn = tmpNioBuf;
+        tmpNioBuf = null;
+        return nioBufToReturn;
     }
 
     private void recycle() {

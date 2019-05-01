@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.NioBufferRecycler;
 import io.netty.util.internal.RecyclableArrayList;
 
 import java.io.IOException;
@@ -456,7 +457,9 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
         if (count == 1) {
             return out.write(internalNioBuffer(index, length));
         } else {
-            long writtenBytes = out.write(nioBuffers(index, length));
+            ByteBuffer[] buffers = nioBuffers(index, length);
+            long writtenBytes = out.write(buffers);
+            NioBufferRecycler.recycle(buffers);
             if (writtenBytes > Integer.MAX_VALUE) {
                 return Integer.MAX_VALUE;
             } else {
@@ -475,6 +478,7 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
             long writtenBytes = 0;
             for (ByteBuffer buf : nioBuffers(index, length)) {
                 writtenBytes += out.write(buf, position + writtenBytes);
+                NioBufferRecycler.recycle(buf);
             }
             if (writtenBytes > Integer.MAX_VALUE) {
                 return Integer.MAX_VALUE;
@@ -545,6 +549,7 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
         //noinspection ForLoopReplaceableByForEach
         for (int i = 0; i < buffers.length; i++) {
             merged.put(buffers[i]);
+            NioBufferRecycler.recycle(buffers[i]);
         }
 
         merged.flip();

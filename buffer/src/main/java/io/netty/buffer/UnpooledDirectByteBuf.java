@@ -17,6 +17,7 @@ package io.netty.buffer;
 
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
+import io.netty.util.internal.NioBufferRecycler;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -294,6 +295,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
             for (ByteBuffer bb: dst.nioBuffers(dstIndex, length)) {
                 int bbLen = bb.remaining();
                 getBytes(index, bb);
+                NioBufferRecycler.recycle(bb);
                 index += bbLen;
             }
         } else {
@@ -445,9 +447,10 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         checkSrcIndex(index, length, srcIndex, src.capacity());
         if (src.nioBufferCount() > 0) {
-            for (ByteBuffer bb: src.nioBuffers(srcIndex, length)) {
+            for (ByteBuffer bb : src.nioBuffers(srcIndex, length)) {
                 int bbLen = bb.remaining();
                 setBytes(index, bb);
+                NioBufferRecycler.recycle(bb);
                 index += bbLen;
             }
         } else {

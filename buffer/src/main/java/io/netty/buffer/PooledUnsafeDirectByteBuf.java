@@ -17,6 +17,7 @@
 package io.netty.buffer;
 
 import io.netty.util.Recycler;
+import io.netty.util.internal.NioBufferRecycler;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -61,13 +62,31 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
         initMemoryAddress();
     }
 
+    @Override
+    void initInternalNioBuffer(ByteBuffer fromPoolCache) {
+        if (chunk.arena.cacheNioBuffers() || !PlatformDependent.isReusable(tmpNioBuf)) {
+            tmpNioBuf = fromPoolCache;
+        } else {
+            PlatformDependent.reusedDuplicateDirectBuffer(memory, tmpNioBuf);
+        }
+    }
+
+    @Override
+    ByteBuffer maybeRecycleInternalNioBuffer() {
+        if (chunk.arena.cacheNioBuffers()) {
+            return super.maybeRecycleInternalNioBuffer();
+        }
+        PlatformDependent.resetDirectBuffer(tmpNioBuf);
+        return null;
+    }
+
     private void initMemoryAddress() {
         memoryAddress = PlatformDependent.directBufferAddress(memory) + offset;
     }
 
     @Override
     protected ByteBuffer newInternalNioBuffer(ByteBuffer memory) {
-        return memory.duplicate();
+        return NioBufferRecycler.duplicate(memory);
     }
 
     @Override
@@ -168,11 +187,17 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
         if (internal) {
             tmpBuf = internalNioBuffer();
         } else {
-            tmpBuf = memory.duplicate();
+            tmpBuf = NioBufferRecycler.duplicate(memory);
         }
         index = idx(index);
         tmpBuf.clear().position(index).limit(index + length);
-        return out.write(tmpBuf);
+        try {
+            return out.write(tmpBuf);
+        } finally {
+            if (!internal) {
+                NioBufferRecycler.recycle(tmpBuf);
+            }
+        }
     }
 
     @Override
@@ -186,10 +211,16 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
             return 0;
         }
 
-        ByteBuffer tmpBuf = internal ? internalNioBuffer() : memory.duplicate();
+        ByteBuffer tmpBuf = internal ? internalNioBuffer() : NioBufferRecycler.duplicate(memory);
         index = idx(index);
         tmpBuf.clear().position(index).limit(index + length);
-        return out.write(tmpBuf, position);
+        try {
+            return out.write(tmpBuf, position);
+        } finally {
+            if (!internal) {
+                NioBufferRecycler.recycle(tmpBuf);
+            }
+        }
     }
 
     @Override
@@ -322,8 +353,7 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
         checkIndex(index, length);
-        index = idx(index);
-        return ((ByteBuffer) memory.duplicate().position(index).limit(index + length)).slice();
+        return NioBufferRecycler.slice(memory, idx(index), length);
     }
 
     @Override

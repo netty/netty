@@ -17,6 +17,7 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.LongCounter;
+import io.netty.util.internal.NioBufferRecycler;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
@@ -389,7 +390,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         }
 
         PoolChunk<T> oldChunk = buf.chunk;
-        ByteBuffer oldNioBuffer = buf.tmpNioBuf;
+        ByteBuffer oldNioBuffer = buf.maybeRecycleInternalNioBuffer();
         long oldHandle = buf.handle;
         T oldMemory = buf.memory;
         int oldOffset = buf.offset;
@@ -421,6 +422,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             free(oldChunk, oldNioBuffer, oldHandle, oldMaxLength, buf.cache);
         }
     }
+
+    abstract boolean cacheNioBuffers();
 
     @Override
     public int numThreadCaches() {
@@ -680,6 +683,11 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         }
 
         @Override
+        boolean cacheNioBuffers() {
+            return true;
+        }
+
+        @Override
         boolean isDirect() {
             return false;
         }
@@ -721,6 +729,11 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 int pageShifts, int chunkSize, int directMemoryCacheAlignment) {
             super(parent, pageSize, maxOrder, pageShifts, chunkSize,
                     directMemoryCacheAlignment);
+        }
+
+        @Override
+        boolean cacheNioBuffers() {
+            return !PlatformDependent.reusableNioBuffersSupported();
         }
 
         @Override

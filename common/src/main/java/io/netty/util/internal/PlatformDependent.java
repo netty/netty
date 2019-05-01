@@ -657,6 +657,7 @@ public final class PlatformDependent {
         int capacity = buffer.capacity();
         PlatformDependent0.freeMemory(PlatformDependent0.directBufferAddress(buffer));
         decrementMemoryCounter(capacity);
+        NioBufferRecycler.recycle(buffer, true);
     }
 
     private static void incrementMemoryCounter(int capacity) {
@@ -680,6 +681,33 @@ public final class PlatformDependent {
 
     public static boolean useDirectBufferNoCleaner() {
         return USE_DIRECT_BUFFER_NO_CLEANER;
+    }
+
+    public static boolean reusableNioBuffersSupported() {
+        return PlatformDependent0.hasUnsafeDirectBufferFields();
+    }
+
+    public static boolean isReusable(ByteBuffer buffer) {
+        return PlatformDependent0.isReusableType(buffer)
+                && directBufferAddress(buffer) == 0
+                && buffer.capacity() == 0;
+    }
+
+    public static void resetDirectBuffer(ByteBuffer buffer) {
+        if (PlatformDependent0.isReusableType(buffer)) {
+            PlatformDependent0.resetDirectBuffer(buffer);
+        }
+    }
+
+    public static void reusedDuplicateDirectBuffer(ByteBuffer parent, ByteBuffer toReuse) {
+        ObjectUtil.checkNotNull(parent, "parent");
+        if (!isReusable(toReuse)) {
+            throw new IllegalArgumentException("Target ByteBuffer not reusable");
+        }
+        PlatformDependent0.initDirectBuffer(toReuse, directBufferAddress(parent),
+                parent, parent.capacity(), parent.limit());
+        // We don't bother to set the mark like ByteBuffer.duplicate() does
+        toReuse.position(parent.position());
     }
 
     /**

@@ -25,6 +25,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
@@ -38,11 +39,17 @@ final class PlatformDependent0 {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent0.class);
     private static final long ADDRESS_FIELD_OFFSET;
     private static final long BYTE_ARRAY_BASE_OFFSET;
+    private static final Class<? extends ByteBuffer> DIRECT_BUFFER_CLASS; //TODO TBD
     private static final Constructor<?> DIRECT_BUFFER_CONSTRUCTOR;
     private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
     private static final Method ALLOCATE_ARRAY_METHOD;
     private static final int JAVA_VERSION = javaVersion0();
     private static final boolean IS_ANDROID = isAndroid0();
+
+    // Either both or neither of these will be set - if set we can perform
+    // unsafe direct ByteBuffer construction and reuse
+    private static final long CAPACITY_FIELD_OFFSET;
+    private static final long PARENT_FIELD_OFFSET;
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE;
     private static final Object INTERNAL_UNSAFE;
@@ -65,19 +72,21 @@ final class PlatformDependent0 {
 
     static {
         final ByteBuffer direct;
+        final Class<? extends ByteBuffer> directBufferClass;
         Field addressField = null;
+        Field capacityField = null;
+        Field parentField = null;
         Method allocateArrayMethod = null;
         Throwable unsafeUnavailabilityCause = null;
-        Unsafe unsafe;
+        Unsafe unsafe = null;
         Object internalUnsafe = null;
 
         if ((unsafeUnavailabilityCause = EXPLICIT_NO_UNSAFE_CAUSE) != null) {
             direct = null;
-            addressField = null;
-            unsafe = null;
-            internalUnsafe = null;
+            directBufferClass = null;
         } else {
             direct = ByteBuffer.allocateDirect(1);
+            directBufferClass = direct.getClass();
 
             // attempt to access field Unsafe#theUnsafe
             final Object maybeUnsafe = AccessController.doPrivileged(new PrivilegedAction<Object>() {
@@ -191,6 +200,56 @@ final class PlatformDependent0 {
             }
 
             if (unsafe != null) {
+                final String parentFieldName = javaVersion() <= 6 ? "viewedBuffer" : "att";
+                // attempt to access field Buffer#att
+                final Object maybeParentField = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                    @Override
+                    public Object run() {
+                        try {
+                            return directBufferClass.getDeclaredField(parentFieldName);
+                        } catch (NoSuchFieldException e) {
+                            return e;
+                        } catch (SecurityException e) {
+                            return e;
+                        }
+                    }
+                });
+
+                if (maybeParentField instanceof Field) {
+                    parentField = (Field) maybeParentField;
+                    logger.debug("java.nio.DirectByteBuffer.{}: available", parentFieldName);
+                } else {
+                    unsafeUnavailabilityCause = (Throwable) maybeParentField;
+                    logger.debug("java.nio.DirectByteBuffer.{}: unavailable",
+                            parentFieldName, (Throwable) maybeParentField);
+                }
+            }
+
+            if (parentField != null) {
+                // attempt to access field Buffer#capacity
+                final Object maybeCapacityField = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                    @Override
+                    public Object run() {
+                        try {
+                            return Buffer.class.getDeclaredField("capacity");
+                        } catch (NoSuchFieldException e) {
+                            return e;
+                        } catch (SecurityException e) {
+                            return e;
+                        }
+                    }
+                });
+
+                if (maybeCapacityField instanceof Field) {
+                    capacityField = (Field) maybeCapacityField;
+                    logger.debug("java.nio.Buffer.capacity: available");
+                } else {
+                    unsafeUnavailabilityCause = (Throwable) maybeCapacityField;
+                    logger.debug("java.nio.Buffer.capacity: unavailable", (Throwable) maybeCapacityField);
+                }
+            }
+
+            if (unsafe != null) {
                 // There are assumptions made where ever BYTE_ARRAY_BASE_OFFSET is used (equals, hashCodeAscii, and
                 // primitive accessors) that arrayIndexScale == 1, and results are undefined if this is not the case.
                 long byteArrayIndexScale = unsafe.arrayIndexScale(byte[].class);
@@ -206,12 +265,15 @@ final class PlatformDependent0 {
 
         if (unsafe == null) {
             ADDRESS_FIELD_OFFSET = -1;
+            PARENT_FIELD_OFFSET = -1;
+            CAPACITY_FIELD_OFFSET = -1;
             BYTE_ARRAY_BASE_OFFSET = -1;
             UNALIGNED = false;
             DIRECT_BUFFER_CONSTRUCTOR = null;
+            DIRECT_BUFFER_CLASS = null;
             ALLOCATE_ARRAY_METHOD = null;
         } else {
-            Constructor<?> directBufferConstructor;
+            Constructor<?> directBufferConstructor = null;
             long address = -1;
             try {
                 final Object maybeDirectBufferConstructor =
@@ -220,7 +282,8 @@ final class PlatformDependent0 {
                             public Object run() {
                                 try {
                                     final Constructor<?> constructor =
-                                            direct.getClass().getDeclaredConstructor(long.class, int.class);
+                                            directBufferClass.getDeclaredConstructor(
+                                                    long.class, int.class, Object.class);
                                     Throwable cause = ReflectionUtil.trySetAccessible(constructor, true);
                                     if (cause != null) {
                                         return cause;
@@ -238,30 +301,32 @@ final class PlatformDependent0 {
                     address = UNSAFE.allocateMemory(1);
                     // try to use the constructor now
                     try {
-                        ((Constructor<?>) maybeDirectBufferConstructor).newInstance(address, 1);
+                        ((Constructor<?>) maybeDirectBufferConstructor).newInstance(address, 1, null);
                         directBufferConstructor = (Constructor<?>) maybeDirectBufferConstructor;
                         logger.debug("direct buffer constructor: available");
-                    } catch (InstantiationException e) {
-                        directBufferConstructor = null;
-                    } catch (IllegalAccessException e) {
-                        directBufferConstructor = null;
-                    } catch (InvocationTargetException e) {
-                        directBufferConstructor = null;
+                    } catch (ReflectiveOperationException e) {
+                        logger.debug("direct buffer constructor: unavailable", e);
                     }
                 } else {
-                    logger.debug(
-                            "direct buffer constructor: unavailable",
+                    logger.debug("direct buffer constructor: unavailable",
                             (Throwable) maybeDirectBufferConstructor);
-                    directBufferConstructor = null;
                 }
             } finally {
                 if (address != -1) {
                     UNSAFE.freeMemory(address);
                 }
             }
+            DIRECT_BUFFER_CLASS = directBufferClass;
             DIRECT_BUFFER_CONSTRUCTOR = directBufferConstructor;
             ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField);
             BYTE_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
+            if (capacityField == null || parentField == null) {
+                CAPACITY_FIELD_OFFSET = -1;
+                PARENT_FIELD_OFFSET = -1;
+            } else {
+                CAPACITY_FIELD_OFFSET = objectFieldOffset(capacityField);
+                PARENT_FIELD_OFFSET = objectFieldOffset(parentField);
+            }
             final boolean unaligned;
             Object maybeUnaligned = AccessController.doPrivileged(new PrivilegedAction<Object>() {
                 @Override
@@ -441,6 +506,10 @@ final class PlatformDependent0 {
         return DIRECT_BUFFER_CONSTRUCTOR != null;
     }
 
+    static boolean hasUnsafeDirectBufferFields() {
+        return PARENT_FIELD_OFFSET != -1L;
+    }
+
     static ByteBuffer reallocateDirectNoCleaner(ByteBuffer buffer, int capacity) {
         return newDirectBuffer(UNSAFE.reallocateMemory(directBufferAddress(buffer), capacity), capacity);
     }
@@ -468,16 +537,54 @@ final class PlatformDependent0 {
 
     static ByteBuffer newDirectBuffer(long address, int capacity) {
         ObjectUtil.checkPositiveOrZero(capacity, "capacity");
-
+        if (hasUnsafeDirectBufferFields()) {
+            ByteBuffer newBuffer = NioBufferRecycler.pollFromCacheForNew();
+            return newBuffer == null ? newDirectBufferUnsafe(address, capacity, null)
+                    : initDirectBuffer(newBuffer, address, null, capacity, capacity);
+        }
         try {
-            return (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(address, capacity);
+            return (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(address, capacity, null);
         } catch (Throwable cause) {
             // Not expected to ever throw!
-            if (cause instanceof Error) {
-                throw (Error) cause;
-            }
-            throw new Error(cause);
+            throw cause instanceof Error ? (Error) cause : new Error(cause);
         }
+    }
+
+    static ByteBuffer newDirectBufferUnsafe(long address, int capacity, Object parent) {
+        try {
+            ByteBuffer newBuffer = (ByteBuffer) UNSAFE.allocateInstance(DIRECT_BUFFER_CLASS);
+            return initDirectBuffer(newBuffer, address, parent, capacity, capacity);
+        } catch (Throwable cause) {
+            // Not expected to ever throw!
+            throw cause instanceof Error ? (Error) cause : new Error(cause);
+        }
+    }
+
+    static boolean isReusableType(ByteBuffer buffer) {
+        return hasUnsafeDirectBufferFields() && buffer != null && buffer.getClass() == DIRECT_BUFFER_CLASS;
+    }
+
+    static ByteBuffer initDirectBuffer(ByteBuffer buffer, long address, Object parent, int capacity, int limit) {
+        assert buffer.capacity() == 0 && buffer.getClass() == DIRECT_BUFFER_CLASS;
+        return setDirectBufferFields0(buffer, address, parent, capacity, limit).order(ByteOrder.BIG_ENDIAN);
+    }
+
+    static ByteBuffer resetDirectBuffer(ByteBuffer buffer) {
+        assert buffer.getClass() == DIRECT_BUFFER_CLASS;
+        return setDirectBufferFields0(buffer, 0L, null, 0, 0);
+    }
+
+    private static ByteBuffer setDirectBufferFields0(ByteBuffer buffer,
+            long address, Object parent, int capacity, int limit) {
+        UNSAFE.putLong(buffer, ADDRESS_FIELD_OFFSET, address);
+        UNSAFE.putObject(buffer, PARENT_FIELD_OFFSET, parent);
+        UNSAFE.putInt(buffer, CAPACITY_FIELD_OFFSET, capacity);
+        buffer.limit(limit);
+        return buffer;
+    }
+
+    static boolean isDerivedDirectBuffer(ByteBuffer buffer) {
+        return isReusableType(buffer) && UNSAFE.getObject(buffer, PARENT_FIELD_OFFSET) != null;
     }
 
     static long directBufferAddress(ByteBuffer buffer) {

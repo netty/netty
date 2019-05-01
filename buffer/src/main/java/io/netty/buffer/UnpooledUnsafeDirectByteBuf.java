@@ -17,6 +17,7 @@ package io.netty.buffer;
 
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
+import io.netty.util.internal.NioBufferRecycler;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -81,7 +82,7 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
         // sun/misc/Unsafe.java#l1250
         //
         // We also call slice() explicitly here to preserve behaviour with previous netty releases.
-        this(alloc, initialBuffer.slice(), maxCapacity, false);
+        this(alloc, NioBufferRecycler.slice(initialBuffer), maxCapacity, false);
     }
 
     UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity, boolean doFree) {
@@ -375,14 +376,15 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
             return 0;
         }
 
-        ByteBuffer tmpBuf;
-        if (internal) {
-            tmpBuf = internalNioBuffer();
-        } else {
-            tmpBuf = buffer.duplicate();
+        ByteBuffer tmpBuf = internal ? internalNioBuffer() : NioBufferRecycler.duplicate(buffer);
+        try {
+            tmpBuf.clear().position(index).limit(index + length);
+            return out.write(tmpBuf);
+        } finally {
+            if (!internal) {
+                NioBufferRecycler.recycle(tmpBuf);
+            }
         }
-        tmpBuf.clear().position(index).limit(index + length);
-        return out.write(tmpBuf);
     }
 
     @Override
@@ -396,9 +398,15 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
             return 0;
         }
 
-        ByteBuffer tmpBuf = internal ? internalNioBuffer() : buffer.duplicate();
+        ByteBuffer tmpBuf = internal ? internalNioBuffer() : NioBufferRecycler.duplicate(buffer);
         tmpBuf.clear().position(index).limit(index + length);
-        return out.write(tmpBuf, position);
+        try {
+            return out.write(tmpBuf, position);
+        } finally {
+            if (!internal) {
+                NioBufferRecycler.recycle(tmpBuf);
+            }
+        }
     }
 
     @Override
@@ -470,15 +478,15 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
     private ByteBuffer internalNioBuffer() {
         ByteBuffer tmpNioBuf = this.tmpNioBuf;
         if (tmpNioBuf == null) {
-            this.tmpNioBuf = tmpNioBuf = buffer.duplicate();
+            this.tmpNioBuf = tmpNioBuf = NioBufferRecycler.duplicate(buffer);
         }
         return tmpNioBuf;
     }
 
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
-        checkIndex(index, length);
-        return ((ByteBuffer) buffer.duplicate().position(index).limit(index + length)).slice();
+        ensureAccessible();
+        return NioBufferRecycler.slice(buffer, index, length);
     }
 
     @Override

@@ -21,6 +21,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.NioBufferRecycler;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -1231,7 +1232,9 @@ public final class ByteBufUtil {
             CharsetDecoder decoder = CharsetUtil.decoder(charset, CodingErrorAction.REPORT, CodingErrorAction.REPORT);
             try {
                 if (buf.nioBufferCount() == 1) {
-                    decoder.decode(buf.nioBuffer(index, length));
+                    ByteBuffer nioBuffer = buf.nioBuffer(index, length);
+                    decoder.decode(nioBuffer);
+                    NioBufferRecycler.recycle(nioBuffer);
                 } else {
                     ByteBuf heapBuffer = buf.alloc().heapBuffer(length);
                     try {

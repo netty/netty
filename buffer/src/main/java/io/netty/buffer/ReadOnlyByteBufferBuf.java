@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.NioBufferRecycler;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -183,6 +184,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
             for (ByteBuffer bb: dst.nioBuffers(dstIndex, length)) {
                 int bbLen = bb.remaining();
                 getBytes(index, bb);
+                NioBufferRecycler.recycle(bb);
                 index += bbLen;
             }
         } else {

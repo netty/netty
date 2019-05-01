@@ -19,6 +19,7 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.NioBufferRecycler;
 import io.netty.util.internal.RecyclableArrayList;
 
 import java.io.IOException;
@@ -1089,7 +1090,9 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         if (count == 1) {
             return out.write(internalNioBuffer(index, length));
         } else {
-            long writtenBytes = out.write(nioBuffers(index, length));
+            ByteBuffer[] buffers = nioBuffers(index, length);
+            long writtenBytes = out.write(buffers);
+            NioBufferRecycler.recycle(buffers);
             if (writtenBytes > Integer.MAX_VALUE) {
                 return Integer.MAX_VALUE;
             } else {
@@ -1108,6 +1111,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             long writtenBytes = 0;
             for (ByteBuffer buf : nioBuffers(index, length)) {
                 writtenBytes += out.write(buf, position + writtenBytes);
+                NioBufferRecycler.recycle(buf);
             }
             if (writtenBytes > Integer.MAX_VALUE) {
                 return Integer.MAX_VALUE;
@@ -1637,6 +1641,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         ByteBuffer merged = ByteBuffer.allocate(length).order(order());
         for (ByteBuffer buf: buffers) {
             merged.put(buf);
+            NioBufferRecycler.recycle(buf);
         }
 
         merged.flip();

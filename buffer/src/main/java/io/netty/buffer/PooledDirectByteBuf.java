@@ -17,6 +17,7 @@
 package io.netty.buffer;
 
 import io.netty.util.Recycler;
+import io.netty.util.internal.NioBufferRecycler;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -116,6 +117,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
             for (ByteBuffer bb: dst.nioBuffers(dstIndex, length)) {
                 int bbLen = bb.remaining();
                 getBytes(index, bb);
+                NioBufferRecycler.recycle(bb);
                 index += bbLen;
             }
         } else {
@@ -313,9 +315,10 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
         if (src.hasArray()) {
             setBytes(index, src.array(), src.arrayOffset() + srcIndex, length);
         } else if (src.nioBufferCount() > 0) {
-            for (ByteBuffer bb: src.nioBuffers(srcIndex, length)) {
+            for (ByteBuffer bb : src.nioBuffers(srcIndex, length)) {
                 int bbLen = bb.remaining();
                 setBytes(index, bb);
+                NioBufferRecycler.recycle(bb);
                 index += bbLen;
             }
         } else {
@@ -339,7 +342,7 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
         checkIndex(index, src.remaining());
         ByteBuffer tmpBuf = internalNioBuffer();
         if (src == tmpBuf) {
-            src = src.duplicate();
+            src = NioBufferRecycler.duplicate(src);
         }
 
         index = idx(index);

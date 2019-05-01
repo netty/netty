@@ -44,6 +44,7 @@ import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
+import io.netty.util.internal.NioBufferRecycler;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
@@ -209,7 +210,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     try {
                         handler.singleBuffer[0] = toByteBuffer(out, writerIndex,
                             out.writableBytes());
-                        result = opensslEngine.unwrap(in.nioBuffers(readerIndex, len), handler.singleBuffer);
+                        ByteBuffer[] buffers = in.nioBuffers(readerIndex, len);
+                        result = opensslEngine.unwrap(buffers, handler.singleBuffer);
+                        NioBufferRecycler.recycle(buffers);
                     } finally {
                         handler.singleBuffer[0] = null;
                     }
@@ -256,9 +259,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                      */
                     try {
                         handler.singleBuffer[0] = toByteBuffer(out, writerIndex, out.writableBytes());
+                        ByteBuffer[] buffers = in.nioBuffers(readerIndex, len);
                         result = ((ConscryptAlpnSslEngine) handler.engine).unwrap(
-                                in.nioBuffers(readerIndex, len),
-                                handler.singleBuffer);
+                                buffers, handler.singleBuffer);
+                        NioBufferRecycler.recycle(buffers);
                     } finally {
                         handler.singleBuffer[0] = null;
                     }
@@ -1045,6 +1049,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             for (;;) {
                 ByteBuffer out0 = out.nioBuffer(out.writerIndex(), out.writableBytes());
                 SSLEngineResult result = engine.wrap(in0, out0);
+                NioBufferRecycler.recycle(out0);
                 in.skipBytes(result.bytesConsumed());
                 out.writerIndex(out.writerIndex() + result.bytesProduced());
 
@@ -1053,6 +1058,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     out.ensureWritable(engine.getSession().getPacketBufferSize());
                     break;
                 default:
+                    if (in0 != singleBuffer) {
+                        NioBufferRecycler.recycle(in0);
+                    }
                     return result;
                 }
             }

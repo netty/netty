@@ -23,6 +23,7 @@ import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.base64.Base64Dialect;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.NioBufferRecycler;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
@@ -276,11 +277,12 @@ final class SslUtils {
         ByteBuffer tmp = ByteBuffer.allocate(5);
 
         do {
-            buffer = buffers[offset++].duplicate();
+            buffer = NioBufferRecycler.duplicate(buffers[offset++]);
             if (buffer.remaining() > tmp.remaining()) {
                 buffer.limit(buffer.position() + tmp.remaining());
             }
             tmp.put(buffer);
+            NioBufferRecycler.recycle(buffer);
         } while (tmp.hasRemaining());
 
         // Done, flip the buffer so we can read from it.
