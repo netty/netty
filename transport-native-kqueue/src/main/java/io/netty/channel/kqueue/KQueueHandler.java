@@ -118,7 +118,10 @@ public final class KQueueHandler implements IoHandler {
     public void register(Channel channel) {
         final AbstractKQueueChannel kQueueChannel = cast(channel);
         final int id = kQueueChannel.fd().intValue();
-        channels.put(id, kQueueChannel);
+        AbstractKQueueChannel old = channels.put(id, kQueueChannel);
+        // We either expect to have no Channel in the map with the same FD or that the FD of the old Channel is already
+        // closed.
+        assert old == null || !old.isOpen();
 
         kQueueChannel.register0(new KQueueRegistration() {
             @Override
@@ -136,7 +139,23 @@ public final class KQueueHandler implements IoHandler {
     @Override
     public void deregister(Channel channel) throws Exception {
         AbstractKQueueChannel kQueueChannel = cast(channel);
-        channels.remove(kQueueChannel.fd().intValue());
+        int fd = kQueueChannel.fd().intValue();
+
+        AbstractKQueueChannel old = channels.remove(fd);
+        if (old != null && old != kQueueChannel) {
+            // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
+            channels.put(fd, old);
+
+            // If we found another Channel in the map that is mapped to the same FD the given Channel MUST be closed.
+            assert !kQueueChannel.isOpen();
+        } else if (kQueueChannel.isOpen()) {
+            // Remove the filters. This is only needed if it's still open as otherwise it will be automatically
+            // removed once the file-descriptor is closed.
+            //
+            // See also https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+            kQueueChannel.unregisterFilters();
+        }
+
         kQueueChannel.deregister0();
     }
 
@@ -314,6 +333,14 @@ public final class KQueueHandler implements IoHandler {
             kqueueWaitNow();
         } catch (IOException e) {
             // ignore on close
+        }
+
+        // Using the intermediate collection to prevent ConcurrentModificationException.
+        // In the `close()` method, the channel is deleted from `channels` map.
+        AbstractKQueueChannel[] localChannels = channels.values().toArray(new AbstractKQueueChannel[0]);
+
+        for (AbstractKQueueChannel ch: localChannels) {
+            ch.unsafe().close(ch.unsafe().voidPromise());
         }
     }
 

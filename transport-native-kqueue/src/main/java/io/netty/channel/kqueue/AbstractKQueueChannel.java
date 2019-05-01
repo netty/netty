@@ -178,10 +178,18 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         evSet0(registration, Native.EVFILT_SOCK, Native.EV_ADD, Native.NOTE_RDHUP);
     }
 
-    void deregister0() throws IOException {
+    void deregister0() {
+        // As unregisteredFilters() may have not been called because isOpen() returned false we just set both filters
+        // to false to ensure a consistent state in all cases.
+        readFilterEnabled = false;
+        writeFilterEnabled = false;
+    }
+
+    void unregisterFilters() throws Exception {
         // Make sure we unregister our filters from kqueue!
         readFilter(false);
         writeFilter(false);
+
         if (registration != null) {
             evSet0(registration, Native.EVFILT_SOCK, Native.EV_DELETE, 0);
             registration = null;
@@ -331,7 +339,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     private void evSet(short filter, short flags) {
-        if (isOpen() && isRegistered()) {
+        if (isRegistered()) {
             evSet0(registration, filter, flags);
         }
     }
@@ -341,7 +349,10 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     private void evSet0(KQueueRegistration registration, short filter, short flags, int fflags) {
-        registration.evSet(filter, flags, fflags);
+        // Only try to add to changeList if the FD is still open, if not we already closed it in the meantime.
+        if (isOpen()) {
+            registration.evSet(filter, flags, fflags);
+        }
     }
 
     abstract class AbstractKQueueUnsafe extends AbstractUnsafe {

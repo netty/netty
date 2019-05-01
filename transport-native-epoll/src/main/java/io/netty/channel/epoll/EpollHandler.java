@@ -61,7 +61,7 @@ public class EpollHandler implements IoHandler {
     private final FileDescriptor epollFd;
     private final FileDescriptor eventFd;
     private final FileDescriptor timerFd;
-    private final IntObjectMap<AbstractEpollChannel> channels = new IntObjectHashMap<AbstractEpollChannel>(4096);
+    private final IntObjectMap<AbstractEpollChannel> channels = new IntObjectHashMap<>(4096);
     private final boolean allowGrowing;
     private final EpollEventArray events;
 
@@ -225,7 +225,11 @@ public class EpollHandler implements IoHandler {
     private void add(AbstractEpollChannel ch) throws IOException {
         int fd = ch.socket.intValue();
         Native.epollCtlAdd(epollFd.intValue(), fd, ch.flags);
-        channels.put(fd, ch);
+        AbstractEpollChannel old = channels.put(fd, ch);
+
+        // We either expect to have no Channel in the map with the same FD or that the FD of the old Channel is already
+        // closed.
+        assert old == null || !old.isOpen();
     }
 
     /**
@@ -239,13 +243,19 @@ public class EpollHandler implements IoHandler {
      * Deregister the given channel from this {@link EpollHandler}.
      */
     private void remove(AbstractEpollChannel ch) throws IOException {
-        if (ch.isOpen()) {
-            int fd = ch.socket.intValue();
-            if (channels.remove(fd) != null) {
-                // Remove the epoll. This is only needed if it's still open as otherwise it will be automatically
-                // removed once the file-descriptor is closed.
-                Native.epollCtlDel(epollFd.intValue(), ch.fd().intValue());
-            }
+        int fd = ch.socket.intValue();
+
+        AbstractEpollChannel old = channels.remove(fd);
+        if (old != null && old != ch) {
+            // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
+            channels.put(fd, old);
+
+            // If we found another Channel in the map that is mapped to the same FD the given Channel MUST be closed.
+            assert !ch.isOpen();
+        } else if (ch.isOpen()) {
+            // Remove the epoll. This is only needed if it's still open as otherwise it will be automatically
+            // removed once the file-descriptor is closed.
+            Native.epollCtlDel(epollFd.intValue(), fd);
         }
     }
 
@@ -367,11 +377,12 @@ public class EpollHandler implements IoHandler {
         } catch (IOException ignore) {
             // ignore on close
         }
+
         // Using the intermediate collection to prevent ConcurrentModificationException.
         // In the `close()` method, the channel is deleted from `channels` map.
         AbstractEpollChannel[] localChannels = channels.values().toArray(new AbstractEpollChannel[0]);
 
-        for (AbstractEpollChannel ch : localChannels) {
+        for (AbstractEpollChannel ch: localChannels) {
             ch.unsafe().close(ch.unsafe().voidPromise());
         }
     }
