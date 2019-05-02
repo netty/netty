@@ -1417,6 +1417,13 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
     }
 
+    protected final void checkDstIndex(int length, int dstIndex, int dstCapacity) {
+        checkReadableBytes(length);
+        if (checkBounds) {
+            checkRangeBounds("dstIndex", dstIndex, length, dstCapacity);
+        }
+    }
+
     /**
      * Throws an {@link IndexOutOfBoundsException} if the current
      * {@linkplain #readableBytes() readable bytes} of this buffer is less
