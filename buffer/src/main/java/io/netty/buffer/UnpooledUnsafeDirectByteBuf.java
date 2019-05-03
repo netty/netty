@@ -56,7 +56,7 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
         // sun/misc/Unsafe.java#l1250
         //
         // We also call slice() explicitly here to preserve behaviour with previous netty releases.
-        super(alloc, initialBuffer, maxCapacity, /* doFree= */ false, /* slice= */ true);
+        super(alloc, initialBuffer, maxCapacity, /* doFree = */ false, /* slice = */ true);
     }
 
     UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity, boolean doFree) {
@@ -160,10 +160,12 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
         return this;
     }
 
+    @Override
     void getBytes(int index, byte[] dst, int dstIndex, int length, boolean internal) {
         UnsafeByteBufUtil.getBytes(this, addr(index), index, dst, dstIndex, length);
     }
 
+    @Override
     void getBytes(int index, ByteBuffer dst, boolean internal) {
         UnsafeByteBufUtil.getBytes(this, addr(index), index, dst);
     }
@@ -267,13 +269,8 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
     }
 
     @Override
-    public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
-        UnsafeByteBufUtil.getBytes(this, addr(index), index, out, length);
-        return this;
-    }
-
     void getBytes(int index, OutputStream out, int length, boolean internal) throws IOException {
-        getBytes(index, out, length);
+        UnsafeByteBufUtil.getBytes(this, addr(index), index, out, length);
     }
 
     @Override
@@ -286,7 +283,7 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
         return UnsafeByteBufUtil.copy(this, addr(index), index, length);
     }
 
-    long addr(int index) {
+    final long addr(int index) {
         return memoryAddress + index;
     }
 
