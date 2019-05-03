@@ -441,7 +441,7 @@ public class JdkSslContext extends SslContext {
      * @param keyPassword the password of the {@code keyFile}.
      *                    {@code null} if it's not password-protected.
      * @param kmf The existing {@link KeyManagerFactory} that will be used if not {@code null}
-     * @param keyStore the keystore that should be used in the {@link KeyManagerFactory}
+     * @param keyStore the {@link KeyStore} that should be used in the {@link KeyManagerFactory}
      * @return A {@link KeyManagerFactory} based upon a key file, key file password, and a certificate chain.
      */
     static KeyManagerFactory buildKeyManagerFactory(File certChainFile, File keyFile, String keyPassword,
@@ -485,7 +485,7 @@ public class JdkSslContext extends SslContext {
      * @param keyPassword the password of the {@code keyFile}.
      *                    {@code null} if it's not password-protected.
      * @param kmf The existing {@link KeyManagerFactory} that will be used if not {@code null}
-     * @param keyStore the keystore that should be used in the {@link KeyManagerFactory}
+     * @param keyStore the {@link KeyStore} that should be used in the {@link KeyManagerFactory}
      * @return A {@link KeyManagerFactory} based upon a key algorithm, key file, key file password,
      * and a certificate chain.
      */

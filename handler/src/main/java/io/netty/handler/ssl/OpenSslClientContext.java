@@ -84,7 +84,7 @@ public final class OpenSslClientContext extends OpenSslContext {
     @Deprecated
     public OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory) throws SSLException {
         this(certChainFile, trustManagerFactory, null, null, null, null, null,
-                IdentityCipherSuiteFilter.INSTANCE, null, 0, 0);
+             IdentityCipherSuiteFilter.INSTANCE, null, 0, 0);
     }
 
     /**
@@ -105,8 +105,7 @@ public final class OpenSslClientContext extends OpenSslContext {
      */
     @Deprecated
     public OpenSslClientContext(File certChainFile, TrustManagerFactory trustManagerFactory, Iterable<String> ciphers,
-                                ApplicationProtocolConfig apn, long sessionCacheSize,
-                                long sessionTimeout)
+                                ApplicationProtocolConfig apn, long sessionCacheSize, long sessionTimeout)
             throws SSLException {
         this(certChainFile, trustManagerFactory, null, null, null, null, ciphers, IdentityCipherSuiteFilter.INSTANCE,
                 apn, sessionCacheSize, sessionTimeout);
@@ -134,7 +133,7 @@ public final class OpenSslClientContext extends OpenSslContext {
                                 CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
                                 long sessionCacheSize, long sessionTimeout) throws SSLException {
         this(certChainFile, trustManagerFactory, null, null, null, null,
-                ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
+             ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
     }
 
     /**
@@ -163,7 +162,7 @@ public final class OpenSslClientContext extends OpenSslContext {
      * @param cipherFilter a filter to apply over the supplied list of ciphers
      * @param apn Application Protocol Negotiator object.
      * @param sessionCacheSize the size of the cache used for storing SSL session objects.
-     *                       {@code 0} to use the default value.
+     *                         {@code 0} to use the default value.
      * @param sessionTimeout the timeout for the cached SSL session objects, in seconds.
      *                       {@code 0} to use the default value.
      * @deprecated use {@link SslContextBuilder}

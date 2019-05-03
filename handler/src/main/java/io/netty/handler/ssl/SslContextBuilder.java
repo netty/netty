@@ -165,7 +165,7 @@ public final class SslContextBuilder {
     }
 
     /**
-     * Sets the Keystore type that should be used. {@code null} uses the default one.
+     * Sets the {@link KeyStore} type that should be used. {@code null} uses the default one.
      */
     public SslContextBuilder keyStoreType(String keyStoreType) {
         this.keyStoreType = keyStoreType;

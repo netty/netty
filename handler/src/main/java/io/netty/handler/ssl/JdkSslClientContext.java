@@ -113,8 +113,7 @@ public final class JdkSslClientContext extends JdkSslContext {
             Iterable<String> ciphers, Iterable<String> nextProtocols,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
         this(certChainFile, trustManagerFactory, ciphers, IdentityCipherSuiteFilter.INSTANCE,
-                toNegotiator(toApplicationProtocolConfig(nextProtocols), false),
-                sessionCacheSize, sessionTimeout);
+             toNegotiator(toApplicationProtocolConfig(nextProtocols), false), sessionCacheSize, sessionTimeout);
     }
 
     /**
@@ -167,8 +166,7 @@ public final class JdkSslClientContext extends JdkSslContext {
             File certChainFile, TrustManagerFactory trustManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout) throws SSLException {
-        this(null, certChainFile, trustManagerFactory, ciphers, cipherFilter, apn,
-                sessionCacheSize, sessionTimeout);
+        this(null, certChainFile, trustManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout);
     }
 
     JdkSslClientContext(Provider provider,
