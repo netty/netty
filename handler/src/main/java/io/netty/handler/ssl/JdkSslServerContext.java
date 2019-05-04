@@ -226,8 +226,10 @@ public final class JdkSslServerContext extends JdkSslContext {
      */
     @Deprecated
     public JdkSslServerContext(File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
-                               File keyCertChainFile, File keyFile, String keyPassword, KeyManagerFactory keyManagerFactory,
-                               Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
+                               File keyCertChainFile, File keyFile, String keyPassword,
+                               KeyManagerFactory keyManagerFactory,
+                               Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
+                                JdkApplicationProtocolNegotiator apn,
                                long sessionCacheSize, long sessionTimeout) throws SSLException {
         super(newSSLContext(null, toX509CertificatesInternal(trustCertCollectionFile), trustManagerFactory,
                 toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
