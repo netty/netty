@@ -542,11 +542,11 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         @Override
         public void onWindowUpdateRead(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement) {
-            if (streamId == 0) {
-                // Ignore connection window updates.
-                return;
+            DefaultHttp2WindowUpdateFrame frame = new DefaultHttp2WindowUpdateFrame(windowSizeIncrement);
+            if (streamId != 0) {
+                frame.stream(requireStream(streamId));
             }
-            onHttp2Frame(ctx, new DefaultHttp2WindowUpdateFrame(windowSizeIncrement).stream(requireStream(streamId)));
+            onHttp2Frame(ctx, frame);
         }
 
         @Override

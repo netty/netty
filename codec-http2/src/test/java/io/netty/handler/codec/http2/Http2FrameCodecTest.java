@@ -505,7 +505,10 @@ public class Http2FrameCodecTest {
         assertEquals(3, windowUpdateFrame.stream().id());
         assertEquals(100, windowUpdateFrame.windowSizeIncrement());
 
-        // Window update for the connection should not be forwarded.
+        windowUpdateFrame = inboundHandler.readInbound();
+        assertNull(windowUpdateFrame.stream());
+        assertEquals(100, windowUpdateFrame.windowSizeIncrement());
+
         assertNull(inboundHandler.readInbound());
     }
 

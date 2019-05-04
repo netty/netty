@@ -231,7 +231,12 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
     final void onHttp2Frame(ChannelHandlerContext ctx, Http2Frame frame) {
         if (frame instanceof Http2StreamFrame) {
             Http2StreamFrame streamFrame = (Http2StreamFrame) frame;
-            ((Http2MultiplexCodecStream) streamFrame.stream()).channel.fireChildRead(streamFrame);
+            if (streamFrame.stream() == null) {
+                // A frame that is for the connection itself.
+                ctx.fireChannelRead(frame);
+            } else {
+                ((Http2MultiplexCodecStream) streamFrame.stream()).channel.fireChildRead(streamFrame);
+            }
         } else if (frame instanceof Http2GoAwayFrame) {
             onHttp2GoAwayFrame(ctx, (Http2GoAwayFrame) frame);
             // Allow other handlers to act on GOAWAY frame
