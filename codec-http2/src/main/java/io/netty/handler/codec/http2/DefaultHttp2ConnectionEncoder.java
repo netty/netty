@@ -420,7 +420,12 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         FlowControlledData(Http2Stream stream, ByteBuf buf, int padding, boolean endOfStream,
                                    ChannelPromise promise) {
             super(stream, padding, endOfStream, promise);
-            queue = new CoalescingBufferQueue(promise.channel());
+            // Construct the CoalescingBufferQueue in a way that will notify the Channel about the amount of queued
+            // data and so update the writablity state of the Channel.
+            //
+            // This way Channel.isWritable() will also take things into account that are currently queued in the
+            // Http2RemoteFlowController.
+            queue = new CoalescingBufferQueue(promise.channel(), 4, true);
             queue.add(buf, promise);
             dataSize = queue.readableBytes();
         }

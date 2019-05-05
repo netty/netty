@@ -832,9 +832,9 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     }
 
     @Test
-    public void nonWritableChannelDoesNotAttemptToWrite() throws Exception {
+    public void nonWritableChannelAttemptToWrite() throws Exception {
         // Start the channel as not writable and exercise the public methods of the flow controller
-        // making sure no frames are written.
+        // making sure frames are written even when the Channel is not writable.
         setChannelWritability(false);
         assertWritabilityChanged(1, false);
         reset(listener);
@@ -844,24 +844,20 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
 
         controller.addFlowControlled(stream, dataA);
         controller.writePendingBytes();
-        dataA.assertNotWritten();
+        dataA.assertFullyWritten();
 
         controller.incrementWindowSize(stream, 100);
         controller.writePendingBytes();
-        dataA.assertNotWritten();
 
         controller.addFlowControlled(stream, dataB);
         controller.writePendingBytes();
-        dataA.assertNotWritten();
-        dataB.assertNotWritten();
+        dataB.assertFullyWritten();
         assertWritabilityChanged(0, false);
 
         // Now change the channel to writable and make sure frames are written.
         setChannelWritability(true);
         assertWritabilityChanged(1, true);
         controller.writePendingBytes();
-        dataA.assertFullyWritten();
-        dataB.assertFullyWritten();
     }
 
     @Test
@@ -999,7 +995,6 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     }
 
     private void setChannelWritability(boolean isWritable) throws Http2Exception {
-        when(channel.bytesBeforeUnwritable()).thenReturn(isWritable ? Long.MAX_VALUE : 0);
         when(channel.isWritable()).thenReturn(isWritable);
         if (controller != null) {
             controller.channelWritabilityChanged();

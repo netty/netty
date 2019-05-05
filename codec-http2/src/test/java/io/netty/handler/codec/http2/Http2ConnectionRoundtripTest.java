@@ -756,9 +756,15 @@ public class Http2ConnectionRoundtripTest {
                 });
 
                 http2Client.encoder().flowController().initialWindowSize(4);
+
+                long bytesBefore = ctx().channel().unsafe().outboundBuffer().totalPendingWriteBytes();
                 http2Client.encoder().writeData(ctx(), 3, randomBytes(8), 0, false, dataPromise);
                 assertTrue(http2Client.encoder().flowController()
                         .hasFlowControlled(http2Client.connection().stream(3)));
+
+                // Even if we did not flush the flowController we should still see the bytes added to the flowController
+                // reflected in the totalPendingWriteBytes and so taken into account for Channel.isWritable()
+                assertEquals(bytesBefore + 8, ctx().channel().unsafe().outboundBuffer().totalPendingWriteBytes());
 
                 http2Client.flush(ctx());
 
@@ -1054,7 +1060,11 @@ public class Http2ConnectionRoundtripTest {
                 public void run() throws Http2Exception {
                     http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0,
                             false, newPromise());
+
+                    long beforeBytes = ctx().channel().unsafe().outboundBuffer().totalPendingWriteBytes();
                     http2Client.encoder().writeData(ctx(), 3, data.retainedDuplicate(), 0, false, newPromise());
+                    assertEquals(beforeBytes, ctx().channel().unsafe().outboundBuffer().totalPendingWriteBytes()
+                            - data.readableBytes());
 
                     // Write trailers.
                     http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0,
@@ -1078,6 +1088,8 @@ public class Http2ConnectionRoundtripTest {
             out.flush();
             byte[] received = out.toByteArray();
             assertArrayEquals(data.array(), received);
+
+            assertEquals(0, ctx().channel().unsafe().outboundBuffer().totalPendingWriteBytes());
         } finally {
             // Don't wait for server to close streams
             setClientGracefulShutdownTime(0);
