@@ -236,6 +236,16 @@ public class ReadOnlyDirectByteBufferBufTest {
         buf.release();
     }
 
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void getDirectByteBufferBoundaryCheck() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        try {
+            buf.getBytes(-1, ByteBuffer.allocateDirect(0));
+        } finally {
+            buf.release();
+        }
+    }
+
     @Test
     public void testCopy() {
         ByteBuf buf = buffer(((ByteBuffer) allocate(16).putLong(1).putLong(2).flip()).asReadOnlyBuffer());
