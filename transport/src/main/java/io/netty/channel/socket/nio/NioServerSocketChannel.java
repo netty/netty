@@ -41,7 +41,7 @@ import java.util.List;
  * NIO selector based implementation to accept new connections.
  */
 public class NioServerSocketChannel extends AbstractNioMessageChannel
-                             implements io.netty.channel.socket.ServerSocketChannel {
+        implements io.netty.channel.socket.ServerSocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
@@ -63,6 +63,10 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         }
     }
 
+    /**
+     * Channel 对应的配置对象。每种 Channel 实现类，也会对应一个 ChannelConfig 实现类。
+     * 例如，NioServerSocketChannel 类，对应 ServerSocketChannelConfig 配置类。
+     */
     private final ServerSocketChannelConfig config;
 
     /**

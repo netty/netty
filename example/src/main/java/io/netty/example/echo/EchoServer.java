@@ -49,32 +49,37 @@ public final class EchoServer {
         }
 
         // Configure the server.
+        // Create two EventLoopGroup Object ?
+        // Create a boss threadGroup for the server to accept client connections
+        //使用两个 EventLoopGroup 对象( 当然这个对象可以引用同一个对象 )：第一个用于处理它本地 Socket 连接的 IO 事件处理，
+        // 而第二个责负责处理远程客户端的 IO 事件处理。
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+        //The worker threadGroup is created to read and write data on the Socketchannel
         EventLoopGroup workerGroup = new NioEventLoopGroup();
         final EchoServerHandler serverHandler = new EchoServerHandler();
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
-             .channel(NioServerSocketChannel.class)
-             .option(ChannelOption.SO_BACKLOG, 100)
-             .handler(new LoggingHandler(LogLevel.INFO))
-             .childHandler(new ChannelInitializer<SocketChannel>() {
-                 @Override
-                 public void initChannel(SocketChannel ch) throws Exception {
-                     ChannelPipeline p = ch.pipeline();
-                     if (sslCtx != null) {
-                         p.addLast(sslCtx.newHandler(ch.alloc()));
-                     }
-                     //p.addLast(new LoggingHandler(LogLevel.INFO));
-                     p.addLast(serverHandler);
-                 }
-             });
+                    .channel(NioServerSocketChannel.class)
+                    .option(ChannelOption.SO_BACKLOG, 100)
+                    .handler(new LoggingHandler(LogLevel.INFO))
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        public void initChannel(SocketChannel ch) {
+                            ChannelPipeline p = ch.pipeline();
+                            if (sslCtx != null) {
+                                p.addLast(sslCtx.newHandler(ch.alloc()));
+                            }
+                            //p.addLast(new LoggingHandler(LogLevel.INFO));
+                            p.addLast(serverHandler);
+                        }
+                    });
 
-            // Start the server.
+            // Start the server. bind a port ：sync
             ChannelFuture f = b.bind(PORT).sync();
 
-            // Wait until the server socket is closed.
-            f.channel().closeFuture().sync();
+            // Wait until the server socket is closed. 其实就是堵塞等待到服务端关闭
+            f.channel().closeFuture().sync(); //没有关闭服务器，只是关闭了监听
         } finally {
             // Shut down all event loops to terminate all threads.
             bossGroup.shutdownGracefully();

@@ -33,7 +33,7 @@ public class ReflectiveChannelFactory<T extends Channel> implements ChannelFacto
     }
 
     @Override
-    public T newChannel() {
+    public T newChannel() {//反射调用clazz的构造方法 创建 Channel子类对象
         try {
             return clazz.getConstructor().newInstance();
         } catch (Throwable t) {

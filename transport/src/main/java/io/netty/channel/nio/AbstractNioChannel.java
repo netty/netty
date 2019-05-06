@@ -76,9 +76,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     /**
      * Create a new instance
      *
-     * @param parent            the parent {@link Channel} by which this instance was created. May be {@code null}
-     * @param ch                the underlying {@link SelectableChannel} on which it operates
-     * @param readInterestOp    the ops to set to receive data from the {@link SelectableChannel}
+     * @param parent         the parent {@link Channel} by which this instance was created. May be {@code null}
+     * @param ch             the underlying {@link SelectableChannel} on which it operates
+     * @param readInterestOp the ops to set to receive data from the {@link SelectableChannel}
      */
     protected AbstractNioChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
         super(parent);
@@ -245,20 +245,25 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             }
 
             try {
+                // 目前有正在连接远程地址的 ChannelPromise ，则直接抛出异常，禁止同时发起多个连接。
                 if (connectPromise != null) {
                     // Already a connect in process.
                     throw new ConnectionPendingException();
                 }
 
+                // 记录 Channel 是否激活
                 boolean wasActive = isActive();
                 if (doConnect(remoteAddress, localAddress)) {
                     fulfillConnectPromise(promise, wasActive);
                 } else {
+                    // 记录 connectPromise
                     connectPromise = promise;
+                    // 记录 requestedRemoteAddress
                     requestedRemoteAddress = remoteAddress;
 
+                    // 使用 EventLoop 发起定时任务，监听连接远程地址超时。若连接超时，则回调通知 connectPromise 超时异常
                     // Schedule connect timeout.
-                    int connectTimeoutMillis = config().getConnectTimeoutMillis();
+                    int connectTimeoutMillis = config().getConnectTimeoutMillis(); //30000
                     if (connectTimeoutMillis > 0) {
                         connectTimeoutFuture = eventLoop().schedule(new Runnable() {
                             @Override
@@ -272,14 +277,16 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                             }
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
-
+                    // 添加监听器，监听连接远程地址取消。
                     promise.addListener(new ChannelFutureListener() {
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
                             if (future.isCancelled()) {
+                                // 取消定时任务
                                 if (connectTimeoutFuture != null) {
                                     connectTimeoutFuture.cancel(false);
                                 }
+                                // 置空 connectPromise
                                 connectPromise = null;
                                 close(voidPromise());
                             }
@@ -381,7 +388,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     @Override
     protected void doRegister() throws Exception {
         boolean selected = false;
-        for (;;) {
+        for (; ; ) {
             try {
                 selectionKey = javaChannel().register(eventLoop().unwrappedSelector(), 0, this);
                 return;

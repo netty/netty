@@ -38,7 +38,6 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * {@link Bootstrap} sub-class which allows easy bootstrap of {@link ServerChannel}
- *
  */
 public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerChannel> {
 
@@ -50,7 +49,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     private volatile EventLoopGroup childGroup;
     private volatile ChannelHandler childHandler;
 
-    public ServerBootstrap() { }
+    public ServerBootstrap() {
+    }
 
     private ServerBootstrap(ServerBootstrap bootstrap) {
         super(bootstrap);
@@ -139,14 +139,15 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
     @Override
     void init(Channel channel) throws Exception {
+        // 初始化 Channel 的可选项集合
         final Map<ChannelOption<?>, Object> options = options0();
         synchronized (options) {
             setChannelOptions(channel, options, logger);
         }
-
+        // 初始化 Channel 的属性集合
         final Map<AttributeKey<?>, Object> attrs = attrs0();
         synchronized (attrs) {
-            for (Entry<AttributeKey<?>, Object> e: attrs.entrySet()) {
+            for (Entry<AttributeKey<?>, Object> e : attrs.entrySet()) {
                 @SuppressWarnings("unchecked")
                 AttributeKey<Object> key = (AttributeKey<Object>) e.getKey();
                 channel.attr(key).set(e.getValue());
@@ -154,7 +155,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         }
 
         ChannelPipeline p = channel.pipeline();
-
+        // 记录当前的属性
         final EventLoopGroup currentChildGroup = childGroup;
         final ChannelHandler currentChildHandler = childHandler;
         final Entry<ChannelOption<?>, Object>[] currentChildOptions;
@@ -165,7 +166,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         synchronized (childAttrs) {
             currentChildAttrs = childAttrs.entrySet().toArray(newAttrArray(0));
         }
-
+        // 添加 ChannelInitializer 对象到 pipeline 中，用于后续初始化 ChannelHandler 到 pipeline 中。
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
             public void initChannel(final Channel ch) throws Exception {
@@ -247,7 +248,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
             setChannelOptions(child, childOptions, logger);
 
-            for (Entry<AttributeKey<?>, Object> e: childAttrs) {
+            for (Entry<AttributeKey<?>, Object> e : childAttrs) {
                 child.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
             }
 

@@ -53,8 +53,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     @SuppressWarnings("deprecation")
     private volatile ChannelFactory<? extends C> channelFactory;
     private volatile SocketAddress localAddress;
+    //可选项集合
     private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
+    //属性集合
     private final Map<AttributeKey<?>, Object> attrs = new LinkedHashMap<AttributeKey<?>, Object>();
+    //处理器
     private volatile ChannelHandler handler;
 
     AbstractBootstrap() {
@@ -62,6 +65,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     AbstractBootstrap(AbstractBootstrap<B, C> bootstrap) {
+        //传入的bootstrap对象的属性 options attrs 很有可能会在其他线程被修改
         group = bootstrap.group;
         channelFactory = bootstrap.channelFactory;
         handler = bootstrap.handler;
@@ -79,10 +83,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * {@link Channel}
      */
     public B group(EventLoopGroup group) {
+        //传入的group
         if (group == null) {
             throw new NullPointerException("group");
         }
-        if (this.group != null) {
+        if (this.group != null) {//只能通过此方法设置group
             throw new IllegalStateException("group set already");
         }
         this.group = group;
@@ -99,17 +104,17 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * You either use this or {@link #channelFactory(io.netty.channel.ChannelFactory)} if your
      * {@link Channel} implementation has no no-args constructor.
      */
-    public B channel(Class<? extends C> channelClass) {
+    public B channel(Class<? extends C> channelClass) { //C extends Channel 设置要被实例化的channel类
         if (channelClass == null) {
             throw new NullPointerException("channelClass");
         }
-        return channelFactory(new ReflectiveChannelFactory<C>(channelClass));
+        return channelFactory(new ReflectiveChannelFactory<C>(channelClass));//使用ReflectiveChannelFactory封装
     }
 
     /**
      * @deprecated Use {@link #channelFactory(io.netty.channel.ChannelFactory)} instead.
      */
-    @Deprecated
+    @Deprecated //原先在bootstrap包中 后面重构到了channel包下面
     public B channelFactory(ChannelFactory<? extends C> channelFactory) {
         if (channelFactory == null) {
             throw new NullPointerException("channelFactory");
@@ -129,7 +134,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * has a no-args constructor, its highly recommend to just use {@link #channel(Class)} to
      * simplify your code.
      */
-    @SuppressWarnings({ "unchecked", "deprecation" })
+    @SuppressWarnings({"unchecked", "deprecation"})
     public B channelFactory(io.netty.channel.ChannelFactory<? extends C> channelFactory) {
         return channelFactory((ChannelFactory<C>) channelFactory);
     }
@@ -207,7 +212,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * Validate all the parameters. Sub-classes may override this, but should
      * call the super method in that case.
      */
-    public B validate() {
+    public B validate() {//校验配置是否正确
         if (group == null) {
             throw new IllegalStateException("group not set");
         }
@@ -238,11 +243,13 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * Create a new {@link Channel} and bind it.
      */
     public ChannelFuture bind() {
+        //校验服务启动必要的参数
         validate();
         SocketAddress localAddress = this.localAddress;
         if (localAddress == null) {
             throw new IllegalStateException("localAddress not set");
         }
+        // 绑定本地地址( 包括端口 )
         return doBind(localAddress);
     }
 
@@ -279,16 +286,17 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     private ChannelFuture doBind(final SocketAddress localAddress) {
+        //首先注册Channel对象，因为注册是一个异步的过程，所以返回一个ChannelFuture对象
         final ChannelFuture regFuture = initAndRegister();
         final Channel channel = regFuture.channel();
-        if (regFuture.cause() != null) {
+        if (regFuture.cause() != null) {//直接返回
             return regFuture;
         }
-
-        if (regFuture.isDone()) {
+        //绑定Channel的端口，并注册Channel到SelectionKey中
+        if (regFuture.isDone()) { //有些会已经完成有些还没有完成
             // At this point we know that the registration was complete and successful.
             ChannelPromise promise = channel.newPromise();
-            doBind0(regFuture, channel, localAddress, promise);
+            doBind0(regFuture, channel, localAddress, promise);//绑定
             return promise;
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
@@ -306,7 +314,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
                         // See https://github.com/netty/netty/issues/2586
                         promise.registered();
 
-                        doBind0(regFuture, channel, localAddress, promise);
+                        doBind0(regFuture, channel, localAddress, promise);//绑定
                     }
                 }
             });
@@ -362,8 +370,10 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         channel.eventLoop().execute(new Runnable() {
             @Override
             public void run() {
+                //注册成功绑定端口
                 if (regFuture.isSuccess()) {
                     channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+                    //注册失败回调通知promise  异常
                 } else {
                     promise.setFailure(regFuture.cause());
                 }
@@ -396,6 +406,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * Returns the {@link AbstractBootstrapConfig} object that can be used to obtain the current config
      * of the bootstrap.
      */
+    //返回当前 AbstractBootstrap 的配置对象
     public abstract AbstractBootstrapConfig<B, C> config();
 
     static <K, V> Map<K, V> copiedMap(Map<K, V> map) {
@@ -440,14 +451,14 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
     static void setChannelOptions(
             Channel channel, Map<ChannelOption<?>, Object> options, InternalLogger logger) {
-        for (Map.Entry<ChannelOption<?>, Object> e: options.entrySet()) {
+        for (Map.Entry<ChannelOption<?>, Object> e : options.entrySet()) {
             setChannelOption(channel, e.getKey(), e.getValue(), logger);
         }
     }
 
     static void setChannelOptions(
             Channel channel, Map.Entry<ChannelOption<?>, Object>[] options, InternalLogger logger) {
-        for (Map.Entry<ChannelOption<?>, Object> e: options) {
+        for (Map.Entry<ChannelOption<?>, Object> e : options) {
             setChannelOption(channel, e.getKey(), e.getValue(), logger);
         }
     }
@@ -468,8 +479,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder()
-            .append(StringUtil.simpleClassName(this))
-            .append('(').append(config()).append(')');
+                .append(StringUtil.simpleClassName(this))
+                .append('(').append(config()).append(')');
         return buf.toString();
     }
 
