@@ -79,22 +79,29 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof SslHandshakeCompletionEvent) {
-            ctx.pipeline().remove(this);
 
-            SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
-            if (handshakeEvent.isSuccess()) {
-                SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
-                if (sslHandler == null) {
-                    throw new IllegalStateException("cannot find a SslHandler in the pipeline (required for " +
-                                                    "application-level protocol negotiation)");
+            try {
+                SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
+                if (handshakeEvent.isSuccess()) {
+                    SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
+                    if (sslHandler == null) {
+                        throw new IllegalStateException("cannot find a SslHandler in the pipeline (required for "
+                                + "application-level protocol negotiation)");
+                    }
+                    String protocol = sslHandler.applicationProtocol();
+                    configurePipeline(ctx, protocol != null ? protocol : fallbackProtocol);
+                } else {
+                    handshakeFailure(ctx, handshakeEvent.cause());
                 }
-                String protocol = sslHandler.applicationProtocol();
-                configurePipeline(ctx, protocol != null? protocol : fallbackProtocol);
-            } else {
-                handshakeFailure(ctx, handshakeEvent.cause());
+            } catch (Throwable cause) {
+                exceptionCaught(ctx, cause);
+            } finally {
+                ChannelPipeline pipeline = ctx.pipeline();
+                if (pipeline.context(this) != null) {
+                    pipeline.remove(this);
+                }
             }
         }
-
         ctx.fireUserEventTriggered(evt);
     }
 
@@ -119,6 +126,7 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         logger.warn("{} Failed to select the application-level protocol:", ctx.channel(), cause);
+        ctx.fireExceptionCaught(cause);
         ctx.close();
     }
 }
