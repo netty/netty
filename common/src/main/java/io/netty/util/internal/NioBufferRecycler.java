@@ -82,18 +82,17 @@ public final class NioBufferRecycler {
 
     public static void recycle(ByteBuffer... buffers) {
         for (ByteBuffer buffer : buffers) {
-            recycle(buffer);
+            recycle(buffer, false);
         }
     }
 
     // must only be used on derived buffers or after explicit deallocation
     static void recycle(ByteBuffer buffer, boolean afterDeallocate) {
-        if (TL_NIO_BUFFER_CACHE != null && buffer != null && buffer.isDirect()) {
-            if (afterDeallocate || PlatformDependent0.isDerivedDirectBuffer(buffer)) {
-                ArrayDeque<ByteBuffer> cache = TL_NIO_BUFFER_CACHE.get();
-                if (cache.size() < MAX_CACHE_SIZE) {
-                    cache.push(PlatformDependent0.resetDirectBuffer(buffer));
-                }
+        if (TL_NIO_BUFFER_CACHE != null && (afterDeallocate ? PlatformDependent0.isReusableType(buffer)
+                : PlatformDependent0.isDerivedDirectBuffer(buffer))) {
+            ArrayDeque<ByteBuffer> cache = TL_NIO_BUFFER_CACHE.get();
+            if (cache.size() < MAX_CACHE_SIZE) {
+                cache.push(PlatformDependent0.resetDirectBuffer(buffer));
             }
         }
     }
