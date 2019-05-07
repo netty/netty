@@ -101,13 +101,7 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
 
     void remove(AbstractKQueueChannel ch) {
         assert inEventLoop();
-        int fd = ch.fd().intValue();
-        // Remove only if that's the same channel
-        // Due to file descriptor reuse another channel might have overwritten
-        // the removed channel in the map
-        if (channels.get(fd) == ch) {
-            channels.remove(fd);
-        }
+        channels.remove(ch.fd().intValue());
     }
 
     /**
