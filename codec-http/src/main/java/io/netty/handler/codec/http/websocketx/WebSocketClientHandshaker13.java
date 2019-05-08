@@ -151,7 +151,6 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * Upgrade: websocket
      * Connection: Upgrade
      * Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
-     * Sec-WebSocket-Origin: http://example.com
      * Sec-WebSocket-Protocol: chat, superchat
      * Sec-WebSocket-Version: 13
      * </pre>
@@ -188,8 +187,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         headers.set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
                .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
                .set(HttpHeaderNames.SEC_WEBSOCKET_KEY, key)
-               .set(HttpHeaderNames.HOST, websocketHostValue(wsURL))
-               .set(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, websocketOriginValue(wsURL));
+               .set(HttpHeaderNames.HOST, websocketHostValue(wsURL));
 
         String expectedSubprotocol = expectedSubprotocol();
         if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
