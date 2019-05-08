@@ -227,6 +227,7 @@ public class DnsNameResolver extends InetNameResolver {
     private final DnsRecordType[] resolveRecordTypes;
     private final boolean decodeIdn;
     private final DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory;
+    private final boolean completeOncePreferredResolved;
 
     /**
      * Creates a new DNS-based name resolver that communicates with the specified list of DNS servers.
@@ -328,7 +329,7 @@ public class DnsNameResolver extends InetNameResolver {
         this(eventLoop, channelFactory, resolveCache, NoopDnsCnameCache.INSTANCE, authoritativeDnsServerCache,
              dnsQueryLifecycleObserverFactory, queryTimeoutMillis, resolvedAddressTypes, recursionDesired,
              maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled, hostsFileEntriesResolver,
-             dnsServerAddressStreamProvider, searchDomains, ndots, decodeIdn);
+             dnsServerAddressStreamProvider, searchDomains, ndots, decodeIdn, false);
     }
 
     DnsNameResolver(
@@ -349,7 +350,8 @@ public class DnsNameResolver extends InetNameResolver {
             DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
             String[] searchDomains,
             int ndots,
-            boolean decodeIdn) {
+            boolean decodeIdn,
+            boolean completeOncePreferredResolved) {
         super(eventLoop);
         this.queryTimeoutMillis = checkPositive(queryTimeoutMillis, "queryTimeoutMillis");
         this.resolvedAddressTypes = resolvedAddressTypes != null ? resolvedAddressTypes : DEFAULT_RESOLVE_ADDRESS_TYPES;
@@ -371,6 +373,7 @@ public class DnsNameResolver extends InetNameResolver {
         this.searchDomains = searchDomains != null ? searchDomains.clone() : DEFAULT_SEARCH_DOMAINS;
         this.ndots = ndots >= 0 ? ndots : DEFAULT_NDOTS;
         this.decodeIdn = decodeIdn;
+        this.completeOncePreferredResolved = completeOncePreferredResolved;
 
         switch (this.resolvedAddressTypes) {
             case IPV4_ONLY:
@@ -954,7 +957,7 @@ public class DnsNameResolver extends InetNameResolver {
         }
 
         if (!doResolveAllCached(hostname, additionals, promise, resolveCache, resolvedInternetProtocolFamilies)) {
-            doResolveAllUncached(hostname, additionals, promise, resolveCache, false);
+            doResolveAllUncached(hostname, additionals, promise, resolveCache, completeOncePreferredResolved);
         }
     }
 

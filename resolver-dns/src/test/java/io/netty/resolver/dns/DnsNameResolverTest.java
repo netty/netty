@@ -65,6 +65,7 @@ import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -2622,7 +2623,7 @@ public class DnsNameResolverTest {
     }
 
     @Test(timeout = 2000)
-    public void testDropAAAAResolveFastFast() throws IOException {
+    public void testDropAAAAResolveFast() throws IOException {
         String host = "somehost.netty.io";
         TestDnsServer dnsServer2 = new TestDnsServer(Collections.singleton(host));
         dnsServer2.start(true);
@@ -2638,6 +2639,52 @@ public class DnsNameResolverTest {
             resolver = builder.build();
             InetAddress address = resolver.resolve(host).syncUninterruptibly().getNow();
             assertEquals(host, address.getHostName());
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
+
+    @Test(timeout = 2000)
+    public void testDropAAAAResolveAllFast() throws IOException {
+        final String host = "somehost.netty.io";
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) throws DnsException {
+                String name = question.getDomainName();
+                if (name.equals(host)) {
+                    Set<ResourceRecord> records = new HashSet<ResourceRecord>(2);
+                    records.add(new TestDnsServer.TestResourceRecord(name, RecordType.A,
+                            Collections.<String, Object>singletonMap(DnsAttribute.IP_ADDRESS.toLowerCase(),
+                                    "10.0.0.1")));
+                    records.add(new TestDnsServer.TestResourceRecord(name, RecordType.A,
+                            Collections.<String, Object>singletonMap(DnsAttribute.IP_ADDRESS.toLowerCase(),
+                                    "10.0.0.2")));
+                    return records;
+                }
+                return null;
+            }
+        });
+        dnsServer2.start(true);
+        DnsNameResolver resolver = null;
+        try {
+            DnsNameResolverBuilder builder = newResolver()
+                    .recursionDesired(false)
+                    .queryTimeoutMillis(10000)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                    .completeOncePreferredResolved(true)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
+
+            resolver = builder.build();
+            List<InetAddress> addresses = resolver.resolveAll(host).syncUninterruptibly().getNow();
+            assertEquals(2, addresses.size());
+            for (InetAddress address: addresses) {
+                assertThat(address, instanceOf(Inet4Address.class));
+                assertEquals(host, address.getHostName());
+            }
         } finally {
             dnsServer2.stop();
             if (resolver != null) {
