@@ -522,6 +522,10 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return {@code true} if the specified string is equal to this string, {@code false} otherwise.
      */
     public boolean contentEqualsIgnoreCase(CharSequence string) {
+        if (this == string) {
+            return true;
+        }
+
         if (string == null || string.length() != length()) {
             return false;
         }
@@ -1036,6 +1040,10 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return {@code true} if equal, otherwise {@code false}
      */
     public boolean contentEquals(CharSequence a) {
+        if (this == a) {
+            return true;
+        }
+
         if (a == null || a.length() != length()) {
             return false;
         }
