@@ -412,16 +412,17 @@ public class HttpPostRequestDecoderTest {
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         decoder.destroy();
     }
-    
+
     @Test
     public void testDecodeOtherMimeHeaderFields() throws Exception {
         final String boundary = "74e78d11b0214bdcbc2f86491eeb4902";
         String filecontent = "123456";
 
         final String body = "--" + boundary + "\r\n" +
-                            "Content-Disposition: form-data; name=\"file\"; filename=" + "\""+"attached.txt"+"\"" + "\r\n"+
-                            "Content-Type: application/octet-stream"+"\r\n"+
-                            "Content-Encoding: gzip"+"\r\n"+
+                            "Content-Disposition: form-data; name=\"file\"; filename=" + "\"" + "attached.txt" + "\"" +
+                            "\r\n" +
+                            "Content-Type: application/octet-stream" + "\r\n" +
+                            "Content-Encoding: gzip" + "\r\n" +
                             "\r\n" +
                             filecontent +
                             "\r\n" +
@@ -445,7 +446,6 @@ public class HttpPostRequestDecoderTest {
         req.release();
     }
 
-    
     @Test
     public void testMultipartRequestWithFileInvalidCharset() throws Exception {
         final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
