@@ -36,7 +36,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThrowableUtil;
@@ -644,6 +643,7 @@ abstract class DnsResolveContext<T> {
         final int answerCount = response.count(DnsSection.ANSWER);
 
         boolean found = false;
+        boolean completeEarly = this.completeEarly;
         for (int i = 0; i < answerCount; i ++) {
             final DnsRecord r = response.recordAt(DnsSection.ANSWER, i);
             final DnsRecordType type = r.type();
@@ -688,27 +688,19 @@ abstract class DnsResolveContext<T> {
             // Check if we did determine we wanted to complete early before. If this is the case we want to not
             // include the result
             if (!completeEarly) {
-                boolean completeEarly = isCompleteEarly(converted);
-                if (completeEarly) {
-                    this.completeEarly = true;
-                }
-                // We want to ensure we do not have duplicates in finalResult as this may be unexpected.
-                //
-                // While using a LinkedHashSet or HashSet may sound like the perfect fit for this we will use an
-                // ArrayList here as duplicates should be found quite unfrequently in the wild and we dont want to pay
-                // for the extra memory copy and allocations in this cases later on.
-                if (finalResult == null) {
-                    if (completeEarly) {
-                        finalResult = Collections.singletonList(converted);
-                    } else {
-                        finalResult = new ArrayList<>(8);
-                        finalResult.add(converted);
-                    }
-                } else if (!finalResult.contains(converted)) {
-                    finalResult.add(converted);
-                } else {
-                    shouldRelease = true;
-                }
+                completeEarly = isCompleteEarly(converted);
+            }
+
+            // We want to ensure we do not have duplicates in finalResult as this may be unexpected.
+            //
+            // While using a LinkedHashSet or HashSet may sound like the perfect fit for this we will use an
+            // ArrayList here as duplicates should be found quite unfrequently in the wild and we dont want to pay
+            // for the extra memory copy and allocations in this cases later on.
+            if (finalResult == null) {
+                finalResult = new ArrayList<>(8);
+                finalResult.add(converted);
+            } else if (!finalResult.contains(converted)) {
+                finalResult.add(converted);
             } else {
                 shouldRelease = true;
             }
@@ -724,6 +716,9 @@ abstract class DnsResolveContext<T> {
 
         if (cnames.isEmpty()) {
             if (found) {
+                if (completeEarly) {
+                    this.completeEarly = true;
+                }
                 queryLifecycleObserver.querySucceed();
                 return;
             }

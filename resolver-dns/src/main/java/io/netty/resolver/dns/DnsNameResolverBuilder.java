@@ -22,6 +22,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayList;
@@ -47,6 +48,7 @@ public final class DnsNameResolverBuilder {
     private Integer negativeTtl;
     private long queryTimeoutMillis = 5000;
     private ResolvedAddressTypes resolvedAddressTypes = DnsNameResolver.DEFAULT_RESOLVE_ADDRESS_TYPES;
+    private boolean completeOncePreferredResolved;
     private boolean recursionDesired = true;
     private int maxQueriesPerResolve = 16;
     private boolean traceEnabled;
@@ -254,6 +256,18 @@ public final class DnsNameResolverBuilder {
     }
 
     /**
+     * If {@code true} {@link DnsNameResolver#resolveAll(String)} will notify the returned {@link Future} as
+     * soon as all queries for the preferred address-type are complete.
+     *
+     * @param completeOncePreferredResolved {@code true} to enable, {@code false} to disable.
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder completeOncePreferredResolved(boolean completeOncePreferredResolved) {
+        this.completeOncePreferredResolved = completeOncePreferredResolved;
+        return this;
+    }
+
+    /**
      * Sets if this resolver has to send a DNS query with the RD (recursion desired) flag set.
      *
      * @param recursionDesired true if recursion is desired
@@ -445,7 +459,8 @@ public final class DnsNameResolverBuilder {
                 dnsServerAddressStreamProvider,
                 searchDomains,
                 ndots,
-                decodeIdn);
+                decodeIdn,
+                completeOncePreferredResolved);
     }
 
     /**
@@ -506,6 +521,7 @@ public final class DnsNameResolverBuilder {
 
         copiedBuilder.ndots(ndots);
         copiedBuilder.decodeIdn(decodeIdn);
+        copiedBuilder.completeOncePreferredResolved(completeOncePreferredResolved);
 
         return copiedBuilder;
     }
