@@ -20,6 +20,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.concurrent.Future;
@@ -40,6 +41,7 @@ import static io.netty.util.internal.ObjectUtil.intValue;
 public final class DnsNameResolverBuilder {
     private EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
+    private ChannelFactory<? extends SocketChannel> socketChannelFactory;
     private DnsCache resolveCache;
     private DnsCnameCache cnameCache;
     private AuthoritativeDnsServerCache authoritativeDnsServerCache;
@@ -113,6 +115,35 @@ public final class DnsNameResolverBuilder {
      */
     public DnsNameResolverBuilder channelType(Class<? extends DatagramChannel> channelType) {
         return channelFactory(new ReflectiveChannelFactory<DatagramChannel>(channelType));
+    }
+
+    /**
+     * Sets the {@link ChannelFactory} that will create a {@link SocketChannel} for
+     * <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> if needed.
+     *
+     * @param channelFactory the {@link ChannelFactory} or {@code null}
+     *                       if <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> should not be supported.
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder socketChannelFactory(ChannelFactory<? extends SocketChannel> channelFactory) {
+        this.socketChannelFactory = channelFactory;
+        return this;
+    }
+
+    /**
+     * Sets the {@link ChannelFactory} as a {@link ReflectiveChannelFactory} of this type for
+     * <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> if needed.
+     * Use as an alternative to {@link #socketChannelFactory(ChannelFactory)}.
+     *
+     * @param channelType the type or {@code null} if <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a>
+     *                    should not be supported.
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder socketChannelType(Class<? extends SocketChannel> channelType) {
+        if (channelType == null) {
+            return socketChannelFactory(null);
+        }
+        return socketChannelFactory(new ReflectiveChannelFactory<SocketChannel>(channelType));
     }
 
     /**
@@ -444,6 +475,7 @@ public final class DnsNameResolverBuilder {
         return new DnsNameResolver(
                 eventLoop,
                 channelFactory,
+                socketChannelFactory,
                 resolveCache,
                 cnameCache,
                 authoritativeDnsServerCache,
@@ -477,6 +509,10 @@ public final class DnsNameResolverBuilder {
 
         if (channelFactory != null) {
             copiedBuilder.channelFactory(channelFactory);
+        }
+
+        if (socketChannelFactory != null) {
+            copiedBuilder.socketChannelFactory(socketChannelFactory);
         }
 
         if (resolveCache != null) {
