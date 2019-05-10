@@ -2597,6 +2597,48 @@ public class DnsNameResolverTest {
     }
 
     @Test
+    public void testIncludeDuplicates() throws IOException {
+        final String name = "netty.io";
+        final String ipv4Addr = "1.2.3.4";
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>(2);
+                String qName = question.getDomainName().toLowerCase();
+                records.add(new TestDnsServer.TestResourceRecord(qName,
+                        RecordType.A, Collections.<String, Object>singletonMap(
+                        DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr)));
+                records.add(new TestDnsServer.TestResourceRecord(qName,
+                        RecordType.A, Collections.<String, Object>singletonMap(
+                        DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr)));
+                return records;
+            }
+        });
+        dnsServer2.start();
+        DnsNameResolver resolver = null;
+        try {
+            DnsNameResolverBuilder builder = newResolver()
+                    .recursionDesired(true)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
+            builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+
+            resolver = builder.build();
+            List<DnsRecord> resolvedAddresses = resolver.resolveAll(new DefaultDnsQuestion(name, A))
+                    .syncUninterruptibly().getNow();
+            assertEquals(2, resolvedAddresses.size());
+            for (DnsRecord record: resolvedAddresses) {
+                ReferenceCountUtil.release(record);
+            }
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
+
+    @Test
     public void testDropAAAA() throws IOException {
         String host = "somehost.netty.io";
         TestDnsServer dnsServer2 = new TestDnsServer(Collections.singleton(host));

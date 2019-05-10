@@ -160,6 +160,12 @@ abstract class DnsResolveContext<T> {
     abstract boolean isCompleteEarly(T resolved);
 
     /**
+     * Returns {@code true} if we should allow duplicates in the result or {@code false} if no duplicates should
+     * be included.
+     */
+    abstract boolean isDuplicateAllowed();
+
+    /**
      * Caches a successful resolution.
      */
     abstract void cache(String hostname, DnsRecord[] additionals,
@@ -706,7 +712,7 @@ abstract class DnsResolveContext<T> {
             if (finalResult == null) {
                 finalResult = new ArrayList<T>(8);
                 finalResult.add(converted);
-            } else if (!finalResult.contains(converted)) {
+            } else if (isDuplicateAllowed() || !finalResult.contains(converted)) {
                 finalResult.add(converted);
             } else {
                 shouldRelease = true;
