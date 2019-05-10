@@ -180,10 +180,6 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         final Future<?> timeoutFuture = ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {
-                if (localHandshakePromise.isDone()) {
-                    return;
-                }
-
                 if (localHandshakePromise.tryFailure(HANDSHAKE_TIMED_OUT_EXCEPTION)) {
                     ctx.flush()
                        .fireUserEventTriggered(ServerHandshakeStateEvent.HANDSHAKE_TIMEOUT)
