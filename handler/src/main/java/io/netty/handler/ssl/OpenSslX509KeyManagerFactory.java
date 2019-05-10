@@ -52,6 +52,8 @@ import java.util.Map;
  * Special {@link KeyManagerFactory} that pre-compute the keymaterial used when {@link SslProvider#OPENSSL} or
  * {@link SslProvider#OPENSSL_REFCNT} is used and so will improve handshake times and its performance.
  *
+ *
+ *
  * Because the keymaterial is pre-computed any modification to the {@link KeyStore} is ignored after
  * {@link #init(KeyStore, char[])} is called.
  *
