@@ -19,7 +19,6 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
-import io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectorFactory;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import java.security.Provider;
@@ -34,7 +33,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;

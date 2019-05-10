@@ -17,6 +17,7 @@
 package io.netty.handler.ssl;
 
 import java.io.File;
+import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.Provider;
 import java.security.cert.X509Certificate;
@@ -45,7 +46,7 @@ final class JdkSslServerContext extends JdkSslContext {
       throws SSLException {
         super(newSSLContext(provider, null, null,
           toX509CertificatesInternal(certChainFile), toPrivateKeyInternal(keyFile, keyPassword),
-          keyPassword, null, sessionCacheSize, sessionTimeout), false,
+          keyPassword, null, sessionCacheSize, sessionTimeout, KeyStore.getDefaultType()), false,
           ciphers, cipherFilter, apn, ClientAuth.NONE, null, false);
     }
 
@@ -63,17 +64,18 @@ final class JdkSslServerContext extends JdkSslContext {
                         long sessionTimeout,
                         ClientAuth clientAuth,
                         String[] protocols,
-                        boolean startTls)
+                        boolean startTls,
+                        String keyStore)
       throws SSLException {
         super(newSSLContext(provider, trustCertCollection, trustManagerFactory, keyCertChain, key,
-          keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout), false,
+          keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout, keyStore), false,
           ciphers, cipherFilter, toNegotiator(apn, true), clientAuth, protocols, startTls);
     }
 
     private static SSLContext newSSLContext(Provider sslContextProvider, X509Certificate[] trustCertCollection,
                                      TrustManagerFactory trustManagerFactory, X509Certificate[] keyCertChain,
                                      PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
-                                     long sessionCacheSize, long sessionTimeout)
+                                     long sessionCacheSize, long sessionTimeout, String keyStore)
             throws SSLException {
         if (key == null && keyManagerFactory == null) {
             throw new NullPointerException("key, keyManagerFactory");
@@ -81,10 +83,10 @@ final class JdkSslServerContext extends JdkSslContext {
 
         try {
             if (trustCertCollection != null) {
-                trustManagerFactory = buildTrustManagerFactory(trustCertCollection, trustManagerFactory);
+                trustManagerFactory = buildTrustManagerFactory(trustCertCollection, trustManagerFactory, keyStore);
             }
             if (key != null) {
-                keyManagerFactory = buildKeyManagerFactory(keyCertChain, key, keyPassword, keyManagerFactory);
+                keyManagerFactory = buildKeyManagerFactory(keyCertChain, key, keyPassword, keyManagerFactory, null);
             }
 
             // Initialize the SSLContext to work with our key managers.

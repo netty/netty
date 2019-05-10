@@ -17,6 +17,7 @@
 package io.netty.handler.ssl;
 
 import java.io.File;
+import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.Provider;
 import java.security.cert.X509Certificate;
@@ -44,7 +45,7 @@ final class JdkSslClientContext extends JdkSslContext {
       throws SSLException {
         super(newSSLContext(provider, toX509CertificatesInternal(trustCertCollectionFile),
           trustManagerFactory, null, null,
-          null, null, sessionCacheSize, sessionTimeout), true,
+          null, null, sessionCacheSize, sessionTimeout, KeyStore.getDefaultType()), true,
           ciphers, cipherFilter, apn, ClientAuth.NONE, null, false);
     }
 
@@ -60,10 +61,11 @@ final class JdkSslClientContext extends JdkSslContext {
                         ApplicationProtocolConfig apn,
                         String[] protocols,
                         long sessionCacheSize,
-                        long sessionTimeout)
+                        long sessionTimeout,
+                        String keyStore)
       throws SSLException {
         super(newSSLContext(sslContextProvider, trustCertCollection, trustManagerFactory,
-          keyCertChain, key, keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout),
+          keyCertChain, key, keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout, keyStore),
           true, ciphers, cipherFilter, toNegotiator(apn, false), ClientAuth.NONE, protocols, false);
     }
 
@@ -71,13 +73,14 @@ final class JdkSslClientContext extends JdkSslContext {
                                             X509Certificate[] trustCertCollection,
                                             TrustManagerFactory trustManagerFactory, X509Certificate[] keyCertChain,
                                             PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
-                                            long sessionCacheSize, long sessionTimeout) throws SSLException {
+                                            long sessionCacheSize, long sessionTimeout,
+                                            String keyStore) throws SSLException {
         try {
             if (trustCertCollection != null) {
-                trustManagerFactory = buildTrustManagerFactory(trustCertCollection, trustManagerFactory);
+                trustManagerFactory = buildTrustManagerFactory(trustCertCollection, trustManagerFactory, keyStore);
             }
             if (keyCertChain != null) {
-                keyManagerFactory = buildKeyManagerFactory(keyCertChain, key, keyPassword, keyManagerFactory);
+                keyManagerFactory = buildKeyManagerFactory(keyCertChain, key, keyPassword, keyManagerFactory, keyStore);
             }
             SSLContext ctx = sslContextProvider == null ? SSLContext.getInstance(PROTOCOL)
                 : SSLContext.getInstance(PROTOCOL, sslContextProvider);

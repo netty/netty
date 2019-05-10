@@ -48,7 +48,8 @@ final class OpenSslServerContext extends OpenSslContext {
                          ClientAuth clientAuth,
                          String[] protocols,
                          boolean startTls,
-                         boolean enableOcsp)
+                         boolean enableOcsp,
+                         String keyStore)
       throws SSLException {
         super(ciphers, cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER,
           keyCertChain, clientAuth, protocols, startTls, enableOcsp);
@@ -57,7 +58,7 @@ final class OpenSslServerContext extends OpenSslContext {
         try {
             OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword);
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
-              keyCertChain, key, keyPassword, keyManagerFactory);
+                                               keyCertChain, key, keyPassword, keyManagerFactory, keyStore);
             success = true;
         } finally {
             if (!success) {

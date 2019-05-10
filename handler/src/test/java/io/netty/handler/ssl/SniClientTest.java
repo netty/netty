@@ -107,8 +107,7 @@ public class SniClientTest {
             } else {
                 // The used OpenSSL version does support a KeyManagerFactory, so use it.
                 KeyManagerFactory kmf = SniClientJava8TestUtil.newSniX509KeyManagerFactory(cert, sniHostName);
-
-               sslServerContext = SslContextBuilder.forServer(kmf)
+                sslServerContext = SslContextBuilder.forServer(kmf)
                                                    .sslProvider(sslServerProvider)
                                                    .build();
             }
