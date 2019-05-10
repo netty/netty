@@ -53,8 +53,13 @@ public final class DnsServerAddressStreamProviders {
         private DnsServerAddressStreamProvider provider() {
             // If on windows just use the DefaultDnsServerAddressStreamProvider.INSTANCE as otherwise
             // we will log some error which may be confusing.
-            return PlatformDependent.isWindows() ? DefaultDnsServerAddressStreamProvider.INSTANCE :
-                    UnixResolverDnsServerAddressStreamProvider.parseSilently();
+            if (PlatformDependent.isWindows()) {
+                return DefaultDnsServerAddressStreamProvider.INSTANCE;
+            }
+            if (PlatformDependent.isOsx()) {
+                return new MacOSDnsServerAddressStreamProvider();
+            }
+            return UnixResolverDnsServerAddressStreamProvider.parseSilently();
         }
     };
 
