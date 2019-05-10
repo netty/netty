@@ -238,7 +238,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
 
                 SslContext serverSslCtx = new JdkSslServerContext(providerType.provider(),
                     ssc.certificate(), ssc.privateKey(), null, null,
-                    IdentityCipherSuiteFilter.INSTANCE, serverApn, 0, 0);
+                    IdentityCipherSuiteFilter.INSTANCE, serverApn, 0, 0, null);
                 SslContext clientSslCtx = new JdkSslClientContext(providerType.provider(), null,
                     InsecureTrustManagerFactory.INSTANCE, null,
                     IdentityCipherSuiteFilter.INSTANCE, clientApn, 0, 0);

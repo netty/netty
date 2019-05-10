@@ -53,6 +53,17 @@ public class SslContextBuilderTest {
     }
 
     @Test
+    public void testKeyStoreTypeJdk() throws Exception {
+        testKeyStoreType(SslProvider.JDK);
+    }
+
+    @Test
+    public void testKeyStoreTypeOpenssl() throws Exception {
+        Assume.assumeTrue(OpenSsl.isAvailable());
+        testKeyStoreType(SslProvider.OPENSSL);
+    }
+
+    @Test
     public void testServerContextFromFileJdk() throws Exception {
         testServerContextFromFile(SslProvider.JDK);
     }
@@ -139,6 +150,17 @@ public class SslContextBuilderTest {
         } catch (SSLException expected) {
             // ok
         }
+    }
+
+    private static void testKeyStoreType(SslProvider provider) throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SslContextBuilder builder = SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
+                .sslProvider(provider)
+                .keyStoreType("PKCS12");
+        SslContext context = builder.build();
+        SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        engine.closeInbound();
+        engine.closeOutbound();
     }
 
     private static void testInvalidCipher(SslProvider provider) throws Exception {
