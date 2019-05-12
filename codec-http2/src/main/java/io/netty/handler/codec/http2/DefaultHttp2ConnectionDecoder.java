@@ -562,7 +562,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 // Its possible that this frame would result in stream ID out of order creation (PROTOCOL ERROR) and its
                 // also possible that this frame is received on a CLOSED stream (STREAM_CLOSED after a RST_STREAM is
                 // sent). We don't have enough information to know for sure, so we choose the lesser of the two errors.
-                throw streamError(streamId, STREAM_CLOSED, "Received %s frame for an unknown stream %d, remote address %s",
+                throw streamError(streamId, STREAM_CLOSED,
+                                  "Received %s frame for an unknown stream %d, remote address %s",
                                   frameName, streamId, ctx.channel().remoteAddress());
             } else if (stream.isResetSent() || streamCreatedAfterGoAwaySent(streamId)) {
                 // If we have sent a reset stream it is assumed the stream will be closed after the write completes.
