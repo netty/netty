@@ -99,8 +99,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * {@link Channel} implementation has no no-args constructor.
      */
     public B channel(Class<? extends C> channelClass) {
-        ObjectUtil.checkNotNull(channelClass, "channelClass");
-        return channelFactory(new ReflectiveChannelFactory<C>(channelClass));
+        return channelFactory(new ReflectiveChannelFactory<C>(
+                ObjectUtil.checkNotNull(channelClass, "channelClass")
+        ));
     }
 
     /**
@@ -263,8 +264,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      */
     public ChannelFuture bind(SocketAddress localAddress) {
         validate();
-        ObjectUtil.checkNotNull(localAddress, "localAddress");
-        return doBind(localAddress);
+        return doBind(ObjectUtil.checkNotNull(localAddress, "localAddress"));
     }
 
     private ChannelFuture doBind(final SocketAddress localAddress) {
@@ -364,8 +364,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * the {@link ChannelHandler} to use for serving the requests.
      */
     public B handler(ChannelHandler handler) {
-        ObjectUtil.checkNotNull(handler, "handler");
-        this.handler = handler;
+        this.handler = ObjectUtil.checkNotNull(handler, "handler");
         return self();
     }
 

@@ -125,8 +125,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      * Set the {@link ChannelHandler} which is used to serve the request for the {@link Channel}'s.
      */
     public ServerBootstrap childHandler(ChannelHandler childHandler) {
-        ObjectUtil.checkNotNull(childHandler, "childHandler");
-        this.childHandler = childHandler;
+        this.childHandler = ObjectUtil.checkNotNull(childHandler, "childHandler");
         return this;
     }
 
