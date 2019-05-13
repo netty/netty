@@ -69,6 +69,12 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
     }
 
     @Override
+    boolean isDuplicateAllowed() {
+        // We don't want include duplicates to mimic JDK behaviour.
+        return false;
+    }
+
+    @Override
     void cache(String hostname, DnsRecord[] additionals,
                DnsRecord result, InetAddress convertedResult) {
         resolveCache.cache(hostname, additionals, convertedResult, result.timeToLive(), parent.ch.eventLoop());
