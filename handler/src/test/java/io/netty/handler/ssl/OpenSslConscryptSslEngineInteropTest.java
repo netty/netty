@@ -116,6 +116,13 @@ public class OpenSslConscryptSslEngineInteropTest extends ConscryptSslEngineTest
     }
 
     @Override
+    @Test
+    public void testSupportedSignatureAlgorithms() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testSupportedSignatureAlgorithms();
+    }
+
+    @Override
     protected boolean mySetupMutualAuthServerIsValidServerException(Throwable cause) {
         // TODO(scott): work around for a JDK issue. The exception should be SSLHandshakeException.
         return super.mySetupMutualAuthServerIsValidServerException(cause) || causedBySSLException(cause);
