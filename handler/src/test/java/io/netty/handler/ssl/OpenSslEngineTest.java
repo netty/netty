@@ -152,6 +152,13 @@ public class OpenSslEngineTest extends SSLEngineTest {
         super.testHandshakeSession();
     }
 
+    @Override
+    @Test
+    public void testSupportedSignatureAlgorithms() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testSupportedSignatureAlgorithms();
+    }
+
     private static boolean isNpnSupported(String versionString) {
         String[] versionStringParts = versionString.split(" ", -1);
         if (versionStringParts.length == 2 && "LibreSSL".equals(versionStringParts[0])) {
