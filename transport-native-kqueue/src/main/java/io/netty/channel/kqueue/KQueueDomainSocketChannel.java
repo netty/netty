@@ -150,6 +150,7 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
             allocHandle.reset(config);
             readReadyBefore();
 
+            boolean interrupted = false;
             try {
                 readLoop: do {
                     // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
@@ -171,7 +172,7 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
                             pipeline.fireChannelRead(new FileDescriptor(recvFd));
                             break;
                     }
-                } while (allocHandle.continueReading());
+                } while (!(interrupted = interrupted()) && allocHandle.continueReading());
 
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
@@ -180,7 +181,7 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
                 pipeline.fireChannelReadComplete();
                 pipeline.fireExceptionCaught(t);
             } finally {
-                readReadyFinally(config);
+                readReadyFinally(config, interrupted);
             }
         }
     }

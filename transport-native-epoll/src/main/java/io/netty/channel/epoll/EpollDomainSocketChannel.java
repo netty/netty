@@ -158,6 +158,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
             allocHandle.reset(config);
             epollInBefore();
 
+            boolean interrupted = false;
             try {
                 readLoop: do {
                     // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
@@ -176,7 +177,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
                         pipeline.fireChannelRead(new FileDescriptor(allocHandle.lastBytesRead()));
                         break;
                     }
-                } while (allocHandle.continueReading());
+                } while (!(interrupted = interrupted()) && allocHandle.continueReading());
 
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
@@ -185,7 +186,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
                 pipeline.fireChannelReadComplete();
                 pipeline.fireExceptionCaught(t);
             } finally {
-                epollInFinally(config);
+                epollInFinally(config, interrupted);
             }
         }
     }

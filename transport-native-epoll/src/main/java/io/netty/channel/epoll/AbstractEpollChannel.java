@@ -30,6 +30,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
+import io.netty.channel.Interruptible;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
@@ -56,7 +57,7 @@ import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.UnixChannelUtil.computeRemoteAddr;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel {
+abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel, Interruptible {
     private static final ClosedChannelException DO_CLOSE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
             new ClosedChannelException(), AbstractEpollChannel.class, "doClose()");
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
@@ -77,6 +78,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     boolean epollInReadyRunnablePending;
 
     protected volatile boolean active;
+
+    private volatile boolean interrupted;
 
     AbstractEpollChannel(LinuxSocket fd) {
         this(null, fd, false);
@@ -244,7 +247,23 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 ((SocketChannelConfig) config).isAllowHalfClosure();
     }
 
-    final void clearEpollIn() {
+    final boolean interrupted() {
+      if (interrupted) {
+        interrupted = false;
+        return true;
+      }
+      return false;
+    }
+
+    @Override
+    public final void interrupt() {
+        if (!interrupted) {
+          interrupted = true;
+          clearEpollIn(true);
+        }
+    }
+
+    private void clearEpollIn(final boolean interrupted) {
         // Only clear if registered with an EventLoop as otherwise
         if (isRegistered()) {
             final EventLoop loop = eventLoop();
@@ -256,7 +275,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 loop.execute(new Runnable() {
                     @Override
                     public void run() {
-                        if (!unsafe.readPending && !config().isAutoRead()) {
+                        if (!unsafe.readPending && (interrupted || !config().isAutoRead())) {
                             // Still no read triggered so clear it now
                             unsafe.clearEpollIn0();
                         }
@@ -395,7 +414,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             maybeMoreDataToRead = false;
         }
 
-        final void epollInFinally(ChannelConfig config) {
+        final void epollInFinally(ChannelConfig config, boolean interrupted) {
             maybeMoreDataToRead = allocHandle.maybeMoreDataToRead();
 
             if (allocHandle.isReceivedRdHup() || (readPending && maybeMoreDataToRead)) {
@@ -407,14 +426,14 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 // to false before every read operation to prevent re-entry into epollInReady() we will not read from
                 // the underlying OS again unless the user happens to call read again.
                 executeEpollInReadyRunnable(config);
-            } else if (!readPending && !config.isAutoRead()) {
+            } else if (!readPending && (interrupted || !config.isAutoRead())) {
                 // Check if there is a readPending which was not processed yet.
                 // This could be for two reasons:
                 // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
                 // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
                 //
                 // See https://github.com/netty/netty/issues/2254
-                clearEpollIn();
+                clearEpollIn(interrupted);
             }
         }
 
@@ -476,7 +495,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                         // We attempted to shutdown and failed, which means the input has already effectively been
                         // shutdown.
                     }
-                    clearEpollIn();
+                    clearEpollIn(true);
                     pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                 } else {
                     close(voidPromise());

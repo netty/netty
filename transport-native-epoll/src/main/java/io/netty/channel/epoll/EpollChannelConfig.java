@@ -175,11 +175,6 @@ public class EpollChannelConfig extends DefaultChannelConfig {
         }
     }
 
-    @Override
-    protected final void autoReadCleared() {
-        ((AbstractEpollChannel) channel).clearEpollIn();
-    }
-
     final void setMaxBytesPerGatheringWrite(long maxBytesPerGatheringWrite) {
         this.maxBytesPerGatheringWrite = maxBytesPerGatheringWrite;
     }

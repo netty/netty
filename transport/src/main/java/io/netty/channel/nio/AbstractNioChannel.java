@@ -27,6 +27,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
+import io.netty.channel.Interruptible;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.ThrowableUtil;
@@ -42,11 +43,12 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * Abstract base class for {@link Channel} implementations which use a Selector based approach.
  */
-public abstract class AbstractNioChannel extends AbstractChannel {
+public abstract class AbstractNioChannel extends AbstractChannel implements Interruptible {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AbstractNioChannel.class);
@@ -55,6 +57,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             new ClosedChannelException(), AbstractNioChannel.class, "doClose()");
 
     private final SelectableChannel ch;
+    private volatile boolean interrupted;
     protected final int readInterestOp;
     volatile SelectionKey selectionKey;
     boolean readPending;
@@ -159,6 +162,22 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             // NB: We only set the boolean field instead of calling clearReadPending0(), because the SelectionKey is
             // not set yet so it would produce an assertion failure.
             this.readPending = readPending;
+        }
+    }
+
+    final boolean interrupted() {
+        if (interrupted) {
+            interrupted = false;
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public final void interrupt() {
+        if (!interrupted) {
+            interrupted = true;
+            clearReadPending();
         }
     }
 

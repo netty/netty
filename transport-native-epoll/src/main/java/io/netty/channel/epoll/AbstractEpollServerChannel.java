@@ -103,6 +103,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
             epollInBefore();
 
             Throwable exception = null;
+            boolean interrupted = false;
             try {
                 try {
                     do {
@@ -119,7 +120,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                         readPending = false;
                         pipeline.fireChannelRead(newChildChannel(allocHandle.lastBytesRead(), acceptedAddress, 1,
                                                                  acceptedAddress[0]));
-                    } while (allocHandle.continueReading());
+                    } while (!(interrupted = interrupted()) && allocHandle.continueReading());
                 } catch (Throwable t) {
                     exception = t;
                 }
@@ -130,7 +131,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                     pipeline.fireExceptionCaught(exception);
                 }
             } finally {
-                epollInFinally(config);
+                epollInFinally(config, interrupted);
             }
         }
     }

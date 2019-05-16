@@ -19,6 +19,7 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.Interruptible;
 import io.netty.channel.ThreadPerChannelEventLoop;
 
 import java.net.SocketAddress;
@@ -29,10 +30,10 @@ import java.net.SocketAddress;
  * @deprecated use NIO / EPOLL / KQUEUE transport.
  */
 @Deprecated
-public abstract class AbstractOioChannel extends AbstractChannel {
-
+public abstract class AbstractOioChannel extends AbstractChannel implements Interruptible {
     protected static final int SO_TIMEOUT = 1000;
 
+    private volatile boolean interrupted;
     boolean readPending;
     private final Runnable readTask = new Runnable() {
         @Override
@@ -139,6 +140,22 @@ public abstract class AbstractOioChannel extends AbstractChannel {
             }
         } else {
             this.readPending = readPending;
+        }
+    }
+
+    final boolean interrupted() {
+        if (interrupted) {
+            interrupted = false;
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public final void interrupt() {
+        if (!interrupted) {
+            interrupted = true;
+            clearReadPending();
         }
     }
 

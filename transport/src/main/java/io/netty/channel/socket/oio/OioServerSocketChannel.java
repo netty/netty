@@ -204,8 +204,4 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     protected void setReadPending(boolean readPending) {
         super.setReadPending(readPending);
     }
-
-    final void clearReadPending0() {
-        super.clearReadPending();
-    }
 }

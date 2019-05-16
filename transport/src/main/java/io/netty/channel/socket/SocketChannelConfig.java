@@ -185,5 +185,4 @@ public interface SocketChannelConfig extends ChannelConfig {
 
     @Override
     SocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark);
-
 }

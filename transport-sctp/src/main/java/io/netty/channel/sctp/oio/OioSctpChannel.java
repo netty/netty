@@ -34,6 +34,7 @@ import io.netty.channel.sctp.SctpChannelConfig;
 import io.netty.channel.sctp.SctpMessage;
 import io.netty.channel.sctp.SctpNotificationHandler;
 import io.netty.channel.sctp.SctpServerChannel;
+import io.netty.channel.sctp.nio.NioSctpChannel;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -464,11 +465,6 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     private final class OioSctpChannelConfig extends DefaultSctpChannelConfig {
         private OioSctpChannelConfig(OioSctpChannel channel, SctpChannel javaChannel) {
             super(channel, javaChannel);
-        }
-
-        @Override
-        protected void autoReadCleared() {
-            clearReadPending();
         }
     }
 }

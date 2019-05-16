@@ -469,11 +469,6 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         }
 
         @Override
-        protected void autoReadCleared() {
-            clearReadPending();
-        }
-
-        @Override
         public NioSocketChannelConfig setSendBufferSize(int sendBufferSize) {
             super.setSendBufferSize(sendBufferSize);
             calculateMaxBytesPerGatheringWrite();

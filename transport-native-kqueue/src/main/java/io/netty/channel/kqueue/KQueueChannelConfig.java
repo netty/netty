@@ -150,11 +150,6 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
         return this;
     }
 
-    @Override
-    protected final void autoReadCleared() {
-        ((AbstractKQueueChannel) channel).clearReadFilter();
-    }
-
     final void setMaxBytesPerGatheringWrite(long maxBytesPerGatheringWrite) {
         this.maxBytesPerGatheringWrite = min(SSIZE_MAX, maxBytesPerGatheringWrite);
     }

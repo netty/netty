@@ -302,10 +302,5 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
         private OioSctpServerChannelConfig(OioSctpServerChannel channel, SctpServerChannel javaChannel) {
             super(channel, javaChannel);
         }
-
-        @Override
-        protected void autoReadCleared() {
-            clearReadPending();
-        }
     }
 }
