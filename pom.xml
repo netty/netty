@@ -74,7 +74,7 @@
       <activation>
         <file>
           <!-- GraalVM Component Updater should exists when using GraalVM-->
-          <exists>${java.home}/bin/native-image</exists>
+          <exists>${java.home}/bin/gu</exists>
         </file>
       </activation>
       <properties>
