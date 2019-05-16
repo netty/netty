@@ -310,7 +310,7 @@ public class FixedChannelPoolTest {
             pool.release(channel).syncUninterruptibly();
             fail();
         } catch (IllegalStateException e) {
-            assertSame(FixedChannelPool.POOL_CLOSED_ON_RELEASE_EXCEPTION, e);
+            // expected
         }
         // Since the pool is closed, the Channel should have been closed as well.
         channel.closeFuture().syncUninterruptibly();
