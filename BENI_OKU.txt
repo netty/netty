@@ -1,0 +1,47 @@
+Netty Projesi
+
+Netty, sürdürülebilir yüksek performansli protokol sunucularinin ve istemcilerin hizli bir sekilde gelistirilmesine yönelik, eszamansiz bir olaya dayali ag uygulama çerçevesidir.
+
+Nasil insa edilir
+Netty olusturma ve gelistirme hakkinda ayrintili bilgi için, lütfen gelistirici kilavuzunu ziyaret edin. Bu sayfa sadece çok temel bilgiler verir.
+
+Netty olusturmak için asagidakilere ihtiyaciniz var:
+
+Son kararli Oracle JDK 7
+Son kararli Apache Maven
+Eger Linux kullaniyorsaniz, yerel tasimayi insa edeceginiz için sisteminizde kurulu ek gelistirme paketlerine ihtiyaciniz var.
+Bunun derleme zamani gerekliligi olduguna dikkat edin. Netty tabanli uygulamanizi çalistirmak için JDK 5 (3.x için) veya 6 (4.0+ için) yeterlidir.
+
+Dallari aramak
+Tüm sürümlerin gelistirilmesi, adi <majorVersion>. <minorVersion> ile ayni olan her dalda gerçeklestirilir. Örnegin, 3.9 ve 4.0'in gelisimi sirasiyla '3.9' dalinda ve '4.0' dalinda bulunur.
+
+JDK 9 ile kullanimi
+Netty, modüler JDK9 uygulamalarinda otomatik modül koleksiyonu olarak kullanilabilir. Modül adlari, ters DNS stilini takip eder ve geçmis nedenlerden dolayi kök paketlerden ziyade alt proje adlarindan türetilir. Asagida listelenmistir:
+
+io.netty.all
+io.netty.buffer
+io.netty.codec
+io.netty.codec.dns
+io.netty.codec.haproxy
+io.netty.codec.http
+io.netty.codec.http2
+io.netty.codec.memcache
+io.netty.codec.mqtt
+io.netty.codec.redis
+io.netty.codec.smtp
+io.netty.codec.socks
+io.netty.codec.stomp
+io.netty.codec.xml
+io.netty.common
+io.netty.handler
+io.netty.handler.proxy
+io.netty.resolver
+io.netty.resolver.dns
+io.netty.transport
+io.netty.transport.epoll (yerel ihmal edilmis - Java’da ayrilmis anahtar kelime)
+io.netty.transport.kqueue (yerel ihmal edilmis - Java’da ayrilmis anahtar kelime)
+io.netty.transport.unix.common (yerel ihmal edilmis - Java’da ayrilmis anahtar kelime)
+io.netty.transport.rxtx
+io.netty.transport.sctp
+io.netty.transport.udt
+Otomatik modüller bagimliliklari bildirmek için herhangi bir araç saglamaz, bu yüzden modül modülünüzdeki her bir modülü ayri ayri listelemeniz gerekir.
