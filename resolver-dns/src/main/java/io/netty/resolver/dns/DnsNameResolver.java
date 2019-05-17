@@ -1272,14 +1272,14 @@ public class DnsNameResolver extends InetNameResolver {
                                     @Override
                                     public void operationComplete(
                                             Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future) {
+                                        channel.close();
+
                                         if (future.isSuccess()) {
                                             qCtx.finish(future.getNow());
                                         } else {
                                             // TCP fallback failed, just use the truncated response.
                                             qCtx.finish(res);
                                         }
-
-                                        channel.close();
                                     }
                                 });
                             } else {
