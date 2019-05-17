@@ -20,6 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.internal.ThrowableUtil;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -31,6 +32,11 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  * Manages streams within a SPDY session.
  */
 public class SpdySessionHandler extends ChannelDuplexHandler {
+
+    private static final SpdyProtocolException PROTOCOL_EXCEPTION = ThrowableUtil.unknownStackTrace(
+            SpdyProtocolException.newStatic(null), SpdySessionHandler.class, "handleOutboundMessage(...)");
+    private static final SpdyProtocolException STREAM_CLOSED = ThrowableUtil.unknownStackTrace(
+            SpdyProtocolException.newStatic("Stream closed"), SpdySessionHandler.class, "removeStream(...)");
 
     private static final int DEFAULT_WINDOW_SIZE = 64 * 1024; // 64 KB default initial window size
     private int initialSendWindowSize    = DEFAULT_WINDOW_SIZE;
@@ -456,7 +462,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamId)) {
                 spdyDataFrame.release();
-                promise.setFailure(new SpdyProtocolException());
+                promise.setFailure(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -535,7 +541,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
             int streamId = spdySynStreamFrame.streamId();
 
             if (isRemoteInitiatedId(streamId)) {
-                promise.setFailure(new SpdyProtocolException());
+                promise.setFailure(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -543,7 +549,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
             boolean remoteSideClosed = spdySynStreamFrame.isUnidirectional();
             boolean localSideClosed = spdySynStreamFrame.isLast();
             if (!acceptStream(streamId, priority, remoteSideClosed, localSideClosed)) {
-                promise.setFailure(new SpdyProtocolException());
+                promise.setFailure(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -554,7 +560,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
 
             // Frames must not be sent on half-closed streams
             if (!isRemoteInitiatedId(streamId) || spdySession.isLocalSideClosed(streamId)) {
-                promise.setFailure(new SpdyProtocolException());
+                promise.setFailure(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -575,7 +581,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
             int settingsMinorVersion = spdySettingsFrame.getValue(SpdySettingsFrame.SETTINGS_MINOR_VERSION);
             if (settingsMinorVersion >= 0 && settingsMinorVersion != minorVersion) {
                 // Settings frame had the wrong minor version
-                promise.setFailure(new SpdyProtocolException());
+                promise.setFailure(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -613,7 +619,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
 
             // Why is this being sent? Intercept it and fail the write.
             // Should have sent a CLOSE ChannelStateEvent
-            promise.setFailure(new SpdyProtocolException("Stream closed"));
+            promise.setFailure(PROTOCOL_EXCEPTION);
             return;
 
         } else if (msg instanceof SpdyHeadersFrame) {
@@ -623,7 +629,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
 
             // Frames must not be sent on half-closed streams
             if (spdySession.isLocalSideClosed(streamId)) {
-                promise.setFailure(new SpdyProtocolException("Stream closed"));
+                promise.setFailure(PROTOCOL_EXCEPTION);
                 return;
             }
 
@@ -635,7 +641,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
         } else if (msg instanceof SpdyWindowUpdateFrame) {
 
             // Why is this being sent? Intercept it and fail the write.
-            promise.setFailure(new SpdyProtocolException("Stream closed"));
+            promise.setFailure(PROTOCOL_EXCEPTION);
             return;
         }
 
@@ -737,7 +743,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
     }
 
     private void removeStream(int streamId, ChannelFuture future) {
-        spdySession.removeStream(streamId, new SpdyProtocolException("Stream closed"), isRemoteInitiatedId(streamId));
+        spdySession.removeStream(streamId, STREAM_CLOSED, isRemoteInitiatedId(streamId));
 
         if (closeSessionFutureListener != null && spdySession.noActiveStreams()) {
             future.addListener(closeSessionFutureListener);

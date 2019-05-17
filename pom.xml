@@ -873,7 +873,6 @@
             <ignore>java.nio.file.LinkOption</ignore>
             <ignore>java.nio.file.Path</ignore>
             <ignore>java.io.File</ignore>
-
           </ignores>
           <annotations>
             <annotation>io.netty.util.internal.SuppressJava6Requirement</annotation>
