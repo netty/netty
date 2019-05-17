@@ -45,7 +45,6 @@ import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -172,18 +171,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             "^.*(?:Socket|Datagram|Sctp|Udt)Channel.*$");
     private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
             "^.*(?:connection.*(?:reset|closed|abort|broken)|broken.*pipe).*$", Pattern.CASE_INSENSITIVE);
-
-    /**
-     * Used in {@link #unwrapNonAppData(ChannelHandlerContext)} as input for
-     * {@link #unwrap(ChannelHandlerContext, ByteBuf, int,  int)}.  Using this static instance reduce object
-     * creation as {@link Unpooled#EMPTY_BUFFER#nioBuffer()} creates a new {@link ByteBuffer} everytime.
-     */
-    private static final SSLException SSLENGINE_CLOSED = ThrowableUtil.unknownStackTrace(
-            new SSLException("SSLEngine closed already"), SslHandler.class, "wrap(...)");
-    private static final SSLException HANDSHAKE_TIMED_OUT = ThrowableUtil.unknownStackTrace(
-            new SSLException("handshake timed out"), SslHandler.class, "handshake(...)");
-    private static final ClosedChannelException CHANNEL_CLOSED = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), SslHandler.class, "channelInactive(...)");
 
     /**
      * <a href="https://tools.ietf.org/html/rfc5246#section-6.2">2^14</a> which is the maximum sized plaintext chunk
@@ -844,11 +831,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (result.getStatus() == Status.CLOSED) {
                     buf.release();
                     buf = null;
-                    promise.tryFailure(SSLENGINE_CLOSED);
+                    SSLException exception = new SSLException("SSLEngine closed already");
+                    promise.tryFailure(exception);
                     promise = null;
                     // SSLEngine has been closed already.
                     // Any further write attempts should be denied.
-                    pendingUnencryptedWrites.releaseAndFailAll(ctx, SSLENGINE_CLOSED);
+                    pendingUnencryptedWrites.releaseAndFailAll(ctx, exception);
                     return;
                 } else {
                     if (buf.isReadable()) {
@@ -1068,12 +1056,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        ClosedChannelException exception = new ClosedChannelException();
         // Make sure to release SSLEngine,
         // and notify the handshake future if the connection has been closed during handshake.
-        setHandshakeFailure(ctx, CHANNEL_CLOSED, !outboundClosed, handshakeStarted, false);
+        setHandshakeFailure(ctx, exception, !outboundClosed, handshakeStarted, false);
 
         // Ensure we always notify the sslClosePromise as well
-        notifyClosePromise(CHANNEL_CLOSED);
+        notifyClosePromise(exception);
 
         super.channelInactive(ctx);
     }
@@ -1988,12 +1977,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (localHandshakePromise.isDone()) {
                     return;
                 }
+                SSLException exception = new SSLException("handshake timed out");
                 try {
-                    if (localHandshakePromise.tryFailure(HANDSHAKE_TIMED_OUT)) {
-                        SslUtils.handleHandshakeFailure(ctx, HANDSHAKE_TIMED_OUT, true);
+                    if (localHandshakePromise.tryFailure(exception)) {
+                        SslUtils.handleHandshakeFailure(ctx, exception, true);
                     }
                 } finally {
-                    releaseAndFailAll(HANDSHAKE_TIMED_OUT);
+                    releaseAndFailAll(exception);
                 }
             }
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);

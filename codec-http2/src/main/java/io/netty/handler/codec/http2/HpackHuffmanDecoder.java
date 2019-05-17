@@ -43,9 +43,11 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 final class HpackHuffmanDecoder {
 
     private static final Http2Exception EOS_DECODED = ThrowableUtil.unknownStackTrace(
-            connectionError(COMPRESSION_ERROR, "HPACK - EOS Decoded"), HpackHuffmanDecoder.class, "decode(..)");
+            Http2Exception.newStatic(COMPRESSION_ERROR, "HPACK - EOS Decoded",
+                    Http2Exception.ShutdownHint.HARD_SHUTDOWN), HpackHuffmanDecoder.class, "decode(..)");
     private static final Http2Exception INVALID_PADDING = ThrowableUtil.unknownStackTrace(
-            connectionError(COMPRESSION_ERROR, "HPACK - Invalid Padding"), HpackHuffmanDecoder.class, "decode(..)");
+            Http2Exception.newStatic(COMPRESSION_ERROR, "HPACK - Invalid Padding",
+                    Http2Exception.ShutdownHint.HARD_SHUTDOWN), HpackHuffmanDecoder.class, "decode(..)");
 
     private static final Node ROOT = buildTree(HpackUtil.HUFFMAN_CODES, HpackUtil.HUFFMAN_CODE_LENGTHS);
 
