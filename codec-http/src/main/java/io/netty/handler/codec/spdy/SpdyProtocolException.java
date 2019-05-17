@@ -48,7 +48,6 @@ public class SpdyProtocolException extends Exception {
         super(cause);
     }
 
-
     static SpdyProtocolException newStatic(String message) {
         if (PlatformDependent.javaVersion() >= 7) {
             return new SpdyProtocolException(message, true);
