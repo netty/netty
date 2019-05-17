@@ -22,7 +22,6 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.ssl.ReferenceCountedOpenSslContext;
 import io.netty.handler.ssl.ReferenceCountedOpenSslEngine;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
-import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
 
 import javax.net.ssl.SSLHandshakeException;
@@ -35,9 +34,6 @@ import javax.net.ssl.SSLHandshakeException;
  */
 @UnstableApi
 public abstract class OcspClientHandler implements ChannelInboundHandler {
-
-    private static final SSLHandshakeException OCSP_VERIFICATION_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new SSLHandshakeException("Bad OCSP response"), OcspClientHandler.class, "verify(...)");
 
     private final ReferenceCountedOpenSslEngine engine;
 
@@ -57,7 +53,7 @@ public abstract class OcspClientHandler implements ChannelInboundHandler {
 
             SslHandshakeCompletionEvent event = (SslHandshakeCompletionEvent) evt;
             if (event.isSuccess() && !verify(ctx, engine)) {
-                throw OCSP_VERIFICATION_EXCEPTION;
+                throw new SSLHandshakeException("Bad OCSP response");
             }
         }
 

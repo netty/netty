@@ -25,5 +25,7 @@ public final class ReadTimeoutException extends TimeoutException {
 
     public static final ReadTimeoutException INSTANCE = new ReadTimeoutException();
 
-    private ReadTimeoutException() { }
+    private ReadTimeoutException() {
+        super(true);
+    }
 }

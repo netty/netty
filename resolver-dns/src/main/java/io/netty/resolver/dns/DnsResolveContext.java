@@ -63,15 +63,15 @@ import static java.util.Objects.requireNonNull;
 abstract class DnsResolveContext<T> {
 
     private static final RuntimeException NXDOMAIN_QUERY_FAILED_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new RuntimeException("No answer found and NXDOMAIN response code returned"),
+            DnsResolveContextException.newStatic("No answer found and NXDOMAIN response code returned"),
             DnsResolveContext.class,
             "onResponse(..)");
     private static final RuntimeException CNAME_NOT_FOUND_QUERY_FAILED_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new RuntimeException("No matching CNAME record found"),
+            DnsResolveContextException.newStatic("No matching CNAME record found"),
             DnsResolveContext.class,
             "onResponseCNAME(..)");
     private static final RuntimeException NO_MATCHING_RECORD_QUERY_FAILED_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new RuntimeException("No matching record type found"),
+            DnsResolveContextException.newStatic("No matching record type found"),
             DnsResolveContext.class,
             "onResponseAorAAAA(..)");
     private static final RuntimeException UNRECOGNIZED_TYPE_QUERY_FAILED_EXCEPTION = ThrowableUtil.unknownStackTrace(
@@ -79,7 +79,7 @@ abstract class DnsResolveContext<T> {
             DnsResolveContext.class,
             "onResponse(..)");
     private static final RuntimeException NAME_SERVERS_EXHAUSTED_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new RuntimeException("No name servers returned an answer"),
+            DnsResolveContextException.newStatic("No name servers returned an answer"),
             DnsResolveContext.class,
             "tryToFinishResolve(..)");
 
@@ -115,6 +115,17 @@ abstract class DnsResolveContext<T> {
         this.nameServerAddrs = requireNonNull(nameServerAddrs, "nameServerAddrs");
         maxAllowedQueries = parent.maxQueriesPerResolve();
         allowedQueries = maxAllowedQueries;
+    }
+
+    static final class DnsResolveContextException extends RuntimeException {
+
+        private DnsResolveContextException(String message) {
+            super(message, null, false, true);
+        }
+
+        static DnsResolveContextException newStatic(String message) {
+            return new DnsResolveContextException(message);
+        }
     }
 
     /**

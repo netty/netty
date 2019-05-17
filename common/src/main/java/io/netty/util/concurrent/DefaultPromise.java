@@ -42,8 +42,6 @@ public class DefaultPromise<V> implements Promise<V> {
             AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class, Object.class, "result");
     private static final Object SUCCESS = new Object();
     private static final Object UNCANCELLABLE = new Object();
-    private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(ThrowableUtil.unknownStackTrace(
-            new CancellationException(), DefaultPromise.class, "cancel(...)"));
 
     private volatile Object result;
     private final EventExecutor executor;
@@ -297,7 +295,8 @@ public class DefaultPromise<V> implements Promise<V> {
      */
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
-        if (RESULT_UPDATER.compareAndSet(this, null, CANCELLATION_CAUSE_HOLDER)) {
+        if (RESULT_UPDATER.get(this) == null &&
+                RESULT_UPDATER.compareAndSet(this, null, new CauseHolder(new CancellationException()))) {
             if (checkNotifyWaiters()) {
                 notifyListeners();
             }

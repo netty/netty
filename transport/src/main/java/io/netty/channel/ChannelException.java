@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.util.internal.UnstableApi;
+
 /**
  * A {@link RuntimeException} which is thrown when an I/O operation fails.
  */
@@ -47,5 +49,11 @@ public class ChannelException extends RuntimeException {
      */
     public ChannelException(Throwable cause) {
         super(cause);
+    }
+
+    @UnstableApi
+    protected ChannelException(String message, Throwable cause, boolean shared) {
+        super(message, cause, false, true);
+        assert shared;
     }
 }

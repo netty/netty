@@ -25,5 +25,8 @@ public final class WriteTimeoutException extends TimeoutException {
 
     public static final WriteTimeoutException INSTANCE = new WriteTimeoutException();
 
-    private WriteTimeoutException() { }
+    private WriteTimeoutException() {
+        super(true);
+    }
+
 }

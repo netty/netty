@@ -112,8 +112,6 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
     private static final ChannelFutureListener CHILD_CHANNEL_REGISTRATION_LISTENER = Http2MultiplexCodec::registerDone;
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
-    private static final ClosedChannelException CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), DefaultHttp2StreamChannel.Http2ChannelUnsafe.class, "write(...)");
     /**
      * Number of bytes to consider non-payload messages. 9 is arbitrary, but also the minimum size of an HTTP/2 frame.
      * Primarily is non-zero.
@@ -1087,7 +1085,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                         // Once the outbound side was closed we should not allow header / data frames
                         outboundClosed && (msg instanceof Http2HeadersFrame || msg instanceof Http2DataFrame)) {
                     ReferenceCountUtil.release(msg);
-                    promise.setFailure(CLOSED_CHANNEL_EXCEPTION);
+                    promise.setFailure(new ClosedChannelException());
                     return;
                 }
 
