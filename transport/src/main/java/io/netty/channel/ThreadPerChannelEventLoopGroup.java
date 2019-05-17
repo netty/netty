@@ -135,7 +135,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
         this.executor = executor;
 
         tooManyChannels = ThrowableUtil.unknownStackTrace(
-                new ChannelException("too many channels (max: " + maxChannels + ')'),
+                ChannelException.newStatic("too many channels (max: " + maxChannels + ')', null),
                 ThreadPerChannelEventLoopGroup.class, "nextChild()");
     }
 

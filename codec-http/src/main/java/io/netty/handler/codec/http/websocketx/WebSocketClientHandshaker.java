@@ -35,7 +35,6 @@ import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ThrowableUtil;
 
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
@@ -48,8 +47,6 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  * Base class for web socket client handshake implementations
  */
 public abstract class WebSocketClientHandshaker {
-    private static final ClosedChannelException CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), WebSocketClientHandshaker.class, "processHandshake(...)");
 
     private static final String HTTP_SCHEME_PREFIX = HttpScheme.HTTP + "://";
     private static final String HTTPS_SCHEME_PREFIX = HttpScheme.HTTPS + "://";
@@ -434,7 +431,9 @@ public abstract class WebSocketClientHandshaker {
                 @Override
                 public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                     // Fail promise if Channel was closed
-                    promise.tryFailure(CLOSED_CHANNEL_EXCEPTION);
+                    if (!promise.isDone()) {
+                        promise.tryFailure(new ClosedChannelException());
+                    }
                     ctx.fireChannelInactive();
                 }
             });

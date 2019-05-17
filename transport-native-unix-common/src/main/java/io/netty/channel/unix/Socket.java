@@ -39,39 +39,12 @@ import static io.netty.channel.unix.Errors.throwConnectException;
 import static io.netty.channel.unix.LimitsStaticallyReferencedJniMethods.udsSunPathSize;
 import static io.netty.channel.unix.NativeInetAddress.address;
 import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
-import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
 
 /**
  * Provides a JNI bridge to native socket operations.
  * <strong>Internal usage only!</strong>
  */
 public class Socket extends FileDescriptor {
-    private static final ClosedChannelException SHUTDOWN_CLOSED_CHANNEL_EXCEPTION = unknownStackTrace(
-            new ClosedChannelException(), Socket.class, "shutdown(..)");
-    private static final ClosedChannelException SEND_TO_CLOSED_CHANNEL_EXCEPTION = unknownStackTrace(
-            new ClosedChannelException(), Socket.class, "sendTo(..)");
-    private static final ClosedChannelException SEND_TO_ADDRESS_CLOSED_CHANNEL_EXCEPTION =
-            unknownStackTrace(new ClosedChannelException(), Socket.class, "sendToAddress(..)");
-    private static final ClosedChannelException SEND_TO_ADDRESSES_CLOSED_CHANNEL_EXCEPTION =
-            unknownStackTrace(new ClosedChannelException(), Socket.class, "sendToAddresses(..)");
-    private static final Errors.NativeIoException SEND_TO_CONNECTION_RESET_EXCEPTION = unknownStackTrace(
-            Errors.newConnectionResetException("syscall:sendto", Errors.ERRNO_EPIPE_NEGATIVE),
-            Socket.class, "sendTo(..)");
-    private static final Errors.NativeIoException SEND_TO_ADDRESS_CONNECTION_RESET_EXCEPTION =
-            unknownStackTrace(Errors.newConnectionResetException("syscall:sendto",
-                    Errors.ERRNO_EPIPE_NEGATIVE), Socket.class, "sendToAddress");
-    private static final Errors.NativeIoException CONNECTION_RESET_EXCEPTION_SENDMSG = unknownStackTrace(
-            Errors.newConnectionResetException("syscall:sendmsg",
-            Errors.ERRNO_EPIPE_NEGATIVE), Socket.class, "sendToAddresses(..)");
-    private static final Errors.NativeIoException CONNECTION_RESET_SHUTDOWN_EXCEPTION =
-            unknownStackTrace(Errors.newConnectionResetException("syscall:shutdown",
-                    Errors.ERRNO_ECONNRESET_NEGATIVE), Socket.class, "shutdown");
-    private static final Errors.NativeConnectException FINISH_CONNECT_REFUSED_EXCEPTION =
-            unknownStackTrace(new Errors.NativeConnectException("syscall:getsockopt",
-                    Errors.ERROR_ECONNREFUSED_NEGATIVE), Socket.class, "finishConnect(..)");
-    private static final Errors.NativeConnectException CONNECT_REFUSED_EXCEPTION =
-            unknownStackTrace(new Errors.NativeConnectException("syscall:connect",
-                    Errors.ERROR_ECONNREFUSED_NEGATIVE), Socket.class, "connect(..)");
 
     public static final int UDS_SUN_PATH_SIZE = udsSunPathSize();
 
@@ -111,7 +84,7 @@ public class Socket extends FileDescriptor {
         }
         int res = shutdown(fd, read, write);
         if (res < 0) {
-            ioResult("shutdown", res, CONNECTION_RESET_SHUTDOWN_EXCEPTION, SHUTDOWN_CLOSED_CHANNEL_EXCEPTION);
+            ioResult("shutdown", res);
         }
     }
 
@@ -148,7 +121,7 @@ public class Socket extends FileDescriptor {
         if (res == ERROR_ECONNREFUSED_NEGATIVE) {
             throw new PortUnreachableException("sendTo failed");
         }
-        return ioResult("sendTo", res, SEND_TO_CONNECTION_RESET_EXCEPTION, SEND_TO_CLOSED_CHANNEL_EXCEPTION);
+        return ioResult("sendTo", res);
     }
 
     public final int sendToAddress(long memoryAddress, int pos, int limit, InetAddress addr, int port)
@@ -172,8 +145,7 @@ public class Socket extends FileDescriptor {
         if (res == ERROR_ECONNREFUSED_NEGATIVE) {
             throw new PortUnreachableException("sendToAddress failed");
         }
-        return ioResult("sendToAddress", res,
-                SEND_TO_ADDRESS_CONNECTION_RESET_EXCEPTION, SEND_TO_ADDRESS_CLOSED_CHANNEL_EXCEPTION);
+        return ioResult("sendToAddress", res);
     }
 
     public final int sendToAddresses(long memoryAddress, int length, InetAddress addr, int port) throws IOException {
@@ -197,8 +169,7 @@ public class Socket extends FileDescriptor {
         if (res == ERROR_ECONNREFUSED_NEGATIVE) {
             throw new PortUnreachableException("sendToAddresses failed");
         }
-        return ioResult("sendToAddresses", res,
-                CONNECTION_RESET_EXCEPTION_SENDMSG, SEND_TO_ADDRESSES_CLOSED_CHANNEL_EXCEPTION);
+        return ioResult("sendToAddresses", res);
     }
 
     public final DatagramSocketAddress recvFrom(ByteBuffer buf, int pos, int limit) throws IOException {
@@ -254,7 +225,7 @@ public class Socket extends FileDescriptor {
                 // connect not complete yet need to wait for EPOLLOUT event
                 return false;
             }
-            throwConnectException("connect", CONNECT_REFUSED_EXCEPTION, res);
+            throwConnectException("connect", res);
         }
         return true;
     }
@@ -266,7 +237,7 @@ public class Socket extends FileDescriptor {
                 // connect still in progress
                 return false;
             }
-            throwConnectException("finishConnect", FINISH_CONNECT_REFUSED_EXCEPTION, res);
+            throwConnectException("finishConnect", res);
         }
         return true;
     }
@@ -274,7 +245,7 @@ public class Socket extends FileDescriptor {
     public final void disconnect() throws IOException {
         int res = disconnect(fd);
         if (res < 0) {
-            throwConnectException("disconnect", FINISH_CONNECT_REFUSED_EXCEPTION, res);
+            throwConnectException("disconnect", res);
         }
     }
 

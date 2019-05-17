@@ -47,8 +47,6 @@ import java.util.Set;
  */
 public abstract class WebSocketServerHandshaker {
     protected static final InternalLogger logger = InternalLoggerFactory.getInstance(WebSocketServerHandshaker.class);
-    private static final ClosedChannelException CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), WebSocketServerHandshaker.class, "handshake(...)");
 
     private final String uri;
 
@@ -282,7 +280,9 @@ public abstract class WebSocketServerHandshaker {
             @Override
             public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                 // Fail promise if Channel was closed
-                promise.tryFailure(CLOSED_CHANNEL_EXCEPTION);
+                if (!promise.isDone()) {
+                    promise.tryFailure(new ClosedChannelException());
+                }
                 ctx.fireChannelInactive();
             }
         });
