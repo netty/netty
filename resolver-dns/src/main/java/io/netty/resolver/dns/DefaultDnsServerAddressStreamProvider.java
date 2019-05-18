@@ -55,7 +55,9 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
             DirContextUtils.addNameServers(defaultNameServers, DNS_PORT);
         }
 
-        if (defaultNameServers.isEmpty()) {
+        // Only try when using Java8 and lower as otherwise it will produce:
+        // WARNING: Illegal reflective access by io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider
+        if (PlatformDependent.javaVersion() < 9 && defaultNameServers.isEmpty()) {
             try {
                 Class<?> configClass = Class.forName("sun.net.dns.ResolverConfiguration");
                 Method open = configClass.getMethod("open");
