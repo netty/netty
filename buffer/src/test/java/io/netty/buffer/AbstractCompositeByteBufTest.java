@@ -977,7 +977,27 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     @Override
     @Test
     public void testInternalNioBuffer() {
-        // ignore
+        CompositeByteBuf buf = compositeBuffer();
+        assertEquals(0, buf.internalNioBuffer(0, 0).remaining());
+
+        // If non-derived buffer is added, its internal buffer should be returned
+        ByteBuf concreteBuffer = directBuffer().writeByte(1);
+        buf.addComponent(concreteBuffer);
+        assertSame(concreteBuffer.internalNioBuffer(0, 1), buf.internalNioBuffer(0, 1));
+        buf.release();
+
+        // In derived cases, the original internal buffer must not be used
+        buf = compositeBuffer();
+        concreteBuffer = directBuffer().writeByte(1);
+        buf.addComponent(concreteBuffer.slice());
+        assertNotSame(concreteBuffer.internalNioBuffer(0, 1), buf.internalNioBuffer(0, 1));
+        buf.release();
+
+        buf = compositeBuffer();
+        concreteBuffer = directBuffer().writeByte(1);
+        buf.addComponent(concreteBuffer.duplicate());
+        assertNotSame(concreteBuffer.internalNioBuffer(0, 1), buf.internalNioBuffer(0, 1));
+        buf.release();
     }
 
     @Test
