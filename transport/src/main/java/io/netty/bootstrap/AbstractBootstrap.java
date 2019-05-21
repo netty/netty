@@ -76,10 +76,12 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      */
     public B group(EventLoopGroup group) {
         requireNonNull(group, "group");
-        if (this.group != null) {
-            throw new IllegalStateException("group set already");
+        synchronized (this) {
+            if (this.group != null) {
+                throw new IllegalStateException("group set already");
+            }
+            this.group = group;
         }
-        this.group = group;
         return self();
     }
 

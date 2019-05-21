@@ -131,11 +131,13 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
      */
     public Bootstrap channelFactory(ChannelFactory<? extends Channel> channelFactory) {
         requireNonNull(channelFactory, "channelFactory");
-        if (this.channelFactory != null) {
-            throw new IllegalStateException("channelFactory set already");
-        }
+        synchronized (this) {
+            if (this.channelFactory != null) {
+                throw new IllegalStateException("channelFactory set already");
+            }
 
-        this.channelFactory = channelFactory;
+            this.channelFactory = channelFactory;
+        }
         return this;
     }
 

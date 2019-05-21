@@ -89,10 +89,12 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
         super.group(parentGroup);
         requireNonNull(childGroup, "childGroup");
-        if (this.childGroup != null) {
-            throw new IllegalStateException("childGroup set already");
+        synchronized (this) {
+            if (this.childGroup != null) {
+                throw new IllegalStateException("childGroup set already");
+            }
+            this.childGroup = childGroup;
         }
-        this.childGroup = childGroup;
         return this;
     }
 
@@ -157,11 +159,13 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      */
     public ServerBootstrap channelFactory(ServerChannelFactory<? extends ServerChannel> channelFactory) {
         requireNonNull(channelFactory, "channelFactory");
-        if (this.channelFactory != null) {
-            throw new IllegalStateException("channelFactory set already");
-        }
+        synchronized (this) {
+            if (this.channelFactory != null) {
+                throw new IllegalStateException("channelFactory set already");
+            }
 
-        this.channelFactory = channelFactory;
+            this.channelFactory = channelFactory;
+        }
         return this;
     }
 
@@ -228,9 +232,11 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         if (channelFactory == null) {
             throw new IllegalStateException("channelFactory not set");
         }
-        if (childGroup == null) {
-            logger.warn("childGroup is not set. Using parentGroup instead.");
-            childGroup = config.group();
+        synchronized (this) {
+            if (childGroup == null) {
+                logger.warn("childGroup is not set. Using parentGroup instead.");
+                childGroup = config.group();
+            }
         }
         return this;
     }
