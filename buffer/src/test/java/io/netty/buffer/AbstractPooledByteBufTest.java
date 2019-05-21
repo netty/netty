@@ -93,8 +93,8 @@ public abstract class AbstractPooledByteBufTest extends AbstractByteBufTest {
     }
 
     private static PooledByteBuf<?> pooledByteBuf(ByteBuf buffer) {
-        // might need to unwrap if swapped (LE)
-        if (!(buffer instanceof PooledByteBuf)) {
+        // might need to unwrap if swapped (LE) and/or leak-aware-wrapped
+        while (!(buffer instanceof PooledByteBuf)) {
             buffer = buffer.unwrap();
         }
         return (PooledByteBuf<?>) buffer;
@@ -116,5 +116,6 @@ public abstract class AbstractPooledByteBufTest extends AbstractByteBufTest {
         assertEquals(handleBefore, pooledByteBuf(buffer).handle);
         assertEquals(100 + fastWritable, buffer.capacity());
         assertEquals(buffer.writableBytes(), buffer.maxFastWritableBytes());
+        buffer.release();
     }
 }
