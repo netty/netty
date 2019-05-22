@@ -99,6 +99,11 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     }
 
     @Override
+    public int maxFastWritableBytes() {
+        return wrapped.maxFastWritableBytes();
+    }
+
+    @Override
     public int ensureWritable(int minWritableBytes, boolean force) {
         return wrapped.ensureWritable(minWritableBytes, force);
     }
