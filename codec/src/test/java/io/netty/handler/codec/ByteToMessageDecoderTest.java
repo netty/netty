@@ -22,7 +22,6 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.buffer.UnpooledHeapByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
 
@@ -246,7 +245,7 @@ public class ByteToMessageDecoderTest {
         byte[] bytes = new byte[1024];
         ThreadLocalRandom.current().nextBytes(bytes);
 
-        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(bytes)));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(bytes)));
         assertBuffer(Unpooled.wrappedBuffer(bytes), channel.readInbound());
         assertNull(channel.readInbound());
         assertFalse(channel.finish());
@@ -278,7 +277,7 @@ public class ByteToMessageDecoderTest {
         byte[] bytes = new byte[1024];
         ThreadLocalRandom.current().nextBytes(bytes);
 
-        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(bytes)));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(bytes)));
         assertBuffer(Unpooled.wrappedBuffer(bytes, 0, bytes.length - 1), channel.readInbound());
         assertNull(channel.readInbound());
         assertTrue(channel.finish());

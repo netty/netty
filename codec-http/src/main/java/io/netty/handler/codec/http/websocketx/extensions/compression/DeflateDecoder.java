@@ -40,7 +40,9 @@ import static io.netty.util.internal.ObjectUtil.*;
  */
 abstract class DeflateDecoder extends WebSocketExtensionDecoder {
 
-    static final byte[] FRAME_TAIL = new byte[] {0x00, 0x00, (byte) 0xff, (byte) 0xff};
+    static final ByteBuf FRAME_TAIL = Unpooled.unreleasableBuffer(
+            Unpooled.wrappedBuffer(new byte[] {0x00, 0x00, (byte) 0xff, (byte) 0xff}))
+            .asReadOnly();
 
     private final boolean noContext;
     private final WebSocketExtensionFilter extensionDecoderFilter;
@@ -81,7 +83,7 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
         boolean readable = msg.content().isReadable();
         decoder.writeInbound(msg.content().retain());
         if (appendFrameTail(msg)) {
-            decoder.writeInbound(Unpooled.wrappedBuffer(FRAME_TAIL));
+            decoder.writeInbound(FRAME_TAIL.duplicate());
         }
 
         CompositeByteBuf compositeUncompressedContent = ctx.alloc().compositeBuffer();
