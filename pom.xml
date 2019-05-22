@@ -309,7 +309,7 @@
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
     <!-- Skip for now as we have no version released yet of netty 5 -->
-    <skipJapicmp>false</skipJapicmp>
+    <skipJapicmp>true</skipJapicmp>
     <graalvm.version>1.0.0-rc15</graalvm.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
