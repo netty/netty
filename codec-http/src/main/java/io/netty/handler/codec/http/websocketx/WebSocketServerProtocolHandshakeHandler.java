@@ -30,8 +30,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler.Ser
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.ScheduledFuture;
-import io.netty.util.internal.ThrowableUtil;
 
 import java.util.concurrent.TimeUnit;
 
@@ -45,10 +43,6 @@ import static io.netty.util.internal.ObjectUtil.*;
  * Handles the HTTP handshake (the HTTP Upgrade request) for {@link WebSocketServerProtocolHandler}.
  */
 class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapter {
-    private static final WebSocketHandshakeException HANDSHAKE_TIMED_OUT_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new WebSocketHandshakeException("handshake timed out"),
-            WebSocketServerProtocolHandshakeHandler.class,
-            "channelRead(...)");
 
     private static final long DEFAULT_HANDSHAKE_TIMEOUT_MS = 10000L;
 
@@ -180,7 +174,8 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         final Future<?> timeoutFuture = ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {
-                if (localHandshakePromise.tryFailure(HANDSHAKE_TIMED_OUT_EXCEPTION)) {
+                if (!localHandshakePromise.isDone() &&
+                        localHandshakePromise.tryFailure(new WebSocketHandshakeException("handshake timed out"))) {
                     ctx.flush()
                        .fireUserEventTriggered(ServerHandshakeStateEvent.HANDSHAKE_TIMEOUT)
                        .close();
