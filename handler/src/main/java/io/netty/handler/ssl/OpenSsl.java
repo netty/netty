@@ -246,13 +246,24 @@ public final class OpenSsl {
                             SSL.setKeyMaterial(ssl, cert, key);
                             supportsKeyManagerFactory = true;
                             try {
-                                useKeyManagerFactory = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                                    @Override
-                                    public Boolean run() {
-                                        return SystemPropertyUtil.getBoolean(
-                                                "io.netty.handler.ssl.openssl.useKeyManagerFactory", true);
+                                boolean propertySet = SystemPropertyUtil.contains(
+                                        "io.netty.handler.ssl.openssl.useKeyManagerFactory");
+                                if (!IS_BORINGSSL) {
+                                    useKeyManagerFactory = SystemPropertyUtil.getBoolean(
+                                            "io.netty.handler.ssl.openssl.useKeyManagerFactory", true);
+
+                                    if (propertySet) {
+                                        logger.info("System property " +
+                                                "'io.netty.handler.ssl.openssl.useKeyManagerFactory'" +
+                                                " is deprecated and so will be ignored in the future");
                                     }
-                                });
+                                } else {
+                                    if (propertySet) {
+                                        logger.info("System property " +
+                                                "'io.netty.handler.ssl.openssl.useKeyManagerFactory'" +
+                                                " is deprecated and will be ignored when using BoringSSL");
+                                    }
+                                }
                             } catch (Throwable ignore) {
                                 logger.debug("Failed to get useKeyManagerFactory system property.");
                             }
