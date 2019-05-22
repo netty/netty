@@ -164,7 +164,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         DefaultChannelHandlerContext newCtx = newContext(name, handler);
         EventExecutor executor = executor();
         boolean inEventLoop = executor.inEventLoop();
-        synchronized (this) {
+        synchronized (handlers) {
             if (context(name) != null) {
                 throw new IllegalArgumentException("Duplicate handler name: " + name);
             }
