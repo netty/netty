@@ -41,7 +41,7 @@ public class DefaultBinaryMemcacheResponse extends AbstractBinaryMemcacheMessage
     /**
      * Create a new {@link DefaultBinaryMemcacheResponse} with the header and key.
      *
-     * @param key    the key to use
+     * @param key    the key to use.
      */
     public DefaultBinaryMemcacheResponse(ByteBuf key) {
         this(key, null);
@@ -91,5 +91,15 @@ public class DefaultBinaryMemcacheResponse extends AbstractBinaryMemcacheMessage
     public BinaryMemcacheResponse touch(Object hint) {
         super.touch(hint);
         return this;
+    }
+
+    /**
+     * Copies special metadata hold by this instance to the provided instance
+     *
+     * @param dst The instance where to copy the metadata of this instance to
+     */
+    void copyMeta(DefaultBinaryMemcacheResponse dst) {
+        super.copyMeta(dst);
+        dst.status = status;
     }
 }
