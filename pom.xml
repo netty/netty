@@ -74,7 +74,7 @@
       <activation>
         <file>
           <!-- GraalVM Component Updater should exists when using GraalVM-->
-          <exists>${java.home}/bin/native-image</exists>
+          <exists>${java.home}/bin/gu</exists>
         </file>
       </activation>
       <properties>
@@ -181,7 +181,7 @@
         <argLine.java9>--illegal-access=deny --add-modules java.xml.bind ${argLine.java9.extras}</argLine.java9>
         <!-- Not use alpn agent as Java9 supports alpn out of the box -->
         <argLine.alpnAgent />
-        <!-- Skip as maven plugin not works with Java9 yet --> 
+        <!-- Skip as maven plugin not works with Java9 yet -->
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
         <enforcer.plugin.version>3.0.0-M1</enforcer.plugin.version>
@@ -315,7 +315,7 @@
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
     <skipJapicmp>false</skipJapicmp>
-    <graalvm.version>1.0.0-rc15</graalvm.version>
+    <graalvm.version>19.0.0</graalvm.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
   </properties>
@@ -453,7 +453,7 @@
         <optional>true</optional>
       </dependency>
 
-      <!-- 
+      <!--
         Completely optional and only needed for OCSP stapling to construct and
         parse OCSP requests and responses.
       -->
@@ -814,8 +814,8 @@
             <ignore>java.nio.channels.SocketChannel</ignore>
             <ignore>java.net.StandardProtocolFamily</ignore>
             <ignore>java.nio.channels.spi.SelectorProvider</ignore>
-            <ignore>java.net.SocketOption</ignore> 
-            <ignore>java.net.StandardSocketOptions</ignore> 
+            <ignore>java.net.SocketOption</ignore>
+            <ignore>java.net.StandardSocketOptions</ignore>
             <ignore>java.nio.channels.NetworkChannel</ignore>
 
             <!-- Self-signed certificate generation -->
@@ -990,7 +990,7 @@
             </property>
           </properties>
           <jvm>${testJvm}</jvm>
-           <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 --> 
+           <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
           <trimStackTrace>false</trimStackTrace>
         </configuration>
       </plugin>
