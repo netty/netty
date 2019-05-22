@@ -25,3 +25,6 @@ RUN curl -sL https://github.com/shyiko/jabba/raw/master/install.sh | JABBA_COMMA
 
 RUN echo 'export JAVA_HOME="/jdk"' >> ~/.bashrc
 RUN echo 'PATH=/jdk/bin:$PATH' >> ~/.bashrc
+
+# when the JDK is GraalVM install native-image
+RUN if [ -O /jdk/bin/gu ]; then /jdk/bin/gu install native-image; else echo "Not GraalVM, skip installation of native-image" ; fi
