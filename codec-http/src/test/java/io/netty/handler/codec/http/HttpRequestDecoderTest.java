@@ -81,7 +81,7 @@ public class HttpRequestDecoderTest {
 
     private static void testDecodeWholeRequestAtOnce(byte[] content) {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
-        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(content)));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(content)));
         HttpRequest req = channel.readInbound();
         assertNotNull(req);
         checkHeaders(req.headers());
@@ -146,13 +146,13 @@ public class HttpRequestDecoderTest {
             }
 
             // if header is done it should produce a HttpRequest
-            channel.writeInbound(Unpooled.wrappedBuffer(content, a, amount));
+            channel.writeInbound(Unpooled.copiedBuffer(content, a, amount));
             a += amount;
         }
 
         for (int i = CONTENT_LENGTH; i > 0; i --) {
             // Should produce HttpContent
-            channel.writeInbound(Unpooled.wrappedBuffer(content, content.length - i, 1));
+            channel.writeInbound(Unpooled.copiedBuffer(content, content.length - i, 1));
         }
 
         HttpRequest req = channel.readInbound();
