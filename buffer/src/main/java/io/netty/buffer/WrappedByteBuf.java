@@ -152,6 +152,11 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public int maxFastWritableBytes() {
+        return buf.maxFastWritableBytes();
+    }
+
+    @Override
     public final boolean isReadable() {
         return buf.isReadable();
     }
