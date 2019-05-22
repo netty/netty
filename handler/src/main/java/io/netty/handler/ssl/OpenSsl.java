@@ -33,8 +33,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.ByteArrayInputStream;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -235,7 +233,11 @@ public final class OpenSsl {
 
                         PemEncoded privateKey = PemPrivateKey.valueOf(KEY.getBytes(CharsetUtil.US_ASCII));
                         try {
-                             X509Certificate certificate = selfSignedCertificate();
+                            // Let's check if we can set a callback, which may not work if the used OpenSSL version
+                            // is to old.
+                            SSLContext.setCertificateCallback(sslCtx, null);
+
+                            X509Certificate certificate = selfSignedCertificate();
                             certBio = ReferenceCountedOpenSslContext.toBIO(ByteBufAllocator.DEFAULT, certificate);
                             cert = SSL.parseX509Chain(certBio);
 
@@ -267,7 +269,7 @@ public final class OpenSsl {
                             } catch (Throwable ignore) {
                                 logger.debug("Failed to get useKeyManagerFactory system property.");
                             }
-                        } catch (Throwable ignore) {
+                        } catch (Error ignore) {
                             logger.debug("KeyManagerFactory not supported.");
                         } finally {
                             privateKey.release();
