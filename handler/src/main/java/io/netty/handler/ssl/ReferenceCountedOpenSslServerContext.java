@@ -98,7 +98,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
         try {
             try {
                 SSLContext.setVerify(ctx, SSL.SSL_CVERIFY_NONE, VERIFY_DEPTH);
-                if (!OpenSsl.useKeyManagerFactory()) {
+                if (!OpenSsl.supportsKeyManagerFactory()) {
                     if (keyManagerFactory != null) {
                         throw new IllegalArgumentException(
                                 "KeyManagerFactory not supported");

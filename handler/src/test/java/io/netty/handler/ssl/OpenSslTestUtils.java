@@ -22,6 +22,6 @@ final class OpenSslTestUtils {
     }
 
     static void checkShouldUseKeyManagerFactory() {
-        assumeTrue(OpenSsl.supportsKeyManagerFactory() && OpenSsl.useKeyManagerFactory());
+        assumeTrue(OpenSsl.supportsKeyManagerFactory());
     }
 }

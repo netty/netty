@@ -33,8 +33,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.ByteArrayInputStream;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -59,7 +57,6 @@ public final class OpenSsl {
     private static final Set<String> AVAILABLE_OPENSSL_CIPHER_SUITES;
     private static final Set<String> AVAILABLE_JAVA_CIPHER_SUITES;
     private static final boolean SUPPORTS_KEYMANAGER_FACTORY;
-    private static final boolean USE_KEYMANAGER_FACTORY;
     private static final boolean SUPPORTS_OCSP;
     private static final boolean TLSV13_SUPPORTED;
     private static final boolean IS_BORINGSSL;
@@ -245,13 +242,6 @@ public final class OpenSsl {
 
                             SSL.setKeyMaterial(ssl, cert, key);
                             supportsKeyManagerFactory = true;
-                            try {
-                                useKeyManagerFactory = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
-                                        SystemPropertyUtil.getBoolean(
-                                                "io.netty.handler.ssl.openssl.useKeyManagerFactory", true));
-                            } catch (Throwable ignore) {
-                                logger.debug("Failed to get useKeyManagerFactory system property.");
-                            }
                         } catch (Throwable ignore) {
                             logger.debug("KeyManagerFactory not supported.");
                         } finally {
@@ -307,7 +297,6 @@ public final class OpenSsl {
 
             AVAILABLE_CIPHER_SUITES = availableCipherSuites;
             SUPPORTS_KEYMANAGER_FACTORY = supportsKeyManagerFactory;
-            USE_KEYMANAGER_FACTORY = useKeyManagerFactory;
 
             Set<String> protocols = new LinkedHashSet<>(6);
             // Seems like there is no way to explicitly disable SSLv2Hello in openssl so it is always enabled
@@ -349,7 +338,6 @@ public final class OpenSsl {
             AVAILABLE_JAVA_CIPHER_SUITES = Collections.emptySet();
             AVAILABLE_CIPHER_SUITES = Collections.emptySet();
             SUPPORTS_KEYMANAGER_FACTORY = false;
-            USE_KEYMANAGER_FACTORY = false;
             SUPPORTED_PROTOCOLS_SET = Collections.emptySet();
             SUPPORTS_OCSP = false;
             TLSV13_SUPPORTED = false;
@@ -517,10 +505,6 @@ public final class OpenSsl {
     @Deprecated
     public static boolean supportsHostnameValidation() {
         return isAvailable();
-    }
-
-    static boolean useKeyManagerFactory() {
-        return USE_KEYMANAGER_FACTORY;
     }
 
     static long memoryAddress(ByteBuf buf) {

@@ -96,7 +96,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
         OpenSslKeyMaterialProvider keyMaterialProvider = null;
         try {
             try {
-                if (!OpenSsl.useKeyManagerFactory()) {
+                if (!OpenSsl.supportsKeyManagerFactory()) {
                     if (keyManagerFactory != null) {
                         throw new IllegalArgumentException(
                                 "KeyManagerFactory not supported");

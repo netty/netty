@@ -100,7 +100,7 @@ public class SniClientTest {
         Channel cc = null;
         try {
             if ((sslServerProvider == SslProvider.OPENSSL || sslServerProvider == SslProvider.OPENSSL_REFCNT)
-                && !OpenSsl.useKeyManagerFactory()) {
+                && !OpenSsl.supportsKeyManagerFactory()) {
                 sslServerContext = SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
                                                     .sslProvider(sslServerProvider)
                                                     .build();
