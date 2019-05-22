@@ -1164,7 +1164,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         AnnotatedConnectException(ConnectException exception, SocketAddress remoteAddress) {
             super(exception.getMessage() + ": " + remoteAddress);
             initCause(exception);
-            setStackTrace(exception.getStackTrace());
         }
 
         @Override
@@ -1180,7 +1179,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         AnnotatedNoRouteToHostException(NoRouteToHostException exception, SocketAddress remoteAddress) {
             super(exception.getMessage() + ": " + remoteAddress);
             initCause(exception);
-            setStackTrace(exception.getStackTrace());
         }
 
         @Override
@@ -1196,7 +1194,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         AnnotatedSocketException(SocketException exception, SocketAddress remoteAddress) {
             super(exception.getMessage() + ": " + remoteAddress);
             initCause(exception);
-            setStackTrace(exception.getStackTrace());
         }
 
         @Override
