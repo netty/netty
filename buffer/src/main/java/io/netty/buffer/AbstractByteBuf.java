@@ -280,6 +280,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (minWritableBytes <= writableBytes()) {
             return;
         }
+        final int writerIndex = writerIndex();
         if (checkBounds) {
             if (minWritableBytes > maxCapacity - writerIndex) {
                 throw new IndexOutOfBoundsException(String.format(
@@ -289,7 +290,14 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
 
         // Normalize the current capacity to the power of 2.
-        int newCapacity = alloc().calculateNewCapacity(writerIndex + minWritableBytes, maxCapacity);
+        int minNewCapacity = writerIndex + minWritableBytes;
+        int newCapacity = alloc().calculateNewCapacity(minNewCapacity, maxCapacity);
+
+        int fastCapacity = writerIndex + maxFastWritableBytes();
+        // Grow by a smaller amount if it will avoid reallocation
+        if (newCapacity > fastCapacity && minNewCapacity <= fastCapacity) {
+            newCapacity = fastCapacity;
+        }
 
         // Adjust to the new capacity.
         capacity(newCapacity);
@@ -316,7 +324,14 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
 
         // Normalize the current capacity to the power of 2.
-        int newCapacity = alloc().calculateNewCapacity(writerIndex + minWritableBytes, maxCapacity);
+        int minNewCapacity = writerIndex + minWritableBytes;
+        int newCapacity = alloc().calculateNewCapacity(minNewCapacity, maxCapacity);
+
+        int fastCapacity = writerIndex + maxFastWritableBytes();
+        // Grow by a smaller amount if it will avoid reallocation
+        if (newCapacity > fastCapacity && minNewCapacity <= fastCapacity) {
+            newCapacity = fastCapacity;
+        }
 
         // Adjust to the new capacity.
         capacity(newCapacity);
