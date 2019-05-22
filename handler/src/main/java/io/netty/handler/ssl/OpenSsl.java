@@ -232,7 +232,11 @@ public final class OpenSsl {
 
                         PemEncoded privateKey = PemPrivateKey.valueOf(KEY.getBytes(CharsetUtil.US_ASCII));
                         try {
-                             X509Certificate certificate = selfSignedCertificate();
+                            // Let's check if we can set a callback, which may not work if the used OpenSSL version
+                            // is to old.
+                            SSLContext.setCertificateCallback(sslCtx, null);
+
+                            X509Certificate certificate = selfSignedCertificate();
                             certBio = ReferenceCountedOpenSslContext.toBIO(ByteBufAllocator.DEFAULT, certificate);
                             cert = SSL.parseX509Chain(certBio);
 
@@ -242,7 +246,7 @@ public final class OpenSsl {
 
                             SSL.setKeyMaterial(ssl, cert, key);
                             supportsKeyManagerFactory = true;
-                        } catch (Throwable ignore) {
+                        } catch (Error ignore) {
                             logger.debug("KeyManagerFactory not supported.");
                         } finally {
                             privateKey.release();
