@@ -83,7 +83,9 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             try {
                 int required = in.readableBytes();
                 int discardable = cumulation.readerIndex();
-                int remaining = cumulation.maxCapacity() - cumulation.writerIndex();
+                // If discardable == 0 then we allow the buffer resize itself internally (equivalent to explicit
+                // allocation + copy but cheaper)
+                int remaining = discardable > 0 ? cumulation.maxFastWritableBytes() : cumulation.maxWritableBytes();
                 if ((remaining + discardable) < required || cumulation.refCnt() > 1 || cumulation.isReadOnly()) {
                     // Expand cumulation (by replace it) when either there is not more room in the buffer
                     // or if the refCnt is greater then 1 which may happen when the user use slice().retain() or
