@@ -24,18 +24,12 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.ScheduledFuture;
-import io.netty.util.internal.ThrowableUtil;
 
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
 class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapter {
-    private static final WebSocketHandshakeException HANDSHAKE_TIMED_OUT_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new WebSocketHandshakeException("handshake timed out"),
-            WebSocketClientProtocolHandshakeHandler.class,
-            "channelActive(...)");
     private static final long DEFAULT_HANDSHAKE_TIMEOUT_MS = 10000L;
 
     private final WebSocketClientHandshaker handshaker;
@@ -112,7 +106,7 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
                     return;
                 }
 
-                if (localHandshakePromise.tryFailure(HANDSHAKE_TIMED_OUT_EXCEPTION)) {
+                if (localHandshakePromise.tryFailure(new WebSocketHandshakeException("handshake timed out"))) {
                     ctx.flush()
                        .fireUserEventTriggered(ClientHandshakeStateEvent.HANDSHAKE_TIMEOUT)
                        .close();
