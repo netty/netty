@@ -162,9 +162,9 @@ This product optionally depends on 'JBoss Marshalling', an alternative Java
 serialization API, which can be obtained at:
 
   * LICENSE:
-    * license/LICENSE.jboss-marshalling.txt (GNU LGPL 2.1)
+    * license/LICENSE.jboss-marshalling.txt (Apache License 2.0)
   * HOMEPAGE:
-    * http://www.jboss.org/jbossmarshalling
+    * https://github.com/jboss-remoting/jboss-marshalling
 
 This product optionally depends on 'Caliper', Google's micro-
 benchmarking framework, which can be obtained at:
