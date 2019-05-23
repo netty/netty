@@ -34,6 +34,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
@@ -494,6 +495,23 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         return buf;
+    }
+
+    /**
+     * Invoked when a {@link ByteBuffer} is about to be written to a {@link java.nio.channels.GatheringByteChannel},
+     * so that the {@link Channel} implementation can optionally copy the bytes to a direct buffer.
+     */
+    protected ByteBuffer filterOutboundByteBuffer(ByteBuffer buffer) throws Exception {
+        return buffer;
+    }
+
+    /**
+     * Invoked when an array of {@link ByteBuffer} is about to be written to a
+     * {@link java.nio.channels.GatheringByteChannel}, so that the {@link Channel} implementation can optionally copy
+     * the bytes to a direct buffer.
+     */
+    protected ByteBuffer[] filterOutboundByteBuffers(ByteBuffer[] buffers) throws Exception {
+        return buffers;
     }
 
     @Override
