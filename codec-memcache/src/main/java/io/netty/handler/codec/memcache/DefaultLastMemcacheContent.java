@@ -64,6 +64,16 @@ public class DefaultLastMemcacheContent extends DefaultMemcacheContent implement
     }
 
     @Override
+    public LastMemcacheContent slice() {
+        return replace(content().slice());
+    }
+
+    @Override
+    public LastMemcacheContent retainedSlice() {
+        return replace(content().retainedSlice());
+    }
+
+    @Override
     public LastMemcacheContent duplicate() {
         return replace(content().duplicate());
     }

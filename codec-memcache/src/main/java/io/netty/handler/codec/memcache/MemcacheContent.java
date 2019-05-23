@@ -21,9 +21,9 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * An Memcache content chunk.
+ * A Memcache content chunk.
  * <p/>
- * A implementation of a {@link AbstractMemcacheObjectDecoder} generates {@link MemcacheContent} after
+ * An implementation of a {@link AbstractMemcacheObjectDecoder} generates {@link MemcacheContent} after
  * {@link MemcacheMessage} when the content is large. If you prefer not to receive {@link MemcacheContent}
  * in your handler, place a aggregator after an implementation of the {@link AbstractMemcacheObjectDecoder}
  * in the {@link ChannelPipeline}.
@@ -33,6 +33,20 @@ public interface MemcacheContent extends MemcacheObject, ByteBufHolder {
 
     @Override
     MemcacheContent copy();
+
+    /**
+     * Slices this {@link ByteBufHolder}. Be aware that this will not automatically call {@link #retain()}.
+     *
+     * @see ByteBuf#slice()
+     */
+    MemcacheContent slice();
+
+    /**
+     * Slices this {@link ByteBufHolder}. This method returns a retained slice unlike {@link #slice()}.
+     *
+     * @see ByteBuf#retainedSlice()
+     */
+    MemcacheContent retainedSlice();
 
     @Override
     MemcacheContent duplicate();

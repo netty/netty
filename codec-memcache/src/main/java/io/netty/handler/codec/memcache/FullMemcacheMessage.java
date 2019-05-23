@@ -29,6 +29,12 @@ public interface FullMemcacheMessage extends MemcacheMessage, LastMemcacheConten
     FullMemcacheMessage copy();
 
     @Override
+    FullMemcacheMessage slice();
+
+    @Override
+    FullMemcacheMessage retainedSlice();
+
+    @Override
     FullMemcacheMessage duplicate();
 
     @Override
