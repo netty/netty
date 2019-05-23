@@ -260,6 +260,7 @@ public final class OpenSsl {
                                                 " is deprecated and so will be ignored in the future");
                                     }
                                 } else {
+                                    useKeyManagerFactory = true;
                                     if (propertySet) {
                                         logger.info("System property " +
                                                 "'io.netty.handler.ssl.openssl.useKeyManagerFactory'" +
