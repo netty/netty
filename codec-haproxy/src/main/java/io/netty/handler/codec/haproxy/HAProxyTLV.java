@@ -111,6 +111,16 @@ public class HAProxyTLV extends DefaultByteBufHolder {
     }
 
     @Override
+    public HAProxyTLV slice() {
+        return replace(content().slice());
+    }
+
+    @Override
+    public HAProxyTLV retainedSlice() {
+        return replace(content().retainedSlice());
+    }
+
+    @Override
     public HAProxyTLV duplicate() {
         return replace(content().duplicate());
     }

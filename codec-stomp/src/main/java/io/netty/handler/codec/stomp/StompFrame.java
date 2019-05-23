@@ -26,6 +26,12 @@ public interface StompFrame extends StompHeadersSubframe, LastStompContentSubfra
     StompFrame copy();
 
     @Override
+    StompFrame slice();
+
+    @Override
+    StompFrame retainedSlice();
+
+    @Override
     StompFrame duplicate();
 
     @Override

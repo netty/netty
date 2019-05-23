@@ -165,6 +165,32 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     }
 
     @Override
+    public FileUpload slice() {
+        final ByteBuf content = content();
+        return replace(content != null ? content.slice() : null);
+    }
+
+    @Override
+    public FileUpload retainedSlice() {
+        ByteBuf content = content();
+        if (content != null) {
+            content = content.retainedSlice();
+            boolean success = false;
+            try {
+                FileUpload slice = replace(content);
+                success = true;
+                return slice;
+            } finally {
+                if (!success) {
+                    content.release();
+                }
+            }
+        }
+
+        return replace(null);
+    }
+
+    @Override
     public FileUpload duplicate() {
         final ByteBuf content = content();
         return replace(content != null ? content.duplicate() : null);

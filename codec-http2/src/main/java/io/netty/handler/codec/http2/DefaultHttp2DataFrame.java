@@ -121,6 +121,16 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
     }
 
     @Override
+    public DefaultHttp2DataFrame slice() {
+        return replace(content().slice());
+    }
+
+    @Override
+    public DefaultHttp2DataFrame retainedSlice() {
+        return replace(content().retainedSlice());
+    }
+
+    @Override
     public DefaultHttp2DataFrame duplicate() {
         return replace(content().duplicate());
     }

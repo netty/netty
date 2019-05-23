@@ -37,6 +37,16 @@ public final class DefaultLastSmtpContent extends DefaultSmtpContent implements 
     }
 
     @Override
+    public LastSmtpContent slice() {
+        return (LastSmtpContent) super.slice();
+    }
+
+    @Override
+    public LastSmtpContent retainedSlice() {
+        return (LastSmtpContent) super.retainedSlice();
+    }
+
+    @Override
     public LastSmtpContent duplicate() {
         return (LastSmtpContent) super.duplicate();
     }

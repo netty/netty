@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.DecoderResult;
 
@@ -37,6 +38,16 @@ public interface LastHttpContent extends HttpContent {
         @Override
         public LastHttpContent copy() {
             return EMPTY_LAST_CONTENT;
+        }
+
+        @Override
+        public LastHttpContent slice() {
+            return this;
+        }
+
+        @Override
+        public LastHttpContent retainedSlice() {
+            return this;
         }
 
         @Override
@@ -120,6 +131,12 @@ public interface LastHttpContent extends HttpContent {
 
     @Override
     LastHttpContent copy();
+
+    @Override
+    LastHttpContent slice();
+
+    @Override
+    LastHttpContent retainedSlice();
 
     @Override
     LastHttpContent duplicate();

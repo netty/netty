@@ -32,6 +32,16 @@ public class DefaultLastStompContentSubframe extends DefaultStompContentSubframe
     }
 
     @Override
+    public LastStompContentSubframe slice() {
+        return (LastStompContentSubframe) super.slice();
+    }
+
+    @Override
+    public LastStompContentSubframe retainedSlice() {
+        return (LastStompContentSubframe) super.retainedSlice();
+    }
+
+    @Override
     public LastStompContentSubframe duplicate() {
         return (LastStompContentSubframe) super.duplicate();
     }

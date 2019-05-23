@@ -57,6 +57,16 @@ public class MqttPublishMessage extends MqttMessage implements ByteBufHolder {
     }
 
     @Override
+    public MqttPublishMessage slice() {
+        return replace(content().slice());
+    }
+
+    @Override
+    public MqttPublishMessage retainedSlice() {
+        return replace(content().retainedSlice());
+    }
+
+    @Override
     public MqttPublishMessage duplicate() {
         return replace(content().duplicate());
     }

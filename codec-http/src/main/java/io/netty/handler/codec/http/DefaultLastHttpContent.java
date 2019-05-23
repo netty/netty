@@ -49,6 +49,16 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
     }
 
     @Override
+    public LastHttpContent slice() {
+        return replace(content().slice());
+    }
+
+    @Override
+    public LastHttpContent retainedSlice() {
+        return replace(content().retainedSlice());
+    }
+
+    @Override
     public LastHttpContent duplicate() {
         return replace(content().duplicate());
     }

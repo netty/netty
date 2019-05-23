@@ -36,6 +36,16 @@ public class DefaultStompContentSubframe extends DefaultByteBufHolder implements
     }
 
     @Override
+    public StompContentSubframe slice() {
+        return (StompContentSubframe) super.slice();
+    }
+
+    @Override
+    public StompContentSubframe retainedSlice() {
+        return (StompContentSubframe) super.retainedSlice();
+    }
+
+    @Override
     public StompContentSubframe duplicate() {
         return (StompContentSubframe) super.duplicate();
     }

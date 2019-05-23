@@ -73,6 +73,16 @@ public class DefaultDnsRawRecord extends AbstractDnsRecord implements DnsRawReco
     }
 
     @Override
+    public DnsRawRecord slice() {
+        return replace(content().slice());
+    }
+
+    @Override
+    public DnsRawRecord retainedSlice() {
+        return replace(content().retainedSlice());
+    }
+
+    @Override
     public DnsRawRecord duplicate() {
         return replace(content().duplicate());
     }

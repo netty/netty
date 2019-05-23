@@ -34,6 +34,12 @@ public interface BulkStringRedisContent extends RedisMessage, ByteBufHolder {
     BulkStringRedisContent copy();
 
     @Override
+    BulkStringRedisContent slice();
+
+    @Override
+    BulkStringRedisContent retainedSlice();
+
+    @Override
     BulkStringRedisContent duplicate();
 
     @Override

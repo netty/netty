@@ -33,6 +33,12 @@ interface PemEncoded extends ByteBufHolder {
     PemEncoded copy();
 
     @Override
+    PemEncoded slice();
+
+    @Override
+    PemEncoded retainedSlice();
+
+    @Override
     PemEncoded duplicate();
 
     @Override

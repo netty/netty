@@ -69,6 +69,16 @@ public final class DefaultHttp2UnknownFrame extends DefaultByteBufHolder impleme
     }
 
     @Override
+    public DefaultHttp2UnknownFrame slice() {
+        return replace(content().slice());
+    }
+
+    @Override
+    public DefaultHttp2UnknownFrame retainedSlice() {
+        return replace(content().retainedSlice());
+    }
+
+    @Override
     public DefaultHttp2UnknownFrame duplicate() {
         return replace(content().duplicate());
     }

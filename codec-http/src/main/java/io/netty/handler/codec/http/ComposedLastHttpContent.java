@@ -46,6 +46,16 @@ final class ComposedLastHttpContent implements LastHttpContent {
     }
 
     @Override
+    public LastHttpContent slice() {
+        return copy();
+    }
+
+    @Override
+    public LastHttpContent retainedSlice() {
+        return copy();
+    }
+
+    @Override
     public LastHttpContent duplicate() {
         return copy();
     }

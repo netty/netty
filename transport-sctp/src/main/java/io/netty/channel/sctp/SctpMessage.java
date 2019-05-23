@@ -154,6 +154,16 @@ public final class SctpMessage extends DefaultByteBufHolder {
     }
 
     @Override
+    public SctpMessage slice() {
+        return (SctpMessage) super.slice();
+    }
+
+    @Override
+    public SctpMessage retainedSlice() {
+        return (SctpMessage) super.retainedSlice();
+    }
+
+    @Override
     public SctpMessage duplicate() {
         return (SctpMessage) super.duplicate();
     }

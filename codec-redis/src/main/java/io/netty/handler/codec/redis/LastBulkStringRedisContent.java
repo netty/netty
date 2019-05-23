@@ -41,6 +41,16 @@ public interface LastBulkStringRedisContent extends BulkStringRedisContent {
         }
 
         @Override
+        public LastBulkStringRedisContent slice() {
+            return this;
+        }
+
+        @Override
+        public LastBulkStringRedisContent retainedSlice() {
+            return this;
+        }
+
+        @Override
         public LastBulkStringRedisContent duplicate() {
             return this;
         }
@@ -93,6 +103,12 @@ public interface LastBulkStringRedisContent extends BulkStringRedisContent {
 
     @Override
     LastBulkStringRedisContent copy();
+
+    @Override
+    LastBulkStringRedisContent slice();
+
+    @Override
+    LastBulkStringRedisContent retainedSlice();
 
     @Override
     LastBulkStringRedisContent duplicate();

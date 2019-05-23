@@ -16,6 +16,7 @@
 package io.netty.handler.codec.redis;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.StringUtil;
@@ -140,6 +141,16 @@ public class FullBulkStringRedisMessage extends DefaultByteBufHolder implements 
         }
 
         @Override
+        public FullBulkStringRedisMessage slice() {
+            return this;
+        }
+
+        @Override
+        public FullBulkStringRedisMessage retainedSlice() {
+            return this;
+        }
+
+        @Override
         public FullBulkStringRedisMessage duplicate() {
             return this;
         }
@@ -188,6 +199,16 @@ public class FullBulkStringRedisMessage extends DefaultByteBufHolder implements 
     @Override
     public FullBulkStringRedisMessage copy() {
         return (FullBulkStringRedisMessage) super.copy();
+    }
+
+    @Override
+    public FullBulkStringRedisMessage slice() {
+        return (FullBulkStringRedisMessage) super.slice();
+    }
+
+    @Override
+    public FullBulkStringRedisMessage retainedSlice() {
+        return (FullBulkStringRedisMessage) super.retainedSlice();
     }
 
     @Override

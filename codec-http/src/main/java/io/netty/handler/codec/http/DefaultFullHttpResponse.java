@@ -138,6 +138,16 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     }
 
     @Override
+    public FullHttpResponse slice() {
+        return replace(content().slice());
+    }
+
+    @Override
+    public FullHttpResponse retainedSlice() {
+        return replace(content().retainedSlice());
+    }
+
+    @Override
     public FullHttpResponse duplicate() {
         return replace(content().duplicate());
     }

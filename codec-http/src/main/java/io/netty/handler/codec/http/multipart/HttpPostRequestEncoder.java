@@ -1269,6 +1269,16 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         }
 
         @Override
+        public FullHttpRequest slice() {
+            return replace(content().slice());
+        }
+
+        @Override
+        public FullHttpRequest retainedSlice() {
+            return replace(content().retainedSlice());
+        }
+
+        @Override
         public FullHttpRequest duplicate() {
             return replace(content().duplicate());
         }

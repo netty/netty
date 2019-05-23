@@ -83,6 +83,16 @@ public class AbstractMemoryHttpDataTest {
         }
 
         @Override
+        public HttpData slice() {
+            throw reject();
+        }
+
+        @Override
+        public HttpData retainedSlice() {
+            throw reject();
+        }
+
+        @Override
         public HttpData duplicate() {
             throw reject();
         }

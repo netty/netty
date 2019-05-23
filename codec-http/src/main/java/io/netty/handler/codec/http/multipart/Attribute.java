@@ -37,6 +37,12 @@ public interface Attribute extends HttpData {
     Attribute copy();
 
     @Override
+    Attribute slice();
+
+    @Override
+    Attribute retainedSlice();
+
+    @Override
     Attribute duplicate();
 
     @Override

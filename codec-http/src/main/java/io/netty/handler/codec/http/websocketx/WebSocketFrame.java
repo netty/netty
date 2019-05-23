@@ -66,6 +66,16 @@ public abstract class WebSocketFrame extends DefaultByteBufHolder {
     }
 
     @Override
+    public WebSocketFrame slice() {
+        return (WebSocketFrame) super.slice();
+    }
+
+    @Override
+    public WebSocketFrame retainedSlice() {
+        return (WebSocketFrame) super.retainedSlice();
+    }
+
+    @Override
     public WebSocketFrame duplicate() {
         return (WebSocketFrame) super.duplicate();
     }

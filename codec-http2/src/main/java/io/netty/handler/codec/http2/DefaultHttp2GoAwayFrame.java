@@ -116,6 +116,16 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
     }
 
     @Override
+    public Http2GoAwayFrame slice() {
+        return (Http2GoAwayFrame) super.slice();
+    }
+
+    @Override
+    public Http2GoAwayFrame retainedSlice() {
+        return (Http2GoAwayFrame) super.retainedSlice();
+    }
+
+    @Override
     public Http2GoAwayFrame duplicate() {
         return (Http2GoAwayFrame) super.duplicate();
     }

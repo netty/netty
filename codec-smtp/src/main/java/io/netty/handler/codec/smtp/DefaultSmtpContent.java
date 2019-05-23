@@ -38,6 +38,16 @@ public class DefaultSmtpContent extends DefaultByteBufHolder implements SmtpCont
     }
 
     @Override
+    public SmtpContent slice() {
+        return (SmtpContent) super.slice();
+    }
+
+    @Override
+    public SmtpContent retainedSlice() {
+        return (SmtpContent) super.retainedSlice();
+    }
+
+    @Override
     public SmtpContent duplicate() {
         return (SmtpContent) super.duplicate();
     }

@@ -267,6 +267,16 @@ public class MixedAttribute implements Attribute {
     }
 
     @Override
+    public Attribute slice() {
+        return attribute.slice();
+    }
+
+    @Override
+    public Attribute retainedSlice() {
+        return attribute.retainedSlice();
+    }
+
+    @Override
     public Attribute duplicate() {
         return attribute.duplicate();
     }

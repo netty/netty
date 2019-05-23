@@ -48,6 +48,16 @@ public final class DatagramPacket
     }
 
     @Override
+    public DatagramPacket slice() {
+        return replace(content().slice());
+    }
+
+    @Override
+    public DatagramPacket retainedSlice() {
+        return replace(content().retainedSlice());
+    }
+
+    @Override
     public DatagramPacket duplicate() {
         return replace(content().duplicate());
     }

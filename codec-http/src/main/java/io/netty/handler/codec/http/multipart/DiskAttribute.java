@@ -166,6 +166,32 @@ public class DiskAttribute extends AbstractDiskHttpData implements Attribute {
     }
 
     @Override
+    public Attribute slice() {
+        final ByteBuf content = content();
+        return replace(content != null ? content.slice() : null);
+    }
+
+    @Override
+    public Attribute retainedSlice() {
+        ByteBuf content = content();
+        if (content != null) {
+            content = content.retainedSlice();
+            boolean success = false;
+            try {
+                Attribute slice = replace(content);
+                success = true;
+                return slice;
+            } finally {
+                if (!success) {
+                    content.release();
+                }
+            }
+        }
+
+        return replace(null);
+    }
+
+    @Override
     public Attribute duplicate() {
         final ByteBuf content = content();
         return replace(content != null ? content.duplicate() : null);

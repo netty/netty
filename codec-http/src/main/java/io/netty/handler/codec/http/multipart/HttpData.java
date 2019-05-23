@@ -217,6 +217,12 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
     HttpData copy();
 
     @Override
+    HttpData slice();
+
+    @Override
+    HttpData retainedSlice();
+
+    @Override
     HttpData duplicate();
 
     @Override

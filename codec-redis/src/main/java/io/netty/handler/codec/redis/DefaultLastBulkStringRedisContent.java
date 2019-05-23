@@ -39,6 +39,16 @@ public final class DefaultLastBulkStringRedisContent extends DefaultBulkStringRe
     }
 
     @Override
+    public LastBulkStringRedisContent slice() {
+        return (LastBulkStringRedisContent) super.slice();
+    }
+
+    @Override
+    public LastBulkStringRedisContent retainedSlice() {
+        return (LastBulkStringRedisContent) super.retainedSlice();
+    }
+
+    @Override
     public LastBulkStringRedisContent duplicate() {
         return (LastBulkStringRedisContent) super.duplicate();
     }

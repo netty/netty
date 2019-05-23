@@ -100,6 +100,16 @@ public class TextWebSocketFrame extends WebSocketFrame {
     }
 
     @Override
+    public TextWebSocketFrame slice() {
+        return (TextWebSocketFrame) super.slice();
+    }
+
+    @Override
+    public TextWebSocketFrame retainedSlice() {
+        return (TextWebSocketFrame) super.retainedSlice();
+    }
+
+    @Override
     public TextWebSocketFrame duplicate() {
         return (TextWebSocketFrame) super.duplicate();
     }

@@ -289,6 +289,16 @@ public class MixedFileUpload implements FileUpload {
     }
 
     @Override
+    public FileUpload slice() {
+        return fileUpload.slice();
+    }
+
+    @Override
+    public FileUpload retainedSlice() {
+        return fileUpload.retainedSlice();
+    }
+
+    @Override
     public FileUpload duplicate() {
         return fileUpload.duplicate();
     }

@@ -54,6 +54,26 @@ public class DefaultByteBufHolder implements ByteBufHolder {
     /**
      * {@inheritDoc}
      * <p>
+     * This method calls {@code replace(content().slice())} by default.
+     */
+    @Override
+    public ByteBufHolder slice() {
+        return replace(data.slice());
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This method calls {@code replace(content().retainedSlice())} by default.
+     */
+    @Override
+    public ByteBufHolder retainedSlice() {
+        return replace(data.retainedSlice());
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
      * This method calls {@code replace(content().duplicate())} by default.
      */
     @Override

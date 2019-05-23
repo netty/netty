@@ -60,6 +60,16 @@ public class PingWebSocketFrame extends WebSocketFrame {
     }
 
     @Override
+    public PingWebSocketFrame slice() {
+        return (PingWebSocketFrame) super.slice();
+    }
+
+    @Override
+    public PingWebSocketFrame retainedSlice() {
+        return (PingWebSocketFrame) super.retainedSlice();
+    }
+
+    @Override
     public PingWebSocketFrame duplicate() {
         return (PingWebSocketFrame) super.duplicate();
     }

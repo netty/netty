@@ -206,6 +206,16 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
     }
 
     @Override
+    public PemX509Certificate slice() {
+        return replace(content.slice());
+    }
+
+    @Override
+    public PemX509Certificate retainedSlice() {
+        return replace(content.retainedSlice());
+    }
+
+    @Override
     public PemX509Certificate duplicate() {
         return replace(content.duplicate());
     }

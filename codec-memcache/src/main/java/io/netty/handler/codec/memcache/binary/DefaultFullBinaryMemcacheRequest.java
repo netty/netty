@@ -106,6 +106,32 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
     }
 
     @Override
+    public FullBinaryMemcacheRequest slice() {
+        ByteBuf key = key();
+        if (key != null) {
+            key = key.slice();
+        }
+        ByteBuf extras = extras();
+        if (extras != null) {
+            extras = extras.slice();
+        }
+        return newInstance(key, extras, content().slice());
+    }
+
+    @Override
+    public FullBinaryMemcacheRequest retainedSlice() {
+        ByteBuf key = key();
+        if (key != null) {
+            key = key.retainedSlice();
+        }
+        ByteBuf extras = extras();
+        if (extras != null) {
+            extras = extras.retainedSlice();
+        }
+        return newInstance(key, extras, content().retainedSlice());
+    }
+
+    @Override
     public FullBinaryMemcacheRequest duplicate() {
         ByteBuf key = key();
         if (key != null) {
