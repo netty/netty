@@ -32,6 +32,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -87,7 +88,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private final Executor executor;
     private volatile boolean interrupted;
 
-    // shutdownHooks Set object also used as monitor for awaitTermination() blocking
+    private final CountDownLatch threadLock = new CountDownLatch(1);
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
     private final boolean addTaskWakesUp;
     private final int maxPendingTasks;
@@ -739,13 +740,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             throw new IllegalStateException("cannot await termination of the current thread");
         }
 
-        final long deadline = System.nanoTime() + unit.toNanos(timeout);
-        long remainingNanos;
-        synchronized (shutdownHooks) {
-            while (!isTerminated() && (remainingNanos = deadline - System.nanoTime()) > 0L) {
-                TimeUnit.NANOSECONDS.timedWait(shutdownHooks, remainingNanos);
-            }
-        }
+        threadLock.await(timeout, unit);
 
         return isTerminated();
     }
@@ -949,9 +944,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                             FastThreadLocal.removeAll();
 
                             STATE_UPDATER.set(SingleThreadEventExecutor.this, ST_TERMINATED);
-                            synchronized (shutdownHooks) {
-                                shutdownHooks.notifyAll();
-                            }
+                            threadLock.countDown();
                             if (logger.isWarnEnabled() && !taskQueue.isEmpty()) {
                                 logger.warn("An event executor terminated with " +
                                         "non-empty task queue (" + taskQueue.size() + ')');
