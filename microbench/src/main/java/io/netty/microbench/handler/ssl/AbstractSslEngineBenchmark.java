@@ -21,6 +21,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.microbench.util.AbstractMicrobenchmark;
+import io.netty.util.DirectCleaner;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
 import org.openjdk.jmh.annotations.Param;
@@ -114,7 +115,7 @@ public class AbstractSslEngineBenchmark extends AbstractMicrobenchmark {
 
             @Override
             void freeBuffer(ByteBuffer buffer) {
-                PlatformDependent.freeDirectBuffer(buffer);
+                DirectCleaner.freeDirectBuffer(buffer);
             }
         };
 

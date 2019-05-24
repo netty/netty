@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.DirectCleaner;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.Assert;
 import org.junit.Test;
@@ -59,7 +60,7 @@ public class PoolArenaTest {
             long address = PlatformDependent.directBufferAddress(bb);
 
             Assert.assertEquals(0, (offset + address) & (alignment - 1));
-            PlatformDependent.freeDirectBuffer(bb);
+            DirectCleaner.freeDirectBuffer(bb);
         }
     }
 

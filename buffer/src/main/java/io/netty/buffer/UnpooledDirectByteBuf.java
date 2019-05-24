@@ -17,7 +17,7 @@ package io.netty.buffer;
 
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
-import io.netty.util.internal.PlatformDependent;
+import io.netty.util.DirectCleaner;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -108,7 +108,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
      * Free a direct {@link ByteBuffer}
      */
     protected void freeDirect(ByteBuffer buffer) {
-        PlatformDependent.freeDirectBuffer(buffer);
+        DirectCleaner.freeDirectBuffer(buffer);
     }
 
     private void setByteBuffer(ByteBuffer buffer) {

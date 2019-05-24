@@ -18,6 +18,7 @@ package io.netty.buffer;
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 
+import io.netty.util.DirectCleaner;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -66,7 +67,7 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
         }
         @Override
         public boolean release() {
-            PlatformDependent.freeDirectBuffer(byteBuffer);
+            DirectCleaner.freeDirectBuffer(byteBuffer);
             return true;
         }
     }

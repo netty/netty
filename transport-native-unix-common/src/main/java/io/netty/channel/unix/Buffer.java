@@ -15,6 +15,7 @@
  */
 package io.netty.channel.unix;
 
+import io.netty.util.DirectCleaner;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
@@ -30,7 +31,7 @@ public final class Buffer {
      * Free the direct {@link ByteBuffer}.
      */
     public static void free(ByteBuffer buffer) {
-        PlatformDependent.freeDirectBuffer(buffer);
+        DirectCleaner.freeDirectBuffer(buffer);
     }
 
     /**

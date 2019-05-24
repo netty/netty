@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.DirectCleaner;
 import io.netty.util.internal.LongCounter;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -777,7 +778,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             if (PlatformDependent.useDirectBufferNoCleaner()) {
                 PlatformDependent.freeDirectNoCleaner(chunk.memory);
             } else {
-                PlatformDependent.freeDirectBuffer(chunk.memory);
+                DirectCleaner.freeDirectBuffer(chunk.memory);
             }
         }
 
