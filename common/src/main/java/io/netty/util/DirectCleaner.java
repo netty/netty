@@ -62,6 +62,12 @@ public final class DirectCleaner {
     private DirectCleaner() {
     }
 
+    /**
+     * Frees direct {@link ByteBuffer}s. This interface can be implemented by users that need custom logic when freeing
+     * direct buffers. A possible use case is one where a user of Netty has disabled Netty's access Unsafe (preventing
+     * Netty from freeing direct buffers), but can provide a {@link CustomCleaner} implementation with the necessary
+     * Unsafe functionality.
+     */
     public interface CustomCleaner {
 
         void freeDirectMemory(ByteBuffer byteBuffer);
