@@ -34,8 +34,8 @@ public final class DirectCleaner {
      */
     public static void freeDirectBuffer(ByteBuffer buffer) {
         // Copied locally to prevent race
-        CustomCleaner localCustomCleaner = DirectCleaner.customCleaner;
-        if (!ALLOW_CUSTOM_CLEANER || localCustomCleaner == null) {
+        CustomCleaner localCustomCleaner;
+        if (!ALLOW_CUSTOM_CLEANER || (localCustomCleaner = DirectCleaner.customCleaner) == null) {
             PlatformDependent.freeDirectBuffer(buffer);
         } else {
             localCustomCleaner.freeDirectMemory(buffer);
@@ -47,7 +47,6 @@ public final class DirectCleaner {
      * can only be used if io.netty.allowCustomCleaner is set to true and Netty is not configured to use
      * direct byte buffers without cleaners.
      */
-    @SuppressWarnings("unused") // this method is part of the public API
     public static void setCustomCleaner(CustomCleaner cleaner) {
         if (!ALLOW_CUSTOM_CLEANER) {
             throw new UnsupportedOperationException("Cannot set CustomCleaner, io.netty.allowCustomCleaner set to " +
