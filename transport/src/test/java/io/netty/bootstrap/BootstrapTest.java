@@ -16,6 +16,7 @@
 
 package io.netty.bootstrap;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -177,11 +178,12 @@ public class BootstrapTest {
                         }
 
                         @Override
-                        public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+                        public Channel bind(SocketAddress localAddress, ChannelPromise promise) {
                             // Close the Channel to emulate what NIO and others impl do on bind failure
                             // See https://github.com/netty/netty/issues/2586
                             close();
-                            return promise.setFailure(new SocketException());
+                            promise.setFailure(new SocketException());
+                            return this;
                         }
                     });
             bootstrap.childHandler(new DummyHandler());

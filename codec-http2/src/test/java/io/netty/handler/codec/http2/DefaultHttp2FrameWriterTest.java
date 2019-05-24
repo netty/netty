@@ -76,16 +76,22 @@ public class DefaultHttp2FrameWriterTest {
 
         http2HeadersEncoder = new DefaultHttp2HeadersEncoder();
 
-        Answer<Object> answer = var1 -> {
+        when(ctx.write(any())).then(var1 -> {
             Object msg = var1.getArgument(0);
             if (msg instanceof ByteBuf) {
                 outbound.writeBytes((ByteBuf) msg);
             }
             ReferenceCountUtil.release(msg);
             return future;
-        };
-        when(ctx.write(any())).then(answer);
-        when(ctx.write(any(), any(ChannelPromise.class))).then(answer);
+        });
+        when(ctx.write(any(), any(ChannelPromise.class))).then(var1 -> {
+            Object msg = var1.getArgument(0);
+            if (msg instanceof ByteBuf) {
+                outbound.writeBytes((ByteBuf) msg);
+            }
+            ReferenceCountUtil.release(msg);
+            return ctx;
+        });
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
         when(ctx.executor()).thenReturn(ImmediateEventExecutor.INSTANCE);

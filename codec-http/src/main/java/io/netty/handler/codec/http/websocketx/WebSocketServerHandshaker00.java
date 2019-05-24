@@ -183,8 +183,9 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            Web Socket frame that was received
      */
     @Override
-    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
-        return channel.writeAndFlush(frame, promise);
+    public WebSocketServerHandshaker close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
+        channel.writeAndFlush(frame, promise);
+        return this;
     }
 
     @Override

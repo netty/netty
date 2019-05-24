@@ -41,6 +41,7 @@ public class AbstractChannelTest {
 
         registerChannel(channel);
 
+        Thread.sleep(1000);
         verify(handler).handlerAdded(any(ChannelHandlerContext.class));
         verify(handler).channelRegistered(any(ChannelHandlerContext.class));
         verify(handler).channelActive(any(ChannelHandlerContext.class));

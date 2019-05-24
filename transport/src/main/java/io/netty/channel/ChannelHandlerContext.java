@@ -22,6 +22,7 @@ import io.netty.util.AttributeKey;
 import io.netty.util.AttributeMap;
 import io.netty.util.concurrent.EventExecutor;
 
+import java.net.SocketAddress;
 import java.nio.channels.Channels;
 
 /**
@@ -185,6 +186,33 @@ public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvok
 
     @Override
     ChannelHandlerContext flush();
+
+    @Override
+    ChannelHandlerContext bind(SocketAddress localAddress, ChannelPromise promise);
+
+    @Override
+    ChannelHandlerContext connect(SocketAddress remoteAddress, ChannelPromise promise);
+
+    @Override
+    ChannelHandlerContext connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise);
+
+    @Override
+    ChannelHandlerContext disconnect(ChannelPromise promise);
+
+    @Override
+    ChannelHandlerContext close(ChannelPromise promise);
+
+    @Override
+    ChannelHandlerContext register(ChannelPromise promise);
+
+    @Override
+    ChannelHandlerContext deregister(ChannelPromise promise);
+
+    @Override
+    ChannelHandlerContext write(Object msg, ChannelPromise promise);
+
+    @Override
+    ChannelHandlerContext writeAndFlush(Object msg, ChannelPromise promise);
 
     /**
      * Return the assigned {@link ChannelPipeline}

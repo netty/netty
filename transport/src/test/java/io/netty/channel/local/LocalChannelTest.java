@@ -720,7 +720,7 @@ public class LocalChannelTest {
 
                 // Make sure a write operation is executed in the eventloop
                 cc.pipeline().lastContext().executor().execute(() ->
-                        ccCpy.writeAndFlush(data.retainedDuplicate(), ccCpy.newPromise())
+                        ccCpy.writeAndFlush(data.retainedDuplicate(), ccCpy.newPromise()
                 .addListener((ChannelFutureListener) future -> {
                     serverChannelCpy.eventLoop().execute(() -> {
                         // The point of this test is to write while the peer is closed, so we should
@@ -737,16 +737,16 @@ public class LocalChannelTest {
                             }
                         }
                         serverChannelCpy.writeAndFlush(data2.retainedDuplicate(),
-                            serverChannelCpy.newPromise())
+                            serverChannelCpy.newPromise()
                             .addListener((ChannelFutureListener) future1 -> {
                                 if (!future1.isSuccess() &&
                                     future1.cause() instanceof ClosedChannelException) {
                                     writeFailLatch.countDown();
                                 }
-                            });
+                            }));
                     });
                     ccCpy.close();
-                }));
+                })));
 
                 assertTrue(serverMessageLatch.await(5, SECONDS));
                 assertTrue(writeFailLatch.await(5, SECONDS));
@@ -805,7 +805,8 @@ public class LocalChannelTest {
                 }
             });
             // Connect to the server
-            cc.connect(sc.localAddress(), promise).sync();
+            cc.connect(sc.localAddress(), promise);
+            promise.sync();
 
             assertPromise.syncUninterruptibly();
             assertTrue(promise.isSuccess());

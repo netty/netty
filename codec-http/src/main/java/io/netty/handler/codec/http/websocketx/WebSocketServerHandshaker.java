@@ -308,7 +308,9 @@ public abstract class WebSocketServerHandshaker {
      */
     public ChannelFuture close(Channel channel, CloseWebSocketFrame frame) {
         requireNonNull(channel, "channel");
-        return close(channel, frame, channel.newPromise());
+        ChannelPromise promise = channel.newPromise();
+        close(channel, frame, promise);
+        return promise;
     }
 
     /**
@@ -321,9 +323,10 @@ public abstract class WebSocketServerHandshaker {
      * @param promise
      *            the {@link ChannelPromise} to be notified when the closing handshake is done
      */
-    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
+    public WebSocketServerHandshaker close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
         requireNonNull(channel, "channel");
-        return channel.writeAndFlush(frame, promise).addListener(ChannelFutureListener.CLOSE);
+        channel.writeAndFlush(frame, promise.addListener(ChannelFutureListener.CLOSE));
+        return this;
     }
 
     /**

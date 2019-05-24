@@ -28,6 +28,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelMetadata;
@@ -207,18 +208,20 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     public ChannelFuture register() {
-        return register(newPromise());
+        ChannelPromise promise = newPromise();
+        register(promise);
+        return promise;
     }
 
     @Override
-    public ChannelFuture register(ChannelPromise promise) {
-        ChannelFuture future = super.register(promise);
-        assert future.isDone();
-        Throwable cause = future.cause();
+    public Channel register(ChannelPromise promise) {
+        super.register(promise);
+        assert promise.isDone();
+        Throwable cause = promise.cause();
         if (cause != null) {
             PlatformDependent.throwException(cause);
         }
-        return future;
+        return this;
     }
 
     @Override
@@ -430,7 +433,8 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public ChannelFuture writeOneOutbound(Object msg, ChannelPromise promise) {
         if (checkOpen(true)) {
-            return write(msg, promise);
+            write(msg, promise);
+            return promise;
         }
         return checkException(promise);
     }
@@ -534,31 +538,35 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     public final ChannelFuture close() {
-        return close(newPromise());
+        ChannelPromise promise = newPromise();
+        close(promise);
+        return promise;
     }
 
     @Override
     public final ChannelFuture disconnect() {
-        return disconnect(newPromise());
+        ChannelPromise promise = newPromise();
+        disconnect(promise);
+        return promise;
     }
 
     @Override
-    public final ChannelFuture close(ChannelPromise promise) {
+    public final Channel close(ChannelPromise promise) {
         // We need to call runPendingTasks() before calling super.close() as there may be something in the queue
         // that needs to be run before the actual close takes place.
         runPendingTasks();
-        ChannelFuture future = super.close(promise);
+        super.close(promise);
 
         // Now finish everything else and cancel all scheduled tasks that were not ready set.
         finishPendingTasks(true);
-        return future;
+        return this;
     }
 
     @Override
-    public final ChannelFuture disconnect(ChannelPromise promise) {
-        ChannelFuture future = super.disconnect(promise);
+    public final Channel disconnect(ChannelPromise promise) {
+        super.disconnect(promise);
         finishPendingTasks(!metadata.hasDisconnect());
-        return future;
+        return this;
     }
 
     private static boolean isNotEmpty(Queue<Object> queue) {

@@ -27,6 +27,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
 
 import java.util.concurrent.TimeUnit;
@@ -239,23 +240,22 @@ public class JZlibEncoder extends ZlibEncoder {
 
     @Override
     public ChannelFuture close() {
-        return close(ctx().channel().newPromise());
+        ChannelPromise promise = ctx().newPromise();
+        close(promise);
+        return promise;
     }
 
     @Override
-    public ChannelFuture close(final ChannelPromise promise) {
+    public ZlibEncoder close(final ChannelPromise promise) {
         ChannelHandlerContext ctx = ctx();
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
-            return finishEncode(ctx, promise);
+            finishEncode(ctx).addListener(new PromiseNotifier<>(promise));
         } else {
             final ChannelPromise p = ctx.newPromise();
-            executor.execute(() -> {
-                ChannelFuture f = finishEncode(ctx(), p);
-                f.addListener(new ChannelPromiseNotifier(promise));
-            });
-            return p;
+            executor.execute(() -> finishEncode(ctx).addListener(new PromiseNotifier<>(promise)));
         }
+        return this;
     }
 
     private ChannelHandlerContext ctx() {
@@ -336,7 +336,7 @@ public class JZlibEncoder extends ZlibEncoder {
     public void close(
             final ChannelHandlerContext ctx,
             final ChannelPromise promise) {
-        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
+        ChannelFuture f = finishEncode(ctx);
         f.addListener((ChannelFutureListener) f1 -> ctx.close(promise));
 
         if (!f.isDone()) {
@@ -347,10 +347,9 @@ public class JZlibEncoder extends ZlibEncoder {
         }
     }
 
-    private ChannelFuture finishEncode(ChannelHandlerContext ctx, ChannelPromise promise) {
+    private ChannelFuture finishEncode(ChannelHandlerContext ctx) {
         if (finished) {
-            promise.setSuccess();
-            return promise;
+            return ctx.newSucceededFuture();
         }
         finished = true;
 
@@ -370,8 +369,7 @@ public class JZlibEncoder extends ZlibEncoder {
             // Write the ADLER32 checksum (stream footer).
             int resultCode = z.deflate(JZlib.Z_FINISH);
             if (resultCode != JZlib.Z_OK && resultCode != JZlib.Z_STREAM_END) {
-                promise.setFailure(ZlibUtil.deflaterException(z, "compression failure", resultCode));
-                return promise;
+                return ctx.newFailedFuture(ZlibUtil.deflaterException(z, "compression failure", resultCode));
             } else if (z.next_out_index != 0) {
                 footer = Unpooled.wrappedBuffer(out, 0, z.next_out_index);
             } else {
@@ -387,7 +385,7 @@ public class JZlibEncoder extends ZlibEncoder {
             z.next_in = null;
             z.next_out = null;
         }
-        return ctx.writeAndFlush(footer, promise);
+        return ctx.writeAndFlush(footer);
     }
 
     @Override

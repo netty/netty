@@ -102,7 +102,7 @@ public class SocketEchoTest extends AbstractSocketTest {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
             ByteBuf buf = Unpooled.wrappedBuffer(data, i, length);
             if (voidPromise) {
-                assertEquals(cc.voidPromise(), cc.writeAndFlush(buf, cc.voidPromise()));
+                cc.writeAndFlush(buf, cc.voidPromise());
             } else {
                 assertNotEquals(cc.voidPromise(), cc.writeAndFlush(buf));
             }

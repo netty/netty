@@ -195,9 +195,9 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         // See https://github.com/netty/netty/issues/2769
         //     https://github.com/netty/netty/issues/2964
         if (voidPromise) {
-            assertEquals(cc.voidPromise(), cc.write(Unpooled.wrappedBuffer(data, 0, bufferSize), cc.voidPromise()));
-            assertEquals(cc.voidPromise(), cc.write(emptyRegion, cc.voidPromise()));
-            assertEquals(cc.voidPromise(), cc.writeAndFlush(region, cc.voidPromise()));
+            cc.write(Unpooled.wrappedBuffer(data, 0, bufferSize), cc.voidPromise());
+            cc.write(emptyRegion, cc.voidPromise());
+            cc.writeAndFlush(region, cc.voidPromise());
         } else {
             assertNotEquals(cc.voidPromise(), cc.write(Unpooled.wrappedBuffer(data, 0, bufferSize)));
             assertNotEquals(cc.voidPromise(), cc.write(emptyRegion));

@@ -553,7 +553,8 @@ public class Http2MultiplexCodecTest {
             channelOpen.set(future.channel().isOpen());
             channelActive.set(future.channel().isActive());
         });
-        childChannel.close(p).syncUninterruptibly();
+        childChannel.close(p);
+        p.syncUninterruptibly();
 
         assertFalse(channelOpen.get());
         assertFalse(channelActive.get());

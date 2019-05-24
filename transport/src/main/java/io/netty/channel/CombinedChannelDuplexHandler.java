@@ -461,39 +461,46 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
         }
 
         @Override
-        public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-            return ctx.bind(localAddress, promise);
+        public ChannelHandlerContext bind(SocketAddress localAddress, ChannelPromise promise) {
+            ctx.bind(localAddress, promise);
+            return this;
         }
 
         @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-            return ctx.connect(remoteAddress, promise);
+        public ChannelHandlerContext connect(SocketAddress remoteAddress, ChannelPromise promise) {
+            ctx.connect(remoteAddress, promise);
+            return this;
         }
 
         @Override
-        public ChannelFuture connect(
+        public ChannelHandlerContext connect(
                 SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            return ctx.connect(remoteAddress, localAddress, promise);
+            ctx.connect(remoteAddress, localAddress, promise);
+            return this;
         }
 
         @Override
-        public ChannelFuture disconnect(ChannelPromise promise) {
-            return ctx.disconnect(promise);
+        public ChannelHandlerContext disconnect(ChannelPromise promise) {
+            ctx.disconnect(promise);
+            return this;
         }
 
         @Override
-        public ChannelFuture close(ChannelPromise promise) {
-            return ctx.close(promise);
+        public ChannelHandlerContext close(ChannelPromise promise) {
+            ctx.close(promise);
+            return this;
         }
 
         @Override
-        public ChannelFuture register(ChannelPromise promise) {
-            return ctx.register(promise);
+        public ChannelHandlerContext register(ChannelPromise promise) {
+            ctx.register(promise);
+            return this;
         }
 
         @Override
-        public ChannelFuture deregister(ChannelPromise promise) {
-            return ctx.deregister(promise);
+        public ChannelHandlerContext deregister(ChannelPromise promise) {
+            ctx.deregister(promise);
+            return this;
         }
 
         @Override
@@ -508,8 +515,9 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
         }
 
         @Override
-        public ChannelFuture write(Object msg, ChannelPromise promise) {
-            return ctx.write(msg, promise);
+        public ChannelHandlerContext write(Object msg, ChannelPromise promise) {
+            ctx.write(msg, promise);
+            return this;
         }
 
         @Override
@@ -519,8 +527,9 @@ public class CombinedChannelDuplexHandler<I extends ChannelHandler, O extends Ch
         }
 
         @Override
-        public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-            return ctx.writeAndFlush(msg, promise);
+        public ChannelHandlerContext writeAndFlush(Object msg, ChannelPromise promise) {
+            ctx.writeAndFlush(msg, promise);
+            return this;
         }
 
         @Override

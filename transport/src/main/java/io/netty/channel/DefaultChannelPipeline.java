@@ -923,39 +923,46 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        return tail.bind(localAddress, promise);
+    public final ChannelPipeline bind(SocketAddress localAddress, ChannelPromise promise) {
+        tail.bind(localAddress, promise);
+        return this;
     }
 
     @Override
-    public final ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-        return tail.connect(remoteAddress, promise);
+    public final ChannelPipeline connect(SocketAddress remoteAddress, ChannelPromise promise) {
+        tail.connect(remoteAddress, promise);
+        return this;
     }
 
     @Override
-    public final ChannelFuture connect(
+    public final ChannelPipeline connect(
             SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-        return tail.connect(remoteAddress, localAddress, promise);
+        tail.connect(remoteAddress, localAddress, promise);
+        return this;
     }
 
     @Override
-    public final ChannelFuture disconnect(ChannelPromise promise) {
-        return tail.disconnect(promise);
+    public final ChannelPipeline disconnect(ChannelPromise promise) {
+        tail.disconnect(promise);
+        return this;
     }
 
     @Override
-    public final ChannelFuture close(ChannelPromise promise) {
-        return tail.close(promise);
+    public final ChannelPipeline close(ChannelPromise promise) {
+        tail.close(promise);
+        return this;
     }
 
     @Override
-    public final ChannelFuture register(final ChannelPromise promise) {
-        return tail.register(promise);
+    public final ChannelPipeline register(final ChannelPromise promise) {
+        tail.register(promise);
+        return this;
     }
 
     @Override
-    public final ChannelFuture deregister(final ChannelPromise promise) {
-        return tail.deregister(promise);
+    public final ChannelPipeline deregister(final ChannelPromise promise) {
+        tail.deregister(promise);
+        return this;
     }
 
     @Override
@@ -970,13 +977,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final ChannelFuture write(Object msg, ChannelPromise promise) {
-        return tail.write(msg, promise);
+    public final ChannelPipeline write(Object msg, ChannelPromise promise) {
+        tail.write(msg, promise);
+        return this;
     }
 
     @Override
-    public final ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-        return tail.writeAndFlush(msg, promise);
+    public final ChannelPipeline writeAndFlush(Object msg, ChannelPromise promise) {
+        tail.writeAndFlush(msg, promise);
+        return this;
     }
 
     @Override

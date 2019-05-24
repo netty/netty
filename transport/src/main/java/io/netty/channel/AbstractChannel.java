@@ -259,38 +259,45 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        return pipeline.bind(localAddress, promise);
+    public Channel bind(SocketAddress localAddress, ChannelPromise promise) {
+        pipeline.bind(localAddress, promise);
+        return this;
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-        return pipeline.connect(remoteAddress, promise);
+    public Channel connect(SocketAddress remoteAddress, ChannelPromise promise) {
+        pipeline.connect(remoteAddress, promise);
+        return this;
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-        return pipeline.connect(remoteAddress, localAddress, promise);
+    public Channel connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        pipeline.connect(remoteAddress, localAddress, promise);
+        return this;
     }
 
     @Override
-    public ChannelFuture disconnect(ChannelPromise promise) {
-        return pipeline.disconnect(promise);
+    public Channel disconnect(ChannelPromise promise) {
+        pipeline.disconnect(promise);
+        return this;
     }
 
     @Override
-    public ChannelFuture close(ChannelPromise promise) {
-        return pipeline.close(promise);
+    public Channel close(ChannelPromise promise) {
+        pipeline.close(promise);
+        return this;
     }
 
     @Override
-    public ChannelFuture register(ChannelPromise promise) {
-        return pipeline.register(promise);
+    public Channel register(ChannelPromise promise) {
+        pipeline.register(promise);
+        return this;
     }
 
     @Override
-    public ChannelFuture deregister(ChannelPromise promise) {
-        return pipeline.deregister(promise);
+    public Channel deregister(ChannelPromise promise) {
+        pipeline.deregister(promise);
+        return this;
     }
 
     @Override
@@ -305,8 +312,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture write(Object msg, ChannelPromise promise) {
-        return pipeline.write(msg, promise);
+    public Channel write(Object msg, ChannelPromise promise) {
+        pipeline.write(msg, promise);
+        return this;
     }
 
     @Override
@@ -315,8 +323,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-        return pipeline.writeAndFlush(msg, promise);
+    public Channel writeAndFlush(Object msg, ChannelPromise promise) {
+        pipeline.writeAndFlush(msg, promise);
+        return this;
     }
 
     @Override

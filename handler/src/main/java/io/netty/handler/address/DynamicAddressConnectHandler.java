@@ -43,13 +43,13 @@ public abstract class DynamicAddressConnectHandler implements ChannelHandler {
             promise.setFailure(e);
             return;
         }
-        ctx.connect(remote, local, promise).addListener(future -> {
+        ctx.connect(remote, local, promise.addListener(future -> {
             if (future.isSuccess()) {
                 // We only remove this handler from the pipeline once the connect was successful as otherwise
                 // the user may try to connect again.
                 ctx.pipeline().remove(DynamicAddressConnectHandler.this);
             }
-        });
+        }));
     }
 
     /**

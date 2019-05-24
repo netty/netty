@@ -123,7 +123,7 @@ public interface ChannelOutboundInvoker {
      * called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise);
+    ChannelOutboundInvoker bind(SocketAddress localAddress, ChannelPromise promise);
 
     /**
      * Request to connect to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
@@ -141,7 +141,7 @@ public interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise);
+    ChannelOutboundInvoker connect(SocketAddress remoteAddress, ChannelPromise promise);
 
     /**
      * Request to connect to the given {@link SocketAddress} while bind to the localAddress and notify the
@@ -155,7 +155,7 @@ public interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise);
+    ChannelOutboundInvoker connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise);
 
     /**
      * Request to disconnect from the remote peer and notify the {@link ChannelFuture} once the operation completes,
@@ -168,7 +168,7 @@ public interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelFuture disconnect(ChannelPromise promise);
+    ChannelOutboundInvoker disconnect(ChannelPromise promise);
 
     /**
      * Request to close the {@link Channel} and notify the {@link ChannelFuture} once the operation completes,
@@ -183,7 +183,7 @@ public interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelFuture close(ChannelPromise promise);
+    ChannelOutboundInvoker close(ChannelPromise promise);
 
     /**
      * Request to register on the {@link EventExecutor} for I/O processing.
@@ -197,7 +197,7 @@ public interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelFuture register(ChannelPromise promise);
+    ChannelOutboundInvoker register(ChannelPromise promise);
 
     /**
      * Request to deregister from the previous assigned {@link EventExecutor} and notify the
@@ -211,7 +211,7 @@ public interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelFuture deregister(ChannelPromise promise);
+    ChannelOutboundInvoker deregister(ChannelPromise promise);
 
     /**
      * Request to Read data from the {@link Channel} into the first inbound buffer, triggers an
@@ -239,7 +239,7 @@ public interface ChannelOutboundInvoker {
      * This method will not request to actual flush, so be sure to call {@link #flush()}
      * once you want to request to flush all pending data to the actual transport.
      */
-    ChannelFuture write(Object msg, ChannelPromise promise);
+    ChannelOutboundInvoker write(Object msg, ChannelPromise promise);
 
     /**
      * Request to flush all pending messages via this ChannelOutboundInvoker.
@@ -249,7 +249,7 @@ public interface ChannelOutboundInvoker {
     /**
      * Shortcut for call {@link #write(Object, ChannelPromise)} and {@link #flush()}.
      */
-    ChannelFuture writeAndFlush(Object msg, ChannelPromise promise);
+    ChannelOutboundInvoker writeAndFlush(Object msg, ChannelPromise promise);
 
     /**
      * Shortcut for call {@link #write(Object)} and {@link #flush()}.

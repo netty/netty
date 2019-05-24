@@ -139,12 +139,15 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
     }
 
     private void writeQuery(final DnsQuery query, final boolean flush, final ChannelPromise writePromise) {
-        final ChannelFuture writeFuture = flush ? channel().writeAndFlush(query, writePromise) :
-                channel().write(query, writePromise);
-        if (writeFuture.isDone()) {
-            onQueryWriteCompletion(writeFuture);
+        if (flush) {
+            channel().writeAndFlush(query, writePromise);
         } else {
-            writeFuture.addListener((ChannelFutureListener) future -> onQueryWriteCompletion(writeFuture));
+            channel().write(query, writePromise);
+        }
+        if (writePromise.isDone()) {
+            onQueryWriteCompletion(writePromise);
+        } else {
+            writePromise.addListener((ChannelFutureListener) future -> onQueryWriteCompletion(future));
         }
     }
 

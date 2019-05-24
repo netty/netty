@@ -193,6 +193,33 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     @Override
     Channel flush();
 
+    @Override
+    Channel bind(SocketAddress localAddress, ChannelPromise promise);
+
+    @Override
+    Channel connect(SocketAddress remoteAddress, ChannelPromise promise);
+
+    @Override
+    Channel connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise);
+
+    @Override
+    Channel disconnect(ChannelPromise promise);
+
+    @Override
+    Channel close(ChannelPromise promise);
+
+    @Override
+    Channel register(ChannelPromise promise);
+
+    @Override
+    Channel deregister(ChannelPromise promise);
+
+    @Override
+    Channel write(Object msg, ChannelPromise promise);
+
+    @Override
+    Channel writeAndFlush(Object msg, ChannelPromise promise);
+
     /**
      * <em>Unsafe</em> operations that should <em>never</em> be called from user-code. These methods
      * are only provided to implement the actual transport, and must be invoked from an I/O thread except for the

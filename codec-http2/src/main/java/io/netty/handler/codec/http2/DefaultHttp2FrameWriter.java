@@ -282,7 +282,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             buf.writeInt(exclusive ? (int) (0x80000000L | streamDependency) : streamDependency);
             // Adjust the weight so that it fits into a single byte on the wire.
             buf.writeByte(weight - 1);
-            return ctx.write(buf, promise);
+            ctx.write(buf, promise);
+            return promise;
         } catch (Throwable t) {
             return promise.setFailure(t);
         }
@@ -298,7 +299,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             ByteBuf buf = ctx.alloc().buffer(RST_STREAM_FRAME_LENGTH);
             writeFrameHeaderInternal(buf, INT_FIELD_LENGTH, RST_STREAM, new Http2Flags(), streamId);
             buf.writeInt((int) errorCode);
-            return ctx.write(buf, promise);
+            ctx.write(buf, promise);
+            return promise;
         } catch (Throwable t) {
             return promise.setFailure(t);
         }
@@ -316,7 +318,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                 buf.writeChar(entry.key());
                 buf.writeInt(entry.value().intValue());
             }
-            return ctx.write(buf, promise);
+            ctx.write(buf, promise);
+            return promise;
         } catch (Throwable t) {
             return promise.setFailure(t);
         }
@@ -327,7 +330,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
         try {
             ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH);
             writeFrameHeaderInternal(buf, 0, SETTINGS, new Http2Flags().ack(true), 0);
-            return ctx.write(buf, promise);
+            ctx.write(buf, promise);
+            return promise;
         } catch (Throwable t) {
             return promise.setFailure(t);
         }
@@ -341,7 +345,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
         // in the catch block.
         writeFrameHeaderInternal(buf, PING_FRAME_PAYLOAD_LENGTH, PING, flags, 0);
         buf.writeLong(data);
-        return ctx.write(buf, promise);
+        ctx.write(buf, promise);
+        return promise;
     }
 
     @Override
@@ -447,7 +452,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             ByteBuf buf = ctx.alloc().buffer(WINDOW_UPDATE_FRAME_LENGTH);
             writeFrameHeaderInternal(buf, INT_FIELD_LENGTH, WINDOW_UPDATE, new Http2Flags(), streamId);
             buf.writeInt(windowSizeIncrement);
-            return ctx.write(buf, promise);
+            ctx.write(buf, promise);
+            return promise;
         } catch (Throwable t) {
             return promise.setFailure(t);
         }

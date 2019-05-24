@@ -181,14 +181,22 @@ public class EmbeddedChannelTest {
     @Test(timeout = 2000)
     public void testFireChannelInactiveAndUnregisteredOnClose() throws InterruptedException {
         testFireChannelInactiveAndUnregistered(ChannelOutboundInvoker::close);
-        testFireChannelInactiveAndUnregistered(channel -> channel.close(channel.newPromise()));
+        testFireChannelInactiveAndUnregistered(channel -> {
+            ChannelPromise promise = channel.newPromise();
+            channel.close(promise);
+            return promise;
+        });
     }
 
     @Test(timeout = 2000)
     public void testFireChannelInactiveAndUnregisteredOnDisconnect() throws InterruptedException {
         testFireChannelInactiveAndUnregistered(ChannelOutboundInvoker::disconnect);
 
-        testFireChannelInactiveAndUnregistered(channel -> channel.disconnect(channel.newPromise()));
+        testFireChannelInactiveAndUnregistered(channel -> {
+            ChannelPromise promise = channel.newPromise();
+            channel.disconnect(promise);
+            return promise;
+        });
     }
 
     private static void testFireChannelInactiveAndUnregistered(Action action) throws InterruptedException {

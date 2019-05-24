@@ -219,7 +219,8 @@ public final class PendingWriteQueue {
         Object msg = write.msg;
         ChannelPromise promise = write.promise;
         recycle(write, true);
-        return ctx.write(msg, promise);
+        ctx.write(msg, promise);
+        return promise;
     }
 
     /**

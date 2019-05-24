@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelProgressiveFuture;
 import io.netty.channel.ChannelProgressiveFutureListener;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -193,22 +194,22 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         ctx.write(response);
 
         // Write the content.
-        ChannelFuture sendFileFuture;
+        ChannelPromise sendFilePromise;
         ChannelFuture lastContentFuture;
         if (ctx.pipeline().get(SslHandler.class) == null) {
-            sendFileFuture =
-                    ctx.write(new DefaultFileRegion(raf.getChannel(), 0, fileLength), ctx.newProgressivePromise());
+            sendFilePromise = ctx.newProgressivePromise();
+            ctx.write(new DefaultFileRegion(raf.getChannel(), 0, fileLength), sendFilePromise);
             // Write the end marker.
             lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
         } else {
-            sendFileFuture =
-                    ctx.writeAndFlush(new HttpChunkedInput(new ChunkedFile(raf, 0, fileLength, 8192)),
-                            ctx.newProgressivePromise());
+            sendFilePromise = ctx.newProgressivePromise();
+            ctx.writeAndFlush(new HttpChunkedInput(new ChunkedFile(raf, 0, fileLength, 8192)),
+                    sendFilePromise);
             // HttpChunkedInput will write the end marker (LastHttpContent) for us.
-            lastContentFuture = sendFileFuture;
+            lastContentFuture = sendFilePromise;
         }
 
-        sendFileFuture.addListener(new ChannelProgressiveFutureListener() {
+        sendFilePromise.addListener(new ChannelProgressiveFutureListener() {
             @Override
             public void operationProgressed(ChannelProgressiveFuture future, long progress, long total) {
                 if (total < 0) { // total unknown
