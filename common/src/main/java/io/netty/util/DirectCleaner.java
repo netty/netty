@@ -22,10 +22,10 @@ import io.netty.util.internal.UnstableApi;
 import java.nio.ByteBuffer;
 
 @UnstableApi
-public class DirectCleaner {
+public final class DirectCleaner {
 
     private static boolean ALLOW_CUSTOM_CLEANER = SystemPropertyUtil.getBoolean("io.netty.allowCustomCleaner", false);
-    private static volatile CustomCleaner customerCleaner;
+    private static volatile CustomCleaner customCleaner;
 
     /**
      * Try to deallocate the specified direct {@link ByteBuffer}. Please note this method does nothing if
@@ -33,28 +33,31 @@ public class DirectCleaner {
      * specified buffer is not a direct buffer.
      */
     public static void freeDirectBuffer(ByteBuffer buffer) {
-        if (!ALLOW_CUSTOM_CLEANER || customerCleaner == null) {
+        // Copied locally to prevent race
+        CustomCleaner localCustomCleaner = DirectCleaner.customCleaner;
+        if (!ALLOW_CUSTOM_CLEANER || localCustomCleaner == null) {
             PlatformDependent.freeDirectBuffer(buffer);
         } else {
-            customerCleaner.freeDirectMemory(buffer);
+            localCustomCleaner.freeDirectMemory(buffer);
         }
     }
 
     /**
-     * Set a {@link CustomCleaner} that will be used to deallocate direct byte buffers. This customer cleaner
+     * Set a {@link CustomCleaner} that will be used to deallocate direct byte buffers. This custom cleaner
      * can only be used if io.netty.allowCustomCleaner is set to true and Netty is not configured to use
      * direct byte buffers without cleaners.
      */
     @SuppressWarnings("unused") // this method is part of the public API
     public static void setCustomCleaner(CustomCleaner cleaner) {
         if (!ALLOW_CUSTOM_CLEANER) {
-            throw new UnsupportedOperationException("Cannot set CustomCleaner, io.netty.allowCustomCleaner set to false.");
+            throw new UnsupportedOperationException("Cannot set CustomCleaner, io.netty.allowCustomCleaner set to " +
+                    "false.");
         }
         if (PlatformDependent.useDirectBufferNoCleaner()) {
-            throw new UnsupportedOperationException("Cannot set CustomCleaner because Netty is configured to allocate direct byte " +
-                    "buffers without use of Cleaner.");
+            throw new UnsupportedOperationException("Cannot set CustomCleaner because Netty is configured to " +
+                    "allocate direct byte buffers without use of Cleaner.");
         }
-        customerCleaner = cleaner;
+        customCleaner = cleaner;
     }
 
     private DirectCleaner() {
@@ -63,6 +66,5 @@ public class DirectCleaner {
     public interface CustomCleaner {
 
         void freeDirectMemory(ByteBuffer byteBuffer);
-
     }
 }
