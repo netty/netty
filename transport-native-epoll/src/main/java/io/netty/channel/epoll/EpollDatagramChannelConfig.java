@@ -367,7 +367,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
     public EpollDatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
         try {
             EpollDatagramChannel datagramChannel = (EpollDatagramChannel) channel;
-            datagramChannel.socket.setNetworkInterface(networkInterface, datagramChannel.family);
+            datagramChannel.socket.setNetworkInterface(networkInterface);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
