@@ -35,6 +35,11 @@ import org.openjdk.jmh.annotations.TearDown;
 
 public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
 
+    private static final Runnable runnable = new Runnable() {
+        @Override
+        public void run() { }
+    };
+
     private EpollEventLoopGroup group;
     private Channel serverChan;
     private Channel chan;
@@ -51,7 +56,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
             public void run() {
                 throw new AssertionError();
             }
-        }, 5, TimeUnit.MINUTES);
+        }, 30, TimeUnit.MINUTES);
         serverChan = new ServerBootstrap()
             .channel(EpollServerSocketChannel.class)
             .group(group)
@@ -135,5 +140,10 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     public Object pingPong() throws Exception {
         return chan.pipeline().writeAndFlush(abyte.retainedSlice()).sync();
+    }
+
+    @Benchmark
+    public Object execute() throws Exception {
+        return chan.eventLoop().submit(runnable).get();
     }
 }

@@ -75,6 +75,8 @@ class EpollEventLoop extends SingleThreadEventLoop {
     @SuppressWarnings("unused") // AtomicIntegerFieldUpdater
     private volatile int wakenUp;
     private volatile int ioRatio = 50;
+    private boolean deferEventFdRead;
+    private boolean deferTimerFdRead;
 
     // See http://man7.org/linux/man-pages/man2/timerfd_create.2.html.
     private static final long MAX_SCHEDULED_TIMERFD_NS = 999999999;
@@ -333,6 +335,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
                     } finally {
                         // Ensure we always run tasks.
                         runAllTasks();
+                        handleDeferredReads();
                     }
                 } else {
                     final long ioStartTime = System.nanoTime();
@@ -345,6 +348,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
                         // Ensure we always run tasks.
                         final long ioTime = System.nanoTime() - ioStartTime;
                         runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
+                        handleDeferredReads();
                     }
                 }
                 if (allowGrowing && strategy == events.length()) {
@@ -403,11 +407,11 @@ class EpollEventLoop extends SingleThreadEventLoop {
         for (int i = 0; i < ready; i ++) {
             final int fd = events.fd(i);
             if (fd == eventFd.intValue()) {
-                // consume wakeup event.
-                Native.eventFdRead(fd);
+                assert !deferEventFdRead;
+                deferEventFdRead = true;
             } else if (fd == timerFd.intValue()) {
-                // consume wakeup event, necessary because the timer is added with ET mode.
-                Native.timerFdRead(fd);
+                assert !deferTimerFdRead;
+                deferTimerFdRead = true;
             } else {
                 final long ev = events.events(i);
 
@@ -460,6 +464,19 @@ class EpollEventLoop extends SingleThreadEventLoop {
                     }
                 }
             }
+        }
+    }
+
+    private void handleDeferredReads() {
+        if (deferEventFdRead) {
+            deferEventFdRead = false;
+            // consume wakeup event.
+            Native.eventFdRead(eventFd.intValue());
+        }
+        if (deferTimerFdRead) {
+            deferTimerFdRead = false;
+            // consume wakeup event, necessary because the timer is added with ET mode.
+            Native.timerFdRead(timerFd.intValue());
         }
     }
 
