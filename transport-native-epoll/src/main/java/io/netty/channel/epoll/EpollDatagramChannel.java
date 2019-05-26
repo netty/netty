@@ -59,7 +59,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             StringUtil.simpleClassName(InetSocketAddress.class) + ">, " +
             StringUtil.simpleClassName(ByteBuf.class) + ')';
 
-    final InternetProtocolFamily family;
     private final EpollDatagramChannelConfig config;
     private volatile boolean connected;
 
@@ -68,7 +67,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
      * on the Operation Systems default which will be chosen.
      */
     public EpollDatagramChannel() {
-        this(null);
+        this((InternetProtocolFamily) null);
     }
 
     /**
@@ -76,17 +75,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
      * on the Operation Systems default which will be chosen.
      */
     public EpollDatagramChannel(InternetProtocolFamily family) {
-        super(family == null ?
+        this(family == null ?
                 newSocketDgram(Socket.isIPv6Preferred()) : newSocketDgram(family == InternetProtocolFamily.IPv6));
-        this.family = internetProtocolFamily(family);
-        config = new EpollDatagramChannelConfig(this);
-    }
-
-    private static InternetProtocolFamily internetProtocolFamily(InternetProtocolFamily family) {
-        if (family == null) {
-            return Socket.isIPv6Preferred() ? InternetProtocolFamily.IPv6 : InternetProtocolFamily.IPv4;
-        }
-        return family;
     }
 
     /**
@@ -94,12 +84,11 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
      * on the Operation Systems default which will be chosen.
      */
     public EpollDatagramChannel(int fd) {
-        this(new LinuxSocket(fd), null);
+        this(new LinuxSocket(fd));
     }
 
-    private EpollDatagramChannel(LinuxSocket fd, InternetProtocolFamily family) {
+    private EpollDatagramChannel(LinuxSocket fd) {
         super(null, fd, true);
-        this.family = internetProtocolFamily(family);
         config = new EpollDatagramChannelConfig(this);
     }
 
