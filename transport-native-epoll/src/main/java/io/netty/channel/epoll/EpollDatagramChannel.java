@@ -61,7 +61,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             StringUtil.simpleClassName(InetSocketAddress.class) + ">, " +
             StringUtil.simpleClassName(ByteBuf.class) + ')';
 
-    final InternetProtocolFamily family;
     private final EpollDatagramChannelConfig config;
     private volatile boolean connected;
 
@@ -70,7 +69,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
      * on the Operation Systems default which will be chosen.
      */
     public EpollDatagramChannel(EventLoop eventLoop) {
-        this(eventLoop, null);
+        this(eventLoop, (InternetProtocolFamily) null);
     }
 
     /**
@@ -78,17 +77,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
      * on the Operation Systems default which will be chosen.
      */
     public EpollDatagramChannel(EventLoop eventLoop, InternetProtocolFamily family) {
-        super(eventLoop, family == null ?
+        this(eventLoop, family == null ?
                 newSocketDgram(Socket.isIPv6Preferred()) : newSocketDgram(family == InternetProtocolFamily.IPv6));
-        this.family = internetProtocolFamily(family);
-        config = new EpollDatagramChannelConfig(this);
-    }
-
-    private static InternetProtocolFamily internetProtocolFamily(InternetProtocolFamily family) {
-        if (family == null) {
-            return Socket.isIPv6Preferred() ? InternetProtocolFamily.IPv6 : InternetProtocolFamily.IPv4;
-        }
-        return family;
     }
 
     /**
@@ -96,12 +86,11 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
      * on the Operation Systems default which will be chosen.
      */
     public EpollDatagramChannel(EventLoop eventLoop, int fd) {
-        this(eventLoop, new LinuxSocket(fd), null);
+        this(eventLoop, new LinuxSocket(fd));
     }
 
-    private EpollDatagramChannel(EventLoop eventLoop, LinuxSocket fd, InternetProtocolFamily family) {
+    private EpollDatagramChannel(EventLoop eventLoop, LinuxSocket fd) {
         super(null, eventLoop, fd, true);
-        this.family = internetProtocolFamily(family);
         config = new EpollDatagramChannelConfig(this);
     }
 

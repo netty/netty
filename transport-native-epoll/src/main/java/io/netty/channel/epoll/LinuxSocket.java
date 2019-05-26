@@ -44,6 +44,10 @@ final class LinuxSocket extends Socket {
         super(fd);
     }
 
+    private InternetProtocolFamily family() {
+        return ipv6 ? InternetProtocolFamily.IPv6 : InternetProtocolFamily.IPv4;
+    }
+
     int sendmmsg(NativeDatagramPacketArray.NativeDatagramPacket[] msgs,
                                int offset, int len) throws IOException {
         return Native.sendmmsg(intValue(), ipv6, msgs, offset, len);
@@ -58,10 +62,10 @@ final class LinuxSocket extends Socket {
         setInterface(intValue(), ipv6, a.address(), a.scopeId(), interfaceIndex(address));
     }
 
-    void setNetworkInterface(NetworkInterface netInterface, InternetProtocolFamily family) throws IOException {
-        InetAddress address = deriveInetAddress(netInterface, family == InternetProtocolFamily.IPv6);
-        if (address.equals(family == InternetProtocolFamily.IPv4 ? INET_ANY : INET6_ANY)) {
-            throw new IOException("NetworkInterface does not support " + family);
+    void setNetworkInterface(NetworkInterface netInterface) throws IOException {
+        InetAddress address = deriveInetAddress(netInterface, family() == InternetProtocolFamily.IPv6);
+        if (address.equals(family() == InternetProtocolFamily.IPv4 ? INET_ANY : INET6_ANY)) {
+            throw new IOException("NetworkInterface does not support " + family());
         }
         final NativeInetAddress nativeAddress = NativeInetAddress.newInstance(address);
         setInterface(intValue(), ipv6, nativeAddress.address(), nativeAddress.scopeId(), interfaceIndex(netInterface));
