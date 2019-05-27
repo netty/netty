@@ -324,6 +324,7 @@ public class HashedWheelTimer implements Timer {
 
     private static int normalizeTicksPerWheel(int ticksPerWheel) {
         int normalizedTicksPerWheel = ticksPerWheel - 1;
+        
         normalizedTicksPerWheel |= normalizedTicksPerWheel >>> 1;
         normalizedTicksPerWheel |= normalizedTicksPerWheel >>> 2;
         normalizedTicksPerWheel |= normalizedTicksPerWheel >>> 4;
