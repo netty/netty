@@ -15,6 +15,7 @@
  */
 package io.netty.util;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.concurrent.BlockingQueue;
@@ -260,5 +261,59 @@ public class HashedWheelTimerTest {
                 latch.countDown();
             }
         };
+    }
+    private static int oldNormalizeTicksPerWheel(int ticksPerWheel) {
+        int normalizedTicksPerWheel = 1;
+        while (normalizedTicksPerWheel < ticksPerWheel) {
+            normalizedTicksPerWheel <<= 1;
+        }
+        return normalizedTicksPerWheel;
+    }
+    private static int newNormalizeTicksPerWheel(int ticksPerWheel) {
+        int normalizedTicksPerWheel = ticksPerWheel - 1;
+        normalizedTicksPerWheel |= normalizedTicksPerWheel >>> 1;
+        normalizedTicksPerWheel |= normalizedTicksPerWheel >>> 2;
+        normalizedTicksPerWheel |= normalizedTicksPerWheel >>> 4;
+        normalizedTicksPerWheel |= normalizedTicksPerWheel >>> 8;
+        normalizedTicksPerWheel |= normalizedTicksPerWheel >>> 16;
+        return normalizedTicksPerWheel + 1;
+    }
+    @Test
+    public void newNormalizeTicksPerWheel(){
+        Long startTime=System.currentTimeMillis();
+        int count=100000;
+
+        while(count>0){
+            count--;
+            // Currently a number between 1-10
+            oldNormalizeTicksPerWheel((int)(1+Math.random()*(11)));
+        }
+        long oldUseTime=System.currentTimeMillis()-startTime;
+        startTime=System.currentTimeMillis();
+        count=100000;
+        while(count>0){
+            count--;
+            newNormalizeTicksPerWheel((int)(1+Math.random()*(11)));
+        }
+        long newUseTime=System.currentTimeMillis()-startTime;
+       // System.out.println(oldUseTime);
+       // System.out.println(newUseTime);
+        Assert.assertTrue(oldUseTime>newUseTime);
+        //  Let's set the tick bigger, then the difference between the two will be even bigger.
+        count=100000;
+        startTime=System.currentTimeMillis();
+        while(count>0){
+            oldNormalizeTicksPerWheel(count--);
+        }
+        oldUseTime=System.currentTimeMillis()-startTime;
+        count=100000;
+        startTime=System.currentTimeMillis();
+        while(count>0){
+            newNormalizeTicksPerWheel(count--);
+        }
+        newUseTime=System.currentTimeMillis()-startTime;
+         System.out.println(oldUseTime);
+        System.out.println(newUseTime);
+        Assert.assertTrue(oldUseTime>newUseTime);
     }
 }
