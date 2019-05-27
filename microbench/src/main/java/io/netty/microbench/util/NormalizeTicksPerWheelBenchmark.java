@@ -1,4 +1,4 @@
-package io.netty.util;
+package io.netty.microbench.util;
 
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.runner.Runner;
@@ -7,15 +7,13 @@ import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.concurrent.TimeUnit;
-
-
 @BenchmarkMode(Mode.Throughput)
 @Warmup(iterations = 3)
 @Measurement(iterations = 10, time = 5, timeUnit = TimeUnit.SECONDS)
 @Threads(8)
 @Fork(2)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-public class NormalizeTicksPerWheelBenchmark {
+public class NormalizeTicksPerWheelBenchmark extends AbstractMicrobenchmark{
 
     @Benchmark
     public void testNew() {
