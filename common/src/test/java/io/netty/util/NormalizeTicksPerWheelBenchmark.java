@@ -21,7 +21,7 @@ public class NormalizeTicksPerWheelBenchmark {
     public void testNew() {
         int count = 10000000;
         while (count > 0) {
-            oldNormalizeTicksPerWheel(count);
+            newNormalizeTicksPerWheel(count);
         }
     }
 
