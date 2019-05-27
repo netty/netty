@@ -21,6 +21,7 @@ import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.junit.Test;
 
 import java.net.InetAddress;
@@ -147,5 +148,71 @@ public class DefaultDnsRecordEncoderTest {
 
     private static int nextInt(int max) {
         return PlatformDependent.threadLocalRandom().nextInt(max);
+    }
+
+    static String[][] TXT_TEST_CASES = new String[][]{
+            {
+                    "printer=lpr5", "printer", "lpr5"
+            },
+            {
+                    "favorite drink=orange juice", "favorite drink", "orange juice"
+            },
+            {
+                    "equation=a=4", "equation", "a=4"
+            },
+            {
+                    "a`=a=true", "a=a", "true"
+            },
+            {
+                    "a\\`=a=false", "a\\=a", "false"
+            },
+            {
+                    "`==\\=", "=", "\\="
+            },
+            {
+                    "string=\"Cat\"", "string", "\"Cat\""
+            },
+            {
+                    "string2=``abc``", "string2", "`abc`"
+            },
+            {
+                    "novalue=", "novalue", ""
+            },
+            {
+                    "a b=c d", "a b", "c d"
+            },
+            {
+                    "abc` =123\t", "abc ", "123\t"
+            }
+    };
+
+    @Test
+    public void testEncodeTxtRecord() throws Exception {
+        DefaultDnsRecordEncoder encoder = new DefaultDnsRecordEncoder();
+
+        for (int i = 0; i < TXT_TEST_CASES.length; i++) {
+            String[] testCase = TXT_TEST_CASES[i];
+            String expected = testCase[0];
+            String key = testCase[1];
+            String value = testCase[2];
+            DnsRecord record = new DefaultDnsTxtRecord("netty.io", DnsRecord.CLASS_IN, 60, key, value);
+
+            ByteBuf out = Unpooled.buffer();
+            try {
+                encoder.encodeRecord(record, out);
+
+                assertEquals(
+                    String.format("encode key=%s, value=%s as (%s)",
+                        StringEscapeUtils.escapeJava(key),
+                        StringEscapeUtils.escapeJava(value),
+                        StringEscapeUtils.escapeJava(expected)),
+                    expected.length() + 18, out.readableBytes());
+                byte[] data = new byte[expected.length()];
+                out.skipBytes(18).readBytes(data);
+                assertEquals(expected, new String(data));
+            } finally {
+                out.release();
+            }
+        }
     }
 }

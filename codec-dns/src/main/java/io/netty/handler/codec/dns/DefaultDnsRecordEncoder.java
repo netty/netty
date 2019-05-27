@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -49,8 +50,24 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
     public void encodeRecord(DnsRecord record, ByteBuf out) throws Exception {
         if (record instanceof DnsQuestion) {
             encodeQuestion((DnsQuestion) record, out);
+        } else if (record instanceof DnsARecord) {
+            encodeARecord((DnsARecord) record, out);
+        } else if (record instanceof DnsAAAARecord) {
+            encodeAAAARecord((DnsAAAARecord) record, out);
+        } else if (record instanceof DnsCNameRecord) {
+            encodeCNameRecord((DnsCNameRecord) record, out);
+        } else if (record instanceof DnsMxRecord) {
+            encodeMxRecord((DnsMxRecord) record, out);
+        } else if (record instanceof DnsNsRecord) {
+            encodeNsRecord((DnsNsRecord) record, out);
         } else if (record instanceof DnsPtrRecord) {
             encodePtrRecord((DnsPtrRecord) record, out);
+        } else if (record instanceof DnsSoaRecord) {
+            encodeSoaRecord((DnsSoaRecord) record, out);
+        } else if (record instanceof DnsSrvRecord) {
+            encodeSrvRecord((DnsSrvRecord) record, out);
+        } else if (record instanceof DnsTxtRecord) {
+            encodeTxtRecord((DnsTxtRecord) record, out);
         } else if (record instanceof DnsOptEcsRecord) {
             encodeOptEcsRecord((DnsOptEcsRecord) record, out);
         } else if (record instanceof DnsOptPseudoRecord) {
@@ -69,9 +86,82 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         out.writeInt((int) record.timeToLive());
     }
 
+    private void encodeARecord(DnsARecord record, ByteBuf out) throws Exception {
+        encodeRecord0(record, out);
+        out.writeBytes(record.address().getAddress());
+    }
+
+    private void encodeAAAARecord(DnsAAAARecord record, ByteBuf out) throws Exception {
+        encodeRecord0(record, out);
+        out.writeBytes(record.address().getAddress());
+    }
+
+    private void encodeCNameRecord(DnsCNameRecord record, ByteBuf out) throws Exception {
+        encodeRecord0(record, out);
+        encodeName(record.hostname(), out);
+    }
+
+    private void encodeMxRecord(DnsMxRecord record, ByteBuf out) throws Exception {
+        encodeRecord0(record, out);
+        out.writeShort(record.preference());
+        encodeName(record.exchange(), out);
+    }
+
+    private void encodeNsRecord(DnsNsRecord record, ByteBuf out) throws Exception {
+        encodeRecord0(record, out);
+        encodeName(record.domain(), out);
+    }
+
     private void encodePtrRecord(DnsPtrRecord record, ByteBuf out) throws Exception {
         encodeRecord0(record, out);
         encodeName(record.hostname(), out);
+    }
+
+    private void encodeSoaRecord(DnsSoaRecord record, ByteBuf out) throws Exception {
+        encodeRecord0(record, out);
+        encodeName(record.primaryNameServer(), out);
+        encodeName(record.responsibleAuthorityMailbox(), out);
+        out.writeInt(record.serialNumber());
+        out.writeInt(record.refreshInterval());
+        out.writeInt(record.retryInterval());
+        out.writeInt(record.expireLimit());
+        out.writeInt(record.minimumTTL());
+    }
+
+    private void encodeSrvRecord(DnsSrvRecord record, ByteBuf out) throws Exception {
+        encodeRecord0(record, out);
+        out.writeShort(record.priority());
+        out.writeShort(record.weight());
+        out.writeShort(record.port());
+        encodeName(record.target(), out);
+    }
+
+    private void encodeTxtRecord(DnsTxtRecord record, ByteBuf out) throws Exception {
+        encodeRecord0(record, out);
+
+        String key = record.key().replaceAll("=", "`=");
+        String value = record.value();
+
+        if (key.length() > 1) {
+            if (Character.isWhitespace(key.charAt(0))) {
+                key = "`" + key;
+            }
+            char last = key.charAt(key.length() - 1);
+            if (Character.isWhitespace(last)) {
+                key = key.substring(0, key.length() - 1) + "`" + last;
+            }
+        }
+
+        if (value.startsWith("`")) {
+            value = "`" + value;
+        }
+        if (value.endsWith("`")) {
+            value += "`";
+        }
+
+        out.writeCharSequence(key, CharsetUtil.US_ASCII);
+        out.writeByte('=');
+        out.writeCharSequence(value, CharsetUtil.US_ASCII);
     }
 
     private void encodeOptPseudoRecord(DnsOptPseudoRecord record, ByteBuf out) throws Exception {
@@ -140,7 +230,14 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         out.writeBytes(content, content.readerIndex(), contentLen);
     }
 
-    protected void encodeName(String name, ByteBuf buf) throws Exception {
+    /**
+     * Encode a domain name as a list of labels
+     *
+     * @param name The domain name to be encoded
+     * @param buf The bytes buffer
+     * @throws Exception Thrown, if the bytes buffer could not be written.
+     */
+    public static void encodeName(String name, ByteBuf buf) throws Exception {
         if (ROOT.equals(name)) {
             // Root domain
             buf.writeByte(0);

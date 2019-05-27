@@ -21,6 +21,8 @@ import java.net.UnknownHostException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.handler.codec.dns.DnsAAAARecord;
+import io.netty.handler.codec.dns.DnsARecord;
 import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
 
@@ -43,17 +45,25 @@ final class DnsAddressDecoder {
      *         its content is malformed
      */
     static InetAddress decodeAddress(DnsRecord record, String name, boolean decodeIdn) {
-        if (!(record instanceof DnsRawRecord)) {
-            return null;
-        }
-        final ByteBuf content = ((ByteBufHolder) record).content();
-        final int contentLen = content.readableBytes();
-        if (contentLen != INADDRSZ4 && contentLen != INADDRSZ6) {
-            return null;
-        }
+        final byte[] addrBytes;
 
-        final byte[] addrBytes = new byte[contentLen];
-        content.getBytes(content.readerIndex(), addrBytes);
+        if (record instanceof DnsARecord) {
+            addrBytes = ((DnsARecord) record).address().getAddress();
+        } else if (record instanceof DnsAAAARecord) {
+            addrBytes = ((DnsAAAARecord) record).address().getAddress();
+        } else {
+            if (!(record instanceof DnsRawRecord)) {
+                return null;
+            }
+            final ByteBuf content = ((ByteBufHolder) record).content();
+            final int contentLen = content.readableBytes();
+            if (contentLen != INADDRSZ4 && contentLen != INADDRSZ6) {
+                return null;
+            }
+
+            addrBytes = new byte[contentLen];
+            content.getBytes(content.readerIndex(), addrBytes);
+        }
 
         try {
             return InetAddress.getByAddress(decodeIdn ? IDN.toUnicode(name) : name, addrBytes);

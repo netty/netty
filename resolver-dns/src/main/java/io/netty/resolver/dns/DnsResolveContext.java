@@ -24,6 +24,8 @@ import io.netty.channel.EventLoop;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsRecordDecoder;
+import io.netty.handler.codec.dns.DnsCNameRecord;
+import io.netty.handler.codec.dns.DnsNsRecord;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
@@ -797,18 +799,8 @@ abstract class DnsResolveContext<T> {
         Map<String, String> cnames = null;
         for (int i = 0; i < answerCount; i ++) {
             final DnsRecord r = response.recordAt(DnsSection.ANSWER, i);
-            final DnsRecordType type = r.type();
-            if (type != DnsRecordType.CNAME) {
-                continue;
-            }
 
-            if (!(r instanceof DnsRawRecord)) {
-                continue;
-            }
-
-            final ByteBuf recordContent = ((ByteBufHolder) r).content();
-            final String domainName = decodeDomainName(recordContent);
-            if (domainName == null) {
+            if (!(r instanceof DnsCNameRecord)) {
                 continue;
             }
 
@@ -817,7 +809,7 @@ abstract class DnsResolveContext<T> {
             }
 
             String name = r.name().toLowerCase(Locale.US);
-            String mapping = domainName.toLowerCase(Locale.US);
+            String mapping = ((DnsCNameRecord) r).hostname().toLowerCase(Locale.US);
 
             // Cache the CNAME as well.
             String nameWithDot = hostnameWithDot(name);
@@ -1063,7 +1055,7 @@ abstract class DnsResolveContext<T> {
         }
 
         void add(DnsRecord r) {
-            if (r.type() != DnsRecordType.NS || !(r instanceof DnsRawRecord)) {
+            if (r.type() != DnsRecordType.NS || !(r instanceof DnsRawRecord || r instanceof DnsNsRecord)) {
                 return;
             }
 
@@ -1090,11 +1082,17 @@ abstract class DnsResolveContext<T> {
                 return;
             }
 
-            final ByteBuf recordContent = ((ByteBufHolder) r).content();
-            final String domainName = decodeDomainName(recordContent);
-            if (domainName == null) {
-                // Could not be parsed, ignore.
-                return;
+            final String domainName;
+
+            if (r instanceof DnsNsRecord) {
+                domainName = ((DnsNsRecord) r).domain();
+            } else {
+                final ByteBuf recordContent = ((ByteBufHolder) r).content();
+                domainName = decodeDomainName(recordContent);
+                if (domainName == null) {
+                    // Could not be parsed, ignore.
+                    return;
+                }
             }
 
             // We are only interested in preserving the nameservers which are the closest to our qName, so ensure

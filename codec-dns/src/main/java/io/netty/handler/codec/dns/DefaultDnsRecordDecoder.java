@@ -20,6 +20,14 @@ import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.UnstableApi;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.util.Locale;
+import java.util.regex.Pattern;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 /**
  * The default {@link DnsRecordDecoder} implementation.
  *
@@ -29,6 +37,14 @@ import io.netty.util.internal.UnstableApi;
 public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
 
     static final String ROOT = ".";
+
+    static final Pattern RE_TXT_KEY = Pattern.compile("`([`=\\s])");
+    static final Pattern RE_TXT_VALUE = Pattern.compile("``");
+
+    static final int IPV4_ADDR_LEN = 4;
+    static final int IPV6_ADDR_LEN = 16;
+    static final int SHORT_LEN = 2;
+    static final int INT_LEN = 4;
 
     /**
      * Creates a new instance.
@@ -90,6 +106,57 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             String name, DnsRecordType type, int dnsClass, long timeToLive,
             ByteBuf in, int offset, int length) throws Exception {
 
+        if (type == DnsRecordType.A && length == IPV4_ADDR_LEN) {
+            byte[] buf = new byte[length];
+            in.getBytes(offset, buf);
+            return new DefaultDnsARecord(
+                    name, dnsClass, timeToLive, (Inet4Address) InetAddress.getByAddress(buf));
+        }
+        if (type == DnsRecordType.AAAA && length == IPV6_ADDR_LEN) {
+            byte[] buf = new byte[length];
+            in.getBytes(offset, buf);
+            return new DefaultDnsAAAARecord(
+                    name, dnsClass, timeToLive, (Inet6Address) InetAddress.getByAddress(buf));
+        }
+        if (type == DnsRecordType.CNAME) {
+            return new DefaultDnsCNameRecord(
+                    name, dnsClass, timeToLive, decodeName0(in.duplicate().setIndex(offset, offset + length)));
+        }
+        if (type == DnsRecordType.MX && length >= SHORT_LEN) {
+            ByteBuf buf = in.retainedDuplicate().setIndex(offset, offset + length);
+            int preference = buf.readUnsignedShort();
+            String hostname = decodeName0(buf);
+            return new DefaultDnsMxRecord(
+                    name, dnsClass, timeToLive, preference, hostname);
+        }
+        if (type == DnsRecordType.NS) {
+            return new DefaultDnsNsRecord(
+                    name, dnsClass, timeToLive, decodeName0(in.duplicate().setIndex(offset, offset + length)));
+        }
+        if (type == DnsRecordType.SOA && length >= INT_LEN * 5) {
+            ByteBuf buf = in.retainedDuplicate().setIndex(offset, offset + length);
+            String primaryNameServer = decodeName0(buf);
+            String responsibleAuthorityMailbox = decodeName0(buf);
+            int serialNumber = (int) buf.readUnsignedInt();
+            int refreshInterval = (int) buf.readUnsignedInt();
+            int retryInterval = (int) buf.readUnsignedInt();
+            int expireLimit = (int) buf.readUnsignedInt();
+            int minimumTTL = (int) buf.readUnsignedInt();
+            return new DefaultDnsSoaRecord(
+                    name, dnsClass, timeToLive,
+                    primaryNameServer, responsibleAuthorityMailbox,
+                    serialNumber, refreshInterval, retryInterval, expireLimit, minimumTTL);
+        }
+        if (type == DnsRecordType.SRV && length >= SHORT_LEN * 3) {
+            ByteBuf buf = in.retainedDuplicate().setIndex(offset, offset + length);
+            int priority = buf.readUnsignedShort();
+            int weight = buf.readUnsignedShort();
+            int port = buf.readUnsignedShort();
+            String target = decodeName0(buf);
+            return new DefaultDnsSrvRecord(
+                    name, dnsClass, timeToLive, priority, weight, port, target);
+        }
+
         // DNS message compression means that domain names may contain "pointers" to other positions in the packet
         // to build a full message. This means the indexes are meaningful and we need the ability to reference the
         // indexes un-obstructed, and thus we cannot use a slice here.
@@ -98,8 +165,53 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             return new DefaultDnsPtrRecord(
                     name, dnsClass, timeToLive, decodeName0(in.duplicate().setIndex(offset, offset + length)));
         }
+
+        if (type == DnsRecordType.TXT) {
+            String text = in.retainedDuplicate().setIndex(offset, offset + length).toString(CharsetUtil.US_ASCII);
+            String[] parts = decodeTxt(checkNotNull(text, "text"));
+            String key = checkNotNull(parts[0], "key");
+            String value = checkNotNull(parts[1], "value");
+
+            return new DefaultDnsTxtRecord(name, dnsClass, timeToLive, key, value);
+        }
+
         return new DefaultDnsRawRecord(
                 name, type, dnsClass, timeToLive, in.retainedDuplicate().setIndex(offset, offset + length));
+    }
+
+    static String[] decodeTxt(String s) {
+        String key = null, value = null;
+
+        int start = 0;
+        for (start = 0; start < s.length(); start++) {
+            if (!Character.isWhitespace(s.charAt(start))) {
+                break;
+            }
+        }
+
+        char prev = 0;
+        for (int i = start; i < s.length(); i++) {
+            char c = s.charAt(i);
+
+            if (c == '=' && prev != '`') {
+                key = s.substring(start, i);
+                value = s.substring(i + 1);
+
+                break;
+            }
+
+            prev = c;
+        }
+
+        if (key == null) {
+            key = "";
+            value = s;
+        }
+
+        key = RE_TXT_KEY.matcher(key).replaceAll("$1").toLowerCase(Locale.US);
+        value = RE_TXT_VALUE.matcher(value).replaceAll("`");
+
+        return new String[]{key, value};
     }
 
     /**
