@@ -15,6 +15,7 @@
  */
 package io.netty.channel.unix;
 
+import io.netty.channel.ChannelException;
 import io.netty.util.internal.EmptyArrays;
 
 import java.io.FileNotFoundException;
@@ -97,6 +98,23 @@ public final class Errors {
 
         int expectedErr() {
             return expectedErr;
+        }
+    }
+
+    /**
+     * <strong>Internal usage only!</strong>
+     */
+    public static final class NativeChannelException extends ChannelException {
+        private static final long serialVersionUID = 8222160204268655523L;
+        private final int expectedErr;
+
+        public NativeChannelException(String message, int expectedErr) {
+            super(message);
+            this.expectedErr = expectedErr;
+        }
+
+        public int expectedErr() {
+          return expectedErr;
         }
     }
 

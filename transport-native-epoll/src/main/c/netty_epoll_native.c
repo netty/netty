@@ -128,7 +128,7 @@ static void netty_epoll_native_eventFdRead(JNIEnv* env, jclass clazz, jint fd) {
 
     if (eventfd_read(fd, &eventfd_t) != 0) {
         // something is serious wrong
-        netty_unix_errors_throwRuntimeException(env, "eventfd_read() failed");
+        netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_read() failed", errno);
     }
 }
 
