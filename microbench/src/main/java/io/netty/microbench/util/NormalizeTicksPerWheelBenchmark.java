@@ -7,52 +7,45 @@ import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.concurrent.TimeUnit;
-@BenchmarkMode(Mode.Throughput)
-@Warmup(iterations = 3)
-@Measurement(iterations = 10, time = 5, timeUnit = TimeUnit.SECONDS)
-@Threads(8)
-@Fork(2)
-@OutputTimeUnit(TimeUnit.MILLISECONDS)
-public class NormalizeTicksPerWheelBenchmark extends AbstractMicrobenchmark{
+
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
+@State(Scope.Benchmark)
+public class NormalizeTicksPerWheelBenchmark extends AbstractMicrobenchmark {
+
+
+    @Param({"7", "9", "17", "19", "29", "39"})
+    int testNum;
+
 
     @Benchmark
-    public void testNew() {
-        int count = 10000000;
-        while (count > 0) {
-            newNormalizeTicksPerWheel(count);
-        }
-    }
-
-    @Benchmark
-    public void testOld() {
-        int count = 10000000;
-        while (count > 0) {
-            count--;
-            oldNormalizeTicksPerWheel(count);
-        }
-    }
-
-    private static int oldNormalizeTicksPerWheel(int ticksPerWheel) {
+    @BenchmarkMode(Mode.AverageTime)
+    @OutputTimeUnit(TimeUnit.MICROSECONDS)
+    public int oldNormalizeTicksPerWheel() {
         int normalizedTicksPerWheel = 1;
-        while (normalizedTicksPerWheel < ticksPerWheel) {
+        while (normalizedTicksPerWheel < testNum) {
             normalizedTicksPerWheel <<= 1;
         }
         return normalizedTicksPerWheel;
     }
 
-    private static int newNormalizeTicksPerWheel(int ticksPerWheel) {
-        int normalizedTicksPerWheel = ticksPerWheel - 1;
-        normalizedTicksPerWheel |= normalizedTicksPerWheel >>> 1;
-        normalizedTicksPerWheel |= normalizedTicksPerWheel >>> 2;
-        normalizedTicksPerWheel |= normalizedTicksPerWheel >>> 4;
-        normalizedTicksPerWheel |= normalizedTicksPerWheel >>> 8;
-        normalizedTicksPerWheel |= normalizedTicksPerWheel >>> 16;
-        return normalizedTicksPerWheel + 1;
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    @OutputTimeUnit(TimeUnit.MICROSECONDS)
+    public int newNormalizeTicksPerWheel() {
+        int n = testNum - 1;
+        n |= n >>> 1;
+        n |= n >>> 2;
+        n |= n >>> 4;
+        n |= n >>> 8;
+        n |= n >>> 16;
+        return n + 1;
     }
 
     public static void main(String[] args) throws RunnerException {
         Options opt = new OptionsBuilder()
                 .include(NormalizeTicksPerWheelBenchmark.class.getSimpleName())
+                .forks(1)
                 .build();
 
         new Runner(opt).run();
