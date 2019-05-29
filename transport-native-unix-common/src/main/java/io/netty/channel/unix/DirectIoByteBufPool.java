@@ -41,11 +41,7 @@ import java.nio.charset.Charset;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 
-/**
- * <strong>Internal usage only!</strong>
- */
-@UnstableApi
-public final class DirectIoByteBufPool {
+final class DirectIoByteBufPool {
 
     private static final int MAX_CACHED_SIZE = SystemPropertyUtil.getInt(
             "jdk.nio.maxCachedBufferSize", Integer.MAX_VALUE); // Use the same property name as the JDK.
@@ -80,36 +76,10 @@ public final class DirectIoByteBufPool {
     }
 
     private static int next(int i) {
-        return (i + 1) % (ARRAY_LENGTH - 1);
+        return (i + 1) & (ARRAY_LENGTH - 1);
     }
 
-    /**
-     * Returns a new {@link ByteBuf} which contains the content of the given {@link ByteBuf} and releases it.
-     *
-     * The position of the given {@code buffer} will not be affected.
-     */
-    static ByteBuf transfer(ByteBuffer buffer) {
-        ByteBuf pooled = acquire(buffer.remaining());
-        pooled.writeBytes(buffer.duplicate());
-        return pooled;
-    }
-
-    /**
-     * Returns a new {@link ByteBuf} which contains the content of the given {@link ByteBuf} and releases it.
-     *
-     * The indices of the given {@code buffer} will not be affected.
-     */
-    public static ByteBuf transfer(ByteBuf buffer) {
-        ByteBuf pooled = acquire(buffer.readableBytes());
-        pooled.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
-        buffer.release();
-        return pooled;
-    }
-
-    /**
-     * Returns a temporary buffer of at least the given capacity.
-     */
-    public static ByteBuf acquire(int capacity) {
+    static ByteBuf acquire(int capacity) {
         if (capacity > MAX_CACHED_SIZE) {
             // The requested buffer is to big just allocate a new one.
             return IO_BUFFER_ALLOCATOR.directBuffer(capacity);

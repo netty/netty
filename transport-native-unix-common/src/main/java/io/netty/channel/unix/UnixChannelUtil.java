@@ -61,6 +61,9 @@ public final class UnixChannelUtil {
         return remoteAddr;
     }
 
+    /**
+     * Returns a temporary direct IO buffer of at least the given capacity.
+     */
     public static ByteBuf ioBuffer(ByteBufAllocator allocator, int capacity) {
         if (allocator.isDirectBufferPooled()) {
             return allocator.directBuffer(capacity);

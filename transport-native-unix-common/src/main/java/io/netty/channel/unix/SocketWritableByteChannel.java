@@ -45,7 +45,8 @@ public abstract class SocketWritableByteChannel implements WritableByteChannel {
                         buffer = alloc.directBuffer(readableBytes);
                         buffer.writeBytes(src.duplicate());
                     } else {
-                        buffer = DirectIoByteBufPool.transfer(src);
+                        buffer = DirectIoByteBufPool.acquire(src.remaining());
+                        buffer.writeBytes(src.duplicate());
                     }
                 }
                 java.nio.ByteBuffer nioBuffer = buffer.internalNioBuffer(buffer.readerIndex(), readableBytes);
