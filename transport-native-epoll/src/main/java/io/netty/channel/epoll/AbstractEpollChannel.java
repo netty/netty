@@ -37,8 +37,8 @@ import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
+import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ThrowableUtil;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -289,6 +289,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     /**
      * Returns an off-heap copy of the specified {@link ByteBuf}, and releases the original one.
      */
+    @Deprecated
     protected final ByteBuf newDirectBuffer(ByteBuf buf) {
         return newDirectBuffer(buf, buf);
     }
@@ -298,6 +299,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
      * The caller must ensure that the holder releases the original {@link ByteBuf} when the holder is released by
      * this method.
      */
+    @Deprecated
     protected final ByteBuf newDirectBuffer(Object holder, ByteBuf buf) {
         final int readableBytes = buf.readableBytes();
         if (readableBytes == 0) {
@@ -336,10 +338,32 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     /**
      * Read bytes into the given {@link ByteBuf} and return the amount.
      */
+    /**
+     * Read bytes into the given {@link ByteBuf} and return the amount.
+     */
     protected final int doReadBytes(ByteBuf byteBuf) throws Exception {
+        int writable = byteBuf.writableBytes();
+
+        if (byteBuf.isDirect()) {
+            unsafe().recvBufAllocHandle().attemptedBytesRead(writable);
+            return doReadBytesDirect(byteBuf);
+        }
+
+        // We need a direct buffer let's create a temporary one.
+        final ByteBuf ioBuffer = ioBuffer(writable);
+        try {
+            unsafe().recvBufAllocHandle().attemptedBytesRead(ioBuffer.writableBytes());
+            int read = doReadBytesDirect(ioBuffer);
+            byteBuf.writeBytes(ioBuffer);
+            return read;
+        } finally {
+            ioBuffer.release();
+        }
+    }
+
+    private int doReadBytesDirect(ByteBuf byteBuf) throws Exception {
         int writerIndex = byteBuf.writerIndex();
         int localReadAmount;
-        unsafe().recvBufAllocHandle().attemptedBytesRead(byteBuf.writableBytes());
         if (byteBuf.hasMemoryAddress()) {
             localReadAmount = socket.readAddress(byteBuf.memoryAddress(), writerIndex, byteBuf.capacity());
         } else {
@@ -353,6 +377,21 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     protected final int doWriteBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
+        if (buf.isDirect()) {
+            return doWriteBytesDirect(in, buf);
+        }
+
+        // We need a direct buffer let's create a temporary one.
+        final ByteBuf ioBuffer = ioBuffer(buf.readableBytes());
+        try {
+            ioBuffer.writeBytes(buf, buf.readerIndex(), buf.readableBytes());
+            return doWriteBytesDirect(in, ioBuffer);
+        } finally {
+            ioBuffer.release();
+        }
+    }
+
+    private int doWriteBytesDirect(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
         if (buf.hasMemoryAddress()) {
             int localFlushedAmount = socket.writeAddress(buf.memoryAddress(), buf.readerIndex(), buf.writerIndex());
             if (localFlushedAmount > 0) {
@@ -360,7 +399,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 return 1;
             }
         } else {
-            final ByteBuffer nioBuf = buf.nioBufferCount() == 1 ?
+            final ByteBuffer nioBuf = buf.nioBufferCount() == 1?
                     buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes()) : buf.nioBuffer();
             int localFlushedAmount = socket.write(nioBuf, nioBuf.position(), nioBuf.limit());
             if (localFlushedAmount > 0) {
@@ -370,6 +409,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             }
         }
         return WRITE_STATUS_SNDBUF_FULL;
+    }
+
+    ByteBuf ioBuffer(int capacity) {
+        return UnixChannelUtil.ioBuffer(alloc(), capacity);
     }
 
     protected abstract class AbstractEpollUnsafe extends AbstractUnsafe {

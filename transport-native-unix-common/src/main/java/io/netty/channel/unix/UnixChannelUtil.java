@@ -16,6 +16,7 @@
 package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
 
 import java.net.InetAddress;
@@ -58,5 +59,13 @@ public final class UnixChannelUtil {
             return osRemoteAddr;
         }
         return remoteAddr;
+    }
+
+    public static ByteBuf ioBuffer(ByteBufAllocator allocator, int capacity) {
+        if (allocator.isDirectBufferPooled()) {
+            return allocator.directBuffer(capacity);
+        } else {
+            return DirectIoByteBufPool.acquire(capacity);
+        }
     }
 }

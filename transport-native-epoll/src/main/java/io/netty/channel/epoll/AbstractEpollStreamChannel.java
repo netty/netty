@@ -257,11 +257,25 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             return 0;
         }
 
+        if (buf.isDirect()) {
+            return writeBytesDirect(in, buf);
+        }
+        // We need a direct buffer let's create a temporary one.
+        ByteBuf ioBuffer = ioBuffer(buf.readableBytes());
+        ioBuffer.writeBytes(buf, buf.readerIndex(), buf.readableBytes());
+        try {
+            return writeBytesDirect(in, ioBuffer);
+        } finally {
+            ioBuffer.release();
+        }
+    }
+
+    private int writeBytesDirect(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
         if (buf.hasMemoryAddress() || buf.nioBufferCount() == 1) {
             return doWriteBytes(in, buf);
         } else {
             ByteBuffer[] nioBuffers = buf.nioBuffers();
-            return writeBytesMultiple(in, nioBuffers, nioBuffers.length, readableBytes,
+            return writeBytesMultiple(in, nioBuffers, nioBuffers.length, buf.readableBytes(),
                     config().getMaxBytesPerGatheringWrite());
         }
     }
@@ -277,36 +291,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         } else if (attempted > MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD && written < attempted >>> 1) {
             config().setMaxBytesPerGatheringWrite(attempted >>> 1);
         }
-    }
-
-    /**
-     * Write multiple bytes via {@link IovArray}.
-     * @param in the collection which contains objects to write.
-     * @param array The array which contains the content to write.
-     * @return The value that should be decremented from the write quantum which starts at
-     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
-     * <ul>
-     *     <li>0 - if no write was attempted. This is appropriate if an empty {@link ByteBuf} (or other empty content)
-     *     is encountered</li>
-     *     <li>1 - if a single call to write data was made to the OS</li>
-     *     <li>{@link ChannelUtils#WRITE_STATUS_SNDBUF_FULL} - if an attempt to write data was made to the OS, but
-     *     no data was accepted</li>
-     * </ul>
-     * @throws IOException If an I/O exception occurs during write.
-     */
-    private int writeBytesMultiple(ChannelOutboundBuffer in, IovArray array) throws IOException {
-        final long expectedWrittenBytes = array.size();
-        assert expectedWrittenBytes != 0;
-        final int cnt = array.count();
-        assert cnt != 0;
-
-        final long localWrittenBytes = socket.writevAddresses(array.memoryAddress(0), cnt);
-        if (localWrittenBytes > 0) {
-            adjustMaxBytesPerGatheringWrite(expectedWrittenBytes, localWrittenBytes, array.maxBytes());
-            in.removeBytes(localWrittenBytes);
-            return 1;
-        }
-        return WRITE_STATUS_SNDBUF_FULL;
     }
 
     /**
@@ -502,27 +486,25 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      */
     private int doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
         final long maxBytesPerGatheringWrite = config().getMaxBytesPerGatheringWrite();
-        IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
+        final IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
         array.maxBytes(maxBytesPerGatheringWrite);
-        in.forEachFlushedMessage(array);
 
-        if (array.count() >= 1) {
-            // TODO: Handle the case where cnt == 1 specially.
-            return writeBytesMultiple(in, array);
+        long localWrittenBytes = array.writeTo(socket, in, alloc());
+        if (localWrittenBytes > 0) {
+            adjustMaxBytesPerGatheringWrite(array.size(), localWrittenBytes, array.maxBytes());
+            in.removeBytes(localWrittenBytes);
+            return 1;
+        } else if (localWrittenBytes == -1) {
+            // cnt == 0, which means the outbound buffer contained empty buffers only.
+            in.removeBytes(0);
+            return 0;
         }
-        // cnt == 0, which means the outbound buffer contained empty buffers only.
-        in.removeBytes(0);
-        return 0;
+        return WRITE_STATUS_SNDBUF_FULL;
     }
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        if (msg instanceof ByteBuf) {
-            ByteBuf buf = (ByteBuf) msg;
-            return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf): buf;
-        }
-
-        if (msg instanceof FileRegion || msg instanceof SpliceOutTask) {
+        if (msg instanceof ByteBuf || msg instanceof FileRegion || msg instanceof SpliceOutTask) {
             return msg;
         }
 

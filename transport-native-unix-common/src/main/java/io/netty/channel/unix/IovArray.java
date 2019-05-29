@@ -16,12 +16,20 @@
 package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
+import io.netty.channel.internal.ChannelUtils;
 import io.netty.util.internal.PlatformDependent;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
+import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.Limits.IOV_MAX;
 import static io.netty.channel.unix.Limits.SSIZE_MAX;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
@@ -67,6 +75,9 @@ public final class IovArray implements MessageProcessor {
     private long size;
     private long maxBytes = SSIZE_MAX;
 
+    // Temporary IO ByteBufs.
+    private final ByteBuf[] buffers = new ByteBuf[maxCount()];
+
     public IovArray() {
         memory = Buffer.allocateDirectWithNativeOrder(CAPACITY);
         memoryAddress = Buffer.memoryAddress(memory);
@@ -77,6 +88,10 @@ public final class IovArray implements MessageProcessor {
         size = 0;
     }
 
+    public int maxCount() {
+        return IOV_MAX;
+    }
+
     /**
      * Add a {@link ByteBuf} to this {@link IovArray}.
      * @param buf The {@link ByteBuf} to add.
@@ -85,7 +100,7 @@ public final class IovArray implements MessageProcessor {
      * have been added.
      */
     public boolean add(ByteBuf buf) {
-        if (count == IOV_MAX) {
+        if (count == maxCount()) {
             // No more room!
             return false;
         } else if (buf.nioBufferCount() == 1) {
@@ -205,11 +220,76 @@ public final class IovArray implements MessageProcessor {
     }
 
     @Override
-    public boolean processMessage(Object msg) throws Exception {
+    public boolean processMessage(Object msg) {
         return msg instanceof ByteBuf && add((ByteBuf) msg);
     }
 
     private static int idx(int index) {
         return IOV_SIZE * index;
+    }
+
+    /**
+     * Write multiple bytes to the given {@link Socket}.
+     * @param socket the {@link Socket} to write to.
+     * @param in the collection which contains objects to write.
+     * @param allocator the {@link ByteBufAllocator} which may be used to obtain temporary direct buffers.
+     * @return The value that should be decremented from the write quantum which starts at
+     * {@link ChannelConfig#getWriteSpinCount()}. The typical use cases are as follows:
+     * <ul>
+     *     <li>0 - write failed due socket non-writable</li>
+     *     <li>-1 - no buffers were found to write.
+     *     <li>1+ - written bytes</li>
+     * </ul>
+     * @throws IOException If an I/O exception occurs during write.
+     */
+    public long writeTo(Socket socket, ChannelOutboundBuffer in, final ByteBufAllocator allocator) throws Exception {
+        assert count == 0;
+
+        ChannelOutboundBuffer.MessageProcessor processor = new ChannelOutboundBuffer.MessageProcessor() {
+            private int idx;
+
+            @Override
+            public boolean processMessage(Object msg) {
+                if (msg instanceof ByteBuf) {
+                    ByteBuf buffer = (ByteBuf) msg;
+                    if (!buffer.isDirect()) {
+                        ByteBuf ioBuffer = UnixChannelUtil.ioBuffer(allocator, buffer.readableBytes());
+                        ioBuffer.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
+                        if (add(ioBuffer)) {
+                            buffers[idx++] = ioBuffer;
+                            return true;
+                        } else {
+                            // We could not fit in the ioBuffer anymore
+                            ioBuffer.release();
+                            return false;
+                        }
+                    } else {
+                        return add(buffer);
+                    }
+                }
+                return false;
+            }
+        };
+
+        try {
+            in.forEachFlushedMessage(processor);
+            final int cnt = count();
+            if (cnt == 0) {
+                return -1;
+            }
+
+            final long expectedWrittenBytes = size();
+            assert expectedWrittenBytes != 0;
+            return socket.writevAddresses(memoryAddress(0), cnt);
+        } finally {
+            for (int i = 0; i < buffers.length; i++) {
+                ByteBuf buffer = buffers[i];
+                if (buffer == null) {
+                    break;
+                }
+                buffers[i] = null;
+                buffer.release();
+            }
+        }
     }
 }

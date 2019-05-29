@@ -431,7 +431,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * Returns an off-heap copy of the specified {@link ByteBuf}, and releases the original one.
      * Note that this method does not create an off-heap copy if the allocation / deallocation cost is too high,
      * but just returns the original {@link ByteBuf}..
+     *
+     * @deprecated will be removed in the future
      */
+    @Deprecated
     protected final ByteBuf newDirectBuffer(ByteBuf buf) {
         final int readableBytes = buf.readableBytes();
         if (readableBytes == 0) {
@@ -463,7 +466,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * The caller must ensure that the holder releases the original {@link ByteBuf} when the holder is released by
      * this method.  Note that this method does not create an off-heap copy if the allocation / deallocation cost is
      * too high, but just returns the original {@link ByteBuf}..
+     *
+     * @deprecated will be removed in the future.
      */
+    @Deprecated
     protected final ByteBuf newDirectBuffer(ReferenceCounted holder, ByteBuf buf) {
         final int readableBytes = buf.readableBytes();
         if (readableBytes == 0) {

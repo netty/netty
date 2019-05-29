@@ -42,8 +42,6 @@ import java.net.PortUnreachableException;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 
 import static io.netty.channel.kqueue.BsdSocket.newSocketDgram;
 
@@ -314,6 +312,25 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
             return true;
         }
 
+        if (data.isDirect()) {
+            return doWriteMessageDirect(data, remoteAddress);
+        } else {
+            ByteBuf ioBuffer = ioBuffer(data.readableBytes());
+            try {
+                ioBuffer.writeBytes(data, data.readerIndex(), data.readableBytes());
+                return doWriteMessageDirect(ioBuffer, remoteAddress);
+            } finally {
+                ioBuffer.release();
+            }
+        }
+    }
+
+    private boolean doWriteMessageDirect(ByteBuf data, InetSocketAddress remoteAddress) throws Exception {
+        final int dataLen = data.readableBytes();
+        if (dataLen == 0) {
+            return true;
+        }
+
         final long writtenBytes;
         if (data.hasMemoryAddress()) {
             long memoryAddress = data.memoryAddress();
@@ -350,31 +367,9 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        if (msg instanceof DatagramPacket) {
-            DatagramPacket packet = (DatagramPacket) msg;
-            ByteBuf content = packet.content();
-            return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
-                    new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
+        if (msg instanceof DatagramPacket || msg instanceof ByteBuf || msg instanceof AddressedEnvelope) {
+            return msg;
         }
-
-        if (msg instanceof ByteBuf) {
-            ByteBuf buf = (ByteBuf) msg;
-            return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
-        }
-
-        if (msg instanceof AddressedEnvelope) {
-            @SuppressWarnings("unchecked")
-            AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
-            if (e.content() instanceof ByteBuf &&
-                    (e.recipient() == null || e.recipient() instanceof InetSocketAddress)) {
-
-                ByteBuf content = (ByteBuf) e.content();
-                return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
-                        new DefaultAddressedEnvelope<ByteBuf, InetSocketAddress>(
-                                newDirectBuffer(e, content), (InetSocketAddress) e.recipient()) : e;
-            }
-        }
-
         throw new UnsupportedOperationException(
                 "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
     }

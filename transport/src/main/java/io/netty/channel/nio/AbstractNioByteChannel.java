@@ -17,6 +17,7 @@ package io.netty.channel.nio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
@@ -29,6 +30,7 @@ import io.netty.channel.internal.ChannelUtils;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -268,11 +270,27 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     protected final Object filterOutboundMessage(Object msg) {
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
+            int readableBytes = buf.readableBytes();
+            if (readableBytes == 0) {
+                buf.release();
+                return Unpooled.EMPTY_BUFFER;
+            }
+
             if (buf.isDirect()) {
                 return msg;
             }
 
-            return newDirectBuffer(buf);
+            ByteBufAllocator alloc = alloc();
+            if (alloc.isDirectBufferPooled()) {
+                ByteBuf directBuf = alloc.directBuffer(readableBytes);
+                directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
+                buf.release();
+                return directBuf;
+            }
+
+            // Just return the ByteBuf and let the JDK handle the conversation of heap to direct byte buffer to keep
+            // the memory overhead to a minimum.
+            return buf;
         }
 
         if (msg instanceof FileRegion) {

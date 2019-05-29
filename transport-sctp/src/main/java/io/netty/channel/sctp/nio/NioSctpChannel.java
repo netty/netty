@@ -21,6 +21,7 @@ import com.sun.nio.sctp.NotificationHandler;
 import com.sun.nio.sctp.SctpChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -325,12 +326,12 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         if (msg instanceof SctpMessage) {
             SctpMessage m = (SctpMessage) msg;
             ByteBuf buf = m.content();
-            if (buf.isDirect() && buf.nioBufferCount() == 1) {
-                return m;
-            }
+            ByteBuf buffer = filterByteBuf(buf);
 
-            return new SctpMessage(m.protocolIdentifier(), m.streamIdentifier(), m.isUnordered(),
-                                   newDirectBuffer(m, buf));
+            if (buf != buffer) {
+                return new SctpMessage(m.protocolIdentifier(), m.streamIdentifier(), m.isUnordered(), buffer);
+            }
+            return m;
         }
 
         throw new UnsupportedOperationException(
@@ -338,6 +339,37 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                 " (expected: " + StringUtil.simpleClassName(SctpMessage.class));
     }
 
+    private ByteBuf filterByteBuf(ByteBuf buf) {
+        int readableBytes = buf.readableBytes();
+        if (readableBytes == 0) {
+            buf.release();
+            return Unpooled.EMPTY_BUFFER;
+        }
+
+        if (isSingleDirectBuffer(buf)) {
+            return buf;
+        }
+
+        ByteBufAllocator alloc = alloc();
+        if (alloc.isDirectBufferPooled()) {
+            ByteBuf directBuf = alloc.directBuffer(readableBytes);
+            directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
+            buf.release();
+            return directBuf;
+        }
+
+        // Just return the ByteBuf and let the JDK handle the conversation of heap to direct byte buffer to keep
+        // the memory overhead to a minimum.
+        return buf;
+    }
+
+    /**
+     * Checks if the specified buffer is a direct buffer and is composed of a single NIO buffer.
+     * (We check this because otherwise we need to make it a non-composite buffer.)
+     */
+    private static boolean isSingleDirectBuffer(ByteBuf buf) {
+        return buf.isDirect() && buf.nioBufferCount() == 1;
+    }
     @Override
     public ChannelFuture bindAddress(InetAddress localAddress) {
         return bindAddress(localAddress, newPromise());

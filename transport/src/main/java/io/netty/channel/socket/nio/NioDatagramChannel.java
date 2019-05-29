@@ -16,6 +16,8 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -302,18 +304,15 @@ public final class NioDatagramChannel
         if (msg instanceof DatagramPacket) {
             DatagramPacket p = (DatagramPacket) msg;
             ByteBuf content = p.content();
-            if (isSingleDirectBuffer(content)) {
-                return p;
+            ByteBuf buffer = filterByteBuf(content);
+            if (buffer != content) {
+                return new DatagramPacket(buffer, p.recipient());
             }
-            return new DatagramPacket(newDirectBuffer(p, content), p.recipient());
+            return p;
         }
 
         if (msg instanceof ByteBuf) {
-            ByteBuf buf = (ByteBuf) msg;
-            if (isSingleDirectBuffer(buf)) {
-                return buf;
-            }
-            return newDirectBuffer(buf);
+            return filterByteBuf((ByteBuf) msg);
         }
 
         if (msg instanceof AddressedEnvelope) {
@@ -321,15 +320,40 @@ public final class NioDatagramChannel
             AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
             if (e.content() instanceof ByteBuf) {
                 ByteBuf content = (ByteBuf) e.content();
-                if (isSingleDirectBuffer(content)) {
-                    return e;
+                ByteBuf buffer = filterByteBuf(content);
+                if (buffer != content) {
+                    return new DefaultAddressedEnvelope<ByteBuf, SocketAddress>(buffer, e.recipient());
                 }
-                return new DefaultAddressedEnvelope<ByteBuf, SocketAddress>(newDirectBuffer(e, content), e.recipient());
+                return e;
             }
         }
 
         throw new UnsupportedOperationException(
                 "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
+    }
+
+    private ByteBuf filterByteBuf(ByteBuf buf) {
+        int readableBytes = buf.readableBytes();
+        if (readableBytes == 0) {
+            buf.release();
+            return Unpooled.EMPTY_BUFFER;
+        }
+
+        if (isSingleDirectBuffer(buf)) {
+            return buf;
+        }
+
+        ByteBufAllocator alloc = alloc();
+        if (alloc.isDirectBufferPooled()) {
+            ByteBuf directBuf = alloc.directBuffer(readableBytes);
+            directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
+            buf.release();
+            return directBuf;
+        }
+
+        // Just return the ByteBuf and let the JDK handle the conversation of heap to direct byte buffer to keep
+        // the memory overhead to a minimum.
+        return buf;
     }
 
     /**

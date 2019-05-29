@@ -23,7 +23,6 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
@@ -32,7 +31,6 @@ import io.netty.channel.unix.DatagramSocketAddress;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Socket;
-import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -307,28 +305,17 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 // Check if sendmmsg(...) is supported which is only the case for GLIBC 2.14+
                 if (Native.IS_SUPPORTING_SENDMMSG && in.size() > 1) {
                     NativeDatagramPacketArray array = ((EpollEventLoop) eventLoop()).cleanDatagramPacketArray();
-                    in.forEachFlushedMessage(array);
-                    int cnt = array.count();
-
-                    if (cnt >= 1) {
-                        // Try to use gathering writes via sendmmsg(...) syscall.
-                        int offset = 0;
-                        NativeDatagramPacketArray.NativeDatagramPacket[] packets = array.packets();
-
-                        while (cnt > 0) {
-                            int send = socket.sendmmsg(packets, offset, cnt);
-                            if (send == 0) {
-                                // Did not write all messages.
-                                setFlag(Native.EPOLLOUT);
-                                return;
-                            }
-                            for (int i = 0; i < send; i++) {
-                                in.remove();
-                            }
-                            cnt -= send;
-                            offset += send;
+                    int send = array.sendmmsgTo(socket, in, alloc());
+                    if (send >= 1) {
+                        while (send != 0) {
+                            in.remove();
+                            send--;
                         }
                         continue;
+                    } else if (send == 0) {
+                        // Did not write all messages.
+                        setFlag(Native.EPOLLOUT);
+                        return;
                     }
                 }
                 boolean done = false;
@@ -374,6 +361,25 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             return true;
         }
 
+        if (data.isDirect()) {
+            return doWriteMessageDirect(data, remoteAddress);
+        } else {
+            ByteBuf ioBuffer = ioBuffer(data.readableBytes());
+            try {
+                ioBuffer.writeBytes(data, data.readerIndex(), data.readableBytes());
+                return doWriteMessageDirect(ioBuffer, remoteAddress);
+            } finally {
+                ioBuffer.release();
+            }
+        }
+    }
+
+    private boolean doWriteMessageDirect(ByteBuf data, InetSocketAddress remoteAddress) throws Exception {
+        final int dataLen = data.readableBytes();
+        if (dataLen == 0) {
+            return true;
+        }
+
         final long writtenBytes;
         if (data.hasMemoryAddress()) {
             long memoryAddress = data.memoryAddress();
@@ -410,29 +416,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        if (msg instanceof DatagramPacket) {
-            DatagramPacket packet = (DatagramPacket) msg;
-            ByteBuf content = packet.content();
-            return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
-                    new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
-        }
-
-        if (msg instanceof ByteBuf) {
-            ByteBuf buf = (ByteBuf) msg;
-            return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
-        }
-
-        if (msg instanceof AddressedEnvelope) {
-            @SuppressWarnings("unchecked")
-            AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
-            if (e.content() instanceof ByteBuf &&
-                (e.recipient() == null || e.recipient() instanceof InetSocketAddress)) {
-
-                ByteBuf content = (ByteBuf) e.content();
-                return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
-                        new DefaultAddressedEnvelope<ByteBuf, InetSocketAddress>(
-                            newDirectBuffer(e, content), (InetSocketAddress) e.recipient()) : e;
-            }
+        if (msg instanceof DatagramPacket || msg instanceof ByteBuf || msg instanceof AddressedEnvelope) {
+            return msg;
         }
 
         throw new UnsupportedOperationException(
