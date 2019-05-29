@@ -24,7 +24,7 @@ import java.nio.ByteBuffer;
 @UnstableApi
 public final class DirectCleaner {
 
-    private static boolean ALLOW_CUSTOM_CLEANER = SystemPropertyUtil.getBoolean("io.netty.allowCustomCleaner", false);
+    private static final boolean ALLOW_CUSTOM_CLEANER = SystemPropertyUtil.getBoolean("io.netty.allowCustomCleaner", false);
     private static volatile CustomCleaner customCleaner;
 
     /**
