@@ -25,9 +25,13 @@ import java.util.concurrent.TimeUnit;
  * The {@link EventExecutorGroup} is responsible for providing the {@link EventExecutor}'s to use
  * via its {@link #next()} method. Besides this, it is also responsible for handling their
  * life-cycle and allows shutting them down in a global fashion.
- *
+ */
+
+/**
+ * EventExecutorGroup 自己不执行任务，而是#submit(...) 或 #schedule(...) 给自己管理的 EventExecutor 的分组.
  */
 public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<EventExecutor> {
+//EventExecutor 事件执行器
 
     /**
      * Returns {@code true} if and only if all {@link EventExecutor}s managed by this {@link EventExecutorGroup}
@@ -37,6 +41,7 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
 
     /**
      * Shortcut method for {@link #shutdownGracefully(long, long, TimeUnit)} with sensible default values.
+     * 优雅的关闭
      *
      * @return the {@link #terminationFuture()}
      */
@@ -53,7 +58,6 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
      * @param timeout     the maximum amount of time to wait until the executor is {@linkplain #shutdown()}
      *                    regardless if a task was submitted during the quiet period
      * @param unit        the unit of {@code quietPeriod} and {@code timeout}
-     *
      * @return the {@link #terminationFuture()}
      */
     Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit);
@@ -80,6 +84,7 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
 
     /**
      * Returns one of the {@link EventExecutor}s managed by this {@link EventExecutorGroup}.
+     * 选择一个 EventExecutor 对象
      */
     EventExecutor next();
 
@@ -95,6 +100,7 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
     @Override
     <T> Future<T> submit(Callable<T> task);
 
+    // ========== 实现自 ScheduledExecutorService 接口 ==========
     @Override
     ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit);
 

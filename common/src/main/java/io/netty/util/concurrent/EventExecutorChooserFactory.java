@@ -21,14 +21,16 @@ import io.netty.util.internal.UnstableApi;
  * Factory that creates new {@link EventExecutorChooser}s.
  */
 @UnstableApi
-public interface EventExecutorChooserFactory {
+public interface EventExecutorChooserFactory { //接口中内部接口
 
     /**
+     * 创建一个 EventExecutorChooser 对象
      * Returns a new {@link EventExecutorChooser}.
      */
     EventExecutorChooser newChooser(EventExecutor[] executors);
 
     /**
+     * EventExecutor 选择器接口
      * Chooses the next {@link EventExecutor} to use.
      */
     @UnstableApi

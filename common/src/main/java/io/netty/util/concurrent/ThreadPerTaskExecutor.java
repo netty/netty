@@ -19,6 +19,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 public final class ThreadPerTaskExecutor implements Executor {
+    /**
+     * 线程工厂对象
+     */
     private final ThreadFactory threadFactory;
 
     public ThreadPerTaskExecutor(ThreadFactory threadFactory) {
@@ -28,8 +31,19 @@ public final class ThreadPerTaskExecutor implements Executor {
         this.threadFactory = threadFactory;
     }
 
+    /**
+     * 功能描述: <br>
+     * 〈执行任务〉
+     *
+     * @param:
+     * @return:void
+     * @since: 1.0.0
+     * @Author:s·D·bs
+     * @Date: 2019/5/17 8:24
+     */
     @Override
     public void execute(Runnable command) {
+
         threadFactory.newThread(command).start();
     }
 }

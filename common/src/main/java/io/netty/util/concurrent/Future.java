@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * The result of an asynchronous operation.
+ * 这个类是真的 gay 自己继承实现的java的Future
  */
 @SuppressWarnings("ClassNameSameAsAncestorName")
 public interface Future<V> extends java.util.concurrent.Future<V> {
