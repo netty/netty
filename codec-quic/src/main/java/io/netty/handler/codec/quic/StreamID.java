@@ -30,9 +30,10 @@ public class StreamID extends VarInt {
         return (asLong() & 0x2) == 0;
     }
 
-    public static StreamID byLong(long id) {
-        return null;
-        //TODO
+    public static StreamID byLong(long value) {
+        StreamID id = new StreamID();
+        id.read(value);
+        return id;
     }
 
     public static StreamID read(ByteBuf buf) {

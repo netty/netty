@@ -27,8 +27,47 @@ public class VarInt {
 
     protected VarInt() {}
 
+    private int getFrom() {
+        if (value > 1073741823) {
+            return  0;
+        } else if (value > 16383) {
+            return 4;
+        } else if (value > 63) {
+            return 6;
+        }
+        return 7;
+    }
+
     public void write(ByteBuf buf) {
-        //TODO
+        byte[] bin = Arrays.copyOfRange(rawValue, getFrom(), 8);
+        bin[0] = (byte) (bin[0] | mask);
+        buf.writeBytes(bin);
+    }
+
+    public void read(long value) {
+        this.value = value;
+        readValue(value);
+        mask = maskByValue(value);
+        //TODO should we set size and rest?
+    }
+
+    private int maskByValue(long value) {
+        if (value > 1073741823) {
+            return 0xc0;
+        } else if (value > 16383) {
+            return 0x80;
+        } else if (value > 63) {
+            return 0x40;
+        }
+        return 0x0;
+    }
+
+    private void readValue(long value) {
+        rawValue = new byte[8];
+        for(int i = 7; i >= 0; --i) {
+            rawValue[i] = (byte)((int)(value & 255L));
+            value >>= 8;
+        }
     }
 
     public void readBuf(ByteBuf buf) {
@@ -58,9 +97,16 @@ public class VarInt {
                 (long)rawValue[7] & 255L;
     }
 
+    public static VarInt read(ByteBuf buf) {
+        VarInt var = new VarInt();
+        var.readBuf(buf);
+        return var;
+    }
+
     public static VarInt byLong(long l) {
-        //TODO
-        return null;
+        VarInt var = new VarInt();
+        var.read(l);
+        return var;
     }
 
     @Override
@@ -85,12 +131,6 @@ public class VarInt {
         result = 31 * result + Arrays.hashCode(rawValue);
         result = 31 * result + (int) (value ^ (value >>> 32));
         return result;
-    }
-
-    public static VarInt read(ByteBuf buf) {
-        VarInt var = new VarInt();
-        var.readBuf(buf);
-        return var;
     }
 
     public void mask(int mask) {
