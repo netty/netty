@@ -17,21 +17,15 @@ package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.internal.ChannelUtils;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.unix.IovArray;
-import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannelUtil;
 
 import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.ArrayDeque;
-import java.util.Arrays;
-import java.util.Queue;
 
 import static io.netty.channel.unix.Limits.UIO_MAX_IOV;
 import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
@@ -50,7 +44,7 @@ final class NativeDatagramPacketArray {
 
     // Temporary IO ByteBufs.
     private final ByteBuf[] buffers = new ByteBuf[iovArray.maxCount()];
-
+    private final SendmmsgMessageProcessor sendmmsgMessageProcessor = new SendmmsgMessageProcessor();
     private int count;
 
     NativeDatagramPacketArray() {
@@ -101,35 +95,8 @@ final class NativeDatagramPacketArray {
     int sendmmsgTo(LinuxSocket socket, ChannelOutboundBuffer in, final ByteBufAllocator allocator) throws Exception {
         assert count == 0;
 
-        ChannelOutboundBuffer.MessageProcessor processor = new ChannelOutboundBuffer.MessageProcessor() {
-            private int idx;
-
-            @Override
-            public boolean processMessage(Object msg) {
-                if (msg instanceof DatagramPacket) {
-                    DatagramPacket packet = (DatagramPacket) msg;
-                    ByteBuf buffer = packet.content();
-                    if (!buffer.isDirect()) {
-                        ByteBuf ioBuffer = UnixChannelUtil.ioBuffer(allocator, buffer.readableBytes());
-                        ioBuffer.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
-                        if (add(ioBuffer, packet.recipient())) {
-                            buffers[idx++] = ioBuffer;
-                            return true;
-                        } else {
-                            // We could not fit in the ioBuffer anymore
-                            ioBuffer.release();
-                            return false;
-                        }
-                    } else {
-                        return add(buffer, packet.recipient());
-                    }
-                }
-                return false;
-            }
-        };
-
         try {
-            in.forEachFlushedMessage(processor);
+            sendmmsgMessageProcessor.transferToArray(in, allocator);
             int cnt = count();
             if (cnt >= 1) {
                 // Try to use gathering writes via sendmmsg(...) syscall.
@@ -209,6 +176,44 @@ final class NativeDatagramPacketArray {
                 scopeId = 0;
             }
             port = recipient.getPort();
+        }
+    }
+
+    private final class SendmmsgMessageProcessor implements ChannelOutboundBuffer.MessageProcessor {
+        private int idx;
+        private ByteBufAllocator allocator;
+
+        void transferToArray(ChannelOutboundBuffer in, ByteBufAllocator allocator) throws Exception {
+            this.allocator = allocator;
+            try {
+                in.forEachFlushedMessage(this);
+            } finally {
+                idx = 0;
+                this.allocator = null;
+            }
+        }
+
+        @Override
+        public boolean processMessage(Object msg) {
+            if (msg instanceof DatagramPacket) {
+                DatagramPacket packet = (DatagramPacket) msg;
+                ByteBuf buffer = packet.content();
+                if (!buffer.isDirect()) {
+                    ByteBuf ioBuffer = UnixChannelUtil.ioBuffer(allocator, buffer.readableBytes());
+                    ioBuffer.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
+                    if (add(ioBuffer, packet.recipient())) {
+                        buffers[idx++] = ioBuffer;
+                        return true;
+                    } else {
+                        // We could not fit in the ioBuffer anymore
+                        ioBuffer.release();
+                        return false;
+                    }
+                } else {
+                    return add(buffer, packet.recipient());
+                }
+            }
+            return false;
         }
     }
 }

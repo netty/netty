@@ -21,15 +21,11 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
-import io.netty.channel.internal.ChannelUtils;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayDeque;
-import java.util.Queue;
 
-import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.Limits.IOV_MAX;
 import static io.netty.channel.unix.Limits.SSIZE_MAX;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
@@ -77,6 +73,7 @@ public final class IovArray implements MessageProcessor {
 
     // Temporary IO ByteBufs.
     private final ByteBuf[] buffers = new ByteBuf[maxCount()];
+    private final WriteToMessageProcessor writeToMessageProcessor = new WriteToMessageProcessor();
 
     public IovArray() {
         memory = Buffer.allocateDirectWithNativeOrder(CAPACITY);
@@ -244,35 +241,8 @@ public final class IovArray implements MessageProcessor {
      */
     public long writeTo(Socket socket, ChannelOutboundBuffer in, final ByteBufAllocator allocator) throws Exception {
         assert count == 0;
-
-        ChannelOutboundBuffer.MessageProcessor processor = new ChannelOutboundBuffer.MessageProcessor() {
-            private int idx;
-
-            @Override
-            public boolean processMessage(Object msg) {
-                if (msg instanceof ByteBuf) {
-                    ByteBuf buffer = (ByteBuf) msg;
-                    if (!buffer.isDirect()) {
-                        ByteBuf ioBuffer = UnixChannelUtil.ioBuffer(allocator, buffer.readableBytes());
-                        ioBuffer.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
-                        if (add(ioBuffer)) {
-                            buffers[idx++] = ioBuffer;
-                            return true;
-                        } else {
-                            // We could not fit in the ioBuffer anymore
-                            ioBuffer.release();
-                            return false;
-                        }
-                    } else {
-                        return add(buffer);
-                    }
-                }
-                return false;
-            }
-        };
-
         try {
-            in.forEachFlushedMessage(processor);
+            writeToMessageProcessor.transferToArray(in, allocator);
             final int cnt = count();
             if (cnt == 0) {
                 return -1;
@@ -290,6 +260,43 @@ public final class IovArray implements MessageProcessor {
                 buffers[i] = null;
                 buffer.release();
             }
+        }
+    }
+
+    private final class WriteToMessageProcessor implements ChannelOutboundBuffer.MessageProcessor {
+        private int idx;
+        private ByteBufAllocator allocator;
+
+        void transferToArray(ChannelOutboundBuffer in, ByteBufAllocator allocator) throws Exception {
+            this.allocator = allocator;
+            try {
+                in.forEachFlushedMessage(this);
+            } finally {
+                idx = 0;
+                this.allocator = null;
+            }
+        }
+
+        @Override
+        public boolean processMessage(Object msg) {
+            if (msg instanceof ByteBuf) {
+                ByteBuf buffer = (ByteBuf) msg;
+                if (!buffer.isDirect()) {
+                    ByteBuf ioBuffer = UnixChannelUtil.ioBuffer(allocator, buffer.readableBytes());
+                    ioBuffer.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
+                    if (add(ioBuffer)) {
+                        buffers[idx++] = ioBuffer;
+                        return true;
+                    } else {
+                        // We could not fit in the ioBuffer anymore
+                        ioBuffer.release();
+                        return false;
+                    }
+                } else {
+                    return add(buffer);
+                }
+            }
+            return false;
         }
     }
 }
