@@ -73,7 +73,7 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     public NioEventLoopGroup(int nThreads, ThreadFactory threadFactory,
-        final SelectorProvider selectorProvider, final SelectStrategyFactory selectStrategyFactory) {
+                             final SelectorProvider selectorProvider, final SelectStrategyFactory selectStrategyFactory) {
         super(nThreads, threadFactory, selectorProvider, selectStrategyFactory, RejectedExecutionHandlers.reject());
     }
 
@@ -102,21 +102,25 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     /**
+     * 设置所有 EventLoop 的 IO 任务占用执行时间的比例。代码如下：
      * Sets the percentage of the desired amount of time spent for I/O in the child event loops.  The default value is
      * {@code 50}, which means the event loop will try to spend the same amount of time for I/O as for non-I/O tasks.
      */
     public void setIoRatio(int ioRatio) {
-        for (EventExecutor e: this) {
+        for (EventExecutor e : this) {
             ((NioEventLoop) e).setIoRatio(ioRatio);
         }
     }
 
     /**
+     * 重建所有 EventLoop 的 Selector 对象。
+     * 规避epoll 100% CPU Bug
+     * 并将Old Selector的有效channel和对应的key转移到新的Selector上。
      * Replaces the current {@link Selector}s of the child event loops with newly created {@link Selector}s to work
      * around the  infamous epoll 100% CPU bug.
      */
     public void rebuildSelectors() {
-        for (EventExecutor e: this) {
+        for (EventExecutor e : this) {
             ((NioEventLoop) e).rebuildSelector();
         }
     }
@@ -124,6 +128,6 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
     @Override
     protected EventLoop newChild(Executor executor, Object... args) throws Exception {
         return new NioEventLoop(this, executor, (SelectorProvider) args[0],
-            ((SelectStrategyFactory) args[1]).newSelectStrategy(), (RejectedExecutionHandler) args[2]);
+                ((SelectStrategyFactory) args[1]).newSelectStrategy(), (RejectedExecutionHandler) args[2]);
     }
 }
