@@ -316,8 +316,9 @@
     <module>codec-redis</module>
     <module>codec-smtp</module>
     <module>codec-socks</module>
-    <module>codec-stomp</module>
+    <module>codec-stomp</module
     <module>codec-xml</module>
+    <module>codec-quic</module>
     <module>resolver</module>
     <module>resolver-dns</module>
     <module>tarball</module>
