@@ -67,6 +67,14 @@ public class StreamDataBlockedFrame extends QuicFrame {
     }
 
     @Override
+    public String toString() {
+        return "StreamDataBlockedFrame{" +
+                "streamID=" + streamID +
+                ", dataLimit=" + dataLimit +
+                '}';
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;

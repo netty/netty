@@ -42,6 +42,14 @@ public class MaxStreamDataFrame extends QuicFrame {
     }
 
     @Override
+    public String toString() {
+        return "MaxStreamDataFrame{" +
+                "streamID=" + streamID +
+                ", maxData=" + maxData +
+                '}';
+    }
+
+    @Override
     public void read(ByteBuf buf) {
         streamID = StreamID.read(buf);
         maxData = VarInt.read(buf);

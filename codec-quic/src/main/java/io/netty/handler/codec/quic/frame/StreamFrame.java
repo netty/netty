@@ -23,6 +23,8 @@ import io.netty.handler.codec.quic.StreamID;
 import io.netty.handler.codec.quic.VarInt;
 import io.netty.handler.codec.quic.packet.HeaderUtil;
 
+import java.util.Arrays;
+
 public class StreamFrame extends QuicFrame {
 
     protected long offset;
@@ -139,4 +141,37 @@ public class StreamFrame extends QuicFrame {
         constructTypeByte(offset, fin(), hasLength());
     }
 
+    @Override
+    public String toString() {
+        return "StreamFrame{" +
+                "offset=" + offset +
+                ", length=" + length +
+                ", streamID=" + streamID +
+                ", typeByte=" + typeByte +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+
+        StreamFrame that = (StreamFrame) o;
+
+        if (offset != that.offset) return false;
+        if (length != that.length) return false;
+        if (streamID != null ? !streamID.equals(that.streamID) : that.streamID != null) return false;
+        return Arrays.equals(data, that.data);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + (int) (offset ^ (offset >>> 32));
+        result = 31 * result + length;
+        result = 31 * result + (streamID != null ? streamID.hashCode() : 0);
+        result = 31 * result + Arrays.hashCode(data);
+        return result;
+    }
 }

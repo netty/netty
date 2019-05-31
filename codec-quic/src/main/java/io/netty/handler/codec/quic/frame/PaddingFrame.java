@@ -45,4 +45,29 @@ public class PaddingFrame extends QuicFrame {
             buf.readerIndex(buf.readerIndex() - 1);
         }
     }
+
+    @Override
+    public String toString() {
+        return "PaddingFrame{" +
+                "padding=" + padding +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+
+        PaddingFrame that = (PaddingFrame) o;
+
+        return padding == that.padding;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + padding;
+        return result;
+    }
 }

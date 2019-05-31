@@ -59,6 +59,15 @@ public class StreamResetFrame extends QuicFrame {
     }
 
     @Override
+    public String toString() {
+        return "StreamResetFrame{" +
+                "id=" + id +
+                ", error=" + error +
+                ", offset=" + offset +
+                '}';
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;

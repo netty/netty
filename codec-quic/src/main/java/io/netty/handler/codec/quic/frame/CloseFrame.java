@@ -73,6 +73,16 @@ public class CloseFrame extends QuicFrame {
         return result;
     }
 
+    @Override
+    public String toString() {
+        return "CloseFrame{" +
+                "errorCode=" + errorCode +
+                ", error='" + error + '\'' +
+                ", application=" + application +
+                ", typeByte=" + typeByte +
+                '}';
+    }
+
     public short errorCode() {
         return errorCode;
     }
