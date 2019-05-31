@@ -94,7 +94,19 @@ public class InitialPacket extends DataPacket implements LongPacket {
 
     @Override
     public void write(ByteBuf buf) {
+        int offset = buf.writerIndex();
+        firstByte = HeaderUtil.writeLongDataHeader(buf, this);
 
+        VarInt.byLong(token == null ? 0 : token.length).write(buf);
+        if (token != null) {
+            buf.writeBytes(token);
+        }
+
+        byte[] pn = getPN(buf);
+        byte[] frames = framesEncoded();
+        VarInt.byLong(frames.length + pn.length).write(buf);
+
+        HeaderUtil.writeLongPacketContent(buf, pn, offset, Cryptor.HANDSHAKE, frames, firstByte);
     }
 
     public byte[] token() {

@@ -31,6 +31,16 @@ public enum Cryptor {
         public byte[] decryptContent(byte[] encrypted, long packetNumber, byte[] header) {
             return new byte[0];
         }
+
+        @Override
+        public byte[] seal(byte[] encrypted, long packetNumber, byte[] header) {
+            return new byte[0];
+        }
+
+        @Override
+        public byte[] encryptHeader(byte[] sample, byte[] header, boolean isShort) {
+            return new byte[0];
+        }
     },
     INITIAL {
         @Override
@@ -40,6 +50,16 @@ public enum Cryptor {
 
         @Override
         public byte[] decryptContent(byte[] encrypted, long packetNumber, byte[] header) {
+            return new byte[0];
+        }
+
+        @Override
+        public byte[] seal(byte[] encrypted, long packetNumber, byte[] header) {
+            return new byte[0];
+        }
+
+        @Override
+        public byte[] encryptHeader(byte[] sample, byte[] header, boolean isShort) {
             return new byte[0];
         }
     },
@@ -53,9 +73,23 @@ public enum Cryptor {
         public byte[] decryptContent(byte[] encrypted, long packetNumber, byte[] header) {
             return new byte[0];
         }
+
+        @Override
+        public byte[] seal(byte[] encrypted, long packetNumber, byte[] header) {
+            return new byte[0];
+        }
+
+        @Override
+        public byte[] encryptHeader(byte[] sample, byte[] header, boolean isShort) {
+            return new byte[0];
+        }
     };
 
     public abstract byte[] decryptHeader(byte[] sample, byte firstByte, byte[] pn, boolean isShort);
 
     public abstract byte[] decryptContent(byte[] encrypted, long packetNumber, byte[] header);
+
+    public abstract byte[] seal(byte[] encrypted, long packetNumber, byte[] header);
+
+    public abstract byte[] encryptHeader(byte[] sample, byte[] header, boolean isShort);
 }

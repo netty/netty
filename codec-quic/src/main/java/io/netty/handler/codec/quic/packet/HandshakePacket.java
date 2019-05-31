@@ -19,6 +19,7 @@
 package io.netty.handler.codec.quic.packet;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.quic.VarInt;
 import io.netty.handler.codec.quic.Version;
 import io.netty.handler.codec.quic.frame.QuicFrame;
 import io.netty.handler.codec.quic.tls.Cryptor;
@@ -86,7 +87,14 @@ public class HandshakePacket extends DataPacket implements LongPacket {
 
     @Override
     public void write(ByteBuf buf) {
-        //TODO
+        int offset = buf.writerIndex();
+        firstByte = HeaderUtil.writeLongDataHeader(buf, this);
+
+        byte[] pn = getPN(buf);
+        byte[] frames = framesEncoded();
+        VarInt.byLong(frames.length + pn.length).write(buf);
+
+        HeaderUtil.writeLongPacketContent(buf, pn, offset, Cryptor.HANDSHAKE, frames, firstByte);
     }
 
     @Override

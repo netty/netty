@@ -24,10 +24,13 @@ public class QuicFrame {
 
     public static void readFrames(DataPacket packet, ByteBuf buf, byte[] encrypted, byte[] header, Cryptor cryptor) {
         ByteBuf decrypted = Unpooled.wrappedBuffer(cryptor.decryptContent(encrypted, packet.packetNumber(), header));
-        while (decrypted.isReadable()) {
-            packet.frames().add(FrameType.readFrame(buf));
+        try {
+            while (decrypted.isReadable()) {
+                packet.frames().add(FrameType.readFrame(buf));
+            }
+        } finally {
+            decrypted.release();
         }
-        decrypted.release();
     }
 
     protected FrameType type;

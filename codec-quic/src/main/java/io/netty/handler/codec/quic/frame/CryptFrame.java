@@ -74,6 +74,14 @@ public class CryptFrame extends QuicFrame {
         return result;
     }
 
+    @Override
+    public String toString() {
+        return "CryptFrame{" +
+                "offset=" + offset +
+                ", data=" + Arrays.toString(data) +
+                '}';
+    }
+
     public byte[] data() {
         return data;
     }

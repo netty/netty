@@ -22,22 +22,27 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.quic.frame.QuicFrame;
 import io.netty.handler.codec.quic.tls.Cryptor;
 
+import java.security.GeneralSecurityException;
 import java.util.List;
 
 public class ShortPacket extends DataPacket {
 
+    protected boolean keyPhase;
+
     ShortPacket() {}
 
-    public ShortPacket(long packetNumber, List<QuicFrame> frames) {
+    public ShortPacket(long packetNumber, boolean keyPhase, List<QuicFrame> frames) {
         super(packetNumber, frames);
     }
 
-    public ShortPacket(long packetNumber, QuicFrame... frames) {
+    public ShortPacket(long packetNumber, boolean keyPhase, QuicFrame... frames) {
         super(packetNumber, frames);
     }
 
     @Override
     public void read(ByteBuf buf) {
+        keyPhase = (firstByte & 0x4) == 0x4;
+
         Cryptor cryptor = Cryptor.ONE_RTT;
         int offset = buf.readerIndex() - 1;
         connectionID = HeaderUtil.read(buf, 16);
@@ -49,7 +54,26 @@ public class ShortPacket extends DataPacket {
 
     @Override
     public void write(ByteBuf buf) {
-        //TODO
+        Cryptor cryptor = Cryptor.ONE_RTT;
+        int offset = buf.writerIndex();
+        firstByte = 0x40;
+        if (keyPhase) {
+            firstByte |= 0x4;
+        }
+        firstByte |= packetNumber;
+        firstByte |= 4 - 1; //TODO size can be compressed
+        buf.writeByte(firstByte);
+        buf.writeBytes(connectionID);
+
+        byte[] pn = getPN(buf);
+        HeaderUtil.writeLongPacketContent(buf, pn, offset, cryptor, framesEncoded(), firstByte);
     }
 
+    public boolean keyPhase() {
+        return keyPhase;
+    }
+
+    public void keyPhase(boolean keyPhase) {
+        this.keyPhase = keyPhase;
+    }
 }

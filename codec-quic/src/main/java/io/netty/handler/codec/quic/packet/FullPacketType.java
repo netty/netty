@@ -71,6 +71,10 @@ public enum FullPacketType {
         }
     }
 
+    public int getFirstByte() {
+        return ((0x80 | id << 4) & 0xFF) | 0x40;
+    }
+
     public static LongPacket readLongPacket(ByteBuf buf, byte first) {
         int rawType = first & 0xFF;
         FullPacketType type = TYPES.get((byte) ((rawType & 0x30) >> 4));

@@ -103,9 +103,9 @@ public class VarInt {
         return var;
     }
 
-    public static VarInt byLong(long l) {
+    public static VarInt byLong(long value) {
         VarInt var = new VarInt();
-        var.read(l);
+        var.read(value);
         return var;
     }
 
@@ -116,11 +116,16 @@ public class VarInt {
 
         VarInt varInt = (VarInt) o;
 
-        if (mask != varInt.mask) return false;
-        if (size != varInt.size) return false;
-        if (rest != varInt.rest) return false;
         if (value != varInt.value) return false;
         return Arrays.equals(rawValue, varInt.rawValue);
+    }
+
+    @Override
+    public String toString() {
+        return "VarInt{" +
+                "rawValue=" + Arrays.toString(rawValue) +
+                ", value=" + value +
+                '}';
     }
 
     @Override

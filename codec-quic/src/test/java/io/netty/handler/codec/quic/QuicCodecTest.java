@@ -47,8 +47,8 @@ public class QuicCodecTest {
     @Mock
     protected final Channel channel = mock(Channel.class);
 
-    protected QuicDecoder decoder;
-    protected QuicEncoder encoder;
+    protected QuicDecoder decoder = new QuicDecoder();
+    protected QuicEncoder encoder = new QuicEncoder();
 
     @Before
     public void setup() {

@@ -19,6 +19,7 @@
 package io.netty.handler.codec.quic.packet;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.quic.frame.QuicFrame;
 import io.netty.handler.codec.quic.tls.Cryptor;
 
@@ -64,6 +65,14 @@ public abstract class DataPacket extends Packet {
         return pn;
     }
 
+    protected byte[] getPN(ByteBuf buf) {
+        final byte[] bin = new byte[4];
+        for (int j = 4; j > 0; j--) {
+            bin[4 - j] = (byte) ((packetNumber >> (8 * (j - 1))) & 0xFF);
+        }
+        return bin;
+    }
+
     protected void processData(ByteBuf buf, byte[] header, int pnStart, int packetStart, Cryptor cryptor) {
         byte firstHeaderByte = header[0];
 
@@ -80,6 +89,26 @@ public abstract class DataPacket extends Packet {
         System.arraycopy(pn, 0, content, pnStart - packetStart, pn.length);
 
         QuicFrame.readFrames(this, buf, drain(buf), content, cryptor);
+    }
+
+    protected byte[] framesEncoded() {
+        ByteBuf raw = Unpooled.buffer();
+        try {
+            for (QuicFrame frame : frames) {
+                frame.write(raw);
+            }
+            return drain(raw);
+        } finally {
+            raw.release();
+        }
+    }
+
+    protected void writeFrames(Cryptor cryptor, ByteBuf buf, byte[] header) {
+        writeFrames(cryptor, buf, framesEncoded(), header);
+    }
+
+    protected void writeFrames(Cryptor cryptor, ByteBuf buf, byte[] encoded, byte[] header) {
+        buf.writeBytes(cryptor.seal(encoded, packetNumber, header));
     }
 
     protected void readPacketNumber(byte[] buf) {

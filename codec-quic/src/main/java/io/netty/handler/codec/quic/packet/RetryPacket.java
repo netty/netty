@@ -85,7 +85,10 @@ public class RetryPacket extends Packet implements LongPacket {
 
     @Override
     public void write(ByteBuf buf) {
-        //TODO
+        firstByte = HeaderUtil.writeLongHeader(buf, this, (originalConnectionID.length - 3) & 0xf);
+
+        buf.writeBytes(originalConnectionID);
+        buf.writeBytes(retryToken);
     }
 
     @Override
