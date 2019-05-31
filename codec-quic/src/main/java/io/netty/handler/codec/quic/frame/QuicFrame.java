@@ -18,17 +18,16 @@ package io.netty.handler.codec.quic.frame;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.quic.packet.DataPacket;
-import io.netty.handler.codec.quic.packet.Packet;
 import io.netty.handler.codec.quic.tls.Cryptor;
 
 public class QuicFrame {
 
-    public static void readFrames(DataPacket packet, ByteBuf buf, byte[] header, Cryptor cryptor) {
-        byte[] encrypted = Packet.drain(buf);
+    public static void readFrames(DataPacket packet, ByteBuf buf, byte[] encrypted, byte[] header, Cryptor cryptor) {
         ByteBuf decrypted = Unpooled.wrappedBuffer(cryptor.decryptContent(encrypted, packet.packetNumber(), header));
         while (decrypted.isReadable()) {
             packet.frames().add(FrameType.readFrame(buf));
         }
+        decrypted.release();
     }
 
     protected FrameType type;

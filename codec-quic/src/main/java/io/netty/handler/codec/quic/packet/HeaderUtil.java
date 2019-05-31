@@ -18,43 +18,30 @@
 
 package io.netty.handler.codec.quic.packet;
 
-public enum PacketType {
+import io.netty.buffer.ByteBuf;
 
-    //TODO
-    INIT(0x0) {
-        @Override
-        public LongPacket constructPacket() {
-            return null;
-        }
-    },
-    RTT_PROTECTED(0x01) {
-        @Override
-        public LongPacket constructPacket() {
-            return null;
-        }
-    },
-    HANDSHAKE(0x02) {
-        @Override
-        public LongPacket constructPacket() {
-            return null;
-        }
-    },
-    RETRY(0x03) {
-        @Override
-        public LongPacket constructPacket() {
-            return null;
-        }
-    };
+public final class HeaderUtil {
 
-    private byte id;
+    private HeaderUtil() {}
 
-    public byte id() {
-        return id;
+    public static byte[] read(ByteBuf buf, int length) {
+        byte[] binary = new byte[length];
+        buf.readBytes(binary);
+        return binary;
     }
 
-    public abstract LongPacket constructPacket();
-
-    PacketType(int id) {
-        this.id = (byte) id;
+    public static byte[][] readConnectionIDInfo(ByteBuf buf) {
+        byte[][] connectionIDS = new byte[2][];
+        int cil = buf.readByte() & 0xFF;
+        int firstLength = ((cil & 0xf0) >> 4);
+        int lastLength = ((cil & 0xf));
+        if (firstLength > 0) {
+            connectionIDS[0] = read(buf, firstLength + 3);
+        }
+        if (lastLength > 0) {
+            connectionIDS[1] = read(buf, lastLength + 3);
+        }
+        return connectionIDS;
     }
+
 }

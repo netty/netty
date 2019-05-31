@@ -19,37 +19,24 @@
 package io.netty.handler.codec.quic.packet;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.quic.frame.FrameType;
 import io.netty.handler.codec.quic.frame.QuicFrame;
 import io.netty.handler.codec.quic.tls.Cryptor;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
-public class ShortPacket extends DataPacket {
+public interface IPacket {
 
-    ShortPacket() {}
+    byte[] connectionID();
+    void connectionID(byte[] connectionID);
 
-    public ShortPacket(long packetNumber, List<QuicFrame> frames) {
-        super(packetNumber, frames);
-    }
+    void read(ByteBuf buf);
+    void write(ByteBuf buf);
 
-    public ShortPacket(long packetNumber, QuicFrame... frames) {
-        super(packetNumber, frames);
-    }
-
-    @Override
-    public void read(ByteBuf buf) {
-        Cryptor cryptor = Cryptor.ONE_RTT;
-        int offset = buf.readerIndex() - 1;
-        connectionID = HeaderUtil.read(buf, 16);
-
-        int pnOffset = buf.readerIndex();
-        byte[] header = cryptor.decryptHeader(readSample(buf), firstByte, readPN(buf, pnOffset), true);
-        processData(buf, header, pnOffset, offset, cryptor);
-    }
-
-    @Override
-    public void write(ByteBuf buf) {
-        //TODO
-    }
+    byte firstByte();
+    void firstByte(byte firstByte);
 
 }

@@ -19,72 +19,48 @@
 package io.netty.handler.codec.quic.packet;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.quic.frame.FrameType;
-import io.netty.handler.codec.quic.frame.QuicFrame;
-import io.netty.handler.codec.quic.tls.Cryptor;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+public abstract class Packet implements IPacket {
 
-public abstract class Packet {
-
-    private static final HashMap<Byte, PacketType> TYPRES = new HashMap<Byte, PacketType>(PacketType.values().length, 1);
-
-    static {
-        for (PacketType packetType : PacketType.values()) {
-            TYPRES.put(packetType.id(), packetType);
-        }
-    }
-
-    public static Packet readPacket(ByteBuf buf) {
+    public static IPacket readPacket(ByteBuf buf) {
         buf.markReaderIndex();
-        int rawType = buf.readByte() & 0xFF;
-        if ((0x80 & rawType) == 0x80) {
-            PacketType type = TYPRES.get((byte) ((rawType & 0x30) >> 4));
-            Packet packet = type.constructPacket();
-            packet.read(buf);
-            return packet;
+        byte firstType = buf.readByte();
+        if ((0x80 & (firstType & 0xFF)) == 0x80) {
+            return FullPacketType.readLongPacket(buf, firstType);
         }
         buf.resetReaderIndex();
         ShortPacket packet = new ShortPacket();
+        packet.firstByte(firstType);
         packet.read(buf);
         return packet;
     }
 
-    protected PacketType type;
     protected byte[] connectionID;
+    protected byte firstByte;
 
-
-    protected void readConnectionID(ByteBuf buf) {
-        connectionID = new byte[18];
-        buf.readBytes(connectionID);
-    }
-
-    protected byte[] readSample(ByteBuf buf) {
-        final int sampleOffset = buf.readerIndex() + 4;
-        final byte[] sample = new byte[16];
-        buf.getBytes(sampleOffset, sample);
-        return sample;
-    }
-
-    protected byte[] readPN(ByteBuf buf, int pnOffset) {
-        byte[] pn = new byte[4];
-        buf.getBytes(pnOffset, pn);
-        return pn;
-    }
-
-    public static byte[] drain(ByteBuf buf) {
+    protected byte[] drain(ByteBuf buf) {
         byte[] array = new byte[buf.readableBytes()];
         buf.readBytes(array);
         return array;
     }
 
-    public abstract void read(ByteBuf buf);
-
-    public void write(ByteBuf buf) {
-        buf.writeByte(type.id());
+    @Override
+    public byte[] connectionID() {
+        return connectionID;
     }
 
+    @Override
+    public void connectionID(byte[] connectionID) {
+        this.connectionID = connectionID;
+    }
+
+    @Override
+    public byte firstByte() {
+        return firstByte;
+    }
+
+    @Override
+    public void firstByte(byte firstByte) {
+        this.firstByte = firstByte;
+    }
 }

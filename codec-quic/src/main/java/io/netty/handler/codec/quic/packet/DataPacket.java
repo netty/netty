@@ -18,13 +18,96 @@
 
 package io.netty.handler.codec.quic.packet;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.quic.frame.QuicFrame;
+import io.netty.handler.codec.quic.tls.Cryptor;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-public interface DataPacket {
+public abstract class DataPacket extends Packet {
 
-    long packetNumber();
-    List<QuicFrame> frames();
+    protected long packetNumber;
+    protected List<QuicFrame> frames = new ArrayList<QuicFrame>();
 
+    DataPacket() {}
+
+    public DataPacket(long packetNumber, List<QuicFrame> frames) {
+        this.packetNumber = packetNumber;
+        this.frames = frames;
+    }
+
+    public DataPacket(long packetNumber, QuicFrame... frames) {
+        this.packetNumber = packetNumber;
+        this.frames = Arrays.asList(frames);
+    }
+
+    public List<QuicFrame> frames() {
+        return frames;
+    }
+
+    public long packetNumber() {
+        return packetNumber;
+    }
+
+    protected byte[] readSample(ByteBuf buf) {
+        final int sampleOffset = buf.readerIndex() + 4;
+        final byte[] sample = new byte[16];
+        buf.getBytes(sampleOffset, sample);
+        return sample;
+    }
+
+    protected byte[] readPN(ByteBuf buf, int pnOffset) {
+        byte[] pn = new byte[4];
+        buf.getBytes(pnOffset, pn);
+        return pn;
+    }
+
+    protected void processData(ByteBuf buf, byte[] header, int pnStart, int packetStart, Cryptor cryptor) {
+        byte firstHeaderByte = header[0];
+
+        int length = (firstHeaderByte & 0x3) + 1;
+        byte[] pn = Arrays.copyOfRange(header, 1, 1 + length);
+        readPacketNumber(pn);
+        buf.readerIndex(buf.readerIndex() + length);
+
+        byte[] content = new byte[buf.readerIndex() - packetStart];
+        buf.getBytes(packetStart, content);
+
+        /* replace old header */
+        content[0] = firstHeaderByte;
+        System.arraycopy(pn, 0, content, pnStart - packetStart, pn.length);
+
+        QuicFrame.readFrames(this, buf, drain(buf), content, cryptor);
+    }
+
+    protected void readPacketNumber(byte[] buf) {
+        byte[] pad = new byte[4 - buf.length];
+
+        int length = pad.length + buf.length;
+        byte[] bs = new byte[length];
+        System.arraycopy(pad, 0, bs, 0, pad.length);
+        System.arraycopy(buf, 0, bs, pad.length, buf.length);
+
+        packetNumber = bs[0] << 24 | (bs[1] & 255) << 16 | (bs[2] & 255) << 8 | bs[3] & 255;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        DataPacket that = (DataPacket) o;
+
+        if (packetNumber != that.packetNumber) return false;
+        return frames != null ? frames.equals(that.frames) : that.frames == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (packetNumber ^ (packetNumber >>> 32));
+        result = 31 * result + (frames != null ? frames.hashCode() : 0);
+        return result;
+    }
 }

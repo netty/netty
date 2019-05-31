@@ -18,10 +18,10 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.MessageToMessageDecoder;
+import io.netty.handler.codec.quic.packet.HeaderUtil;
+import io.netty.handler.codec.quic.packet.IPacket;
 import io.netty.handler.codec.quic.packet.Packet;
-import io.netty.handler.codec.quic.packet.PacketType;
 
 import java.util.List;
 
@@ -31,9 +31,7 @@ public class QuicDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
     public static String decodeString(ByteBuf buf) {
         int length = VarInt.read(buf).asInt();
-        byte[] binary = new byte[length];
-        buf.readBytes(binary);
-        return new String(binary);
+        return new String(HeaderUtil.read(buf, length));
     }
 
     @Override

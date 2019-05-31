@@ -18,10 +18,9 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
-import io.netty.handler.codec.quic.frame.QuicFrame;
-import io.netty.handler.codec.quic.packet.Packet;
+import io.netty.handler.codec.quic.packet.IPacket;
 
-public class QuicEncoder extends MessageToByteEncoder<Packet> {
+public class QuicEncoder extends MessageToByteEncoder<IPacket> {
 
     public static void writeString(ByteBuf buf, String str) {
         VarInt.byLong(str.length()).write(buf);
@@ -29,7 +28,7 @@ public class QuicEncoder extends MessageToByteEncoder<Packet> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, Packet msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, IPacket msg, ByteBuf out) throws Exception {
 
     }
 }

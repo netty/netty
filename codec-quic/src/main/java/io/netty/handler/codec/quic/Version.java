@@ -16,11 +16,13 @@
 package io.netty.handler.codec.quic;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.quic.packet.HeaderUtil;
 
 import java.util.Arrays;
 
 public enum Version {
 
+    //TODO
     DRAFT_20;
 
     Version(byte... raw) {
@@ -39,8 +41,7 @@ public enum Version {
     }
 
     public static Version readVersion(ByteBuf buf) {
-        byte[] rawVersion = new byte[4];
-        buf.readBytes(rawVersion);
+        byte[] rawVersion = HeaderUtil.read(buf, 4);
 
         for (Version version : values()) {
             if (Arrays.equals(version.raw, rawVersion)) {

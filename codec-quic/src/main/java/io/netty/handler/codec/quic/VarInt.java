@@ -16,6 +16,7 @@
 package io.netty.handler.codec.quic;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.quic.packet.HeaderUtil;
 
 import java.util.Arrays;
 
@@ -77,8 +78,7 @@ public class VarInt {
 
         int totalLength = (int) Math.pow(2, size >> 6) - 1;
 
-        byte[] bin = new byte[totalLength];
-        buf.readBytes(bin);
+        byte[] bin = HeaderUtil.read(buf, totalLength);
         byte[] pad = new byte[7 - totalLength];
 
         //add padding, rest and binary to result

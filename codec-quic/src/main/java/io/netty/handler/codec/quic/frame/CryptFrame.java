@@ -17,6 +17,7 @@ package io.netty.handler.codec.quic.frame;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.quic.VarInt;
+import io.netty.handler.codec.quic.packet.HeaderUtil;
 
 import java.util.Arrays;
 
@@ -42,8 +43,7 @@ public class CryptFrame extends QuicFrame {
     @Override
     public void read(ByteBuf buf) {
         offset = VarInt.read(buf);
-        data = new byte[(int) VarInt.read(buf).asLong()];
-        buf.readBytes(data);
+        data = HeaderUtil.read(buf, VarInt.read(buf).asInt());
     }
 
     @Override

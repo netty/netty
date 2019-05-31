@@ -18,19 +18,16 @@
 
 package io.netty.handler.codec.quic.packet;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.quic.Version;
 
-public abstract class LongPacket extends Packet {
+public interface LongPacket extends IPacket {
 
-    private Version version;
+    Version version();
+    void version(Version version);
 
-    @Override
-    public void read(ByteBuf buf) {
-        version = Version.readVersion(buf);
-    }
+    FullPacketType packetType();
 
-    public Version version() {
-        return version;
-    }
+    byte[] sourceConnectionID();
+    void sourceConnectionID(byte[] sourceID);
+
 }
