@@ -260,9 +260,12 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         if (buf.isDirect()) {
             return writeBytesDirect(in, buf);
         }
+
+        int readable = buf.readableBytes();
+
         // We need a direct buffer let's create a temporary one.
-        ByteBuf ioBuffer = ioBuffer(buf.readableBytes());
-        ioBuffer.writeBytes(buf, buf.readerIndex(), buf.readableBytes());
+        ByteBuf ioBuffer = ioBuffer(readable);
+        ioBuffer.writeBytes(buf, buf.readerIndex(), readable);
         try {
             return writeBytesDirect(in, ioBuffer);
         } finally {

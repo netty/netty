@@ -370,6 +370,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     private static boolean isSingleDirectBuffer(ByteBuf buf) {
         return buf.isDirect() && buf.nioBufferCount() == 1;
     }
+
     @Override
     public ChannelFuture bindAddress(InetAddress localAddress) {
         return bindAddress(localAddress, newPromise());

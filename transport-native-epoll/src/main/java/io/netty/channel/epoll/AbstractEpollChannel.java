@@ -338,9 +338,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     /**
      * Read bytes into the given {@link ByteBuf} and return the amount.
      */
-    /**
-     * Read bytes into the given {@link ByteBuf} and return the amount.
-     */
     protected final int doReadBytes(ByteBuf byteBuf) throws Exception {
         int writable = byteBuf.writableBytes();
 
@@ -381,10 +378,12 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             return doWriteBytesDirect(in, buf);
         }
 
+        int readable = buf.readableBytes();
+
         // We need a direct buffer let's create a temporary one.
-        final ByteBuf ioBuffer = ioBuffer(buf.readableBytes());
+        final ByteBuf ioBuffer = ioBuffer(readable);
         try {
-            ioBuffer.writeBytes(buf, buf.readerIndex(), buf.readableBytes());
+            ioBuffer.writeBytes(buf, buf.readerIndex(), readable);
             return doWriteBytesDirect(in, ioBuffer);
         } finally {
             ioBuffer.release();
@@ -399,7 +398,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 return 1;
             }
         } else {
-            final ByteBuffer nioBuf = buf.nioBufferCount() == 1?
+            final ByteBuffer nioBuf = buf.nioBufferCount() == 1 ?
                     buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes()) : buf.nioBuffer();
             int localFlushedAmount = socket.write(nioBuf, nioBuf.position(), nioBuf.limit());
             if (localFlushedAmount > 0) {

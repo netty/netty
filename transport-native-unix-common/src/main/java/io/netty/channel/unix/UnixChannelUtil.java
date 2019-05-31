@@ -67,8 +67,7 @@ public final class UnixChannelUtil {
     public static ByteBuf ioBuffer(ByteBufAllocator allocator, int capacity) {
         if (allocator.isDirectBufferPooled()) {
             return allocator.directBuffer(capacity);
-        } else {
-            return DirectIoByteBufPool.acquire(capacity);
         }
+        return DirectIoByteBufPool.acquire(capacity);
     }
 }
