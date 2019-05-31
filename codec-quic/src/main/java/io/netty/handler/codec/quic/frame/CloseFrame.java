@@ -26,14 +26,14 @@ public class CloseFrame extends QuicFrame {
     private boolean application;
 
     public CloseFrame(short errorCode, String error, boolean application) {
-        super(application ? FrameType.APPLICATION_CLOSE : FrameType.CONNECTION_CLOSE);
+        super(application ? FrameType.APPLICATION_CLOSE : FrameType.CONNECTION_CLOSE, (byte) -1);
         this.errorCode = errorCode;
         this.error = error;
         this.application = application;
     }
 
     public CloseFrame(boolean application) {
-        super(application ? FrameType.APPLICATION_CLOSE : FrameType.CONNECTION_CLOSE);
+        super(application ? FrameType.APPLICATION_CLOSE : FrameType.CONNECTION_CLOSE, (byte) -1);
         this.application = application;
     }
 

@@ -3,20 +3,20 @@ package io.netty.handler.codec.quic.frame;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.quic.VarInt;
 
-public class DataLimitFrame extends QuicFrame {
+public class DataBlockedFrame extends QuicFrame {
 
     private VarInt dataLimit;
 
-    public DataLimitFrame() {
-        super(FrameType.DATA_LIMIT);
+    public DataBlockedFrame() {
+        super(FrameType.DATA_BLOCKED);
     }
 
-    public DataLimitFrame(VarInt dataLimit) {
+    public DataBlockedFrame(VarInt dataLimit) {
         this();
         this.dataLimit = dataLimit;
     }
 
-    public DataLimitFrame(long dataLimit) {
+    public DataBlockedFrame(long dataLimit) {
         this(VarInt.byLong(dataLimit));
     }
 
@@ -37,7 +37,7 @@ public class DataLimitFrame extends QuicFrame {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
 
-        DataLimitFrame that = (DataLimitFrame) o;
+        DataBlockedFrame that = (DataBlockedFrame) o;
 
         return dataLimit != null ? dataLimit.equals(that.dataLimit) : that.dataLimit == null;
     }

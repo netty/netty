@@ -34,15 +34,26 @@ public class QuicFrame {
     }
 
     protected FrameType type;
+    protected byte typeByte;
+
+    public QuicFrame(FrameType type, byte typeByte) {
+        this.type = type;
+        this.typeByte = typeByte;
+    }
 
     public QuicFrame(FrameType type) {
-        this.type = type;
+        this(type, type.firstIdentifier());
     }
 
     public void read(ByteBuf buf) {}
 
     public void write(ByteBuf buf) {
-        buf.writeByte(type.getByte());
+        buf.writeByte(typeByte);
+    }
+
+    @Override
+    public String toString() {
+        return "QuicFrame{" + type.name() + "}";
     }
 
     @Override
@@ -52,12 +63,15 @@ public class QuicFrame {
 
         QuicFrame frame = (QuicFrame) o;
 
+        if (typeByte != frame.typeByte) return false;
         return type == frame.type;
     }
 
     @Override
     public int hashCode() {
-        return type != null ? type.hashCode() : 0;
+        int result = type != null ? type.hashCode() : 0;
+        result = 31 * result + (int) typeByte;
+        return result;
     }
 
     public FrameType type() {

@@ -20,11 +20,10 @@ import io.netty.handler.codec.quic.VarInt;
 
 public class MaxStreamsFrame extends QuicFrame {
 
-    private boolean bidi;
     private VarInt maxStreams;
 
-    public MaxStreamsFrame() {
-        super(FrameType.MAX_STREAMS);
+    public MaxStreamsFrame(byte type) {
+        super(FrameType.MAX_STREAMS, type);
     }
 
     public MaxStreamsFrame(boolean bidi, long maxStreams) {
@@ -32,21 +31,18 @@ public class MaxStreamsFrame extends QuicFrame {
     }
 
     public MaxStreamsFrame(boolean bidi, VarInt maxStreams) {
-        super(FrameType.MAX_STREAMS);
-        this.bidi = bidi;
+        super(FrameType.MAX_STREAMS, (byte) (bidi ? 0x12 : 0x13));
         this.maxStreams = maxStreams;
     }
 
     @Override
     public void write(ByteBuf buf) {
         super.write(buf);
-        buf.writeByte(bidi ? 0x12 : 0x13);
         maxStreams.write(buf);
     }
 
     @Override
     public void read(ByteBuf buf) {
-        bidi = buf.readByte() == 0x12;
         maxStreams = VarInt.read(buf);
     }
 
@@ -58,20 +54,18 @@ public class MaxStreamsFrame extends QuicFrame {
 
         MaxStreamsFrame that = (MaxStreamsFrame) o;
 
-        if (bidi != that.bidi) return false;
         return maxStreams != null ? maxStreams.equals(that.maxStreams) : that.maxStreams == null;
     }
 
     @Override
     public int hashCode() {
         int result = super.hashCode();
-        result = 31 * result + (bidi ? 1 : 0);
         result = 31 * result + (maxStreams != null ? maxStreams.hashCode() : 0);
         return result;
     }
 
     public boolean bidi() {
-        return bidi;
+        return typeByte == 0x12;
     }
 
     public VarInt maxStreams() {
@@ -79,7 +73,7 @@ public class MaxStreamsFrame extends QuicFrame {
     }
 
     public void bidi(boolean bidi) {
-        this.bidi = bidi;
+        typeByte = (byte) (bidi ? 0x12 : 0x13);
     }
 
     public void maxStreams(VarInt maxStreams) {

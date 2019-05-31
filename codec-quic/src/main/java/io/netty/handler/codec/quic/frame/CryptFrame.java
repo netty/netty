@@ -27,7 +27,7 @@ public class CryptFrame extends QuicFrame {
     private byte[] data;
 
     public CryptFrame() {
-        super(FrameType.CRYPT);
+        super(FrameType.CRYPTO);
     }
 
     public CryptFrame(VarInt offset, byte[] data) {
