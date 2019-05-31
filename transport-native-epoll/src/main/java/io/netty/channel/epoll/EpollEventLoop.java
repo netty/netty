@@ -98,12 +98,16 @@ class EpollEventLoop extends SingleThreadEventLoop {
             this.epollFd = epollFd = Native.newEpollCreate();
             this.eventFd = eventFd = Native.newEventFd();
             try {
-                Native.epollCtlAdd(epollFd.intValue(), eventFd.intValue(), Native.EPOLLIN);
+                // It is important to use EPOLLET here as we only want to get the notification once per
+                // wakeup and don't call eventfd_read(...).
+                Native.epollCtlAdd(epollFd.intValue(), eventFd.intValue(), Native.EPOLLIN | Native.EPOLLET);
             } catch (IOException e) {
                 throw new IllegalStateException("Unable to add eventFd filedescriptor to epoll", e);
             }
             this.timerFd = timerFd = Native.newTimerFd();
             try {
+                // It is important to use EPOLLET here as we only want to get the notification once per
+                // wakeup and don't call read(...).
                 Native.epollCtlAdd(epollFd.intValue(), timerFd.intValue(), Native.EPOLLIN | Native.EPOLLET);
             } catch (IOException e) {
                 throw new IllegalStateException("Unable to add timerFd filedescriptor to epoll", e);
@@ -402,12 +406,10 @@ class EpollEventLoop extends SingleThreadEventLoop {
     private void processReady(EpollEventArray events, int ready) {
         for (int i = 0; i < ready; i ++) {
             final int fd = events.fd(i);
-            if (fd == eventFd.intValue()) {
-                // consume wakeup event.
-                Native.eventFdRead(fd);
-            } else if (fd == timerFd.intValue()) {
-                // consume wakeup event, necessary because the timer is added with ET mode.
-                Native.timerFdRead(fd);
+            if (fd == eventFd.intValue() || fd == timerFd.intValue()) {
+                // Just ignore as we use ET mode for the eventfd and timerfd.
+                //
+                // See also https://stackoverflow.com/a/12492308/1074097
             } else {
                 final long ev = events.events(i);
 
