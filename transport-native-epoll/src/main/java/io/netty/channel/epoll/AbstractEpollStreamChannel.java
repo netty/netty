@@ -507,7 +507,10 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        if (msg instanceof ByteBuf || msg instanceof FileRegion || msg instanceof SpliceOutTask) {
+        if (msg instanceof ByteBuf) {
+            return UnixChannelUtil.copyIfNonDirect((ByteBuf) msg, alloc());
+        }
+        if (msg instanceof FileRegion || msg instanceof SpliceOutTask) {
             return msg;
         }
 

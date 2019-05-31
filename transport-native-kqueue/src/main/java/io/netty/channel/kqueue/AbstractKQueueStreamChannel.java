@@ -32,6 +32,7 @@ import io.netty.channel.internal.ChannelUtils;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.SocketWritableByteChannel;
+import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -348,7 +349,11 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        if (msg instanceof ByteBuf || msg instanceof FileRegion) {
+        if (msg instanceof ByteBuf) {
+            return UnixChannelUtil.copyIfNonDirect((ByteBuf) msg, alloc());
+        }
+
+        if (msg instanceof FileRegion) {
             return msg;
         }
 

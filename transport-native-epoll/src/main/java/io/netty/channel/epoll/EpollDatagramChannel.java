@@ -23,6 +23,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
@@ -31,6 +32,7 @@ import io.netty.channel.unix.DatagramSocketAddress;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Socket;
+import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -416,8 +418,31 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        if (msg instanceof DatagramPacket || msg instanceof ByteBuf || msg instanceof AddressedEnvelope) {
-            return msg;
+        if (msg instanceof DatagramPacket) {
+            DatagramPacket p = (DatagramPacket) msg;
+            ByteBuf content = p.content();
+            ByteBuf buffer = UnixChannelUtil.copyIfNonDirect(content, alloc());
+            if (buffer != content) {
+                return new DatagramPacket(buffer, p.recipient());
+            }
+            return p;
+        }
+
+        if (msg instanceof ByteBuf) {
+            return UnixChannelUtil.copyIfNonDirect((ByteBuf) msg, alloc());
+        }
+
+        if (msg instanceof AddressedEnvelope) {
+            @SuppressWarnings("unchecked")
+            AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
+            if (e.content() instanceof ByteBuf) {
+                ByteBuf content = (ByteBuf) e.content();
+                ByteBuf buffer = UnixChannelUtil.copyIfNonDirect(content, alloc());
+                if (buffer != content) {
+                    return new DefaultAddressedEnvelope<ByteBuf, SocketAddress>(buffer, e.recipient());
+                }
+                return e;
+            }
         }
 
         throw new UnsupportedOperationException(

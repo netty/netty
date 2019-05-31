@@ -199,20 +199,22 @@ final class NativeDatagramPacketArray {
                 DatagramPacket packet = (DatagramPacket) msg;
                 ByteBuf buffer = packet.content();
                 if (!buffer.isDirect()) {
-                    ByteBuf ioBuffer = UnixChannelUtil.ioBuffer(allocator, buffer.readableBytes());
-                    ioBuffer.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
-                    if (add(ioBuffer, packet.recipient())) {
-                        buffers[idx++] = ioBuffer;
-                        return true;
-                    } else {
-                        // We could not fit in the ioBuffer anymore
-                        ioBuffer.release();
-                        return false;
-                    }
-                } else {
-                    return add(buffer, packet.recipient());
+                    return processNonDirectPacket(buffer, packet.recipient());
                 }
+                return add(buffer, packet.recipient());
             }
+            return false;
+        }
+
+        private boolean processNonDirectPacket(ByteBuf buffer, InetSocketAddress recipient) {
+            ByteBuf ioBuffer = UnixChannelUtil.ioBuffer(allocator, buffer.readableBytes());
+            ioBuffer.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
+            if (add(ioBuffer, recipient)) {
+                buffers[idx++] = ioBuffer;
+                return true;
+            }
+            // We could not fit in the ioBuffer anymore
+            ioBuffer.release();
             return false;
         }
     }

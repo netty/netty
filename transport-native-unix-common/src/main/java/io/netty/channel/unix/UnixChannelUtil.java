@@ -17,7 +17,10 @@ package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.FileRegion;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -69,5 +72,25 @@ public final class UnixChannelUtil {
             return allocator.directBuffer(capacity);
         }
         return DirectIoByteBufPool.acquire(capacity);
+    }
+
+    public static ByteBuf copyIfNonDirect(ByteBuf buf, ByteBufAllocator alloc) {
+        int readableBytes = buf.readableBytes();
+        if (readableBytes == 0) {
+            buf.release();
+            return Unpooled.EMPTY_BUFFER;
+        }
+
+        if (buf.isDirect()) {
+            return buf;
+        }
+
+        if (alloc.isDirectBufferPooled()) {
+            ByteBuf directBuf = alloc.directBuffer(readableBytes);
+            directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
+            buf.release();
+            return directBuf;
+        }
+        return buf;
     }
 }

@@ -116,7 +116,7 @@ public final class IovArray implements MessageProcessor {
             for (ByteBuffer nioBuffer : buffers) {
                 final int len = nioBuffer.remaining();
                 if (len != 0 &&
-                    (!add(Buffer.memoryAddress(nioBuffer), nioBuffer.position(), len) || count == IOV_MAX)) {
+                    (!add(Buffer.memoryAddress(nioBuffer), nioBuffer.position(), len) || count == maxCount())) {
                     return false;
                 }
             }
@@ -282,20 +282,24 @@ public final class IovArray implements MessageProcessor {
             if (msg instanceof ByteBuf) {
                 ByteBuf buffer = (ByteBuf) msg;
                 if (!buffer.isDirect()) {
-                    ByteBuf ioBuffer = UnixChannelUtil.ioBuffer(allocator, buffer.readableBytes());
-                    ioBuffer.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
-                    if (add(ioBuffer)) {
-                        buffers[idx++] = ioBuffer;
-                        return true;
-                    } else {
-                        // We could not fit in the ioBuffer anymore
-                        ioBuffer.release();
-                        return false;
-                    }
-                } else {
-                    return add(buffer);
+                    return proccesNonDirectBuffer(buffer);
                 }
+                return add(buffer);
             }
+            return false;
+        }
+
+        private boolean proccesNonDirectBuffer(ByteBuf buffer) {
+            int readable = buffer.readableBytes();
+            ByteBuf ioBuffer = UnixChannelUtil.ioBuffer(allocator, readable);
+            ioBuffer.writeBytes(buffer, buffer.readerIndex(), readable);
+            if (add(ioBuffer)) {
+                buffers[idx++] = ioBuffer;
+                return true;
+            }
+
+            // We could not fit in the ioBuffer anymore
+            ioBuffer.release();
             return false;
         }
     }
