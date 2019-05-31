@@ -182,6 +182,10 @@ public class VarInt {
         return (int) value;
     }
 
+    public byte asByte() {
+        return (byte) value;
+    }
+
     public long asLong() {
         return value;
     }

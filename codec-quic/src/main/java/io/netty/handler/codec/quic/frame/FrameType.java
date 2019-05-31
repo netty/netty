@@ -98,22 +98,25 @@ public enum FrameType {
             return new StreamDataBlockedFrame();
         }
     },
-    STREAMS_BLOCKED(0x16, 0x17),//TODO
-    NEW_CONNECTION_ID(0x18),//TODO
-    RETIRE_CONNECTION_ID(0x19),//TODO
-    PATH_CHALLENGE(0x1a),//TODO
-    PATH_RESPONSE(0x1b),//TODO
-    //TODO MERGE
-    CONNECTION_CLOSE(0x1c) {
+    STREAMS_BLOCKED(0x16, 0x17) {
         @Override
         QuicFrame constructFrame(byte firstByte) {
-            return new CloseFrame(false);
+            return new StreamBlockedFrame(firstByte);
         }
     },
-    APPLICATION_CLOSE(0x1d) {
+    NEW_CONNECTION_ID(0x18),//TODO
+    RETIRE_CONNECTION_ID(0x19) {
         @Override
         QuicFrame constructFrame(byte firstByte) {
-            return new CloseFrame(true);
+            return new RetireConnectionIdFrame();
+        }
+    },
+    PATH_CHALLENGE(0x1a),//TODO
+    PATH_RESPONSE(0x1b),//TODO
+    CONNECTION_CLOSE(0x1c, 0x1d) {
+        @Override
+        QuicFrame constructFrame(byte firstByte) {
+            return firstByte == 0x1c ? new ConnectionCloseFrame() : new ApplicationCloseFrame();
         }
     };
 
