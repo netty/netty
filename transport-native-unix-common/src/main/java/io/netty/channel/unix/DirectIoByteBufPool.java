@@ -25,9 +25,7 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.ByteProcessor;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.concurrent.FastThreadLocal;
-import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -48,7 +46,7 @@ final class DirectIoByteBufPool {
 
     // We need the Cleaner to ensure the memory will eventually be released as the user may not use a
     // FastThreadLocalThread.
-    private static final ByteBufAllocator IO_BUFFER_ALLOCATOR = new UnpooledByteBufAllocator(true, true, false);
+    private static final ByteBufAllocator IO_BUFFER_ALLOCATOR = new UnpooledByteBufAllocator(true, false, false);
 
     private static final FastThreadLocal<DirectIoByteBufPool> POOL = new FastThreadLocal<DirectIoByteBufPool>() {
         @Override
@@ -58,109 +56,47 @@ final class DirectIoByteBufPool {
 
         @Override
         protected void onRemoval(DirectIoByteBufPool value) {
-            value.freeAll();
+            value.free();
         }
     };
 
-    private static final int ARRAY_LENGTH = Math.min(MathUtil.findNextPositivePowerOfTwo(Limits.IOV_MAX), 4096);
-    // We use a circular array to store the cached buffers.
-    private final PooledIoByteBuf[] buffers = new PooledIoByteBuf[ARRAY_LENGTH];
+    private ByteBuf parent;
 
     // Just used to assert for the correct thread when releasing the buffer back to the pool.
     private final Thread ioThread;
 
-    private int idx;
-
     private DirectIoByteBufPool(Thread ioThread) {
         this.ioThread = ioThread;
-    }
-
-    private static int next(int i) {
-        return (i + 1) & (ARRAY_LENGTH - 1);
+        parent = IO_BUFFER_ALLOCATOR.directBuffer(4096);
     }
 
     static ByteBuf acquire(int capacity) {
-        if (capacity > MAX_CACHED_SIZE) {
-            // The requested buffer is to big just allocate a new one.
-            return IO_BUFFER_ALLOCATOR.directBuffer(capacity);
-        }
-
         ByteBuf buffer = POOL.get().get(capacity);
         return buffer != null ? buffer : IO_BUFFER_ALLOCATOR.directBuffer(capacity);
     }
 
     private ByteBuf get(int reqCapacity) {
-        // Let's scan the array, which is not very large and will have the biggest buffers first in the array after
-        // some time.
-        int i = idx;
-        do {
-            PooledIoByteBuf buf = buffers[i];
-            if (buf == null) {
-                // No matching buffer found but there is still space in the array.
-                return null;
-            }
+        if (parent.capacity() + reqCapacity > MAX_CACHED_SIZE) {
+            return null;
+        }
 
-            if (buf.capacity() >= reqCapacity) {
-                // Alright we found a buffer that is big enough, let just move the first cached buffer to the spot
-                // where we found this one. This way we will have no empty slots.
-                PooledIoByteBuf first = buffers[idx];
-                assert first != null;
-                buffers[i] = first;
-                buffers[idx] = null;
+        // No space left...
+        if (parent.writableBytes() < reqCapacity) {
+            int capacity = IO_BUFFER_ALLOCATOR.calculateNewCapacity(parent.capacity() + reqCapacity,
+                    parent.capacity() + reqCapacity * 2);
+            parent = IO_BUFFER_ALLOCATOR.directBuffer(capacity);
+        }
 
-                // reader and writer index should always be 0.
-                assert buf.readerIndex() == 0 && buf.writerIndex() == 0;
-                return buf;
-            }
-
-            i = next(i);
-        } while (i != idx);
-
-        // We did not find a buffer that was big enough but walked the whole array,
-        // let's drop one from the cache so we may be able to cache it later on when it is released.
-        removeAndFreeFirst();
-        return null;
+        int writerIndex = parent.writerIndex();
+        // TODO: Improve GC if possible
+        PooledIoByteBuf buffer =  new PooledIoByteBuf(parent.retainedSlice(writerIndex, reqCapacity).clear());
+        parent.writerIndex(writerIndex + reqCapacity);
+        return buffer;
     }
 
-    private void cache(PooledIoByteBuf buf) {
-        int i = (idx - 1) & (ARRAY_LENGTH - 1);
-        if (buffers[i] != null) {
-            // Array is full, let's free the provided buffer.
-            buf.free();
-            return;
-        }
-        // Ensure we reset the reader and writer index before we put the buffer back.
-        buf.clear();
-        buffers[i] = buf;
-        idx = i;
-    }
-
-    private boolean removeAndFreeFirst() {
-        int i = idx;
-        PooledIoByteBuf buf = buffers[i];
-        if (buf == null) {
-            return false;
-        }
-        buffers[i] = null;
-        buf.free();
-        idx = next(i);
-        return true;
-    }
-
-    private void freeAll() {
-        while (removeAndFreeFirst()) {
-            // Free all buffers.
-        }
-        assert isArrayEmpty();
-    }
-
-    private boolean isArrayEmpty() {
-        for (int i = 0; i < buffers.length; i++) {
-            if (buffers[i] != null) {
-                return false;
-            }
-        }
-        return true;
+    private void free() {
+        boolean released = parent.release();
+        assert released;
     }
 
     private void assertThread() {
@@ -1197,15 +1133,23 @@ final class DirectIoByteBufPool {
             refCnt -= decrement;
 
             if (refCnt == 0) {
-                cache(this);
+                boolean released = buffer.release();
+                assert !released;
+
+                ByteBuf unwrapped = buffer.unwrap();
+                if (unwrapped.refCnt() == 1) {
+                    if (unwrapped == parent) {
+                        // Once the parent reaches a refCnt of 1 we are able to call clear() and so have the
+                        // reader / writer index reset to 0.
+                        buffer.unwrap().clear();
+                    } else {
+                        // We replaced the parent buffer in the meantime just release the original.
+                        unwrapped.release();
+                    }
+                }
                 return true;
             }
             return false;
-        }
-
-        void free() {
-            refCnt = 0;
-            buffer.release();
         }
     }
 }
