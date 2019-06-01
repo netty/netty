@@ -119,6 +119,7 @@ final class DirectIoByteBufPool {
 
         @Override
         public ByteBuf capacity(int newCapacity) {
+            checkRefCnt();
             buffer.capacity(newCapacity);
             return this;
         }
@@ -166,6 +167,7 @@ final class DirectIoByteBufPool {
 
         @Override
         public ByteBuf asReadOnly() {
+            checkRefCnt();
             if (isReadOnly()) {
                 return this;
             }
@@ -237,461 +239,546 @@ final class DirectIoByteBufPool {
 
         @Override
         public ByteBuf clear() {
+            checkRefCnt();
             buffer.clear();
             return this;
         }
 
         @Override
         public ByteBuf markReaderIndex() {
+            checkRefCnt();
             buffer.markReaderIndex();
             return this;
         }
 
         @Override
         public ByteBuf resetReaderIndex() {
+            checkRefCnt();
             buffer.resetReaderIndex();
             return this;
         }
 
         @Override
         public ByteBuf markWriterIndex() {
+            checkRefCnt();
             buffer.markWriterIndex();
             return this;
         }
 
         @Override
         public ByteBuf resetWriterIndex() {
+            checkRefCnt();
             buffer.resetWriterIndex();
             return this;
         }
 
         @Override
         public ByteBuf discardReadBytes() {
+            checkRefCnt();
             buffer.discardReadBytes();
             return this;
         }
 
         @Override
         public ByteBuf discardSomeReadBytes() {
+            checkRefCnt();
             buffer.discardSomeReadBytes();
             return this;
         }
 
         @Override
         public ByteBuf ensureWritable(int minWritableBytes) {
+            checkRefCnt();
             buffer.ensureWritable(minWritableBytes);
             return this;
         }
 
         @Override
         public int ensureWritable(int minWritableBytes, boolean force) {
+            checkRefCnt();
             return buffer.ensureWritable(minWritableBytes, force);
         }
 
         @Override
         public boolean getBoolean(int index) {
+            checkRefCnt();
             return buffer.getBoolean(index);
         }
 
         @Override
         public byte getByte(int index) {
+            checkRefCnt();
             return buffer.getByte(index);
         }
 
         @Override
         public short getUnsignedByte(int index) {
+            checkRefCnt();
             return buffer.getUnsignedByte(index);
         }
 
         @Override
         public short getShort(int index) {
+            checkRefCnt();
             return buffer.getShort(index);
         }
 
         @Override
         public short getShortLE(int index) {
+            checkRefCnt();
             return buffer.getShortLE(index);
         }
 
         @Override
         public int getUnsignedShort(int index) {
+            checkRefCnt();
             return buffer.getUnsignedShort(index);
         }
 
         @Override
         public int getUnsignedShortLE(int index) {
+            checkRefCnt();
             return buffer.getUnsignedShortLE(index);
         }
 
         @Override
         public int getMedium(int index) {
+            checkRefCnt();
             return buffer.getMedium(index);
         }
 
         @Override
         public int getMediumLE(int index) {
+            checkRefCnt();
             return buffer.getMediumLE(index);
         }
 
         @Override
         public int getUnsignedMedium(int index) {
+            checkRefCnt();
             return buffer.getUnsignedMedium(index);
         }
 
         @Override
         public int getUnsignedMediumLE(int index) {
+            checkRefCnt();
             return buffer.getUnsignedMediumLE(index);
         }
 
         @Override
         public int getInt(int index) {
+            checkRefCnt();
             return buffer.getInt(index);
         }
 
         @Override
         public int getIntLE(int index) {
+            checkRefCnt();
             return buffer.getIntLE(index);
         }
 
         @Override
         public long getUnsignedInt(int index) {
+            checkRefCnt();
             return buffer.getUnsignedInt(index);
         }
 
         @Override
         public long getUnsignedIntLE(int index) {
+            checkRefCnt();
             return buffer.getUnsignedIntLE(index);
         }
 
         @Override
         public long getLong(int index) {
+            checkRefCnt();
             return buffer.getLong(index);
         }
 
         @Override
         public long getLongLE(int index) {
+            checkRefCnt();
             return buffer.getLongLE(index);
         }
 
         @Override
         public char getChar(int index) {
+            checkRefCnt();
             return buffer.getChar(index);
         }
 
         @Override
         public float getFloat(int index) {
+            checkRefCnt();
             return buffer.getFloat(index);
         }
 
         @Override
         public double getDouble(int index) {
+            checkRefCnt();
             return buffer.getDouble(index);
         }
 
         @Override
         public ByteBuf getBytes(int index, ByteBuf dst) {
+            checkRefCnt();
             buffer.getBytes(index, dst);
             return this;
         }
 
         @Override
         public ByteBuf getBytes(int index, ByteBuf dst, int length) {
+            checkRefCnt();
             buffer.getBytes(index, dst, length);
             return this;
         }
 
         @Override
         public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
+            checkRefCnt();
             buffer.getBytes(index, dst, dstIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf getBytes(int index, byte[] dst) {
+            checkRefCnt();
             buffer.getBytes(index, dst);
             return this;
         }
 
         @Override
         public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
+            checkRefCnt();
             buffer.getBytes(index, dst, dstIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf getBytes(int index, ByteBuffer dst) {
+            checkRefCnt();
             buffer.getBytes(index, dst);
             return this;
         }
 
         @Override
         public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
+            checkRefCnt();
             buffer.getBytes(index, out, length);
             return this;
         }
 
         @Override
         public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
+            checkRefCnt();
             return buffer.getBytes(index, out, length);
         }
 
         @Override
         public int getBytes(int index, FileChannel out, long position, int length) throws IOException {
+            checkRefCnt();
             return buffer.getBytes(index, out, position, length);
         }
 
         @Override
         public CharSequence getCharSequence(int index, int length, Charset charset) {
+            checkRefCnt();
             return buffer.getCharSequence(index, length, charset);
         }
 
         @Override
         public ByteBuf setBoolean(int index, boolean value) {
+            checkRefCnt();
             buffer.setBoolean(index, value);
             return this;
         }
 
         @Override
         public ByteBuf setByte(int index, int value) {
+            checkRefCnt();
             buffer.setByte(index, value);
             return this;
         }
 
         @Override
         public ByteBuf setShort(int index, int value) {
+            checkRefCnt();
             buffer.setShort(index, value);
             return this;
         }
 
         @Override
         public ByteBuf setShortLE(int index, int value) {
+            checkRefCnt();
             buffer.setShortLE(index, value);
             return this;
         }
 
         @Override
         public ByteBuf setMedium(int index, int value) {
+            checkRefCnt();
             buffer.setMedium(index, value);
             return this;
         }
 
         @Override
         public ByteBuf setMediumLE(int index, int value) {
+            checkRefCnt();
             buffer.setMediumLE(index, value);
             return this;
         }
 
         @Override
         public ByteBuf setInt(int index, int value) {
+            checkRefCnt();
             buffer.setInt(index, value);
             return this;
         }
 
         @Override
         public ByteBuf setIntLE(int index, int value) {
+            checkRefCnt();
             buffer.setIntLE(index, value);
             return this;
         }
 
         @Override
         public ByteBuf setLong(int index, long value) {
+            checkRefCnt();
             buffer.setLong(index, value);
             return this;
         }
 
         @Override
         public ByteBuf setLongLE(int index, long value) {
+            checkRefCnt();
             buffer.setLongLE(index, value);
             return this;
         }
 
         @Override
         public ByteBuf setChar(int index, int value) {
+            checkRefCnt();
             buffer.setChar(index, value);
             return this;
         }
 
         @Override
         public ByteBuf setFloat(int index, float value) {
+            checkRefCnt();
             buffer.setFloat(index, value);
             return this;
         }
 
         @Override
         public ByteBuf setDouble(int index, double value) {
+            checkRefCnt();
             buffer.setDouble(index, value);
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, ByteBuf src) {
+            checkRefCnt();
             buffer.setBytes(index, src);
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, ByteBuf src, int length) {
+            checkRefCnt();
             buffer.setBytes(index, src, length);
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
+            checkRefCnt();
             buffer.setBytes(index, src, srcIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, byte[] src) {
+            checkRefCnt();
             buffer.setBytes(index, src);
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
+            checkRefCnt();
             buffer.setBytes(index, src, srcIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, ByteBuffer src) {
+            checkRefCnt();
             buffer.setBytes(index, src);
             return this;
         }
 
         @Override
         public int setBytes(int index, InputStream in, int length) throws IOException {
+            checkRefCnt();
             return buffer.setBytes(index, in, length);
         }
 
         @Override
         public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
+            checkRefCnt();
             return buffer.setBytes(index, in, length);
         }
 
         @Override
         public int setBytes(int index, FileChannel in, long position, int length) throws IOException {
+            checkRefCnt();
             return buffer.setBytes(index, in, position, length);
         }
 
         @Override
         public ByteBuf setZero(int index, int length) {
+            checkRefCnt();
             buffer.setZero(index, length);
             return this;
         }
 
         @Override
         public int setCharSequence(int index, CharSequence sequence, Charset charset) {
+            checkRefCnt();
             return buffer.setCharSequence(index, sequence, charset);
         }
 
         @Override
         public boolean readBoolean() {
+            checkRefCnt();
             return buffer.readBoolean();
         }
 
         @Override
         public byte readByte() {
+            checkRefCnt();
             return buffer.readByte();
         }
 
         @Override
         public short readUnsignedByte() {
+            checkRefCnt();
             return buffer.readUnsignedByte();
         }
 
         @Override
         public short readShort() {
+            checkRefCnt();
             return buffer.readShort();
         }
 
         @Override
         public short readShortLE() {
+            checkRefCnt();
             return buffer.readShortLE();
         }
 
         @Override
         public int readUnsignedShort() {
+            checkRefCnt();
             return buffer.readUnsignedShort();
         }
 
         @Override
         public int readUnsignedShortLE() {
+            checkRefCnt();
             return buffer.readUnsignedShortLE();
         }
 
         @Override
         public int readMedium() {
+            checkRefCnt();
             return buffer.readMedium();
         }
 
         @Override
         public int readMediumLE() {
+            checkRefCnt();
             return buffer.readMediumLE();
         }
 
         @Override
         public int readUnsignedMedium() {
+            checkRefCnt();
             return buffer.readUnsignedMedium();
         }
 
         @Override
         public int readUnsignedMediumLE() {
+            checkRefCnt();
             return buffer.readUnsignedMediumLE();
         }
 
         @Override
         public int readInt() {
+            checkRefCnt();
             return buffer.readInt();
         }
 
         @Override
         public int readIntLE() {
+            checkRefCnt();
             return buffer.readIntLE();
         }
 
         @Override
         public long readUnsignedInt() {
+            checkRefCnt();
             return buffer.readUnsignedInt();
         }
 
         @Override
         public long readUnsignedIntLE() {
+            checkRefCnt();
             return buffer.readUnsignedIntLE();
         }
 
         @Override
         public long readLong() {
+            checkRefCnt();
             return buffer.readLong();
         }
 
         @Override
         public long readLongLE() {
+            checkRefCnt();
             return buffer.readLongLE();
         }
 
         @Override
         public char readChar() {
+            checkRefCnt();
             return buffer.readChar();
         }
 
         @Override
         public float readFloat() {
+            checkRefCnt();
             return buffer.readFloat();
         }
 
         @Override
         public double readDouble() {
+            checkRefCnt();
             return buffer.readDouble();
         }
 
         @Override
         public ByteBuf readBytes(int length) {
+            checkRefCnt();
             return buffer.readBytes(length);
         }
 
         @Override
         public ByteBuf readSlice(int length) {
+            checkRefCnt();
             @SuppressWarnings("deprecation")
             ByteBuf slice = new SlicedByteBuf(this, readerIndex(), length);
             readerIndex(readerIndex() + length);
@@ -700,321 +787,379 @@ final class DirectIoByteBufPool {
 
         @Override
         public ByteBuf readRetainedSlice(int length) {
+            checkRefCnt();
             return readSlice(length).retain();
         }
 
         @Override
         public ByteBuf readBytes(ByteBuf dst) {
+            checkRefCnt();
             buffer.readBytes(dst);
             return this;
         }
 
         @Override
         public ByteBuf readBytes(ByteBuf dst, int length) {
+            checkRefCnt();
             buffer.readBytes(dst, length);
             return this;
         }
 
         @Override
         public ByteBuf readBytes(ByteBuf dst, int dstIndex, int length) {
+            checkRefCnt();
             buffer.readBytes(dst, dstIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf readBytes(byte[] dst) {
+            checkRefCnt();
             buffer.readBytes(dst);
             return this;
         }
 
         @Override
         public ByteBuf readBytes(byte[] dst, int dstIndex, int length) {
+            checkRefCnt();
             buffer.readBytes(dst, dstIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf readBytes(ByteBuffer dst) {
+            checkRefCnt();
             buffer.readBytes(dst);
             return this;
         }
 
         @Override
         public ByteBuf readBytes(OutputStream out, int length) throws IOException {
+            checkRefCnt();
             buffer.readBytes(out, length);
             return this;
         }
 
         @Override
         public int readBytes(GatheringByteChannel out, int length) throws IOException {
+            checkRefCnt();
             return buffer.readBytes(out, length);
         }
 
         @Override
         public CharSequence readCharSequence(int length, Charset charset) {
+            checkRefCnt();
             return buffer.readCharSequence(length, charset);
         }
 
         @Override
         public int readBytes(FileChannel out, long position, int length) throws IOException {
+            checkRefCnt();
             return buffer.readBytes(out, position, length);
         }
 
         @Override
         public ByteBuf skipBytes(int length) {
+            checkRefCnt();
             buffer.skipBytes(length);
             return this;
         }
 
         @Override
         public ByteBuf writeBoolean(boolean value) {
+            checkRefCnt();
             buffer.writeBoolean(value);
             return this;
         }
 
         @Override
         public ByteBuf writeByte(int value) {
+            checkRefCnt();
             buffer.writeByte(value);
             return this;
         }
 
         @Override
         public ByteBuf writeShort(int value) {
+            checkRefCnt();
             buffer.writeShort(value);
             return this;
         }
 
         @Override
         public ByteBuf writeShortLE(int value) {
+            checkRefCnt();
             buffer.writeShortLE(value);
             return this;
         }
 
         @Override
         public ByteBuf writeMedium(int value) {
+            checkRefCnt();
             buffer.writeMedium(value);
             return this;
         }
 
         @Override
         public ByteBuf writeMediumLE(int value) {
+            checkRefCnt();
             buffer.writeMediumLE(value);
             return this;
         }
 
         @Override
         public ByteBuf writeInt(int value) {
+            checkRefCnt();
             buffer.writeInt(value);
             return this;
         }
 
         @Override
         public ByteBuf writeIntLE(int value) {
+            checkRefCnt();
             buffer.writeIntLE(value);
             return this;
         }
 
         @Override
         public ByteBuf writeLong(long value) {
+            checkRefCnt();
             buffer.writeLong(value);
             return this;
         }
 
         @Override
         public ByteBuf writeLongLE(long value) {
+            checkRefCnt();
             buffer.writeLongLE(value);
             return this;
         }
 
         @Override
         public ByteBuf writeChar(int value) {
+            checkRefCnt();
             buffer.writeChar(value);
             return this;
         }
 
         @Override
         public ByteBuf writeFloat(float value) {
+            checkRefCnt();
             buffer.writeFloat(value);
             return this;
         }
 
         @Override
         public ByteBuf writeDouble(double value) {
+            checkRefCnt();
             buffer.writeDouble(value);
             return this;
         }
 
         @Override
         public ByteBuf writeBytes(ByteBuf src) {
+            checkRefCnt();
             buffer.writeBytes(src);
             return this;
         }
 
         @Override
         public ByteBuf writeBytes(ByteBuf src, int length) {
+            checkRefCnt();
             buffer.writeBytes(src, length);
             return this;
         }
 
         @Override
         public ByteBuf writeBytes(ByteBuf src, int srcIndex, int length) {
+            checkRefCnt();
             buffer.writeBytes(src, srcIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf writeBytes(byte[] src) {
+            checkRefCnt();
             buffer.writeBytes(src);
             return this;
         }
 
         @Override
         public ByteBuf writeBytes(byte[] src, int srcIndex, int length) {
+            checkRefCnt();
             buffer.writeBytes(src, srcIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf writeBytes(ByteBuffer src) {
+            checkRefCnt();
             buffer.writeBytes(src);
             return this;
         }
 
         @Override
         public int writeBytes(InputStream in, int length) throws IOException {
+            checkRefCnt();
             return buffer.writeBytes(in, length);
         }
 
         @Override
         public int writeBytes(ScatteringByteChannel in, int length) throws IOException {
+            checkRefCnt();
             return buffer.writeBytes(in, length);
         }
 
         @Override
         public int writeBytes(FileChannel in, long position, int length) throws IOException {
+            checkRefCnt();
             return buffer.writeBytes(in, position, length);
         }
 
         @Override
         public ByteBuf writeZero(int length) {
+            checkRefCnt();
             buffer.writeZero(length);
             return this;
         }
 
         @Override
         public int writeCharSequence(CharSequence sequence, Charset charset) {
+            checkRefCnt();
             return buffer.writeCharSequence(sequence, charset);
         }
 
         @Override
         public int indexOf(int fromIndex, int toIndex, byte value) {
+            checkRefCnt();
             return buffer.indexOf(fromIndex, toIndex, value);
         }
 
         @Override
         public int bytesBefore(byte value) {
+            checkRefCnt();
             return buffer.bytesBefore(value);
         }
 
         @Override
         public int bytesBefore(int length, byte value) {
+            checkRefCnt();
             return buffer.bytesBefore(length, value);
         }
 
         @Override
         public int bytesBefore(int index, int length, byte value) {
+            checkRefCnt();
             return buffer.bytesBefore(index, length, value);
         }
 
         @Override
         public int forEachByte(ByteProcessor processor) {
+            checkRefCnt();
             return buffer.forEachByte(processor);
         }
 
         @Override
         public int forEachByte(int index, int length, ByteProcessor processor) {
+            checkRefCnt();
             return buffer.forEachByte(index, length, processor);
         }
 
         @Override
         public int forEachByteDesc(ByteProcessor processor) {
+            checkRefCnt();
             return buffer.forEachByteDesc(processor);
         }
 
         @Override
         public int forEachByteDesc(int index, int length, ByteProcessor processor) {
+            checkRefCnt();
             return buffer.forEachByteDesc(index, length, processor);
         }
 
         @Override
         public ByteBuf copy() {
+            checkRefCnt();
             return buffer.copy();
         }
 
         @Override
         public ByteBuf copy(int index, int length) {
+            checkRefCnt();
             return buffer.copy(index, length);
         }
 
         @Override
         public ByteBuf slice() {
+            checkRefCnt();
             return slice(readerIndex(), readableBytes());
         }
 
         @Override
         public ByteBuf retainedSlice() {
+            checkRefCnt();
             return slice().retain();
         }
 
         @SuppressWarnings("deprecation")
         @Override
         public ByteBuf slice(int index, int length) {
+            checkRefCnt();
             return new SlicedByteBuf(this, index, length);
         }
 
         @Override
         public ByteBuf retainedSlice(int index, int length) {
+            checkRefCnt();
             return slice(index, length).retain();
         }
 
         @SuppressWarnings("deprecation")
         @Override
         public ByteBuf duplicate() {
+            checkRefCnt();
             return new DuplicatedByteBuf(this);
         }
 
         @Override
         public ByteBuf retainedDuplicate() {
+            checkRefCnt();
             return duplicate().retain();
         }
 
         @Override
         public int nioBufferCount() {
+            checkRefCnt();
             return buffer.nioBufferCount();
         }
 
         @Override
         public ByteBuffer nioBuffer() {
+            checkRefCnt();
             return buffer.nioBuffer();
         }
 
         @Override
         public ByteBuffer nioBuffer(int index, int length) {
+            checkRefCnt();
             return buffer.nioBuffer(index, length);
         }
 
         @Override
         public ByteBuffer internalNioBuffer(int index, int length) {
+            checkRefCnt();
             return buffer.internalNioBuffer(index, length);
         }
 
         @Override
         public ByteBuffer[] nioBuffers() {
+            checkRefCnt();
             return buffer.nioBuffers();
         }
 
         @Override
         public ByteBuffer[] nioBuffers(int index, int length) {
+            checkRefCnt();
             return buffer.nioBuffers(index, length);
         }
 
@@ -1025,6 +1170,7 @@ final class DirectIoByteBufPool {
 
         @Override
         public byte[] array() {
+            checkRefCnt();
             return buffer.array();
         }
 
@@ -1040,16 +1186,19 @@ final class DirectIoByteBufPool {
 
         @Override
         public long memoryAddress() {
+            checkRefCnt();
             return buffer.memoryAddress();
         }
 
         @Override
         public String toString(Charset charset) {
+            checkRefCnt();
             return buffer.toString(charset);
         }
 
         @Override
         public String toString(int index, int length, Charset charset) {
+            checkRefCnt();
             return buffer.toString(index, length, charset);
         }
 
@@ -1060,11 +1209,13 @@ final class DirectIoByteBufPool {
 
         @Override
         public boolean equals(Object obj) {
+            checkRefCnt();
             return buffer.equals(obj);
         }
 
         @Override
         public int compareTo(ByteBuf buffer) {
+            checkRefCnt();
             return this.buffer.compareTo(buffer);
         }
 
@@ -1150,6 +1301,12 @@ final class DirectIoByteBufPool {
                 return true;
             }
             return false;
+        }
+
+        private void checkRefCnt() {
+            if (refCnt <= 0) {
+                throw new IllegalReferenceCountException();
+            }
         }
     }
 }
