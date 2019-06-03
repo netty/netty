@@ -26,11 +26,10 @@ import java.lang.ref.WeakReference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -163,10 +162,6 @@ public class ResourceLeakDetector<T> {
         return level;
     }
 
-    /** the collection of active resources */
-    private final Set<DefaultResourceLeak<?>> allLeaks =
-            Collections.newSetFromMap(new ConcurrentHashMap<DefaultResourceLeak<?>, Boolean>());
-
     private final ReferenceQueue<Object> refQueue = new ReferenceQueue<Object>();
     private final ConcurrentMap<String, Boolean> reportedLeaks = PlatformDependent.newConcurrentHashMap();
 
@@ -261,12 +256,12 @@ public class ResourceLeakDetector<T> {
         if (level.ordinal() < Level.PARANOID.ordinal()) {
             if ((PlatformDependent.threadLocalRandom().nextInt(samplingInterval)) == 0) {
                 reportLeak();
-                return new DefaultResourceLeak(obj, refQueue, allLeaks);
+                return new DefaultResourceLeak(obj, refQueue);
             }
             return null;
         }
         reportLeak();
-        return new DefaultResourceLeak(obj, refQueue, allLeaks);
+        return new DefaultResourceLeak(obj, refQueue);
     }
 
     private void clearRefQueue() {
@@ -294,7 +289,7 @@ public class ResourceLeakDetector<T> {
                 break;
             }
 
-            if (!ref.dispose()) {
+            if (ref.dispose()) {
                 continue;
             }
 
@@ -359,13 +354,13 @@ public class ResourceLeakDetector<T> {
         @SuppressWarnings("unused")
         private volatile int droppedRecords;
 
-        private final Set<DefaultResourceLeak<?>> allLeaks;
+        //private final Set<DefaultResourceLeak<?>> allLeaks;
+        private final AtomicBoolean closed;
         private final int trackedHash;
 
         DefaultResourceLeak(
                 Object referent,
-                ReferenceQueue<Object> refQueue,
-                Set<DefaultResourceLeak<?>> allLeaks) {
+                ReferenceQueue<Object> refQueue) {
             super(referent, refQueue);
 
             assert referent != null;
@@ -374,10 +369,9 @@ public class ResourceLeakDetector<T> {
             // It's important that we not store a reference to the referent as this would disallow it from
             // be collected via the WeakReference.
             trackedHash = System.identityHashCode(referent);
-            allLeaks.add(this);
+            closed = new AtomicBoolean(false);
             // Create a new Record so we always have the creation stacktrace included.
             headUpdater.set(this, new Record(Record.BOTTOM));
-            this.allLeaks = allLeaks;
         }
 
         @Override
@@ -447,12 +441,12 @@ public class ResourceLeakDetector<T> {
 
         boolean dispose() {
             clear();
-            return allLeaks.remove(this);
+            return closed.get();
         }
 
         @Override
         public boolean close() {
-            if (allLeaks.remove(this)) {
+            if (closed.compareAndSet(false, true)) {
                 // Call clear so the reference is not even enqueued.
                 clear();
                 headUpdater.set(this, null);
