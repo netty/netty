@@ -271,13 +271,6 @@ public class HttpObjectAggregator
                     }
                 });
             }
-
-            // If an oversized request was handled properly and the connection is still alive
-            // (i.e. rejected 100-continue). the decoder should prepare to handle a new message.
-            HttpObjectDecoder decoder = ctx.pipeline().get(HttpObjectDecoder.class);
-            if (decoder != null) {
-                decoder.reset();
-            }
         } else if (oversized instanceof HttpResponse) {
             ctx.close();
             throw new TooLongFrameException("Response entity too large: " + oversized);

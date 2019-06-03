@@ -48,7 +48,7 @@ import java.util.Date;
  * It is purely for testing purposes, and thus it is very insecure.
  * It even uses an insecure pseudo-random generator for faster generation internally.
  * </p><p>
- * A X.509 certificate file and a RSA private key file are generated in a system's temporary directory using
+ * An X.509 certificate file and a RSA private key file are generated in a system's temporary directory using
  * {@link java.io.File#createTempFile(String, String)}, and they are deleted when the JVM exits using
  * {@link java.io.File#deleteOnExit()}.
  * </p><p>
@@ -66,6 +66,14 @@ public final class SelfSignedCertificate {
     /** The maximum possible value in X.509 specification: 9999-12-31 23:59:59 */
     private static final Date DEFAULT_NOT_AFTER = new Date(SystemPropertyUtil.getLong(
             "io.netty.selfSignedCertificate.defaultNotAfter", 253402300799000L));
+
+    /**
+     * FIPS 140-2 encryption requires the key length to be 2048 bits or greater.
+     * Let's use that as a sane default but allow the default to be set dynamically
+     * for those that need more stringent security requirements.
+     */
+    private static final int DEFAULT_KEY_LENGTH_BITS =
+            SystemPropertyUtil.getInt("io.netty.handler.ssl.util.selfSignedKeyStrength", 2048);
 
     private final File certificate;
     private final File privateKey;
@@ -107,7 +115,7 @@ public final class SelfSignedCertificate {
     public SelfSignedCertificate(String fqdn, Date notBefore, Date notAfter) throws CertificateException {
         // Bypass entropy collection by using insecure random generator.
         // We just want to generate it without any delay because it's for testing purposes only.
-        this(fqdn, ThreadLocalInsecureRandom.current(), 1024, notBefore, notAfter);
+        this(fqdn, ThreadLocalInsecureRandom.current(), DEFAULT_KEY_LENGTH_BITS, notBefore, notAfter);
     }
 
     /**

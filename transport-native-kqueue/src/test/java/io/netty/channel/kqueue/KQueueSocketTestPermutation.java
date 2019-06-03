@@ -103,7 +103,8 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     }
 
     @Override
-    public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> datagram() {
+    public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(
+            final InternetProtocolFamily family) {
         // Make the list of Bootstrap factories.
         @SuppressWarnings("unchecked")
         List<BootstrapFactory<Bootstrap>> bfs = Arrays.asList(
@@ -113,7 +114,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                         return new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
                             @Override
                             public Channel newChannel() {
-                                return new NioDatagramChannel(InternetProtocolFamily.IPv4);
+                                return new NioDatagramChannel(family);
                             }
 
                             @Override

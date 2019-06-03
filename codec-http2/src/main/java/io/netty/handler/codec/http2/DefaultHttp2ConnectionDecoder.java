@@ -57,6 +57,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private final Http2FrameReader frameReader;
     private Http2FrameListener listener;
     private final Http2PromisedRequestVerifier requestVerifier;
+    private final Http2SettingsReceivedConsumer settingsReceivedConsumer;
 
     public DefaultHttp2ConnectionDecoder(Http2Connection connection,
                                          Http2ConnectionEncoder encoder,
@@ -68,6 +69,35 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                                          Http2ConnectionEncoder encoder,
                                          Http2FrameReader frameReader,
                                          Http2PromisedRequestVerifier requestVerifier) {
+        this(connection, encoder, frameReader, requestVerifier, true);
+    }
+
+    /**
+     * Create a new instance.
+     * @param connection The {@link Http2Connection} associated with this decoder.
+     * @param encoder The {@link Http2ConnectionEncoder} associated with this decoder.
+     * @param frameReader Responsible for reading/parsing the raw frames. As opposed to this object which applies
+     *                    h2 semantics on top of the frames.
+     * @param requestVerifier Determines if push promised streams are valid.
+     * @param autoAckSettings {@code false} to disable automatically applying and sending settings acknowledge frame.
+     *  The {@code Http2ConnectionEncoder} is expected to be an instance of {@link Http2SettingsReceivedConsumer} and
+     *  will apply the earliest received but not yet ACKed SETTINGS when writing the SETTINGS ACKs.
+     * {@code true} to enable automatically applying and sending settings acknowledge frame.
+     */
+    public DefaultHttp2ConnectionDecoder(Http2Connection connection,
+                                         Http2ConnectionEncoder encoder,
+                                         Http2FrameReader frameReader,
+                                         Http2PromisedRequestVerifier requestVerifier,
+                                         boolean autoAckSettings) {
+        if (autoAckSettings) {
+            settingsReceivedConsumer = null;
+        } else {
+            if (!(encoder instanceof Http2SettingsReceivedConsumer)) {
+                throw new IllegalArgumentException("disabling autoAckSettings requires the encoder to be a " +
+                        Http2SettingsReceivedConsumer.class);
+            }
+            settingsReceivedConsumer = (Http2SettingsReceivedConsumer) encoder;
+        }
         this.connection = checkNotNull(connection, "connection");
         this.frameReader = checkNotNull(frameReader, "frameReader");
         this.encoder = checkNotNull(encoder, "encoder");
@@ -408,13 +438,17 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
 
         @Override
-        public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
-            // Acknowledge receipt of the settings. We should do this before we process the settings to ensure our
-            // remote peer applies these settings before any subsequent frames that we may send which depend upon these
-            // new settings. See https://github.com/netty/netty/issues/6520.
-            encoder.writeSettingsAck(ctx, ctx.newPromise());
+        public void onSettingsRead(final ChannelHandlerContext ctx, Http2Settings settings) throws Http2Exception {
+            if (settingsReceivedConsumer == null) {
+                // Acknowledge receipt of the settings. We should do this before we process the settings to ensure our
+                // remote peer applies these settings before any subsequent frames that we may send which depend upon
+                // these new settings. See https://github.com/netty/netty/issues/6520.
+                encoder.writeSettingsAck(ctx, ctx.newPromise());
 
-            encoder.remoteSettings(settings);
+                encoder.remoteSettings(settings);
+            } else {
+                settingsReceivedConsumer.consumeReceivedSettings(settings);
+            }
 
             listener.onSettingsRead(ctx, settings);
         }

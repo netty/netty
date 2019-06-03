@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.35.Final-SNAPSHOT</version>
+    <version>4.1.37.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-common</artifactId>
@@ -38,6 +38,13 @@
   </properties>
 
   <dependencies>
+    <dependency>
+      <groupId>com.oracle.substratevm</groupId>
+      <artifactId>svm</artifactId>
+      <version>${graalvm.version}</version>
+      <!-- Provided scope as it is only needed for compiling the SVM substitution classes -->
+      <scope>provided</scope>
+    </dependency>
     <dependency>
       <groupId>org.jctools</groupId>
       <artifactId>jctools-core</artifactId>

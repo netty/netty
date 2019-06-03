@@ -39,44 +39,20 @@ import static io.netty.channel.unix.Errors.throwConnectException;
 import static io.netty.channel.unix.LimitsStaticallyReferencedJniMethods.udsSunPathSize;
 import static io.netty.channel.unix.NativeInetAddress.address;
 import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
-import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
 
 /**
  * Provides a JNI bridge to native socket operations.
  * <strong>Internal usage only!</strong>
  */
 public class Socket extends FileDescriptor {
-    private static final ClosedChannelException SHUTDOWN_CLOSED_CHANNEL_EXCEPTION = unknownStackTrace(
-            new ClosedChannelException(), Socket.class, "shutdown(..)");
-    private static final ClosedChannelException SEND_TO_CLOSED_CHANNEL_EXCEPTION = unknownStackTrace(
-            new ClosedChannelException(), Socket.class, "sendTo(..)");
-    private static final ClosedChannelException SEND_TO_ADDRESS_CLOSED_CHANNEL_EXCEPTION =
-            unknownStackTrace(new ClosedChannelException(), Socket.class, "sendToAddress(..)");
-    private static final ClosedChannelException SEND_TO_ADDRESSES_CLOSED_CHANNEL_EXCEPTION =
-            unknownStackTrace(new ClosedChannelException(), Socket.class, "sendToAddresses(..)");
-    private static final Errors.NativeIoException SEND_TO_CONNECTION_RESET_EXCEPTION = unknownStackTrace(
-            Errors.newConnectionResetException("syscall:sendto", Errors.ERRNO_EPIPE_NEGATIVE),
-            Socket.class, "sendTo(..)");
-    private static final Errors.NativeIoException SEND_TO_ADDRESS_CONNECTION_RESET_EXCEPTION =
-            unknownStackTrace(Errors.newConnectionResetException("syscall:sendto",
-                    Errors.ERRNO_EPIPE_NEGATIVE), Socket.class, "sendToAddress");
-    private static final Errors.NativeIoException CONNECTION_RESET_EXCEPTION_SENDMSG = unknownStackTrace(
-            Errors.newConnectionResetException("syscall:sendmsg",
-            Errors.ERRNO_EPIPE_NEGATIVE), Socket.class, "sendToAddresses(..)");
-    private static final Errors.NativeIoException CONNECTION_RESET_SHUTDOWN_EXCEPTION =
-            unknownStackTrace(Errors.newConnectionResetException("syscall:shutdown",
-                    Errors.ERRNO_ECONNRESET_NEGATIVE), Socket.class, "shutdown");
-    private static final Errors.NativeConnectException FINISH_CONNECT_REFUSED_EXCEPTION =
-            unknownStackTrace(new Errors.NativeConnectException("syscall:getsockopt",
-                    Errors.ERROR_ECONNREFUSED_NEGATIVE), Socket.class, "finishConnect(..)");
-    private static final Errors.NativeConnectException CONNECT_REFUSED_EXCEPTION =
-            unknownStackTrace(new Errors.NativeConnectException("syscall:connect",
-                    Errors.ERROR_ECONNREFUSED_NEGATIVE), Socket.class, "connect(..)");
 
     public static final int UDS_SUN_PATH_SIZE = udsSunPathSize();
 
+    protected final boolean ipv6;
+
     public Socket(int fd) {
         super(fd);
+        this.ipv6 = isIPv6(fd);
     }
 
     public final void shutdown() throws IOException {
@@ -111,7 +87,7 @@ public class Socket extends FileDescriptor {
         }
         int res = shutdown(fd, read, write);
         if (res < 0) {
-            ioResult("shutdown", res, CONNECTION_RESET_SHUTDOWN_EXCEPTION, SHUTDOWN_CLOSED_CHANNEL_EXCEPTION);
+            ioResult("shutdown", res);
         }
     }
 
@@ -141,14 +117,14 @@ public class Socket extends FileDescriptor {
             scopeId = 0;
             address = ipv4MappedIpv6Address(addr.getAddress());
         }
-        int res = sendTo(fd, buf, pos, limit, address, scopeId, port);
+        int res = sendTo(fd, ipv6, buf, pos, limit, address, scopeId, port);
         if (res >= 0) {
             return res;
         }
         if (res == ERROR_ECONNREFUSED_NEGATIVE) {
             throw new PortUnreachableException("sendTo failed");
         }
-        return ioResult("sendTo", res, SEND_TO_CONNECTION_RESET_EXCEPTION, SEND_TO_CLOSED_CHANNEL_EXCEPTION);
+        return ioResult("sendTo", res);
     }
 
     public final int sendToAddress(long memoryAddress, int pos, int limit, InetAddress addr, int port)
@@ -165,15 +141,14 @@ public class Socket extends FileDescriptor {
             scopeId = 0;
             address = ipv4MappedIpv6Address(addr.getAddress());
         }
-        int res = sendToAddress(fd, memoryAddress, pos, limit, address, scopeId, port);
+        int res = sendToAddress(fd, ipv6, memoryAddress, pos, limit, address, scopeId, port);
         if (res >= 0) {
             return res;
         }
         if (res == ERROR_ECONNREFUSED_NEGATIVE) {
             throw new PortUnreachableException("sendToAddress failed");
         }
-        return ioResult("sendToAddress", res,
-                SEND_TO_ADDRESS_CONNECTION_RESET_EXCEPTION, SEND_TO_ADDRESS_CLOSED_CHANNEL_EXCEPTION);
+        return ioResult("sendToAddress", res);
     }
 
     public final int sendToAddresses(long memoryAddress, int length, InetAddress addr, int port) throws IOException {
@@ -189,7 +164,7 @@ public class Socket extends FileDescriptor {
             scopeId = 0;
             address = ipv4MappedIpv6Address(addr.getAddress());
         }
-        int res = sendToAddresses(fd, memoryAddress, length, address, scopeId, port);
+        int res = sendToAddresses(fd, ipv6, memoryAddress, length, address, scopeId, port);
         if (res >= 0) {
             return res;
         }
@@ -197,8 +172,7 @@ public class Socket extends FileDescriptor {
         if (res == ERROR_ECONNREFUSED_NEGATIVE) {
             throw new PortUnreachableException("sendToAddresses failed");
         }
-        return ioResult("sendToAddresses", res,
-                CONNECTION_RESET_EXCEPTION_SENDMSG, SEND_TO_ADDRESSES_CLOSED_CHANNEL_EXCEPTION);
+        return ioResult("sendToAddresses", res);
     }
 
     public final DatagramSocketAddress recvFrom(ByteBuffer buf, int pos, int limit) throws IOException {
@@ -242,7 +216,7 @@ public class Socket extends FileDescriptor {
         if (socketAddress instanceof InetSocketAddress) {
             InetSocketAddress inetSocketAddress = (InetSocketAddress) socketAddress;
             NativeInetAddress address = NativeInetAddress.newInstance(inetSocketAddress.getAddress());
-            res = connect(fd, address.address, address.scopeId, inetSocketAddress.getPort());
+            res = connect(fd, ipv6, address.address, address.scopeId, inetSocketAddress.getPort());
         } else if (socketAddress instanceof DomainSocketAddress) {
             DomainSocketAddress unixDomainSocketAddress = (DomainSocketAddress) socketAddress;
             res = connectDomainSocket(fd, unixDomainSocketAddress.path().getBytes(CharsetUtil.UTF_8));
@@ -254,7 +228,7 @@ public class Socket extends FileDescriptor {
                 // connect not complete yet need to wait for EPOLLOUT event
                 return false;
             }
-            throwConnectException("connect", CONNECT_REFUSED_EXCEPTION, res);
+            throwConnectException("connect", res);
         }
         return true;
     }
@@ -266,15 +240,15 @@ public class Socket extends FileDescriptor {
                 // connect still in progress
                 return false;
             }
-            throwConnectException("finishConnect", FINISH_CONNECT_REFUSED_EXCEPTION, res);
+            throwConnectException("finishConnect", res);
         }
         return true;
     }
 
     public final void disconnect() throws IOException {
-        int res = disconnect(fd);
+        int res = disconnect(fd, ipv6);
         if (res < 0) {
-            throwConnectException("disconnect", FINISH_CONNECT_REFUSED_EXCEPTION, res);
+            throwConnectException("disconnect", res);
         }
     }
 
@@ -282,7 +256,7 @@ public class Socket extends FileDescriptor {
         if (socketAddress instanceof InetSocketAddress) {
             InetSocketAddress addr = (InetSocketAddress) socketAddress;
             NativeInetAddress address = NativeInetAddress.newInstance(addr.getAddress());
-            int res = bind(fd, address.address, address.scopeId, addr.getPort());
+            int res = bind(fd, ipv6, address.address, address.scopeId, addr.getPort());
             if (res < 0) {
                 throw newIOException("bind", res);
             }
@@ -367,7 +341,7 @@ public class Socket extends FileDescriptor {
     }
 
     public final int getTrafficClass() throws IOException {
-        return getTrafficClass(fd);
+        return getTrafficClass(fd, ipv6);
     }
 
     public final void setKeepAlive(boolean keepAlive) throws IOException {
@@ -403,8 +377,12 @@ public class Socket extends FileDescriptor {
     }
 
     public final void setTrafficClass(int trafficClass) throws IOException {
-        setTrafficClass(fd, trafficClass);
+        setTrafficClass(fd, ipv6, trafficClass);
     }
+
+    public static native boolean isIPv6Preferred();
+
+    private static native boolean isIPv6(int fd);
 
     @Override
     public String toString() {
@@ -434,7 +412,11 @@ public class Socket extends FileDescriptor {
     }
 
     protected static int newSocketStream0() {
-        int res = newSocketStreamFd();
+        return newSocketStream0(isIPv6Preferred());
+    }
+
+    protected static int newSocketStream0(boolean ipv6) {
+        int res = newSocketStreamFd(ipv6);
         if (res < 0) {
             throw new ChannelException(newIOException("newSocketStream", res));
         }
@@ -442,7 +424,11 @@ public class Socket extends FileDescriptor {
     }
 
     protected static int newSocketDgram0() {
-        int res = newSocketDgramFd();
+        return newSocketDgram0(isIPv6Preferred());
+    }
+
+    protected static int newSocketDgram0(boolean ipv6) {
+        int res = newSocketDgramFd(ipv6);
         if (res < 0) {
             throw new ChannelException(newIOException("newSocketDgram", res));
         }
@@ -458,11 +444,11 @@ public class Socket extends FileDescriptor {
     }
 
     private static native int shutdown(int fd, boolean read, boolean write);
-    private static native int connect(int fd, byte[] address, int scopeId, int port);
+    private static native int connect(int fd, boolean ipv6, byte[] address, int scopeId, int port);
     private static native int connectDomainSocket(int fd, byte[] path);
     private static native int finishConnect(int fd);
-    private static native int disconnect(int fd);
-    private static native int bind(int fd, byte[] address, int scopeId, int port);
+    private static native int disconnect(int fd, boolean ipv6);
+    private static native int bind(int fd, boolean ipv6, byte[] address, int scopeId, int port);
     private static native int bindDomainSocket(int fd, byte[] path);
     private static native int listen(int fd, int backlog);
     private static native int accept(int fd, byte[] addr);
@@ -471,11 +457,11 @@ public class Socket extends FileDescriptor {
     private static native byte[] localAddress(int fd);
 
     private static native int sendTo(
-            int fd, ByteBuffer buf, int pos, int limit, byte[] address, int scopeId, int port);
+            int fd, boolean ipv6, ByteBuffer buf, int pos, int limit, byte[] address, int scopeId, int port);
     private static native int sendToAddress(
-            int fd, long memoryAddress, int pos, int limit, byte[] address, int scopeId, int port);
+            int fd, boolean ipv6, long memoryAddress, int pos, int limit, byte[] address, int scopeId, int port);
     private static native int sendToAddresses(
-            int fd, long memoryAddress, int length, byte[] address, int scopeId, int port);
+            int fd, boolean ipv6, long memoryAddress, int length, byte[] address, int scopeId, int port);
 
     private static native DatagramSocketAddress recvFrom(
             int fd, ByteBuffer buf, int pos, int limit) throws IOException;
@@ -484,8 +470,8 @@ public class Socket extends FileDescriptor {
     private static native int recvFd(int fd);
     private static native int sendFd(int socketFd, int fd);
 
-    private static native int newSocketStreamFd();
-    private static native int newSocketDgramFd();
+    private static native int newSocketStreamFd(boolean ipv6);
+    private static native int newSocketDgramFd(boolean ipv6);
     private static native int newSocketDomainFd();
 
     private static native int isReuseAddress(int fd) throws IOException;
@@ -497,7 +483,7 @@ public class Socket extends FileDescriptor {
     private static native int isBroadcast(int fd) throws IOException;
     private static native int getSoLinger(int fd) throws IOException;
     private static native int getSoError(int fd) throws IOException;
-    private static native int getTrafficClass(int fd) throws IOException;
+    private static native int getTrafficClass(int fd, boolean ipv6) throws IOException;
 
     private static native void setReuseAddress(int fd, int reuseAddress) throws IOException;
     private static native void setReusePort(int fd, int reuseAddress) throws IOException;
@@ -507,6 +493,6 @@ public class Socket extends FileDescriptor {
     private static native void setTcpNoDelay(int fd, int tcpNoDelay) throws IOException;
     private static native void setSoLinger(int fd, int soLinger) throws IOException;
     private static native void setBroadcast(int fd, int broadcast) throws IOException;
-    private static native void setTrafficClass(int fd, int trafficClass) throws IOException;
+    private static native void setTrafficClass(int fd, boolean ipv6, int trafficClass) throws IOException;
     private static native void initialize(boolean ipv4Preferred);
 }

@@ -63,7 +63,7 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
             @SuppressWarnings("rawtypes")
             AddressedEnvelope envelope = (AddressedEnvelope) msg;
             return encoder.acceptOutboundMessage(envelope.content())
-                    && envelope.sender() instanceof InetSocketAddress
+                    && (envelope.sender() instanceof InetSocketAddress || envelope.sender() == null)
                     && envelope.recipient() instanceof InetSocketAddress;
         }
         return false;

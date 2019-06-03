@@ -35,6 +35,8 @@ public class Http2MultiplexCodecBuilder
     Http2MultiplexCodecBuilder(boolean server, ChannelHandler childHandler) {
         server(server);
         this.childHandler = checkSharable(checkNotNull(childHandler, "childHandler"));
+        // For backwards compatibility we should disable to timeout by default at this layer.
+        gracefulShutdownTimeoutMillis(0);
     }
 
     private static ChannelHandler checkSharable(ChannelHandler handler) {
@@ -71,6 +73,14 @@ public class Http2MultiplexCodecBuilder
         return new Http2MultiplexCodecBuilder(true, childHandler);
     }
 
+    public Http2MultiplexCodecBuilder withUpgradeStreamHandler(ChannelHandler upgradeStreamHandler) {
+        if (this.isServer()) {
+            throw new IllegalArgumentException("Server codecs don't use an extra handler for the upgrade stream");
+        }
+        this.upgradeStreamHandler = upgradeStreamHandler;
+        return this;
+    }
+
     @Override
     public Http2Settings initialSettings() {
         return super.initialSettings();
@@ -89,14 +99,6 @@ public class Http2MultiplexCodecBuilder
     @Override
     public Http2MultiplexCodecBuilder gracefulShutdownTimeoutMillis(long gracefulShutdownTimeoutMillis) {
         return super.gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis);
-    }
-
-    public Http2MultiplexCodecBuilder withUpgradeStreamHandler(ChannelHandler upgradeStreamHandler) {
-        if (this.isServer()) {
-            throw new IllegalArgumentException("Server codecs don't use an extra handler for the upgrade stream");
-        }
-        this.upgradeStreamHandler = upgradeStreamHandler;
-        return this;
     }
 
     @Override
@@ -166,6 +168,16 @@ public class Http2MultiplexCodecBuilder
     }
 
     @Override
+    public Http2MultiplexCodecBuilder autoAckSettingsFrame(boolean autoAckSettings) {
+        return super.autoAckSettingsFrame(autoAckSettings);
+    }
+
+    @Override
+    public Http2MultiplexCodecBuilder decoupleCloseAndGoAway(boolean decoupleCloseAndGoAway) {
+        return super.decoupleCloseAndGoAway(decoupleCloseAndGoAway);
+    }
+
+    @Override
     public Http2MultiplexCodec build() {
         Http2FrameWriter frameWriter = this.frameWriter;
         if (frameWriter != null) {
@@ -185,7 +197,8 @@ public class Http2MultiplexCodecBuilder
             if (encoderEnforceMaxConcurrentStreams()) {
                 encoder = new StreamBufferingEncoder(encoder);
             }
-            Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader);
+            Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader,
+                    promisedRequestVerifier(), isAutoAckSettingsFrame());
 
             return build(decoder, encoder, initialSettings());
         }
@@ -195,6 +208,9 @@ public class Http2MultiplexCodecBuilder
     @Override
     protected Http2MultiplexCodec build(
             Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder, Http2Settings initialSettings) {
-        return new Http2MultiplexCodec(encoder, decoder, initialSettings, childHandler, upgradeStreamHandler);
+        Http2MultiplexCodec codec = new Http2MultiplexCodec(encoder, decoder, initialSettings, childHandler,
+                upgradeStreamHandler, decoupleCloseAndGoAway());
+        codec.gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis());
+        return codec;
     }
 }

@@ -75,6 +75,7 @@ public final class PlatformDependent {
     private static final boolean IS_WINDOWS = isWindows0();
     private static final boolean IS_OSX = isOsx0();
     private static final boolean IS_J9_JVM = isJ9Jvm0();
+    private static final boolean IS_IVKVM_DOT_NET = isIkvmDotNet0();
 
     private static final boolean MAYBE_SUPER_USER;
 
@@ -953,6 +954,12 @@ public final class PlatformDependent {
             logger.debug("sun.misc.Unsafe: unavailable (Android)");
             return new UnsupportedOperationException("sun.misc.Unsafe: unavailable (Android)");
         }
+
+        if (isIkvmDotNet()) {
+            logger.debug("sun.misc.Unsafe: unavailable (IKVM.NET)");
+            return new UnsupportedOperationException("sun.misc.Unsafe: unavailable (IKVM.NET)");
+        }
+
         Throwable cause = PlatformDependent0.getUnsafeUnavailabilityCause();
         if (cause != null) {
             return cause;
@@ -980,6 +987,18 @@ public final class PlatformDependent {
     private static boolean isJ9Jvm0() {
         String vmName = SystemPropertyUtil.get("java.vm.name", "").toLowerCase();
         return vmName.startsWith("ibm j9") || vmName.startsWith("eclipse openj9");
+    }
+
+    /**
+     * Returns {@code true} if the running JVM is <a href="https://www.ikvm.net">IKVM.NET</a>, {@code false} otherwise.
+     */
+    public static boolean isIkvmDotNet() {
+        return IS_IVKVM_DOT_NET;
+    }
+
+    private static boolean isIkvmDotNet0() {
+        String vmName = SystemPropertyUtil.get("java.vm.name", "").toUpperCase(Locale.US);
+        return vmName.equals("IKVM.NET");
     }
 
     private static long maxDirectMemory0() {

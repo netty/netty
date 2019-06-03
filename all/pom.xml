@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.35.Final-SNAPSHOT</version>
+    <version>4.1.37.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-all</artifactId>
@@ -112,6 +112,14 @@
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
+        <!-- Just include the classes for the other platform so these are at least present in the netty-all artifact -->
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-kqueue</artifactId>
+          <version>${project.version}</version>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
       </dependencies>
     </profile>
     <!-- The mac, openbsd and freebsd  profile will only include the native jar for epol to the all jar.
@@ -131,6 +139,14 @@
           <artifactId>netty-transport-native-kqueue</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <!-- Just include the classes for the other platform so these are at least present in the netty-all artifact -->
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-epoll</artifactId>
+          <version>${project.version}</version>
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
@@ -154,6 +170,14 @@
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
+        <!-- Just include the classes for the other platform so these are at least present in the netty-all artifact -->
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-epoll</artifactId>
+          <version>${project.version}</version>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
       </dependencies>
     </profile>
     <profile>
@@ -171,6 +195,14 @@
           <artifactId>netty-transport-native-kqueue</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <!-- Just include the classes for the other platform so these are at least present in the netty-all artifact -->
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-epoll</artifactId>
+          <version>${project.version}</version>
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>

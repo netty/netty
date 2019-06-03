@@ -62,15 +62,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
                     StringUtil.simpleClassName(DefaultFileRegion.class) + ')';
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractEpollStreamChannel.class);
-    private static final ClosedChannelException CLEAR_SPLICE_QUEUE_CLOSED_CHANNEL_EXCEPTION =
-            ThrowableUtil.unknownStackTrace(new ClosedChannelException(),
-                    AbstractEpollStreamChannel.class, "clearSpliceQueue()");
-    private static final ClosedChannelException SPLICE_TO_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(),
-            AbstractEpollStreamChannel.class, "spliceTo(...)");
-    private static final ClosedChannelException FAIL_SPLICE_IF_CLOSED_CLOSED_CHANNEL_EXCEPTION =
-            ThrowableUtil.unknownStackTrace(new ClosedChannelException(),
-            AbstractEpollStreamChannel.class, "failSpliceIfClosed(...)");
+
     private final Runnable flushTask = new Runnable() {
         @Override
         public void run() {
@@ -171,7 +163,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         }
         checkNotNull(promise, "promise");
         if (!isOpen()) {
-            promise.tryFailure(SPLICE_TO_CLOSED_CHANNEL_EXCEPTION);
+            promise.tryFailure(new ClosedChannelException());
         } else {
             addToSpliceQueue(new SpliceInChannelTask(ch, len, promise));
             failSpliceIfClosed(promise);
@@ -220,7 +212,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         }
         checkNotNull(promise, "promise");
         if (!isOpen()) {
-            promise.tryFailure(SPLICE_TO_CLOSED_CHANNEL_EXCEPTION);
+            promise.tryFailure(new ClosedChannelException());
         } else {
             addToSpliceQueue(new SpliceFdTask(ch, offset, len, promise));
             failSpliceIfClosed(promise);
@@ -232,7 +224,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         if (!isOpen()) {
             // Seems like the Channel was closed in the meantime try to fail the promise to prevent any
             // cases where a future may not be notified otherwise.
-            if (promise.tryFailure(FAIL_SPLICE_IF_CLOSED_CLOSED_CHANNEL_EXCEPTION)) {
+            if (promise.tryFailure(new ClosedChannelException())) {
                 eventLoop().execute(new Runnable() {
                     @Override
                     public void run() {
@@ -690,12 +682,17 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         if (spliceQueue == null) {
             return;
         }
+        ClosedChannelException exception = null;
+
         for (;;) {
             SpliceInTask task = spliceQueue.poll();
             if (task == null) {
                 break;
             }
-            task.promise.tryFailure(CLEAR_SPLICE_QUEUE_CLOSED_CHANNEL_EXCEPTION);
+            if (exception == null) {
+                exception = new ClosedChannelException();
+            }
+            task.promise.tryFailure(exception);
         }
     }
 

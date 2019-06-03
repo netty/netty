@@ -245,7 +245,7 @@ public class ByteToMessageDecoderTest {
         byte[] bytes = new byte[1024];
         PlatformDependent.threadLocalRandom().nextBytes(bytes);
 
-        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(bytes)));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(bytes)));
         assertBuffer(Unpooled.wrappedBuffer(bytes), (ByteBuf) channel.readInbound());
         assertNull(channel.readInbound());
         assertFalse(channel.finish());
@@ -277,7 +277,7 @@ public class ByteToMessageDecoderTest {
         byte[] bytes = new byte[1024];
         PlatformDependent.threadLocalRandom().nextBytes(bytes);
 
-        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(bytes)));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(bytes)));
         assertBuffer(Unpooled.wrappedBuffer(bytes, 0, bytes.length - 1), (ByteBuf) channel.readInbound());
         assertNull(channel.readInbound());
         assertTrue(channel.finish());

@@ -18,18 +18,17 @@ package io.netty.channel.kqueue;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.RecvByteBufAllocator.DelegatingHandle;
+import io.netty.channel.RecvByteBufAllocator.ExtendedHandle;
 import io.netty.channel.unix.PreferredDirectByteBufAllocator;
 import io.netty.util.UncheckedBooleanSupplier;
-import io.netty.util.internal.ObjectUtil;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
-final class KQueueRecvByteAllocatorHandle implements RecvByteBufAllocator.ExtendedHandle {
+final class KQueueRecvByteAllocatorHandle extends DelegatingHandle implements ExtendedHandle {
     private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
             new PreferredDirectByteBufAllocator();
-    private final RecvByteBufAllocator.ExtendedHandle delegate;
 
     private final UncheckedBooleanSupplier defaultMaybeMoreDataSupplier = new UncheckedBooleanSupplier() {
         @Override
@@ -41,24 +40,19 @@ final class KQueueRecvByteAllocatorHandle implements RecvByteBufAllocator.Extend
     private boolean readEOF;
     private long numberBytesPending;
 
-    KQueueRecvByteAllocatorHandle(RecvByteBufAllocator.ExtendedHandle handle) {
-        delegate = ObjectUtil.checkNotNull(handle, "handle");
+    KQueueRecvByteAllocatorHandle(ExtendedHandle handle) {
+        super(handle);
     }
 
     @Override
     public int guess() {
-        return overrideGuess ? guess0() : delegate.guess();
+        return overrideGuess ? guess0() : delegate().guess();
     }
 
     @Override
     public void reset(ChannelConfig config) {
         overrideGuess = ((KQueueChannelConfig) config).getRcvAllocTransportProvidesGuess();
-        delegate.reset(config);
-    }
-
-    @Override
-    public void incMessagesRead(int numMessages) {
-        delegate.incMessagesRead(numMessages);
+        delegate().reset(config);
     }
 
     @Override
@@ -66,44 +60,24 @@ final class KQueueRecvByteAllocatorHandle implements RecvByteBufAllocator.Extend
         // We need to ensure we always allocate a direct ByteBuf as we can only use a direct buffer to read via JNI.
         preferredDirectByteBufAllocator.updateAllocator(alloc);
         return overrideGuess ? preferredDirectByteBufAllocator.ioBuffer(guess0()) :
-                delegate.allocate(preferredDirectByteBufAllocator);
+                delegate().allocate(preferredDirectByteBufAllocator);
     }
 
     @Override
     public void lastBytesRead(int bytes) {
         numberBytesPending = bytes < 0 ? 0 : max(0, numberBytesPending - bytes);
-        delegate.lastBytesRead(bytes);
-    }
-
-    @Override
-    public int lastBytesRead() {
-        return delegate.lastBytesRead();
-    }
-
-    @Override
-    public void attemptedBytesRead(int bytes) {
-        delegate.attemptedBytesRead(bytes);
-    }
-
-    @Override
-    public int attemptedBytesRead() {
-        return delegate.attemptedBytesRead();
-    }
-
-    @Override
-    public void readComplete() {
-        delegate.readComplete();
+        delegate().lastBytesRead(bytes);
     }
 
     @Override
     public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
-        return delegate.continueReading(maybeMoreDataSupplier);
+        return ((ExtendedHandle) delegate()).continueReading(maybeMoreDataSupplier);
     }
 
     @Override
     public boolean continueReading() {
         // We must override the supplier which determines if there maybe more data to read.
-        return delegate.continueReading(defaultMaybeMoreDataSupplier);
+        return continueReading(defaultMaybeMoreDataSupplier);
     }
 
     void readEOF() {

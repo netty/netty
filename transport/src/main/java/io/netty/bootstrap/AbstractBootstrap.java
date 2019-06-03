@@ -26,10 +26,11 @@ import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ReflectiveChannelFactory;
-import io.netty.util.internal.SocketUtils;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 
@@ -79,9 +80,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * {@link Channel}
      */
     public B group(EventLoopGroup group) {
-        if (group == null) {
-            throw new NullPointerException("group");
-        }
+        ObjectUtil.checkNotNull(group, "group");
         if (this.group != null) {
             throw new IllegalStateException("group set already");
         }
@@ -100,10 +99,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * {@link Channel} implementation has no no-args constructor.
      */
     public B channel(Class<? extends C> channelClass) {
-        if (channelClass == null) {
-            throw new NullPointerException("channelClass");
-        }
-        return channelFactory(new ReflectiveChannelFactory<C>(channelClass));
+        return channelFactory(new ReflectiveChannelFactory<C>(
+                ObjectUtil.checkNotNull(channelClass, "channelClass")
+        ));
     }
 
     public B setChannelSystem(ChannelSystem channelSystem) {
@@ -116,9 +114,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      */
     @Deprecated
     public B channelFactory(ChannelFactory<? extends C> channelFactory) {
-        if (channelFactory == null) {
-            throw new NullPointerException("channelFactory");
-        }
+        ObjectUtil.checkNotNull(channelFactory, "channelFactory");
         if (this.channelFactory != null) {
             throw new IllegalStateException("channelFactory set already");
         }
@@ -173,9 +169,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.
      */
     public <T> B option(ChannelOption<T> option, T value) {
-        if (option == null) {
-            throw new NullPointerException("option");
-        }
+        ObjectUtil.checkNotNull(option, "option");
         if (value == null) {
             synchronized (options) {
                 options.remove(option);
@@ -193,9 +187,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * {@code null}, the attribute of the specified {@code key} is removed.
      */
     public <T> B attr(AttributeKey<T> key, T value) {
-        if (key == null) {
-            throw new NullPointerException("key");
-        }
+        ObjectUtil.checkNotNull(key, "key");
         if (value == null) {
             synchronized (attrs) {
                 attrs.remove(key);
@@ -274,10 +266,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      */
     public ChannelFuture bind(SocketAddress localAddress) {
         validate();
-        if (localAddress == null) {
-            throw new NullPointerException("localAddress");
-        }
-        return doBind(localAddress);
+        return doBind(ObjectUtil.checkNotNull(localAddress, "localAddress"));
     }
 
     private ChannelFuture doBind(final SocketAddress localAddress) {
@@ -377,10 +366,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * the {@link ChannelHandler} to use for serving the requests.
      */
     public B handler(ChannelHandler handler) {
-        if (handler == null) {
-            throw new NullPointerException("handler");
-        }
-        this.handler = handler;
+        this.handler = ObjectUtil.checkNotNull(handler, "handler");
         return self();
     }
 

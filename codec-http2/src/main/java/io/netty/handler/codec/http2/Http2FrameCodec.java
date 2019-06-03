@@ -35,8 +35,10 @@ import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import static io.netty.buffer.ByteBufUtil.writeAscii;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
+import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 
 /**
  * <p><em>This API is very immature.</em> The Http2Connection-based API is currently preferred over this API.
@@ -157,8 +159,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     private final IntObjectMap<DefaultHttp2FrameStream> frameStreamToInitializeMap =
             new IntObjectHashMap<DefaultHttp2FrameStream>(8);
 
-    Http2FrameCodec(Http2ConnectionEncoder encoder, Http2ConnectionDecoder decoder, Http2Settings initialSettings) {
-        super(decoder, encoder, initialSettings);
+    Http2FrameCodec(Http2ConnectionEncoder encoder, Http2ConnectionDecoder decoder, Http2Settings initialSettings,
+                    boolean decoupleCloseAndGoAway) {
+        super(decoder, encoder, initialSettings, decoupleCloseAndGoAway);
 
         decoder.frameListener(new FrameListener());
         connection().addListener(new ConnectionListener());
@@ -297,6 +300,10 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             encoder().writePing(ctx, frame.ack(), frame.content(), promise);
         } else if (msg instanceof Http2SettingsFrame) {
             encoder().writeSettings(ctx, ((Http2SettingsFrame) msg).settings(), promise);
+        } else if (msg instanceof Http2SettingsAckFrame) {
+            // In the event of manual SETTINGS ACK is is assumed the encoder will apply the earliest received but not
+            // yet ACKed settings.
+            encoder().writeSettingsAck(ctx, promise);
         } else if (msg instanceof Http2GoAwayFrame) {
             writeGoAwayFrame(ctx, (Http2GoAwayFrame) msg, promise);
         } else if (msg instanceof Http2UnknownFrame) {
@@ -357,6 +364,12 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             final int streamId = connection.local().incrementAndGetNextStreamId();
             if (streamId < 0) {
                 promise.setFailure(new Http2NoMoreStreamIdsException());
+
+                // Simulate a GOAWAY being received due to stream exhaustion on this connection. We use the maximum
+                // valid stream ID for the current peer.
+                onHttp2Frame(ctx, new DefaultHttp2GoAwayFrame(connection.isServer() ? Integer.MAX_VALUE :
+                        Integer.MAX_VALUE - 1, NO_ERROR.code(),
+                        writeAscii(ctx.alloc(), "Stream IDs exhausted on local stream creation")));
                 return;
             }
             stream.id = streamId;
@@ -490,7 +503,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     void onHttp2UnknownStreamError(@SuppressWarnings("unused") ChannelHandlerContext ctx, Throwable cause,
                                    Http2Exception.StreamException streamException) {
         // Just log....
-        LOG.warn("Stream exception thrown for unkown stream {}.", streamException.streamId(), cause);
+        LOG.warn("Stream exception thrown for unknown stream {}.", streamException.streamId(), cause);
     }
 
     @Override
@@ -572,7 +585,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         @Override
         public void onSettingsAckRead(ChannelHandlerContext ctx) {
-            // TODO: Maybe handle me
+            onHttp2Frame(ctx, Http2SettingsAckFrame.INSTANCE);
         }
 
         @Override

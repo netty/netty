@@ -522,6 +522,10 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return {@code true} if the specified string is equal to this string, {@code false} otherwise.
      */
     public boolean contentEqualsIgnoreCase(CharSequence string) {
+        if (this == string) {
+            return true;
+        }
+
         if (string == null || string.length() != length()) {
             return false;
         }
@@ -742,7 +746,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      */
     public int lastIndexOf(CharSequence string) {
         // Use count instead of count - 1 so lastIndexOf("") answers count
-        return lastIndexOf(string, length());
+        return lastIndexOf(string, length);
     }
 
     /**
@@ -757,14 +761,12 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      */
     public int lastIndexOf(CharSequence subString, int start) {
         final int subCount = subString.length();
+        start = Math.min(start, length - subCount);
         if (start < 0) {
-            start = 0;
-        }
-        if (subCount <= 0) {
-            return start < length ? start : length;
-        }
-        if (subCount > length - start) {
             return INDEX_NOT_FOUND;
+        }
+        if (subCount == 0) {
+            return start;
         }
 
         final char firstChar = subString.charAt(0);
@@ -772,8 +774,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return INDEX_NOT_FOUND;
         }
         final byte firstCharAsByte = c2b0(firstChar);
-        final int end = offset + start;
-        for (int i = offset + length - subCount; i >= end; --i) {
+        for (int i = offset + start; i >= 0; --i) {
             if (value[i] == firstCharAsByte) {
                 int o1 = i, o2 = 0;
                 while (++o2 < subCount && b2c(value[++o1]) == subString.charAt(o2)) {
@@ -1036,6 +1037,10 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return {@code true} if equal, otherwise {@code false}
      */
     public boolean contentEquals(CharSequence a) {
+        if (this == a) {
+            return true;
+        }
+
         if (a == null || a.length() != length()) {
             return false;
         }

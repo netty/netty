@@ -977,7 +977,27 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     @Override
     @Test
     public void testInternalNioBuffer() {
-        // ignore
+        CompositeByteBuf buf = compositeBuffer();
+        assertEquals(0, buf.internalNioBuffer(0, 0).remaining());
+
+        // If non-derived buffer is added, its internal buffer should be returned
+        ByteBuf concreteBuffer = directBuffer().writeByte(1);
+        buf.addComponent(concreteBuffer);
+        assertSame(concreteBuffer.internalNioBuffer(0, 1), buf.internalNioBuffer(0, 1));
+        buf.release();
+
+        // In derived cases, the original internal buffer must not be used
+        buf = compositeBuffer();
+        concreteBuffer = directBuffer().writeByte(1);
+        buf.addComponent(concreteBuffer.slice());
+        assertNotSame(concreteBuffer.internalNioBuffer(0, 1), buf.internalNioBuffer(0, 1));
+        buf.release();
+
+        buf = compositeBuffer();
+        concreteBuffer = directBuffer().writeByte(1);
+        buf.addComponent(concreteBuffer.duplicate());
+        assertNotSame(concreteBuffer.internalNioBuffer(0, 1), buf.internalNioBuffer(0, 1));
+        buf.release();
     }
 
     @Test
@@ -1094,6 +1114,71 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertArrayEquals(new byte[] {1, 2}, dest);
 
         cbuf.release();
+    }
+
+    @Test
+    public void testAddFlattenedComponents() {
+        ByteBuf b1 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3 });
+        CompositeByteBuf newComposite = Unpooled.compositeBuffer()
+                .addComponent(true, b1)
+                .addFlattenedComponents(true, b1.retain())
+                .addFlattenedComponents(true, Unpooled.EMPTY_BUFFER);
+
+        assertEquals(2, newComposite.numComponents());
+        assertEquals(6, newComposite.capacity());
+        assertEquals(6, newComposite.writerIndex());
+
+        // It is important to use a pooled allocator here to ensure
+        // the slices returned by readRetainedSlice are of type
+        // PooledSlicedByteBuf, which maintains an independent refcount
+        // (so that we can be sure to cover this case)
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer()
+              .writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+
+        // use mixture of slice and retained slice
+        ByteBuf s1 = buffer.readRetainedSlice(2);
+        ByteBuf s2 = s1.retainedSlice(0, 2);
+        ByteBuf s3 = buffer.slice(0, 2).retain();
+        ByteBuf s4 = s2.retainedSlice(0, 2);
+        buffer.release();
+
+        ByteBuf compositeToAdd = Unpooled.compositeBuffer()
+            .addComponent(s1)
+            .addComponent(Unpooled.EMPTY_BUFFER)
+            .addComponents(s2, s3, s4);
+        // set readable range to be from middle of first component
+        // to middle of penultimate component
+        compositeToAdd.setIndex(1, 5);
+
+        assertEquals(1, compositeToAdd.refCnt());
+        assertEquals(1, s4.refCnt());
+
+        ByteBuf compositeCopy = compositeToAdd.copy();
+
+        newComposite.addFlattenedComponents(true, compositeToAdd);
+
+        // verify that added range matches
+        ByteBufUtil.equals(compositeCopy, 0,
+                newComposite, 6, compositeCopy.readableBytes());
+
+        // should not include empty component or last component
+        // (latter outside of the readable range)
+        assertEquals(5, newComposite.numComponents());
+        assertEquals(10, newComposite.capacity());
+        assertEquals(10, newComposite.writerIndex());
+
+        assertEquals(0, compositeToAdd.refCnt());
+        // s4 wasn't in added range so should have been jettisoned
+        assertEquals(0, s4.refCnt());
+        assertEquals(1, newComposite.refCnt());
+
+        // releasing composite should release the remaining components
+        newComposite.release();
+        assertEquals(0, newComposite.refCnt());
+        assertEquals(0, s1.refCnt());
+        assertEquals(0, s2.refCnt());
+        assertEquals(0, s3.refCnt());
+        assertEquals(0, b1.refCnt());
     }
 
     @Test
@@ -1378,4 +1463,70 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertTrue(buf.release());
     }
 
+    @Test
+    public void testDiscardSomeReadBytesCorrectlyUpdatesLastAccessed() {
+        testDiscardCorrectlyUpdatesLastAccessed(true);
+    }
+
+    @Test
+    public void testDiscardReadBytesCorrectlyUpdatesLastAccessed() {
+        testDiscardCorrectlyUpdatesLastAccessed(false);
+    }
+
+    private static void testDiscardCorrectlyUpdatesLastAccessed(boolean discardSome) {
+        CompositeByteBuf cbuf = compositeBuffer();
+        List<ByteBuf> buffers = new ArrayList<ByteBuf>(4);
+        for (int i = 0; i < 4; i++) {
+            ByteBuf buf = buffer().writeInt(i);
+            cbuf.addComponent(true, buf);
+            buffers.add(buf);
+        }
+
+        // Skip the first 2 bytes which means even if we call discard*ReadBytes() later we can no drop the first
+        // component as it is still used.
+        cbuf.skipBytes(2);
+        if (discardSome) {
+            cbuf.discardSomeReadBytes();
+        } else {
+            cbuf.discardReadBytes();
+        }
+        assertEquals(4, cbuf.numComponents());
+
+        // Now skip 3 bytes which means we should be able to drop the first component on the next discard*ReadBytes()
+        // call.
+        cbuf.skipBytes(3);
+
+        if (discardSome) {
+            cbuf.discardSomeReadBytes();
+        } else {
+            cbuf.discardReadBytes();
+        }
+        assertEquals(3, cbuf.numComponents());
+        // Now skip again 3 bytes which should bring our readerIndex == start of the 3 component.
+        cbuf.skipBytes(3);
+
+        // Read one int (4 bytes) which should bring our readerIndex == start of the 4 component.
+        assertEquals(2, cbuf.readInt());
+        if (discardSome) {
+            cbuf.discardSomeReadBytes();
+        } else {
+            cbuf.discardReadBytes();
+        }
+
+        // Now all except the last component should have been dropped / released.
+        assertEquals(1, cbuf.numComponents());
+        assertEquals(3, cbuf.readInt());
+        if (discardSome) {
+            cbuf.discardSomeReadBytes();
+        } else {
+            cbuf.discardReadBytes();
+        }
+        assertEquals(0, cbuf.numComponents());
+
+        // These should have been released already.
+        for (ByteBuf buffer: buffers) {
+            assertEquals(0, buffer.refCnt());
+        }
+        assertTrue(cbuf.release());
+    }
 }

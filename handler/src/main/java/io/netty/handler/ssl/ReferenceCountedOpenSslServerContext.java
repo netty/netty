@@ -55,25 +55,25 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
-            boolean enableOcsp) throws SSLException {
+            boolean enableOcsp, String keyStore) throws SSLException {
         this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers,
                 cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
-                enableOcsp);
+                enableOcsp, keyStore);
     }
 
-    private ReferenceCountedOpenSslServerContext(
+    ReferenceCountedOpenSslServerContext(
             X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
-            boolean enableOcsp) throws SSLException {
+            boolean enableOcsp, String keyStore) throws SSLException {
         super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_SERVER, keyCertChain,
               clientAuth, protocols, startTls, enableOcsp, true);
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
-                                                      keyCertChain, key, keyPassword, keyManagerFactory);
+                                                      keyCertChain, key, keyPassword, keyManagerFactory, keyStore);
             success = true;
         } finally {
             if (!success) {
@@ -92,7 +92,8 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                                                          X509Certificate[] trustCertCollection,
                                                          TrustManagerFactory trustManagerFactory,
                                                          X509Certificate[] keyCertChain, PrivateKey key,
-                                                         String keyPassword, KeyManagerFactory keyManagerFactory)
+                                                         String keyPassword, KeyManagerFactory keyManagerFactory,
+                                                         String keyStore)
             throws SSLException {
         OpenSslKeyMaterialProvider keyMaterialProvider = null;
         try {
@@ -111,7 +112,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                     // keyManagerFactory for the server so build one if it is not specified.
                     if (keyManagerFactory == null) {
                         char[] keyPasswordChars = keyStorePassword(keyPassword);
-                        KeyStore ks = buildKeyStore(keyCertChain, key, keyPasswordChars);
+                        KeyStore ks = buildKeyStore(keyCertChain, key, keyPasswordChars, keyStore);
                         if (ks.aliases().hasMoreElements()) {
                             keyManagerFactory = new OpenSslX509KeyManagerFactory();
                         } else {
@@ -130,7 +131,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             }
             try {
                 if (trustCertCollection != null) {
-                    trustManagerFactory = buildTrustManagerFactory(trustCertCollection, trustManagerFactory);
+                    trustManagerFactory = buildTrustManagerFactory(trustCertCollection, trustManagerFactory, keyStore);
                 } else if (trustManagerFactory == null) {
                     // Mimic the way SSLContext.getInstance(KeyManager[], null, null) works
                     trustManagerFactory = TrustManagerFactory.getInstance(

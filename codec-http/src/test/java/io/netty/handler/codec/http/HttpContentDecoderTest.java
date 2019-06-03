@@ -178,7 +178,7 @@ public class HttpContentDecoderTest {
         assertThat(o, is(instanceOf(FullHttpResponse.class)));
         FullHttpResponse r = (FullHttpResponse) o;
         assertEquals(100, r.status().code());
-        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(GZ_HELLO_WORLD)));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(GZ_HELLO_WORLD)));
         r.release();
 
         assertHasInboundMessages(channel, true);
@@ -205,7 +205,7 @@ public class HttpContentDecoderTest {
         FullHttpResponse r = (FullHttpResponse) o;
         assertEquals(100, r.status().code());
         r.release();
-        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(GZ_HELLO_WORLD)));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(GZ_HELLO_WORLD)));
 
         assertHasInboundMessages(channel, true);
         assertHasOutboundMessages(channel, false);
@@ -232,7 +232,7 @@ public class HttpContentDecoderTest {
         FullHttpResponse r = (FullHttpResponse) o;
         assertEquals(100, r.status().code());
         r.release();
-        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(GZ_HELLO_WORLD)));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(GZ_HELLO_WORLD)));
 
         assertHasInboundMessages(channel, true);
         assertHasOutboundMessages(channel, false);
@@ -259,7 +259,7 @@ public class HttpContentDecoderTest {
         FullHttpResponse r = (FullHttpResponse) o;
         assertEquals(100, r.status().code());
         r.release();
-        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(GZ_HELLO_WORLD)));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(GZ_HELLO_WORLD)));
 
         assertHasInboundMessages(channel, true);
         assertHasOutboundMessages(channel, false);
@@ -566,7 +566,7 @@ public class HttpContentDecoderTest {
     private static byte[] gzDecompress(byte[] input) {
         ZlibDecoder decoder = ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP);
         EmbeddedChannel channel = new EmbeddedChannel(decoder);
-        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(input)));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(input)));
         assertTrue(channel.finish()); // close the channel to indicate end-of-data
 
         int outputSize = 0;
