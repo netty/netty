@@ -20,66 +20,34 @@ package io.netty.handler.codec.quic.frame;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.quic.StreamID;
-import io.netty.handler.codec.quic.VarInt;
 
-public class MaxStreamDataFrame extends QuicFrame {
+public class StopSendingFrame extends QuicFrame {
 
-    private StreamID streamID;
-    private VarInt maxData;
+    protected StreamID streamID;
+    protected short errorCode;
 
-    MaxStreamDataFrame() {
-        super(FrameType.MAX_STREAM_DATA);
+    StopSendingFrame() {
+        super(FrameType.STOP_SENDING);
     }
 
-    public MaxStreamDataFrame(StreamID streamID, VarInt maxData) {
+    public StopSendingFrame(StreamID streamID, short errorCode) {
         this();
         this.streamID = streamID;
-        this.maxData = maxData;
-    }
-
-    public MaxStreamDataFrame(long streamID, long maxData) {
-        this(StreamID.byLong(streamID), VarInt.byLong(maxData));
-    }
-
-    @Override
-    public String toString() {
-        return "MaxStreamDataFrame{" +
-                "streamID=" + streamID +
-                ", maxData=" + maxData +
-                '}';
+        this.errorCode = errorCode;
     }
 
     @Override
     public void read(ByteBuf buf) {
         streamID = StreamID.read(buf);
-        maxData = VarInt.read(buf);
+        //TODO should we read this with VarInt ieft unclear
+        errorCode = buf.readShort();
     }
 
     @Override
     public void write(ByteBuf buf) {
         super.write(buf);
         streamID.write(buf);
-        maxData.write(buf);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
-
-        MaxStreamDataFrame that = (MaxStreamDataFrame) o;
-
-        if (streamID != null ? !streamID.equals(that.streamID) : that.streamID != null) return false;
-        return maxData != null ? maxData.equals(that.maxData) : that.maxData == null;
-    }
-
-    @Override
-    public int hashCode() {
-        int result = super.hashCode();
-        result = 31 * result + (streamID != null ? streamID.hashCode() : 0);
-        result = 31 * result + (maxData != null ? maxData.hashCode() : 0);
-        return result;
+        buf.writeShort(errorCode);
     }
 
     public StreamID streamID() {
@@ -90,11 +58,39 @@ public class MaxStreamDataFrame extends QuicFrame {
         this.streamID = streamID;
     }
 
-    public VarInt maxData() {
-        return maxData;
+    public short errorCode() {
+        return errorCode;
     }
 
-    public void maxData(VarInt maxData) {
-        this.maxData = maxData;
+    public void errorCode(short errorCode) {
+        this.errorCode = errorCode;
+    }
+
+    @Override
+    public String toString() {
+        return "StopSendingFrame{" +
+                "streamID=" + streamID +
+                ", errorCode=" + errorCode +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+
+        StopSendingFrame that = (StopSendingFrame) o;
+
+        if (errorCode != that.errorCode) return false;
+        return streamID != null ? streamID.equals(that.streamID) : that.streamID == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + (streamID != null ? streamID.hashCode() : 0);
+        result = 31 * result + (int) errorCode;
+        return result;
     }
 }

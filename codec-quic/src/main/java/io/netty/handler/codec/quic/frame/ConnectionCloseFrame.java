@@ -16,11 +16,16 @@
 package io.netty.handler.codec.quic.frame;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.quic.TransportError;
 import io.netty.handler.codec.quic.VarInt;
 
 public class ConnectionCloseFrame extends ApplicationCloseFrame {
 
     private byte errorFrame;
+
+    public ConnectionCloseFrame(TransportError errorCode, String error, byte errorFrame) {
+        this(errorCode.errorCode(), error, errorFrame);
+    }
 
     public ConnectionCloseFrame(short errorCode, String error, byte errorFrame) {
         super(errorCode, error);
@@ -43,6 +48,14 @@ public class ConnectionCloseFrame extends ApplicationCloseFrame {
 
     public byte errorFrame() {
         return errorFrame;
+    }
+
+    public TransportError transportError() {
+        return TransportError.byErrorCode((byte) errorCode);
+    }
+
+    public void transportError(TransportError error) {
+        errorCode = error.errorCode();
     }
 
     public FrameType errorFrameType() {

@@ -27,8 +27,6 @@ import java.util.List;
 
 public class QuicDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
-    private Status status;
-
     public static String decodeString(ByteBuf buf) {
         int length = VarInt.read(buf).asInt();
         return new String(HeaderUtil.read(buf, length));

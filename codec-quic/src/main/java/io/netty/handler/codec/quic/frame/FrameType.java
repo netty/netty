@@ -17,6 +17,7 @@ package io.netty.handler.codec.quic.frame;
 
 import io.netty.buffer.ByteBuf;
 
+//12.4
 public enum FrameType {
 
     PADDING(0x00) {
@@ -33,7 +34,12 @@ public enum FrameType {
             return new StreamResetFrame();
         }
     },
-    STOP_SENDING(0x05),//TODO
+    STOP_SENDING(0x05) {
+        @Override
+        QuicFrame constructFrame(byte firstByte) {
+            return new StopSendingFrame();
+        }
+    },
     CRYPTO(0x06) {
         @Override
         QuicFrame constructFrame(byte firstByte) {
@@ -111,8 +117,18 @@ public enum FrameType {
             return new RetireConnectionIdFrame();
         }
     },
-    PATH_CHALLENGE(0x1a),//TODO
-    PATH_RESPONSE(0x1b),//TODO
+    PATH_CHALLENGE(0x1a) {
+        @Override
+        QuicFrame constructFrame(byte firstByte) {
+            return new PathFrame(this);
+        }
+    },
+    PATH_RESPONSE(0x1b) {
+        @Override
+        QuicFrame constructFrame(byte firstByte) {
+            return new PathFrame(this);
+        }
+    },
     CONNECTION_CLOSE(0x1c, 0x1d) {
         @Override
         QuicFrame constructFrame(byte firstByte) {

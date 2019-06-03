@@ -38,10 +38,11 @@ public class PaddingFrame extends QuicFrame {
 
     @Override
     public void read(ByteBuf buf) {
-        while (buf.isReadable() && buf.readByte() == 0) {
+        boolean wasEmpty = false;
+        while (buf.isReadable() && (wasEmpty = buf.readByte() == 0)) {
             padding++;
         }
-        if (padding != 0) {
+        if (!wasEmpty) {
             buf.readerIndex(buf.readerIndex() - 1);
         }
     }

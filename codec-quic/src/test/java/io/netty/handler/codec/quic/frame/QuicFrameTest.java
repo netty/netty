@@ -20,9 +20,12 @@ package io.netty.handler.codec.quic.frame;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.quic.StreamID;
+import io.netty.handler.codec.quic.TransportError;
 import io.netty.util.internal.StringUtil;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -31,8 +34,8 @@ import static org.junit.Assert.*;
 public class QuicFrameTest {
 
     public static final QuicFrame[] TEST_FRAMES = new QuicFrame[] {
-            new CloseFrame((short) 200, "Server Error", true),
-            new CloseFrame((short) 200, "Server Error", false),
+            //new ApplicationCloseFrame((short) 4, "Server Error"),
+            //new ConnectionCloseFrame(TransportError.INTERNAL_ERROR, "Server Error", (byte) 0x00),
             new CryptFrame(40, new byte[400]),
             new DataBlockedFrame(20),
             new QuicFrame(FrameType.PING),
@@ -40,16 +43,28 @@ public class QuicFrameTest {
             new MaxStreamDataFrame(20, 200),
             new MaxStreamsFrame(true, 20),
             new PaddingFrame(200),
+            new PathFrame(true, new byte[8]),
+            new PathFrame(false, new byte[8]),
+            new RetireConnectionIdFrame(2),
+            new StopSendingFrame(StreamID.byLong(80000), (short) 2),
+            new StreamBlockedFrame(true, 200),
+            new StreamDataBlockedFrame(StreamID.byLong(80000), 300),
+            //new StreamFrame(true, StreamID.byLong(80000), new byte[32]),
             new StreamResetFrame(20, (short) 1000, 400)
     };
 
     @Test
     public void testReadWrite(){
         for (QuicFrame frame : TEST_FRAMES) {
+            System.out.println(frame.toString());
             ByteBuf buf = Unpooled.buffer();
             try {
                 frame.write(buf);
+                //byte[] bytes = new byte[buf.readableBytes()];
+                //buf.readBytes(bytes);
+                //System.out.println(Arrays.toString(bytes));
                 QuicFrame actual = FrameType.readFrame(buf);
+                assertEquals(0, buf.readableBytes());
                 assertEquals(StringUtil.simpleClassName(frame), frame, actual);
             } finally {
                 buf.release();
@@ -69,8 +84,11 @@ public class QuicFrameTest {
     public void testTypesImplemented() {
         Set<Class> types = new HashSet<Class>();
         for (FrameType type : FrameType.values()) {
-            Class clazz = type.constructFrame(type.firstIdentifier()).getClass();
-            assertTrue(StringUtil.simpleClassName(clazz) + " is used by two types", types.add(clazz));
+            QuicFrame frame = type.constructFrame(type.firstIdentifier());
+            if (!(frame instanceof PathFrame)) {
+                Class clazz = frame.getClass();
+                assertTrue(StringUtil.simpleClassName(clazz) + " is used by two types", types.add(clazz));
+            }
         }
     }
 

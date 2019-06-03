@@ -57,6 +57,9 @@ public class StreamFrame extends QuicFrame {
         }
         length = hasLength() ? VarInt.read(buf).asInt() : buf.readableBytes();
         data = HeaderUtil.read(buf, length);
+        if (!hasLength()) {
+            length = 0;
+        }
     }
 
     @Override

@@ -17,22 +17,15 @@
 package io.netty.handler.codec.quic;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.DecoderException;
-import io.netty.util.CharsetUtil;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -54,6 +47,18 @@ public class QuicCodecTest {
     public void setup() {
         MockitoAnnotations.initMocks(this);
         when(ctx.channel()).thenReturn(channel);
+    }
+
+    @Test
+    public void testStringCodec() {
+        ByteBuf buf = Unpooled.buffer();
+        try {
+            String STR = "This is a test";
+            QuicEncoder.writeString(buf, STR);
+            assertEquals(STR, QuicDecoder.decodeString(buf));
+        } finally {
+            buf.release();
+        }
     }
 
 }
