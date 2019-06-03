@@ -159,7 +159,7 @@ static jobject netty_kqueue_bsdsocket_getPeerCredentials(JNIEnv *env, jclass cla
         (*env)->SetIntArrayRegion(env, gids, 0, 1, (jint*) &credentials.cr_gid);
     }
 
-    pid_t pid;
+    pid_t pid = 0;
 #ifdef LOCAL_PEERPID
     socklen_t len = sizeof(pid);
     // Getting the LOCAL_PEERPID is expected to return error in some cases (e.g. server socket FDs) - just return 0.
