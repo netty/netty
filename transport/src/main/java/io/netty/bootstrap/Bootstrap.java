@@ -107,12 +107,6 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         return this;
     }
 
-    @Override
-    public Bootstrap setChannelSystem(ChannelSystem channelSystem) {
-        channel(channelSystem.getChannelClass());
-        return super.setChannelSystem(channelSystem);
-    }
-
     /**
      * Connect a {@link Channel} to the remote peer.
      */
@@ -284,9 +278,6 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         super.validate();
         if (config.handler() == null) {
             throw new IllegalStateException("handler not set");
-        }
-        if (channelFactory == null) {
-            channel(ChannelSystem.getOptimal().getChannelClass());
         }
         return this;
     }

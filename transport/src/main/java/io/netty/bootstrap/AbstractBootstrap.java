@@ -52,7 +52,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
     volatile EventLoopGroup group;
     @SuppressWarnings("deprecation")
-    protected volatile ChannelFactory<? extends C> channelFactory;
+    private volatile ChannelFactory<? extends C> channelFactory;
     private volatile SocketAddress localAddress;
     private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
     private final Map<AttributeKey<?>, Object> attrs = new LinkedHashMap<AttributeKey<?>, Object>();
@@ -102,11 +102,6 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         return channelFactory(new ReflectiveChannelFactory<C>(
                 ObjectUtil.checkNotNull(channelClass, "channelClass")
         ));
-    }
-
-    public B setChannelSystem(ChannelSystem channelSystem) {
-        group(channelSystem.newLoopGroup());
-        return self();
     }
 
     /**
@@ -206,7 +201,10 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      */
     public B validate() {
         if (group == null) {
-            group(ChannelSystem.getOptimal().newLoopGroup());
+            throw new IllegalStateException("group not set");
+        }
+        if (channelFactory == null) {
+            throw new IllegalStateException("channel or channelFactory not set");
         }
         return self();
     }
@@ -456,8 +454,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder()
-            .append(StringUtil.simpleClassName(this))
-            .append('(').append(config()).append(')');
+                .append(StringUtil.simpleClassName(this))
+                .append('(').append(config()).append(')');
         return buf.toString();
     }
 

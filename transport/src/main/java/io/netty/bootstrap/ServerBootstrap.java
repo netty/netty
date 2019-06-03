@@ -179,12 +179,6 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     }
 
     @Override
-    public ServerBootstrap setChannelSystem(ChannelSystem channelSystem) {
-        channel(channelSystem.getServerChannelClass());
-        return super.setChannelSystem(channelSystem);
-    }
-
-    @Override
     public ServerBootstrap validate() {
         super.validate();
         if (childHandler == null) {
@@ -193,9 +187,6 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         if (childGroup == null) {
             logger.warn("childGroup is not set. Using parentGroup instead.");
             childGroup = config.group();
-        }
-        if (channelFactory == null) {
-            channel(ChannelSystem.getOptimal().getServerChannelClass());
         }
         return this;
     }
