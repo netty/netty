@@ -32,7 +32,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -55,10 +54,6 @@ public class LocalChannel extends AbstractChannel {
             AtomicReferenceFieldUpdater.newUpdater(LocalChannel.class, Future.class, "finishReadFuture");
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private static final int MAX_READER_STACK_DEPTH = 8;
-    private static final ClosedChannelException DO_WRITE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), LocalChannel.class, "doWrite(...)");
-    private static final ClosedChannelException DO_CLOSE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), LocalChannel.class, "doClose()");
 
     private enum State { OPEN, BOUND, CONNECTED, CLOSED }
 
@@ -234,7 +229,7 @@ public class LocalChannel extends AbstractChannel {
                 ChannelPromise promise = connectPromise;
                 if (promise != null) {
                     // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-                    promise.tryFailure(DO_CLOSE_CLOSED_CHANNEL_EXCEPTION);
+                    promise.tryFailure(new ClosedChannelException());
                     connectPromise = null;
                 }
             }
@@ -347,7 +342,7 @@ public class LocalChannel extends AbstractChannel {
         case BOUND:
             throw new NotYetConnectedException();
         case CLOSED:
-            throw DO_WRITE_CLOSED_CHANNEL_EXCEPTION;
+            throw new ClosedChannelException();
         case CONNECTED:
             break;
         }
@@ -356,6 +351,7 @@ public class LocalChannel extends AbstractChannel {
 
         writeInProgress = true;
         try {
+            ClosedChannelException exception = null;
             for (;;) {
                 Object msg = in.current();
                 if (msg == null) {
@@ -368,7 +364,10 @@ public class LocalChannel extends AbstractChannel {
                         peer.inboundBuffer.add(ReferenceCountUtil.retain(msg));
                         in.remove();
                     } else {
-                        in.remove(DO_WRITE_CLOSED_CHANNEL_EXCEPTION);
+                        if (exception == null) {
+                            exception = new ClosedChannelException();
+                        }
+                        in.remove(exception);
                     }
                 } catch (Throwable cause) {
                     in.remove(cause);

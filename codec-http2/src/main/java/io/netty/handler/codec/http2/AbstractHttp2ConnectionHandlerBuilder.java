@@ -16,17 +16,17 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.channel.Channel;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_INITIAL_HUFFMAN_DECODE_CAPACITY;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_RESERVED_STREAMS;
+import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Abstract base class which defines commonly used features required to build {@link Http2ConnectionHandler} instances.
@@ -84,6 +84,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private Http2Settings initialSettings = Http2Settings.defaultSettings();
     private Http2FrameListener frameListener;
     private long gracefulShutdownTimeoutMillis = Http2CodecUtil.DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
+    private boolean decoupleCloseAndGoAway;
 
     // The property that will prohibit connection() and codec() if set by server(),
     // because this property is used only when this builder creates a Http2Connection.
@@ -106,6 +107,8 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private Boolean encoderEnforceMaxConcurrentStreams;
     private Boolean encoderIgnoreMaxHeaderListSize;
     private int initialHuffmanDecodeCapacity = DEFAULT_INITIAL_HUFFMAN_DECODE_CAPACITY;
+    private Http2PromisedRequestVerifier promisedRequestVerifier = ALWAYS_VERIFY;
+    private boolean autoAckSettingsFrame = true;
 
     /**
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
@@ -365,6 +368,60 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
+     * Set the {@link Http2PromisedRequestVerifier} to use.
+     * @return this.
+     */
+    protected B promisedRequestVerifier(Http2PromisedRequestVerifier promisedRequestVerifier) {
+        enforceNonCodecConstraints("promisedRequestVerifier");
+        this.promisedRequestVerifier = checkNotNull(promisedRequestVerifier, "promisedRequestVerifier");
+        return self();
+    }
+
+    /**
+     * Get the {@link Http2PromisedRequestVerifier} to use.
+     * @return the {@link Http2PromisedRequestVerifier} to use.
+     */
+    protected Http2PromisedRequestVerifier promisedRequestVerifier() {
+        return promisedRequestVerifier;
+    }
+
+    /**
+     * Determine if settings frame should automatically be acknowledged and applied.
+     * @return this.
+     */
+    protected B autoAckSettingsFrame(boolean autoAckSettings) {
+        enforceNonCodecConstraints("autoAckSettingsFrame");
+        this.autoAckSettingsFrame = autoAckSettings;
+        return self();
+    }
+
+    /**
+     * Determine if the SETTINGS frames should be automatically acknowledged and applied.
+     * @return {@code true} if the SETTINGS frames should be automatically acknowledged and applied.
+     */
+    protected boolean isAutoAckSettingsFrame() {
+        return autoAckSettingsFrame;
+    }
+
+    /**
+     * Determine if the {@link Channel#close()} should be coupled with goaway and graceful close.
+     * @param decoupleCloseAndGoAway {@code true} to make {@link Channel#close()} directly close the underlying
+     *   transport, and not attempt graceful closure via GOAWAY.
+     * @return {@code this}.
+     */
+    protected B decoupleCloseAndGoAway(boolean decoupleCloseAndGoAway) {
+        this.decoupleCloseAndGoAway = decoupleCloseAndGoAway;
+        return self();
+    }
+
+    /**
+     * Determine if the {@link Channel#close()} should be coupled with goaway and graceful close.
+     */
+    protected boolean decoupleCloseAndGoAway() {
+        return decoupleCloseAndGoAway;
+    }
+
+    /**
      * Create a new {@link Http2ConnectionHandler}.
      */
     protected T build() {
@@ -409,7 +466,8 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
             encoder = new StreamBufferingEncoder(encoder);
         }
 
-        Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
+        DefaultHttp2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
+                promisedRequestVerifier(), isAutoAckSettingsFrame());
         return buildFromCodec(decoder, encoder);
     }
 

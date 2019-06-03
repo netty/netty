@@ -221,15 +221,27 @@ public final class ChannelOutboundBuffer {
     }
 
     /**
+     * Return the current message flush progress.
+     * @return {@code 0} if nothing was flushed before for the current message or there is no current message
+     */
+    public long currentProgress() {
+        Entry entry = flushedEntry;
+        if (entry == null) {
+            return 0;
+        }
+        return entry.progress;
+    }
+
+    /**
      * Notify the {@link ChannelPromise} of the current message about writing progress.
      */
     public void progress(long amount) {
         Entry e = flushedEntry;
         assert e != null;
         ChannelPromise p = e.promise;
+        long progress = e.progress + amount;
+        e.progress = progress;
         if (p instanceof ChannelProgressivePromise) {
-            long progress = e.progress + amount;
-            e.progress = progress;
             ((ChannelProgressivePromise) p).tryProgress(progress, e.total);
         }
     }

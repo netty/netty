@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.35.Final-SNAPSHOT</version>
+  <version>4.1.37.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>http://netty.io/</url>
@@ -68,6 +68,21 @@
   </developers>
 
   <profiles>
+    <!-- Detect if we use GraalVM and if so enable the native image testsuite -->
+    <profile>
+      <id>graal</id>
+      <activation>
+        <file>
+          <!-- GraalVM Component Updater should exists when using GraalVM-->
+          <exists>${java.home}/bin/gu</exists>
+        </file>
+      </activation>
+      <properties>
+        <skipNativeImageTestsuite>false</skipNativeImageTestsuite>
+        <forbiddenapis.skip>true</forbiddenapis.skip>
+        <testJvm />
+      </properties>
+    </profile>
     <!-- JDK13 -->
     <profile>
       <id>java13</id>
@@ -166,7 +181,7 @@
         <argLine.java9>--illegal-access=deny --add-modules java.xml.bind ${argLine.java9.extras}</argLine.java9>
         <!-- Not use alpn agent as Java9 supports alpn out of the box -->
         <argLine.alpnAgent />
-        <!-- Skip as maven plugin not works with Java9 yet --> 
+        <!-- Skip as maven plugin not works with Java9 yet -->
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
         <enforcer.plugin.version>3.0.0-M1</enforcer.plugin.version>
@@ -283,7 +298,7 @@
     <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
     <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
-    <tcnative.version>2.0.23.Final</tcnative.version>
+    <tcnative.version>2.0.25.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -294,11 +309,15 @@
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.6.2</log4j2.version>
     <enforcer.plugin.version>1.4.1</enforcer.plugin.version>
-    <testJavaHome>${env.JAVA_HOME}</testJavaHome>
+    <testJavaHome>${java.home}</testJavaHome>
+    <testJvm>${testJavaHome}/bin/java</testJvm>
     <skipOsgiTestsuite>false</skipOsgiTestsuite>
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
     <skipJapicmp>false</skipJapicmp>
+    <graalvm.version>19.0.0</graalvm.version>
+    <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
+    <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
   </properties>
 
   <modules>
@@ -338,6 +357,7 @@
     <module>testsuite-http2</module>
     <module>testsuite-osgi</module>
     <module>testsuite-shading</module>
+    <module>testsuite-native-image</module>
     <module>microbench</module>
     <module>bom</module>
   </modules>
@@ -434,7 +454,7 @@
         <optional>true</optional>
       </dependency>
 
-      <!-- 
+      <!--
         Completely optional and only needed for OCSP stapling to construct and
         parse OCSP requests and responses.
       -->
@@ -795,8 +815,8 @@
             <ignore>java.nio.channels.SocketChannel</ignore>
             <ignore>java.net.StandardProtocolFamily</ignore>
             <ignore>java.nio.channels.spi.SelectorProvider</ignore>
-            <ignore>java.net.SocketOption</ignore> 
-            <ignore>java.net.StandardSocketOptions</ignore> 
+            <ignore>java.net.SocketOption</ignore>
+            <ignore>java.net.StandardSocketOptions</ignore>
             <ignore>java.nio.channels.NetworkChannel</ignore>
 
             <!-- Self-signed certificate generation -->
@@ -970,8 +990,8 @@
               <value>io.netty.build.junit.TimedOutTestsListener</value>
             </property>
           </properties>
-          <jvm>${testJavaHome}/bin/java</jvm>
-           <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 --> 
+          <jvm>${testJvm}</jvm>
+           <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
           <trimStackTrace>false</trimStackTrace>
         </configuration>
       </plugin>

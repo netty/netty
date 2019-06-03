@@ -30,6 +30,7 @@ import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -106,6 +107,12 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         return this;
     }
 
+    @Override
+    public Bootstrap setChannelSystem(ChannelSystem channelSystem) {
+        channel(channelSystem.getChannelClass());
+        return super.setChannelSystem(channelSystem);
+    }
+
     /**
      * Connect a {@link Channel} to the remote peer.
      */
@@ -137,10 +144,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
      * Connect a {@link Channel} to the remote peer.
      */
     public ChannelFuture connect(SocketAddress remoteAddress) {
-        if (remoteAddress == null) {
-            throw new NullPointerException("remoteAddress");
-        }
-
+        ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
         validate();
         return doResolveAndConnect(remoteAddress, config.localAddress());
     }
@@ -149,9 +153,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
      * Connect a {@link Channel} to the remote peer.
      */
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        if (remoteAddress == null) {
-            throw new NullPointerException("remoteAddress");
-        }
+        ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
         validate();
         return doResolveAndConnect(remoteAddress, localAddress);
     }
@@ -282,6 +284,9 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         super.validate();
         if (config.handler() == null) {
             throw new IllegalStateException("handler not set");
+        }
+        if (channelFactory == null) {
+            channel(ChannelSystem.getOptimal().getChannelClass());
         }
         return this;
     }

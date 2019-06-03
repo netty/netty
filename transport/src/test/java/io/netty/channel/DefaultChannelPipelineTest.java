@@ -21,10 +21,10 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.channel.ChannelHandlerMask.Skip;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.oio.OioEventLoopGroup;
@@ -45,6 +45,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Test;
 
+import java.net.SocketAddress;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -1221,6 +1222,374 @@ public class DefaultChannelPipelineTest {
         } finally {
             group.shutdownGracefully();
         }
+    }
+
+    @Test
+    public void testSkipHandlerMethodsIfAnnotated() {
+        EmbeddedChannel channel = new EmbeddedChannel(true);
+        ChannelPipeline pipeline = channel.pipeline();
+
+        final class SkipHandler implements ChannelInboundHandler, ChannelOutboundHandler {
+            private int state = 2;
+            private Error errorRef;
+
+            private void fail() {
+                errorRef = new AssertionError("Method should never been called");
+            }
+
+            @Skip
+            @Override
+            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+                fail();
+                ctx.bind(localAddress, promise);
+            }
+
+            @Skip
+            @Override
+            public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
+                                SocketAddress localAddress, ChannelPromise promise) {
+                fail();
+                ctx.connect(remoteAddress, localAddress, promise);
+            }
+
+            @Skip
+            @Override
+            public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+                fail();
+                ctx.disconnect(promise);
+            }
+
+            @Skip
+            @Override
+            public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+                fail();
+                ctx.close(promise);
+            }
+
+            @Skip
+            @Override
+            public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+                fail();
+                ctx.deregister(promise);
+            }
+
+            @Skip
+            @Override
+            public void read(ChannelHandlerContext ctx) {
+                fail();
+                ctx.read();
+            }
+
+            @Skip
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                fail();
+                ctx.write(msg, promise);
+            }
+
+            @Skip
+            @Override
+            public void flush(ChannelHandlerContext ctx) {
+                fail();
+                ctx.flush();
+            }
+
+            @Skip
+            @Override
+            public void channelRegistered(ChannelHandlerContext ctx) {
+                fail();
+                ctx.fireChannelRegistered();
+            }
+
+            @Skip
+            @Override
+            public void channelUnregistered(ChannelHandlerContext ctx) {
+                fail();
+                ctx.fireChannelUnregistered();
+            }
+
+            @Skip
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) {
+                fail();
+                ctx.fireChannelActive();
+            }
+
+            @Skip
+            @Override
+            public void channelInactive(ChannelHandlerContext ctx) {
+                fail();
+                ctx.fireChannelInactive();
+            }
+
+            @Skip
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                fail();
+                ctx.fireChannelRead(msg);
+            }
+
+            @Skip
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) {
+                fail();
+                ctx.fireChannelReadComplete();
+            }
+
+            @Skip
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                fail();
+                ctx.fireUserEventTriggered(evt);
+            }
+
+            @Skip
+            @Override
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
+                fail();
+                ctx.fireChannelWritabilityChanged();
+            }
+
+            @Skip
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                fail();
+                ctx.fireExceptionCaught(cause);
+            }
+
+            @Override
+            public void handlerAdded(ChannelHandlerContext ctx) {
+                state--;
+            }
+
+            @Override
+            public void handlerRemoved(ChannelHandlerContext ctx) {
+                state--;
+            }
+
+            void assertSkipped() {
+                assertEquals(0, state);
+                Error error = errorRef;
+                if (error != null) {
+                    throw error;
+                }
+            }
+        }
+
+        final class OutboundCalledHandler extends ChannelOutboundHandlerAdapter {
+            private static final int MASK_BIND = 1;
+            private static final int MASK_CONNECT = 1 << 1;
+            private static final int MASK_DISCONNECT = 1 << 2;
+            private static final int MASK_CLOSE = 1 << 3;
+            private static final int MASK_DEREGISTER = 1 << 4;
+            private static final int MASK_READ = 1 << 5;
+            private static final int MASK_WRITE = 1 << 6;
+            private static final int MASK_FLUSH = 1 << 7;
+            private static final int MASK_ADDED = 1 << 8;
+            private static final int MASK_REMOVED = 1 << 9;
+
+            private int executionMask;
+
+            @Override
+            public void handlerAdded(ChannelHandlerContext ctx) {
+                executionMask |= MASK_ADDED;
+            }
+
+            @Override
+            public void handlerRemoved(ChannelHandlerContext ctx) {
+                executionMask |= MASK_REMOVED;
+            }
+
+            @Override
+            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+                executionMask |= MASK_BIND;
+                promise.setSuccess();
+            }
+
+            @Override
+            public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
+                                SocketAddress localAddress, ChannelPromise promise) {
+                executionMask |= MASK_CONNECT;
+                promise.setSuccess();
+            }
+
+            @Override
+            public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+                executionMask |= MASK_DISCONNECT;
+                promise.setSuccess();
+            }
+
+            @Override
+            public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+                executionMask |= MASK_CLOSE;
+                promise.setSuccess();
+            }
+
+            @Override
+            public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+                executionMask |= MASK_DEREGISTER;
+                promise.setSuccess();
+            }
+
+            @Override
+            public void read(ChannelHandlerContext ctx) {
+                executionMask |= MASK_READ;
+            }
+
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                executionMask |= MASK_WRITE;
+                promise.setSuccess();
+            }
+
+            @Override
+            public void flush(ChannelHandlerContext ctx) {
+                executionMask |= MASK_FLUSH;
+            }
+
+            void assertCalled() {
+                assertCalled("handlerAdded", MASK_ADDED);
+                assertCalled("handlerRemoved", MASK_REMOVED);
+                assertCalled("bind", MASK_BIND);
+                assertCalled("connect", MASK_CONNECT);
+                assertCalled("disconnect", MASK_DISCONNECT);
+                assertCalled("close", MASK_CLOSE);
+                assertCalled("deregister", MASK_DEREGISTER);
+                assertCalled("read", MASK_READ);
+                assertCalled("write", MASK_WRITE);
+                assertCalled("flush", MASK_FLUSH);
+            }
+
+            private void assertCalled(String methodName, int mask) {
+                assertTrue(methodName + " was not called", (executionMask & mask) != 0);
+            }
+        }
+
+        final class InboundCalledHandler extends ChannelInboundHandlerAdapter {
+
+            private static final int MASK_CHANNEL_REGISTER = 1;
+            private static final int MASK_CHANNEL_UNREGISTER = 1 << 1;
+            private static final int MASK_CHANNEL_ACTIVE = 1 << 2;
+            private static final int MASK_CHANNEL_INACTIVE = 1 << 3;
+            private static final int MASK_CHANNEL_READ = 1 << 4;
+            private static final int MASK_CHANNEL_READ_COMPLETE = 1 << 5;
+            private static final int MASK_USER_EVENT_TRIGGERED = 1 << 6;
+            private static final int MASK_CHANNEL_WRITABILITY_CHANGED = 1 << 7;
+            private static final int MASK_EXCEPTION_CAUGHT = 1 << 8;
+            private static final int MASK_ADDED = 1 << 9;
+            private static final int MASK_REMOVED = 1 << 10;
+
+            private int executionMask;
+
+            @Override
+            public void handlerAdded(ChannelHandlerContext ctx) {
+                executionMask |= MASK_ADDED;
+            }
+
+            @Override
+            public void handlerRemoved(ChannelHandlerContext ctx) {
+                executionMask |= MASK_REMOVED;
+            }
+
+            @Override
+            public void channelRegistered(ChannelHandlerContext ctx) {
+                executionMask |= MASK_CHANNEL_REGISTER;
+            }
+
+            @Override
+            public void channelUnregistered(ChannelHandlerContext ctx) {
+                executionMask |= MASK_CHANNEL_UNREGISTER;
+            }
+
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) {
+                executionMask |= MASK_CHANNEL_ACTIVE;
+            }
+
+            @Override
+            public void channelInactive(ChannelHandlerContext ctx) {
+                executionMask |= MASK_CHANNEL_INACTIVE;
+            }
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                executionMask |= MASK_CHANNEL_READ;
+            }
+
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) {
+                executionMask |= MASK_CHANNEL_READ_COMPLETE;
+            }
+
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                executionMask |= MASK_USER_EVENT_TRIGGERED;
+            }
+
+            @Override
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
+                executionMask |= MASK_CHANNEL_WRITABILITY_CHANGED;
+            }
+
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                executionMask |= MASK_EXCEPTION_CAUGHT;
+            }
+
+            void assertCalled() {
+                assertCalled("handlerAdded", MASK_ADDED);
+                assertCalled("handlerRemoved", MASK_REMOVED);
+                assertCalled("channelRegistered", MASK_CHANNEL_REGISTER);
+                assertCalled("channelUnregistered", MASK_CHANNEL_UNREGISTER);
+                assertCalled("channelActive", MASK_CHANNEL_ACTIVE);
+                assertCalled("channelInactive", MASK_CHANNEL_INACTIVE);
+                assertCalled("channelRead", MASK_CHANNEL_READ);
+                assertCalled("channelReadComplete", MASK_CHANNEL_READ_COMPLETE);
+                assertCalled("userEventTriggered", MASK_USER_EVENT_TRIGGERED);
+                assertCalled("channelWritabilityChanged", MASK_CHANNEL_WRITABILITY_CHANGED);
+                assertCalled("exceptionCaught", MASK_EXCEPTION_CAUGHT);
+            }
+
+            private void assertCalled(String methodName, int mask) {
+                assertTrue(methodName + " was not called", (executionMask & mask) != 0);
+            }
+        }
+
+        OutboundCalledHandler outboundCalledHandler = new OutboundCalledHandler();
+        SkipHandler skipHandler = new SkipHandler();
+        InboundCalledHandler inboundCalledHandler = new InboundCalledHandler();
+        pipeline.addLast(outboundCalledHandler, skipHandler, inboundCalledHandler);
+
+        pipeline.fireChannelRegistered();
+        pipeline.fireChannelUnregistered();
+        pipeline.fireChannelActive();
+        pipeline.fireChannelInactive();
+        pipeline.fireChannelRead("");
+        pipeline.fireChannelReadComplete();
+        pipeline.fireChannelWritabilityChanged();
+        pipeline.fireUserEventTriggered("");
+        pipeline.fireExceptionCaught(new Exception());
+
+        pipeline.deregister().syncUninterruptibly();
+        pipeline.bind(new SocketAddress() {
+        }).syncUninterruptibly();
+        pipeline.connect(new SocketAddress() {
+        }).syncUninterruptibly();
+        pipeline.disconnect().syncUninterruptibly();
+        pipeline.close().syncUninterruptibly();
+        pipeline.write("");
+        pipeline.flush();
+        pipeline.read();
+
+        pipeline.remove(outboundCalledHandler);
+        pipeline.remove(inboundCalledHandler);
+        pipeline.remove(skipHandler);
+
+        assertFalse(channel.finish());
+
+        outboundCalledHandler.assertCalled();
+        inboundCalledHandler.assertCalled();
+        skipHandler.assertSkipped();
     }
 
     @Test

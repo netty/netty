@@ -20,20 +20,24 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.internal.tcnative.CertificateVerifier;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
+import io.netty.internal.tcnative.SSLPrivateKeyMethod;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
 import io.netty.util.ResourceLeakTracker;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.security.AccessController;
 import java.security.PrivateKey;
 import java.security.PrivilegedAction;
+import java.security.SignatureException;
 import java.security.cert.CertPathValidatorException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateExpiredException;
@@ -86,7 +90,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                                                       2048));
                 }
             });
-    private static final boolean USE_TASKS =
+    static final boolean USE_TASKS =
             SystemPropertyUtil.getBoolean("io.netty.handler.ssl.openssl.useTasks", false);
     private static final Integer DH_KEY_LENGTH;
     private static final ResourceLeakDetector<ReferenceCountedOpenSslContext> leakDetector =
@@ -517,6 +521,26 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
     }
 
+    /**
+     * Set the {@link OpenSslPrivateKeyMethod} to use. This allows to offload private-key operations
+     * if needed.
+     *
+     * This method is currently only supported when {@code BoringSSL} is used.
+     *
+     * @param method method to use.
+     */
+    @UnstableApi
+    public final void setPrivateKeyMethod(OpenSslPrivateKeyMethod method) {
+        ObjectUtil.checkNotNull(method, "method");
+        Lock writerLock = ctxLock.writeLock();
+        writerLock.lock();
+        try {
+            SSLContext.setPrivateKeyMethod(ctx, new PrivateKeyMethod(engineMap, method));
+        } finally {
+            writerLock.unlock();
+        }
+    }
+
     // IMPORTANT: This method must only be called from either the constructor or the finalizer as a user MUST never
     //            get access to an OpenSslSessionContext after this method was called to prevent the user from
     //            producing a segfault.
@@ -553,7 +577,10 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     protected static X509TrustManager chooseTrustManager(TrustManager[] managers) {
         for (TrustManager m : managers) {
             if (m instanceof X509TrustManager) {
-                return OpenSslX509TrustManagerWrapper.wrapIfNeeded((X509TrustManager) m);
+                if (PlatformDependent.javaVersion() >= 7) {
+                    return OpenSslX509TrustManagerWrapper.wrapIfNeeded((X509TrustManager) m);
+                }
+                return (X509TrustManager) m;
             }
         }
         throw new IllegalStateException("no X509TrustManager found");
@@ -881,5 +908,53 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
         // We can not be sure if the material may change at runtime so we will not cache it.
         return new OpenSslKeyMaterialProvider(keyManager, password);
+    }
+
+    private static final class PrivateKeyMethod implements SSLPrivateKeyMethod {
+
+        private final OpenSslEngineMap engineMap;
+        private final OpenSslPrivateKeyMethod keyMethod;
+        PrivateKeyMethod(OpenSslEngineMap engineMap, OpenSslPrivateKeyMethod keyMethod) {
+            this.engineMap = engineMap;
+            this.keyMethod = keyMethod;
+        }
+
+        private ReferenceCountedOpenSslEngine retrieveEngine(long ssl) throws SSLException {
+            ReferenceCountedOpenSslEngine engine = engineMap.get(ssl);
+            if (engine == null) {
+                throw new SSLException("Could not find a " +
+                        StringUtil.simpleClassName(ReferenceCountedOpenSslEngine.class) + " for sslPointer " + ssl);
+            }
+            return engine;
+        }
+
+        @Override
+        public byte[] sign(long ssl, int signatureAlgorithm, byte[] digest) throws Exception {
+            ReferenceCountedOpenSslEngine engine = retrieveEngine(ssl);
+            try {
+                return verifyResult(keyMethod.sign(engine, signatureAlgorithm, digest));
+            } catch (Exception e) {
+                engine.initHandshakeException(e);
+                throw e;
+            }
+        }
+
+        @Override
+        public byte[] decrypt(long ssl, byte[] input) throws Exception {
+            ReferenceCountedOpenSslEngine engine = retrieveEngine(ssl);
+            try {
+                return verifyResult(keyMethod.decrypt(engine, input));
+            } catch (Exception e) {
+                engine.initHandshakeException(e);
+                throw e;
+            }
+        }
+
+        private static byte[] verifyResult(byte[] result) throws SignatureException {
+            if (result == null) {
+                throw new SignatureException();
+            }
+            return result;
+        }
     }
 }

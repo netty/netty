@@ -28,7 +28,6 @@ import io.netty.util.ResourceLeakTracker;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -98,12 +97,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ReferenceCountedOpenSslEngine.class);
 
-    private static final SSLException BEGIN_HANDSHAKE_ENGINE_CLOSED = ThrowableUtil.unknownStackTrace(
-            new SSLException("engine closed"), ReferenceCountedOpenSslEngine.class, "beginHandshake()");
-    private static final SSLException HANDSHAKE_ENGINE_CLOSED = ThrowableUtil.unknownStackTrace(
-            new SSLException("engine closed"), ReferenceCountedOpenSslEngine.class, "handshake()");
-    private static final SSLException RENEGOTIATION_UNSUPPORTED =  ThrowableUtil.unknownStackTrace(
-            new SSLException("renegotiation unsupported"), ReferenceCountedOpenSslEngine.class, "beginHandshake()");
     private static final ResourceLeakDetector<ReferenceCountedOpenSslEngine> leakDetector =
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(ReferenceCountedOpenSslEngine.class);
     private static final int OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2 = 0;
@@ -885,7 +878,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                             // [1] https://www.openssl.org/docs/manmaster/ssl/SSL_write.html
                             return newResult(BUFFER_OVERFLOW, status, bytesConsumed, bytesProduced);
                         } else if (sslError == SSL.SSL_ERROR_WANT_X509_LOOKUP ||
-                                sslError == SSL.SSL_ERROR_WANT_CERTIFICATE_VERIFY) {
+                                sslError == SSL.SSL_ERROR_WANT_CERTIFICATE_VERIFY ||
+                                sslError == SSL.SSL_ERROR_WANT_PRIVATE_KEY_OPERATION) {
+
                             return newResult(NEED_TASK, bytesConsumed, bytesProduced);
                         } else {
                             // Everything else is considered as error
@@ -966,7 +961,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         if (handshakeState == HandshakeState.FINISHED) {
             return new SSLException(errorString);
         }
-        return new SSLHandshakeException(errorString);
+
+        SSLHandshakeException exception = new SSLHandshakeException(errorString);
+        // If we have a handshakeException stored already we should include it as well to help the user debug things.
+        if (handshakeException != null) {
+            exception.initCause(handshakeException);
+            handshakeException = null;
+        }
+        return exception;
     }
 
     public final SSLEngineResult unwrap(
@@ -1174,8 +1176,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                     }
                                     return newResultMayFinishHandshake(isInboundDone() ? CLOSED : OK, status,
                                             bytesConsumed, bytesProduced);
-                                } else if (sslError == SSL.SSL_ERROR_WANT_X509_LOOKUP
-                                        || sslError == SSL.SSL_ERROR_WANT_CERTIFICATE_VERIFY) {
+                                } else if (sslError == SSL.SSL_ERROR_WANT_X509_LOOKUP ||
+                                        sslError == SSL.SSL_ERROR_WANT_CERTIFICATE_VERIFY ||
+                                        sslError == SSL.SSL_ERROR_WANT_PRIVATE_KEY_OPERATION) {
                                     return newResult(isInboundDone() ? CLOSED : OK,
                                             NEED_TASK, bytesConsumed, bytesProduced);
                                 } else {
@@ -1627,7 +1630,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     public final synchronized void beginHandshake() throws SSLException {
         switch (handshakeState) {
             case STARTED_IMPLICITLY:
-                checkEngineClosed(BEGIN_HANDSHAKE_ENGINE_CLOSED);
+                checkEngineClosed();
 
                 // A user did not start handshake by calling this method by him/herself,
                 // but handshake has been started already by wrap() or unwrap() implicitly.
@@ -1643,7 +1646,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 // Nothing to do as the handshake is not done yet.
                 break;
             case FINISHED:
-                throw RENEGOTIATION_UNSUPPORTED;
+                throw new SSLException("renegotiation unsupported");
             case NOT_STARTED:
                 handshakeState = HandshakeState.STARTED_EXPLICITLY;
                 if (handshake() == NEED_TASK) {
@@ -1657,9 +1660,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     }
 
-    private void checkEngineClosed(SSLException cause) throws SSLException {
+    private void checkEngineClosed() throws SSLException {
         if (isDestroyed()) {
-            throw cause;
+            throw new SSLException("engine closed");
         }
     }
 
@@ -1711,7 +1714,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             return FINISHED;
         }
 
-        checkEngineClosed(HANDSHAKE_ENGINE_CLOSED);
+        checkEngineClosed();
 
         if (handshakeException != null) {
             return handshakeException();
@@ -1730,7 +1733,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 return pendingStatus(SSL.bioLengthNonApplication(networkBIO));
             }
 
-            if (sslError == SSL.SSL_ERROR_WANT_X509_LOOKUP || sslError == SSL.SSL_ERROR_WANT_CERTIFICATE_VERIFY) {
+            if (sslError == SSL.SSL_ERROR_WANT_X509_LOOKUP ||
+                    sslError == SSL.SSL_ERROR_WANT_CERTIFICATE_VERIFY ||
+                    sslError == SSL.SSL_ERROR_WANT_PRIVATE_KEY_OPERATION) {
                 return NEED_TASK;
             }
 

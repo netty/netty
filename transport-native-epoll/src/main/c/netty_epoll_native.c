@@ -116,10 +116,27 @@ static jint netty_epoll_native_timerFd(JNIEnv* env, jclass clazz) {
 }
 
 static void netty_epoll_native_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlong value) {
-    jint eventFD = eventfd_write(fd, (eventfd_t) value);
+    uint64_t val;
 
-    if (eventFD < 0) {
-        netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_write() failed: ", errno);
+    for (;;) {
+        jint ret = eventfd_write(fd, (eventfd_t) value);
+
+        if (ret < 0) {
+            // We need to read before we can write again, let's try to read and then write again and if this
+            // fails we will bail out.
+            //
+            // See http://man7.org/linux/man-pages/man2/eventfd.2.html.
+            if (errno == EAGAIN) {
+                if (eventfd_read(fd, &val) == 0 || errno == EAGAIN) {
+                    // Try again
+                    continue;
+                }
+                netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_read(...) failed: ", errno);
+            } else {
+                netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_write(...) failed: ", errno);
+            }
+        }
+        break;
     }
 }
 
@@ -265,7 +282,7 @@ static jint netty_epoll_native_epollCtlDel0(JNIEnv* env, jclass clazz, jint efd,
     return res;
 }
 
-static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, jobjectArray packets, jint offset, jint len) {
+static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jobjectArray packets, jint offset, jint len) {
     struct mmsghdr msg[len];
     struct sockaddr_storage addr[len];
     socklen_t addrSize;
@@ -280,7 +297,7 @@ static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, job
         jint scopeId = (*env)->GetIntField(env, packet, packetScopeIdFieldId);
         jint port = (*env)->GetIntField(env, packet, packetPortFieldId);
 
-        if (netty_unix_socket_initSockaddr(env, address, scopeId, port, &addr[i], &addrSize) == -1) {
+        if (netty_unix_socket_initSockaddr(env, ipv6, address, scopeId, port, &addr[i], &addrSize) == -1) {
             return -1;
         }
 
@@ -435,7 +452,7 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     char* dynamicTypeName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;II)I");
     JNINativeMethod* dynamicMethod = &dynamicMethods[fixed_method_table_size];
     dynamicMethod->name = "sendmmsg0";
-    dynamicMethod->signature = netty_unix_util_prepend("(I[L", dynamicTypeName);
+    dynamicMethod->signature = netty_unix_util_prepend("(IZ[L", dynamicTypeName);
     dynamicMethod->fnPtr = (void *) netty_epoll_native_sendmmsg0;
     free(dynamicTypeName);
     return dynamicMethods;

@@ -97,20 +97,6 @@ final class ReadOnlyUnsafeDirectByteBuf extends ReadOnlyByteBufferBuf {
     }
 
     @Override
-    public ByteBuf getBytes(int index, ByteBuffer dst) {
-        checkIndex(index);
-        if (dst == null) {
-            throw new NullPointerException("dst");
-        }
-
-        int bytesToCopy = Math.min(capacity() - index, dst.remaining());
-        ByteBuffer tmpBuf = internalNioBuffer();
-        tmpBuf.clear().position(index).limit(index + bytesToCopy);
-        dst.put(tmpBuf);
-        return this;
-    }
-
-    @Override
     public ByteBuf copy(int index, int length) {
         checkIndex(index, length);
         ByteBuf copy = alloc().directBuffer(length, maxCapacity());

@@ -727,7 +727,7 @@ public class Http2ConnectionHandlerTest {
         final long expectedMillis = 1234;
         handler.gracefulShutdownTimeoutMillis(expectedMillis);
         handler.close(ctx, promise);
-        verify(executor).schedule(any(Runnable.class), eq(expectedMillis), eq(TimeUnit.MILLISECONDS));
+        verify(executor, atLeastOnce()).schedule(any(Runnable.class), eq(expectedMillis), eq(TimeUnit.MILLISECONDS));
     }
 
     @Test

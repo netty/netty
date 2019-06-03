@@ -20,22 +20,31 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler.ServerHandshakeStateEvent;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 
-import static io.netty.handler.codec.http.HttpUtil.*;
+import java.util.concurrent.TimeUnit;
+
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.handler.codec.http.HttpUtil.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * Handles the HTTP handshake (the HTTP Upgrade request) for {@link WebSocketServerProtocolHandler}.
  */
 class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapter {
+
+    private static final long DEFAULT_HANDSHAKE_TIMEOUT_MS = 10000L;
 
     private final String websocketPath;
     private final String subprotocols;
@@ -43,20 +52,45 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     private final int maxFramePayloadSize;
     private final boolean allowMaskMismatch;
     private final boolean checkStartsWith;
+    private final long handshakeTimeoutMillis;
+    private ChannelHandlerContext ctx;
+    private ChannelPromise handshakePromise;
 
     WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
             boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch) {
-        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch, false);
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch,
+             DEFAULT_HANDSHAKE_TIMEOUT_MS);
+    }
+
+    WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
+                                            boolean allowExtensions, int maxFrameSize,
+                                            boolean allowMaskMismatch, long handshakeTimeoutMillis) {
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch,
+             false, handshakeTimeoutMillis);
     }
 
     WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
             boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch, boolean checkStartsWith) {
+        this(websocketPath, subprotocols, allowExtensions, maxFrameSize, allowMaskMismatch,
+             checkStartsWith, DEFAULT_HANDSHAKE_TIMEOUT_MS);
+    }
+
+    WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
+                                            boolean allowExtensions, int maxFrameSize, boolean allowMaskMismatch,
+                                            boolean checkStartsWith, long handshakeTimeoutMillis) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
         this.allowExtensions = allowExtensions;
         maxFramePayloadSize = maxFrameSize;
         this.allowMaskMismatch = allowMaskMismatch;
         this.checkStartsWith = checkStartsWith;
+        this.handshakeTimeoutMillis = checkPositive(handshakeTimeoutMillis, "handshakeTimeoutMillis");
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
+        handshakePromise = ctx.newPromise();
     }
 
     @Override
@@ -77,6 +111,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
                     getWebSocketLocation(ctx.pipeline(), req, websocketPath), subprotocols,
                             allowExtensions, maxFramePayloadSize, allowMaskMismatch);
             final WebSocketServerHandshaker handshaker = wsFactory.newHandshaker(req);
+            final ChannelPromise localHandshakePromise = handshakePromise;
             if (handshaker == null) {
                 WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
             } else {
@@ -85,8 +120,10 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
                         if (!future.isSuccess()) {
+                            localHandshakePromise.tryFailure(future.cause());
                             ctx.fireExceptionCaught(future.cause());
                         } else {
+                            localHandshakePromise.trySuccess();
                             // Kept for compatibility
                             ctx.fireUserEventTriggered(
                                     WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE);
@@ -96,6 +133,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
                         }
                     }
                 });
+                applyHandshakeTimeout();
                 WebSocketServerProtocolHandler.setHandshaker(ctx.channel(), handshaker);
                 ctx.pipeline().replace(this, "WS403Responder",
                         WebSocketServerProtocolHandler.forbiddenHttpRequestResponder());
@@ -124,5 +162,33 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         }
         String host = req.headers().get(HttpHeaderNames.HOST);
         return protocol + "://" + host + path;
+    }
+
+    private void applyHandshakeTimeout() {
+        final ChannelPromise localHandshakePromise = handshakePromise;
+        final long handshakeTimeoutMillis = this.handshakeTimeoutMillis;
+        if (handshakeTimeoutMillis <= 0 || localHandshakePromise.isDone()) {
+            return;
+        }
+
+        final Future<?> timeoutFuture = ctx.executor().schedule(new Runnable() {
+            @Override
+            public void run() {
+                if (!localHandshakePromise.isDone() &&
+                        localHandshakePromise.tryFailure(new WebSocketHandshakeException("handshake timed out"))) {
+                    ctx.flush()
+                       .fireUserEventTriggered(ServerHandshakeStateEvent.HANDSHAKE_TIMEOUT)
+                       .close();
+                }
+            }
+        }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
+
+        // Cancel the handshake timeout when handshake is finished.
+        localHandshakePromise.addListener(new FutureListener<Void>() {
+            @Override
+            public void operationComplete(Future<Void> f) throws Exception {
+                timeoutFuture.cancel(false);
+            }
+        });
     }
 }

@@ -46,6 +46,7 @@ import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
@@ -116,8 +117,6 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
     };
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
-    private static final ClosedChannelException CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), DefaultHttp2StreamChannel.Http2ChannelUnsafe.class, "write(...)");
     /**
      * Number of bytes to consider non-payload messages. 9 is arbitrary, but also the minimum size of an HTTP/2 frame.
      * Primarily is non-zero.
@@ -165,8 +164,8 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                         Http2ConnectionDecoder decoder,
                         Http2Settings initialSettings,
                         ChannelHandler inboundStreamHandler,
-                        ChannelHandler upgradeStreamHandler) {
-        super(encoder, decoder, initialSettings);
+                        ChannelHandler upgradeStreamHandler, boolean decoupleCloseAndGoAway) {
+        super(encoder, decoder, initialSettings, decoupleCloseAndGoAway);
         this.inboundStreamHandler = inboundStreamHandler;
         this.upgradeStreamHandler = upgradeStreamHandler;
     }
@@ -1090,7 +1089,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                         // Once the outbound side was closed we should not allow header / data frames
                         outboundClosed && (msg instanceof Http2HeadersFrame || msg instanceof Http2DataFrame)) {
                     ReferenceCountUtil.release(msg);
-                    promise.setFailure(CLOSED_CHANNEL_EXCEPTION);
+                    promise.setFailure(new ClosedChannelException());
                     return;
                 }
 
@@ -1119,7 +1118,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                             }
                             return;
                         }
-                    } else  {
+                    } else {
                         String msgStr = msg.toString();
                         ReferenceCountUtil.release(msg);
                         promise.setFailure(new IllegalArgumentException(
@@ -1166,11 +1165,13 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                     promise.setSuccess();
                 } else {
                     Throwable error = wrapStreamClosedError(cause);
-                    if (error instanceof ClosedChannelException) {
+                    // To make it more consistent with AbstractChannel we handle all IOExceptions here.
+                    if (error instanceof IOException) {
                         if (config.isAutoClose()) {
                             // Close channel if needed.
                             closeForcibly();
                         } else {
+                            // TODO: Once Http2StreamChannel extends DuplexChannel we should call shutdownOutput(...)
                             outboundClosed = true;
                         }
                     }

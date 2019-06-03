@@ -62,13 +62,28 @@ public final class Errors {
     public static final class NativeIoException extends IOException {
         private static final long serialVersionUID = 8222160204268655526L;
         private final int expectedErr;
+        private final boolean fillInStackTrace;
+
         public NativeIoException(String method, int expectedErr) {
+            this(method, expectedErr, true);
+        }
+
+        public NativeIoException(String method, int expectedErr, boolean fillInStackTrace) {
             super(method + "(..) failed: " + ERRORS[-expectedErr]);
             this.expectedErr = expectedErr;
+            this.fillInStackTrace = fillInStackTrace;
         }
 
         public int expectedErr() {
             return expectedErr;
+        }
+
+        @Override
+        public synchronized Throwable fillInStackTrace() {
+            if (fillInStackTrace) {
+                return super.fillInStackTrace();
+            }
+            return this;
         }
     }
 
@@ -92,11 +107,8 @@ public final class Errors {
         }
     }
 
-    static void throwConnectException(String method, NativeConnectException refusedCause, int err)
+    static void throwConnectException(String method, int err)
             throws IOException {
-        if (err == refusedCause.expectedErr()) {
-            throw refusedCause;
-        }
         if (err == ERROR_EALREADY_NEGATIVE) {
             throw new ConnectionPendingException();
         }
@@ -113,7 +125,7 @@ public final class Errors {
     }
 
     public static NativeIoException newConnectionResetException(String method, int errnoNegative) {
-        NativeIoException exception = newIOException(method, errnoNegative);
+        NativeIoException exception = new NativeIoException(method, errnoNegative, false);
         exception.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
         return exception;
     }
@@ -122,6 +134,7 @@ public final class Errors {
         return new NativeIoException(method, err);
     }
 
+    @Deprecated
     public static int ioResult(String method, int err, NativeIoException resetCause,
                                ClosedChannelException closedCause) throws IOException {
         // network stack saturated... try again later
@@ -144,6 +157,24 @@ public final class Errors {
         // TODO: We could even go further and use a pre-instantiated IOException for the other error codes, but for
         //       all other errors it may be better to just include a stack trace.
         throw newIOException(method, err);
+    }
+
+    public static int ioResult(String method, int err) throws IOException {
+        // network stack saturated... try again later
+        if (err == ERRNO_EAGAIN_NEGATIVE || err == ERRNO_EWOULDBLOCK_NEGATIVE) {
+            return 0;
+        }
+        if (err == ERRNO_EBADF_NEGATIVE) {
+            throw new ClosedChannelException();
+        }
+        if (err == ERRNO_ENOTCONN_NEGATIVE) {
+            throw new NotYetConnectedException();
+        }
+        if (err == ERRNO_ENOENT_NEGATIVE) {
+            throw new FileNotFoundException();
+        }
+
+        throw new NativeIoException(method, err, false);
     }
 
     private Errors() { }

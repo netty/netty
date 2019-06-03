@@ -72,7 +72,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
      */
     final void reuse(int maxCapacity) {
         maxCapacity(maxCapacity);
-        setRefCnt(1);
+        resetRefCnt();
         setIndex0(0, 0);
         discardMarks();
     }
@@ -80,6 +80,11 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     @Override
     public final int capacity() {
         return length;
+    }
+
+    @Override
+    public int maxFastWritableBytes() {
+        return Math.min(maxLength, maxCapacity()) - writerIndex;
     }
 
     @Override

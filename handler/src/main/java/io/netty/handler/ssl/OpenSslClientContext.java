@@ -18,6 +18,7 @@ package io.netty.handler.ssl;
 import io.netty.internal.tcnative.SSL;
 
 import java.io.File;
+import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 
@@ -42,7 +43,7 @@ public final class OpenSslClientContext extends OpenSslContext {
      */
     @Deprecated
     public OpenSslClientContext() throws SSLException {
-        this((File) null, null, null, null, null, null, null, IdentityCipherSuiteFilter.INSTANCE, null, 0, 0);
+        this(null, null, null, null, null, null, null, IdentityCipherSuiteFilter.INSTANCE, null, 0, 0);
     }
 
     /**
@@ -176,21 +177,22 @@ public final class OpenSslClientContext extends OpenSslContext {
         this(toX509CertificatesInternal(trustCertCollectionFile), trustManagerFactory,
                 toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
                 keyPassword, keyManagerFactory, ciphers, cipherFilter, apn, null, sessionCacheSize,
-                sessionTimeout, false);
+                sessionTimeout, false, KeyStore.getDefaultType());
     }
 
     OpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
                          X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
                                 KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
                                 CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
-                                long sessionCacheSize, long sessionTimeout, boolean enableOcsp)
+                                long sessionCacheSize, long sessionTimeout, boolean enableOcsp, String keyStore)
             throws SSLException {
         super(ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, SSL.SSL_MODE_CLIENT, keyCertChain,
                 ClientAuth.NONE, protocols, false, enableOcsp);
         boolean success = false;
         try {
+            OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword);
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
-                                               keyCertChain, key, keyPassword, keyManagerFactory);
+                                               keyCertChain, key, keyPassword, keyManagerFactory, keyStore);
             success = true;
         } finally {
             if (!success) {

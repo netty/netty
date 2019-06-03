@@ -20,7 +20,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.dns.DatagramDnsQuery;
 import io.netty.handler.codec.dns.AbstractDnsOptPseudoRrRecord;
 import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.dns.DnsQuestion;
@@ -40,7 +39,7 @@ import java.util.concurrent.TimeUnit;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-final class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>> {
+abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsQueryContext.class);
 
@@ -89,10 +88,18 @@ final class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRespo
         return question;
     }
 
+    DnsNameResolver parent() {
+        return parent;
+    }
+
+    protected abstract DnsQuery newQuery(int id);
+    protected abstract Channel channel();
+    protected abstract String protocol();
+
     void query(boolean flush, ChannelPromise writePromise) {
         final DnsQuestion question = question();
         final InetSocketAddress nameServerAddr = nameServerAddr();
-        final DatagramDnsQuery query = new DatagramDnsQuery(null, nameServerAddr, id);
+        final DnsQuery query = newQuery(id);
 
         query.setRecursionDesired(recursionDesired);
 
@@ -107,7 +114,7 @@ final class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRespo
         }
 
         if (logger.isDebugEnabled()) {
-            logger.debug("{} WRITE: [{}: {}], {}", parent.ch, id, nameServerAddr, question);
+            logger.debug("{} WRITE: {}, [{}: {}], {}", channel(), protocol(), id, nameServerAddr, question);
         }
 
         sendQuery(query, flush, writePromise);
@@ -136,8 +143,8 @@ final class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRespo
     }
 
     private void writeQuery(final DnsQuery query, final boolean flush, final ChannelPromise writePromise) {
-        final ChannelFuture writeFuture = flush ? parent.ch.writeAndFlush(query, writePromise) :
-                parent.ch.write(query, writePromise);
+        final ChannelFuture writeFuture = flush ? channel().writeAndFlush(query, writePromise) :
+                channel().write(query, writePromise);
         if (writeFuture.isDone()) {
             onQueryWriteCompletion(writeFuture);
         } else {
@@ -152,7 +159,7 @@ final class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRespo
 
     private void onQueryWriteCompletion(ChannelFuture writeFuture) {
         if (!writeFuture.isSuccess()) {
-            setFailure("failed to send a query", writeFuture.cause());
+            setFailure("failed to send a query via " + protocol(), writeFuture.cause());
             return;
         }
 
@@ -167,7 +174,8 @@ final class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRespo
                         return;
                     }
 
-                    setFailure("query timed out after " + queryTimeoutMillis + " milliseconds", null);
+                    setFailure("query via " + protocol() + " timed out after " +
+                            queryTimeoutMillis + " milliseconds", null);
                 }
             }, queryTimeoutMillis, TimeUnit.MILLISECONDS);
         }

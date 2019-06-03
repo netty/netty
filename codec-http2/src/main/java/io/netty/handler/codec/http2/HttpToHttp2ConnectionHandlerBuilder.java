@@ -85,6 +85,11 @@ public final class HttpToHttp2ConnectionHandlerBuilder extends
     }
 
     @Override
+    public HttpToHttp2ConnectionHandlerBuilder decoupleCloseAndGoAway(boolean decoupleCloseAndGoAway) {
+        return super.decoupleCloseAndGoAway(decoupleCloseAndGoAway);
+    }
+
+    @Override
     public HttpToHttp2ConnectionHandler build() {
         return super.build();
     }
@@ -92,6 +97,7 @@ public final class HttpToHttp2ConnectionHandlerBuilder extends
     @Override
     protected HttpToHttp2ConnectionHandler build(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                                  Http2Settings initialSettings) {
-        return new HttpToHttp2ConnectionHandler(decoder, encoder, initialSettings, isValidateHeaders());
+        return new HttpToHttp2ConnectionHandler(decoder, encoder, initialSettings, isValidateHeaders(),
+                decoupleCloseAndGoAway());
     }
 }

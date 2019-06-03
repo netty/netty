@@ -27,6 +27,7 @@ import io.netty.util.IntSupplier;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import org.hamcrest.core.IsInstanceOf;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -258,6 +259,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         }
     }
 
+    @Ignore
     @Test
     public void testChannelsRegistered()  {
         NioEventLoopGroup group = new NioEventLoopGroup(1);

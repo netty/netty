@@ -16,6 +16,7 @@
 package io.netty.channel.kqueue;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.DatagramUnicastTest;
 
@@ -24,6 +25,6 @@ import java.util.List;
 public class KQueueDatagramUnicastTest extends DatagramUnicastTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
-        return KQueueSocketTestPermutation.INSTANCE.datagram();
+        return KQueueSocketTestPermutation.INSTANCE.datagram(InternetProtocolFamily.IPv4);
     }
 }

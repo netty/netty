@@ -22,6 +22,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
@@ -35,6 +36,8 @@ import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapterBuilder;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.SslContext;
+
+import java.net.InetSocketAddress;
 
 import static io.netty.handler.logging.LogLevel.INFO;
 
@@ -130,10 +133,20 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
      * A handler that triggers the cleartext upgrade to HTTP/2 by sending an initial HTTP request.
      */
     private final class UpgradeRequestHandler extends ChannelInboundHandlerAdapter {
+
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             DefaultFullHttpRequest upgradeRequest =
                     new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+
+            // Set HOST header as the remote peer may require it.
+            InetSocketAddress remote = (InetSocketAddress) ctx.channel().remoteAddress();
+            String hostString = remote.getHostString();
+            if (hostString == null) {
+                hostString = remote.getAddress().getHostAddress();
+            }
+            upgradeRequest.headers().set(HttpHeaderNames.HOST, hostString + ':' + remote.getPort());
+
             ctx.writeAndFlush(upgradeRequest);
 
             ctx.fireChannelActive();

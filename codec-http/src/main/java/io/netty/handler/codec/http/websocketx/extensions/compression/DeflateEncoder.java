@@ -114,7 +114,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
 
         ByteBuf compressedContent;
         if (removeFrameTail(msg)) {
-            int realLength = fullCompressedContent.readableBytes() - FRAME_TAIL.length;
+            int realLength = fullCompressedContent.readableBytes() - FRAME_TAIL.readableBytes();
             compressedContent = fullCompressedContent.slice(0, realLength);
         } else {
             compressedContent = fullCompressedContent;

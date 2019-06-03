@@ -111,9 +111,23 @@ public class ConscryptOpenSslEngineInteropTest extends ConscryptSslEngineTest {
 
     @Override
     @Test
+    public void testSessionAfterHandshakeKeyManagerFactory() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testSessionAfterHandshakeKeyManagerFactory();
+    }
+
+    @Override
+    @Test
     public void testSessionAfterHandshakeKeyManagerFactoryMutualAuth() throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSessionAfterHandshakeKeyManagerFactoryMutualAuth();
+    }
+
+    @Override
+    @Test
+    public void testSupportedSignatureAlgorithms() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testSupportedSignatureAlgorithms();
     }
 
     @Override

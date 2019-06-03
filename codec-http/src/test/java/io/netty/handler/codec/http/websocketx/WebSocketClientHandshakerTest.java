@@ -217,7 +217,7 @@ public abstract class WebSocketClientHandshakerTest {
         String url = "ws://localhost:9999/ws";
         final WebSocketClientHandshaker shaker = newHandshaker(URI.create(url));
         final WebSocketClientHandshaker handshaker = new WebSocketClientHandshaker(
-                shaker.uri(), shaker.version(), null, EmptyHttpHeaders.INSTANCE, Integer.MAX_VALUE) {
+                shaker.uri(), shaker.version(), null, EmptyHttpHeaders.INSTANCE, Integer.MAX_VALUE, -1) {
             @Override
             protected FullHttpRequest newHandshakeRequest() {
                 return shaker.newHandshakeRequest();

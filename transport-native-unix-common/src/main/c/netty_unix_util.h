@@ -18,6 +18,7 @@
 #define NETTY_UNIX_UTIL_H_
 
 #include <jni.h>
+#include <stdint.h>
 #include <time.h>
 
 #if defined(__MACH__) && !defined(CLOCK_REALTIME)
@@ -63,6 +64,20 @@ jboolean netty_unix_util_initialize_wait_clock(clockid_t* clockId);
  * MacOS does not support clock_gettime.
  */
 int netty_unix_util_clock_gettime(clockid_t clockId, struct timespec* tp);
+
+/**
+ * Calculate the number of nano seconds elapsed between begin and end.
+ *
+ * Returns the number of nano seconds.
+ */
+uint64_t netty_unix_util_timespec_elapsed_ns(const struct timespec* begin, const struct timespec* end);
+
+/**
+ * Subtract <pre>nanos</pre> nano seconds from a <pre>timespec</pre>.
+ *
+ * Returns true if there is underflow.
+ */
+jboolean netty_unix_util_timespec_subtract_ns(struct timespec* ts, uint64_t nanos);
 
 /**
  * Return type is as defined in http://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/functions.html#wp5833.
