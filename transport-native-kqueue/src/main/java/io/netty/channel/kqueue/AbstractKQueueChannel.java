@@ -299,10 +299,12 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             return doWriteBytesDirect(in, buf);
         }
 
+        int readable = buf.readableBytes();
+
         // We need a direct buffer let's create a temporary one.
-        final ByteBuf ioBuffer = ioBuffer(buf.readableBytes());
+        final ByteBuf ioBuffer = ioBuffer(readable);
         try {
-            ioBuffer.writeBytes(buf, buf.readerIndex(), buf.readableBytes());
+            ioBuffer.writeBytes(buf, buf.readerIndex(), readable);
             return doWriteBytesDirect(in, ioBuffer);
         } finally {
             ioBuffer.release();

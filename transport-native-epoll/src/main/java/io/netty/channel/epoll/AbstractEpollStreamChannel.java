@@ -761,8 +761,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                         }
                     }
 
-                    // we use a direct buffer here as the native implementations only be able
-                    // to handle direct buffers.
                     byteBuf = allocHandle.allocate(allocator);
                     allocHandle.lastBytesRead(doReadBytes(byteBuf));
                     if (allocHandle.lastBytesRead() <= 0) {

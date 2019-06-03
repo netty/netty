@@ -510,8 +510,6 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
             boolean close = false;
             try {
                 do {
-                    // we use a direct buffer here as the native implementations only be able
-                    // to handle direct buffers.
                     byteBuf = allocHandle.allocate(allocator);
                     allocHandle.lastBytesRead(doReadBytes(byteBuf));
                     if (allocHandle.lastBytesRead() <= 0) {
