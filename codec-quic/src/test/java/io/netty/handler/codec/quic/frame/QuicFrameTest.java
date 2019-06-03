@@ -25,17 +25,15 @@ import io.netty.handler.codec.quic.TransportError;
 import io.netty.util.internal.StringUtil;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 import static org.junit.Assert.*;
 
 public class QuicFrameTest {
 
     public static final QuicFrame[] TEST_FRAMES = new QuicFrame[] {
-            //new ApplicationCloseFrame((short) 4, "Server Error"),
-            //new ConnectionCloseFrame(TransportError.INTERNAL_ERROR, "Server Error", (byte) 0x00),
+            new ApplicationCloseFrame((short) 4, "Server Error"),
+            new ConnectionCloseFrame(TransportError.INTERNAL_ERROR, "Server Error", (byte) 0x00),
             new CryptFrame(40, new byte[400]),
             new DataBlockedFrame(20),
             new QuicFrame(FrameType.PING),
@@ -49,7 +47,7 @@ public class QuicFrameTest {
             new StopSendingFrame(StreamID.byLong(80000), (short) 2),
             new StreamBlockedFrame(true, 200),
             new StreamDataBlockedFrame(StreamID.byLong(80000), 300),
-            //new StreamFrame(true, StreamID.byLong(80000), new byte[32]),
+            new StreamFrame(true, StreamID.byLong(80000), new byte[32]),
             new StreamResetFrame(20, (short) 1000, 400)
     };
 
@@ -82,12 +80,15 @@ public class QuicFrameTest {
 
     @Test
     public void testTypesImplemented() {
-        Set<Class> types = new HashSet<Class>();
+        Map<Class, FrameType> types = new HashMap<Class, FrameType>();
         for (FrameType type : FrameType.values()) {
             QuicFrame frame = type.constructFrame(type.firstIdentifier());
             if (!(frame instanceof PathFrame)) {
                 Class clazz = frame.getClass();
-                assertTrue(StringUtil.simpleClassName(clazz) + " is used by two types", types.add(clazz));
+                FrameType used = types.put(clazz, type);
+                if (used != null) {
+                    fail(StringUtil.simpleClassName(clazz) + " is used by two types (" + type.name() + " and " + used.name() + ")");
+                }
             }
         }
     }

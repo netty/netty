@@ -69,7 +69,9 @@ public class StreamFrame extends QuicFrame {
         if (hasOffset()) {
             VarInt.byLong(offset).write(buf);
         }
-        VarInt.byLong(hasLength() ? length : data.length).write(buf);
+        if (hasLength()) {
+            VarInt.byLong(length).write(buf);
+        }
         buf.writeBytes(data);
     }
 
@@ -159,7 +161,6 @@ public class StreamFrame extends QuicFrame {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
-
         StreamFrame that = (StreamFrame) o;
 
         if (offset != that.offset) return false;

@@ -28,7 +28,13 @@ public class ApplicationCloseFrame extends QuicFrame {
     protected String error;
 
     public ApplicationCloseFrame(short errorCode, String error) {
-        super(FrameType.CONNECTION_CLOSE);
+        this((byte) 0x1d);
+        this.errorCode = errorCode;
+        this.error = error;
+    }
+
+    protected ApplicationCloseFrame(byte type, short errorCode, String error) {
+        this(type);
         this.errorCode = errorCode;
         this.error = error;
     }
@@ -43,7 +49,6 @@ public class ApplicationCloseFrame extends QuicFrame {
 
     @Override
     public void read(ByteBuf buf) {
-        super.read(buf);
         errorCode = buf.readShort();
         beforeMessageRead(buf);
         error = QuicDecoder.decodeString(buf);

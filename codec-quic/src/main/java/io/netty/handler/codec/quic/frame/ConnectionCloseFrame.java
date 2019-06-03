@@ -28,7 +28,7 @@ public class ConnectionCloseFrame extends ApplicationCloseFrame {
     }
 
     public ConnectionCloseFrame(short errorCode, String error, byte errorFrame) {
-        super(errorCode, error);
+        super((byte) 0x1c, errorCode, error);
         this.errorFrame = errorFrame;
     }
 

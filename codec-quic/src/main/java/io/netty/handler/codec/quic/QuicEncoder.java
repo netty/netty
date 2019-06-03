@@ -29,6 +29,6 @@ public class QuicEncoder extends MessageToByteEncoder<IPacket> {
 
     @Override
     protected void encode(ChannelHandlerContext ctx, IPacket msg, ByteBuf out) throws Exception {
-
+        msg.write(out);
     }
 }
