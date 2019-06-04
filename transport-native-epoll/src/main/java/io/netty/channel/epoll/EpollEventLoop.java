@@ -271,9 +271,10 @@ class EpollEventLoop extends SingleThreadEventLoop {
 
     @Override
     protected void run() {
+        boolean hasTasks = hasTasks();
         for (;;) {
             try {
-                int strategy = selectStrategy.calculateStrategy(selectNowSupplier, hasTasks());
+                int strategy = selectStrategy.calculateStrategy(selectNowSupplier, hasTasks);
                 switch (strategy) {
                     case SelectStrategy.CONTINUE:
                         continue;
@@ -286,7 +287,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
                         if (wakenUp == 1) {
                             wakenUp = 0;
                         }
-                        if (!hasTasks()) {
+                        if (!hasTasks && !hasTasks()) {
                             strategy = epollWait();
                         }
                         // fallthrough
@@ -302,6 +303,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
                     } finally {
                         // Ensure we always run tasks.
                         runAllTasks();
+                        hasTasks = false;
                     }
                 } else {
                     final long ioStartTime = System.nanoTime();
@@ -313,7 +315,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
                     } finally {
                         // Ensure we always run tasks.
                         final long ioTime = System.nanoTime() - ioStartTime;
-                        runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
+                        hasTasks = runAllTasks(ioTime * (100 - ioRatio) / ioRatio, true);
                     }
                 }
                 if (allowGrowing && strategy == events.length()) {

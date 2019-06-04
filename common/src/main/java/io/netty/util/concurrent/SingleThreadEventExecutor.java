@@ -389,8 +389,21 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     /**
      * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.  This method stops running
      * the tasks in the task queue and returns if it ran longer than {@code timeoutNanos}.
+     *
+     * @return true if any tasks from the main queue were run
      */
     protected boolean runAllTasks(long timeoutNanos) {
+        return runAllTasks(timeoutNanos, false);
+    }
+
+    /**
+     * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.  This method stops running
+     * the tasks in the task queue and returns if it ran longer than {@code timeoutNanos}.
+     *
+     * @return if {@code returnTrueIfTasksRemain} is true returns whether any tasks from the main queue were run,
+     *     otherwise whether any tasks remain due to timeout
+     */
+    protected boolean runAllTasks(long timeoutNanos, boolean returnTrueIfTasksRemain) {
         fetchFromScheduledTaskQueue();
         Runnable task = pollTask();
         if (task == null) {
@@ -411,20 +424,21 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             if ((runTasks & 0x3F) == 0) {
                 lastExecutionTime = ScheduledFutureTask.nanoTime();
                 if (lastExecutionTime >= deadline) {
-                    break;
+                    afterRunningAllTasks();
+                    this.lastExecutionTime = lastExecutionTime;
+                    // hasTasks() call must go after afterRunningAllTasks()
+                    return !returnTrueIfTasksRemain || hasTasks();
                 }
             }
 
             task = pollTask();
             if (task == null) {
                 lastExecutionTime = ScheduledFutureTask.nanoTime();
-                break;
+                afterRunningAllTasks();
+                this.lastExecutionTime = lastExecutionTime;
+                return !returnTrueIfTasksRemain;
             }
         }
-
-        afterRunningAllTasks();
-        this.lastExecutionTime = lastExecutionTime;
-        return true;
     }
 
     /**
@@ -432,6 +446,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      */
     @UnstableApi
     protected void afterRunningAllTasks() { }
+
     /**
      * Returns the amount of time left until the scheduled task with the closest dead line is executed.
      */
