@@ -400,8 +400,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.  This method stops running
      * the tasks in the task queue and returns if it ran longer than {@code timeoutNanos}.
      *
-     * @return if {@code returnTrueIfTasksRemain} is true returns whether any tasks from the main queue were run,
-     *     otherwise whether any tasks remain due to timeout
+     * @return if {@code returnTrueIfTasksRemain} is true returns whether any any tasks remain due to timeout,
+     *     otherwise returns whether any tasks from the main queue were run
      */
     protected boolean runAllTasks(long timeoutNanos, boolean returnTrueIfTasksRemain) {
         fetchFromScheduledTaskQueue();
