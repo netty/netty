@@ -152,9 +152,15 @@ public final class Native {
 
     private static native int splice0(int fd, long offIn, int fdOut, long offOut, long len);
 
-    public static int sendmmsg(
-            int fd, NativeDatagramPacketArray.NativeDatagramPacket[] msgs, int offset, int len) throws IOException {
-        int res = sendmmsg0(fd, msgs, offset, len);
+    @Deprecated
+    public static int sendmmsg(int fd, NativeDatagramPacketArray.NativeDatagramPacket[] msgs,
+                               int offset, int len) throws IOException {
+        return sendmmsg(fd, Socket.isIPv6Preferred(), msgs, offset, len);
+    }
+
+    static int sendmmsg(int fd, boolean ipv6, NativeDatagramPacketArray.NativeDatagramPacket[] msgs,
+                               int offset, int len) throws IOException {
+        int res = sendmmsg0(fd, ipv6, msgs, offset, len);
         if (res >= 0) {
             return res;
         }
@@ -162,7 +168,7 @@ public final class Native {
     }
 
     private static native int sendmmsg0(
-            int fd, NativeDatagramPacketArray.NativeDatagramPacket[] msgs, int offset, int len);
+            int fd, boolean ipv6, NativeDatagramPacketArray.NativeDatagramPacket[] msgs, int offset, int len);
 
     // epoll_event related
     public static native int sizeofEpollEvent();
