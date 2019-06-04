@@ -94,4 +94,9 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
     private static int randomIndex(int numAddresses) {
         return numAddresses == 1 ? 0 : ThreadLocalRandom.current().nextInt(numAddresses);
     }
+
+    @Override
+    public void close() {
+        nameResolver.close();
+    }
 }
