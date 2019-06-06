@@ -284,11 +284,12 @@ class EpollEventLoop extends SingleThreadEventLoop {
                         break;
 
                     case SelectStrategy.SELECT:
-                        if (wakenUp == 1) {
-                            wakenUp = 0;
-                        }
-                        if (!hasTasks && !hasTasks()) {
+                        wakenUp = 0;
+                        if (!hasTasks()) {
                             strategy = epollWait();
+                        }
+                        if (strategy > 0 || wakenUp == 0) {
+                            wakenUp = 1;
                         }
                         // fallthrough
                     default:
