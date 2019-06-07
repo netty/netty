@@ -130,7 +130,45 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
     public WebSocketClientHandshaker07(URI webSocketURL, WebSocketVersion version, String subprotocol,
             boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength,
             boolean performMasking, boolean allowMaskMismatch, long forceCloseTimeoutMillis) {
-        super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength, forceCloseTimeoutMillis);
+        this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength, performMasking,
+                allowMaskMismatch, forceCloseTimeoutMillis, false);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param allowExtensions
+     *            Allow extensions to be used in the reserved bits of the web socket frame
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
+     * @param performMasking
+     *            Whether to mask all written websocket frames. This must be set to true in order to be fully compatible
+     *            with the websocket specifications. Client applications that communicate with a non-standard server
+     *            which doesn't require masking might set this to false to achieve a higher performance.
+     * @param allowMaskMismatch
+     *            When set to true, frames which are not masked properly according to the standard will still be
+     *            accepted
+     * @param forceCloseTimeoutMillis
+     *            Close the connection if it was not closed by the server after timeout specified.
+     * @param  absoluteUpgradeUrl
+     *            Use an absolute url for the Upgrade request, typically when connecting through an HTTP proxy over
+     *            clear HTTP
+     */
+    WebSocketClientHandshaker07(URI webSocketURL, WebSocketVersion version, String subprotocol,
+                                boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength,
+                                boolean performMasking, boolean allowMaskMismatch, long forceCloseTimeoutMillis,
+                                boolean absoluteUpgradeUrl) {
+        super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength, forceCloseTimeoutMillis,
+                absoluteUpgradeUrl);
         this.allowExtensions = allowExtensions;
         this.performMasking = performMasking;
         this.allowMaskMismatch = allowMaskMismatch;
@@ -156,9 +194,7 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
      */
     @Override
     protected FullHttpRequest newHandshakeRequest() {
-        // Get path
         URI wsURL = uri();
-        String path = rawPath(wsURL);
 
         // Get 16 bit nonce and base 64 encode it
         byte[] nonce = WebSocketUtil.randomBytes(16);
@@ -175,7 +211,7 @@ public class WebSocketClientHandshaker07 extends WebSocketClientHandshaker {
         }
 
         // Format request
-        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
+        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, upgradeUrl(wsURL));
         HttpHeaders headers = request.headers();
 
         if (customHeaders != null) {
