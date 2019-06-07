@@ -820,12 +820,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             future.addListener((ChannelFutureListener) future1 ->
                     processGoAwayWriteResult(ctx, lastStreamId, errorCode, debugData, future1));
         }
-        // if closeListener != null this means we have already initiated graceful closure. doGracefulShutdown will apply
-        // the gracefulShutdownTimeoutMillis on each invocation, however we only care to apply the timeout on the
-        // start of graceful shutdown.
-        if (errorCode == NO_ERROR.code() && closeListener == null) {
-            doGracefulShutdown(ctx, future, null);
-        }
 
         return future;
     }
