@@ -316,12 +316,21 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
 
     @Override
     public boolean isLoopbackModeDisabled() {
-        return false;
+        try {
+            return ((EpollDatagramChannel) channel).socket.isLoopbackModeDisabled();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public DatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
-        throw new UnsupportedOperationException("Multicast not supported");
+        try {
+            ((EpollDatagramChannel) channel).socket.setLoopbackModeDisabled(loopbackModeDisabled);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
@@ -345,7 +354,11 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
 
     @Override
     public InetAddress getInterface() {
-        return null;
+        try {
+            return ((EpollDatagramChannel) channel).socket.getInterface();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
@@ -360,7 +373,11 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
 
     @Override
     public NetworkInterface getNetworkInterface() {
-        return null;
+        try {
+            return ((EpollDatagramChannel) channel).socket.getNetworkInterface();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
