@@ -21,7 +21,10 @@ import java.net.URI;
 
 public class WebSocketClientHandshaker13Test extends WebSocketClientHandshaker07Test {
     @Override
-    protected WebSocketClientHandshaker newHandshaker(URI uri, String subprotocol, HttpHeaders headers) {
-        return new WebSocketClientHandshaker13(uri, WebSocketVersion.V13, subprotocol, false, headers, 1024);
+    protected WebSocketClientHandshaker newHandshaker(URI uri, String subprotocol, HttpHeaders headers,
+                                                      boolean absoluteUpgradeUrl) {
+        return new WebSocketClientHandshaker13(uri, WebSocketVersion.V13, subprotocol, false, headers,
+          1024, true, true, 10000,
+          absoluteUpgradeUrl);
     }
 }

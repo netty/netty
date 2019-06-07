@@ -40,10 +40,11 @@ import java.net.URI;
 import static org.junit.Assert.*;
 
 public abstract class WebSocketClientHandshakerTest {
-    protected abstract WebSocketClientHandshaker newHandshaker(URI uri, String subprotocol, HttpHeaders headers);
+    protected abstract WebSocketClientHandshaker newHandshaker(URI uri, String subprotocol, HttpHeaders headers,
+                                                               boolean absoluteUpgradeUrl);
 
     protected WebSocketClientHandshaker newHandshaker(URI uri) {
-        return newHandshaker(uri, null, null);
+        return newHandshaker(uri, null, null, false);
     }
 
     protected abstract CharSequence getOriginHeaderName();
@@ -180,7 +181,7 @@ public abstract class WebSocketClientHandshakerTest {
 
     @Test
     @SuppressWarnings("deprecation")
-    public void testRawPath() {
+    public void testUpgradeUrl() {
         URI uri = URI.create("ws://localhost:9999/path%20with%20ws");
         WebSocketClientHandshaker handshaker = newHandshaker(uri);
         FullHttpRequest request = handshaker.newHandshakeRequest();
@@ -192,12 +193,24 @@ public abstract class WebSocketClientHandshakerTest {
     }
 
     @Test
-    public void testRawPathWithQuery() {
+    public void testUpgradeUrlWithQuery() {
         URI uri = URI.create("ws://localhost:9999/path%20with%20ws?a=b%20c");
         WebSocketClientHandshaker handshaker = newHandshaker(uri);
         FullHttpRequest request = handshaker.newHandshakeRequest();
         try {
             assertEquals("/path%20with%20ws?a=b%20c", request.uri());
+        } finally {
+            request.release();
+        }
+    }
+
+    @Test
+    public void testAbsoluteUpgradeUrlWithQuery() {
+        URI uri = URI.create("ws://localhost:9999/path%20with%20ws?a=b%20c");
+        WebSocketClientHandshaker handshaker = newHandshaker(uri, null, null, true);
+        FullHttpRequest request = handshaker.newHandshakeRequest();
+        try {
+            assertEquals("ws://localhost:9999/path%20with%20ws?a=b%20c", request.uri());
         } finally {
             request.release();
         }
@@ -317,7 +330,7 @@ public abstract class WebSocketClientHandshakerTest {
         inputHeaders.add(getProtocolHeaderName(), bogusSubProtocol);
 
         String realSubProtocol = "realSubProtocol";
-        WebSocketClientHandshaker handshaker = newHandshaker(uri, realSubProtocol, inputHeaders);
+        WebSocketClientHandshaker handshaker = newHandshaker(uri, realSubProtocol, inputHeaders, false);
         FullHttpRequest request = handshaker.newHandshakeRequest();
         HttpHeaders outputHeaders = request.headers();
 
