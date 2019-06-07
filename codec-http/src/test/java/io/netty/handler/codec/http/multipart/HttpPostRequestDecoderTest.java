@@ -414,6 +414,39 @@ public class HttpPostRequestDecoderTest {
     }
 
     @Test
+    public void testDecodeOtherMimeHeaderFields() throws Exception {
+        final String boundary = "74e78d11b0214bdcbc2f86491eeb4902";
+        String filecontent = "123456";
+
+        final String body = "--" + boundary + "\r\n" +
+                            "Content-Disposition: form-data; name=\"file\"; filename=" + "\"" + "attached.txt" + "\"" +
+                            "\r\n" +
+                            "Content-Type: application/octet-stream" + "\r\n" +
+                            "Content-Encoding: gzip" + "\r\n" +
+                            "\r\n" +
+                            filecontent +
+                            "\r\n" +
+                            "--" + boundary + "--";
+
+        final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                                                                      HttpMethod.POST,
+                                                                      "http://localhost",
+                                                                      Unpooled.wrappedBuffer(body.getBytes()));
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        req.headers().add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+        final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
+        final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        assertFalse(decoder.getBodyHttpDatas().isEmpty());
+        InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
+        assertTrue("the item should be a FileUpload", part1 instanceof FileUpload);
+        FileUpload fileUpload = (FileUpload) part1;
+        byte[] fileBytes = fileUpload.get();
+        assertTrue("the filecontent should not be decoded", filecontent.equals(new String(fileBytes)));
+        decoder.destroy();
+        req.release();
+    }
+
+    @Test
     public void testMultipartRequestWithFileInvalidCharset() throws Exception {
         final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
         final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
