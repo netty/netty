@@ -17,11 +17,13 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.unix.NativeInetAddress;
 import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SocketUtils;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -69,6 +71,41 @@ final class LinuxSocket extends Socket {
         }
         final NativeInetAddress nativeAddress = NativeInetAddress.newInstance(address);
         setInterface(intValue(), ipv6, nativeAddress.address(), nativeAddress.scopeId(), interfaceIndex(netInterface));
+    }
+
+    InetAddress getInterface() throws IOException {
+        NetworkInterface inf = getNetworkInterface();
+        if (inf != null) {
+            Enumeration<InetAddress> addresses = SocketUtils.addressesFromNetworkInterface(inf);
+            if (addresses.hasMoreElements()) {
+                return addresses.nextElement();
+            }
+        }
+        return null;
+    }
+
+    NetworkInterface getNetworkInterface() throws IOException {
+        int ret = getInterface(intValue(), ipv6);
+        if (ipv6) {
+            return PlatformDependent.javaVersion() >= 7 ? NetworkInterface.getByIndex(ret) : null;
+        }
+        InetAddress address = inetAddress(ret);
+        return address != null ? NetworkInterface.getByInetAddress(address) : null;
+    }
+
+    private static InetAddress inetAddress(int value) {
+        byte[] var1 = {
+                (byte) (value >>> 24 & 255),
+                (byte) (value >>> 16 & 255),
+                (byte) (value >>> 8 & 255),
+                (byte) (value & 255)
+        };
+
+        try {
+            return InetAddress.getByAddress(var1);
+        } catch (UnknownHostException ignore) {
+            return null;
+        }
     }
 
     void joinGroup(InetAddress group, NetworkInterface netInterface, InetAddress source) throws IOException {
@@ -239,6 +276,14 @@ final class LinuxSocket extends Socket {
         return getPeerCredentials(intValue());
     }
 
+    boolean isLoopbackModeDisabled() throws IOException {
+        return getIpMulticastLoop(intValue(), ipv6) == 0;
+    }
+
+    void setLoopbackModeDisabled(boolean loopbackModeDisabled) throws IOException {
+        setIpMulticastLoop(intValue(), ipv6, loopbackModeDisabled ? 0 : 1);
+    }
+
     long sendFile(DefaultFileRegion src, long baseOffset, long offset, long length) throws IOException {
         // Open the file-region as it may be created via the lazy constructor. This is needed as we directly access
         // the FileChannel field via JNI.
@@ -340,5 +385,8 @@ final class LinuxSocket extends Socket {
             int fd, boolean ipv6, byte[] address, int scopeId, byte[] key) throws IOException;
     private static native void setInterface(
             int fd, boolean ipv6, byte[] interfaceAddress, int scopeId, int networkInterfaceIndex) throws IOException;
+    private static native int getInterface(int fd, boolean ipv6);
+    private static native int getIpMulticastLoop(int fd, boolean ipv6) throws IOException;
+    private static native void setIpMulticastLoop(int fd, boolean ipv6, int enabled) throws IOException;
     private static native void setTimeToLive(int fd, int ttl) throws IOException;
 }
