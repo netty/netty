@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2019 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * Auto-detects the version of the Web Socket protocol in use and creates a new proper
@@ -36,11 +37,7 @@ public class WebSocketServerHandshakerFactory {
 
     private final String subprotocols;
 
-    private final boolean allowExtensions;
-
-    private final int maxFramePayloadLength;
-
-    private final boolean allowMaskMismatch;
+    private final WebSocketDecoderConfig decoderConfig;
 
     /**
      * Constructor specifying the destination web socket location
@@ -98,11 +95,29 @@ public class WebSocketServerHandshakerFactory {
     public WebSocketServerHandshakerFactory(
             String webSocketURL, String subprotocols, boolean allowExtensions,
             int maxFramePayloadLength, boolean allowMaskMismatch) {
+        this(webSocketURL, subprotocols, WebSocketDecoderConfig.newBuilder()
+            .allowExtensions(allowExtensions)
+            .maxFramePayloadLength(maxFramePayloadLength)
+            .allowMaskMismatch(allowMaskMismatch)
+            .build());
+    }
+
+    /**
+     * Constructor specifying the destination web socket location
+     *
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath".
+     *            Subsequent web socket frames will be sent to this URL.
+     * @param subprotocols
+     *            CSV of supported protocols. Null if sub protocols not supported.
+     * @param decoderConfig
+     *            Frames decoder options.
+     */
+    public WebSocketServerHandshakerFactory(
+            String webSocketURL, String subprotocols, WebSocketDecoderConfig decoderConfig) {
         this.webSocketURL = webSocketURL;
         this.subprotocols = subprotocols;
-        this.allowExtensions = allowExtensions;
-        this.maxFramePayloadLength = maxFramePayloadLength;
-        this.allowMaskMismatch = allowMaskMismatch;
+        this.decoderConfig = ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
     }
 
     /**
@@ -118,21 +133,21 @@ public class WebSocketServerHandshakerFactory {
             if (version.equals(WebSocketVersion.V13.toHttpHeaderValue())) {
                 // Version 13 of the wire protocol - RFC 6455 (version 17 of the draft hybi specification).
                 return new WebSocketServerHandshaker13(
-                        webSocketURL, subprotocols, allowExtensions, maxFramePayloadLength, allowMaskMismatch);
+                        webSocketURL, subprotocols, decoderConfig);
             } else if (version.equals(WebSocketVersion.V08.toHttpHeaderValue())) {
                 // Version 8 of the wire protocol - version 10 of the draft hybi specification.
                 return new WebSocketServerHandshaker08(
-                        webSocketURL, subprotocols, allowExtensions, maxFramePayloadLength, allowMaskMismatch);
+                        webSocketURL, subprotocols, decoderConfig);
             } else if (version.equals(WebSocketVersion.V07.toHttpHeaderValue())) {
                 // Version 8 of the wire protocol - version 07 of the draft hybi specification.
                 return new WebSocketServerHandshaker07(
-                        webSocketURL, subprotocols, allowExtensions, maxFramePayloadLength, allowMaskMismatch);
+                        webSocketURL, subprotocols, decoderConfig);
             } else {
                 return null;
             }
         } else {
             // Assume version 00 where version header was not specified
-            return new WebSocketServerHandshaker00(webSocketURL, subprotocols, maxFramePayloadLength);
+            return new WebSocketServerHandshaker00(webSocketURL, subprotocols, decoderConfig);
         }
     }
 
