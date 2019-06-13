@@ -23,7 +23,10 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * A builder for {@link Http2MultiplexCodec}.
+ *
+ * @deprecated use {@link Http2FrameCodecBuilder} together with {@link Http2MultiplexHandler}.
  */
+@Deprecated
 @UnstableApi
 public class Http2MultiplexCodecBuilder
         extends AbstractHttp2ConnectionHandlerBuilder<Http2MultiplexCodec, Http2MultiplexCodecBuilder> {

@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.assertFalse;
 
-public class Http2MultiplexCodecTransportTest {
+public class Http2MultiplexTransportTest {
     private EventLoopGroup eventLoopGroup;
     private Channel clientChannel;
     private Channel serverChannel;
@@ -65,7 +65,18 @@ public class Http2MultiplexCodecTransportTest {
     }
 
     @Test(timeout = 10000)
-    public void asyncSettingsAck() throws InterruptedException {
+    public void asyncSettingsAckWithMultiplexCodec() throws InterruptedException {
+        asyncSettingsAck0(new Http2MultiplexCodecBuilder(true, new HttpInboundHandler()).build(), null);
+    }
+
+    @Test(timeout = 10000)
+    public void asyncSettingsAckWithMultiplexHandler() throws InterruptedException {
+        asyncSettingsAck0(new Http2FrameCodecBuilder(true).build(),
+                new Http2MultiplexHandler(new HttpInboundHandler()));
+    }
+
+    private void asyncSettingsAck0(final Http2FrameCodec codec, final ChannelHandler multiplexer)
+            throws InterruptedException {
         // The client expects 2 settings frames. One from the connection setup and one from this test.
         final CountDownLatch serverAckOneLatch = new CountDownLatch(1);
         final CountDownLatch serverAckAllLatch = new CountDownLatch(2);
@@ -78,7 +89,10 @@ public class Http2MultiplexCodecTransportTest {
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) {
-                ch.pipeline().addLast(Http2MultiplexCodecBuilder.forServer(new HttpInboundHandler()).build());
+                ch.pipeline().addLast(codec);
+                if (multiplexer != null) {
+                    ch.pipeline().addLast(multiplexer);
+                }
                 ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelActive(ChannelHandlerContext ctx) {
