@@ -22,6 +22,8 @@ import java.io.Closeable;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -32,18 +34,28 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 public abstract class AbstractChannelPoolMap<K, P extends ChannelPool>
         implements ChannelPoolMap<K, P>, Iterable<Entry<K, P>>, Closeable {
     private final ConcurrentMap<K, P> map = PlatformDependent.newConcurrentHashMap();
+    private final Lock lock = new ReentrantLock();
 
     @Override
     public final P get(K key) {
         P pool = map.get(checkNotNull(key, "key"));
         if (pool == null) {
-            pool = newPool(key);
-            P old = map.putIfAbsent(key, pool);
-            if (old != null) {
-                // We need to destroy the newly created pool as we not use it.
-                pool.close();
-                pool = old;
+            lock.lock();
+            try {
+                pool = map.get(checkNotNull(key, "key"));
+                if (pool == null) {
+                    pool = newPool(key);
+                    P old = map.putIfAbsent(key, pool);
+                    if (old != null) {
+                        // We need to destroy the newly created pool as we not use it.
+                        pool.close();
+                        pool = old;
+                    }
+                }
+            } finally {
+                lock.unlock();
             }
+
         }
         return pool;
     }
