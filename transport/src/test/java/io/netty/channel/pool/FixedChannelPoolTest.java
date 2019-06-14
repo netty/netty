@@ -27,10 +27,13 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.pool.FixedChannelPool.AcquireTimeoutAction;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -344,6 +347,40 @@ public class FixedChannelPoolTest {
         pool.release(channel).syncUninterruptibly();
 
         sc.close().syncUninterruptibly();
+    }
+
+    @Test
+    public void testCloseAsync() throws ExecutionException, InterruptedException {
+        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        Bootstrap cb = new Bootstrap();
+        cb.remoteAddress(addr);
+        cb.group(group).channel(LocalChannel.class);
+
+        ServerBootstrap sb = new ServerBootstrap();
+        sb.group(group)
+                .channel(LocalServerChannel.class)
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    public void initChannel(LocalChannel ch) throws Exception {
+                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                    }
+                });
+
+        // Start server
+        final Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+
+        final FixedChannelPool pool = new FixedChannelPool(cb, new TestChannelPoolHandler(), 2);
+
+        pool.acquire().get();
+        pool.acquire().get();
+
+        pool.closeAsync().addListener(new GenericFutureListener<Future<? super Void>>() {
+            @Override
+            public void operationComplete(Future<? super Void> future) throws Exception {
+                Assert.assertEquals(0, pool.acquiredChannelCount());
+                sc.close().syncUninterruptibly();
+            }
+        }).awaitUninterruptibly();
     }
 
     private static final class TestChannelPoolHandler extends AbstractChannelPoolHandler {

@@ -28,6 +28,7 @@ import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -441,19 +442,46 @@ public class FixedChannelPool extends SimpleChannelPool {
 
     @Override
     public void close() {
-        if (executor.inEventLoop()) {
-            close0();
-        } else {
-            executor.submit(new Runnable() {
-                @Override
-                public void run() {
-                    close0();
-                }
-            }).awaitUninterruptibly();
+        try {
+            closeAsync().await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
         }
     }
 
-    private void close0() {
+    /**
+     * Closes the pool in an async manner.
+     *
+     * @return Future which represents completion of the close task
+     */
+    public Future<Void> closeAsync() {
+        if (executor.inEventLoop()) {
+            return close0();
+        } else {
+            final Promise<Void> closeComplete = executor.newPromise();
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    close0().addListener(new FutureListener<Void>() {
+                        @Override
+                        public void operationComplete(Future<Void> f) throws Exception {
+                            if (f.isSuccess()) {
+                                closeComplete.setSuccess(null);
+                            } else {
+                                closeComplete.setFailure(f.cause());
+                            }
+                        }
+                    });
+                }
+            });
+            return closeComplete;
+        }
+    }
+
+    private Future<Void> close0() {
+        assert executor.inEventLoop();
+
         if (!closed) {
             closed = true;
             for (;;) {
@@ -472,12 +500,15 @@ public class FixedChannelPool extends SimpleChannelPool {
 
             // Ensure we dispatch this on another Thread as close0 will be called from the EventExecutor and we need
             // to ensure we will not block in a EventExecutor.
-            GlobalEventExecutor.INSTANCE.execute(new Runnable() {
+            return GlobalEventExecutor.INSTANCE.submit(new Callable<Void>() {
                 @Override
-                public void run() {
+                public Void call() throws Exception {
                     FixedChannelPool.super.close();
+                    return null;
                 }
             });
         }
+
+        return GlobalEventExecutor.INSTANCE.newSucceededFuture(null);
     }
 }
