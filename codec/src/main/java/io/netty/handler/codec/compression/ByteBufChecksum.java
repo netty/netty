@@ -51,7 +51,7 @@ abstract class ByteBufChecksum implements Checksum {
     private static Method updateByteBuffer(Checksum checksum) {
         try {
             Method method = checksum.getClass().getDeclaredMethod("update", ByteBuffer.class);
-            method.invoke(method, ByteBuffer.allocate(1));
+            method.invoke(checksum, ByteBuffer.allocate(1));
             return method;
         } catch (Throwable ignore) {
             return null;
