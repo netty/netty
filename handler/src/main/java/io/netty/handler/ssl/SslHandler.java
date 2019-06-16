@@ -918,7 +918,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * {@link #setHandshakeFailure(ChannelHandlerContext, Throwable)}.
      * @return {@code true} if this method ends on {@link SSLEngineResult.HandshakeStatus#NOT_HANDSHAKING}.
      */
-    private boolean wrapNonAppData(ChannelHandlerContext ctx, boolean inUnwrap) throws SSLException {
+    private boolean wrapNonAppData(final ChannelHandlerContext ctx, boolean inUnwrap) throws SSLException {
         ByteBuf out = null;
         ByteBufAllocator alloc = ctx.alloc();
         try {
@@ -934,7 +934,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 SSLEngineResult result = wrap(alloc, engine, Unpooled.EMPTY_BUFFER, out);
 
                 if (result.bytesProduced() > 0) {
-                    ctx.write(out);
+                    ctx.write(out).addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) {
+                            Throwable cause = future.cause();
+                            if (cause != null) {
+                                setHandshakeFailureTransportFailure(ctx, cause);
+                            }
+                        }
+                    });
                     if (inUnwrap) {
                         needsFlush = true;
                     }
@@ -1782,11 +1790,26 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
         } finally {
             // Ensure we remove and fail all pending writes in all cases and so release memory quickly.
-            releaseAndFailAll(cause);
+            releaseAndFailAll(ctx, cause);
         }
     }
 
-    private void releaseAndFailAll(Throwable cause) {
+    private void setHandshakeFailureTransportFailure(ChannelHandlerContext ctx, Throwable cause) {
+        // If TLS control frames fail to write we are in an unknown state and may become out of
+        // sync with our peer. We give up and close the channel. This will also take care of
+        // cleaning up any outstanding state (e.g. handshake promise, queued unencrypted data).
+        try {
+            SSLException transportFailure = new SSLException("failure when writing TLS control frames", cause);
+            releaseAndFailAll(ctx, transportFailure);
+            if (handshakePromise.tryFailure(transportFailure)) {
+                ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(transportFailure));
+            }
+        } finally {
+            ctx.close();
+        }
+    }
+
+    private void releaseAndFailAll(ChannelHandlerContext ctx, Throwable cause) {
         if (pendingUnencryptedWrites != null) {
             pendingUnencryptedWrites.releaseAndFailAll(ctx, cause);
         }
@@ -1983,7 +2006,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         SslUtils.handleHandshakeFailure(ctx, exception, true);
                     }
                 } finally {
-                    releaseAndFailAll(exception);
+                    releaseAndFailAll(ctx, exception);
                 }
             }
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);

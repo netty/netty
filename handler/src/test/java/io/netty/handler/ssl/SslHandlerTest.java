@@ -23,6 +23,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -62,7 +63,9 @@ import org.junit.Test;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -79,15 +82,75 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLProtocolException;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
 public class SslHandlerTest {
+
+    @Test(timeout = 5000)
+    public void testNonApplicationDataFailureFailsQueuedWrites() throws NoSuchAlgorithmException, InterruptedException {
+        final CountDownLatch writeLatch = new CountDownLatch(1);
+        final Queue<ChannelPromise> writesToFail = new ConcurrentLinkedQueue<ChannelPromise>();
+        SSLEngine engine = newClientModeSSLEngine();
+        SslHandler handler = new SslHandler(engine) {
+            @Override
+            public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                super.write(ctx, msg, promise);
+                writeLatch.countDown();
+            }
+        };
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelDuplexHandler() {
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                if (msg instanceof ByteBuf) {
+                    if (((ByteBuf) msg).isReadable()) {
+                        writesToFail.add(promise);
+                    } else {
+                        promise.setSuccess();
+                    }
+                }
+                ReferenceCountUtil.release(msg);
+            }
+        }, handler);
+
+        try {
+            final CountDownLatch writeCauseLatch = new CountDownLatch(1);
+            final AtomicReference<Throwable> failureRef = new AtomicReference<Throwable>();
+            ch.write(Unpooled.wrappedBuffer(new byte[]{1})).addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) {
+                    failureRef.compareAndSet(null, future.cause());
+                    writeCauseLatch.countDown();
+                }
+            });
+            writeLatch.await();
+
+            // Simulate failing the SslHandler non-application writes after there are applications writes queued.
+            ChannelPromise promiseToFail;
+            while ((promiseToFail = writesToFail.poll()) != null) {
+                promiseToFail.setFailure(new RuntimeException("fake exception"));
+            }
+
+            writeCauseLatch.await();
+            Throwable writeCause = failureRef.get();
+            assertNotNull(writeCause);
+            assertThat(writeCause, is(CoreMatchers.<Throwable>instanceOf(SSLException.class)));
+            Throwable cause = handler.handshakeFuture().cause();
+            assertNotNull(cause);
+            assertThat(cause, is(CoreMatchers.<Throwable>instanceOf(SSLException.class)));
+        } finally {
+            assertFalse(ch.finishAndReleaseAll());
+        }
+    }
 
     @Test
     public void testNoSslHandshakeEventWhenNoHandshake() throws Exception {
@@ -145,6 +208,16 @@ public class SslHandlerTest {
         //  - https://docs.oracle.com/javase/10/docs/api/javax/net/ssl/SSLEngine.html#beginHandshake()
         //  - http://mail.openjdk.java.net/pipermail/security-dev/2018-July/017715.html
         engine.setUseClientMode(false);
+        return engine;
+    }
+
+    private static SSLEngine newClientModeSSLEngine() throws NoSuchAlgorithmException {
+        SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+        // Set the mode before we try to do the handshake as otherwise it may throw an IllegalStateException.
+        // See:
+        //  - https://docs.oracle.com/javase/10/docs/api/javax/net/ssl/SSLEngine.html#beginHandshake()
+        //  - http://mail.openjdk.java.net/pipermail/security-dev/2018-July/017715.html
+        engine.setUseClientMode(true);
         return engine;
     }
 
