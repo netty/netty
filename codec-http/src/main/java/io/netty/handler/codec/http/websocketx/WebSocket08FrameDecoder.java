@@ -430,6 +430,8 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
         state = State.CORRUPT;
         int readableBytes = in.readableBytes();
         if (readableBytes > 0) {
+            // Fix for memory leak, caused by ByteToMessageDecoder#channelRead:
+            // buffer 'cumulation' is released ONLY when no more readable bytes available.
             in.skipBytes(readableBytes);
         }
         if (ctx.channel().isActive() && config.closeOnProtocolViolation()) {

@@ -214,6 +214,7 @@ public final class WebSocketCloseStatus implements Comparable<WebSocketCloseStat
 
     private final int statusCode;
     private final String reasonText;
+    private String text;
 
     public WebSocketCloseStatus(int statusCode, String reasonText) {
         if (!isValidStatusCode(statusCode)) {
@@ -264,8 +265,12 @@ public final class WebSocketCloseStatus implements Comparable<WebSocketCloseStat
 
     @Override
     public String toString() {
-        // E.g.: "1000 Bye", "1009 Message too big"
-        return code() + " " + reasonText();
+        String text = this.text;
+        if (text == null) {
+            // E.g.: "1000 Bye", "1009 Message too big"
+            this.text = text = code() + " " + reasonText();
+        }
+        return text;
     }
 
     public static boolean isValidStatusCode(int code) {
