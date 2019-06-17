@@ -49,20 +49,24 @@ public class ByteBufChecksumTest {
         testUpdate(buf);
     }
 
-    private void testUpdate(ByteBuf buf) {
-        testUpdate(xxHash32(), ByteBufChecksum.wrapChecksum(xxHash32()), buf);
-        testUpdate(new CRC32(), ByteBufChecksum.wrapChecksum(new CRC32()), buf);
-        testUpdate(new Adler32(), ByteBufChecksum.wrapChecksum(new Adler32()), buf);
+    private static void testUpdate(ByteBuf buf) {
+        try {
+            testUpdate(xxHash32(), ByteBufChecksum.wrapChecksum(xxHash32()), buf);
+            testUpdate(new CRC32(), ByteBufChecksum.wrapChecksum(new CRC32()), buf);
+            testUpdate(new Adler32(), ByteBufChecksum.wrapChecksum(new Adler32()), buf);
+        } finally {
+            buf.release();
+        }
     }
 
-    private void testUpdate(Checksum checksum, ByteBufChecksum wrapped, ByteBuf buf) {
+    private static void testUpdate(Checksum checksum, ByteBufChecksum wrapped, ByteBuf buf) {
         testUpdate(checksum, wrapped, buf, 0, BYTE_ARRAY.length);
         testUpdate(checksum, wrapped, buf, 0, BYTE_ARRAY.length - 1);
         testUpdate(checksum, wrapped, buf, 1, BYTE_ARRAY.length - 1);
         testUpdate(checksum, wrapped, buf, 1, BYTE_ARRAY.length - 2);
     }
 
-    private void testUpdate(Checksum checksum, ByteBufChecksum wrapped, ByteBuf buf, int off, int len) {
+    private static void testUpdate(Checksum checksum, ByteBufChecksum wrapped, ByteBuf buf, int off, int len) {
         checksum.reset();
         wrapped.reset();
 
