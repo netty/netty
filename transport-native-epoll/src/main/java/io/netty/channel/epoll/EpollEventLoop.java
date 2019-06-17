@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.epoll.AbstractEpollChannel.AbstractEpollUnsafe;
@@ -80,8 +81,10 @@ class EpollEventLoop extends SingleThreadEventLoop {
     private static final long MAX_SCHEDULED_TIMERFD_NS = 999999999;
 
     EpollEventLoop(EventLoopGroup parent, Executor executor, int maxEvents,
-                   SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler) {
-        super(parent, executor, false, DEFAULT_MAX_PENDING_TASKS, rejectedExecutionHandler);
+                   SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler,
+                   MultithreadEventLoopGroup.EventLoopTaskQueueFactory queueFactory) {
+        super(parent, executor, false, newTaskQueue(queueFactory), newTaskQueue(queueFactory),
+                rejectedExecutionHandler);
         selectStrategy = ObjectUtil.checkNotNull(strategy, "strategy");
         if (maxEvents == 0) {
             allowGrowing = true;
@@ -138,6 +141,14 @@ class EpollEventLoop extends SingleThreadEventLoop {
                 }
             }
         }
+    }
+
+    private static Queue<Runnable> newTaskQueue(
+            MultithreadEventLoopGroup.EventLoopTaskQueueFactory queueFactory) {
+        if (queueFactory == null) {
+            return newTaskQueue0(DEFAULT_MAX_PENDING_TASKS);
+        }
+        return queueFactory.newTaskQueue(DEFAULT_MAX_PENDING_TASKS);
     }
 
     /**
@@ -217,9 +228,13 @@ class EpollEventLoop extends SingleThreadEventLoop {
 
     @Override
     protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
+        return newTaskQueue0(maxPendingTasks);
+    }
+
+    private static Queue<Runnable> newTaskQueue0(int maxPendingTasks) {
         // This event loop never calls takeTask()
         return maxPendingTasks == Integer.MAX_VALUE ? PlatformDependent.<Runnable>newMpscQueue()
-                                                    : PlatformDependent.<Runnable>newMpscQueue(maxPendingTasks);
+                : PlatformDependent.<Runnable>newMpscQueue(maxPendingTasks);
     }
 
     /**
