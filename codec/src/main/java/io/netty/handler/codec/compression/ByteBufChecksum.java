@@ -100,7 +100,7 @@ abstract class ByteBufChecksum implements Checksum {
                 update(b.array(), b.arrayOffset() + off, len);
             } else {
                 try {
-                    method.invoke(checksum, CompressionUtil.safeNioBuffer(b));
+                    method.invoke(checksum, CompressionUtil.safeNioBuffer(b, off, len));
                 } catch (Throwable cause) {
                     throw new Error();
                 }
