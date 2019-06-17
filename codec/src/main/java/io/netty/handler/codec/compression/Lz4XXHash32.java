@@ -46,7 +46,7 @@ import java.util.zip.Checksum;
  * {@link Lz4FrameEncoder} and {@link Lz4FrameDecoder}:
  * {@code reset()}, followed by one {@code update()}, followed by {@code getValue()}.
  */
-public class Lz4XXHash32 extends ByteBufChecksum {
+public final class Lz4XXHash32 extends ByteBufChecksum {
 
     private static final XXHash32 XXHASH32 = XXHashFactory.fastestInstance().hash32();
 
