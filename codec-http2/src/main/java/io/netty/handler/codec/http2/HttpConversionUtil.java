@@ -363,6 +363,7 @@ public final class HttpConversionUtil {
             for (Entry<CharSequence, CharSequence> entry : inputHeaders) {
                 translator.translate(entry);
             }
+            translator.translateCookies();
         } catch (Http2Exception ex) {
             throw ex;
         } catch (Throwable t) {
@@ -607,6 +608,9 @@ public final class HttpConversionUtil {
         private final HttpHeaders output;
         private final CharSequenceMap<AsciiString> translations;
 
+        // lazily created as needed
+        private StringBuilder cookies;
+
         /**
          * Create a new instance
          *
@@ -636,12 +640,21 @@ public final class HttpConversionUtil {
                 if (COOKIE.equals(name)) {
                     // combine the cookie values into 1 header entry.
                     // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
-                    String existingCookie = output.get(COOKIE);
-                    output.set(COOKIE,
-                               (existingCookie != null) ? (existingCookie + "; " + value) : value);
+                    if (cookies == null) {
+                        cookies = new StringBuilder(value.length());
+                    } else if (cookies.length() > 0) {
+                        cookies.append("; ");
+                    }
+                    cookies.append(value);
                 } else {
                     output.add(name, value);
                 }
+            }
+        }
+
+        public void translateCookies() {
+            if (cookies != null) {
+                output.add(COOKIE, cookies.toString());
             }
         }
     }
