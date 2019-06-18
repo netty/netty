@@ -66,6 +66,9 @@ abstract class ByteBufChecksum implements Checksum {
 
     static ByteBufChecksum wrapChecksum(Checksum checksum) {
         ObjectUtil.checkNotNull(checksum, "checksum");
+        if (checksum instanceof ByteBufChecksum) {
+            return (ByteBufChecksum) checksum;
+        }
         if (checksum instanceof Adler32 && ADLER32_UPDATE_METHOD != null) {
             return new ReflectiveByteBufChecksum(checksum, ADLER32_UPDATE_METHOD);
         }
