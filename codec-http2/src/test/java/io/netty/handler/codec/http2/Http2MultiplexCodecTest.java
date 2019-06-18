@@ -686,18 +686,36 @@ public class Http2MultiplexCodecTest {
         long bytesBeforeUnwritable = childChannel.bytesBeforeUnwritable();
         assertNotEquals(0, bytesBeforeUnwritable);
         // Add something to the ChannelOutboundBuffer of the parent to simulate queuing in the parents channel buffer
-        // and verify that this also effects the child channel in terms of writability.
+        // and verify that this only affect the writability of the parent channel while the child stays writable
+        // until it used all of its credits.
         parentChannel.unsafe().outboundBuffer().addMessage(
                 Unpooled.buffer().writeZero(800), 800, parentChannel.voidPromise());
         assertFalse(parentChannel.isWritable());
-        assertFalse(childChannel.isWritable());
-        assertEquals(0, childChannel.bytesBeforeUnwritable());
+
+        assertTrue(childChannel.isWritable());
+        assertEquals(4096, childChannel.bytesBeforeUnwritable());
 
         // Flush everything which simulate writing everything to the socket.
         parentChannel.flush();
         assertTrue(parentChannel.isWritable());
         assertTrue(childChannel.isWritable());
         assertEquals(bytesBeforeUnwritable, childChannel.bytesBeforeUnwritable());
+
+        ChannelFuture future = childChannel.writeAndFlush(new DefaultHttp2DataFrame(
+                Unpooled.buffer().writeZero((int) bytesBeforeUnwritable)));
+        assertFalse(childChannel.isWritable());
+        assertTrue(parentChannel.isWritable());
+
+        parentChannel.flush();
+        assertFalse(future.isDone());
+        assertTrue(parentChannel.isWritable());
+        assertFalse(childChannel.isWritable());
+
+        // Now write an window update frame for the stream which then should ensure we will flush the bytes that were
+        // queued in the RemoteFlowController before for the stream.
+        frameInboundWriter.writeInboundWindowUpdate(childChannel.stream().id(), (int) bytesBeforeUnwritable);
+        assertTrue(childChannel.isWritable());
+        assertTrue(future.isDone());
     }
 
     @Test
