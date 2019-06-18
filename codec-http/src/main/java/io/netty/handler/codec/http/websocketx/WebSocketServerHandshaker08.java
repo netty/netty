@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2019 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -36,9 +36,6 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
 
     public static final String WEBSOCKET_08_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-
-    private final boolean allowExtensions;
-    private final boolean allowMaskMismatch;
 
     /**
      * Constructor specifying the destination web socket location
@@ -79,9 +76,27 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
     public WebSocketServerHandshaker08(
             String webSocketURL, String subprotocols, boolean allowExtensions, int maxFramePayloadLength,
             boolean allowMaskMismatch) {
-        super(WebSocketVersion.V08, webSocketURL, subprotocols, maxFramePayloadLength);
-        this.allowExtensions = allowExtensions;
-        this.allowMaskMismatch = allowMaskMismatch;
+        this(webSocketURL, subprotocols, WebSocketDecoderConfig.newBuilder()
+            .allowExtensions(allowExtensions)
+            .maxFramePayloadLength(maxFramePayloadLength)
+            .allowMaskMismatch(allowMaskMismatch)
+            .build());
+    }
+
+    /**
+     * Constructor specifying the destination web socket location
+     *
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath".
+     *            Subsequent web socket frames will be sent to this URL.
+     * @param subprotocols
+     *            CSV of supported protocols
+     * @param decoderConfig
+     *            Frames decoder configuration.
+     */
+    public WebSocketServerHandshaker08(
+        String webSocketURL, String subprotocols, WebSocketDecoderConfig decoderConfig) {
+        super(WebSocketVersion.V08, webSocketURL, subprotocols, decoderConfig);
     }
 
     /**
@@ -158,7 +173,7 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
 
     @Override
     protected WebSocketFrameDecoder newWebsocketDecoder() {
-        return new WebSocket08FrameDecoder(true, allowExtensions, maxFramePayloadLength(), allowMaskMismatch);
+        return new WebSocket08FrameDecoder(decoderConfig());
     }
 
     @Override
