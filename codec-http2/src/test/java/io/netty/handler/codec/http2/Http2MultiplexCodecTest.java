@@ -22,7 +22,9 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpScheme;
@@ -53,6 +55,7 @@ import static io.netty.handler.codec.http2.Http2TestUtil.bb;
 import static io.netty.util.ReferenceCountUtil.release;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -674,38 +677,45 @@ public class Http2MultiplexCodecTest {
         parentChannel.flush();
 
         // Test for initial window size
-        assertEquals(initialRemoteStreamWindow, childChannel.config().getWriteBufferHighWaterMark());
+        assertTrue(initialRemoteStreamWindow < childChannel.config().getWriteBufferHighWaterMark());
 
         assertTrue(childChannel.isWritable());
         childChannel.write(new DefaultHttp2DataFrame(Unpooled.buffer().writeZero(16 * 1024 * 1024)));
+        assertEquals(0, childChannel.bytesBeforeUnwritable());
         assertFalse(childChannel.isWritable());
     }
 
     @Test
-    public void writabilityAndFlowControl() {
-        LastInboundHandler inboundHandler = new LastInboundHandler();
-        Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
-        assertEquals("", inboundHandler.writabilityStates());
-
+    public void writabilityOfParentIsRespected() {
+        Http2StreamChannel childChannel = newOutboundStream(new ChannelInboundHandlerAdapter());
+        childChannel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(2048, 4096));
+        parentChannel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(256, 512));
         assertTrue(childChannel.isWritable());
-        // HEADERS frames are not flow controlled, so they should not affect the flow control window.
+        assertTrue(parentChannel.isActive());
+
         childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()));
-        codec.onHttp2StreamWritabilityChanged(codec.ctx, childChannel.stream(), true);
+        parentChannel.flush();
 
         assertTrue(childChannel.isWritable());
-        assertEquals("", inboundHandler.writabilityStates());
-
-        codec.onHttp2StreamWritabilityChanged(codec.ctx, childChannel.stream(), true);
+        childChannel.write(new DefaultHttp2DataFrame(Unpooled.buffer().writeZero(256)));
         assertTrue(childChannel.isWritable());
-        assertEquals("", inboundHandler.writabilityStates());
+        childChannel.writeAndFlush(new DefaultHttp2DataFrame(Unpooled.buffer().writeZero(512)));
 
-        codec.onHttp2StreamWritabilityChanged(codec.ctx, childChannel.stream(), false);
+        long bytesBeforeUnwritable = childChannel.bytesBeforeUnwritable();
+        assertNotEquals(0, bytesBeforeUnwritable);
+        // Add something to the ChannelOutboundBuffer of the parent to simulate queuing in the parents channel buffer
+        // and verify that this also effects the child channel in terms of writability.
+        parentChannel.unsafe().outboundBuffer().addMessage(
+                Unpooled.buffer().writeZero(800), 800, parentChannel.voidPromise());
+        assertFalse(parentChannel.isWritable());
         assertFalse(childChannel.isWritable());
-        assertEquals("false", inboundHandler.writabilityStates());
+        assertEquals(0, childChannel.bytesBeforeUnwritable());
 
-        codec.onHttp2StreamWritabilityChanged(codec.ctx, childChannel.stream(), false);
-        assertFalse(childChannel.isWritable());
-        assertEquals("false", inboundHandler.writabilityStates());
+        // Flush everything which simulate writing everything to the socket.
+        parentChannel.flush();
+        assertTrue(parentChannel.isWritable());
+        assertTrue(childChannel.isWritable());
+        assertEquals(bytesBeforeUnwritable, childChannel.bytesBeforeUnwritable());
     }
 
     @Test
