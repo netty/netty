@@ -156,6 +156,15 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
     private final ChannelHandler inboundStreamHandler;
     private final ChannelHandler upgradeStreamHandler;
 
+    private final Http2FrameStreamVisitor writableVisitor = new Http2FrameStreamVisitor() {
+        @Override
+        public boolean visit(Http2FrameStream stream) {
+            final DefaultHttp2StreamChannel childChannel = ((Http2MultiplexCodecStream) stream).channel;
+            childChannel.trySetWritable();
+            return true;
+        }
+    };
+
     private boolean parentReadInProgress;
     private int idCount;
 
@@ -394,17 +403,13 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
     @Override
     public final void channelWritabilityChanged(final ChannelHandlerContext ctx) throws Exception {
-        forEachActiveStream(new Http2FrameStreamVisitor() {
-            @Override
-            public boolean visit(Http2FrameStream stream) {
-                final DefaultHttp2StreamChannel childChannel = ((Http2MultiplexCodecStream) stream).channel;
-                // As the writability may change during visiting active streams we need to ensure we always fetch
-                // the current writability state of the channel.
-                childChannel.updateWritability(ctx.channel().isWritable());
-                return true;
-            }
-        });
-        super.channelWritabilityChanged(ctx);
+        if (ctx.channel().isWritable()) {
+            // While the writability state may change during iterating of the streams we just set all of the streams
+            // to writable to not affect fairness. These will be "limited" by their own watermarks in any case.
+            forEachActiveStream(writableVisitor);
+        }
+
+        ctx.fireChannelWritabilityChanged();
     }
 
     final void onChannelReadComplete(ChannelHandlerContext ctx)  {
@@ -529,28 +534,17 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
             // as writable again. Before doing so we also need to ensure the parent channel is writable to
             // prevent excessive buffering in the parent outbound buffer. If the parent is not writable
             // we will mark the child channel as writable once the parent becomes writable by calling
-            // updateWritability later.
+            // trySetWritable() later.
             if (newWriteBufferSize < config().getWriteBufferLowWaterMark() && parent().isWritable()) {
                 setWritable(invokeLater);
             }
         }
 
-        void updateWritability(boolean parentIsWritable) {
-            if (parentIsWritable) {
-                // The parent is writable again but the child channel itself may still not be writable.
-                // Lets try to set the child channel writable to match the state of the parent channel
-                // if (and only if) the totalPendingSize is smaller then the low water-mark.
-                // If this is not the case we will try again later once we drop under it.
-                trySetWritable();
-            } else {
-                // No matter what the current totalPendingSize for the child channel is as soon as the parent
-                // channel is unwritable we also need to mark the child channel as unwritable to try to keep
-                // buffering to a minimum.
-                setUnwritable(false);
-            }
-        }
-
-        private void trySetWritable() {
+        void trySetWritable() {
+            // The parent is writable again but the child channel itself may still not be writable.
+            // Lets try to set the child channel writable to match the state of the parent channel
+            // if (and only if) the totalPendingSize is smaller then the low water-mark.
+            // If this is not the case we will try again later once we drop under it.
             if (totalPendingSize < config().getWriteBufferLowWaterMark()) {
                 setWritable(false);
             }
@@ -634,7 +628,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
         @Override
         public boolean isWritable() {
-            return unwritable == 0 && parent().isWritable();
+            return unwritable == 0;
         }
 
         @Override
