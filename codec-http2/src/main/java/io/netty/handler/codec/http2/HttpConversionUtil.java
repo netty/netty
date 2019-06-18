@@ -360,10 +360,7 @@ public final class HttpConversionUtil {
             HttpVersion httpVersion, boolean isTrailer, boolean isRequest) throws Http2Exception {
         Http2ToHttpHeaderTranslator translator = new Http2ToHttpHeaderTranslator(streamId, outputHeaders, isRequest);
         try {
-            for (Entry<CharSequence, CharSequence> entry : inputHeaders) {
-                translator.translate(entry);
-            }
-            translator.translateCookies();
+            translator.translateHeaders(inputHeaders);
         } catch (Http2Exception ex) {
             throw ex;
         } catch (Throwable t) {
@@ -624,7 +621,16 @@ public final class HttpConversionUtil {
             translations = request ? REQUEST_HEADER_TRANSLATIONS : RESPONSE_HEADER_TRANSLATIONS;
         }
 
-        public void translate(Entry<CharSequence, CharSequence> entry) throws Http2Exception {
+        public void translateHeaders(Iterable<Entry<CharSequence, CharSequence>> inputHeaders) throws Http2Exception {
+            for (Entry<CharSequence, CharSequence> entry : inputHeaders) {
+                translateHeader(entry);
+            }
+            if (cookies != null) {
+                output.add(COOKIE, cookies.toString());
+            }
+        }
+
+        private void translateHeader(Entry<CharSequence, CharSequence> entry) throws Http2Exception {
             final CharSequence name = entry.getKey();
             final CharSequence value = entry.getValue();
             AsciiString translatedName = translations.get(name);
@@ -641,7 +647,8 @@ public final class HttpConversionUtil {
                     // combine the cookie values into 1 header entry.
                     // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
                     if (cookies == null) {
-                        cookies = new StringBuilder(value.length());
+                        // sized to leave space for further growth.
+                        cookies = new StringBuilder(value.length() + 512);
                     } else if (cookies.length() > 0) {
                         cookies.append("; ");
                     }
@@ -649,12 +656,6 @@ public final class HttpConversionUtil {
                 } else {
                     output.add(name, value);
                 }
-            }
-        }
-
-        public void translateCookies() {
-            if (cookies != null) {
-                output.add(COOKIE, cookies.toString());
             }
         }
     }
