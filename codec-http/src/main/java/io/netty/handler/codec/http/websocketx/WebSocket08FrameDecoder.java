@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2019 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -58,8 +58,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.TooLongFrameException;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -93,10 +93,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
     private static final byte OPCODE_PING = 0x9;
     private static final byte OPCODE_PONG = 0xA;
 
-    private final long maxFramePayloadLength;
-    private final boolean allowExtensions;
-    private final boolean expectMaskedFrames;
-    private final boolean allowMaskMismatch;
+    private final WebSocketDecoderConfig config;
 
     private int fragmentedFramesCount;
     private boolean frameFinalFlag;
@@ -142,10 +139,22 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
      */
     public WebSocket08FrameDecoder(boolean expectMaskedFrames, boolean allowExtensions, int maxFramePayloadLength,
                                    boolean allowMaskMismatch) {
-        this.expectMaskedFrames = expectMaskedFrames;
-        this.allowMaskMismatch = allowMaskMismatch;
-        this.allowExtensions = allowExtensions;
-        this.maxFramePayloadLength = maxFramePayloadLength;
+        this(WebSocketDecoderConfig.newBuilder()
+            .expectMaskedFrames(expectMaskedFrames)
+            .allowExtensions(allowExtensions)
+            .maxFramePayloadLength(maxFramePayloadLength)
+            .allowMaskMismatch(allowMaskMismatch)
+            .build());
+    }
+
+    /**
+     * Constructor
+     *
+     * @param decoderConfig
+     *            Frames decoder configuration.
+     */
+    public WebSocket08FrameDecoder(WebSocketDecoderConfig decoderConfig) {
+        this.config = ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
     }
 
     @Override
@@ -184,13 +193,13 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
             frameMasked = (b & 0x80) != 0;
             framePayloadLen1 = b & 0x7F;
 
-            if (frameRsv != 0 && !allowExtensions) {
-                protocolViolation(ctx, "RSV != 0 and no extension negotiated, RSV:" + frameRsv);
+            if (frameRsv != 0 && !config.allowExtensions()) {
+                protocolViolation(ctx, in, "RSV != 0 and no extension negotiated, RSV:" + frameRsv);
                 return;
             }
 
-            if (!allowMaskMismatch && expectMaskedFrames != frameMasked) {
-                protocolViolation(ctx, "received a frame that is not masked as expected");
+            if (!config.allowMaskMismatch() && config.expectMaskedFrames() != frameMasked) {
+                protocolViolation(ctx, in, "received a frame that is not masked as expected");
                 return;
             }
 
@@ -198,20 +207,20 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
 
                 // control frames MUST NOT be fragmented
                 if (!frameFinalFlag) {
-                    protocolViolation(ctx, "fragmented control frame");
+                    protocolViolation(ctx, in, "fragmented control frame");
                     return;
                 }
 
                 // control frames MUST have payload 125 octets or less
                 if (framePayloadLen1 > 125) {
-                    protocolViolation(ctx, "control frame with payload length > 125 octets");
+                    protocolViolation(ctx, in, "control frame with payload length > 125 octets");
                     return;
                 }
 
                 // check for reserved control frame opcodes
                 if (!(frameOpcode == OPCODE_CLOSE || frameOpcode == OPCODE_PING
                       || frameOpcode == OPCODE_PONG)) {
-                    protocolViolation(ctx, "control frame using reserved opcode " + frameOpcode);
+                    protocolViolation(ctx, in, "control frame using reserved opcode " + frameOpcode);
                     return;
                 }
 
@@ -219,26 +228,26 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 // body MUST be a 2-byte unsigned integer (in network byte
                 // order) representing a getStatus code
                 if (frameOpcode == 8 && framePayloadLen1 == 1) {
-                    protocolViolation(ctx, "received close control frame with payload len 1");
+                    protocolViolation(ctx, in, "received close control frame with payload len 1");
                     return;
                 }
             } else { // data frame
                 // check for reserved data frame opcodes
                 if (!(frameOpcode == OPCODE_CONT || frameOpcode == OPCODE_TEXT
                       || frameOpcode == OPCODE_BINARY)) {
-                    protocolViolation(ctx, "data frame using reserved opcode " + frameOpcode);
+                    protocolViolation(ctx, in, "data frame using reserved opcode " + frameOpcode);
                     return;
                 }
 
                 // check opcode vs message fragmentation state 1/2
                 if (fragmentedFramesCount == 0 && frameOpcode == OPCODE_CONT) {
-                    protocolViolation(ctx, "received continuation data frame outside fragmented message");
+                    protocolViolation(ctx, in, "received continuation data frame outside fragmented message");
                     return;
                 }
 
                 // check opcode vs message fragmentation state 2/2
                 if (fragmentedFramesCount != 0 && frameOpcode != OPCODE_CONT && frameOpcode != OPCODE_PING) {
-                    protocolViolation(ctx,
+                    protocolViolation(ctx, in,
                                       "received non-continuation data frame while inside fragmented message");
                     return;
                 }
@@ -254,7 +263,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 }
                 framePayloadLength = in.readUnsignedShort();
                 if (framePayloadLength < 126) {
-                    protocolViolation(ctx, "invalid data frame length (not using minimal length encoding)");
+                    protocolViolation(ctx, in, "invalid data frame length (not using minimal length encoding)");
                     return;
                 }
             } else if (framePayloadLen1 == 127) {
@@ -266,15 +275,16 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 // just check if it's negative?
 
                 if (framePayloadLength < 65536) {
-                    protocolViolation(ctx, "invalid data frame length (not using minimal length encoding)");
+                    protocolViolation(ctx, in, "invalid data frame length (not using minimal length encoding)");
                     return;
                 }
             } else {
                 framePayloadLength = framePayloadLen1;
             }
 
-            if (framePayloadLength > maxFramePayloadLength) {
-                protocolViolation(ctx, "Max frame length of " + maxFramePayloadLength + " has been exceeded.");
+            if (framePayloadLength > config.maxFramePayloadLength()) {
+                protocolViolation(ctx, in, WebSocketCloseStatus.MESSAGE_TOO_BIG,
+                    "Max frame length of " + config.maxFramePayloadLength() + " has been exceeded.");
                 return;
             }
 
@@ -408,18 +418,33 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
         }
     }
 
-    private void protocolViolation(ChannelHandlerContext ctx, String reason) {
-        protocolViolation(ctx, new CorruptedFrameException(reason));
+    private void protocolViolation(ChannelHandlerContext ctx, ByteBuf in, String reason) {
+        protocolViolation(ctx, in, WebSocketCloseStatus.PROTOCOL_ERROR, reason);
     }
 
-    private void protocolViolation(ChannelHandlerContext ctx, CorruptedFrameException ex) {
+    private void protocolViolation(ChannelHandlerContext ctx, ByteBuf in, WebSocketCloseStatus status, String reason) {
+        protocolViolation(ctx, in, new CorruptedWebSocketFrameException(status, reason));
+    }
+
+    private void protocolViolation(ChannelHandlerContext ctx, ByteBuf in, CorruptedWebSocketFrameException ex) {
         state = State.CORRUPT;
-        if (ctx.channel().isActive()) {
+        int readableBytes = in.readableBytes();
+        if (readableBytes > 0) {
+            // Fix for memory leak, caused by ByteToMessageDecoder#channelRead:
+            // buffer 'cumulation' is released ONLY when no more readable bytes available.
+            in.skipBytes(readableBytes);
+        }
+        if (ctx.channel().isActive() && config.closeOnProtocolViolation()) {
             Object closeMessage;
             if (receivedClosingHandshake) {
                 closeMessage = Unpooled.EMPTY_BUFFER;
             } else {
-                closeMessage = new CloseWebSocketFrame(1002, null);
+                WebSocketCloseStatus closeStatus = ex.closeStatus();
+                String reasonText = ex.getMessage();
+                if (reasonText == null) {
+                    reasonText = closeStatus.reasonText();
+                }
+                closeMessage = new CloseWebSocketFrame(closeStatus, reasonText);
             }
             ctx.writeAndFlush(closeMessage).addListener(ChannelFutureListener.CLOSE);
         }
@@ -441,7 +466,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
             return;
         }
         if (buffer.readableBytes() == 1) {
-            protocolViolation(ctx, "Invalid close frame body");
+            protocolViolation(ctx, buffer, WebSocketCloseStatus.INVALID_PAYLOAD_DATA, "Invalid close frame body");
         }
 
         // Save reader index
@@ -450,17 +475,16 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
 
         // Must have 2 byte integer within the valid range
         int statusCode = buffer.readShort();
-        if (statusCode >= 0 && statusCode <= 999 || statusCode >= 1004 && statusCode <= 1006
-                || statusCode >= 1015 && statusCode <= 2999) {
-            protocolViolation(ctx, "Invalid close frame getStatus code: " + statusCode);
+        if (!WebSocketCloseStatus.isValidStatusCode(statusCode)) {
+            protocolViolation(ctx, buffer, "Invalid close frame getStatus code: " + statusCode);
         }
 
         // May have UTF-8 message
         if (buffer.isReadable()) {
             try {
                 new Utf8Validator().check(buffer);
-            } catch (CorruptedFrameException ex) {
-                protocolViolation(ctx, ex);
+            } catch (CorruptedWebSocketFrameException ex) {
+                protocolViolation(ctx, buffer, ex);
             }
         }
 
