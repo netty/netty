@@ -26,6 +26,7 @@ import java.util.zip.Adler32;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
+import static io.netty.handler.codec.compression.Lz4Constants.DEFAULT_SEED;
 import static org.junit.Assert.*;
 
 public class ByteBufChecksumTest {
@@ -51,7 +52,14 @@ public class ByteBufChecksumTest {
 
     private static void testUpdate(ByteBuf buf) {
         try {
-            testUpdate(xxHash32(), ByteBufChecksum.wrapChecksum(xxHash32()), buf);
+            // all variations of xxHash32: slow and naive, optimised, wrapped optimised;
+            // the last two should be literally identical, but it's best to guard against
+            // an accidental regression in ByteBufChecksum#wrapChecksum(Checksum)
+            testUpdate(xxHash32(DEFAULT_SEED), ByteBufChecksum.wrapChecksum(xxHash32(DEFAULT_SEED)), buf);
+            testUpdate(xxHash32(DEFAULT_SEED), new Lz4XXHash32(DEFAULT_SEED), buf);
+            testUpdate(xxHash32(DEFAULT_SEED), ByteBufChecksum.wrapChecksum(new Lz4XXHash32(DEFAULT_SEED)), buf);
+
+            // CRC32 and Adler32, special-cased to use ReflectiveByteBufChecksum
             testUpdate(new CRC32(), ByteBufChecksum.wrapChecksum(new CRC32()), buf);
             testUpdate(new Adler32(), ByteBufChecksum.wrapChecksum(new Adler32()), buf);
         } finally {
@@ -76,7 +84,7 @@ public class ByteBufChecksumTest {
         assertEquals(checksum.getValue(), wrapped.getValue());
     }
 
-    private static Checksum xxHash32() {
-        return XXHashFactory.fastestInstance().newStreamingHash32(Lz4Constants.DEFAULT_SEED).asChecksum();
+    private static Checksum xxHash32(int seed) {
+        return XXHashFactory.fastestInstance().newStreamingHash32(seed).asChecksum();
     }
 }

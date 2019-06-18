@@ -21,7 +21,6 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import net.jpountz.lz4.LZ4Exception;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
-import net.jpountz.xxhash.XXHashFactory;
 
 import java.util.List;
 import java.util.zip.Checksum;
@@ -124,9 +123,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
      *                           <a href="https://github.com/Cyan4973/xxHash">Github</a>.
      */
     public Lz4FrameDecoder(LZ4Factory factory, boolean validateChecksums) {
-        this(factory, validateChecksums ?
-                XXHashFactory.fastestInstance().newStreamingHash32(DEFAULT_SEED).asChecksum()
-              : null);
+        this(factory, validateChecksums ? new Lz4XXHash32(DEFAULT_SEED) : null);
     }
 
     /**
