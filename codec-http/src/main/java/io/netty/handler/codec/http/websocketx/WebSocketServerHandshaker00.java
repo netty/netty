@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2019 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -60,7 +60,24 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
      *            reduce denial of service attacks using long data frames.
      */
     public WebSocketServerHandshaker00(String webSocketURL, String subprotocols, int maxFramePayloadLength) {
-        super(WebSocketVersion.V00, webSocketURL, subprotocols, maxFramePayloadLength);
+        this(webSocketURL, subprotocols, WebSocketDecoderConfig.newBuilder()
+            .maxFramePayloadLength(maxFramePayloadLength)
+            .build());
+    }
+
+    /**
+     * Constructor specifying the destination web socket location
+     *
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param subprotocols
+     *            CSV of supported protocols
+     * @param decoderConfig
+     *            Frames decoder configuration.
+     */
+    public WebSocketServerHandshaker00(String webSocketURL, String subprotocols, WebSocketDecoderConfig decoderConfig) {
+        super(WebSocketVersion.V00, webSocketURL, subprotocols, decoderConfig);
     }
 
     /**
@@ -189,7 +206,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
 
     @Override
     protected WebSocketFrameDecoder newWebsocketDecoder() {
-        return new WebSocket00FrameDecoder(maxFramePayloadLength());
+        return new WebSocket00FrameDecoder(decoderConfig());
     }
 
     @Override

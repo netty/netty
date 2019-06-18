@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2019 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -36,7 +36,6 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.util.ByteProcessor;
 
 /**
@@ -79,7 +78,8 @@ final class Utf8Validator implements ByteProcessor {
         codep = 0;
         if (state != UTF8_ACCEPT) {
             state = UTF8_ACCEPT;
-            throw new CorruptedFrameException("bytes are not UTF-8");
+            throw new CorruptedWebSocketFrameException(
+                WebSocketCloseStatus.INVALID_PAYLOAD_DATA, "bytes are not UTF-8");
         }
     }
 
@@ -93,7 +93,8 @@ final class Utf8Validator implements ByteProcessor {
 
         if (state == UTF8_REJECT) {
             checking = false;
-            throw new CorruptedFrameException("bytes are not UTF-8");
+            throw new CorruptedWebSocketFrameException(
+                WebSocketCloseStatus.INVALID_PAYLOAD_DATA, "bytes are not UTF-8");
         }
         return true;
     }
