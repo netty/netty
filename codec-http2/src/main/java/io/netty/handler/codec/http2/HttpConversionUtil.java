@@ -606,9 +606,6 @@ public final class HttpConversionUtil {
         private final HttpHeaders output;
         private final CharSequenceMap<AsciiString> translations;
 
-        // lazily created as needed
-        private StringBuilder cookies;
-
         /**
          * Create a new instance
          *
@@ -623,8 +620,35 @@ public final class HttpConversionUtil {
         }
 
         public void translateHeaders(Iterable<Entry<CharSequence, CharSequence>> inputHeaders) throws Http2Exception {
+            // lazily created as needed
+            StringBuilder cookies = null;
+
             for (Entry<CharSequence, CharSequence> entry : inputHeaders) {
-                translateHeader(entry);
+                final CharSequence name = entry.getKey();
+                final CharSequence value = entry.getValue();
+                AsciiString translatedName = translations.get(name);
+                if (translatedName != null) {
+                    output.add(translatedName, AsciiString.of(value));
+                } else if (!Http2Headers.PseudoHeaderName.isPseudoHeader(name)) {
+                    // https://tools.ietf.org/html/rfc7540#section-8.1.2.3
+                    // All headers that start with ':' are only valid in HTTP/2 context
+                    if (name.length() == 0 || name.charAt(0) == ':') {
+                        throw streamError(streamId, PROTOCOL_ERROR,
+                                "Invalid HTTP/2 header '%s' encountered in translation to HTTP/1.x", name);
+                    }
+                    if (COOKIE.equals(name)) {
+                        // combine the cookie values into 1 header entry.
+                        // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
+                        if (cookies == null) {
+                            cookies = InternalThreadLocalMap.get().stringBuilder();
+                        } else if (cookies.length() > 0) {
+                            cookies.append("; ");
+                        }
+                        cookies.append(value);
+                    } else {
+                        output.add(name, value);
+                    }
+                }
             }
             if (cookies != null) {
                 output.add(COOKIE, cookies.toString());
@@ -632,31 +656,6 @@ public final class HttpConversionUtil {
         }
 
         private void translateHeader(Entry<CharSequence, CharSequence> entry) throws Http2Exception {
-            final CharSequence name = entry.getKey();
-            final CharSequence value = entry.getValue();
-            AsciiString translatedName = translations.get(name);
-            if (translatedName != null) {
-                output.add(translatedName, AsciiString.of(value));
-            } else if (!Http2Headers.PseudoHeaderName.isPseudoHeader(name)) {
-                // https://tools.ietf.org/html/rfc7540#section-8.1.2.3
-                // All headers that start with ':' are only valid in HTTP/2 context
-                if (name.length() == 0 || name.charAt(0) == ':') {
-                    throw streamError(streamId, PROTOCOL_ERROR,
-                            "Invalid HTTP/2 header '%s' encountered in translation to HTTP/1.x", name);
-                }
-                if (COOKIE.equals(name)) {
-                    // combine the cookie values into 1 header entry.
-                    // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
-                    if (cookies == null) {
-                        cookies = InternalThreadLocalMap.get().stringBuilder();
-                    } else if (cookies.length() > 0) {
-                        cookies.append("; ");
-                    }
-                    cookies.append(value);
-                } else {
-                    output.add(name, value);
-                }
-            }
         }
     }
 }
