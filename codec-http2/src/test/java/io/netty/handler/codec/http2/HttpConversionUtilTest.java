@@ -17,10 +17,12 @@ package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
 import org.junit.Test;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaderNames.COOKIE;
 import static io.netty.handler.codec.http.HttpHeaderNames.TE;
 import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
 import static io.netty.handler.codec.http.HttpHeaderValues.TRAILERS;
@@ -142,5 +144,19 @@ public class HttpConversionUtilTest {
         HttpConversionUtil.toHttp2Headers(inHeaders, out);
         assertEquals(1, out.size());
         assertSame("world", out.get("hello"));
+    }
+
+    @Test
+    public void addHttp2ToHttpHeadersCombinesCookies() throws Http2Exception {
+        Http2Headers inHeaders = new DefaultHttp2Headers();
+        inHeaders.add("yes", "no");
+        inHeaders.add(COOKIE, "foo=bar");
+        inHeaders.add(COOKIE, "bax=baz");
+
+        HttpHeaders outHeaders = new DefaultHttpHeaders();
+
+        HttpConversionUtil.addHttp2ToHttpHeaders(5, inHeaders, outHeaders, HttpVersion.HTTP_1_1, false, false);
+        assertEquals("no", outHeaders.get("yes"));
+        assertEquals("foo=bar; bax=baz", outHeaders.get(COOKIE.toString()));
     }
 }
