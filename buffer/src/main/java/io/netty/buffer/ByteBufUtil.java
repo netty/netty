@@ -535,6 +535,8 @@ public final class ByteBufUtil {
      * Equivalent to <code>{@link #reserveAndWriteUtf8(ByteBuf, CharSequence, int)
      * reserveAndWriteUtf8(buf, seq.subSequence(start, end), reserveBytes)}</code> but avoids
      * subsequence object allocation if possible.
+     *
+     * @return actual number of bytes written
      */
     public static int reserveAndWriteUtf8(ByteBuf buf, CharSequence seq, int start, int end, int reserveBytes) {
         return reserveAndWriteUtf8Seq(buf, checkCharSequenceBounds(seq, start, end), start, end, reserveBytes);
@@ -665,7 +667,7 @@ public final class ByteBufUtil {
             ++i;
         }
         // !ASCII is packed in a separate method to let the ASCII case be smaller
-        return i < end ? i + utf8BytesNonAscii(seq, i, end) : i;
+        return i < end ? (i - start) + utf8BytesNonAscii(seq, i, end) : i - start;
     }
 
     private static int utf8BytesNonAscii(final CharSequence seq, final int start, final int end) {
