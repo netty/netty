@@ -33,6 +33,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
+import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.URI;
@@ -360,9 +361,7 @@ public final class HttpConversionUtil {
             HttpVersion httpVersion, boolean isTrailer, boolean isRequest) throws Http2Exception {
         Http2ToHttpHeaderTranslator translator = new Http2ToHttpHeaderTranslator(streamId, outputHeaders, isRequest);
         try {
-            for (Entry<CharSequence, CharSequence> entry : inputHeaders) {
-                translator.translate(entry);
-            }
+            translator.translateHeaders(inputHeaders);
         } catch (Http2Exception ex) {
             throw ex;
         } catch (Throwable t) {
@@ -620,29 +619,43 @@ public final class HttpConversionUtil {
             translations = request ? REQUEST_HEADER_TRANSLATIONS : RESPONSE_HEADER_TRANSLATIONS;
         }
 
-        public void translate(Entry<CharSequence, CharSequence> entry) throws Http2Exception {
-            final CharSequence name = entry.getKey();
-            final CharSequence value = entry.getValue();
-            AsciiString translatedName = translations.get(name);
-            if (translatedName != null) {
-                output.add(translatedName, AsciiString.of(value));
-            } else if (!Http2Headers.PseudoHeaderName.isPseudoHeader(name)) {
-                // https://tools.ietf.org/html/rfc7540#section-8.1.2.3
-                // All headers that start with ':' are only valid in HTTP/2 context
-                if (name.length() == 0 || name.charAt(0) == ':') {
-                    throw streamError(streamId, PROTOCOL_ERROR,
-                            "Invalid HTTP/2 header '%s' encountered in translation to HTTP/1.x", name);
-                }
-                if (COOKIE.equals(name)) {
-                    // combine the cookie values into 1 header entry.
-                    // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
-                    String existingCookie = output.get(COOKIE);
-                    output.set(COOKIE,
-                               (existingCookie != null) ? (existingCookie + "; " + value) : value);
-                } else {
-                    output.add(name, value);
+        public void translateHeaders(Iterable<Entry<CharSequence, CharSequence>> inputHeaders) throws Http2Exception {
+            // lazily created as needed
+            StringBuilder cookies = null;
+
+            for (Entry<CharSequence, CharSequence> entry : inputHeaders) {
+                final CharSequence name = entry.getKey();
+                final CharSequence value = entry.getValue();
+                AsciiString translatedName = translations.get(name);
+                if (translatedName != null) {
+                    output.add(translatedName, AsciiString.of(value));
+                } else if (!Http2Headers.PseudoHeaderName.isPseudoHeader(name)) {
+                    // https://tools.ietf.org/html/rfc7540#section-8.1.2.3
+                    // All headers that start with ':' are only valid in HTTP/2 context
+                    if (name.length() == 0 || name.charAt(0) == ':') {
+                        throw streamError(streamId, PROTOCOL_ERROR,
+                                "Invalid HTTP/2 header '%s' encountered in translation to HTTP/1.x", name);
+                    }
+                    if (COOKIE.equals(name)) {
+                        // combine the cookie values into 1 header entry.
+                        // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
+                        if (cookies == null) {
+                            cookies = InternalThreadLocalMap.get().stringBuilder();
+                        } else if (cookies.length() > 0) {
+                            cookies.append("; ");
+                        }
+                        cookies.append(value);
+                    } else {
+                        output.add(name, value);
+                    }
                 }
             }
+            if (cookies != null) {
+                output.add(COOKIE, cookies.toString());
+            }
+        }
+
+        private void translateHeader(Entry<CharSequence, CharSequence> entry) throws Http2Exception {
         }
     }
 }
