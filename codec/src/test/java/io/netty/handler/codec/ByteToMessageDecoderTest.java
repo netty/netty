@@ -20,9 +20,9 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.buffer.UnpooledHeapByteBuf;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.Test;
@@ -350,7 +350,7 @@ public class ByteToMessageDecoderTest {
 
     @Test
     public void testDoesNotOverRead() {
-        class ReadInterceptingHandler extends ChannelDuplexHandler {
+        class ReadInterceptingHandler extends ChannelOutboundHandlerAdapter {
             private int readsTriggered;
 
             @Override
@@ -395,6 +395,7 @@ public class ByteToMessageDecoderTest {
             assertEquals(i * 3 + 0, read.getByte(0));
             assertEquals(i * 3 + 1, read.getByte(1));
             assertEquals(i * 3 + 2, read.getByte(2));
+            read.release();
         }
         assertFalse(channel.finish());
     }
