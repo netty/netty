@@ -365,30 +365,20 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
      */
     private static String ipBytesToString(ByteBuf header, int addressLen) {
         StringBuilder sb = new StringBuilder();
-        if (addressLen == 4) {
-            sb.append(header.readByte() & 0xff);
-            sb.append('.');
-            sb.append(header.readByte() & 0xff);
-            sb.append('.');
-            sb.append(header.readByte() & 0xff);
-            sb.append('.');
-            sb.append(header.readByte() & 0xff);
+        final int ipv4Len = 4;
+        final int ipv6Len = 8;
+        if (addressLen == ipv4Len) {
+            for (int i = 0; i < ipv4Len; i++) {
+                sb.append(header.readByte() & 0xff);
+                sb.append('.');
+            }
+            sb.setLength(sb.length() - 1);
         } else {
-            sb.append(Integer.toHexString(header.readUnsignedShort()));
-            sb.append(':');
-            sb.append(Integer.toHexString(header.readUnsignedShort()));
-            sb.append(':');
-            sb.append(Integer.toHexString(header.readUnsignedShort()));
-            sb.append(':');
-            sb.append(Integer.toHexString(header.readUnsignedShort()));
-            sb.append(':');
-            sb.append(Integer.toHexString(header.readUnsignedShort()));
-            sb.append(':');
-            sb.append(Integer.toHexString(header.readUnsignedShort()));
-            sb.append(':');
-            sb.append(Integer.toHexString(header.readUnsignedShort()));
-            sb.append(':');
-            sb.append(Integer.toHexString(header.readUnsignedShort()));
+            for (int i = 0; i < ipv6Len; i++) {
+                sb.append(Integer.toHexString(header.readUnsignedShort()));
+                sb.append(':');
+            }
+            sb.setLength(sb.length() - 1);
         }
         return sb.toString();
     }
