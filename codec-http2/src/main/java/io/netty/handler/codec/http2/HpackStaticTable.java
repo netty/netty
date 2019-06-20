@@ -38,6 +38,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static io.netty.handler.codec.http2.HpackUtil.equalsConstantTime;
+import static io.netty.handler.codec.http2.HpackUtil.equalsVariableTime;
 
 final class HpackStaticTable {
 
@@ -145,7 +146,7 @@ final class HpackStaticTable {
      * Returns the index value for the given header field in the static table. Returns -1 if the
      * header field is not in the static table.
      */
-    static int getIndex(CharSequence name, CharSequence value) {
+    static int getIndexInsensitive(CharSequence name, CharSequence value) {
         int index = getIndex(name);
         if (index == -1) {
             return -1;
@@ -154,10 +155,7 @@ final class HpackStaticTable {
         // Note this assumes all entries for a given header field are sequential.
         while (index <= length) {
             HpackHeaderField entry = getEntry(index);
-            if (equalsConstantTime(name, entry.name) == 0) {
-                break;
-            }
-            if (equalsConstantTime(value, entry.value) != 0) {
+            if (equalsVariableTime(name, entry.name) && equalsVariableTime(value, entry.value)) {
                 return index;
             }
             index++;
