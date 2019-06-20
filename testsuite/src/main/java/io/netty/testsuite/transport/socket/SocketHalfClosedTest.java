@@ -229,7 +229,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         }
     }
 
-    @Test
+    @Test(timeout = 20000)
     public void testAutoCloseFalseDoesShutdownOutput() throws Throwable {
         // This test only works on Linux / BSD / MacOS as we assume some semantics that are not true for Windows.
         Assume.assumeFalse(PlatformDependent.isWindows());

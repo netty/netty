@@ -208,6 +208,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
     }
 
+    protected final Queue<Runnable> taskQueue() {
+        return taskQueue;
+    }
+
     /**
      * @see Queue#poll()
      */
@@ -443,6 +447,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      */
     @UnstableApi
     protected void afterRunningAllTasks() { }
+
     /**
      * Returns the amount of time left until the scheduled task with the closest dead line is executed.
      */
@@ -457,7 +462,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     /**
      * Returns the absolute point in time (relative to {@link #nanoTime()}) at which the the next
-     * closest scheduled task should run.
+     * closest scheduled task should run, or one second in the future if there are none.
      */
     @UnstableApi
     protected long deadlineNanos() {
@@ -466,6 +471,22 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             return nanoTime() + SCHEDULE_PURGE_INTERVAL;
         }
         return scheduledTask.deadlineNanos();
+    }
+
+    /**
+     * Returns the absolute point in time (relative to {@link #nanoTime()}) at which the the next
+     * closest scheduled task should run, or -1 if there are none.
+     */
+    protected long rawDeadlineNanos() {
+        ScheduledFutureTask<?> scheduledTask = peekScheduledTask();
+        return scheduledTask != null ? scheduledTask.deadlineNanos() : -1L;
+    }
+
+    /**
+     * @return (System#nanoTime() - ScheduledFutureTask#nanoTime())
+     */
+    protected static long nanoTimeBase() {
+        return ScheduledFutureTask.nanoTimeBase();
     }
 
     /**

@@ -18,6 +18,7 @@ package io.netty.microbench.channel.epoll;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -27,23 +28,38 @@ import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.microbench.util.AbstractMicrobenchmark;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.GroupThreads;
-import org.openjdk.jmh.annotations.Setup;
-import org.openjdk.jmh.annotations.TearDown;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
+import org.openjdk.jmh.annotations.Threads;
+import org.openjdk.jmh.annotations.Warmup;
+
+@Warmup(iterations = 10, time = 1500, timeUnit = TimeUnit.MILLISECONDS)
+@Measurement(iterations = 10, time = 2000, timeUnit = TimeUnit.MILLISECONDS)
+@State(Scope.Benchmark)
+@Fork(2)
 public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
-    private static final Runnable runnable = new Runnable() {
-        @Override
-        public void run() { }
-    };
+
+    @Override
+    protected String[] jvmArgs() {
+        // Ensure we minimize the GC overhead by sizing the heap big enough.
+        return new String[] { "-Xmx8g", "-Xms8g", "-Xmn6g" };
+    }
 
     private EpollEventLoopGroup group;
     private Channel serverChan;
     private Channel chan;
-    private ByteBuf abyte;
     private ScheduledFuture<?> future;
 
     @Setup
@@ -123,9 +139,6 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
         .connect(serverChan.localAddress())
         .sync()
         .channel();
-
-        abyte = chan.alloc().directBuffer(1);
-        abyte.writeByte('a');
     }
 
     @TearDown
@@ -134,22 +147,67 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
         serverChan.close().sync();
         future.cancel(true);
         group.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
-        abyte.release();
     }
 
     @Benchmark
-    public Object pingPong() throws Exception {
-        return chan.pipeline().writeAndFlush(abyte.retainedSlice()).sync();
+    public Object pingPong(PerThreadState state) throws Exception {
+        return spinWait(chan.pipeline().writeAndFlush(state.unReleasable.readerIndex(0)));
     }
 
     @Benchmark
-    public Object executeSingle() throws Exception {
-        return chan.eventLoop().submit(runnable).get();
+    public Object executeSingle(PerThreadState state) throws Exception {
+        state.reset();
+        chan.eventLoop().execute(state.runnable);
+        return state.spinUntilDone();
     }
 
     @Benchmark
-    @GroupThreads(3)
-    public Object executeMulti() throws Exception {
-        return chan.eventLoop().submit(runnable).get();
+    @Threads(3)
+    public Object executeMulti(PerThreadState state) throws Exception {
+        return executeSingle(state);
+    }
+
+    static <T> T spinWait(Future<T> future) throws ExecutionException, InterruptedException {
+        while (!future.isDone()) ;
+        return future.get();
+    }
+
+    @State(Scope.Thread)
+    public static class PerThreadState {
+        ByteBuf abyte;
+        ByteBuf unReleasable;
+
+        final AtomicBoolean done = new AtomicBoolean();
+
+        final Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                done.set(true);
+            }
+        };
+
+        void reset() {
+            done.lazySet(false);
+        }
+
+        boolean spinUntilDone() {
+            for (;;) {
+                boolean isDone = done.get();
+                if (isDone) {
+                    return isDone;
+                }
+            }
+        }
+
+        @Setup
+        public void setup(EpollSocketChannelBenchmark bench) {
+            abyte = bench.chan.alloc().directBuffer(1).writeByte('a');
+            unReleasable = Unpooled.unreleasableBuffer(abyte);
+        }
+
+        @TearDown
+        public void tearDown() throws Exception {
+            abyte.release();
+        }
     }
 }

@@ -795,6 +795,7 @@
         <artifactId>animal-sniffer-maven-plugin</artifactId>
         <version>1.16</version>
         <configuration>
+          <skip>true</skip>
           <signature>
             <groupId>org.codehaus.mojo.signature</groupId>
             <artifactId>java16</artifactId>
@@ -898,6 +899,7 @@
             </goals>
             <phase>validate</phase>
             <configuration>
+              <skip>true</skip>
               <consoleOutput>true</consoleOutput>
               <logViolationsToConsole>true</logViolationsToConsole>
               <failsOnError>true</failsOnError>
@@ -1467,6 +1469,7 @@
             <execution>
               <id>check-forbidden-apis</id>
               <configuration>
+                <skip>true</skip>
                 <targetVersion>${maven.compiler.target}</targetVersion>
                 <!-- allow undocumented classes like sun.misc.Unsafe: -->
                 <internalRuntimeForbidden>false</internalRuntimeForbidden>
@@ -1492,6 +1495,7 @@
             <execution>
               <id>check-forbidden-test-apis</id>
               <configuration>
+                <skip>true</skip>
                 <targetVersion>${maven.compiler.target}</targetVersion>
                 <!-- allow undocumented classes like sun.misc.Unsafe: -->
                 <internalRuntimeForbidden>true</internalRuntimeForbidden>

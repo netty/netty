@@ -50,7 +50,7 @@ public class EpollSpliceTest {
         random.nextBytes(data);
     }
 
-    @Test
+    @Test(timeout = 20000)
     public void spliceToSocket() throws Throwable {
         final EchoHandler sh = new EchoHandler();
         final EchoHandler ch = new EchoHandler();
