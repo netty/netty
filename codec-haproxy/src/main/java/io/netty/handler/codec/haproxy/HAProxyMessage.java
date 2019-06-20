@@ -17,9 +17,13 @@ package io.netty.handler.codec.haproxy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
+import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
+import io.netty.util.ResourceLeakDetector;
+import io.netty.util.ResourceLeakDetectorFactory;
+import io.netty.util.ResourceLeakTracker;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,7 +32,9 @@ import java.util.List;
 /**
  * Message container for decoded HAProxy proxy protocol parameters
  */
-public final class HAProxyMessage {
+public final class HAProxyMessage extends AbstractReferenceCounted {
+    private static final ResourceLeakDetector<HAProxyMessage> leakDetector =
+            ResourceLeakDetectorFactory.instance().newResourceLeakDetector(HAProxyMessage.class);
 
     /**
      * Version 1 proxy protocol message for 'UNKNOWN' proxied protocols. Per spec, when the proxied protocol is
@@ -51,6 +57,7 @@ public final class HAProxyMessage {
     private static final HAProxyMessage V2_LOCAL_MSG = new HAProxyMessage(
             HAProxyProtocolVersion.V2, HAProxyCommand.LOCAL, HAProxyProxiedProtocol.UNKNOWN, null, null, 0, 0);
 
+    private final ResourceLeakTracker<HAProxyMessage> leak = leakDetector.track(this);
     private final HAProxyProtocolVersion protocolVersion;
     private final HAProxyCommand command;
     private final HAProxyProxiedProtocol proxiedProtocol;
@@ -518,5 +525,41 @@ public final class HAProxyMessage {
      */
     public List<HAProxyTLV> tlvs() {
         return tlvs;
+    }
+
+    @Override
+    public HAProxyMessage touch() {
+        return (HAProxyMessage) super.touch();
+    }
+
+    @Override
+    public HAProxyMessage touch(Object hint) {
+        if (leak != null) {
+            leak.record(hint);
+        }
+        return this;
+    }
+
+    @Override
+    public HAProxyMessage retain() {
+        return (HAProxyMessage) super.retain();
+    }
+
+    @Override
+    public HAProxyMessage retain(int increment) {
+        return (HAProxyMessage) super.retain(increment);
+    }
+
+    @Override
+    protected void deallocate() {
+        for (HAProxyTLV tlv : tlvs) {
+            tlv.release();
+        }
+
+        final ResourceLeakTracker<HAProxyMessage> leak = this.leak;
+        if (leak != null) {
+            boolean closed = leak.close(this);
+            assert closed;
+        }
     }
 }
