@@ -519,6 +519,9 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
 
     @Override
     public HAProxyMessage touch() {
+        if (leak != null) {
+            leak.record();
+        }
         return (HAProxyMessage) super.touch();
     }
 
@@ -532,24 +535,48 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
 
     @Override
     public HAProxyMessage retain() {
+        if (leak != null) {
+            leak.record();
+        }
         return (HAProxyMessage) super.retain();
     }
 
     @Override
     public HAProxyMessage retain(int increment) {
+        if (leak != null) {
+            leak.record();
+        }
         return (HAProxyMessage) super.retain(increment);
     }
 
     @Override
-    protected void deallocate() {
-        for (HAProxyTLV tlv : tlvs) {
-            tlv.release();
-        }
-
-        final ResourceLeakTracker<HAProxyMessage> leak = this.leak;
+    public boolean release() {
         if (leak != null) {
-            boolean closed = leak.close(this);
-            assert closed;
+            leak.record();
+        }
+        return super.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        if (leak != null) {
+            leak.record();
+        }
+        return super.release(decrement);
+    }
+
+    @Override
+    protected void deallocate() {
+        try {
+            for (HAProxyTLV tlv : tlvs) {
+                tlv.release();
+            }
+        } finally {
+            final ResourceLeakTracker<HAProxyMessage> leak = this.leak;
+            if (leak != null) {
+                boolean closed = leak.close(this);
+                assert closed;
+            }
         }
     }
 }
