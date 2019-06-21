@@ -519,50 +519,44 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
 
     @Override
     public HAProxyMessage touch() {
-        if (leak != null) {
-            leak.record();
-        }
+        tryRecord();
         return (HAProxyMessage) super.touch();
     }
 
     @Override
     public HAProxyMessage touch(Object hint) {
-        if (leak != null) {
-            leak.record(hint);
-        }
+        tryRecord();
         return this;
     }
 
     @Override
     public HAProxyMessage retain() {
-        if (leak != null) {
-            leak.record();
-        }
+        tryRecord();
         return (HAProxyMessage) super.retain();
     }
 
     @Override
     public HAProxyMessage retain(int increment) {
-        if (leak != null) {
-            leak.record();
-        }
+        tryRecord();
         return (HAProxyMessage) super.retain(increment);
     }
 
     @Override
     public boolean release() {
-        if (leak != null) {
-            leak.record();
-        }
+        tryRecord();
         return super.release();
     }
 
     @Override
     public boolean release(int decrement) {
+        tryRecord();
+        return super.release(decrement);
+    }
+
+    private void tryRecord() {
         if (leak != null) {
             leak.record();
         }
-        return super.release(decrement);
     }
 
     @Override
