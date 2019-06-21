@@ -525,7 +525,9 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
 
     @Override
     public HAProxyMessage touch(Object hint) {
-        tryRecord();
+        if (leak != null) {
+            leak.record(hint);
+        }
         return this;
     }
 
