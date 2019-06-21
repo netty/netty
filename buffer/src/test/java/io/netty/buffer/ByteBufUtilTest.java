@@ -511,6 +511,97 @@ public class ByteBufUtilTest {
     }
 
     @Test
+    public void testWriteUtf8Subsequence() {
+        String usAscii = "Some UTF-8 like äÄ∏ŒŒ";
+        ByteBuf buf = Unpooled.buffer(16);
+        buf.writeBytes(usAscii.substring(5, 18).getBytes(CharsetUtil.UTF_8));
+        ByteBuf buf2 = Unpooled.buffer(16);
+        ByteBufUtil.writeUtf8(buf2, usAscii, 5, 18);
+
+        assertEquals(buf, buf2);
+
+        buf.release();
+        buf2.release();
+    }
+
+    @Test
+    public void testReserveAndWriteUtf8Subsequence() {
+        String usAscii = "Some UTF-8 like äÄ∏ŒŒ";
+        ByteBuf buf = Unpooled.buffer(16);
+        buf.writeBytes(usAscii.substring(5, 18).getBytes(CharsetUtil.UTF_8));
+        ByteBuf buf2 = Unpooled.buffer(16);
+        int count = ByteBufUtil.reserveAndWriteUtf8(buf2, usAscii, 5, 18, 16);
+
+        assertEquals(buf, buf2);
+        assertEquals(buf.readableBytes(), count);
+
+        buf.release();
+        buf2.release();
+    }
+
+    @Test
+    public void testUtf8BytesSubsequence() {
+        String usAscii = "Some UTF-8 like äÄ∏ŒŒ";
+        assertEquals(usAscii.substring(5, 18).getBytes(CharsetUtil.UTF_8).length,
+                ByteBufUtil.utf8Bytes(usAscii, 5, 18));
+    }
+
+    private static int[][] INVALID_RANGES = new int[][] {
+        { -1, 5 }, { 5, 30 }, { 10, 5 }
+    };
+
+    interface TestMethod {
+        int invoke(Object... args);
+    }
+
+    private void testInvalidSubsequences(TestMethod method) {
+        for (int [] range : INVALID_RANGES) {
+            ByteBuf buf = Unpooled.buffer(16);
+            try {
+                method.invoke(buf, "Some UTF-8 like äÄ∏ŒŒ", range[0], range[1]);
+                fail("Did not throw IndexOutOfBoundsException for range (" + range[0] + ", " + range[1] + ")");
+            } catch (IndexOutOfBoundsException iiobe) {
+                // expected
+            } finally {
+                assertFalse(buf.isReadable());
+                buf.release();
+            }
+        }
+    }
+
+    @Test
+    public void testWriteUtf8InvalidSubsequences() {
+        testInvalidSubsequences(new TestMethod() {
+            @Override
+            public int invoke(Object... args) {
+                return ByteBufUtil.writeUtf8((ByteBuf) args[0], (String) args[1],
+                        (Integer) args[2], (Integer) args[3]);
+            }
+        });
+    }
+
+    @Test
+    public void testReserveAndWriteUtf8InvalidSubsequences() {
+        testInvalidSubsequences(new TestMethod() {
+            @Override
+            public int invoke(Object... args) {
+                return ByteBufUtil.reserveAndWriteUtf8((ByteBuf) args[0], (String) args[1],
+                        (Integer) args[2], (Integer) args[3], 32);
+            }
+        });
+    }
+
+    @Test
+    public void testUtf8BytesInvalidSubsequences() {
+        testInvalidSubsequences(new TestMethod() {
+            @Override
+            public int invoke(Object... args) {
+                return ByteBufUtil.utf8Bytes((String) args[1], (Integer) args[2], (Integer) args[3]);
+            }
+        });
+    }
+
+    @Test
     public void testDecodeUsAscii() {
         testDecodeString("This is a test", CharsetUtil.US_ASCII);
     }
