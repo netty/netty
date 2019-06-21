@@ -48,13 +48,21 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
         if (frame instanceof PingWebSocketFrame) {
             frame.content().retain();
             ctx.channel().writeAndFlush(new PongWebSocketFrame(frame.content()));
+            readIfNeeded(ctx);
             return;
         }
         if (frame instanceof PongWebSocketFrame && dropPongFrames) {
+            readIfNeeded(ctx);
             return;
         }
 
         out.add(frame.retain());
+    }
+
+    private static void readIfNeeded(ChannelHandlerContext ctx) {
+        if (!ctx.channel().config().isAutoRead()) {
+            ctx.read();
+        }
     }
 
     @Override
