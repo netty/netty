@@ -88,7 +88,7 @@ public class FlowControlHandler extends ChannelDuplexHandler {
      * testing, debugging and inspection purposes and it is not Thread safe!
      */
     boolean isQueueEmpty() {
-        return queue.isEmpty();
+        return queue == null || queue.isEmpty();
     }
 
     /**
@@ -190,8 +190,13 @@ public class FlowControlHandler extends ChannelDuplexHandler {
             // We're firing a completion event every time one (or more)
             // messages were consumed and the queue ended up being drained
             // to an empty state.
-            if (queue.isEmpty() && consumed > 0) {
-                ctx.fireChannelReadComplete();
+            if (queue.isEmpty()) {
+                queue.recycle();
+                queue = null;
+
+                if (consumed > 0) {
+                    ctx.fireChannelReadComplete();
+                }
             }
 
             return consumed;
