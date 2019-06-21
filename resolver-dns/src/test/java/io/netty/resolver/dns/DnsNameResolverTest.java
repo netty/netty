@@ -105,7 +105,6 @@ import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
 import static io.netty.handler.codec.dns.DnsRecordType.CNAME;
 import static io.netty.resolver.dns.DnsServerAddresses.sequential;
 import static java.util.Collections.singletonList;
-import static java.util.Collections.singletonMap;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
@@ -2797,6 +2796,7 @@ public class DnsNameResolverTest {
         dnsServer2.start();
         DnsNameResolver resolver = null;
         ServerSocket serverSocket = null;
+        Socket socket = null;
         try {
             DnsNameResolverBuilder builder = newResolver()
                     .queryTimeoutMillis(10000)
@@ -2816,7 +2816,7 @@ public class DnsNameResolverTest {
 
             if (tcpFallback) {
                 // If we are configured to use TCP as a fallback lets replay the dns message over TCP
-                Socket socket = serverSocket.accept();
+                socket = serverSocket.accept();
 
                 IoBuffer ioBuffer = IoBuffer.allocate(1024);
                 new DnsMessageEncoder().encode(ioBuffer, messageRef.get());
@@ -2835,7 +2835,6 @@ public class DnsNameResolverTest {
                 }
                 socket.getOutputStream().flush();
                 socket.getOutputStream().close();
-                socket.close();
             }
 
             AddressedEnvelope<DnsResponse, InetSocketAddress> envelope = envelopeFuture.syncUninterruptibly().getNow();
@@ -2860,6 +2859,9 @@ public class DnsNameResolverTest {
             envelope.release();
         } finally {
             dnsServer2.stop();
+            if (socket != null) {
+                socket.close();
+            }
             if (serverSocket != null) {
                 serverSocket.close();
             }
