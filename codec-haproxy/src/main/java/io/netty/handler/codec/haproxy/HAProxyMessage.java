@@ -36,7 +36,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
     private static final ResourceLeakDetector<HAProxyMessage> leakDetector =
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(HAProxyMessage.class);
 
-    private final ResourceLeakTracker<HAProxyMessage> leak = leakDetector.track(this);
+    private final ResourceLeakTracker<HAProxyMessage> leak;
     private final HAProxyProtocolVersion protocolVersion;
     private final HAProxyCommand command;
     private final HAProxyProxiedProtocol proxiedProtocol;
@@ -94,6 +94,8 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
         this.sourcePort = sourcePort;
         this.destinationPort = destinationPort;
         this.tlvs = Collections.unmodifiableList(tlvs);
+
+        leak = leakDetector.track(this);
     }
 
     /**
