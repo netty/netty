@@ -58,6 +58,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(443, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test
@@ -78,6 +79,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(443, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test
@@ -98,6 +100,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(0, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test(expected = HAProxyProtocolException.class)
@@ -264,6 +267,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(443, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test
@@ -319,6 +323,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(443, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test
@@ -398,6 +403,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(443, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test
@@ -476,6 +482,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(0, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test
@@ -531,6 +538,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(0, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test
@@ -586,6 +594,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(0, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test
@@ -642,9 +651,7 @@ public class HAProxyMessageDecoderTest {
         assertTrue(0 < firstTlv.refCnt());
         assertTrue(0 < secondTlv.refCnt());
         assertTrue(0 < thirdTLV.refCnt());
-        assertFalse(thirdTLV.release());
-        assertFalse(secondTlv.release());
-        assertTrue(firstTlv.release());
+        assertTrue(msg.release());
         assertEquals(0, firstTlv.refCnt());
         assertEquals(0, secondTlv.refCnt());
         assertEquals(0, thirdTLV.refCnt());
@@ -783,6 +790,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(0, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test(expected = HAProxyProtocolException.class)
