@@ -372,14 +372,13 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
                 sb.append(header.readByte() & 0xff);
                 sb.append('.');
             }
-            sb.setLength(sb.length() - 1);
         } else {
             for (int i = 0; i < ipv6Len; i++) {
                 sb.append(Integer.toHexString(header.readUnsignedShort()));
                 sb.append(':');
             }
-            sb.setLength(sb.length() - 1);
         }
+        sb.setLength(sb.length() - 1);
         return sb.toString();
     }
 
