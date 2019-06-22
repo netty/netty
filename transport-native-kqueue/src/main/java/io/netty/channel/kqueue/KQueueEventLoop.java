@@ -17,7 +17,7 @@ package io.netty.channel.kqueue;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.kqueue.AbstractKQueueChannel.AbstractKQueueUnsafe;
@@ -73,7 +73,7 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
 
     KQueueEventLoop(EventLoopGroup parent, Executor executor, int maxEvents,
                     SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler,
-                    MultithreadEventLoopGroup.EventLoopTaskQueueFactory queueFactory) {
+                    EventLoopTaskQueueFactory queueFactory) {
         super(parent, executor, false, newTaskQueue(queueFactory), newTaskQueue(queueFactory),
                 rejectedExecutionHandler);
         selectStrategy = ObjectUtil.checkNotNull(strategy, "strategy");
@@ -94,7 +94,7 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
     }
 
     private static Queue<Runnable> newTaskQueue(
-            MultithreadEventLoopGroup.EventLoopTaskQueueFactory queueFactory) {
+            EventLoopTaskQueueFactory queueFactory) {
         if (queueFactory == null) {
             return newTaskQueue0(DEFAULT_MAX_PENDING_TASKS);
         }
