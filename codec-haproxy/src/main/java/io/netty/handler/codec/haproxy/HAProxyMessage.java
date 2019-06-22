@@ -36,27 +36,6 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
     private static final ResourceLeakDetector<HAProxyMessage> leakDetector =
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(HAProxyMessage.class);
 
-    /**
-     * Version 1 proxy protocol message for 'UNKNOWN' proxied protocols. Per spec, when the proxied protocol is
-     * 'UNKNOWN' we must discard all other header values.
-     */
-    private static final HAProxyMessage V1_UNKNOWN_MSG = new HAProxyMessage(
-            HAProxyProtocolVersion.V1, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNKNOWN, null, null, 0, 0);
-
-    /**
-     * Version 2 proxy protocol message for 'UNKNOWN' proxied protocols. Per spec, when the proxied protocol is
-     * 'UNKNOWN' we must discard all other header values.
-     */
-    private static final HAProxyMessage V2_UNKNOWN_MSG = new HAProxyMessage(
-            HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNKNOWN, null, null, 0, 0);
-
-    /**
-     * Version 2 proxy protocol message for local requests. Per spec, we should use an unspecified protocol and family
-     * for 'LOCAL' commands. Per spec, when the proxied protocol is 'UNKNOWN' we must discard all other header values.
-     */
-    private static final HAProxyMessage V2_LOCAL_MSG = new HAProxyMessage(
-            HAProxyProtocolVersion.V2, HAProxyCommand.LOCAL, HAProxyProxiedProtocol.UNKNOWN, null, null, 0, 0);
-
     private final ResourceLeakTracker<HAProxyMessage> leak = leakDetector.track(this);
     private final HAProxyProtocolVersion protocolVersion;
     private final HAProxyCommand command;
@@ -157,7 +136,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
         }
 
         if (cmd == HAProxyCommand.LOCAL) {
-            return V2_LOCAL_MSG;
+            return unknownMsg(HAProxyProtocolVersion.V2, HAProxyCommand.LOCAL);
         }
 
         // Per spec, the 14th byte is the protocol and address family byte
@@ -169,7 +148,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
         }
 
         if (protAndFam == HAProxyProxiedProtocol.UNKNOWN) {
-            return V2_UNKNOWN_MSG;
+            return unknownMsg(HAProxyProtocolVersion.V2, HAProxyCommand.PROXY);
         }
 
         int addressInfoLen = header.readUnsignedShort();
@@ -344,7 +323,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
         }
 
         if (protAndFam == HAProxyProxiedProtocol.UNKNOWN) {
-            return V1_UNKNOWN_MSG;
+            return unknownMsg(HAProxyProtocolVersion.V1, HAProxyCommand.PROXY);
         }
 
         if (numParts != 6) {
@@ -354,6 +333,14 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
         return new HAProxyMessage(
                 HAProxyProtocolVersion.V1, HAProxyCommand.PROXY,
                 protAndFam, parts[2], parts[3], parts[4], parts[5]);
+    }
+
+    /**
+     * Proxy protocol message for 'UNKNOWN' proxied protocols. Per spec, when the proxied protocol is
+     * 'UNKNOWN' we must discard all other header values.
+     */
+    private static HAProxyMessage unknownMsg(HAProxyProtocolVersion version, HAProxyCommand command) {
+        return new HAProxyMessage(version, command, HAProxyProxiedProtocol.UNKNOWN, null, null, 0, 0);
     }
 
     /**
