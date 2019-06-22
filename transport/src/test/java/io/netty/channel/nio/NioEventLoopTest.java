@@ -20,7 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -297,7 +297,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
                 new ThreadPerTaskExecutor(new DefaultThreadFactory(NioEventLoopGroup.class)),
                 DefaultEventExecutorChooserFactory.INSTANCE, SelectorProvider.provider(),
                 DefaultSelectStrategyFactory.INSTANCE, RejectedExecutionHandlers.reject(),
-                new MultithreadEventLoopGroup.EventLoopTaskQueueFactory() {
+                new EventLoopTaskQueueFactory() {
                     @Override
                     public Queue<Runnable> newTaskQueue(int maxCapacity) {
                         called.set(true);
