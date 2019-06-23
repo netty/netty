@@ -638,7 +638,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
                         replacement.append("; ")
                                    .append(HttpHeaderValues.FILENAME)
                                    .append("=\"")
-                                   .append(fileUpload.getFilename())
+                                   .append(currentFileUpload.getFilename())
                                    .append('"');
                     }
 
