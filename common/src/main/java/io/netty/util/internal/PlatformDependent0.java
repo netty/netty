@@ -19,6 +19,8 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import sun.misc.Unsafe;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -845,7 +847,7 @@ final class PlatformDependent0 {
         if (isAndroid0()) {
             majorVersion = 6;
         } else {
-            majorVersion = majorVersionFromJavaSpecificationVersion();
+            majorVersion = majorVersionFromSystemClass();
         }
 
         logger.debug("Java version: {}", majorVersion);
@@ -853,24 +855,20 @@ final class PlatformDependent0 {
         return majorVersion;
     }
 
-    // Package-private for testing only
-    static int majorVersionFromJavaSpecificationVersion() {
-        return majorVersion(SystemPropertyUtil.get("java.specification.version", "1.6"));
-    }
-
-    // Package-private for testing only
-    static int majorVersion(final String javaSpecVersion) {
-        final String[] components = javaSpecVersion.split("\\.");
-        final int[] version = new int[components.length];
-        for (int i = 0; i < components.length; i++) {
-            version[i] = Integer.parseInt(components[i]);
-        }
-
-        if (version[0] == 1) {
-            assert version[1] >= 6;
-            return version[1];
-        } else {
-            return version[0];
+    private static int majorVersionFromSystemClass() {
+        InputStream in = ClassLoader.getSystemResourceAsStream("java/lang/ClassLoader.class");
+        assert in != null;
+        try {
+            in.skip(6L);
+            return (in.read() << 8) + in.read() - 44;
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        } finally {
+            try {
+                in.close();
+            } catch (IOException ignored) {
+                // Should not probably ignore this, but will leave it now as it is
+            }
         }
     }
 
