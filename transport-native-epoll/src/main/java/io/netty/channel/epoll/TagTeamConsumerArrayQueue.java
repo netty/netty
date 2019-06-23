@@ -338,67 +338,6 @@ class TagTeamConsumerArrayQueue<E> extends MpscBlockingConsumerArrayQueueConsume
     // ----------- methods only safe to call from primary consumer --------
 
     /**
-     * ST_PRIMARY_ACTIVE   -> ST_PRIMARY_ACTIVE (returns 1)
-     * ST_SECONDARY_ACTIVE -> ST_SECONDARY_ACTIVE (returns 0)
-     * ST_BOTH_WAITING     -> ST_PRIMARY_ACTIVE (returns 1)
-     * 
-     * @return 0 submitted, 1 grabbed control (not submitted), -1 queue full
-     */
-    public int primaryGrabControlOrOffer(final E e)
-    {
-        if (null == e)
-        {
-            throw new NullPointerException();
-        }
-
-        final long mask = this.producerMask;
-        final E[] buffer = this.producerBuffer;
-        //final int ourCtx = primaryConsumer ? ST_PRIMARY_ACTIVE : ST_SECONDARY_ACTIVE;
-        long pIndex;
-        while (true)
-        {
-            pIndex = lvProducerIndex();
-            
-            int state = state(pIndex);
-            if (state == ST_PRIMARY_ACTIVE)
-            {
-                return 1; // already have control
-            }
-            // lower bit is indicative of both consumers waiting
-            if (state == ST_BOTH_WAITING)
-            {
-                if(casProducerIndex(pIndex, pIndex - 1))
-                {
-                    return 1; // control grabbed
-                }
-                continue;
-            }
-            // pIndex is even (lower bit is 0) -> actual index is (pIndex >> 2), consumer is awake
-            final long producerLimit = lvProducerLimit();
-
-            // Use producer limit to save a read of the more rapidly mutated consumer index.
-            // Assumption: queue is usually empty or near empty
-            if (producerLimit <= pIndex)
-            {
-                if (!recalculateProducerLimit(mask, pIndex, producerLimit))
-                {
-                    return -1; // full
-                }
-            }
-
-            // Claim the index
-            if (casProducerIndex(pIndex, pIndex + 4))
-            {
-                break;
-            }
-        }
-        final long offset = modifiedCalcElementOffset(pIndex, mask);
-        // INDEX visible before ELEMENT
-        soElement(buffer, offset, e); // release element e
-        return 0; // success, no wakeup needed
-    }
-
-    /**
      * Must only be called in {@link #ST_PRIMARY_ACTIVE} state,
      * will only return or throw in {@link #ST_PRIMARY_ACTIVE} state.
      */
@@ -486,6 +425,11 @@ class TagTeamConsumerArrayQueue<E> extends MpscBlockingConsumerArrayQueueConsume
         }
     }
 
+    // If the waiting primary consumer times-out or is interrupted while
+    // the secondary consumer is active, it will continue to wait until
+    // it can take control (secondary starts to wait). This flag ensures
+    // it will be woken up again immediately at that point so that it can
+    // return null or throw as appropriate
     private volatile boolean primaryNeedsWakeup;
 
     private boolean waitAfterInterruptOrTimeout() {
@@ -530,11 +474,10 @@ class TagTeamConsumerArrayQueue<E> extends MpscBlockingConsumerArrayQueueConsume
         if (pIndex / 4 != lpConsumerIndex() / 4) {
             return false;
         }
-        boolean needWakeup = primaryNeedsWakeup;
         if (!casProducerIndex(pIndex, pIndex - 1)) {
             return false;
         }
-        if (needWakeup) {
+        if (primaryNeedsWakeup) {
             LockSupport.unpark(consumerThread);
         }
         return true;
