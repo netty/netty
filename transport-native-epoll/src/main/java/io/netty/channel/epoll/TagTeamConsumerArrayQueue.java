@@ -343,7 +343,7 @@ class TagTeamConsumerArrayQueue<E> extends MpscBlockingConsumerArrayQueueConsume
      */
     public E take() throws InterruptedException
     {
-        assert Thread.currentThread() == consumerThread;
+        //assert Thread.currentThread() == consumerThread;
         //assert state(lvProducerIndex()) == ST_PRIMARY_ACTIVE;
 
         final E[] buffer = consumerBuffer;
@@ -382,7 +382,7 @@ class TagTeamConsumerArrayQueue<E> extends MpscBlockingConsumerArrayQueueConsume
      */
     public E pollUntil(long deadlineNanos) throws InterruptedException
     {
-        assert Thread.currentThread() == consumerThread;
+        //assert Thread.currentThread() == consumerThread;
         //assert state(lvProducerIndex()) == ST_PRIMARY_ACTIVE;
 
         final E[] buffer = consumerBuffer;
@@ -392,6 +392,7 @@ class TagTeamConsumerArrayQueue<E> extends MpscBlockingConsumerArrayQueueConsume
         long offset = modifiedCalcElementOffset(cIndex, mask);
         E e = lvElement(buffer, offset);// LoadLoad
         if (e == null) {
+            //TODO maybe also check deadline here
             final long pIndex = lvProducerIndex();
             if (pIndex == cIndex && casProducerIndex(pIndex, pIndex + 1)) {
                 do {
@@ -429,7 +430,7 @@ class TagTeamConsumerArrayQueue<E> extends MpscBlockingConsumerArrayQueueConsume
     // the secondary consumer is active, it will continue to wait until
     // it can take control (secondary starts to wait). This flag ensures
     // it will be woken up again immediately at that point so that it can
-    // return null or throw as appropriate
+    // then return null or throw as appropriate
     private volatile boolean primaryNeedsWakeup;
 
     private boolean waitAfterInterruptOrTimeout() {

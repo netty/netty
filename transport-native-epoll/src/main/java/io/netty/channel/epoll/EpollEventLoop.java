@@ -30,6 +30,7 @@ import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ReflectionUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -226,7 +227,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
             Thread thread = Thread.currentThread();
             setName(thread.getName() + "-epoll");
             setThreadLocalMap(InternalThreadLocalMap.get());
-            // shareThreadLocalsTo(this);
+            shareThreadLocalsTo(this);
             start();
         }
     }
@@ -541,22 +542,17 @@ class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     private final boolean runAllTasks(boolean ranAtLeastOne) {
-        long consumerIndex = taskQueue.plainCurrentConsumerIndex();
-        for (Runnable r;;) {
-            long pixBefore = taskQueue.currentProducerIndex();
-            boolean hasTasks = pixBefore != consumerIndex;
+        for (long consumerIndex = taskQueue.plainCurrentConsumerIndex();;) {
+            final long producerIndexBefore = taskQueue.currentProducerIndex();
+            final boolean hasTasks = producerIndexBefore != consumerIndex;
             if (hasTasks) {
-                while ((r = taskQueue.poll()) != null) {
-                    safeExecute(r);
-                    if (++consumerIndex == pixBefore) {
-                        break;
-                    }
-                }
+                // Run only the tasks which are already in the queue
+                // prior to running expired time-scheduled tasks
+                do {
+                    safeExecute(taskQueue.poll());
+                } while (++consumerIndex < producerIndexBefore);
             }
-            r = pollScheduledTask();
-            if (r != null) {
-                runScheduledTasks(r);
-            } else if (!hasTasks) {
+            if (!runExpiredScheduledTasks() && !hasTasks) {
                 break;
             }
             ranAtLeastOne = true;
@@ -568,10 +564,17 @@ class EpollEventLoop extends SingleThreadEventLoop {
         return ranAtLeastOne;
     }
 
-    private void runScheduledTasks(Runnable r) {
-        do {
-            safeExecute(r);
-        } while ((r = pollScheduledTask()) != null);
+    private boolean runExpiredScheduledTasks() {
+        // Only run those already expired when this method was called
+        final long nanoTimeBefore = nanoTime();
+        Runnable r = pollScheduledTask(nanoTimeBefore);
+        if (r != null) {
+            do {
+                safeExecute(r);
+            } while ((r = pollScheduledTask(nanoTimeBefore)) != null);
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -621,15 +624,21 @@ class EpollEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    // optional
-//    private static void shareThreadLocalsTo(Thread target) throws Exception {
-//        Field map = Thread.class.getDeclaredField("threadLocals");
-//        map.setAccessible(true);
-//        // this ensures the current thread's map is initialized
-//        // before we copy it
-//        ThreadLocal<Integer> tempTl = new ThreadLocal<Integer>();
-//        tempTl.set(1);
-//        tempTl.remove();
-//        map.set(target, map.get(Thread.currentThread()));
-//    }
+    // optional - best-effort
+    private static void shareThreadLocalsTo(Thread target) {
+        try {
+            //TODO PrivilegedAction
+            java.lang.reflect.Field map = Thread.class.getDeclaredField("threadLocals");
+            if (ReflectionUtil.trySetAccessible(map, true) == null) {
+                // this ensures the current thread's map is initialized
+                // before we copy it
+                ThreadLocal<Integer> tempTl = new ThreadLocal<Integer>();
+                tempTl.set(1);
+                tempTl.remove();
+                map.set(target, map.get(Thread.currentThread()));
+            }
+        } catch(Exception e) {
+            //TODO maybe log
+        }
+    }
 }
