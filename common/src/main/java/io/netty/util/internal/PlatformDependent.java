@@ -93,11 +93,11 @@ public final class PlatformDependent {
 
     private static final File TMPDIR = tmpdir0();
 
+    private static final int ADDRESS_SIZE = addressSize0();
     private static final int BIT_MODE = bitMode0();
     private static final String NORMALIZED_ARCH = normalizeArch(SystemPropertyUtil.get("os.arch", ""));
     private static final String NORMALIZED_OS = normalizeOs(SystemPropertyUtil.get("os.name", ""));
 
-    private static final int ADDRESS_SIZE = addressSize0();
     private static final boolean USE_DIRECT_BUFFER_NO_CLEANER;
     private static final AtomicLong DIRECT_MEMORY_COUNTER;
     private static final long DIRECT_MEMORY_LIMIT;
@@ -1160,6 +1160,12 @@ public final class PlatformDependent {
         if (bitMode > 0) {
             logger.debug("-Dio.netty.bitMode: {}", bitMode);
             return bitMode;
+        }
+
+        // If sun.misc.Unsafe is available, return addressSize multiplied by 8
+        int addressSize = addressSize();
+        if (addressSize != -1) {
+            return addressSize * 8;
         }
 
         // And then the vendor specific ones which is probably most reliable.
