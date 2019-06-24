@@ -139,9 +139,11 @@ public class HttpPostRequestEncoderTest {
         HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(request, true);
         File file1 = new File(getClass().getResource("/file-01.txt").toURI());
         File file2 = new File(getClass().getResource("/file-02.txt").toURI());
+        File file3 = new File(getClass().getResource("/file-03.txt").toURI());
         encoder.addBodyAttribute("foo", "bar");
         encoder.addBodyFileUpload("quux", file1, "text/plain", false);
         encoder.addBodyFileUpload("quux", file2, "text/plain", false);
+        encoder.addBodyFileUpload("quux", file3, "text/plain", false);
 
         // We have to query the value of these two fields before finalizing
         // the request, which unsets one of them.
@@ -160,7 +162,7 @@ public class HttpPostRequestEncoderTest {
                 CONTENT_TYPE + ": multipart/mixed; boundary=" + multipartMixedBoundary + "\r\n" +
                 "\r\n" +
                 "--" + multipartMixedBoundary + "\r\n" +
-                CONTENT_DISPOSITION + ": attachment; filename=\"file-02.txt\"" + "\r\n" +
+                CONTENT_DISPOSITION + ": attachment; filename=\"file-01.txt\"" + "\r\n" +
                 CONTENT_LENGTH + ": " + file1.length() + "\r\n" +
                 CONTENT_TYPE + ": text/plain" + "\r\n" +
                 CONTENT_TRANSFER_ENCODING + ": binary" + "\r\n" +
@@ -174,6 +176,14 @@ public class HttpPostRequestEncoderTest {
                 CONTENT_TRANSFER_ENCODING + ": binary" + "\r\n" +
                 "\r\n" +
                 "File 02" + StringUtil.NEWLINE +
+                "\r\n" +
+                "--" + multipartMixedBoundary + "\r\n" +
+                CONTENT_DISPOSITION + ": attachment; filename=\"file-03.txt\"" + "\r\n" +
+                CONTENT_LENGTH + ": " + file3.length() + "\r\n" +
+                CONTENT_TYPE + ": text/plain" + "\r\n" +
+                CONTENT_TRANSFER_ENCODING + ": binary" + "\r\n" +
+                "\r\n" +
+                "File 03" + StringUtil.NEWLINE +
                 "\r\n" +
                 "--" + multipartMixedBoundary + "--" + "\r\n" +
                 "--" + multipartDataBoundary + "--" + "\r\n";
