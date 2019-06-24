@@ -123,8 +123,7 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
             throw new IllegalReferenceCountException(0, increment);
         }
         // don't pass 0!
-        if ((oldRef <= 0 && oldRef + rawIncrement >= 0)
-                || (oldRef >= 0 && oldRef + rawIncrement < oldRef)) {
+        if (oldRef <= 0 && oldRef + rawIncrement >= 0 || oldRef >= 0 && oldRef + rawIncrement < oldRef) {
             // overflow case
             updater().getAndAdd(instance, -rawIncrement);
             throw new IllegalReferenceCountException(realRefCnt(oldRef), increment);
