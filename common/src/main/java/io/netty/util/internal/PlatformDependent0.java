@@ -855,6 +855,7 @@ final class PlatformDependent0 {
         return majorVersion;
     }
 
+    // https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html
     private static int majorVersionFromSystemClass() {
         InputStream in = ClassLoader.getSystemResourceAsStream("java/lang/ClassLoader.class");
         assert in != null;
