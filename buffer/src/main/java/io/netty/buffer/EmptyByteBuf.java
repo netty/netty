@@ -684,7 +684,7 @@ public final class EmptyByteBuf extends ByteBuf {
     @Override
     public CharSequence readCharSequence(int length, Charset charset) {
         checkLength(length);
-        return null;
+        return StringUtil.EMPTY_STRING;
     }
 
     @Override
