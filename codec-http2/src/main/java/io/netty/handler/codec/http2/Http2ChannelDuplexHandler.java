@@ -91,16 +91,4 @@ public abstract class Http2ChannelDuplexHandler extends ChannelDuplexHandler {
         }
         return (Http2FrameCodec) frameCodecCtx.handler();
     }
-
-    boolean isValidLocalStreamId(Http2FrameStream stream) {
-        return frameCodec.connection().local().isValidStreamId(stream.id());
-    }
-
-    boolean streamMayHaveExisted(Http2FrameStream stream) {
-        return frameCodec.connection().streamMayHaveExisted(stream.id());
-    }
-
-    boolean consumeBytes(Http2FrameStream stream, int bytes) throws Http2Exception {
-        return frameCodec.consumeBytes(stream.id(), bytes);
-    }
 }
