@@ -18,7 +18,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.example.http2.helloworld.server.HelloWorldHttp1Handler;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.codec.http2.Http2MultiplexCodecBuilder;
+import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
+import io.netty.handler.codec.http2.Http2MultiplexHandler;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 
@@ -37,7 +38,8 @@ public class Http2OrHttpHandler extends ApplicationProtocolNegotiationHandler {
     @Override
     protected void configurePipeline(ChannelHandlerContext ctx, String protocol) throws Exception {
         if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
-            ctx.pipeline().addLast(Http2MultiplexCodecBuilder.forServer(new HelloWorldHttp2Handler()).build());
+            ctx.pipeline().addLast(Http2FrameCodecBuilder.forServer().build());
+            ctx.pipeline().addLast(new Http2MultiplexHandler(new HelloWorldHttp2Handler()));
             return;
         }
 

@@ -15,16 +15,20 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelHandler;
+import org.junit.Ignore;
 
-public class Http2MultiplexCodecTest extends Http2MultiplexTest<Http2FrameCodec> {
+/**
+ * Unit tests for {@link Http2MultiplexHandler}.
+ */
+public class Http2MultiplexHandlerTest extends Http2MultiplexTest<Http2FrameCodec> {
 
     @Override
     protected Http2FrameCodec newCodec(TestChannelInitializer childChannelInitializer, Http2FrameWriter frameWriter) {
-        return new Http2MultiplexCodecBuilder(true, childChannelInitializer).frameWriter(frameWriter).build();
+        return new Http2FrameCodecBuilder(true).frameWriter(frameWriter).build();
     }
 
     @Override
     protected ChannelHandler newMultiplexer(TestChannelInitializer childChannelInitializer) {
-        return null;
+        return new Http2MultiplexHandler(childChannelInitializer, null);
     }
 }
