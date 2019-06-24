@@ -858,9 +858,10 @@ final class PlatformDependent0 {
     private static int majorVersionFromSystemClass() {
         InputStream in = ClassLoader.getSystemResourceAsStream("java/lang/ClassLoader.class");
         assert in != null;
+        int version;
         try {
             in.skip(6L);
-            return (in.read() << 8) + in.read() - 44;
+            version =  (in.read() << 8) + in.read() - 44;
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         } finally {
@@ -870,6 +871,8 @@ final class PlatformDependent0 {
                 // Should not probably ignore this, but will leave it now as it is
             }
         }
+        assert version >= 6;
+        return version;
     }
 
     private PlatformDependent0() {
