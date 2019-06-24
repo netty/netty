@@ -857,7 +857,10 @@ final class PlatformDependent0 {
 
     private static int majorVersionFromSystemClass() {
         InputStream in = ClassLoader.getSystemResourceAsStream("java/lang/ClassLoader.class");
-        assert in != null;
+        if (in == null) {
+            // Probably will never happen, but ok
+            return majorVersionFromJavaSpecificationVersion();
+        }
         int version;
         try {
             in.skip(6L);
@@ -873,6 +876,27 @@ final class PlatformDependent0 {
         }
         assert version >= 6;
         return version;
+    }
+
+    // Package-private for testing only
+    static int majorVersionFromJavaSpecificationVersion() {
+        return majorVersion(SystemPropertyUtil.get("java.specification.version", "1.6"));
+    }
+
+    // Package-private for testing only
+    static int majorVersion(final String javaSpecVersion) {
+        final String[] components = javaSpecVersion.split("\\.");
+        final int[] version = new int[components.length];
+        for (int i = 0; i < components.length; i++) {
+            version[i] = Integer.parseInt(components[i]);
+        }
+
+        if (version[0] == 1) {
+            assert version[1] >= 6;
+            return version[1];
+        } else {
+            return version[0];
+        }
     }
 
     private PlatformDependent0() {
