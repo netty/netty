@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -186,14 +187,16 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     final void forEachActiveStream(final Http2FrameStreamVisitor streamVisitor) throws Http2Exception {
         assert ctx.executor().inEventLoop();
 
-        connection().forEachActiveStream(stream -> {
-            try {
-                return streamVisitor.visit((Http2FrameStream) stream.getProperty(streamKey));
-            } catch (Throwable cause) {
-                onError(ctx, false, cause);
-                return false;
-            }
-        });
+        if (connection().numActiveStreams() > 0) {
+            connection().forEachActiveStream(stream -> {
+                try {
+                    return streamVisitor.visit((Http2FrameStream) stream.getProperty(streamKey));
+                } catch (Throwable cause) {
+                    onError(ctx, false, cause);
+                    return false;
+                }
+            });
+        }
     }
 
     @Override
@@ -410,7 +413,8 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     }
 
     private void onStreamActive0(Http2Stream stream) {
-        if (connection().local().isValidStreamId(stream.id())) {
+        if (stream.id() != Http2CodecUtil.HTTP_UPGRADE_STREAM_ID &&
+                connection().local().isValidStreamId(stream.id())) {
             return;
         }
 
@@ -618,11 +622,6 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         ctx.fireExceptionCaught(cause);
     }
 
-    final boolean isWritable(DefaultHttp2FrameStream stream) {
-        Http2Stream s = stream.stream;
-        return s != null && connection().remote().flowController().isWritable(s);
-    }
-
     private final class Http2RemoteFlowControllerListener implements Http2RemoteFlowController.Listener {
         @Override
         public void writabilityChanged(Http2Stream stream) {
@@ -643,6 +642,8 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         private volatile int id = -1;
         volatile Http2Stream stream;
+
+        Channel attachment;
 
         DefaultHttp2FrameStream setStreamAndProperty(PropertyKey streamKey, Http2Stream stream) {
             assert id == -1 || stream.id() == id;

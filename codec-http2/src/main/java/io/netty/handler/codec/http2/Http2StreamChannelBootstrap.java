@@ -102,7 +102,10 @@ public final class Http2StreamChannelBootstrap {
     }
 
     public Future<Http2StreamChannel> open(final Promise<Http2StreamChannel> promise) {
-        final ChannelHandlerContext ctx = channel.pipeline().context(Http2MultiplexCodec.class);
+        ChannelHandlerContext ctx = channel.pipeline().context(Http2MultiplexCodec.class);
+        if (ctx == null) {
+            ctx = channel.pipeline().context(Http2MultiplexHandler.class);
+        }
         if (ctx == null) {
             if (channel.isActive()) {
                 promise.setFailure(new IllegalStateException(StringUtil.simpleClassName(Http2MultiplexCodec.class) +
@@ -115,7 +118,8 @@ public final class Http2StreamChannelBootstrap {
             if (executor.inEventLoop()) {
                 open0(ctx, promise);
             } else {
-                executor.execute(() -> open0(ctx, promise));
+                final ChannelHandlerContext finalCtx = ctx;
+                executor.execute(() -> open0(finalCtx, promise));
             }
         }
         return promise;
@@ -123,7 +127,12 @@ public final class Http2StreamChannelBootstrap {
 
     public void open0(ChannelHandlerContext ctx, final Promise<Http2StreamChannel> promise) {
         assert ctx.executor().inEventLoop();
-        final Http2StreamChannel streamChannel = ((Http2MultiplexCodec) ctx.handler()).newOutboundStream();
+        final Http2StreamChannel streamChannel;
+        if (ctx.handler() instanceof Http2MultiplexCodec) {
+            streamChannel = ((Http2MultiplexCodec) ctx.handler()).newOutboundStream();
+        } else {
+            streamChannel = ((Http2MultiplexHandler) ctx.handler()).newOutboundStream();
+        }
         try {
             init(streamChannel);
         } catch (Exception e) {
