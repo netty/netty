@@ -149,6 +149,14 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
     public int readBatch() {
         buffer.readerIndex(0).touch();
         int result = 0;
+        // WARNING!
+        // Please do not replace this sum loop with a BlackHole::consume loop:
+        // BlackHole::consume could prevent the JVM to perform certain optimizations
+        // forcing ByteBuf::readByte to be executed in order.
+        // The purpose of the benchmark is to mimic accesses on ByteBuf
+        // as in a real (single-threaded) case ie without (compiler) memory barriers that would
+        // disable certain optimizations or would make bounds checks (if enabled)
+        // to happen on each access.
         for (int i = 0, size = batchSize; i < size; i++) {
             result += buffer.readByte();
         }
