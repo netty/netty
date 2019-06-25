@@ -20,6 +20,7 @@ import io.netty.util.concurrent.FastThreadLocal;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Threads;
+import org.openjdk.jmh.infra.Blackhole;
 
 import java.util.Random;
 
@@ -60,20 +61,16 @@ public class FastThreadLocalSlowPathBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public int jdkThreadLocalGet() {
-        int result = 0;
+    public void jdkThreadLocalGet(Blackhole bh) {
         for (ThreadLocal<Integer> i: jdkThreadLocals) {
-            result += i.get();
+            bh.consume(i.get());
         }
-        return result;
     }
 
     @Benchmark
-    public int fastThreadLocal() {
-        int result = 0;
+    public void fastThreadLocal(Blackhole bh) {
         for (FastThreadLocal<Integer> i: fastThreadLocals) {
-            result += i.get();
+            bh.consume(i.get());
         }
-        return result;
     }
 }
