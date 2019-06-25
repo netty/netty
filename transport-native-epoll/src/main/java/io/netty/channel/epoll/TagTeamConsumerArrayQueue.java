@@ -292,6 +292,16 @@ class TagTeamConsumerArrayQueue<E> extends MpscBlockingConsumerArrayQueueConsume
     @Override
     public boolean offer(final E e)
     {
+        return offer(e, true);
+    }
+
+    /**
+     * If {@code wake == true} then state transition:
+     * ST_BOTH_WAITING -> ST_PRIMARY_ACTIVE
+     * otherwise state unchanged
+     */
+    public boolean offer(final E e, final boolean wake)
+    {
         if (null == e)
         {
             throw new NullPointerException();
@@ -304,7 +314,7 @@ class TagTeamConsumerArrayQueue<E> extends MpscBlockingConsumerArrayQueueConsume
         {
             pIndex = lvProducerIndex();
             // lower bit is indicative of blocked consumer
-            if (state(pIndex) == ST_BOTH_WAITING)
+            if (wake && state(pIndex) == ST_BOTH_WAITING)
             {
                 if (offerAndWakeup(buffer, mask, pIndex, e))
                     return true;

@@ -17,6 +17,7 @@
 package io.netty.util;
 
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.concurrent.StandInThread;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -111,20 +112,25 @@ public abstract class Recycler<T> {
     private final FastThreadLocal<Stack<T>> threadLocal = new FastThreadLocal<Stack<T>>() {
         @Override
         protected Stack<T> initialValue() {
-            return new Stack<T>(Recycler.this, Thread.currentThread(), maxCapacityPerThread, maxSharedCapacityFactor,
+            return new Stack<T>(Recycler.this, currentThread(), maxCapacityPerThread, maxSharedCapacityFactor,
                     ratioMask, maxDelayedQueuesPerThread);
         }
 
         @Override
         protected void onRemoval(Stack<T> value) {
             // Let us remove the WeakOrderQueue from the WeakHashMap directly if its safe to remove some overhead
-            if (value.threadRef.get() == Thread.currentThread()) {
+            if (value.threadRef.get() == currentThread()) {
                if (DELAYED_RECYCLED.isSet()) {
                    DELAYED_RECYCLED.get().remove(value);
                }
             }
         }
     };
+
+    static Thread currentThread() {
+        final Thread thread = Thread.currentThread();
+        return thread instanceof StandInThread ? ((StandInThread) thread).mainThread() : thread;
+    }
 
     protected Recycler() {
         this(DEFAULT_MAX_CAPACITY_PER_THREAD);
@@ -586,7 +592,7 @@ public abstract class Recycler<T> {
         }
 
         void push(DefaultHandle<?> item) {
-            Thread currentThread = Thread.currentThread();
+            Thread currentThread = currentThread();
             if (threadRef.get() == currentThread) {
                 // The current Thread is the thread that belongs to the Stack, we can try to push the object now.
                 pushNow(item);

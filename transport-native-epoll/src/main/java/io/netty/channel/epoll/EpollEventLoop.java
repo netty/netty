@@ -27,6 +27,7 @@ import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.RejectedExecutionHandler;
+import io.netty.util.concurrent.StandInThread;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -45,13 +46,13 @@ import java.util.concurrent.locks.LockSupport;
 class EpollEventLoop extends SingleThreadEventLoop {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollEventLoop.class);
 
+    static int EVENT_ARRAY_COUNT = 32; // 2
+
     static {
         // Ensure JNI is initialized by the time this class is loaded by this time!
         // We use unix-common methods in this class which are backed by JNI methods.
         Epoll.ensureAvailability();
     }
-
-    static int EVENT_ARRAY_COUNT = 32; // 2
 
     final FileDescriptor epollFd;
     private final IntObjectMap<AbstractEpollChannel> channels = new IntObjectHashMap<AbstractEpollChannel>(4096);
@@ -215,7 +216,9 @@ class EpollEventLoop extends SingleThreadEventLoop {
         return channels.size();
     }
 
-    static final class EpollThread extends FastThreadLocalThread {
+    static final class EpollThread extends FastThreadLocalThread implements StandInThread {
+        private Thread thread;
+
         public EpollThread(EpollLoop loop) {
             super(loop);
         }
@@ -224,11 +227,16 @@ class EpollEventLoop extends SingleThreadEventLoop {
          * Must be called from main thread
          */
         void startFromMainThread() {
-            Thread thread = Thread.currentThread();
+            thread = Thread.currentThread();
             setName(thread.getName() + "-epoll");
             setThreadLocalMap(InternalThreadLocalMap.get());
             shareThreadLocalsTo(this);
             start();
+        }
+
+        @Override
+        public Thread mainThread() {
+            return thread;
         }
     }
 
@@ -537,6 +545,16 @@ class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     @Override
+    protected final void addTask(Runnable task) {
+        ObjectUtil.checkNotNull(task, "task");
+        if (isShutdown()) {
+            reject();
+        } else if (!taskQueue.offer(task, wakesUpForTask(task))) {
+            reject(task);
+        }
+    }
+
+    @Override
     protected final boolean runAllTasks() {
         return runAllTasks(false);
     }
@@ -565,14 +583,16 @@ class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     private boolean runExpiredScheduledTasks() {
-        // Only run those already expired when this method was called
-        final long nanoTimeBefore = nanoTime();
-        Runnable r = pollScheduledTask(nanoTimeBefore);
-        if (r != null) {
-            do {
-                safeExecute(r);
-            } while ((r = pollScheduledTask(nanoTimeBefore)) != null);
-            return true;
+        if (hasAnyScheduledTasks()) {
+            // Only run those already expired when this method was called
+            final long nanoTimeBefore = nanoTime();
+            Runnable r = pollScheduledTask(nanoTimeBefore);
+            if (r != null) {
+                do {
+                    safeExecute(r);
+                } while ((r = pollScheduledTask(nanoTimeBefore)) != null);
+                return true;
+            }
         }
         return false;
     }
