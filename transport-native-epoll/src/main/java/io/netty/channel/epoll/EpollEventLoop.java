@@ -306,6 +306,11 @@ class EpollEventLoop extends SingleThreadEventLoop {
                     runAllTasks();
                     // Re-check events before going to sleep
                 } while (epollWaitNow() || !taskQueue.secondaryEnterWait());
+
+                if (timerRescheduleMayBeRequired || isShuttingDown()) {
+                    wakeup(false); // wake up primary thread
+                    timerRescheduleMayBeRequired = false;
+                }
             }
         }
 
@@ -551,6 +556,16 @@ class EpollEventLoop extends SingleThreadEventLoop {
             reject();
         } else if (!taskQueue.offer(task, wakesUpForTask(task))) {
             reject(task);
+        }
+    }
+
+    // accessed only from epoll thread
+    boolean timerRescheduleMayBeRequired;
+
+    @Override
+    protected void newTaskScheduled() {
+        if (Thread.currentThread() == epollThread) {
+            timerRescheduleMayBeRequired = true;
         }
     }
 

@@ -233,17 +233,22 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     <V> ScheduledFuture<V> schedule(final ScheduledFutureTask<V> task) {
         if (inEventLoop()) {
             scheduledTaskQueue().add(task);
+            newTaskScheduled();
         } else {
             execute(new Runnable() {
                 @Override
                 public void run() {
                     scheduledTaskQueue().add(task);
+                    newTaskScheduled();
                 }
             });
         }
 
         return task;
     }
+
+    // can be overridden, called only from event loop
+    protected void newTaskScheduled() { }
 
     final void removeScheduled(final ScheduledFutureTask<?> task) {
         if (inEventLoop()) {
