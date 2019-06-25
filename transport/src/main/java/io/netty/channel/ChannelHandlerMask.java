@@ -175,7 +175,7 @@ final class ChannelHandlerMask {
                         "Class {} missing method {}, assume we can not skip execution", handlerType, methodName, e);
                     return false;
                 }
-                return m.isAnnotationPresent(Skip.class);
+                return m != null && m.isAnnotationPresent(Skip.class);
             }
         });
     }
