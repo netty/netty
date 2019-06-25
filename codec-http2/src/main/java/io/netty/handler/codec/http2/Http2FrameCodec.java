@@ -304,7 +304,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             } else {
                 ReferenceCountUtil.release(rstFrame);
                 promise.setFailure(Http2Exception.streamError(
-                        rstFrame.stream().id(), Http2Error.PROTOCOL_ERROR, "Stream did never exist"));
+                        rstFrame.stream().id(), Http2Error.PROTOCOL_ERROR, "Stream never existed"));
             }
         } else if (msg instanceof Http2PingFrame) {
             Http2PingFrame frame = (Http2PingFrame) msg;

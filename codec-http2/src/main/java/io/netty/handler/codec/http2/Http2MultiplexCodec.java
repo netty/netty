@@ -87,7 +87,10 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
     private final ChannelHandler inboundStreamHandler;
     private final ChannelHandler upgradeStreamHandler;
-    private final Queue<AbstractHttp2StreamChannel> readPendingQueue = new ArrayDeque<AbstractHttp2StreamChannel>(8);
+    private final Queue<AbstractHttp2StreamChannel> readCompletePendingQueue =
+            new MaxCapacityQueue<AbstractHttp2StreamChannel>(new ArrayDeque<AbstractHttp2StreamChannel>(8),
+                    // Choose 100 which is what is used most of the times as default.
+                    Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS);
 
     private boolean parentReadInProgress;
     private int idCount;
@@ -131,7 +134,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
     public final void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
         super.handlerRemoved0(ctx);
 
-        readPendingQueue.clear();
+        readCompletePendingQueue.clear();
     }
 
     @Override
@@ -240,17 +243,30 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
      */
     @Override
     public final void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-        try {
-            onChannelReadComplete(ctx);
-        } finally {
-            parentReadInProgress = false;
-            readPendingQueue.clear();
-            // We always flush as this is what Http2ConnectionHandler does for now.
-            flush0(ctx);
-        }
+        processPendingReadCompleteQueue();
         channelReadComplete0(ctx);
     }
 
+    private void processPendingReadCompleteQueue() {
+        parentReadInProgress = true;
+        try {
+            // If we have many child channel we can optimize for the case when multiple call flush() in
+            // channelReadComplete(...) callbacks and only do it once as otherwise we will end-up with multiple
+            // write calls on the socket which is expensive.
+            for (;;) {
+                AbstractHttp2StreamChannel childChannel = readCompletePendingQueue.poll();
+                if (childChannel == null) {
+                    break;
+                }
+                childChannel.fireChildReadComplete();
+            }
+        } finally {
+            parentReadInProgress = false;
+            readCompletePendingQueue.clear();
+            // We always flush as this is what Http2ConnectionHandler does for now.
+            flush0(ctx);
+        }
+    }
     @Override
     public final void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         parentReadInProgress = true;
@@ -266,20 +282,6 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         }
 
         ctx.fireChannelWritabilityChanged();
-    }
-
-    final void onChannelReadComplete(ChannelHandlerContext ctx)  {
-        // If we have many child channel we can optimize for the case when multiple call flush() in
-        // channelReadComplete(...) callbacks and only do it once as otherwise we will end-up with multiple
-        // write calls on the socket which is expensive.
-
-        for (;;) {
-            AbstractHttp2StreamChannel childChannel = readPendingQueue.poll();
-            if (childChannel == null) {
-                break;
-            }
-            childChannel.fireChildReadComplete();
-        }
     }
 
     final void flush0(ChannelHandlerContext ctx) {
@@ -299,7 +301,11 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
         @Override
         protected void addChannelToReadCompletePendingQueue() {
-            readPendingQueue.add(this);
+            // If there is no space left in the queue, just keep on processing everything that is already
+            // stored there and try again.
+            while (!readCompletePendingQueue.offer(this)) {
+                processPendingReadCompleteQueue();
+            }
         }
 
         @Override

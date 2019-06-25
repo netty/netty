@@ -94,7 +94,10 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
     private final ChannelHandler inboundStreamHandler;
     private final ChannelHandler upgradeStreamHandler;
-    private final Queue<AbstractHttp2StreamChannel> readPendingQueue = new ArrayDeque<AbstractHttp2StreamChannel>(8);
+    private final Queue<AbstractHttp2StreamChannel> readCompletePendingQueue =
+            new MaxCapacityQueue<AbstractHttp2StreamChannel>(new ArrayDeque<AbstractHttp2StreamChannel>(8),
+                    // Choose 100 which is what is used most of the times as default.
+                    Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS);
 
     private boolean parentReadInProgress;
     private int idCount;
@@ -149,7 +152,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
     @Override
     protected void handlerRemoved0(ChannelHandlerContext ctx) {
-        readPendingQueue.clear();
+        readCompletePendingQueue.clear();
     }
 
     @Override
@@ -288,26 +291,30 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
      */
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        processPendingReadCompleteQueue();
+        ctx.fireChannelReadComplete();
+    }
+
+    private void processPendingReadCompleteQueue() {
         parentReadInProgress = true;
         // If we have many child channel we can optimize for the case when multiple call flush() in
         // channelReadComplete(...) callbacks and only do it once as otherwise we will end-up with multiple
         // write calls on the socket which is expensive.
-        AbstractHttp2StreamChannel childChannel = readPendingQueue.poll();
+        AbstractHttp2StreamChannel childChannel = readCompletePendingQueue.poll();
         if (childChannel != null) {
             try {
                 do {
                     childChannel.fireChildReadComplete();
-                    childChannel = readPendingQueue.poll();
+                    childChannel = readCompletePendingQueue.poll();
                 } while (childChannel != null);
             } finally {
                 parentReadInProgress = false;
-                readPendingQueue.clear();
+                readCompletePendingQueue.clear();
                 ctx.flush();
             }
         } else {
             parentReadInProgress = false;
         }
-        ctx.fireChannelReadComplete();
     }
 
     private final class Http2MultiplexHandlerStreamChannel extends AbstractHttp2StreamChannel {
@@ -323,7 +330,11 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
         @Override
         protected void addChannelToReadCompletePendingQueue() {
-            readPendingQueue.add(this);
+            // If there is no space left in the queue, just keep on processing everything that is already
+            // stored there and try again.
+            while (!readCompletePendingQueue.offer(this)) {
+                processPendingReadCompleteQueue();
+            }
         }
 
         @Override
