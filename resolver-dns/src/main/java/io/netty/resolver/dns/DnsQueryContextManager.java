@@ -17,6 +17,8 @@
 package io.netty.resolver.dns;
 
 import io.netty.util.NetUtil;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 import io.netty.util.internal.PlatformDependent;
 
 import java.net.Inet4Address;

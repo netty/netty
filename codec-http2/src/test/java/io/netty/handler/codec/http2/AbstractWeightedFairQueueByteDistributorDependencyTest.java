@@ -15,6 +15,8 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.http2.Http2TestUtil.TestStreamByteDistributorStreamState;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;

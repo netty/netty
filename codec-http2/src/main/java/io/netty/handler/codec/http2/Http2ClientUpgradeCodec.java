@@ -21,6 +21,7 @@ import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.util.collection.CharObjectMap;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.Collection;

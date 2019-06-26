@@ -15,6 +15,7 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.util.collection.CharObjectHashMap;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
