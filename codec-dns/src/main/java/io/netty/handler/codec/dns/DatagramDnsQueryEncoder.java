@@ -26,8 +26,6 @@ import io.netty.util.internal.UnstableApi;
 import java.net.InetSocketAddress;
 import java.util.List;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 /**
  * Encodes a {@link DatagramDnsQuery} (or an {@link AddressedEnvelope} of {@link DnsQuery}} into a
  * {@link DatagramPacket}.

@@ -27,7 +27,6 @@ import io.netty.util.internal.UnstableApi;
 
 import java.util.Map;
 
-import static io.netty.channel.ChannelOption.ALLOW_HALF_CLOSURE;
 import static io.netty.channel.unix.UnixChannelOption.*;
 
 @UnstableApi

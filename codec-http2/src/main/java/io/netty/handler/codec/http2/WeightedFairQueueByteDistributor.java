@@ -14,9 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import io.netty.util.collection.IntCollections;
-import io.netty.util.collection.IntObjectHashMap;
-import io.netty.util.collection.IntObjectMap;
 import io.netty.util.internal.DefaultPriorityQueue;
 import io.netty.util.internal.EmptyPriorityQueue;
 import io.netty.util.internal.MathUtil;

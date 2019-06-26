@@ -24,8 +24,6 @@ import io.netty.channel.kqueue.AbstractKQueueChannel.AbstractKQueueUnsafe;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.util.IntSupplier;
-import io.netty.util.collection.IntObjectHashMap;
-import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
