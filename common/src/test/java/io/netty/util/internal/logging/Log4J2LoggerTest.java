@@ -50,7 +50,7 @@ public class Log4J2LoggerTest extends AbstractInternalLoggerTest<Logger> {
                 result.put("level", level.name());
                 result.put("t", t);
                 super.logMessage(fqcn, level, marker, message, t);
-            };
+            }
         };
     }
 
