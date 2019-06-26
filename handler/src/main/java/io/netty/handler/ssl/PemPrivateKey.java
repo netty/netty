@@ -211,6 +211,7 @@ public final class PemPrivateKey extends AbstractReferenceCounted implements Pri
      *
      * @see Destroyable#destroy()
      */
+    @Override
     public void destroy() {
         release(refCnt());
     }
@@ -222,6 +223,7 @@ public final class PemPrivateKey extends AbstractReferenceCounted implements Pri
      *
      * @see Destroyable#isDestroyed()
      */
+    @Override
     public boolean isDestroyed() {
         return refCnt() == 0;
     }

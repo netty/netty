@@ -81,6 +81,7 @@ final class OpenSslX509Certificate extends X509Certificate {
     }
 
     // No @Override annotation as it was only introduced in Java8.
+    @Override
     public void verify(PublicKey key, Provider sigProvider)
             throws CertificateException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         unwrap().verify(key, sigProvider);

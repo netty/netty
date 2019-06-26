@@ -82,6 +82,7 @@ public class EpollServerChannelConfig extends EpollChannelConfig implements Serv
         return true;
     }
 
+    @Override
     public boolean isReuseAddress() {
         try {
             return ((AbstractEpollChannel) channel).socket.isReuseAddress();
@@ -90,6 +91,7 @@ public class EpollServerChannelConfig extends EpollChannelConfig implements Serv
         }
     }
 
+    @Override
     public EpollServerChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
             ((AbstractEpollChannel) channel).socket.setReuseAddress(reuseAddress);
@@ -99,6 +101,7 @@ public class EpollServerChannelConfig extends EpollChannelConfig implements Serv
         }
     }
 
+    @Override
     public int getReceiveBufferSize() {
         try {
             return ((AbstractEpollChannel) channel).socket.getReceiveBufferSize();
@@ -107,6 +110,7 @@ public class EpollServerChannelConfig extends EpollChannelConfig implements Serv
         }
     }
 
+    @Override
     public EpollServerChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((AbstractEpollChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
@@ -116,10 +120,12 @@ public class EpollServerChannelConfig extends EpollChannelConfig implements Serv
         }
     }
 
+    @Override
     public int getBacklog() {
         return backlog;
     }
 
+    @Override
     public EpollServerChannelConfig setBacklog(int backlog) {
         checkPositiveOrZero(backlog, "backlog");
         this.backlog = backlog;
