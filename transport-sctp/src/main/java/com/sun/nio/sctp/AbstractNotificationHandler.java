@@ -25,7 +25,6 @@ public class AbstractNotificationHandler<T> implements NotificationHandler<T> {
         return null;
     }
 
-    @Override
     public HandlerResult handleNotification(Notification notification, Object o) {
         return null;
     }
