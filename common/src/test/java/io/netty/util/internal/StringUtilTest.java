@@ -18,6 +18,7 @@ package io.netty.util.internal;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 import static io.netty.util.internal.StringUtil.NEWLINE;
 import static io.netty.util.internal.StringUtil.commonSuffixOfLength;
@@ -446,15 +447,15 @@ public class StringUtilTest {
 
     @Test
     public void testUnescapeCsvFields() {
-        assertEquals(Arrays.asList(""), unescapeCsvFields(""));
+        assertEquals(Collections.singletonList(""), unescapeCsvFields(""));
         assertEquals(Arrays.asList("", ""), unescapeCsvFields(","));
         assertEquals(Arrays.asList("a", ""), unescapeCsvFields("a,"));
         assertEquals(Arrays.asList("", "a"), unescapeCsvFields(",a"));
-        assertEquals(Arrays.asList("\""), unescapeCsvFields("\"\"\"\""));
+        assertEquals(Collections.singletonList("\""), unescapeCsvFields("\"\"\"\""));
         assertEquals(Arrays.asList("\"", "\""), unescapeCsvFields("\"\"\"\",\"\"\"\""));
-        assertEquals(Arrays.asList("netty"), unescapeCsvFields("netty"));
+        assertEquals(Collections.singletonList("netty"), unescapeCsvFields("netty"));
         assertEquals(Arrays.asList("hello", "netty"), unescapeCsvFields("hello,netty"));
-        assertEquals(Arrays.asList("hello,netty"), unescapeCsvFields("\"hello,netty\""));
+        assertEquals(Collections.singletonList("hello,netty"), unescapeCsvFields("\"hello,netty\""));
         assertEquals(Arrays.asList("hello", "netty"), unescapeCsvFields("\"hello\",\"netty\""));
         assertEquals(Arrays.asList("a\"b", "c\"d"), unescapeCsvFields("\"a\"\"b\",\"c\"\"d\""));
         assertEquals(Arrays.asList("a\rb", "c\nd"), unescapeCsvFields("\"a\rb\",\"c\nd\""));
