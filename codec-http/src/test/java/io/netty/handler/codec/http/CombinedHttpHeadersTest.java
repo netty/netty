@@ -196,7 +196,7 @@ public class CombinedHttpHeadersTest {
     public void addIterableCsvEmpty() {
         final CombinedHttpHeaders headers = newCombinedHttpHeaders();
         headers.add(HEADER_NAME, Collections.<CharSequence>emptyList());
-        assertEquals(Arrays.asList(""), headers.getAll(HEADER_NAME));
+        assertEquals(Collections.singletonList(""), headers.getAll(HEADER_NAME));
     }
 
     @Test
@@ -294,9 +294,9 @@ public class CombinedHttpHeadersTest {
         headers.set(HEADER_NAME, Arrays.asList("\"a\"", "\"b\"", "\"c\""));
         assertEquals(Arrays.asList("a", "b", "c"), headers.getAll(HEADER_NAME));
         headers.set(HEADER_NAME, "a,b,c");
-        assertEquals(Arrays.asList("a,b,c"), headers.getAll(HEADER_NAME));
+        assertEquals(Collections.singletonList("a,b,c"), headers.getAll(HEADER_NAME));
         headers.set(HEADER_NAME, "\"a,b,c\"");
-        assertEquals(Arrays.asList("a,b,c"), headers.getAll(HEADER_NAME));
+        assertEquals(Collections.singletonList("a,b,c"), headers.getAll(HEADER_NAME));
     }
 
     @Test
