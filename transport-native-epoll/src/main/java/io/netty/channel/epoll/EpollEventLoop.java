@@ -302,14 +302,25 @@ class EpollEventLoop extends SingleThreadEventLoop {
         public void run() {
             // epoll/secondary thread loop
             while (epollWait()) {
+                long deadlineBefore = rawDeadlineNanos();
+                boolean wakeupPrimaryAfter;
                 do {
-                    runAllTasks();
-                    // Re-check events before going to sleep
-                } while (epollWaitNow() || !taskQueue.secondaryEnterWait());
+                    do {
+                        runAllTasks();
+                        // Re-check events before going to sleep
+                    } while (epollWaitNow());
 
-                if (timerRescheduleRequired || isShuttingDown()) {
+                    // Still in event loop here
+                    long deadlineAfter = rawDeadlineNanos();
+                    // If the deadline moved forward we need to wake up
+                    // the primary thread so that it can reschedule its wait timer
+                    wakeupPrimaryAfter = deadlineAfter != -1L
+                            && (deadlineBefore == -1L || deadlineBefore > deadlineAfter);
+                } while (!taskQueue.secondaryEnterWait());
+
+                // Now we aren't the event loop
+                if (wakeupPrimaryAfter || isShuttingDown()) {
                     wakeup(false); // wake up primary thread
-                    timerRescheduleRequired = false;
                 }
             }
         }
@@ -543,13 +554,10 @@ class EpollEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    private long nextWakeupTimeNanos = -1L;
-
     private Runnable waitForTask() throws InterruptedException {
         // assert taskQueue.getState() == ST_PRIMARY_ACTIVE;
-        nextWakeupTimeNanos = rawDeadlineNanos();
-        return nextWakeupTimeNanos == -1L ? taskQueue.take()
-                : taskQueue.pollUntil(nanoTimeBase() + nextWakeupTimeNanos);
+        final long deadlineNanos = rawDeadlineNanos();
+        return deadlineNanos == -1L ? taskQueue.take() : taskQueue.pollUntil(nanoTimeBase() + deadlineNanos);
     }
 
     @Override
@@ -559,18 +567,6 @@ class EpollEventLoop extends SingleThreadEventLoop {
             reject();
         } else if (!taskQueue.offer(task, wakesUpForTask(task))) {
             reject(task);
-        }
-    }
-
-    // accessed only from epoll thread
-    boolean timerRescheduleRequired;
-
-    @Override
-    protected void newTaskScheduled(long deadlineNanos) {
-        if (!timerRescheduleRequired
-                && (nextWakeupTimeNanos == -1L || nextWakeupTimeNanos > deadlineNanos)
-                && Thread.currentThread() == epollThread) {
-            timerRescheduleRequired = true;
         }
     }
 

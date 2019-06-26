@@ -233,22 +233,17 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     <V> ScheduledFuture<V> schedule(final ScheduledFutureTask<V> task) {
         if (inEventLoop()) {
             scheduledTaskQueue().add(task);
-            newTaskScheduled(task.deadlineNanos());
         } else {
             execute(new Runnable() {
                 @Override
                 public void run() {
                     scheduledTaskQueue().add(task);
-                    newTaskScheduled(task.deadlineNanos());
                 }
             });
         }
 
         return task;
     }
-
-    // can be overridden, called only from event loop
-    protected void newTaskScheduled(long deadlineNanos) { }
 
     final void removeScheduled(final ScheduledFutureTask<?> task) {
         if (inEventLoop()) {
