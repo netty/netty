@@ -38,7 +38,6 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.ThrowableUtil;
 
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
 final class HpackHuffmanDecoder {
 
