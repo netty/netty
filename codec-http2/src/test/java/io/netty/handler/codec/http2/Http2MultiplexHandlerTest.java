@@ -15,7 +15,6 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelHandler;
-import org.junit.Ignore;
 
 /**
  * Unit tests for {@link Http2MultiplexHandler}.
