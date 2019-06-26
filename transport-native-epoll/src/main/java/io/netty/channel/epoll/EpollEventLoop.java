@@ -307,9 +307,9 @@ class EpollEventLoop extends SingleThreadEventLoop {
                     // Re-check events before going to sleep
                 } while (epollWaitNow() || !taskQueue.secondaryEnterWait());
 
-                if (timerRescheduleMayBeRequired || isShuttingDown()) {
+                if (timerRescheduleRequired || isShuttingDown()) {
                     wakeup(false); // wake up primary thread
-                    timerRescheduleMayBeRequired = false;
+                    timerRescheduleRequired = false;
                 }
             }
         }
@@ -543,10 +543,13 @@ class EpollEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    private long nextWakeupTimeNanos = -1L;
+
     private Runnable waitForTask() throws InterruptedException {
         // assert taskQueue.getState() == ST_PRIMARY_ACTIVE;
-        final long deadlineNanos = rawDeadlineNanos();
-        return deadlineNanos == -1L ? taskQueue.take() : taskQueue.pollUntil(nanoTimeBase() + deadlineNanos);
+        nextWakeupTimeNanos = rawDeadlineNanos();
+        return nextWakeupTimeNanos == -1L ? taskQueue.take()
+                : taskQueue.pollUntil(nanoTimeBase() + nextWakeupTimeNanos);
     }
 
     @Override
@@ -560,12 +563,14 @@ class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     // accessed only from epoll thread
-    boolean timerRescheduleMayBeRequired;
+    boolean timerRescheduleRequired;
 
     @Override
-    protected void newTaskScheduled() {
-        if (Thread.currentThread() == epollThread) {
-            timerRescheduleMayBeRequired = true;
+    protected void newTaskScheduled(long deadlineNanos) {
+        if (!timerRescheduleRequired
+                && (nextWakeupTimeNanos == -1L || nextWakeupTimeNanos > deadlineNanos)
+                && Thread.currentThread() == epollThread) {
+            timerRescheduleRequired = true;
         }
     }
 

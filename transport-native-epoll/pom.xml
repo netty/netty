@@ -327,6 +327,10 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.jctools</groupId>
+      <artifactId>jctools-core</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-testsuite</artifactId>
       <version>${project.version}</version>
