@@ -19,8 +19,6 @@ import io.netty.channel.EventLoop;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * A noop {@link AuthoritativeDnsServerCache} that actually never caches anything.

@@ -22,7 +22,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
+
 import java.security.Provider;
 import java.util.ArrayList;
 import java.util.Collection;

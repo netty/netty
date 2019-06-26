@@ -17,7 +17,6 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.DefaultFileRegion;
-import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.unix.NativeInetAddress;
 import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.Socket;

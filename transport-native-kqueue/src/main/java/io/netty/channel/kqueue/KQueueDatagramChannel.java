@@ -42,8 +42,6 @@ import java.net.PortUnreachableException;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 
 import static io.netty.channel.kqueue.BsdSocket.newSocketDgram;
 

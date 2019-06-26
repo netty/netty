@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -38,7 +37,6 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_SETTINGS_HEADER;
 import static io.netty.handler.codec.http2.Http2CodecUtil.writeFrameHeader;
 import static io.netty.handler.codec.http2.Http2FrameTypes.SETTINGS;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Server-side codec for performing a cleartext upgrade from HTTP/1.x to HTTP/2.

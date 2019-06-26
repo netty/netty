@@ -38,7 +38,6 @@ import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ThrowableUtil;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

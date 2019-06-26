@@ -33,7 +33,6 @@ import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.net.InetAddress;

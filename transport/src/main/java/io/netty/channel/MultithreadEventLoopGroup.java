@@ -23,7 +23,6 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
