@@ -1292,6 +1292,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             onUnhandledInboundMessage(msg);
+            if (logger.isDebugEnabled()) {
+                logger.debug("Discarded message pipeline : {}. Channel : {}.",
+                             ctx.pipeline().names(), ctx.channel());
+            }
         }
 
         @Override
