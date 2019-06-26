@@ -24,7 +24,9 @@ import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.TransportProtocol;
 import io.netty.util.CharsetUtil;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.List;
 
@@ -32,6 +34,8 @@ import static io.netty.buffer.Unpooled.*;
 import static org.junit.Assert.*;
 
 public class HAProxyMessageDecoderTest {
+    @Rule
+    public ExpectedException exceptionRule = ExpectedException.none();
 
     private EmbeddedChannel ch;
 
@@ -162,6 +166,32 @@ public class HAProxyMessageDecoderTest {
         String header = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 " +
                         "00000000000000000000000000000000000000000000000000000000000000000443\r\n";
         ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
+    }
+
+    @Test
+    public void testFailSlowHeaderTooLong() {
+        EmbeddedChannel slowFailCh = new EmbeddedChannel(new HAProxyMessageDecoder(false));
+        String headerPart1 = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 " +
+                             "000000000000000000000000000000000000000000000000000000000000000000000443";
+        slowFailCh.writeInbound(copiedBuffer(headerPart1, CharsetUtil.US_ASCII)); // Should not throw exception
+        String headerPart2 = "more header data";
+        slowFailCh.writeInbound(copiedBuffer(headerPart2, CharsetUtil.US_ASCII)); // Should not throw exception
+        String headerPart3 = "end of header\r\n";
+
+        int discarded = headerPart1.length() + headerPart2.length() + headerPart3.length() - 2;
+        exceptionRule.expect(HAProxyProtocolException.class); // Should throw exception
+        exceptionRule.expectMessage("over " + discarded);
+        slowFailCh.writeInbound(copiedBuffer(headerPart3, CharsetUtil.US_ASCII));
+    }
+
+    @Test
+    public void testFailFastHeaderTooLong() {
+        EmbeddedChannel fastFailCh = new EmbeddedChannel(new HAProxyMessageDecoder(true));
+        String headerPart1 = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 " +
+                             "000000000000000000000000000000000000000000000000000000000000000000000443";
+        exceptionRule.expect(HAProxyProtocolException.class); // Should throw exception, fail fast
+        exceptionRule.expectMessage("over " + headerPart1.length());
+        fastFailCh.writeInbound(copiedBuffer(headerPart1, CharsetUtil.US_ASCII));
     }
 
     @Test
