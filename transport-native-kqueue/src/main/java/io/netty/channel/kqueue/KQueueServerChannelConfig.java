@@ -78,6 +78,7 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
         return true;
     }
 
+    @Override
     public boolean isReuseAddress() {
         try {
             return ((AbstractKQueueChannel) channel).socket.isReuseAddress();
@@ -86,6 +87,7 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
         }
     }
 
+    @Override
     public KQueueServerChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
             ((AbstractKQueueChannel) channel).socket.setReuseAddress(reuseAddress);
@@ -95,6 +97,7 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
         }
     }
 
+    @Override
     public int getReceiveBufferSize() {
         try {
             return ((AbstractKQueueChannel) channel).socket.getReceiveBufferSize();
@@ -103,6 +106,7 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
         }
     }
 
+    @Override
     public KQueueServerChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((AbstractKQueueChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
@@ -112,10 +116,12 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
         }
     }
 
+    @Override
     public int getBacklog() {
         return backlog;
     }
 
+    @Override
     public KQueueServerChannelConfig setBacklog(int backlog) {
         checkPositiveOrZero(backlog, "backlog");
         this.backlog = backlog;
