@@ -171,27 +171,38 @@ public class HAProxyMessageDecoderTest {
     @Test
     public void testFailSlowHeaderTooLong() {
         EmbeddedChannel slowFailCh = new EmbeddedChannel(new HAProxyMessageDecoder(false));
-        String headerPart1 = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 " +
-                             "000000000000000000000000000000000000000000000000000000000000000000000443";
-        slowFailCh.writeInbound(copiedBuffer(headerPart1, CharsetUtil.US_ASCII)); // Should not throw exception
-        String headerPart2 = "more header data";
-        slowFailCh.writeInbound(copiedBuffer(headerPart2, CharsetUtil.US_ASCII)); // Should not throw exception
-        String headerPart3 = "end of header\r\n";
+        try {
+            String headerPart1 = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 " +
+                                 "000000000000000000000000000000000000000000000000000000000000000000000443";
+            // Should not throw exception
+            assertFalse(slowFailCh.writeInbound(copiedBuffer(headerPart1, CharsetUtil.US_ASCII)));
+            String headerPart2 = "more header data";
+            // Should not throw exception
+            assertFalse(slowFailCh.writeInbound(copiedBuffer(headerPart2, CharsetUtil.US_ASCII)));
+            String headerPart3 = "end of header\r\n";
 
-        int discarded = headerPart1.length() + headerPart2.length() + headerPart3.length() - 2;
-        exceptionRule.expect(HAProxyProtocolException.class); // Should throw exception
-        exceptionRule.expectMessage("over " + discarded);
-        slowFailCh.writeInbound(copiedBuffer(headerPart3, CharsetUtil.US_ASCII));
+            int discarded = headerPart1.length() + headerPart2.length() + headerPart3.length() - 2;
+            // Should throw exception
+            exceptionRule.expect(HAProxyProtocolException.class);
+            exceptionRule.expectMessage("over " + discarded);
+            assertFalse(slowFailCh.writeInbound(copiedBuffer(headerPart3, CharsetUtil.US_ASCII)));
+        } finally {
+            assertFalse(slowFailCh.finishAndReleaseAll());
+        }
     }
 
     @Test
     public void testFailFastHeaderTooLong() {
         EmbeddedChannel fastFailCh = new EmbeddedChannel(new HAProxyMessageDecoder(true));
-        String headerPart1 = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 " +
-                             "000000000000000000000000000000000000000000000000000000000000000000000443";
-        exceptionRule.expect(HAProxyProtocolException.class); // Should throw exception, fail fast
-        exceptionRule.expectMessage("over " + headerPart1.length());
-        fastFailCh.writeInbound(copiedBuffer(headerPart1, CharsetUtil.US_ASCII));
+        try {
+            String headerPart1 = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 " +
+                                 "000000000000000000000000000000000000000000000000000000000000000000000443";
+            exceptionRule.expect(HAProxyProtocolException.class); // Should throw exception, fail fast
+            exceptionRule.expectMessage("over " + headerPart1.length());
+            assertFalse(fastFailCh.writeInbound(copiedBuffer(headerPart1, CharsetUtil.US_ASCII)));
+        } finally {
+            assertFalse(fastFailCh.finishAndReleaseAll());
+        }
     }
 
     @Test
