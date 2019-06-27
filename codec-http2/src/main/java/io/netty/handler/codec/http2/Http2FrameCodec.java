@@ -296,7 +296,16 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             }
         } else if (msg instanceof Http2ResetFrame) {
             Http2ResetFrame rstFrame = (Http2ResetFrame) msg;
-            encoder().writeRstStream(ctx, rstFrame.stream().id(), rstFrame.errorCode(), promise);
+            int id = rstFrame.stream().id();
+            // Only ever send a reset frame if stream may have existed before as otherwise we may send a RST on a
+            // stream in an invalid state and cause a connection error.
+            if (connection().streamMayHaveExisted(id)) {
+                encoder().writeRstStream(ctx, rstFrame.stream().id(), rstFrame.errorCode(), promise);
+            } else {
+                ReferenceCountUtil.release(rstFrame);
+                promise.setFailure(Http2Exception.streamError(
+                        rstFrame.stream().id(), Http2Error.PROTOCOL_ERROR, "Stream never existed"));
+            }
         } else if (msg instanceof Http2PingFrame) {
             Http2PingFrame frame = (Http2PingFrame) msg;
             encoder().writePing(ctx, frame.ack(), frame.content(), promise);
