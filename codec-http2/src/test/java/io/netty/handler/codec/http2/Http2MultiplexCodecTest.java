@@ -27,4 +27,14 @@ public class Http2MultiplexCodecTest extends Http2MultiplexTest<Http2FrameCodec>
     protected ChannelHandler newMultiplexer(TestChannelInitializer childChannelInitializer) {
         return null;
     }
+
+    @Override
+    protected boolean useUserEventForResetFrame() {
+        return false;
+    }
+
+    @Override
+    protected boolean ignoreWindowUpdateFrames() {
+        return false;
+    }
 }
