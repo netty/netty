@@ -46,6 +46,7 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
     }
 
     // Use rawtypes an unchecked override to be able to also work on java7.
+    @Override
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public abstract List getRequestedServerNames();
 
