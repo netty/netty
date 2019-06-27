@@ -18,7 +18,6 @@ package io.netty.handler.codec.haproxy;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.ProtocolDetectionResult;
 import io.netty.util.CharsetUtil;
 
@@ -92,6 +91,11 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
      */
     private static final ProtocolDetectionResult<HAProxyProtocolVersion> DETECTION_RESULT_V2 =
             ProtocolDetectionResult.detected(HAProxyProtocolVersion.V2);
+
+    /**
+     * Used to extract a header frame out of the {@link ByteBuf} and return it.
+     */
+    private HeaderExtractor headerExtractor;
 
     /**
      * {@code true} if we're discarding input because we're already over maxLength
@@ -291,8 +295,10 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
      *                be created
      */
     private ByteBuf decodeStruct(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
-        HeaderDecoder headerDecoder = new StructHeaderDecoder(v2MaxHeaderSize);
-        return headerDecoder.decode(ctx, buffer);
+        if (headerExtractor == null) {
+            headerExtractor = new StructHeaderExtractor(v2MaxHeaderSize);
+        }
+        return headerExtractor.extract(ctx, buffer);
     }
 
     /**
@@ -304,8 +310,10 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
      *                be created
      */
     private ByteBuf decodeLine(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
-        HeaderDecoder headerDecoder = new LineHeaderDecoder(V1_MAX_LENGTH);
-        return headerDecoder.decode(ctx, buffer);
+        if (headerExtractor == null) {
+            headerExtractor = new LineHeaderExtractor(V1_MAX_LENGTH);
+        }
+        return headerExtractor.extract(ctx, buffer);
     }
 
     private void failOverLimit(final ChannelHandlerContext ctx, int length) {
@@ -363,13 +371,13 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
     }
 
     /**
-     * HeaderDecoder create a header frame out of the {@link ByteBuf}.
+     * HeaderExtractor create a header frame out of the {@link ByteBuf}.
      */
-    private abstract class HeaderDecoder {
+    private abstract class HeaderExtractor {
         /** Header max size */
         private final int maxHeaderSize;
 
-        protected HeaderDecoder(int maxHeaderSize) {
+        protected HeaderExtractor(int maxHeaderSize) {
             this.maxHeaderSize = maxHeaderSize;
         }
 
@@ -382,7 +390,7 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
          *                be created
          * @throws Exception if exceed maxLength
          */
-        public ByteBuf decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+        public ByteBuf extract(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
             final int eoh = findEndOfHeader(buffer);
             if (!discarding) {
                 if (eoh >= 0) {
@@ -443,9 +451,9 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
         protected abstract int delimiterLength(ByteBuf buffer, int eoh);
     }
 
-    private class LineHeaderDecoder extends HeaderDecoder {
+    private final class LineHeaderExtractor extends HeaderExtractor {
 
-        protected LineHeaderDecoder(int maxHeaderSize) {
+        private LineHeaderExtractor(int maxHeaderSize) {
             super(maxHeaderSize);
         }
 
@@ -460,9 +468,9 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
         }
     }
 
-    private class StructHeaderDecoder extends HeaderDecoder {
+    private final class StructHeaderExtractor extends HeaderExtractor {
 
-        protected StructHeaderDecoder(int maxHeaderSize) {
+        private StructHeaderExtractor(int maxHeaderSize) {
             super(maxHeaderSize);
         }
 
