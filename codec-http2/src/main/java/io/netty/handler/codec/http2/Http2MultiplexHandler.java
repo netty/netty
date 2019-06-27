@@ -77,10 +77,10 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
  * <h3>Writability and Flow Control</h3>
  *
  * A child channel observes outbound/remote flow control via the channel's writability. A channel only becomes writable
- * when it maps to an active HTTP/2 stream and the stream's flow control window is greater than zero. A child channel
- * does not know about the connection-level flow control window. {@link ChannelHandler}s are free to ignore the
- * channel's writability, in which case the excessive writes will be buffered by the parent channel. It's important to
- * note that only {@link Http2DataFrame}s are subject to HTTP/2 flow control.
+ * when it maps to an active HTTP/2 stream . A child channel does not know about the connection-level flow control
+ * window. {@link ChannelHandler}s are free to ignore the channel's writability, in which case the excessive writes will
+ * be buffered by the parent channel. It's important to note that only {@link Http2DataFrame}s are subject to
+ * HTTP/2 flow control.
  */
 @UnstableApi
 public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
@@ -159,14 +159,31 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         parentReadInProgress = true;
         if (msg instanceof Http2StreamFrame) {
+            if (msg instanceof Http2WindowUpdateFrame) {
+                // We dont want to propagate update frames to the user
+                return;
+            }
             Http2StreamFrame streamFrame = (Http2StreamFrame) msg;
             DefaultHttp2FrameStream s =
                     (DefaultHttp2FrameStream) streamFrame.stream();
-            ((AbstractHttp2StreamChannel) s.attachment).fireChildRead(streamFrame);
+
+            AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel) s.attachment;
+            if (msg instanceof Http2ResetFrame) {
+                // Reset frames needs to be propagated via user events as these are not flow-controlled and so
+                // must not be controlled by suppressing channel.read() on the child channel.
+                channel.pipeline().fireUserEventTriggered(msg);
+
+                // RST frames will also trigger closing of the streams which then will call
+                // AbstractHttp2StreamChannel.streamClosed()
+            } else {
+                channel.fireChildRead(streamFrame);
+            }
             return;
         }
 
         if (msg instanceof Http2GoAwayFrame) {
+            // goaway frames will also trigger closing of the streams which then will call
+            // AbstractHttp2StreamChannel.streamClosed()
             onHttp2GoAwayFrame(ctx, (Http2GoAwayFrame) msg);
         }
 

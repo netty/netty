@@ -875,7 +875,9 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertEqualsAndRelease(dataFrame3, inboundHandler.<Http2DataFrame>readInbound());
         assertEqualsAndRelease(dataFrame4, inboundHandler.<Http2DataFrame>readInbound());
 
-        Http2ResetFrame resetFrame = inboundHandler.readInbound();
+        Http2ResetFrame resetFrame = useUserEventForResetFrame() ? inboundHandler.<Http2ResetFrame>readUserEvent() :
+                inboundHandler.<Http2ResetFrame>readInbound();
+
         assertEquals(childChannel.stream(), resetFrame.stream());
         assertEquals(Http2Error.NO_ERROR.code(), resetFrame.errorCode());
 
@@ -886,6 +888,33 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         parentChannel.flushInbound();
 
         childChannel.closeFuture().syncUninterruptibly();
+    }
+
+    protected abstract boolean useUserEventForResetFrame();
+
+    protected abstract boolean ignoreWindowUpdateFrames();
+
+    @Test
+    public void windowUpdateFrames() {
+        AtomicInteger numReads = new AtomicInteger(1);
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        Http2StreamChannel childChannel = newInboundStream(3, false, numReads, inboundHandler);
+
+        assertEquals(new DefaultHttp2HeadersFrame(request).stream(childChannel.stream()), inboundHandler.readInbound());
+
+        frameInboundWriter.writeInboundWindowUpdate(childChannel.stream().id(), 4);
+
+        Http2WindowUpdateFrame updateFrame = inboundHandler.readInbound();
+        if (ignoreWindowUpdateFrames()) {
+            assertNull(updateFrame);
+        } else {
+            assertEquals(new DefaultHttp2WindowUpdateFrame(4).stream(childChannel.stream()), updateFrame);
+        }
+
+        frameInboundWriter.writeInboundWindowUpdate(Http2CodecUtil.CONNECTION_STREAM_ID, 6);
+
+        assertNull(parentChannel.readInbound());
+        childChannel.close().syncUninterruptibly();
     }
 
     @Test
