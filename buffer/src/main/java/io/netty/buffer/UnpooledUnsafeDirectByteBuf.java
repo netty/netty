@@ -63,6 +63,7 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
         super(alloc, initialBuffer, maxCapacity, doFree, false);
     }
 
+    @Override
     final void setByteBuffer(ByteBuffer buffer, boolean tryFree) {
         super.setByteBuffer(buffer, tryFree);
         memoryAddress = PlatformDependent.directBufferAddress(buffer);
