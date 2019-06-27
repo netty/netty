@@ -27,6 +27,9 @@ import io.netty.util.ReferenceCounted;
 
 import io.netty.util.internal.UnstableApi;
 
+import java.util.ArrayDeque;
+import java.util.Queue;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
@@ -84,13 +87,13 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
     private final ChannelHandler inboundStreamHandler;
     private final ChannelHandler upgradeStreamHandler;
+    private final Queue<AbstractHttp2StreamChannel> readCompletePendingQueue =
+            new MaxCapacityQueue<AbstractHttp2StreamChannel>(new ArrayDeque<AbstractHttp2StreamChannel>(8),
+                    // Choose 100 which is what is used most of the times as default.
+                    Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS);
 
     private boolean parentReadInProgress;
     private int idCount;
-
-    // Linked-List for Http2MultiplexCodecStreamChannel instances that need to be processed by channelReadComplete(...)
-    private AbstractHttp2StreamChannel head;
-    private AbstractHttp2StreamChannel tail;
 
     // Need to be volatile as accessed from within the Http2MultiplexCodecStreamChannel in a multi-threaded fashion.
     volatile ChannelHandlerContext ctx;
@@ -131,14 +134,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
     public final void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
         super.handlerRemoved0(ctx);
 
-        // Unlink the linked list to guard against GC nepotism.
-        AbstractHttp2StreamChannel ch = head;
-        while (ch != null) {
-            AbstractHttp2StreamChannel curr = ch;
-            ch = curr.next;
-            curr.next = curr.previous = null;
-        }
-        head = tail = null;
+        readCompletePendingQueue.clear();
     }
 
     @Override
@@ -222,50 +218,6 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         }
     }
 
-    private boolean isChildChannelInReadPendingQueue(AbstractHttp2StreamChannel childChannel) {
-        return childChannel.previous != null || childChannel.next != null || head == childChannel;
-    }
-
-    private boolean tryAddChildChannelToReadPendingQueue(AbstractHttp2StreamChannel childChannel) {
-        if (!isChildChannelInReadPendingQueue(childChannel)) {
-            addChildChannelToReadPendingQueue(childChannel);
-            return true;
-        }
-        return false;
-    }
-
-    private void addChildChannelToReadPendingQueue(AbstractHttp2StreamChannel childChannel) {
-        if (tail == null) {
-            assert head == null;
-            tail = head = childChannel;
-        } else {
-            childChannel.previous = tail;
-            tail.next = childChannel;
-            tail = childChannel;
-        }
-    }
-
-    private void tryRemoveChildChannelFromReadPendingQueue(AbstractHttp2StreamChannel childChannel) {
-        if (isChildChannelInReadPendingQueue(childChannel)) {
-            removeChildChannelFromReadPendingQueue(childChannel);
-        }
-    }
-
-    private void removeChildChannelFromReadPendingQueue(AbstractHttp2StreamChannel childChannel) {
-        AbstractHttp2StreamChannel previous = childChannel.previous;
-        if (childChannel.next != null) {
-            childChannel.next.previous = previous;
-        } else {
-            tail = tail.previous; // If there is no next, this childChannel is the tail, so move the tail back.
-        }
-        if (previous != null) {
-            previous.next = childChannel.next;
-        } else {
-            head = head.next; // If there is no previous, this childChannel is the head, so move the tail forward.
-        }
-        childChannel.next = childChannel.previous = null;
-    }
-
     private void onHttp2GoAwayFrame(ChannelHandlerContext ctx, final Http2GoAwayFrame goAwayFrame) {
         try {
             forEachActiveStream(new Http2FrameStreamVisitor() {
@@ -291,17 +243,30 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
      */
     @Override
     public final void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-        try {
-            onChannelReadComplete(ctx);
-        } finally {
-            parentReadInProgress = false;
-            tail = head = null;
-            // We always flush as this is what Http2ConnectionHandler does for now.
-            flush0(ctx);
-        }
+        processPendingReadCompleteQueue();
         channelReadComplete0(ctx);
     }
 
+    private void processPendingReadCompleteQueue() {
+        parentReadInProgress = true;
+        try {
+            // If we have many child channel we can optimize for the case when multiple call flush() in
+            // channelReadComplete(...) callbacks and only do it once as otherwise we will end-up with multiple
+            // write calls on the socket which is expensive.
+            for (;;) {
+                AbstractHttp2StreamChannel childChannel = readCompletePendingQueue.poll();
+                if (childChannel == null) {
+                    break;
+                }
+                childChannel.fireChildReadComplete();
+            }
+        } finally {
+            parentReadInProgress = false;
+            readCompletePendingQueue.clear();
+            // We always flush as this is what Http2ConnectionHandler does for now.
+            flush0(ctx);
+        }
+    }
     @Override
     public final void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         parentReadInProgress = true;
@@ -319,20 +284,6 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         ctx.fireChannelWritabilityChanged();
     }
 
-    final void onChannelReadComplete(ChannelHandlerContext ctx)  {
-        // If we have many child channel we can optimize for the case when multiple call flush() in
-        // channelReadComplete(...) callbacks and only do it once as otherwise we will end-up with multiple
-        // write calls on the socket which is expensive.
-        AbstractHttp2StreamChannel current = head;
-        while (current != null) {
-            AbstractHttp2StreamChannel childChannel = current;
-            // Clear early in case fireChildReadComplete() causes it to need to be re-processed
-            current = current.next;
-            childChannel.next = childChannel.previous = null;
-            childChannel.fireChildReadComplete();
-        }
-    }
-
     final void flush0(ChannelHandlerContext ctx) {
         flush(ctx);
     }
@@ -344,28 +295,17 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         }
 
         @Override
-        protected boolean consumeBytes(Http2FrameStream stream, int bytes) throws Http2Exception {
-            return Http2MultiplexCodec.this.consumeBytes(stream.id(), bytes);
-        }
-
-        @Override
         protected boolean isParentReadInProgress() {
             return parentReadInProgress;
         }
 
         @Override
-        protected boolean streamMayHaveExisted(Http2FrameStream stream) {
-            return Http2MultiplexCodec.this.connection().streamMayHaveExisted(stream.id());
-        }
-
-        @Override
-        protected void tryRemoveChildChannelFromReadPendingQueue() {
-            Http2MultiplexCodec.this.tryRemoveChildChannelFromReadPendingQueue(this);
-        }
-
-        @Override
-        protected boolean tryAddChildChannelToReadPendingQueue() {
-            return Http2MultiplexCodec.this.tryAddChildChannelToReadPendingQueue(this);
+        protected void addChannelToReadCompletePendingQueue() {
+            // If there is no space left in the queue, just keep on processing everything that is already
+            // stored there and try again.
+            while (!readCompletePendingQueue.offer(this)) {
+                processPendingReadCompleteQueue();
+            }
         }
 
         @Override

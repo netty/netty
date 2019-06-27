@@ -151,6 +151,10 @@ public final class Http2CodecUtil {
         return streamId >= 0;
     }
 
+    static boolean isStreamIdValid(int streamId, boolean server) {
+        return isStreamIdValid(streamId) && server == ((streamId & 1) == 0);
+    }
+
     /**
      * Indicates whether or not the given value for max frame size falls within the valid range.
      */
