@@ -453,7 +453,7 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
 
     private final class LineHeaderExtractor extends HeaderExtractor {
 
-        private LineHeaderExtractor(int maxHeaderSize) {
+        LineHeaderExtractor(int maxHeaderSize) {
             super(maxHeaderSize);
         }
 
@@ -470,7 +470,7 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
 
     private final class StructHeaderExtractor extends HeaderExtractor {
 
-        private StructHeaderExtractor(int maxHeaderSize) {
+        StructHeaderExtractor(int maxHeaderSize) {
             super(maxHeaderSize);
         }
 
