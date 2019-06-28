@@ -23,6 +23,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
@@ -147,8 +148,14 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
     ByteBuf cumulation;
     private Cumulator cumulator = MERGE_CUMULATOR;
     private boolean singleDecode;
-    private boolean decodeWasNull;
     private boolean first;
+
+    /**
+     * This flag is used to determine if we need to call {@link ChannelHandlerContext#read()} to consume more data
+     * when {@link ChannelConfig#isAutoRead()} is {@code false}.
+     */
+    private boolean firedChannelRead;
+
     /**
      * A bitmask where the bits are defined as
      * <ul>
@@ -285,7 +292,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
                 }
 
                 int size = out.size();
-                decodeWasNull = !out.insertSinceRecycled();
+                firedChannelRead |= out.insertSinceRecycled();
                 fireChannelRead(ctx, out, size);
                 out.recycle();
             }
@@ -320,12 +327,10 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         numReads = 0;
         discardSomeReadBytes();
-        if (decodeWasNull) {
-            decodeWasNull = false;
-            if (!ctx.channel().config().isAutoRead()) {
-                ctx.read();
-            }
+        if (!firedChannelRead && !ctx.channel().config().isAutoRead()) {
+            ctx.read();
         }
+        firedChannelRead = false;
         ctx.fireChannelReadComplete();
     }
 
