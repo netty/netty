@@ -31,19 +31,23 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLParameters;
 import java.nio.ByteBuffer;
 import java.security.AlgorithmConstraints;
 import java.security.AlgorithmParameters;
 import java.security.CryptoPrimitive;
 import java.security.Key;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLParameters;
 
 import static io.netty.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static io.netty.handler.ssl.ReferenceCountedOpenSslEngine.MAX_PLAINTEXT_LENGTH;
@@ -54,6 +58,7 @@ import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_1;
 import static io.netty.handler.ssl.SslUtils.PROTOCOL_TLS_V1_2;
 import static io.netty.internal.tcnative.SSL.SSL_CVERIFY_IGNORED;
 import static java.lang.Integer.MAX_VALUE;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -1115,6 +1120,158 @@ public class OpenSslEngineTest extends SSLEngineTest {
         } finally {
             cleanupServerSslEngine(engine);
             ssc.delete();
+        }
+    }
+
+    @Test
+    public void testExtractMasterkeyWorksCorrectly() throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        serverSslCtx = SslContextBuilder.forServer(cert.key(), cert.cert())
+                .sslProvider(SslProvider.OPENSSL).build();
+        final SSLEngine serverEngine =
+                serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        clientSslCtx = SslContextBuilder.forClient()
+                .trustManager(cert.certificate())
+                .sslProvider(SslProvider.OPENSSL).build();
+        final SSLEngine clientEngine =
+                clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+
+        try {
+            //lets set the cipher suite to a specific one with DHE
+            assumeTrue("The diffie hellman cipher is not supported on your runtime.",
+                    Arrays.asList(clientEngine.getSupportedCipherSuites())
+                            .contains("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"));
+
+            //https://www.ietf.org/rfc/rfc5289.txt
+            //For cipher suites ending with _SHA256, the PRF is the TLS PRF
+            //[RFC5246] with SHA-256 as the hash function.  The MAC is HMAC
+            //[RFC2104] with SHA-256 as the hash function.
+            clientEngine.setEnabledCipherSuites(new String[] { "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256" });
+            serverEngine.setEnabledCipherSuites(new String[] { "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256" });
+
+            int appBufferMax = clientEngine.getSession().getApplicationBufferSize();
+            int netBufferMax = clientEngine.getSession().getPacketBufferSize();
+
+            /*
+             * We'll make the input buffers a bit bigger than the max needed
+             * size, so that unwrap()s following a successful data transfer
+             * won't generate BUFFER_OVERFLOWS.
+             */
+            ByteBuffer clientIn = ByteBuffer.allocate(appBufferMax + 50);
+            ByteBuffer serverIn = ByteBuffer.allocate(appBufferMax + 50);
+
+            ByteBuffer cTOs = ByteBuffer.allocate(netBufferMax);
+            ByteBuffer sTOc = ByteBuffer.allocate(netBufferMax);
+
+            ByteBuffer clientOut = ByteBuffer.wrap("Hi Server, I'm Client".getBytes());
+            ByteBuffer serverOut = ByteBuffer.wrap("Hello Client, I'm Server".getBytes());
+
+            // This implementation is largely imitated from
+            // https://docs.oracle.com/javase/8/docs/technotes/
+            // guides/security/jsse/samples/sslengine/SSLEngineSimpleDemo.java
+            // It has been simplified however without the need for running delegation tasks
+
+            // Do handshake for SSL
+            // A typical handshake will usually contain the following steps:
+            // 1. wrap:     ClientHello
+            // 2. unwrap:   ServerHello/Cert/ServerHelloDone
+            // 3. wrap:     ClientKeyExchange
+            // 4. wrap:     ChangeCipherSpec
+            // 5. wrap:     Finished
+            // 6. unwrap:   ChangeCipherSpec
+            // 7. unwrap:   Finished
+
+            //set a for loop; instead of a while loop to guarantee we quit out eventually
+            boolean asserted = false;
+            for (int i = 0; i < 1000; i++) {
+
+                clientEngine.wrap(clientOut, cTOs);
+                serverEngine.wrap(serverOut, sTOc);
+
+                cTOs.flip();
+                sTOc.flip();
+
+                clientEngine.unwrap(sTOc, clientIn);
+                serverEngine.unwrap(cTOs, serverIn);
+
+                // check when the application data has fully been consumed and sent
+                // for both the client and server
+                if ((clientOut.limit() == serverIn.position()) &&
+                        (serverOut.limit() == clientIn.position())) {
+                    byte[] serverRandom = SSL.getServerRandom(((OpenSslEngine) serverEngine).sslPointer());
+                    byte[] clientRandom = SSL.getClientRandom(((OpenSslEngine) clientEngine).sslPointer());
+                    byte[] serverMasterKey = SSL.getMasterKey(((OpenSslEngine) serverEngine).sslPointer());
+                    byte[] clientMasterKey = SSL.getMasterKey(((OpenSslEngine) clientEngine).sslPointer());
+
+                    asserted = true;
+                    assertArrayEquals(serverMasterKey, clientMasterKey);
+
+                    // let us re-read the encrypted data and decrypt it ourselves!
+                    cTOs.flip();
+                    sTOc.flip();
+
+                    // See http://tools.ietf.org/html/rfc5246#section-6.3:
+                    // key_block = PRF(SecurityParameters.master_secret, "key expansion",
+                    //                 SecurityParameters.server_random + SecurityParameters.client_random);
+                    //
+                    // partitioned:
+                    //       client_write_MAC_secret[SecurityParameters.hash_size]
+                    //       server_write_MAC_secret[SecurityParameters.hash_size]
+                    //       client_write_key[SecurityParameters.key_material_length]
+                    //       server_write_key[SecurityParameters.key_material_length]
+
+                    int keySize = 16; // AES is 16 bytes or 128 bits
+                    int macSize = 32; // SHA256 is 32 bytes or 256 bits
+                    int keyBlockSize = (2 * keySize) + (2 * macSize);
+
+                    byte[] seed = new byte[serverRandom.length + clientRandom.length];
+                    System.arraycopy(serverRandom, 0, seed, 0, serverRandom.length);
+                    System.arraycopy(clientRandom, 0, seed, serverRandom.length, clientRandom.length);
+                    byte[] keyBlock = PseudoRandomFunction.hash(serverMasterKey,
+                            "key expansion".getBytes(CharsetUtil.US_ASCII), seed, keyBlockSize, "HmacSha256");
+
+                    int offset = 0;
+                    byte[] clientWriteMac = Arrays.copyOfRange(keyBlock, offset, offset + macSize);
+                    offset += macSize;
+
+                    byte[] serverWriteMac = Arrays.copyOfRange(keyBlock, offset, offset + macSize);
+                    offset += macSize;
+
+                    byte[] clientWriteKey = Arrays.copyOfRange(keyBlock, offset, offset + keySize);
+                    offset += keySize;
+
+                    byte[] serverWriteKey = Arrays.copyOfRange(keyBlock, offset, offset + keySize);
+                    offset += keySize;
+
+                    //advance the cipher text by 5
+                    //to take into account the TLS Record Header
+                    cTOs.position(cTOs.position() + 5);
+
+                    byte[] ciphertext = new byte[cTOs.remaining()];
+                    cTOs.get(ciphertext);
+
+                    //the initialization vector is the first 16 bytes (128 bits) of the payload
+                    byte[] clientWriteIV = Arrays.copyOfRange(ciphertext, 0, 16);
+                    ciphertext = Arrays.copyOfRange(ciphertext, 16, ciphertext.length);
+
+                    SecretKeySpec secretKey = new SecretKeySpec(clientWriteKey, "AES");
+                    final IvParameterSpec ivForCBC = new IvParameterSpec(clientWriteIV);
+                    Cipher cipher = Cipher.getInstance("AES/CBC/NoPadding");
+                    cipher.init(Cipher.DECRYPT_MODE, secretKey, ivForCBC);
+                    byte[] plaintext = cipher.doFinal(ciphertext);
+                    assertTrue(new String(plaintext).startsWith("Hi Server, I'm Client"));
+                    break;
+                } else {
+                    cTOs.compact();
+                    sTOc.compact();
+                }
+            }
+
+            assertTrue("The assertions were never executed.", asserted);
+        } finally {
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
+            cert.delete();
         }
     }
 
