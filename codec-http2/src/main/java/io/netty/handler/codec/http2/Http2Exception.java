@@ -225,7 +225,7 @@ public class Http2Exception extends Exception {
         /**
          * Close the channel immediately after a {@code GOAWAY} is sent.
          */
-        HARD_SHUTDOWN;
+        HARD_SHUTDOWN
     }
 
     /**

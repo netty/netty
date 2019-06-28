@@ -123,9 +123,7 @@ final class SslUtils {
         // AES256 requires JCE unlimited strength jurisdiction policy files.
         defaultCiphers.add("TLS_RSA_WITH_AES_256_CBC_SHA");
 
-        for (String tlsv13Cipher: DEFAULT_TLSV13_CIPHER_SUITES) {
-            defaultCiphers.add(tlsv13Cipher);
-        }
+        Collections.addAll(defaultCiphers, DEFAULT_TLSV13_CIPHER_SUITES);
 
         DEFAULT_CIPHER_SUITES = defaultCiphers.toArray(new String[0]);
     }
