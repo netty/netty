@@ -477,12 +477,12 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
 
     @Override
     public boolean isReadable() {
-        return terminated? buffer.isReadable() : true;
+        return !terminated || buffer.isReadable();
     }
 
     @Override
     public boolean isReadable(int size) {
-        return terminated? buffer.isReadable(size) : true;
+        return !terminated || buffer.isReadable(size);
     }
 
     @Override
