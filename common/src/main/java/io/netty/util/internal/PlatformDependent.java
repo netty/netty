@@ -104,6 +104,7 @@ public final class PlatformDependent {
     private static final ThreadLocalRandomProvider RANDOM_PROVIDER;
     private static final Cleaner CLEANER;
     private static final int UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD;
+    private static final Pattern BIT_PATTERN = Pattern.compile("([1-9][0-9]+)-?bit");
 
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
@@ -1188,7 +1189,6 @@ public final class PlatformDependent {
 
         // Last resort: guess from VM name and then fall back to most common 64-bit mode.
         String vm = SystemPropertyUtil.get("java.vm.name", "").toLowerCase(Locale.US);
-        Pattern BIT_PATTERN = Pattern.compile("([1-9][0-9]+)-?bit");
         Matcher m = BIT_PATTERN.matcher(vm);
         if (m.find()) {
             return Integer.parseInt(m.group(1));

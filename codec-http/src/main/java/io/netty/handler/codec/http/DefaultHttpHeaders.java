@@ -324,7 +324,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     @Override
     public boolean contains(String name, String value, boolean ignoreCase) {
-        return contains((CharSequence) name, (CharSequence) value, ignoreCase);
+        return contains(name, value, ignoreCase);
     }
 
     @Override
