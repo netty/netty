@@ -174,7 +174,7 @@ final class HpackTestCase {
             maxHeaderTableSize = Integer.MAX_VALUE;
         }
 
-        return new HpackDecoder(DEFAULT_HEADER_LIST_SIZE, 32, maxHeaderTableSize);
+        return new HpackDecoder(DEFAULT_HEADER_LIST_SIZE, maxHeaderTableSize);
     }
 
     private static byte[] encode(HpackEncoder hpackEncoder, List<HpackHeaderField> headers, int maxHeaderTableSize,
