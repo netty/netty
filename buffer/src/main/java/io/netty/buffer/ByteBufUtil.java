@@ -1095,7 +1095,7 @@ public final class ByteBufUtil {
             if (length == 0) {
               return StringUtil.EMPTY_STRING;
             } else {
-                int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
+                int rows = length / 16 + ((length & 15) == 0? 0 : 1) + 4;
                 StringBuilder buf = new StringBuilder(rows * 80);
                 appendPrettyHexDump(buf, buffer, offset, length);
                 return buf.toString();
