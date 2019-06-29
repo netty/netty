@@ -83,6 +83,8 @@ static void netty_epoll_linuxsocket_setInterface(JNIEnv* env, jclass clazz, jint
     socklen_t interfaceAddrSize;
     struct sockaddr_in* interfaceIpAddr;
 
+    memset(&interfaceAddr, 0, sizeof(interfaceAddr));
+
     if (ipv6 == JNI_TRUE) {
         if (interfaceIndex == -1) {
            netty_unix_errors_throwIOException(env, "Unable to find network index");
@@ -168,6 +170,9 @@ static void netty_epoll_linuxsocket_joinGroup(JNIEnv* env, jclass clazz, jint fd
     struct sockaddr_in6* groupIp6Addr;
     struct ipv6_mreq mreq6;
 
+    memset(&groupAddr, 0, sizeof(groupAddr));
+    memset(&interfaceAddr, 0, sizeof(interfaceAddr));
+
     if (netty_unix_socket_initSockaddr(env, ipv6, groupAddress, scopeId, 0, &groupAddr, &groupAddrSize) == -1) {
         netty_unix_errors_throwIOException(env, "Could not init sockaddr for groupAddress");
         return;
@@ -217,6 +222,10 @@ static void netty_epoll_linuxsocket_joinSsmGroup(JNIEnv* env, jclass clazz, jint
     struct ip_mreq_source mreq;
 
     struct group_source_req mreq6;
+
+    memset(&groupAddr, 0, sizeof(groupAddr));
+    memset(&sourceAddr, 0, sizeof(sourceAddr));
+    memset(&interfaceAddr, 0, sizeof(interfaceAddr));
 
     if (netty_unix_socket_initSockaddr(env, ipv6, groupAddress, scopeId, 0, &groupAddr, &groupAddrSize) == -1) {
         netty_unix_errors_throwIOException(env, "Could not init sockaddr for groupAddress");
@@ -271,6 +280,9 @@ static void netty_epoll_linuxsocket_leaveGroup(JNIEnv* env, jclass clazz, jint f
     struct sockaddr_in6* groupIp6Addr;
     struct ipv6_mreq mreq6;
 
+    memset(&groupAddr, 0, sizeof(groupAddr));
+    memset(&interfaceAddr, 0, sizeof(interfaceAddr));
+
     if (netty_unix_socket_initSockaddr(env, ipv6, groupAddress, scopeId, 0, &groupAddr, &groupAddrSize) == -1) {
         netty_unix_errors_throwIOException(env, "Could not init sockaddr for groupAddress");
         return;
@@ -320,6 +332,10 @@ static void netty_epoll_linuxsocket_leaveSsmGroup(JNIEnv* env, jclass clazz, jin
     struct ip_mreq_source mreq;
     struct group_source_req mreq6;
 
+    memset(&groupAddr, 0, sizeof(groupAddr));
+    memset(&sourceAddr, 0, sizeof(sourceAddr));
+    memset(&interfaceAddr, 0, sizeof(interfaceAddr));
+
 
     if (netty_unix_socket_initSockaddr(env, ipv6, groupAddress, scopeId, 0, &groupAddr, &groupAddrSize) == -1) {
         netty_unix_errors_throwIOException(env, "Could not init sockaddr for groupAddress");
@@ -366,6 +382,9 @@ static void netty_epoll_linuxsocket_leaveSsmGroup(JNIEnv* env, jclass clazz, jin
 static void netty_epoll_linuxsocket_setTcpMd5Sig(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jbyteArray address, jint scopeId, jbyteArray key) {
     struct sockaddr_storage addr;
     socklen_t addrSize;
+
+    memset(&addr, 0, sizeof(addr));
+
     if (netty_unix_socket_initSockaddr(env, ipv6, address, scopeId, 0, &addr, &addrSize) == -1) {
         netty_unix_errors_throwIOException(env, "Could not init sockaddr");
         return;
