@@ -142,6 +142,11 @@ public class Http2FrameCodecBuilder extends
     }
 
     @Override
+    public Http2FrameCodecBuilder autoAckSettingsFrame(boolean autoAckSettings) {
+        return super.autoAckSettingsFrame(autoAckSettings);
+    }
+
+    @Override
     public Http2FrameCodecBuilder decoupleCloseAndGoAway(boolean decoupleCloseAndGoAway) {
         return super.decoupleCloseAndGoAway(decoupleCloseAndGoAway);
     }
