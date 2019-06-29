@@ -20,6 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
@@ -374,13 +375,15 @@ public class FixedChannelPoolTest {
         pool.acquire().get();
         pool.acquire().get();
 
+        final ChannelPromise closePromise = sc.newPromise();
         pool.closeAsync().addListener(new GenericFutureListener<Future<? super Void>>() {
             @Override
             public void operationComplete(Future<? super Void> future) throws Exception {
                 Assert.assertEquals(0, pool.acquiredChannelCount());
-                sc.close().syncUninterruptibly();
+                sc.close(closePromise).syncUninterruptibly();
             }
         }).awaitUninterruptibly();
+        closePromise.awaitUninterruptibly();
     }
 
     private static final class TestChannelPoolHandler extends AbstractChannelPoolHandler {
