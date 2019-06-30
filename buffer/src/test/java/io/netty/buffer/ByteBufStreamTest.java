@@ -228,6 +228,9 @@ public class ByteBufStreamTest {
         assertEquals(-1, in.read());
         assertEquals(-1, in.read());
 
+        buf.release();
+        in.close();
+
         // case2
         ByteBuf buf2 = Unpooled.buffer(16);
         buf2.writeBytes(new byte[]{1, 2, 3, 4, 5, 6});
@@ -240,6 +243,9 @@ public class ByteBufStreamTest {
         assertEquals(4, in2.read());
         assertNotEquals(5, in2.read());
         assertEquals(-1, in2.read());
+
+        buf2.release();
+        in2.close();
 
     }
 }
