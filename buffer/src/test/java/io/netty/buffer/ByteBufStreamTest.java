@@ -246,6 +246,5 @@ public class ByteBufStreamTest {
 
         buf2.release();
         in2.close();
-
     }
 }
