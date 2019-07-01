@@ -16,13 +16,10 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
-
-import static io.netty.handler.codec.dns.DefaultDnsRecordDecoder.ROOT;
 
 /**
  * The default {@link DnsRecordEncoder} implementation.

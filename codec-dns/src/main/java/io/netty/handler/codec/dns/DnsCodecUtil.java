@@ -24,12 +24,12 @@ import io.netty.util.CharsetUtil;
 
 import static io.netty.handler.codec.dns.DefaultDnsRecordDecoder.*;
 
-public final class DnsCodecUtil {
+final class DnsCodecUtil {
     private DnsCodecUtil() {
         // Util class
     }
 
-    public static void encodeDomainName(String name, ByteBuf buf) {
+    static void encodeDomainName(String name, ByteBuf buf) {
         if (ROOT.equals(name)) {
             // Root domain
             buf.writeByte(0);
@@ -51,7 +51,7 @@ public final class DnsCodecUtil {
         buf.writeByte(0); // marks end of name field
     }
 
-    public static String decodeDomainName(ByteBuf in) {
+    static String decodeDomainName(ByteBuf in) {
         int position = -1;
         int checked = 0;
         final int end = in.writerIndex();
@@ -123,7 +123,7 @@ public final class DnsCodecUtil {
      * @param compression comporession data
      * @return decompressed data
      */
-    public static ByteBuf decompressDomainName(ByteBuf compression) {
+    static ByteBuf decompressDomainName(ByteBuf compression) {
         String domainName = decodeDomainName(compression);
         ByteBuf result = Unpooled.buffer(domainName.length() << 1);
         encodeDomainName(domainName, result);
