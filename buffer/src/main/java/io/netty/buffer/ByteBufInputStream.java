@@ -264,7 +264,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
                     break loop;
 
                 case '\r':
-                    if (available >= 0 && (char) buffer.getUnsignedByte(buffer.readerIndex()) == '\n') {
+                    if (available > 0 && (char) buffer.getUnsignedByte(buffer.readerIndex()) == '\n') {
                         buffer.skipBytes(1);
                         --available;
                     }

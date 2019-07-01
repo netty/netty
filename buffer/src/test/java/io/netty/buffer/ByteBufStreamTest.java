@@ -253,7 +253,7 @@ public class ByteBufStreamTest {
     }
 
     @Test
-    public void testReadLineLengthRespected() throws Exception {
+    public void testReadLineLengthRespected1() throws Exception {
         // case1
         ByteBuf buf = Unpooled.buffer(16);
         buf.writeBytes(new byte[] { 1, 2, 3, 4, 5, 6 });
@@ -263,8 +263,10 @@ public class ByteBufStreamTest {
         assertNull(in.readLine());
         buf.release();
         in.close();
+    }
 
-        // case2
+    @Test
+    public void testReadLineLengthRespected2() throws Exception {
         ByteBuf buf2 = Unpooled.buffer(16);
         buf2.writeBytes(new byte[] { 'A', 'B', '\n', 'C', 'E', 'F'});
 
