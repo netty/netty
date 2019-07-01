@@ -533,9 +533,7 @@ public final class WorldClockProtocol {
     @Override
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) {
-        return isInitialized == 1;
-      }
+      if (isInitialized != -1) return isInitialized == 1;
 
       if (!hasContinent()) {
         memoizedIsInitialized = 0;
@@ -566,9 +564,7 @@ public final class WorldClockProtocol {
     @Override
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
-      if (size != -1) {
-        return size;
-      }
+      if (size != -1) return size;
 
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
@@ -760,9 +756,7 @@ public final class WorldClockProtocol {
       }
 
       public Builder mergeFrom(io.netty.example.worldclock.WorldClockProtocol.Location other) {
-        if (other == io.netty.example.worldclock.WorldClockProtocol.Location.getDefaultInstance()) {
-          return this;
-        }
+        if (other == io.netty.example.worldclock.WorldClockProtocol.Location.getDefaultInstance()) return this;
         if (other.hasContinent()) {
           setContinent(other.getContinent());
         }
@@ -1114,9 +1108,7 @@ public final class WorldClockProtocol {
     @Override
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) {
-        return isInitialized == 1;
-      }
+      if (isInitialized != -1) return isInitialized == 1;
 
       for (int i = 0; i < getLocationCount(); i++) {
         if (!getLocation(i).isInitialized()) {
@@ -1142,9 +1134,7 @@ public final class WorldClockProtocol {
     @Override
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
-      if (size != -1) {
-        return size;
-      }
+      if (size != -1) return size;
 
       size = 0;
       for (int i = 0; i < location_.size(); i++) {
@@ -1334,9 +1324,7 @@ public final class WorldClockProtocol {
       }
 
       public Builder mergeFrom(io.netty.example.worldclock.WorldClockProtocol.Locations other) {
-        if (other == io.netty.example.worldclock.WorldClockProtocol.Locations.getDefaultInstance()) {
-          return this;
-        }
+        if (other == io.netty.example.worldclock.WorldClockProtocol.Locations.getDefaultInstance()) return this;
         if (locationBuilder_ == null) {
           if (!other.location_.isEmpty()) {
             if (location_.isEmpty()) {
@@ -2001,9 +1989,7 @@ public final class WorldClockProtocol {
     @Override
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) {
-        return isInitialized == 1;
-      }
+      if (isInitialized != -1) return isInitialized == 1;
 
       if (!hasYear()) {
         memoizedIsInitialized = 0;
@@ -2069,9 +2055,7 @@ public final class WorldClockProtocol {
     @Override
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
-      if (size != -1) {
-        return size;
-      }
+      if (size != -1) return size;
 
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
@@ -2313,9 +2297,7 @@ public final class WorldClockProtocol {
       }
 
       public Builder mergeFrom(io.netty.example.worldclock.WorldClockProtocol.LocalTime other) {
-        if (other == io.netty.example.worldclock.WorldClockProtocol.LocalTime.getDefaultInstance()) {
-          return this;
-        }
+        if (other == io.netty.example.worldclock.WorldClockProtocol.LocalTime.getDefaultInstance()) return this;
         if (other.hasYear()) {
           setYear(other.getYear());
         }
@@ -2833,9 +2815,7 @@ public final class WorldClockProtocol {
     @Override
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) {
-        return isInitialized == 1;
-      }
+      if (isInitialized != -1) return isInitialized == 1;
 
       for (int i = 0; i < getLocalTimeCount(); i++) {
         if (!getLocalTime(i).isInitialized()) {
@@ -2861,9 +2841,7 @@ public final class WorldClockProtocol {
     @Override
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
-      if (size != -1) {
-        return size;
-      }
+      if (size != -1) return size;
 
       size = 0;
       for (int i = 0; i < localTime_.size(); i++) {
@@ -3053,9 +3031,7 @@ public final class WorldClockProtocol {
       }
 
       public Builder mergeFrom(io.netty.example.worldclock.WorldClockProtocol.LocalTimes other) {
-        if (other == io.netty.example.worldclock.WorldClockProtocol.LocalTimes.getDefaultInstance()) {
-          return this;
-        }
+        if (other == io.netty.example.worldclock.WorldClockProtocol.LocalTimes.getDefaultInstance()) return this;
         if (localTimeBuilder_ == null) {
           if (!other.localTime_.isEmpty()) {
             if (localTime_.isEmpty()) {
