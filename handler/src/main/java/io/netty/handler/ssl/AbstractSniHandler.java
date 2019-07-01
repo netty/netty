@@ -42,9 +42,6 @@ import java.util.Locale;
  */
 public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder implements ChannelOutboundHandler {
 
-    // Maximal number of ssl records to inspect before fallback to the default SslContext.
-    private static final int MAX_SSL_RECORDS = 4;
-
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AbstractSniHandler.class);
 
@@ -55,83 +52,75 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         if (!suppressRead && !handshakeFailed) {
-            final int writerIndex = in.writerIndex();
             try {
-                loop:
-                for (int i = 0; i < MAX_SSL_RECORDS; i++) {
-                    final int readerIndex = in.readerIndex();
-                    final int readableBytes = writerIndex - readerIndex;
-                    if (readableBytes < SslUtils.SSL_RECORD_HEADER_LENGTH) {
-                        // Not enough data to determine the record type and length.
-                        return;
-                    }
+                final int readerIndex = in.readerIndex();
+                final int readableBytes = in.readableBytes();
+                if (readableBytes < SslUtils.SSL_RECORD_HEADER_LENGTH) {
+                    // Not enough data to determine the record type and length.
+                    return;
+                }
 
-                    final int command = in.getUnsignedByte(readerIndex);
+                final int command = in.getUnsignedByte(readerIndex);
+                switch (command) {
+                    case SslUtils.SSL_CONTENT_TYPE_CHANGE_CIPHER_SPEC:
+                        // fall-through
+                    case SslUtils.SSL_CONTENT_TYPE_ALERT:
+                        final int len = SslUtils.getEncryptedPacketLength(in, readerIndex);
 
-                    // tls, but not handshake command
-                    switch (command) {
-                        case SslUtils.SSL_CONTENT_TYPE_CHANGE_CIPHER_SPEC:
-                        case SslUtils.SSL_CONTENT_TYPE_ALERT:
-                            final int len = SslUtils.getEncryptedPacketLength(in, readerIndex);
+                        // Not an SSL/TLS packet
+                        if (len == SslUtils.NOT_ENCRYPTED) {
+                            handshakeFailed = true;
+                            NotSslRecordException e = new NotSslRecordException(
+                                    "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
+                            in.skipBytes(in.readableBytes());
+                            ctx.fireUserEventTriggered(new SniCompletionEvent(e));
+                            SslUtils.handleHandshakeFailure(ctx, e, true);
+                            throw e;
+                        }
+                        if (len == SslUtils.NOT_ENOUGH_DATA) {
+                            // Not enough data
+                            return;
+                        }
+                        // SNI can't be present in an ALERT or CHANGE_CIPHER_SPEC record, so we'll fall back and assume
+                        // no SNI is present. Let's let the actual TLS implementation sort this out.
+                        break;
 
-                            // Not an SSL/TLS packet
-                            if (len == SslUtils.NOT_ENCRYPTED) {
-                                handshakeFailed = true;
-                                NotSslRecordException e = new NotSslRecordException(
-                                        "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
-                                in.skipBytes(in.readableBytes());
-                                ctx.fireUserEventTriggered(new SniCompletionEvent(e));
-                                SslUtils.handleHandshakeFailure(ctx, e, true);
-                                throw e;
-                            }
-                            if (len == SslUtils.NOT_ENOUGH_DATA ||
-                                    writerIndex - readerIndex - SslUtils.SSL_RECORD_HEADER_LENGTH < len) {
-                                // Not enough data
+                    case SslUtils.SSL_CONTENT_TYPE_HANDSHAKE:
+                        final int majorVersion = in.getUnsignedByte(readerIndex + 1);
+                        // SSLv3 or TLS
+                        if (majorVersion == 3) {
+                            final int packetLength = in.getUnsignedShort(readerIndex + 3) +
+                                    SslUtils.SSL_RECORD_HEADER_LENGTH;
+
+                            if (readableBytes < packetLength) {
+                                // client hello incomplete; try again to decode once more data is ready.
                                 return;
                             }
-                            // increase readerIndex and try again.
-                            in.skipBytes(len);
-                            continue;
-                        case SslUtils.SSL_CONTENT_TYPE_HANDSHAKE:
-                            final int majorVersion = in.getUnsignedByte(readerIndex + 1);
 
-                            // SSLv3 or TLS
-                            if (majorVersion == 3) {
-                                final int packetLength = in.getUnsignedShort(readerIndex + 3) +
-                                        SslUtils.SSL_RECORD_HEADER_LENGTH;
+                            // See https://tools.ietf.org/html/rfc5246#section-7.4.1.2
+                            //
+                            // Decode the ssl client hello packet.
+                            // We have to skip bytes until SessionID (which sum to 43 bytes).
+                            //
+                            // struct {
+                            //    ProtocolVersion client_version;
+                            //    Random random;
+                            //    SessionID session_id;
+                            //    CipherSuite cipher_suites<2..2^16-2>;
+                            //    CompressionMethod compression_methods<1..2^8-1>;
+                            //    select (extensions_present) {
+                            //        case false:
+                            //            struct {};
+                            //        case true:
+                            //            Extension extensions<0..2^16-1>;
+                            //    };
+                            // } ClientHello;
+                            //
 
-                                if (readableBytes < packetLength) {
-                                    // client hello incomplete; try again to decode once more data is ready.
-                                    return;
-                                }
+                            final int endOffset = readerIndex + packetLength;
+                            int offset = readerIndex + 43;
 
-                                // See https://tools.ietf.org/html/rfc5246#section-7.4.1.2
-                                //
-                                // Decode the ssl client hello packet.
-                                // We have to skip bytes until SessionID (which sum to 43 bytes).
-                                //
-                                // struct {
-                                //    ProtocolVersion client_version;
-                                //    Random random;
-                                //    SessionID session_id;
-                                //    CipherSuite cipher_suites<2..2^16-2>;
-                                //    CompressionMethod compression_methods<1..2^8-1>;
-                                //    select (extensions_present) {
-                                //        case false:
-                                //            struct {};
-                                //        case true:
-                                //            Extension extensions<0..2^16-1>;
-                                //    };
-                                // } ClientHello;
-                                //
-
-                                final int endOffset = readerIndex + packetLength;
-                                int offset = readerIndex + 43;
-
-                                if (endOffset - offset < 6) {
-                                    break loop;
-                                }
-
+                            if (endOffset - offset >= 6) {
                                 final int sessionIdLength = in.getUnsignedByte(offset);
                                 offset += sessionIdLength + 1;
 
@@ -145,68 +134,61 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
                                 offset += 2;
                                 final int extensionsLimit = offset + extensionsLength;
 
-                                if (extensionsLimit > endOffset) {
-                                    // Extensions should never exceed the record boundary.
-                                    break loop;
-                                }
-
-                                for (;;) {
-                                    if (extensionsLimit - offset < 4) {
-                                        break loop;
-                                    }
-
-                                    final int extensionType = in.getUnsignedShort(offset);
-                                    offset += 2;
-
-                                    final int extensionLength = in.getUnsignedShort(offset);
-                                    offset += 2;
-
-                                    if (extensionsLimit - offset < extensionLength) {
-                                        break loop;
-                                    }
-
-                                    // SNI
-                                    // See https://tools.ietf.org/html/rfc6066#page-6
-                                    if (extensionType == 0) {
+                                // Extensions should never exceed the record boundary.
+                                if (extensionsLimit <= endOffset) {
+                                    while (extensionsLimit - offset >= 4) {
+                                        final int extensionType = in.getUnsignedShort(offset);
                                         offset += 2;
-                                        if (extensionsLimit - offset < 3) {
-                                            break loop;
+
+                                        final int extensionLength = in.getUnsignedShort(offset);
+                                        offset += 2;
+
+                                        if (extensionsLimit - offset < extensionLength) {
+                                            break;
                                         }
 
-                                        final int serverNameType = in.getUnsignedByte(offset);
-                                        offset++;
-
-                                        if (serverNameType == 0) {
-                                            final int serverNameLength = in.getUnsignedShort(offset);
+                                        // SNI
+                                        // See https://tools.ietf.org/html/rfc6066#page-6
+                                        if (extensionType == 0) {
                                             offset += 2;
-
-                                            if (extensionsLimit - offset < serverNameLength) {
-                                                break loop;
+                                            if (extensionsLimit - offset < 3) {
+                                                break;
                                             }
 
-                                            final String hostname = in.toString(offset, serverNameLength,
-                                                    CharsetUtil.US_ASCII);
+                                            final int serverNameType = in.getUnsignedByte(offset);
+                                            offset++;
 
-                                            try {
-                                                select(ctx, hostname.toLowerCase(Locale.US));
-                                            } catch (Throwable t) {
-                                                PlatformDependent.throwException(t);
+                                            if (serverNameType == 0) {
+                                                final int serverNameLength = in.getUnsignedShort(offset);
+                                                offset += 2;
+
+                                                if (extensionsLimit - offset < serverNameLength) {
+                                                    break;
+                                                }
+
+                                                final String hostname =
+                                                        in.toString(offset, serverNameLength, CharsetUtil.US_ASCII);
+                                                try {
+                                                    select(ctx, hostname.toLowerCase(Locale.US));
+                                                } catch (Throwable t) {
+                                                    PlatformDependent.throwException(t);
+                                                }
+                                                return;
+                                            } else {
+                                                // invalid enum value
+                                                break;
                                             }
-                                            return;
-                                        } else {
-                                            // invalid enum value
-                                            break loop;
                                         }
-                                    }
 
-                                    offset += extensionLength;
+                                        offset += extensionLength;
+                                    }
                                 }
                             }
-                            // Fall-through
-                        default:
-                            //not tls, ssl or application data, do not try sni
-                            break loop;
-                    }
+                        }
+                        break;
+                    default:
+                        //not tls, ssl or application data, do not try sni
+                        break;
                 }
             } catch (NotSslRecordException e) {
                 // Just rethrow as in this case we also closed the channel and this is consistent with SslHandler.
