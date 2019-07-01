@@ -1043,11 +1043,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
      * in {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object)}. This method is responsible
      * to call {@link ReferenceCountUtil#release(Object)} on the given msg at some point.
      */
-    protected void onUnhandledInboundMessage(Object msg) {
+    protected void onUnhandledInboundMessage(ChannelHandlerContext ctx, Object msg) {
         try {
             logger.debug(
                     "Discarded inbound message {} that reached at the tail of the pipeline. " +
-                            "Please check your pipeline configuration.", msg);
+                            "Please check your pipeline configuration. Discarded message pipeline : {}. Channel : {}.",
+                    msg, ctx.pipeline().names(), ctx.channel());
         } finally {
             ReferenceCountUtil.release(msg);
         }
@@ -1136,7 +1137,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
-            ((DefaultChannelPipeline) ctx.pipeline()).onUnhandledInboundMessage(msg);
+            ((DefaultChannelPipeline) ctx.pipeline()).onUnhandledInboundMessage(ctx, msg);
         }
 
         @Override

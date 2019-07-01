@@ -313,7 +313,7 @@ public class DefaultChannelPipelineTailTest {
             }
 
             @Override
-            protected void onUnhandledInboundMessage(Object msg) {
+            protected void onUnhandledInboundMessage(ChannelHandlerContext ctx, Object msg) {
                 MyChannel.this.onUnhandledInboundMessage(msg);
             }
 
