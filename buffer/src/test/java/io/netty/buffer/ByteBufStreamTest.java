@@ -212,4 +212,39 @@ public class ByteBufStreamTest {
         assertEquals(charCount, count);
         in.close();
     }
+
+    @Test
+    public void testRead() throws Exception {
+        // case1
+        ByteBuf buf = Unpooled.buffer(16);
+        buf.writeBytes(new byte[]{1, 2, 3, 4, 5, 6});
+
+        ByteBufInputStream in = new ByteBufInputStream(buf, 3);
+
+        assertEquals(1, in.read());
+        assertEquals(2, in.read());
+        assertEquals(3, in.read());
+        assertEquals(-1, in.read());
+        assertEquals(-1, in.read());
+        assertEquals(-1, in.read());
+
+        buf.release();
+        in.close();
+
+        // case2
+        ByteBuf buf2 = Unpooled.buffer(16);
+        buf2.writeBytes(new byte[]{1, 2, 3, 4, 5, 6});
+
+        ByteBufInputStream in2 = new ByteBufInputStream(buf2, 4);
+
+        assertEquals(1, in2.read());
+        assertEquals(2, in2.read());
+        assertEquals(3, in2.read());
+        assertEquals(4, in2.read());
+        assertNotEquals(5, in2.read());
+        assertEquals(-1, in2.read());
+
+        buf2.release();
+        in2.close();
+    }
 }

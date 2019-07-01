@@ -163,7 +163,8 @@ public class ByteBufInputStream extends InputStream implements DataInput {
 
     @Override
     public int read() throws IOException {
-        if (!buffer.isReadable()) {
+        int available = available();
+        if (available == 0) {
             return -1;
         }
         return buffer.readByte() & 0xff;
