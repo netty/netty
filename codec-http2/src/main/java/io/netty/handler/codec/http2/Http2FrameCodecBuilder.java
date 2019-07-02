@@ -137,6 +137,7 @@ public class Http2FrameCodecBuilder extends
     }
 
     @Override
+    @Deprecated
     public Http2FrameCodecBuilder initialHuffmanDecodeCapacity(int initialHuffmanDecodeCapacity) {
         return super.initialHuffmanDecodeCapacity(initialHuffmanDecodeCapacity);
     }

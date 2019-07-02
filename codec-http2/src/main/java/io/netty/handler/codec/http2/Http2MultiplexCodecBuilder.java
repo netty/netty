@@ -166,6 +166,7 @@ public class Http2MultiplexCodecBuilder
     }
 
     @Override
+    @Deprecated
     public Http2MultiplexCodecBuilder initialHuffmanDecodeCapacity(int initialHuffmanDecodeCapacity) {
         return super.initialHuffmanDecodeCapacity(initialHuffmanDecodeCapacity);
     }

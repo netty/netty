@@ -79,7 +79,7 @@ public class HpackDecoderTest {
 
     @Before
     public void setUp() {
-        hpackDecoder = new HpackDecoder(8192, 32);
+        hpackDecoder = new HpackDecoder(8192);
         mockHeaders = mock(Http2Headers.class);
     }
 
