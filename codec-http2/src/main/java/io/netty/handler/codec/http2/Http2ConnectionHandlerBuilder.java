@@ -88,6 +88,7 @@ public final class Http2ConnectionHandlerBuilder
     }
 
     @Override
+    @Deprecated
     public Http2ConnectionHandlerBuilder initialHuffmanDecodeCapacity(int initialHuffmanDecodeCapacity) {
         return super.initialHuffmanDecodeCapacity(initialHuffmanDecodeCapacity);
     }
