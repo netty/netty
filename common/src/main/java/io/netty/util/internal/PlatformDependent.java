@@ -1188,8 +1188,8 @@ public final class PlatformDependent {
 
         // Last resort: guess from VM name and then fall back to most common 64-bit mode.
         String vm = SystemPropertyUtil.get("java.vm.name", "").toLowerCase(Locale.US);
-        Pattern BIT_PATTERN = Pattern.compile("([1-9][0-9]+)-?bit");
-        Matcher m = BIT_PATTERN.matcher(vm);
+        Pattern bitPattern = Pattern.compile("([1-9][0-9]+)-?bit");
+        Matcher m = bitPattern.matcher(vm);
         if (m.find()) {
             return Integer.parseInt(m.group(1));
         } else {
