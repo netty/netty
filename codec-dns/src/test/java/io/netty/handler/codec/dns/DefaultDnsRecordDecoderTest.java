@@ -97,14 +97,14 @@ public class DefaultDnsRecordDecoderTest {
                 (byte) 0xC0, 0
         };
         ByteBuf buffer = Unpooled.wrappedBuffer(compressionPointer);
-        ByteBuf uncomporessed = null;
+        ByteBuf uncompressed = null;
         try {
-            uncomporessed = DnsCodecUtil.decompressDomainName(buffer.duplicate().setIndex(10, 12));
-            assertEquals(0, ByteBufUtil.compare(buffer.duplicate().setIndex(0, 10), uncomporessed));
+            uncompressed = DnsCodecUtil.decompressDomainName(buffer.duplicate().setIndex(10, 12));
+            assertEquals(0, ByteBufUtil.compare(buffer.duplicate().setIndex(0, 10), uncompressed));
         } finally {
             buffer.release();
-            if (uncomporessed != null) {
-                uncomporessed.release();
+            if (uncompressed != null) {
+                uncompressed.release();
             }
         }
     }
@@ -117,17 +117,17 @@ public class DefaultDnsRecordDecoderTest {
                 (byte) 0xC0, 11, // netty.github.io
         };
         ByteBuf buffer = Unpooled.wrappedBuffer(nestedCompressionPointer);
-        ByteBuf uncomporessed = null;
+        ByteBuf uncompressed = null;
         try {
-            uncomporessed = DnsCodecUtil.decompressDomainName(buffer.duplicate().setIndex(19, 21));
+            uncompressed = DnsCodecUtil.decompressDomainName(buffer.duplicate().setIndex(19, 21));
             assertEquals(0, ByteBufUtil.compare(
                     Unpooled.wrappedBuffer(new byte[] {
                             5, 'n', 'e', 't', 't', 'y', 6, 'g', 'i', 't', 'h', 'u', 'b', 2, 'i', 'o', 0
-                    }), uncomporessed));
+                    }), uncompressed));
         } finally {
             buffer.release();
-            if (uncomporessed != null) {
-                uncomporessed.release();
+            if (uncompressed != null) {
+                uncompressed.release();
             }
         }
     }
