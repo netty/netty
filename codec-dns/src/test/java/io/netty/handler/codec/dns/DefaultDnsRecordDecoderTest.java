@@ -16,10 +16,11 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class DefaultDnsRecordDecoderTest {
 
@@ -86,6 +87,81 @@ public class DefaultDnsRecordDecoderTest {
             assertEquals(writerIndex, buffer.writerIndex());
         } finally {
             buffer.release();
+        }
+    }
+
+    @Test
+    public void testdecompressCompressPointer() {
+        byte[] compressionPointer = {
+                5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0,
+                (byte) 0xC0, 0
+        };
+        ByteBuf buffer = Unpooled.wrappedBuffer(compressionPointer);
+        ByteBuf uncompressed = null;
+        try {
+            uncompressed = DnsCodecUtil.decompressDomainName(buffer.duplicate().setIndex(10, 12));
+            assertEquals(0, ByteBufUtil.compare(buffer.duplicate().setIndex(0, 10), uncompressed));
+        } finally {
+            buffer.release();
+            if (uncompressed != null) {
+                uncompressed.release();
+            }
+        }
+    }
+
+    @Test
+    public void testdecompressNestedCompressionPointer() {
+        byte[] nestedCompressionPointer = {
+                6, 'g', 'i', 't', 'h', 'u', 'b', 2, 'i', 'o', 0, // github.io
+                5, 'n', 'e', 't', 't', 'y', (byte) 0xC0, 0, // netty.github.io
+                (byte) 0xC0, 11, // netty.github.io
+        };
+        ByteBuf buffer = Unpooled.wrappedBuffer(nestedCompressionPointer);
+        ByteBuf uncompressed = null;
+        try {
+            uncompressed = DnsCodecUtil.decompressDomainName(buffer.duplicate().setIndex(19, 21));
+            assertEquals(0, ByteBufUtil.compare(
+                    Unpooled.wrappedBuffer(new byte[] {
+                            5, 'n', 'e', 't', 't', 'y', 6, 'g', 'i', 't', 'h', 'u', 'b', 2, 'i', 'o', 0
+                    }), uncompressed));
+        } finally {
+            buffer.release();
+            if (uncompressed != null) {
+                uncompressed.release();
+            }
+        }
+    }
+
+    @Test
+    public void testDecodeCompressionRDataPointer() throws Exception {
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
+        byte[] compressionPointer = {
+                5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0,
+                (byte) 0xC0, 0
+        };
+        ByteBuf buffer = Unpooled.wrappedBuffer(compressionPointer);
+        DefaultDnsRawRecord cnameRecord = null;
+        DefaultDnsRawRecord nsRecord = null;
+        try {
+            cnameRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
+                    "netty.github.io", DnsRecordType.CNAME, DnsRecord.CLASS_IN, 60, buffer, 10, 2);
+            assertEquals("The rdata of CNAME-type record should be decompressed in advance",
+                         0, ByteBufUtil.compare(buffer.duplicate().setIndex(0, 10), cnameRecord.content()));
+            assertEquals("netty.io.", DnsCodecUtil.decodeDomainName(cnameRecord.content()));
+            nsRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
+                    "netty.github.io", DnsRecordType.NS, DnsRecord.CLASS_IN, 60, buffer, 10, 2);
+            assertEquals("The rdata of NS-type record should be decompressed in advance",
+                         0, ByteBufUtil.compare(buffer.duplicate().setIndex(0, 10), nsRecord.content()));
+            assertEquals("netty.io.", DnsCodecUtil.decodeDomainName(nsRecord.content()));
+        } finally {
+            buffer.release();
+            if (cnameRecord != null) {
+                cnameRecord.release();
+            }
+
+            if (nsRecord != null) {
+                nsRecord.release();
+            }
         }
     }
 
