@@ -178,10 +178,10 @@ class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     @Override
-    protected void executeScheduledRunnable(ScheduledTaskRunnable runnable) {
-        if (runnable.isAddition()) {
+    protected void executeScheduledRunnable(Runnable runnable, boolean isAddition, long deadlineNanos) {
+        if (isAddition) {
             try {
-                trySetTimerFd(runnable);
+                trySetTimerFd(deadlineNanos);
             } catch (IOException cause) {
                 throw new RejectedExecutionException(cause);
             }
@@ -201,8 +201,8 @@ class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     @Override
-    protected boolean wakesUpForTask(Runnable task) {
-        return !(task instanceof ScheduledTaskRunnable) && super.wakesUpForTask(task);
+    protected boolean wakesUpForScheduledRunnable() {
+        return false;
     }
 
     @Override
@@ -212,8 +212,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
         return runScheduledAndExecutorTasks(4);
     }
 
-    private void trySetTimerFd(ScheduledTask task) throws IOException {
-        final long candidateNextDeadline = task.deadlineNanos();
+    private void trySetTimerFd(long candidateNextDeadline) throws IOException {
         for (;;) {
             long nextDeadline = nextDeadlineNanos.get();
             if (nextDeadline - candidateNextDeadline <= 0) {
@@ -249,9 +248,9 @@ class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     private void checkScheduleTaskQueueForNewDelay() throws IOException {
-        final ScheduledTask task = peekScheduledTaskDelayNanos();
-        if (task != null) {
-            trySetTimerFd(task);
+        final long deadlineNanos = nextScheduledTaskDeadlineNanos();
+        if (deadlineNanos != -1) {
+            trySetTimerFd(deadlineNanos);
         }
         // Don't disarm the timerFd even if there are no more queued tasks. Since we are setting timerFd from outside
         // the EventLoop it is possible that another thread has set the timer and we may miss a wakeup if we disarm
@@ -259,7 +258,8 @@ class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     @Override
-    protected void minimumDelayScheduledTaskRemoved(@SuppressWarnings("unused") ScheduledTask task) {
+    protected void minimumDelayScheduledTaskRemoved(@SuppressWarnings("unused") Runnable task,
+                                                    @SuppressWarnings("unused") long deadlineNanos) {
         // It is OK to reset nextDeadlineNanos here because we are in the event loop thread, and the event loop is
         // guaranteed to transfer all pending ScheduledFutureTasks from the executor queue to the scheduled
         // PriorityQueue and we will set the next expiration time. If another thread races with this thread inserting a
