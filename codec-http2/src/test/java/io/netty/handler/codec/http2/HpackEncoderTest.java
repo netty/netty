@@ -33,7 +33,7 @@ public class HpackEncoderTest {
     @Before
     public void setUp() {
         hpackEncoder = new HpackEncoder();
-        hpackDecoder = new HpackDecoder(DEFAULT_HEADER_LIST_SIZE, 32);
+        hpackDecoder = new HpackDecoder(DEFAULT_HEADER_LIST_SIZE);
         mockHeaders = mock(Http2Headers.class);
     }
 
