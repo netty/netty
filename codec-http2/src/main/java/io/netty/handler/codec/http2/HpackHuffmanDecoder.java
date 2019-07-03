@@ -38,7 +38,7 @@ import io.netty.util.internal.ThrowableUtil;
 
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 
-final class HpackHuffmanDecoder {
+final class HpackHuffmanDecoder implements ByteProcessor {
 
     /* Scroll to the bottom! */
 
@@ -4669,7 +4669,10 @@ final class HpackHuffmanDecoder {
             Http2Exception.newStatic(COMPRESSION_ERROR, "HPACK - Bad Encoding",
                     Http2Exception.ShutdownHint.HARD_SHUTDOWN), HpackHuffmanDecoder.class, "decode(..)");
 
-    private final HuffmanDecoderProcessor processor = new HuffmanDecoderProcessor();
+    private byte[] dest;
+    private int k;
+    private int state;
+    private int flags;
 
     HpackHuffmanDecoder() { }
 
@@ -4681,72 +4684,62 @@ final class HpackHuffmanDecoder {
      * @throws Http2Exception EOS Decoded
      */
     public AsciiString decode(ByteBuf buf, int length) throws Http2Exception {
-        return processor.decode(buf, length);
+        if (length == 0) {
+            return AsciiString.EMPTY_STRING;
+        }
+        dest = new byte[length * 8 / 5];
+        try {
+            int readerIndex = buf.readerIndex();
+            // Using ByteProcessor to reduce bounds-checking and reference-count checking during byte-by-byte
+            // processing of the ByteBuf.
+            int endIndex = buf.forEachByte(readerIndex, length, this);
+            if (endIndex == -1) {
+                // We did consume the requested length
+                buf.readerIndex(readerIndex + length);
+                if ((flags & HUFFMAN_COMPLETE_SHIFT) != HUFFMAN_COMPLETE_SHIFT) {
+                    throw BAD_ENCODING;
+                }
+                return new AsciiString(dest, 0, k, false);
+            }
+
+            // The process(...) method returned before the requested length was requested. This means there
+            // was a bad encoding detected.
+            buf.readerIndex(endIndex);
+            throw BAD_ENCODING;
+        } finally {
+            dest = null;
+            k = 0;
+            state = 0;
+            flags = 0;
+        }
     }
 
     /**
-     * Using {@link ByteProcessor} to reduce bounds-checking and reference-count checking during byte-by-byte
-     * processing of the {@link ByteBuf}.
+     * <strong>This should never be called from anything but this class itself!</strong>
      */
-    private static final class HuffmanDecoderProcessor implements ByteProcessor {
-        private byte[] dest;
-        private int k;
-        private int state;
-        private int flags;
-
-        public AsciiString decode(ByteBuf buf, int length) throws Http2Exception {
-            if (length == 0) {
-                return AsciiString.EMPTY_STRING;
-            }
-            dest = new byte[length * 8 / 5];
-            try {
-                int readerIndex = buf.readerIndex();
-                int endIndex = buf.forEachByte(readerIndex, length, this);
-                if (endIndex == -1) {
-                    // We did consume the requested length
-                    buf.readerIndex(readerIndex + length);
-                    if ((flags & HUFFMAN_COMPLETE_SHIFT) != HUFFMAN_COMPLETE_SHIFT) {
-                        throw BAD_ENCODING;
-                    }
-                    return new AsciiString(dest, 0, k, false);
-                }
-
-                // The process(...) method returned before the requested length was requested. This means there
-                // was an bad encoding detected.
-                buf.readerIndex(endIndex);
-                throw BAD_ENCODING;
-            } finally {
-                dest = null;
-                k = 0;
-                state = 0;
-                flags = 0;
-            }
+    @Override
+    public boolean process(byte input) {
+        int index = (state << 4) | ((input & 0xFF) >>> 4);
+        int row = HUFFS[index];
+        flags = row & 0x00FF00;
+        if ((flags & HUFFMAN_FAIL_SHIFT) != 0) {
+            return false;
         }
-
-        @Override
-        public boolean process(byte input) {
-            int index = (state << 4) | ((input & 0xFF) >>> 4);
-            int row = HUFFS[index];
-            flags = row & 0x00FF00;
-            if ((flags & HUFFMAN_FAIL_SHIFT) != 0) {
-                return false;
-            }
-            if ((flags & HUFFMAN_EMIT_SYMBOL_SHIFT) != 0) {
-                dest[k++] = (byte) (row & 0xFF);
-            }
-            state = row >> 16;
-
-            index = (state << 4) | (input & 0x0F);
-            row = HUFFS[index];
-            flags = row & 0x00FF00;
-            if ((flags & HUFFMAN_FAIL_SHIFT) != 0) {
-                return false;
-            }
-            if ((flags & HUFFMAN_EMIT_SYMBOL_SHIFT) != 0) {
-                dest[k++] = (byte) (row & 0xFF);
-            }
-            state = row >> 16;
-            return true;
+        if ((flags & HUFFMAN_EMIT_SYMBOL_SHIFT) != 0) {
+            dest[k++] = (byte) (row & 0xFF);
         }
+        state = row >> 16;
+
+        index = (state << 4) | (input & 0x0F);
+        row = HUFFS[index];
+        flags = row & 0x00FF00;
+        if ((flags & HUFFMAN_FAIL_SHIFT) != 0) {
+            return false;
+        }
+        if ((flags & HUFFMAN_EMIT_SYMBOL_SHIFT) != 0) {
+            dest[k++] = (byte) (row & 0xFF);
+        }
+        state = row >> 16;
+        return true;
     }
 }
