@@ -42,6 +42,7 @@ import java.net.SocketAddress;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Exchanger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.concurrent.TimeUnit.*;
 import static org.junit.Assert.assertTrue;
@@ -362,6 +363,56 @@ public class FlowControlHandlerTest {
             peer.read();
             assertTrue(msgRcvLatch3.await(1L, SECONDS));
             assertTrue(flow.isQueueEmpty());
+        } finally {
+            client.close();
+            server.close();
+        }
+    }
+
+    @Test
+    public void testReentranceNotCausesNPE() throws Throwable {
+        final Exchanger<Channel> peerRef = new Exchanger<Channel>();
+        final CountDownLatch latch = new CountDownLatch(3);
+        final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
+        ChannelInboundHandlerAdapter handler = new ChannelDuplexHandler() {
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                ctx.fireChannelActive();
+                peerRef.exchange(ctx.channel(), 1L, SECONDS);
+            }
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                latch.countDown();
+                ctx.read();
+            }
+
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                causeRef.set(cause);
+            }
+        };
+
+        FlowControlHandler flow = new FlowControlHandler();
+        Channel server = newServer(false, flow, handler);
+        Channel client = newClient(server.localAddress());
+        try {
+            // The client connection on the server side
+            Channel peer = peerRef.exchange(null, 1L, SECONDS);
+
+            // Write the message
+            client.writeAndFlush(newOneMessage())
+                    .syncUninterruptibly();
+
+            // channelRead(1)
+            peer.read();
+            assertTrue(latch.await(1L, SECONDS));
+            assertTrue(flow.isQueueEmpty());
+
+            Throwable cause = causeRef.get();
+            if (cause != null) {
+                throw cause;
+            }
         } finally {
             client.close();
             server.close();
