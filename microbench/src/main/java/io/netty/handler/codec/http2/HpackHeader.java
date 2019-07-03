@@ -59,14 +59,14 @@ class HpackHeader {
                                            boolean limitToAscii) {
         List<HpackHeader> hpackHeaders = new ArrayList<HpackHeader>(numHeaders);
         for (int i = 0; i < numHeaders; ++i) {
-            byte[] name = randomBytes(new byte[nameLength], limitToAscii);
-            byte[] value = randomBytes(new byte[valueLength], limitToAscii);
+            byte[] name = randomBytes(new byte[nameLength], limitToAscii, true);
+            byte[] value = randomBytes(new byte[valueLength], limitToAscii, false);
             hpackHeaders.add(new HpackHeader(name, value));
         }
         return hpackHeaders;
     }
 
-    private static byte[] randomBytes(byte[] bytes, boolean limitToAscii) {
+    private static byte[] randomBytes(byte[] bytes, boolean limitToAscii, boolean removeLeadingColon) {
         Random r = new Random();
         if (limitToAscii) {
             for (int index = 0; index < bytes.length; ++index) {
@@ -75,6 +75,12 @@ class HpackHeader {
             }
         } else {
             r.nextBytes(bytes);
+
+            // Remove leading ':' as this is not allowed
+            if (removeLeadingColon && bytes[0] == ':') {
+                int charIndex = r.nextInt(ALPHABET.length());
+                bytes[0] = (byte) ALPHABET.charAt(charIndex);
+            }
         }
         return bytes;
     }
