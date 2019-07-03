@@ -143,34 +143,22 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
 
     @Override
     public void upgradeTo(final ChannelHandlerContext ctx, FullHttpRequest upgradeRequest) {
-        int firstHandlerIdx = 0;
         try {
             // Add the HTTP/2 connection handler to the pipeline immediately following the current handler.
             ctx.pipeline().addAfter(ctx.name(), handlerName, connectionHandler);
 
-            // As we will re-act on the created streams in the Http2MultiplexHandler we need to ensure we special
-            // handle it and put it into the pipeline before we all onHttp2ServerUpgrade(...) is called. Otherwise
-            // we will not correctly create the Http2StreamChannel for the upgrade request and so will produce an
-            // NPE.
-            //
+            // Add also all extra handlers as these may handle events / messages produced by the connectionHandler.
             // See https://github.com/netty/netty/issues/9314
-            if (handlers != null && handlers.length > 0 && handlers[firstHandlerIdx] instanceof Http2MultiplexHandler) {
-                ChannelHandlerContext connectionHandlerCtx = ctx.pipeline().context(connectionHandler);
-                ctx.pipeline().addAfter(connectionHandlerCtx.name(), null, handlers[firstHandlerIdx++]);
+            if (handlers != null) {
+                final String name = ctx.pipeline().context(connectionHandler).name();
+                for (int i = handlers.length - 1; i >= 0; i--) {
+                    ctx.pipeline().addAfter(name, null, handlers[i]);
+                }
             }
             connectionHandler.onHttpServerUpgrade(settings);
-
         } catch (Http2Exception e) {
             ctx.fireExceptionCaught(e);
             ctx.close();
-            return;
-        }
-
-        if (handlers != null) {
-            final String name = ctx.pipeline().context(connectionHandler).name();
-            for (int i = handlers.length - 1; i >= firstHandlerIdx; i--) {
-                ctx.pipeline().addAfter(name, null, handlers[i]);
-            }
         }
     }
 
