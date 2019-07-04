@@ -146,19 +146,19 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
         try {
             // Add the HTTP/2 connection handler to the pipeline immediately following the current handler.
             ctx.pipeline().addAfter(ctx.name(), handlerName, connectionHandler);
-            connectionHandler.onHttpServerUpgrade(settings);
 
+            // Add also all extra handlers as these may handle events / messages produced by the connectionHandler.
+            // See https://github.com/netty/netty/issues/9314
+            if (handlers != null) {
+                final String name = ctx.pipeline().context(connectionHandler).name();
+                for (int i = handlers.length - 1; i >= 0; i--) {
+                    ctx.pipeline().addAfter(name, null, handlers[i]);
+                }
+            }
+            connectionHandler.onHttpServerUpgrade(settings);
         } catch (Http2Exception e) {
             ctx.fireExceptionCaught(e);
             ctx.close();
-            return;
-        }
-
-        if (handlers != null) {
-            final String name = ctx.pipeline().context(connectionHandler).name();
-            for (int i = handlers.length - 1; i >= 0; i--) {
-                ctx.pipeline().addAfter(name, null, handlers[i]);
-            }
         }
     }
 
