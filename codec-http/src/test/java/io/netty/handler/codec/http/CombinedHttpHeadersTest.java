@@ -55,7 +55,7 @@ public class CombinedHttpHeadersTest {
         otherHeaders.add(HEADER_NAME, "a");
         otherHeaders.add(HEADER_NAME, "b");
         headers.add(otherHeaders);
-        assertEquals("a,b", headers.get(HEADER_NAME).toString());
+        assertEquals("a,b", headers.get(HEADER_NAME));
     }
 
     @Test
@@ -66,7 +66,7 @@ public class CombinedHttpHeadersTest {
         otherHeaders.add(HEADER_NAME, "b");
         otherHeaders.add(HEADER_NAME, "c");
         headers.add(otherHeaders);
-        assertEquals("a,b,c", headers.get(HEADER_NAME).toString());
+        assertEquals("a,b,c", headers.get(HEADER_NAME));
     }
 
     @Test
@@ -99,7 +99,7 @@ public class CombinedHttpHeadersTest {
         otherHeaders.add(HEADER_NAME, "b");
         otherHeaders.add(HEADER_NAME, "c");
         headers.set(otherHeaders);
-        assertEquals("b,c", headers.get(HEADER_NAME).toString());
+        assertEquals("b,c", headers.get(HEADER_NAME));
     }
 
     @Test
@@ -110,7 +110,7 @@ public class CombinedHttpHeadersTest {
         otherHeaders.add(HEADER_NAME, "b");
         otherHeaders.add(HEADER_NAME, "c");
         headers.add(otherHeaders);
-        assertEquals("a,b,c", headers.get(HEADER_NAME).toString());
+        assertEquals("a,b,c", headers.get(HEADER_NAME));
     }
 
     @Test
@@ -121,7 +121,7 @@ public class CombinedHttpHeadersTest {
         otherHeaders.add(HEADER_NAME, "b");
         otherHeaders.add(HEADER_NAME, "c");
         headers.set(otherHeaders);
-        assertEquals("b,c", headers.get(HEADER_NAME).toString());
+        assertEquals("b,c", headers.get(HEADER_NAME));
     }
 
     @Test
