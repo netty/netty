@@ -76,6 +76,11 @@ public class Http2ServerUpgradeCodecTest {
         // Flush the channel to ensure we write out all buffered data
         channel.flush();
 
+        channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf());
+        Http2FrameInboundWriter writer = new Http2FrameInboundWriter(channel);
+        writer.writeInboundSettings(new Http2Settings());
+        writer.writeInboundRstStream(Http2CodecUtil.HTTP_UPGRADE_STREAM_ID, Http2Error.CANCEL.code());
+
         assertSame(handler, channel.pipeline().remove(handler.getClass()));
         assertNull(channel.pipeline().get(handler.getClass()));
         assertTrue(channel.finish());
@@ -84,6 +89,10 @@ public class Http2ServerUpgradeCodecTest {
         ByteBuf settingsBuffer = channel.readOutbound();
         assertNotNull(settingsBuffer);
         settingsBuffer.release();
+
+        ByteBuf buf = channel.readOutbound();
+        assertNotNull(buf);
+        buf.release();
 
         assertNull(channel.readOutbound());
     }
