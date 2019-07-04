@@ -40,14 +40,14 @@ import java.util.Random;
 /**
  * Helper class representing a single header entry. Used by the benchmarks.
  */
-class HpackHeader {
+final class HpackHeader {
     private static final String ALPHABET =
             "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
 
     final CharSequence name;
     final CharSequence value;
 
-    HpackHeader(byte[] name, byte[] value) {
+    private HpackHeader(byte[] name, byte[] value) {
         this.name = new AsciiString(name, false);
         this.value = new AsciiString(value, false);
     }
@@ -59,14 +59,15 @@ class HpackHeader {
                                            boolean limitToAscii) {
         List<HpackHeader> hpackHeaders = new ArrayList<HpackHeader>(numHeaders);
         for (int i = 0; i < numHeaders; ++i) {
-            byte[] name = randomBytes(new byte[nameLength], limitToAscii, true);
-            byte[] value = randomBytes(new byte[valueLength], limitToAscii, false);
+            // Force always ascii for header names
+            byte[] name = randomBytes(new byte[nameLength], true);
+            byte[] value = randomBytes(new byte[valueLength], limitToAscii);
             hpackHeaders.add(new HpackHeader(name, value));
         }
         return hpackHeaders;
     }
 
-    private static byte[] randomBytes(byte[] bytes, boolean limitToAscii, boolean removeLeadingColon) {
+    private static byte[] randomBytes(byte[] bytes, boolean limitToAscii) {
         Random r = new Random();
         if (limitToAscii) {
             for (int index = 0; index < bytes.length; ++index) {
@@ -75,12 +76,6 @@ class HpackHeader {
             }
         } else {
             r.nextBytes(bytes);
-
-            // Remove leading ':' as this is not allowed
-            if (removeLeadingColon && bytes[0] == ':') {
-                int charIndex = r.nextInt(ALPHABET.length());
-                bytes[0] = (byte) ALPHABET.charAt(charIndex);
-            }
         }
         return bytes;
     }
