@@ -153,7 +153,7 @@ public class HpackHuffmanTest {
     private static byte[] decode(byte[] bytes) throws Http2Exception {
         ByteBuf buffer = Unpooled.wrappedBuffer(bytes);
         try {
-            AsciiString decoded = HpackHuffmanDecoder.decode(buffer, buffer.readableBytes());
+            AsciiString decoded = new HpackHuffmanDecoder().decode(buffer, buffer.readableBytes());
             Assert.assertFalse(buffer.isReadable());
             return decoded.toByteArray();
         } finally {
