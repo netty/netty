@@ -91,7 +91,6 @@ public abstract class CaliperBench extends SimpleBenchmark {
                 return;
             } else {
                 System.out.print("-");
-                continue;
             }
         }
     }
