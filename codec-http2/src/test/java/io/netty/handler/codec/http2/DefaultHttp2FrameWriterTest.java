@@ -78,8 +78,6 @@ public class DefaultHttp2FrameWriterTest {
 
         promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
 
-        http2HeadersEncoder = new DefaultHttp2HeadersEncoder();
-
         Answer<Object> answer = var1 -> {
             Object msg = var1.getArgument(0);
             if (msg instanceof ByteBuf) {
