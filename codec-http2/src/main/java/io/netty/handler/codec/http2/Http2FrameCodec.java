@@ -159,6 +159,12 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     private int numBufferedStreams;
     private final IntObjectMap<DefaultHttp2FrameStream> frameStreamToInitializeMap =
             new IntObjectHashMap<DefaultHttp2FrameStream>(8);
+    private final ChannelFutureListener bufferedStreamsListener = new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            numBufferedStreams--;
+        }
+    };
 
     Http2FrameCodec(Http2ConnectionEncoder encoder, Http2ConnectionDecoder decoder, Http2Settings initialSettings,
                     boolean decoupleCloseAndGoAway) {
@@ -395,34 +401,12 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             // We should not re-use ids.
             assert old == null;
 
-            // TODO(buchgr): Once Http2FrameStream and Http2Stream are merged this is no longer necessary.
-            final ChannelPromise writePromise = ctx.newPromise();
-
             encoder().writeHeaders(ctx, streamId, headersFrame.headers(), headersFrame.padding(),
-                    headersFrame.isEndStream(), writePromise);
-            if (writePromise.isDone()) {
-                notifyHeaderWritePromise(writePromise, promise);
-            } else {
+                    headersFrame.isEndStream(), promise);
+            if (!promise.isDone()) {
                 numBufferedStreams++;
-
-                writePromise.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        numBufferedStreams--;
-
-                        notifyHeaderWritePromise(future, promise);
-                    }
-                });
+                promise.addListener(bufferedStreamsListener);
             }
-        }
-    }
-
-    private static void notifyHeaderWritePromise(ChannelFuture future, ChannelPromise promise) {
-        Throwable cause = future.cause();
-        if (cause == null) {
-            promise.setSuccess();
-        } else {
-            promise.setFailure(cause);
         }
     }
 
@@ -512,7 +496,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         }
     }
 
-    void onHttp2UnknownStreamError(@SuppressWarnings("unused") ChannelHandlerContext ctx, Throwable cause,
+    private void onHttp2UnknownStreamError(@SuppressWarnings("unused") ChannelHandlerContext ctx, Throwable cause,
                                    Http2Exception.StreamException streamException) {
         // Just log....
         LOG.warn("Stream exception thrown for unknown stream {}.", streamException.streamId(), cause);
@@ -615,11 +599,11 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         }
     }
 
-    void onUpgradeEvent(ChannelHandlerContext ctx, UpgradeEvent evt) {
+    private void onUpgradeEvent(ChannelHandlerContext ctx, UpgradeEvent evt) {
         ctx.fireUserEventTriggered(evt);
     }
 
-    void onHttp2StreamWritabilityChanged(ChannelHandlerContext ctx, Http2FrameStream stream,
+    private void onHttp2StreamWritabilityChanged(ChannelHandlerContext ctx, Http2FrameStream stream,
                                          @SuppressWarnings("unused") boolean writable) {
         ctx.fireUserEventTriggered(Http2FrameStreamEvent.writabilityChanged(stream));
     }
