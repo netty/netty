@@ -68,6 +68,11 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     // There is no need to make this volatile as at worse it will just create a few more instances then needed.
     private Tasks invokeTasks;
 
+    private static final int READ_INIT = 0;
+    private static final int READ_NEEDED = 1 << 0;
+    private static final int READ_NOT_NEEDED = 1 << 1;
+    private int readState;
+
     DefaultChannelHandlerContext next;
     DefaultChannelHandlerContext prev;
     private volatile int handlerState = INIT;
@@ -76,7 +81,15 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
                                  ChannelHandler handler) {
         this.name = requireNonNull(name, "name");
         this.pipeline = pipeline;
-        this.executionMask = mask(handler.getClass());
+        int mask = mask(handler.getClass());
+
+        // As the handler is buffering and channelRead(...) is implemented we also need to ensure
+        // channelReadComplete(...) is triggered as there is a relationship between both these methods and calling
+        // ctx.read() if we need to request more data.
+        if (handler.isBufferingInbound() && (mask & MASK_CHANNEL_READ) != 0) {
+            mask |= MASK_CHANNEL_READ_COMPLETE;
+        }
+        this.executionMask = mask;
         this.handler = handler;
     }
 
@@ -294,10 +307,15 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeChannelRead(Object msg) {
+        // fireChannelRead(...) was called so the user has a chance to call ctx.read().
+        readState |= READ_NOT_NEEDED;
         findContextInbound(MASK_CHANNEL_READ).invokeChannelRead(msg);
     }
 
     void invokeChannelRead(Object msg) {
+        // We may need to call ctx.read() if fireChannelRead(..) is not called to notify the next handler
+        // and give the user a chance to call ctx.read() explicitly.
+        readState |= READ_NEEDED;
         final Object m = pipeline.touch(requireNonNull(msg, "msg"), this);
         try {
             handler().channelRead(this, m);
@@ -325,6 +343,15 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     void invokeChannelReadComplete() {
         try {
             handler().channelReadComplete(this);
+            if ((readState & READ_NOT_NEEDED) == 0 && handler.isBufferingInbound() &&
+                    !channel().config().isAutoRead()) {
+                readState = READ_INIT;
+                // We did not give the user any chance to trigger ctx.read() so let's do it on the users behalf
+                // to ensure we not stale.
+                read();
+            } else {
+                readState = READ_INIT;
+            }
         } catch (Throwable t) {
             notifyHandlerException(t);
         }

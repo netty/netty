@@ -105,6 +105,11 @@ public abstract class MessageToMessageDecoder<I> extends ChannelHandlerAdapter i
         }
     }
 
+    @Override
+    public final boolean isBufferingInbound() {
+        return true;
+    }
+
     /**
      * Decode from one message to an other. This method will be called for each written message that can be handled
      * by this decoder.

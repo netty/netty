@@ -383,4 +383,8 @@ public interface ChannelHandler {
     default void flush(ChannelHandlerContext ctx) throws Exception {
         ctx.flush();
     }
+
+    default boolean isBufferingInbound() {
+        return false;
+    }
 }

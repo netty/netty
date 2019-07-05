@@ -191,12 +191,11 @@ public class FlowControlHandler implements ChannelHandler {
         if (queue != null && queue.isEmpty()) {
             queue.recycle();
             queue = null;
-
-            if (consumed > 0) {
-                ctx.fireChannelReadComplete();
-            }
         }
 
+        if (consumed > 0) {
+            ctx.fireChannelReadComplete();
+        }
         return consumed;
     }
 

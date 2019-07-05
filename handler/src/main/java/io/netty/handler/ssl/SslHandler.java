@@ -395,12 +395,6 @@ public class SslHandler extends ByteToMessageDecoder {
 
     private int packetLength;
 
-    /**
-     * This flag is used to determine if we need to call {@link ChannelHandlerContext#read()} to consume more data
-     * when {@link ChannelConfig#isAutoRead()} is {@code false}.
-     */
-    private boolean firedChannelRead;
-
     private volatile long handshakeTimeoutMillis = 10000;
     private volatile long closeNotifyFlushTimeoutMillis = 3000;
     private volatile long closeNotifyReadTimeoutMillis;
@@ -1280,13 +1274,12 @@ public class SslHandler extends ByteToMessageDecoder {
         flushIfNeeded(ctx);
         readIfNeeded(ctx);
 
-        firedChannelRead = false;
         ctx.fireChannelReadComplete();
     }
 
     private void readIfNeeded(ChannelHandlerContext ctx) {
         // If handshake is not finished yet, we need more data.
-        if (!ctx.channel().config().isAutoRead() && (!firedChannelRead || !handshakePromise.isDone())) {
+        if (!ctx.channel().config().isAutoRead() && !handshakePromise.isDone()) {
             // No auto-read used and no message passed through the ChannelPipeline or the handshake was not complete
             // yet, which means we need to trigger the read to ensure we not encounter any stalls.
             ctx.read();
@@ -1337,7 +1330,6 @@ public class SslHandler extends ByteToMessageDecoder {
                     overflowReadableBytes = readableBytes;
                     int bufferSize = engine.getSession().getApplicationBufferSize() - readableBytes;
                     if (readableBytes > 0) {
-                        firedChannelRead = true;
                         ctx.fireChannelRead(decodeOut);
 
                         // This buffer was handled, null it out.
@@ -1464,8 +1456,6 @@ public class SslHandler extends ByteToMessageDecoder {
         } finally {
             if (decodeOut != null) {
                 if (decodeOut.isReadable()) {
-                    firedChannelRead = true;
-
                     ctx.fireChannelRead(decodeOut);
                 } else {
                     decodeOut.release();
