@@ -73,6 +73,8 @@ public class WebSocketProtocolHandlerTest {
         // When
         channel.read();
 
+        channel.runPendingTasks();
+
         // Then - pong frame was written to the outbound
         PongWebSocketFrame response1 = channel.readOutbound();
         assertEquals(text1, response1.content().toString(UTF_8));
