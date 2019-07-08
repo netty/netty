@@ -30,7 +30,7 @@ import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.ReferenceCountUtil;
 
 @Sharable
-public class MqttHeartBeatBrokerHandler extends ChannelInboundHandlerAdapter {
+public final class MqttHeartBeatBrokerHandler extends ChannelInboundHandlerAdapter {
 
     public static final MqttHeartBeatBrokerHandler INSTANCE = new MqttHeartBeatBrokerHandler();
 

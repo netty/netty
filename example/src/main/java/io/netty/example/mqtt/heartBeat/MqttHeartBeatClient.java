@@ -60,6 +60,5 @@ public final class MqttHeartBeatClient {
         } finally {
             workerGroup.shutdownGracefully();
         }
-
     }
 }
