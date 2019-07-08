@@ -48,7 +48,7 @@ public final class MqttHeartBeatBroker {
                     ch.pipeline().addLast("encoder", MqttEncoder.INSTANCE);
                     ch.pipeline().addLast("decoder", new MqttDecoder());
                     ch.pipeline().addLast("heartBeatHandler", new IdleStateHandler(45, 0, 0, TimeUnit.SECONDS));
-                    ch.pipeline().addLast("handler", new MqttHeartBeatBrokerHandler());
+                    ch.pipeline().addLast("handler", MqttHeartBeatBrokerHandler.INSTANCE);
                 }
             });
 

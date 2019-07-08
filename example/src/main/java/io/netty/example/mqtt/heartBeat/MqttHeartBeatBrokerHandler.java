@@ -32,6 +32,11 @@ import io.netty.util.ReferenceCountUtil;
 @Sharable
 public class MqttHeartBeatBrokerHandler extends ChannelInboundHandlerAdapter {
 
+    public static final MqttHeartBeatBrokerHandler INSTANCE = new MqttHeartBeatBrokerHandler();
+
+    private MqttHeartBeatBrokerHandler() {
+    }
+
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         MqttMessage mqttMessage = (MqttMessage) msg;
