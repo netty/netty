@@ -46,9 +46,9 @@ final class HpackHuffmanDecoder implements ByteProcessor {
     private static final byte HUFFMAN_EMIT_SYMBOL = 1 << 1;
     private static final byte HUFFMAN_FAIL = 1 << 2;
 
-    private static final int HUFFMAN_COMPLETE_SHIFT = 1 << 8;
-    private static final int HUFFMAN_EMIT_SYMBOL_SHIFT = 1 << 9;
-    private static final int HUFFMAN_FAIL_SHIFT = 1 << 10;
+    private static final int HUFFMAN_COMPLETE_SHIFT = HUFFMAN_COMPLETE << 8;
+    private static final int HUFFMAN_EMIT_SYMBOL_SHIFT = HUFFMAN_EMIT_SYMBOL << 8;
+    private static final int HUFFMAN_FAIL_SHIFT = HUFFMAN_FAIL << 8;
 
     /**
      * A table of byte tuples (state, flags, output).   They are packed together as:
@@ -4672,7 +4672,6 @@ final class HpackHuffmanDecoder implements ByteProcessor {
     private byte[] dest;
     private int k;
     private int state;
-    private int flags;
 
     HpackHuffmanDecoder() { }
 
@@ -4696,7 +4695,7 @@ final class HpackHuffmanDecoder implements ByteProcessor {
             if (endIndex == -1) {
                 // We did consume the requested length
                 buf.readerIndex(readerIndex + length);
-                if ((flags & HUFFMAN_COMPLETE_SHIFT) != HUFFMAN_COMPLETE_SHIFT) {
+                if ((state & HUFFMAN_COMPLETE_SHIFT) != HUFFMAN_COMPLETE_SHIFT) {
                     throw BAD_ENCODING;
                 }
                 return new AsciiString(dest, 0, k, false);
@@ -4710,7 +4709,6 @@ final class HpackHuffmanDecoder implements ByteProcessor {
             dest = null;
             k = 0;
             state = 0;
-            flags = 0;
         }
     }
 
@@ -4719,27 +4717,21 @@ final class HpackHuffmanDecoder implements ByteProcessor {
      */
     @Override
     public boolean process(byte input) {
-        int index = (state << 4) | ((input & 0xFF) >>> 4);
-        int row = HUFFS[index];
-        flags = row & 0x00FF00;
-        if ((flags & HUFFMAN_FAIL_SHIFT) != 0) {
-            return false;
-        }
-        if ((flags & HUFFMAN_EMIT_SYMBOL_SHIFT) != 0) {
-            dest[k++] = (byte) (row & 0xFF);
-        }
-        state = row >> 16;
+        return processNibble(input >> 4) && processNibble(input);
+    }
 
-        index = (state << 4) | (input & 0x0F);
-        row = HUFFS[index];
-        flags = row & 0x00FF00;
-        if ((flags & HUFFMAN_FAIL_SHIFT) != 0) {
+    private boolean processNibble(int input) {
+        // The high nibble of the flags byte of each row is always zero
+        // (low nibble after shifting row by 12), since there are only 3 flag bits
+        int index = state >> 12 | (input & 0x0F);
+        state = HUFFS[index];
+        if ((state & HUFFMAN_FAIL_SHIFT) != 0) {
             return false;
         }
-        if ((flags & HUFFMAN_EMIT_SYMBOL_SHIFT) != 0) {
-            dest[k++] = (byte) (row & 0xFF);
+        if ((state & HUFFMAN_EMIT_SYMBOL_SHIFT) != 0) {
+            // state is always positive so can cast without mask here
+            dest[k++] = (byte) state;
         }
-        state = row >> 16;
         return true;
     }
 }
