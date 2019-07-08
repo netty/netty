@@ -731,6 +731,16 @@ public class Http2ConnectionHandlerTest {
     }
 
     @Test
+    public void gracefulShutdownTimeoutNoActiveStreams() throws Exception {
+        handler = newHandler();
+        when(connection.numActiveStreams()).thenReturn(0);
+        final long expectedMillis = 1234;
+        handler.gracefulShutdownTimeoutMillis(expectedMillis);
+        handler.close(ctx, promise);
+        verify(executor, atLeastOnce()).schedule(any(Runnable.class), eq(expectedMillis), eq(TimeUnit.MILLISECONDS));
+    }
+
+    @Test
     public void gracefulShutdownIndefiniteTimeoutTest() throws Exception {
         handler = newHandler();
         handler.gracefulShutdownTimeoutMillis(-1);
