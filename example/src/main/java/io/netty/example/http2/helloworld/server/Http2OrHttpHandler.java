@@ -33,9 +33,9 @@ public class Http2OrHttpHandler extends ApplicationProtocolNegotiationHandler {
     }
 
     @Override
-    protected void configurePipeline(ChannelHandlerContext ctx, String protocol) throws Exception {
+    protected final void configurePipeline(ChannelHandlerContext ctx, String protocol) {
         if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
-            ctx.pipeline().addLast(new HelloWorldHttp2HandlerBuilder().build());
+            configureHttp2Pipeline(ctx);
             return;
         }
 
@@ -47,5 +47,9 @@ public class Http2OrHttpHandler extends ApplicationProtocolNegotiationHandler {
         }
 
         throw new IllegalStateException("unknown protocol: " + protocol);
+    }
+
+    protected void configureHttp2Pipeline(ChannelHandlerContext ctx) {
+        ctx.pipeline().addLast(new HelloWorldHttp2HandlerBuilder().build());
     }
 }
