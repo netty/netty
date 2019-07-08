@@ -27,6 +27,7 @@ import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
+import io.netty.util.ReferenceCountUtil;
 
 @Sharable
 public class MqttHeartBeatBrokerHandler extends ChannelInboundHandlerAdapter {
@@ -55,6 +56,7 @@ public class MqttHeartBeatBrokerHandler extends ChannelInboundHandlerAdapter {
             break;
         default:
             System.out.println("Unexpected message type: " + mqttMessage.fixedHeader().messageType());
+            ReferenceCountUtil.release(msg);
             ctx.close();
         }
     }
