@@ -15,6 +15,7 @@
  */
 package io.netty.example.mqtt.heartBeat;
 
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.mqtt.MqttConnAckMessage;
@@ -27,6 +28,7 @@ import io.netty.handler.codec.mqtt.MqttQoS;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 
+@Sharable
 public class MqttHeartBeatBrokerHandler extends ChannelInboundHandlerAdapter {
 
     @Override
@@ -40,20 +42,20 @@ public class MqttHeartBeatBrokerHandler extends ChannelInboundHandlerAdapter {
             MqttConnAckVariableHeader mqttConnAckVariableHeader =
                     new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_ACCEPTED, false);
             MqttConnAckMessage connack = new MqttConnAckMessage(connackFixedHeader, mqttConnAckVariableHeader);
-            ctx.channel().writeAndFlush(connack);
+            ctx.writeAndFlush(connack);
             break;
         case PINGREQ:
             MqttFixedHeader pingreqFixedHeader = new MqttFixedHeader(MqttMessageType.PINGRESP, false,
                                                                      MqttQoS.AT_MOST_ONCE, false, 0);
             MqttMessage pingResp = new MqttMessage(pingreqFixedHeader);
-            ctx.channel().writeAndFlush(pingResp);
+            ctx.writeAndFlush(pingResp);
             break;
         case DISCONNECT:
-            ctx.channel().close();
+            ctx.close();
             break;
         default:
             System.out.println("Unexpected message type: " + mqttMessage.fixedHeader().messageType());
-            ctx.channel().close();
+            ctx.close();
         }
     }
 
@@ -61,13 +63,13 @@ public class MqttHeartBeatBrokerHandler extends ChannelInboundHandlerAdapter {
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         System.out.println("Channel heartBeat lost");
         if (evt instanceof IdleStateEvent && IdleState.READER_IDLE == ((IdleStateEvent) evt).state()) {
-            ctx.channel().close();
+            ctx.close();
         }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         cause.printStackTrace();
-        ctx.channel().close();
+        ctx.close();
     }
 }

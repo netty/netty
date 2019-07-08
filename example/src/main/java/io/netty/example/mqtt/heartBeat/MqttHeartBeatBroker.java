@@ -29,7 +29,10 @@ import io.netty.handler.timeout.IdleStateHandler;
 
 import java.util.concurrent.TimeUnit;
 
-public class MqttHeartBeatBroker {
+public final class MqttHeartBeatBroker {
+
+    private MqttHeartBeatBroker() {
+    }
 
     public static void main(String[] args) throws Exception {
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
