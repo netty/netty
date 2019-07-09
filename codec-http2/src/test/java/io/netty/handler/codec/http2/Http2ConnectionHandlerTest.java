@@ -29,6 +29,7 @@ import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
+import io.netty.handler.codec.http2.Http2Exception.ShutdownHint;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -719,6 +720,25 @@ public class Http2ConnectionHandlerTest {
     @Test
     public void writeRstStreamForKnownStreamUsingVoidPromise() throws Exception {
         writeRstStreamUsingVoidPromise(STREAM_ID);
+    }
+
+    @Test
+    public void gracefulShutdownTimeoutWhenConnectionErrorHardShutdownTest() throws Exception {
+        gracefulShutdownTimeoutWhenConnectionErrorTest0(ShutdownHint.HARD_SHUTDOWN);
+    }
+
+    @Test
+    public void gracefulShutdownTimeoutWhenConnectionErrorGracefulShutdownTest() throws Exception {
+        gracefulShutdownTimeoutWhenConnectionErrorTest0(ShutdownHint.GRACEFUL_SHUTDOWN);
+    }
+
+    private void gracefulShutdownTimeoutWhenConnectionErrorTest0(ShutdownHint hint) throws Exception {
+        handler = newHandler();
+        final long expectedMillis = 1234;
+        handler.gracefulShutdownTimeoutMillis(expectedMillis);
+        Http2Exception exception = new Http2Exception(PROTOCOL_ERROR, "Test error", hint);
+        handler.onConnectionError(ctx, false, exception, exception);
+        verify(executor, atLeastOnce()).schedule(any(Runnable.class), eq(expectedMillis), eq(TimeUnit.MILLISECONDS));
     }
 
     @Test

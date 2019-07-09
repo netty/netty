@@ -477,10 +477,16 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         doGracefulShutdown(ctx, f, promise);
     }
 
-    private void doGracefulShutdown(ChannelHandlerContext ctx, ChannelFuture future, final ChannelPromise promise) {
-        final ClosingChannelFutureListener listener = gracefulShutdownTimeoutMillis < 0 ?
+    private ChannelFutureListener newClosingChannelFutureListener(
+            ChannelHandlerContext ctx, ChannelPromise promise) {
+        long gracefulShutdownTimeoutMillis = this.gracefulShutdownTimeoutMillis;
+        return gracefulShutdownTimeoutMillis < 0 ?
                 new ClosingChannelFutureListener(ctx, promise) :
                 new ClosingChannelFutureListener(ctx, promise, gracefulShutdownTimeoutMillis, MILLISECONDS);
+    }
+
+    private void doGracefulShutdown(ChannelHandlerContext ctx, ChannelFuture future, final ChannelPromise promise) {
+        final ChannelFutureListener listener = newClosingChannelFutureListener(ctx, promise);
         if (isGracefulShutdownComplete()) {
             // If there are no active streams, close immediately after the GO_AWAY write completes or the timeout
             // elapsed.
@@ -667,7 +673,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         if (http2Ex.shutdownHint() == Http2Exception.ShutdownHint.GRACEFUL_SHUTDOWN) {
             doGracefulShutdown(ctx, future, promise);
         } else {
-            future.addListener(new ClosingChannelFutureListener(ctx, promise));
+            future.addListener(newClosingChannelFutureListener(ctx, promise));
         }
     }
 
