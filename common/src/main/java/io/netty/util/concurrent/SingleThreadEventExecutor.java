@@ -802,7 +802,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 reject();
             }
         }
-        // 唤醒线程
+        // 唤醒线程 !(task instanceof NonWakeupRunnable);
         if (!addTaskWakesUp && wakesUpForTask(task)) {
             wakeup(inEventLoop);
         }
