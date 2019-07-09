@@ -65,8 +65,9 @@ public class DecoratingHttp2ConnectionEncoder extends DecoratingHttp2FrameWriter
     public void consumeReceivedSettings(Http2Settings settings) {
         if (delegate instanceof Http2SettingsReceivedConsumer) {
             ((Http2SettingsReceivedConsumer) delegate).consumeReceivedSettings(settings);
+        } else {
+            throw new IllegalStateException("delegate " + delegate + " is not an instance of " +
+                    Http2SettingsReceivedConsumer.class);
         }
-        throw new IllegalStateException("delegate " + delegate + " is not an instance of " +
-                Http2SettingsReceivedConsumer.class);
     }
 }
