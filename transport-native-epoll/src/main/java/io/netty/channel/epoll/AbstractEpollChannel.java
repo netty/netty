@@ -111,9 +111,13 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     void setFlag(int flag) throws IOException {
-        if (flag == Native.EPOLLOUT && isFlagSet(Native.EPOLLET)) {
+        if (flag == Native.EPOLLOUT) {
             flushPending = true;
-        } else if (!isFlagSet(flag)) {
+            if (isFlagSet(Native.EPOLLET)) {
+                return;
+            }
+        }
+        if (!isFlagSet(flag)) {
             if (flag == Native.EPOLLET) {
                 flushPending = isFlagSet(Native.EPOLLOUT);
                 flags |= Native.EPOLLOUT;
@@ -124,9 +128,13 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     void clearFlag(int flag) throws IOException {
-        if (flag == Native.EPOLLOUT && isFlagSet(Native.EPOLLET)) {
+        if (flag == Native.EPOLLOUT) {
             flushPending = false;
-        } else if (isFlagSet(flag)) {
+            if (isFlagSet(Native.EPOLLET)) {
+                return;
+            }
+        }
+        if (isFlagSet(flag)) {
             if (flag == Native.EPOLLET) {
                 flags = flushPending ? (flags | Native.EPOLLOUT) : (flags & ~Native.EPOLLOUT);
                 flushPending = false;
@@ -536,7 +544,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             if (connectPromise != null) {
                 // pending connect which is now complete so handle it.
                 finishConnect();
-            } else if (!socket.isOutputShutdown()) {
+            } else if (flushPending && !socket.isOutputShutdown()) {
                 // directly call super.flush0() to force a flush now
                 super.flush0();
             }
