@@ -136,7 +136,7 @@ import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
  * reference counted objects (e.g. {@link ByteBuf}s). The frame codec will call {@link ReferenceCounted#retain()} before
  * propagating a reference counted object through the pipeline, and thus an application handler needs to release such
  * an object after having consumed it. For more information on reference counting take a look at
- * http://netty.io/wiki/reference-counted-objects.html
+ * https://netty.io/wiki/reference-counted-objects.html
  *
  * <h3>HTTP Upgrade</h3>
  *

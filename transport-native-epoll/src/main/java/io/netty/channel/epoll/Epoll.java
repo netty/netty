@@ -19,7 +19,7 @@ import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.internal.SystemPropertyUtil;
 
 /**
- * Tells if <a href="http://netty.io/wiki/native-transports.html">{@code netty-transport-native-epoll}</a> is supported.
+ * Tells if <a href="https://netty.io/wiki/native-transports.html">{@code netty-transport-native-epoll}</a> is supported.
  */
 public final class Epoll {
 
@@ -62,14 +62,14 @@ public final class Epoll {
 
     /**
      * Returns {@code true} if and only if the
-     * <a href="http://netty.io/wiki/native-transports.html">{@code netty-transport-native-epoll}</a> is available.
+     * <a href="https://netty.io/wiki/native-transports.html">{@code netty-transport-native-epoll}</a> is available.
      */
     public static boolean isAvailable() {
         return UNAVAILABILITY_CAUSE == null;
     }
 
     /**
-     * Ensure that <a href="http://netty.io/wiki/native-transports.html">{@code netty-transport-native-epoll}</a> is
+     * Ensure that <a href="https://netty.io/wiki/native-transports.html">{@code netty-transport-native-epoll}</a> is
      * available.
      *
      * @throws UnsatisfiedLinkError if unavailable
@@ -83,7 +83,7 @@ public final class Epoll {
 
     /**
      * Returns the cause of unavailability of
-     * <a href="http://netty.io/wiki/native-transports.html">{@code netty-transport-native-epoll}</a>.
+     * <a href="https://netty.io/wiki/native-transports.html">{@code netty-transport-native-epoll}</a>.
      *
      * @return the cause if unavailable. {@code null} if available.
      */
