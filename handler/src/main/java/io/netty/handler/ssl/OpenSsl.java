@@ -44,7 +44,7 @@ import java.util.Set;
 import static io.netty.handler.ssl.SslUtils.*;
 
 /**
- * Tells if <a href="http://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and its OpenSSL support
+ * Tells if <a href="https://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and its OpenSSL support
  * are available.
  */
 public final class OpenSsl {
@@ -136,7 +136,7 @@ public final class OpenSsl {
                             "Failed to load netty-tcnative; " +
                                     OpenSslEngine.class.getSimpleName() + " will be unavailable, unless the " +
                                     "application has already loaded the symbols by some other means. " +
-                                    "See http://netty.io/wiki/forked-tomcat-native.html for more information.", t);
+                                    "See https://netty.io/wiki/forked-tomcat-native.html for more information.", t);
                 }
 
                 try {
@@ -159,7 +159,7 @@ public final class OpenSsl {
                     logger.debug(
                             "Failed to initialize netty-tcnative; " +
                                     OpenSslEngine.class.getSimpleName() + " will be unavailable. " +
-                                    "See http://netty.io/wiki/forked-tomcat-native.html for more information.", t);
+                                    "See https://netty.io/wiki/forked-tomcat-native.html for more information.", t);
                 }
             }
         }
@@ -396,7 +396,7 @@ public final class OpenSsl {
 
     /**
      * Returns {@code true} if and only if
-     * <a href="http://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and its OpenSSL support
+     * <a href="https://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and its OpenSSL support
      * are available.
      */
     public static boolean isAvailable() {
@@ -435,7 +435,7 @@ public final class OpenSsl {
     }
 
     /**
-     * Ensure that <a href="http://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and
+     * Ensure that <a href="https://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and
      * its OpenSSL support are available.
      *
      * @throws UnsatisfiedLinkError if unavailable
@@ -449,7 +449,7 @@ public final class OpenSsl {
 
     /**
      * Returns the cause of unavailability of
-     * <a href="http://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and its OpenSSL support.
+     * <a href="https://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and its OpenSSL support.
      *
      * @return the cause if unavailable. {@code null} if available.
      */

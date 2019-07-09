@@ -61,7 +61,7 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
  * reference counted objects (e.g. {@link ByteBuf}s). The multiplex codec will call {@link ReferenceCounted#retain()}
  * before propagating a reference counted object through the pipeline, and thus an application handler needs to release
  * such an object after having consumed it. For more information on reference counting take a look at
- * http://netty.io/wiki/reference-counted-objects.html
+ * https://netty.io/wiki/reference-counted-objects.html
  *
  * <h3>Channel Events</h3>
  *
