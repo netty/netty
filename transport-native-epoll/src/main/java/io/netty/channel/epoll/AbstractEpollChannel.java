@@ -69,7 +69,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
 
-    protected int flags = Native.EPOLLET;
+    protected int flags = Native.EPOLLET | Native.EPOLLOUT;
+    boolean flushPending; // used only when EPOLLET is set
     boolean inputClosedSeenErrorOnRead;
     boolean epollInReadyRunnablePending;
 
@@ -110,14 +111,26 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     void setFlag(int flag) throws IOException {
-        if (!isFlagSet(flag)) {
+        if (flag == Native.EPOLLOUT && isFlagSet(Native.EPOLLET)) {
+            flushPending = true;
+        } else if (!isFlagSet(flag)) {
+            if (flag == Native.EPOLLET) {
+                flushPending = isFlagSet(Native.EPOLLOUT);
+                flags |= Native.EPOLLOUT;
+            }
             flags |= flag;
             modifyEvents();
         }
     }
 
     void clearFlag(int flag) throws IOException {
-        if (isFlagSet(flag)) {
+        if (flag == Native.EPOLLOUT && isFlagSet(Native.EPOLLET)) {
+            flushPending = false;
+        } else if (isFlagSet(flag)) {
+            if (flag == Native.EPOLLET) {
+                flags = flushPending ? (flags | Native.EPOLLOUT) : (flags & ~Native.EPOLLOUT);
+                flushPending = false;
+            }
             flags &= ~flag;
             modifyEvents();
         }
@@ -510,7 +523,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             // Flush immediately only when there's no pending flush.
             // If there's a pending flush operation, event loop will call forceFlush() later,
             // and thus there's no need to call it now.
-            if (!isFlagSet(Native.EPOLLOUT)) {
+            boolean pendingFlush = isFlagSet(Native.EPOLLET) ? flushPending : isFlagSet(Native.EPOLLOUT);
+            if (!pendingFlush) {
                 super.flush0();
             }
         }
