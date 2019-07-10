@@ -150,8 +150,7 @@ public class EpollChannelConfig extends DefaultChannelConfig {
         if (mode == null) {
             throw new NullPointerException("mode");
         }
-        try {
-            switch (mode) {
+        switch (mode) {
             case EDGE_TRIGGERED:
                 checkChannelNotRegistered();
                 ((AbstractEpollChannel) channel).setFlag(Native.EPOLLET);
@@ -162,9 +161,6 @@ public class EpollChannelConfig extends DefaultChannelConfig {
                 break;
             default:
                 throw new Error();
-            }
-        } catch (IOException e) {
-            throw new ChannelException(e);
         }
         return this;
     }
