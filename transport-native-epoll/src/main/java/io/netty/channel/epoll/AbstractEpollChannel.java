@@ -69,7 +69,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
 
-    protected int flags = Native.EPOLLET;
+    protected int flags = Native.EPOLLET | Native.EPOLLIN;
     boolean inputClosedSeenErrorOnRead;
     boolean epollInReadyRunnablePending;
 
@@ -404,7 +404,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 // to false before every read operation to prevent re-entry into epollInReady() we will not read from
                 // the underlying OS again unless the user happens to call read again.
                 executeEpollInReadyRunnable(config);
-            } else if (!readPending && !config.isAutoRead()) {
+            } else if (!readPending && !config.isAutoRead() && !isFlagSet(Native.EPOLLET)) {
                 // Check if there is a readPending which was not processed yet.
                 // This could be for two reasons:
                 // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method

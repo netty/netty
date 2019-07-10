@@ -419,9 +419,16 @@ class EpollEventLoop extends SingleThreadEventLoop {
                     //
                     // If EPOLLIN or EPOLLERR was received and the channel is still open call epollInReady(). This will
                     // try to read from the underlying file descriptor and so notify the user about the error.
-                    if ((ev & (Native.EPOLLERR | Native.EPOLLIN)) != 0) {
-                        // The Channel is still open and there is something to read. Do it now.
+                    if ((ev & Native.EPOLLERR) != 0) {
                         unsafe.epollInReady();
+                    } else if ((ev & Native.EPOLLIN) != 0) {
+                        if (unsafe.readPending) {
+                            // The Channel is still open and there is something to read. Do it now.
+                            unsafe.epollInReady();
+                        } else {
+                            // We don't want to read now, just make a record that there's data
+                            unsafe.maybeMoreDataToRead = true;
+                        }
                     }
 
                     // Check if EPOLLRDHUP was set, this will notify us for connection-reset in which case
