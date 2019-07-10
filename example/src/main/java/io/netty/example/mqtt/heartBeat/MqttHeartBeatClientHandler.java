@@ -29,8 +29,8 @@ import io.netty.util.ReferenceCountUtil;
 
 public class MqttHeartBeatClientHandler extends ChannelInboundHandlerAdapter {
 
-    private final String PROTOCOL_NAME_MQTT_3_1_1 = "MQTT";
-    private final int PROTOCOL_VERSION_MQTT_3_1_1 = 4;
+    private static final String PROTOCOL_NAME_MQTT_3_1_1 = "MQTT";
+    private static final int PROTOCOL_VERSION_MQTT_3_1_1 = 4;
 
     private final String clientId;
     private final String userName;
