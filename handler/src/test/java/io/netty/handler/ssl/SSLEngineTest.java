@@ -47,6 +47,8 @@ import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ResourcesUtil;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
+import org.conscrypt.OpenSSLProvider;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -56,12 +58,14 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 
+import javax.crypto.SecretKey;
 import javax.net.ssl.ExtendedSSLSession;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactorySpi;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.Status;
@@ -81,10 +85,12 @@ import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 import javax.security.cert.X509Certificate;
 import java.io.ByteArrayInputStream;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -3254,6 +3260,90 @@ public abstract class SSLEngineTest {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
             ssc.delete();
+        }
+    }
+
+    @Test
+    public void testMasterKeyLogging() throws Exception {
+
+        /*
+         * At the moment master key logging is not supported for conscrypt
+         */
+        Assume.assumeFalse(serverSslContextProvider() instanceof OpenSSLProvider);
+
+        /*
+         * The JDK SSL engine master key retrieval relies on being able to set field access to true.
+         * That is not available in JDK9+
+         */
+        Assume.assumeFalse(sslServerProvider() == SslProvider.JDK && PlatformDependent.javaVersion() > 8);
+
+        String originalSystemPropertyValue = SystemPropertyUtil.get(SslMasterKeyHandler.SYSTEM_PROP_KEY);
+        System.setProperty(SslMasterKeyHandler.SYSTEM_PROP_KEY, Boolean.TRUE.toString());
+
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        serverSslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
+                .build();
+        Socket socket = null;
+
+        try {
+            sb = new ServerBootstrap();
+            sb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()),
+                    new MultithreadEventLoopGroup(NioHandler.newFactory()));
+            sb.channel(NioServerSocketChannel.class);
+
+            final Promise<SecretKey> promise = sb.config().group().next().newPromise();
+            serverChannel = sb.childHandler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) throws Exception {
+                    ch.config().setAllocator(new TestByteBufAllocator(ch.config().getAllocator(), type));
+
+                    SslHandler sslHandler = delegatingExecutor == null ?
+                            serverSslCtx.newHandler(ch.alloc()) :
+                            serverSslCtx.newHandler(ch.alloc(), delegatingExecutor);
+
+                    ch.pipeline().addLast(sslHandler);
+                    ch.pipeline().addLast(new SslMasterKeyHandler() {
+                        @Override
+                        protected void accept(SecretKey masterKey, SSLSession session) {
+                            promise.setSuccess(masterKey);
+                        }
+                    });
+                    serverConnectedChannel = ch;
+                }
+            }).bind(new InetSocketAddress(0)).sync().channel();
+
+            int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
+
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(null, InsecureTrustManagerFactory.INSTANCE.getTrustManagers(), null);
+            socket = sslContext.getSocketFactory().createSocket(NetUtil.LOCALHOST, port);
+            OutputStream out = socket.getOutputStream();
+            out.write(1);
+            out.flush();
+
+            assertTrue(promise.await(10, TimeUnit.SECONDS));
+            SecretKey key = promise.get();
+            assertEquals("AES secret key must be 48 bytes", 48, key.getEncoded().length);
+        } finally {
+            closeQuietly(socket);
+            if (originalSystemPropertyValue != null) {
+                System.setProperty(SslMasterKeyHandler.SYSTEM_PROP_KEY, originalSystemPropertyValue);
+            } else {
+                System.clearProperty(SslMasterKeyHandler.SYSTEM_PROP_KEY);
+            }
+            ssc.delete();
+        }
+    }
+
+    private static void closeQuietly(Closeable c) {
+        if (c != null) {
+            try {
+                c.close();
+            } catch (IOException ignore) {
+                // ignore
+            }
         }
     }
 
