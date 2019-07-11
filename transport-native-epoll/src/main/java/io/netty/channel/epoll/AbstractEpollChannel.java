@@ -70,7 +70,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     private volatile SocketAddress remote;
 
     protected int flags = Native.EPOLLET | Native.EPOLLOUT;
-    boolean flushPending; // used only when EPOLLET is set
+    boolean flushPending; // coincides with EPOLLOUT flag when in LT mode
     boolean inputClosedSeenErrorOnRead;
     boolean epollInReadyRunnablePending;
 
