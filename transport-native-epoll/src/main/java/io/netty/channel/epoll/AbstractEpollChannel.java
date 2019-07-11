@@ -247,7 +247,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             final EventLoop loop = eventLoop();
             final AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) unsafe();
             if (loop.inEventLoop()) {
-                unsafe.clearEpollIn0();
+                if (!unsafe.readPending) {
+                    unsafe.clearEpollIn0();
+                }
             } else {
                 // schedule a task to clear the EPOLLIN as it is not safe to modify it directly
                 loop.execute(new Runnable() {
@@ -404,14 +406,14 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 // to false before every read operation to prevent re-entry into epollInReady() we will not read from
                 // the underlying OS again unless the user happens to call read again.
                 executeEpollInReadyRunnable(config);
-            } else if (!readPending && !config.isAutoRead() && !isFlagSet(Native.EPOLLET)) {
+            } else if (!readPending && !config.isAutoRead()) {
                 // Check if there is a readPending which was not processed yet.
                 // This could be for two reasons:
                 // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
                 // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
                 //
                 // See https://github.com/netty/netty/issues/2254
-                clearEpollIn();
+                clearEpollIn0();
             }
         }
 
@@ -473,7 +475,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                         // We attempted to shutdown and failed, which means the input has already effectively been
                         // shutdown.
                     }
-                    clearEpollIn();
+                    clearEpollIn0();
                     pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                 } else {
                     close(voidPromise());
@@ -530,8 +532,11 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
         protected final void clearEpollIn0() {
             assert eventLoop().inEventLoop();
+            readPending = false;
+            if (!isFlagSet(Native.EPOLLET)) {
+                return;
+            }
             try {
-                readPending = false;
                 clearFlag(Native.EPOLLIN);
             } catch (IOException e) {
                 // When this happens there is something completely wrong with either the filedescriptor or epoll,

@@ -177,10 +177,7 @@ public class EpollChannelConfig extends DefaultChannelConfig {
 
     @Override
     protected final void autoReadCleared() {
-        AbstractEpollChannel epollChannel = (AbstractEpollChannel) channel;
-        if (!epollChannel.isFlagSet(Native.EPOLLET)) {
-            epollChannel.clearEpollIn();
-        }
+        ((AbstractEpollChannel) channel).clearEpollIn();
     }
 
     final void setMaxBytesPerGatheringWrite(long maxBytesPerGatheringWrite) {
