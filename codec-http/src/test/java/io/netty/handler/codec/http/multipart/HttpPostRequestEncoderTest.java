@@ -18,7 +18,6 @@ package io.netty.handler.codec.http.multipart;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpConstants;
@@ -29,7 +28,6 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.EncoderMode;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.ErrorDataEncoderException;
-import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 import org.junit.Test;
@@ -450,7 +448,6 @@ public class HttpPostRequestEncoderTest {
 
     @Test
     public void testEncodeChunkedContent() throws Exception {
-        EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
         HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
         HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(req, false);
 
@@ -462,10 +459,13 @@ public class HttpPostRequestEncoderTest {
         encoder.addBodyAttribute("data", longText);
         encoder.addBodyAttribute("moreData", "abcd");
 
-        HttpRequest finalRequest = encoder.finalizeRequest();
+        assertNotNull(encoder.finalizeRequest());
 
-        ch.writeOutbound(finalRequest);
-        ch.writeOutbound(encoder);
-        ch.flushOutbound();
+        while (!encoder.isEndOfInput()) {
+            encoder.readChunk((ByteBufAllocator) null);
+        }
+
+        assertTrue(encoder.isEndOfInput());
+        encoder.cleanFiles();
     }
 }
