@@ -428,11 +428,9 @@ class EpollEventLoop extends SingleThreadEventLoop {
                         } else {
                             // We don't want to read now, just make a record that there's data
                             unsafe.maybeMoreDataToRead = true;
-                            if (!ch.isFlagSet(Native.EPOLLET)) {
-                                // This should never happen, but clear the flag just in case since
-                                // we could enter a wait/wake spin otherwise
-                                unsafe.clearEpollIn0();
-                            }
+                            // We should never reach here in LT mode but just in case we do
+                            // then clear the flag to avoid a wait/wake spin
+                            unsafe.clearEpollIn0();
                         }
                     }
 
