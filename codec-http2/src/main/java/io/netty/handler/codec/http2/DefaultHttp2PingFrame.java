@@ -32,10 +32,7 @@ public class DefaultHttp2PingFrame implements Http2PingFrame {
         this(content, false);
     }
 
-    /**
-     * A user cannot send a ping ack, as this is done automatically when a ping is received.
-     */
-    DefaultHttp2PingFrame(long content, boolean ack) {
+    public DefaultHttp2PingFrame(long content, boolean ack) {
         this.content = content;
         this.ack = ack;
     }

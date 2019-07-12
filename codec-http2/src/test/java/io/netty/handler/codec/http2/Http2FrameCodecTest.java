@@ -760,6 +760,30 @@ public class Http2FrameCodecTest {
     }
 
     @Test
+    public void autoAckPingTrue() throws Exception {
+        setUp(Http2FrameCodecBuilder.forServer().autoAckPingFrame(true), new Http2Settings());
+        frameInboundWriter.writeInboundPing(false, 8);
+        Http2PingFrame frame = inboundHandler.readInbound();
+        assertFalse(frame.ack());
+        assertEquals(8, frame.content());
+        verify(frameWriter).writePing(eqFrameCodecCtx(), eq(true), eq(8L), anyChannelPromise());
+    }
+
+    @Test
+    public void autoAckPingFalse() throws Exception {
+        setUp(Http2FrameCodecBuilder.forServer().autoAckPingFrame(false), new Http2Settings());
+        frameInboundWriter.writeInboundPing(false, 8);
+        verify(frameWriter, never()).writePing(eqFrameCodecCtx(), eq(true), eq(8L), anyChannelPromise());
+        Http2PingFrame frame = inboundHandler.readInbound();
+        assertFalse(frame.ack());
+        assertEquals(8, frame.content());
+
+        // Now ack the frame manually.
+        channel.writeAndFlush(new DefaultHttp2PingFrame(8, true));
+        verify(frameWriter).writePing(eqFrameCodecCtx(), eq(true), eq(8L), anyChannelPromise());
+    }
+
+    @Test
     public void streamShouldBeOpenInListener() {
         final Http2FrameStream stream2 = frameCodec.newStream();
         assertEquals(State.IDLE, stream2.state());
