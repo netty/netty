@@ -422,12 +422,17 @@ class EpollEventLoop extends SingleThreadEventLoop {
                     if ((ev & Native.EPOLLERR) != 0) {
                         unsafe.epollInReady();
                     } else if ((ev & Native.EPOLLIN) != 0) {
-                        if (unsafe.readPending) {
+                        if (unsafe.readPending || ch.config().isAutoRead()) {
                             // The Channel is still open and there is something to read. Do it now.
                             unsafe.epollInReady();
                         } else {
                             // We don't want to read now, just make a record that there's data
                             unsafe.maybeMoreDataToRead = true;
+                            if (!ch.isFlagSet(Native.EPOLLET)) {
+                                // This should never happen, but clear the flag just in case since
+                                // we could enter a wait/wake spin otherwise
+                                unsafe.clearEpollIn0();
+                            }
                         }
                     }
 
