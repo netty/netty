@@ -46,7 +46,7 @@ public class WebSocketClientHandshaker07Test extends WebSocketClientHandshakerTe
                 HttpHeaderNames.CONNECTION,
                 HttpHeaderNames.SEC_WEBSOCKET_KEY,
                 HttpHeaderNames.HOST,
-                HttpHeaderNames.SEC_WEBSOCKET_ORIGIN,
+                getOriginHeaderName(),
                 HttpHeaderNames.SEC_WEBSOCKET_VERSION,
         };
     }
