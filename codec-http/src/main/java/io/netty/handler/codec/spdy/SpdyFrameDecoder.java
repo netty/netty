@@ -15,6 +15,9 @@
  */
 package io.netty.handler.codec.spdy;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_DATA_FLAG_FIN;
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_DATA_FRAME;
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_FLAG_FIN;
@@ -39,9 +42,6 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.getUnsignedInt;
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.getUnsignedMedium;
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.getUnsignedShort;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 
 /**
  * Decodes {@link ByteBuf}s into SPDY Frames.
@@ -154,7 +154,8 @@ public class SpdyFrameDecoder {
                 case READ_DATA_FRAME:
                     if (length == 0) {
                         state = State.READ_COMMON_HEADER;
-                        delegate.readDataFrame(streamId, hasFlag(flags, SPDY_DATA_FLAG_FIN), Unpooled.buffer(0));
+                        delegate.readDataFrame(
+                                streamId, hasFlag(flags, SPDY_DATA_FLAG_FIN), ByteBufAllocator.DEFAULT.buffer(0));
                         break;
                     }
 

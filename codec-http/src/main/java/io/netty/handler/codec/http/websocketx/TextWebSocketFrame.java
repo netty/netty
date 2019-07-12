@@ -16,8 +16,12 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
+
+import java.nio.CharBuffer;
 
 /**
  * Web Socket text frame.
@@ -28,7 +32,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
      * Creates a new empty text frame.
      */
     public TextWebSocketFrame() {
-        super(Unpooled.buffer(0));
+        super(ByteBufAllocator.DEFAULT.buffer(0));
     }
 
     /**
@@ -69,7 +73,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
         if (text == null || text.isEmpty()) {
             return Unpooled.EMPTY_BUFFER;
         } else {
-            return Unpooled.copiedBuffer(text, CharsetUtil.UTF_8);
+            return ByteBufUtil.encodeString(ByteBufAllocator.DEFAULT, CharBuffer.wrap(text), CharsetUtil.UTF_8);
         }
     }
 

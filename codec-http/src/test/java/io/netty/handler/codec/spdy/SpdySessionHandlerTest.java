@@ -203,6 +203,7 @@ public class SpdySessionHandlerTest {
         sessionHandler.writeInbound(spdyHeadersFrame);
         assertRstStream(sessionHandler.readOutbound(), localStreamId, SpdyStreamStatus.PROTOCOL_ERROR);
         assertNull(sessionHandler.readOutbound());
+        spdyDataFrame.release();
 
         sessionHandler.finish();
     }

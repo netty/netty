@@ -21,6 +21,12 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static junit.framework.TestCase.assertNotNull;
+import static junit.framework.TestCase.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+
 /**
  * Tests the WebSocket08FrameEncoder and Decoder implementation.<br>
  * Checks whether the combination of encoding and decoding yields the original data.<br>
@@ -73,9 +79,10 @@ public class WebSocket08EncoderDecoderTest {
         executeProtocolViolationTest(outChannel, inChannel, maxPayloadLength + 1, expectedStatus, errorMessage);
 
         CloseWebSocketFrame response = inChannel.readOutbound();
-        Assert.assertNotNull(response);
-        Assert.assertEquals(expectedStatus.code(), response.statusCode());
-        Assert.assertEquals(errorMessage, response.reasonText());
+        assertNotNull(response);
+        assertEquals(expectedStatus.code(), response.statusCode());
+        assertEquals(errorMessage, response.reasonText());
+        response.release();
 
         // Without auto-close
         config = WebSocketDecoderConfig.newBuilder()
@@ -88,12 +95,12 @@ public class WebSocket08EncoderDecoderTest {
         executeProtocolViolationTest(outChannel, inChannel, maxPayloadLength + 1, expectedStatus, errorMessage);
 
         response = inChannel.readOutbound();
-        Assert.assertNull(response);
+        assertNull(response);
 
         // Release test data
         binTestData.release();
-        Assert.assertFalse(inChannel.finish());
-        Assert.assertFalse(outChannel.finish());
+        assertFalse(inChannel.finish());
+        assertFalse(outChannel.finish());
     }
 
     private void executeProtocolViolationTest(EmbeddedChannel outChannel, EmbeddedChannel inChannel,
@@ -107,11 +114,11 @@ public class WebSocket08EncoderDecoderTest {
         }
 
         BinaryWebSocketFrame exceedingFrame = inChannel.readInbound();
-        Assert.assertNull(exceedingFrame);
+        assertNull(exceedingFrame);
 
-        Assert.assertNotNull(corrupted);
-        Assert.assertEquals(expectedStatus, corrupted.closeStatus());
-        Assert.assertEquals(errorMessage, corrupted.getMessage());
+        assertNotNull(corrupted);
+        assertEquals(expectedStatus, corrupted.closeStatus());
+        assertEquals(errorMessage, corrupted.getMessage());
     }
 
     @Test
@@ -172,10 +179,10 @@ public class WebSocket08EncoderDecoderTest {
         transfer(outChannel, inChannel);
 
         Object decoded = inChannel.readInbound();
-        Assert.assertNotNull(decoded);
-        Assert.assertTrue(decoded instanceof TextWebSocketFrame);
+        assertNotNull(decoded);
+        assertTrue(decoded instanceof TextWebSocketFrame);
         TextWebSocketFrame txt = (TextWebSocketFrame) decoded;
-        Assert.assertEquals(txt.text(), testStr);
+        assertEquals(txt.text(), testStr);
         txt.release();
     }
 
@@ -187,13 +194,13 @@ public class WebSocket08EncoderDecoderTest {
         transfer(outChannel, inChannel);
 
         Object decoded = inChannel.readInbound();
-        Assert.assertNotNull(decoded);
-        Assert.assertTrue(decoded instanceof BinaryWebSocketFrame);
+        assertNotNull(decoded);
+        assertTrue(decoded instanceof BinaryWebSocketFrame);
         BinaryWebSocketFrame binFrame = (BinaryWebSocketFrame) decoded;
         int readable = binFrame.content().readableBytes();
-        Assert.assertEquals(readable, testDataLength);
+        assertEquals(readable, testDataLength);
         for (int i = 0; i < testDataLength; i++) {
-            Assert.assertEquals(binTestData.getByte(i), binFrame.content().getByte(i));
+            assertEquals(binTestData.getByte(i), binFrame.content().getByte(i));
         }
         binFrame.release();
     }

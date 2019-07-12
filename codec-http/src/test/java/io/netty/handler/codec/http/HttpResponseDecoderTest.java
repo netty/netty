@@ -21,6 +21,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -642,6 +643,8 @@ public class HttpResponseDecoderTest {
         // Closing the connection should not generate anything since the protocol has been violated.
         ch.finish();
         assertThat(ch.readInbound(), is(nullValue()));
+
+        ReferenceCountUtil.release(res);
     }
 
     /**

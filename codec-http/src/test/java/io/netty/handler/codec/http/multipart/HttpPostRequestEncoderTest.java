@@ -95,6 +95,7 @@ public class HttpPostRequestEncoderTest {
                 "--" + multipartDataBoundary + "--" + "\r\n";
 
         assertEquals(expected, content);
+        request.release();
     }
 
     @Test
@@ -128,6 +129,7 @@ public class HttpPostRequestEncoderTest {
                 "--" + multipartDataBoundary + "--" + "\r\n";
 
         assertEquals(expected, content);
+        request.release();
     }
 
     @Test
@@ -188,6 +190,7 @@ public class HttpPostRequestEncoderTest {
                 "--" + multipartDataBoundary + "--" + "\r\n";
 
         assertEquals(expected, content);
+        request.release();
     }
 
     @Test
@@ -238,6 +241,7 @@ public class HttpPostRequestEncoderTest {
                 "--" + multipartDataBoundary + "--" + "\r\n";
 
         assertEquals(expected, content);
+        request.release();
     }
 
     @Test
@@ -282,6 +286,7 @@ public class HttpPostRequestEncoderTest {
                 "--" + multipartDataBoundary + "--" + "\r\n";
 
         assertEquals(expected, content);
+        request.release();
     }
 
     @Test
@@ -318,6 +323,7 @@ public class HttpPostRequestEncoderTest {
                 "--" + multipartDataBoundary + "--" + "\r\n";
 
         assertEquals(expected, content);
+        request.release();
     }
 
     @Test
@@ -350,6 +356,7 @@ public class HttpPostRequestEncoderTest {
         }
         encoder.cleanFiles();
         encoder.close();
+        request.release();
     }
 
     private static String getRequestBody(HttpPostRequestEncoder encoder) throws Exception {
@@ -401,8 +408,8 @@ public class HttpPostRequestEncoderTest {
         HttpContent httpContent = encoder.readChunk((ByteBufAllocator) null);
         assertTrue("Expected LastHttpContent is not received", httpContent instanceof LastHttpContent);
         httpContent.release();
-
-           assertTrue("Expected end of input is not receive", encoder.isEndOfInput());
+        assertTrue("Expected end of input is not receive", encoder.isEndOfInput());
+        request.release();
     }
 
     @Test
@@ -425,6 +432,7 @@ public class HttpPostRequestEncoderTest {
         httpContent.release();
 
         assertTrue("Expected end of input is not receive", encoder.isEndOfInput());
+        request.release();
     }
 
     private static void checkNextChunkSize(HttpPostRequestEncoder encoder, int sizeWithoutDelimiter) throws Exception {

@@ -16,7 +16,7 @@
 package io.netty.handler.codec.stomp;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.CharsetUtil;
 
 /**
@@ -27,7 +27,7 @@ public class DefaultStompFrame extends DefaultStompHeadersSubframe implements St
     private final ByteBuf content;
 
     public DefaultStompFrame(StompCommand command) {
-        this(command, Unpooled.buffer(0));
+        this(command, ByteBufAllocator.DEFAULT.buffer(0));
     }
 
     public DefaultStompFrame(StompCommand command, ByteBuf content) {

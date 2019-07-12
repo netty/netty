@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,9 +37,13 @@ import org.junit.Test;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
-import static io.netty.handler.codec.http.HttpResponseStatus.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
-import static org.junit.Assert.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
+import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
+import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 public class WebSocketServerProtocolHandlerTest {
 
@@ -120,7 +125,7 @@ public class WebSocketServerProtocolHandlerTest {
     public void testHandleTextFrame() {
         CustomTextFrameHandler customTextFrameHandler = new CustomTextFrameHandler();
         EmbeddedChannel ch = createChannel(customTextFrameHandler);
-        writeUpgradeRequest(ch);
+        HttpRequest req = writeUpgradeRequest(ch);
 
         if (ch.pipeline().context(HttpRequestDecoder.class) != null) {
             // Removing the HttpRequestDecoder because we are writing a TextWebSocketFrame and thus
@@ -128,9 +133,12 @@ public class WebSocketServerProtocolHandlerTest {
             ch.pipeline().remove(HttpRequestDecoder.class);
         }
 
-        ch.writeInbound(new TextWebSocketFrame("payload"));
+        TextWebSocketFrame textWebSocketFrame = new TextWebSocketFrame("payload");
+        ch.writeInbound(textWebSocketFrame);
 
         assertEquals("processed: payload", customTextFrameHandler.getContent());
+        textWebSocketFrame.release();
+        ReferenceCountUtil.release(req);
     }
 
     private EmbeddedChannel createChannel() {
@@ -146,12 +154,14 @@ public class WebSocketServerProtocolHandlerTest {
                 handler);
     }
 
-    private static void writeUpgradeRequest(EmbeddedChannel ch) {
-        ch.writeInbound(WebSocketRequestBuilder.successful());
+    private static HttpRequest writeUpgradeRequest(EmbeddedChannel ch) {
+        HttpRequest req = WebSocketRequestBuilder.successful();
+        ch.writeInbound(req);
+        return req;
     }
 
     private static String getResponseMessage(FullHttpResponse response) {
-        return new String(response.content().array());
+        return response.content().toString(CharsetUtil.UTF_8);
     }
 
     private class MockOutboundHandler extends ChannelOutboundHandlerAdapter {

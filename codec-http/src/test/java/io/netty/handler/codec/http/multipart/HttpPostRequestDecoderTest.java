@@ -107,9 +107,9 @@ public class HttpPostRequestDecoderTest {
     // See https://github.com/netty/netty/issues/1089
     @Test
     public void testFullHttpRequestUpload() throws Exception {
-        final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
+        String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
 
-        final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+        DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
                 "http://localhost");
 
         req.setDecoderResult(DecoderResult.SUCCESS);
@@ -117,10 +117,10 @@ public class HttpPostRequestDecoderTest {
         req.headers().add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 
         // Force to use memory-based data.
-        final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
+        DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
 
         for (String data : Arrays.asList("", "\r", "\r\r", "\r\r\r")) {
-            final String body =
+            String body =
                     "--" + boundary + "\r\n" +
                             "Content-Disposition: form-data; name=\"file\"; filename=\"tmp-0.txt\"\r\n" +
                             "Content-Type: image/gif\r\n" +
@@ -131,9 +131,10 @@ public class HttpPostRequestDecoderTest {
             req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8));
         }
         // Create decoder instance to test.
-        final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         decoder.destroy();
+        req.release();
     }
 
     // See https://github.com/netty/netty/issues/2544
@@ -180,15 +181,16 @@ public class HttpPostRequestDecoderTest {
             assertEquals(datas[i].getBytes(CharsetUtil.UTF_8).length, datar.length);
 
             decoder.destroy();
+            req.release();
         }
     }
 
     // See https://github.com/netty/netty/issues/2542
     @Test
     public void testQuotedBoundary() throws Exception {
-        final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
+        String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
 
-        final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+        DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
                 "http://localhost");
 
         req.setDecoderResult(DecoderResult.SUCCESS);
@@ -196,7 +198,7 @@ public class HttpPostRequestDecoderTest {
         req.headers().add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 
         // Force to use memory-based data.
-        final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
+        DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
 
         for (String data : Arrays.asList("", "\r", "\r\r", "\r\r\r")) {
             final String body =
@@ -213,6 +215,7 @@ public class HttpPostRequestDecoderTest {
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         decoder.destroy();
+        req.release();
     }
 
     // See https://github.com/netty/netty/issues/1848
@@ -352,6 +355,7 @@ public class HttpPostRequestDecoderTest {
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         decoder.destroy();
+        req.release();
     }
 
     @Test
@@ -385,9 +389,9 @@ public class HttpPostRequestDecoderTest {
 
     @Test
     public void testMultipartRequestWithoutContentTypeBody() {
-        final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
+        String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
 
-        final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+        DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
                 "http://localhost");
 
         req.setDecoderResult(DecoderResult.SUCCESS);
@@ -395,10 +399,10 @@ public class HttpPostRequestDecoderTest {
         req.headers().add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 
         // Force to use memory-based data.
-        final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
+        DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
 
         for (String data : Arrays.asList("", "\r", "\r\r", "\r\r\r")) {
-            final String body =
+            String body =
                     "--" + boundary + "\r\n" +
                             "Content-Disposition: form-data; name=\"file\"; filename=\"tmp-0.txt\"\r\n" +
                             "\r\n" +
@@ -408,9 +412,10 @@ public class HttpPostRequestDecoderTest {
             req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8));
         }
         // Create decoder instance to test without any exception.
-        final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         decoder.destroy();
+        req.release();
     }
 
     @Test
@@ -478,17 +483,17 @@ public class HttpPostRequestDecoderTest {
 
     @Test
     public void testMultipartRequestWithFieldInvalidCharset() throws Exception {
-        final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
-        final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+        String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
+        DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
             "http://localhost");
         req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
         // Force to use memory-based data.
-        final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
-        final String aData = "some data would be here. the data should be long enough that it " +
+        DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
+        String aData = "some data would be here. the data should be long enough that it " +
             "will be longer than the original buffer length of 256 bytes in " +
             "the HttpPostRequestDecoder in order to trigger the issue. Some more " +
             "data just to be on the safe side.";
-        final String body =
+        String body =
             "--" + boundary + "\r\n" +
                 "Content-Disposition: form-data; name=\"root\"\r\n" +
                 "Content-Type: text/plain; charset=ABCD\r\n" +
@@ -506,6 +511,7 @@ public class HttpPostRequestDecoderTest {
             assertTrue(e.getCause() instanceof UnsupportedCharsetException);
         } finally {
             req.release();
+            inMemoryFactory.cleanAllHttpData();
         }
     }
 
@@ -663,15 +669,15 @@ public class HttpPostRequestDecoderTest {
     // https://github.com/netty/netty/issues/7620
     @Test
     public void testDecodeMalformedEmptyContentTypeFieldParameters() throws Exception {
-        final String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
-        final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+        String boundary = "dLV9Wyq26L_-JQxk6ferf-RT153LhOO";
+        DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
                                                                       "http://localhost");
         req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
         // Force to use memory-based data.
-        final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
-        final String data = "asdf";
-        final String filename = "tmp-0.txt";
-        final String body =
+        DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
+        String data = "asdf";
+        String filename = "tmp-0.txt";
+        String body =
                 "--" + boundary + "\r\n" +
                 "Content-Disposition: form-data; name=\"file\"; filename=\"" + filename + "\"\r\n" +
                 "Content-Type: \r\n" +
@@ -681,12 +687,13 @@ public class HttpPostRequestDecoderTest {
 
         req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8.name()));
         // Create decoder instance to test.
-        final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
         InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
         assertTrue(part1 instanceof FileUpload);
         FileUpload fileUpload = (FileUpload) part1;
         assertEquals("tmp-0.txt", fileUpload.getFilename());
         decoder.destroy();
+        req.release();
     }
 }

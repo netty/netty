@@ -26,7 +26,6 @@ import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -41,10 +40,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.Assert.assertSame;
 
 public class HttpObjectAggregatorTest {
 
@@ -356,6 +355,7 @@ public class HttpObjectAggregatorTest {
         assertThat(inbound, is(instanceOf(FullHttpRequest.class)));
         assertTrue(((DecoderResultProvider) inbound).decoderResult().isFailure());
         assertNull(ch.readInbound());
+        assertThat(ReferenceCountUtil.release(inbound), is(true));
         ch.finish();
     }
 
@@ -367,6 +367,7 @@ public class HttpObjectAggregatorTest {
         assertThat(inbound, is(instanceOf(FullHttpResponse.class)));
         assertTrue(((DecoderResultProvider) inbound).decoderResult().isFailure());
         assertNull(ch.readInbound());
+        assertThat(ReferenceCountUtil.release(inbound), is(true));
         ch.finish();
     }
 

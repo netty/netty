@@ -16,8 +16,12 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
+
+import java.nio.CharBuffer;
 
 /**
  * Web Socket continuation frame containing continuation text or binary data. This is used for
@@ -29,7 +33,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
      * Creates a new empty continuation frame.
      */
     public ContinuationWebSocketFrame() {
-        this(Unpooled.buffer(0));
+        this(ByteBufAllocator.DEFAULT.buffer(0));
     }
 
     /**
@@ -87,7 +91,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
         if (text == null || text.isEmpty()) {
             return Unpooled.EMPTY_BUFFER;
         } else {
-            return Unpooled.copiedBuffer(text, CharsetUtil.UTF_8);
+            return ByteBufUtil.encodeString(ByteBufAllocator.DEFAULT, CharBuffer.wrap(text), CharsetUtil.UTF_8);
         }
     }
 

@@ -19,15 +19,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
+import org.junit.Test;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-
-
-import org.junit.Test;
 
 public class Http2ClientUpgradeCodecTest {
 
@@ -48,7 +45,7 @@ public class Http2ClientUpgradeCodecTest {
     }
 
     private static void testUpgrade(Http2ConnectionHandler handler) throws Exception {
-        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "*");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "*");
 
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
         ChannelHandlerContext ctx = channel.pipeline().firstContext();
@@ -61,6 +58,7 @@ public class Http2ClientUpgradeCodecTest {
         assertNotNull(channel.pipeline().get("connectionHandler"));
 
         assertTrue(channel.finishAndReleaseAll());
+        request.release();
     }
 
     @ChannelHandler.Sharable

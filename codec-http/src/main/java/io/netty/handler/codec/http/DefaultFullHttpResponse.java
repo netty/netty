@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.IllegalReferenceCountException;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -35,7 +35,7 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     private int hash;
 
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status) {
-        this(version, status, Unpooled.buffer(0));
+        this(version, status, ByteBufAllocator.DEFAULT.buffer(0));
     }
 
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, ByteBuf content) {
@@ -43,12 +43,12 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     }
 
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders) {
-        this(version, status, Unpooled.buffer(0), validateHeaders, false);
+        this(version, status, ByteBufAllocator.DEFAULT.buffer(0), validateHeaders, false);
     }
 
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders,
                                    boolean singleFieldHeaders) {
-        this(version, status, Unpooled.buffer(0), validateHeaders, singleFieldHeaders);
+        this(version, status, ByteBufAllocator.DEFAULT.buffer(0), validateHeaders, singleFieldHeaders);
     }
 
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status,

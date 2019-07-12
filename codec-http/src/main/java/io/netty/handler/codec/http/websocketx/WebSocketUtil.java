@@ -16,9 +16,10 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 
@@ -91,11 +92,16 @@ final class WebSocketUtil {
      * @return An encoded string containing the data
      */
     static String base64(byte[] data) {
-        ByteBuf encodedData = Unpooled.wrappedBuffer(data);
-        ByteBuf encoded = Base64.encode(encodedData);
-        String encodedString = encoded.toString(CharsetUtil.UTF_8);
-        encoded.release();
-        return encodedString;
+        ByteBuf byteBuf = null;
+        ByteBuf encoded = null;
+        try {
+            byteBuf = ByteBufAllocator.DEFAULT.buffer(data.length).writeBytes(data);
+            encoded = Base64.encode(byteBuf);
+            return encoded.toString(CharsetUtil.UTF_8);
+        } finally {
+            ReferenceCountUtil.release(encoded);
+            ReferenceCountUtil.release(byteBuf);
+        }
     }
 
     /**

@@ -16,7 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.internal.StringUtil;
 
@@ -33,7 +33,7 @@ public class DefaultSpdyDataFrame extends DefaultSpdyStreamFrame implements Spdy
      * @param streamId the Stream-ID of this frame
      */
     public DefaultSpdyDataFrame(int streamId) {
-        this(streamId, Unpooled.buffer(0));
+        this(streamId, ByteBufAllocator.DEFAULT.buffer(0));
     }
 
     /**

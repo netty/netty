@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.DefaultHeaders.NameValidator;
 import io.netty.util.internal.StringUtil;
 
@@ -30,7 +30,7 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
     private final boolean validateHeaders;
 
     public DefaultLastHttpContent() {
-        this(Unpooled.buffer(0));
+        this(ByteBufAllocator.DEFAULT.buffer(0));
     }
 
     public DefaultLastHttpContent(ByteBuf content) {

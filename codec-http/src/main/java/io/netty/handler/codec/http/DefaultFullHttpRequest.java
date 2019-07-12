@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.IllegalReferenceCountException;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -33,7 +33,7 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     private int hash;
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
-        this(httpVersion, method, uri, Unpooled.buffer(0));
+        this(httpVersion, method, uri, ByteBufAllocator.DEFAULT.buffer(0));
     }
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
@@ -41,7 +41,7 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     }
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
-        this(httpVersion, method, uri, Unpooled.buffer(0), validateHeaders);
+        this(httpVersion, method, uri, ByteBufAllocator.DEFAULT.buffer(0), validateHeaders);
     }
 
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,

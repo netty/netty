@@ -20,6 +20,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
 import java.util.List;
@@ -306,6 +307,7 @@ public class HttpRequestDecoderTest {
         assertTrue(request.decoderResult().isFailure());
         assertTrue(request.decoderResult().cause() instanceof TooLongFrameException);
         assertFalse(channel.finish());
+        ReferenceCountUtil.release(request);
     }
 
     @Test

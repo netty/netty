@@ -57,7 +57,7 @@ public class Http2ServerUpgradeCodecTest {
     }
 
     private static void testUpgrade(Http2ConnectionHandler handler, ChannelHandler multiplexer) {
-        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "*");
+        DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "*");
         request.headers().set(HttpHeaderNames.HOST, "netty.io");
         request.headers().set(HttpHeaderNames.CONNECTION, "Upgrade, HTTP2-Settings");
         request.headers().set(HttpHeaderNames.UPGRADE, "h2c");
@@ -93,6 +93,7 @@ public class Http2ServerUpgradeCodecTest {
         ByteBuf buf = channel.readOutbound();
         assertNotNull(buf);
         buf.release();
+        request.release();
 
         assertNull(channel.readOutbound());
     }

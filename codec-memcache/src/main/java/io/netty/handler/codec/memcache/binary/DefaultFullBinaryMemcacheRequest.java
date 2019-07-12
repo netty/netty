@@ -16,7 +16,7 @@
 package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -35,7 +35,7 @@ public class DefaultFullBinaryMemcacheRequest extends DefaultBinaryMemcacheReque
      * @param extras the extras to use.
      */
     public DefaultFullBinaryMemcacheRequest(ByteBuf key, ByteBuf extras) {
-        this(key, extras, Unpooled.buffer(0));
+        this(key, extras, ByteBufAllocator.DEFAULT.buffer(0));
     }
 
     /**

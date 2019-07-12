@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
 import java.util.Random;
@@ -43,6 +44,7 @@ public class HttpInvalidMessageTest {
         assertFalse(dr.isSuccess());
         assertTrue(dr.isFailure());
         ensureInboundTrafficDiscarded(ch);
+        ReferenceCountUtil.release(req);
     }
 
     @Test
@@ -59,6 +61,7 @@ public class HttpInvalidMessageTest {
         assertEquals("Good Value", req.headers().get(of("Good_Name")));
         assertEquals("/maybe-something", req.uri());
         ensureInboundTrafficDiscarded(ch);
+        ReferenceCountUtil.release(req);
     }
 
     @Test
@@ -103,6 +106,7 @@ public class HttpInvalidMessageTest {
         assertFalse(dr.isSuccess());
         assertTrue(dr.isFailure());
         ensureInboundTrafficDiscarded(ch);
+        ReferenceCountUtil.release(req);
     }
 
     private void ensureInboundTrafficDiscarded(EmbeddedChannel ch) {

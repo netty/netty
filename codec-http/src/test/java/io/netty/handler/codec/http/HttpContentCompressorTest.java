@@ -501,7 +501,7 @@ public class HttpContentCompressorTest {
     }
 
     private static FullHttpRequest newRequest() {
-        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/", Unpooled.buffer(0));
         req.headers().set(HttpHeaderNames.ACCEPT_ENCODING, "gzip");
         return req;
     }
