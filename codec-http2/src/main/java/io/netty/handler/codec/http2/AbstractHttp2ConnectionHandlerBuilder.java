@@ -106,6 +106,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private Boolean encoderIgnoreMaxHeaderListSize;
     private Http2PromisedRequestVerifier promisedRequestVerifier = ALWAYS_VERIFY;
     private boolean autoAckSettingsFrame = true;
+    private boolean autoAckPingFrame = true;
 
     /**
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
@@ -400,6 +401,24 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
+     * Determine if PING frame should automatically be acknowledged or not.
+     * @return this.
+     */
+    protected B autoAckPingFrame(boolean autoAckPingFrame) {
+        enforceNonCodecConstraints("autoAckPingFrame");
+        this.autoAckPingFrame = autoAckPingFrame;
+        return self();
+    }
+
+    /**
+     * Determine if the PING frames should be automatically acknowledged or not.
+     * @return {@code true} if the PING frames should be automatically acknowledged.
+     */
+    protected boolean isAutoAckPingFrame() {
+        return autoAckPingFrame;
+    }
+
+    /**
      * Determine if the {@link Channel#close()} should be coupled with goaway and graceful close.
      * @param decoupleCloseAndGoAway {@code true} to make {@link Channel#close()} directly close the underlying
      *   transport, and not attempt graceful closure via GOAWAY.
@@ -463,7 +482,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         }
 
         DefaultHttp2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
-                promisedRequestVerifier(), isAutoAckSettingsFrame());
+                promisedRequestVerifier(), isAutoAckSettingsFrame(), isAutoAckPingFrame());
         return buildFromCodec(decoder, encoder);
     }
 

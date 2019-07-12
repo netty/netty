@@ -177,6 +177,11 @@ public class Http2MultiplexCodecBuilder
     }
 
     @Override
+    public Http2MultiplexCodecBuilder autoAckPingFrame(boolean autoAckPingFrame) {
+        return super.autoAckPingFrame(autoAckPingFrame);
+    }
+
+    @Override
     public Http2MultiplexCodecBuilder decoupleCloseAndGoAway(boolean decoupleCloseAndGoAway) {
         return super.decoupleCloseAndGoAway(decoupleCloseAndGoAway);
     }
@@ -202,7 +207,7 @@ public class Http2MultiplexCodecBuilder
                 encoder = new StreamBufferingEncoder(encoder);
             }
             Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader,
-                    promisedRequestVerifier(), isAutoAckSettingsFrame());
+                    promisedRequestVerifier(), isAutoAckSettingsFrame(), isAutoAckPingFrame());
 
             return build(decoder, encoder, initialSettings());
         }
