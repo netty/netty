@@ -462,7 +462,7 @@ public class HttpPostRequestEncoderTest {
         assertNotNull(encoder.finalizeRequest());
 
         while (!encoder.isEndOfInput()) {
-            encoder.readChunk((ByteBufAllocator) null);
+            encoder.readChunk((ByteBufAllocator) null).release();
         }
 
         assertTrue(encoder.isEndOfInput());
