@@ -248,9 +248,10 @@ public abstract class WebSocketClientHandshaker {
      *            the {@link ChannelPromise} to be notified when the opening handshake is sent
      */
     public final ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
-        HttpResponseDecoder decoder = channel.pipeline().get(HttpResponseDecoder.class);
+        ChannelPipeline pipeline = channel.pipeline();
+        HttpResponseDecoder decoder = pipeline.get(HttpResponseDecoder.class);
         if (decoder == null) {
-            HttpClientCodec codec = channel.pipeline().get(HttpClientCodec.class);
+            HttpClientCodec codec = pipeline.get(HttpClientCodec.class);
             if (codec == null) {
                promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
                        "a HttpResponseDecoder or HttpClientCodec"));
@@ -258,7 +259,7 @@ public abstract class WebSocketClientHandshaker {
             }
         }
 
-        FullHttpRequest request =  newHandshakeRequest();
+        FullHttpRequest request = newHandshakeRequest();
 
         channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
             @Override

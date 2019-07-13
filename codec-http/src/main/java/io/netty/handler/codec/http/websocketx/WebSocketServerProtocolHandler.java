@@ -213,13 +213,13 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         ChannelPipeline cp = ctx.pipeline();
         if (cp.get(WebSocketServerProtocolHandshakeHandler.class) == null) {
             // Add the WebSocketHandshakeHandler before this one.
-            ctx.pipeline().addBefore(ctx.name(), WebSocketServerProtocolHandshakeHandler.class.getName(),
+            cp.addBefore(ctx.name(), WebSocketServerProtocolHandshakeHandler.class.getName(),
                     new WebSocketServerProtocolHandshakeHandler(
                         websocketPath, subprotocols, checkStartsWith, handshakeTimeoutMillis, decoderConfig));
         }
         if (cp.get(Utf8FrameValidator.class) == null) {
             // Add the UFT8 checking before this one.
-            ctx.pipeline().addBefore(ctx.name(), Utf8FrameValidator.class.getName(),
+            cp.addBefore(ctx.name(), Utf8FrameValidator.class.getName(),
                     new Utf8FrameValidator());
         }
     }
