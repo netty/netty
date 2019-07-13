@@ -142,19 +142,20 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
 
         // Create the WebSocket handshake response.
         FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, new HttpResponseStatus(101,
-                isHixie76 ? "WebSocket Protocol Handshake" : "Web Socket Protocol Handshake"));
+                isHixie76 ? "WebSocket Protocol Handshake" : "Web Socket Protocol Handshake"),
+                req.content().alloc().buffer(0));
         if (headers != null) {
             res.headers().add(headers);
         }
 
-        res.headers().add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);
-        res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
+        res.headers().add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
+                     .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
 
         // Fill in the headers and contents depending on handshake getMethod.
         if (isHixie76) {
             // New handshake getMethod with a challenge:
-            res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, origin);
-            res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_LOCATION, uri());
+            res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, origin)
+                         .add(HttpHeaderNames.SEC_WEBSOCKET_LOCATION, uri());
 
             String subprotocols = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
             if (subprotocols != null) {
@@ -183,8 +184,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             res.content().writeBytes(WebSocketUtil.md5(input.array()));
         } else {
             // Old Hixie 75 handshake getMethod with no challenge:
-            res.headers().add(HttpHeaderNames.WEBSOCKET_ORIGIN, origin);
-            res.headers().add(HttpHeaderNames.WEBSOCKET_LOCATION, uri());
+            res.headers().add(HttpHeaderNames.WEBSOCKET_ORIGIN, origin)
+                         .add(HttpHeaderNames.WEBSOCKET_LOCATION, uri());
 
             String protocol = req.headers().get(HttpHeaderNames.WEBSOCKET_PROTOCOL);
             if (protocol != null) {

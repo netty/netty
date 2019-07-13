@@ -140,7 +140,8 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
             throw new WebSocketHandshakeException("not a WebSocket request: missing key");
         }
 
-        FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
+        FullHttpResponse res = new DefaultFullHttpResponse(
+                HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS, req.content().alloc().buffer(0));
 
         if (headers != null) {
             res.headers().add(headers);
@@ -154,9 +155,9 @@ public class WebSocketServerHandshaker08 extends WebSocketServerHandshaker {
             logger.debug("WebSocket version 08 server handshake key: {}, response: {}", key, accept);
         }
 
-        res.headers().add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);
-        res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
-        res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, accept);
+        res.headers().add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
+                     .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
+                     .add(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, accept);
 
         String subprotocols = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
         if (subprotocols != null) {
