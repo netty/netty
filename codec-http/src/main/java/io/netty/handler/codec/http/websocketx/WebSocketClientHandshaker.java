@@ -258,7 +258,7 @@ public abstract class WebSocketClientHandshaker {
             }
         }
 
-        FullHttpRequest request =  newHandshakeRequest();
+        FullHttpRequest request = newHandshakeRequest();
         channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {
