@@ -24,7 +24,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.CharsetUtil;
 
-import static io.netty.handler.codec.http.HttpVersion.*;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
  * <p>
@@ -134,15 +134,17 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      */
     @Override
     protected FullHttpResponse newHandshakeResponse(FullHttpRequest req, HttpHeaders headers) {
-        FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
-        if (headers != null) {
-            res.headers().add(headers);
-        }
-
         CharSequence key = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
         if (key == null) {
             throw new WebSocketHandshakeException("not a WebSocket request: missing key");
         }
+
+        FullHttpResponse res = new DefaultFullHttpResponse(
+                HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS, req.content().alloc().buffer(0));
+        if (headers != null) {
+            res.headers().add(headers);
+        }
+
         String acceptSeed = key + WEBSOCKET_13_ACCEPT_GUID;
         byte[] sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII));
         String accept = WebSocketUtil.base64(sha1);
@@ -151,9 +153,9 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
             logger.debug("WebSocket version 13 server handshake key: {}, response: {}", key, accept);
         }
 
-        res.headers().add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET);
-        res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
-        res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, accept);
+        res.headers().add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
+                     .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
+                     .add(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT, accept);
 
         String subprotocols = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
         if (subprotocols != null) {

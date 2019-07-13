@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.StringUtil;
 
@@ -29,7 +29,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * Creates a new empty close frame.
      */
     public CloseWebSocketFrame() {
-        super(Unpooled.buffer(0));
+        super(ByteBufAllocator.DEFAULT.buffer(0));
     }
 
     /**
@@ -78,7 +78,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      *            reserved bits used for protocol extensions.
      */
     public CloseWebSocketFrame(boolean finalFragment, int rsv) {
-        this(finalFragment, rsv, Unpooled.buffer(0));
+        this(finalFragment, rsv, ByteBufAllocator.DEFAULT.buffer(0));
     }
 
     /**
@@ -103,7 +103,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
             reasonText = StringUtil.EMPTY_STRING;
         }
 
-        ByteBuf binaryData = Unpooled.buffer(2 + reasonText.length());
+        ByteBuf binaryData = ByteBufAllocator.DEFAULT.buffer(2 + reasonText.length());
         binaryData.writeShort(statusCode);
         if (!reasonText.isEmpty()) {
             binaryData.writeCharSequence(reasonText, CharsetUtil.UTF_8);
