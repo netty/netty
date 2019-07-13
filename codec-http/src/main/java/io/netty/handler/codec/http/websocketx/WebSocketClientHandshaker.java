@@ -248,8 +248,6 @@ public abstract class WebSocketClientHandshaker {
      *            the {@link ChannelPromise} to be notified when the opening handshake is sent
      */
     public final ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
-        FullHttpRequest request =  newHandshakeRequest();
-
         HttpResponseDecoder decoder = channel.pipeline().get(HttpResponseDecoder.class);
         if (decoder == null) {
             HttpClientCodec codec = channel.pipeline().get(HttpClientCodec.class);
@@ -259,6 +257,8 @@ public abstract class WebSocketClientHandshaker {
                return promise;
             }
         }
+
+        FullHttpRequest request =  newHandshakeRequest();
 
         channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
             @Override
