@@ -585,14 +585,15 @@ public abstract class WebSocketClientHandshaker {
             return wsURL.getHost();
         }
         String host = wsURL.getHost();
+        String scheme = wsURL.getScheme();
         if (port == HttpScheme.HTTP.port()) {
-            return HttpScheme.HTTP.name().contentEquals(wsURL.getScheme())
-                    || WebSocketScheme.WS.name().contentEquals(wsURL.getScheme()) ?
+            return HttpScheme.HTTP.name().contentEquals(scheme)
+                    || WebSocketScheme.WS.name().contentEquals(scheme) ?
                     host : NetUtil.toSocketAddressString(host, port);
         }
         if (port == HttpScheme.HTTPS.port()) {
-            return HttpScheme.HTTPS.name().contentEquals(wsURL.getScheme())
-                    || WebSocketScheme.WSS.name().contentEquals(wsURL.getScheme()) ?
+            return HttpScheme.HTTPS.name().contentEquals(scheme)
+                    || WebSocketScheme.WSS.name().contentEquals(scheme) ?
                     host : NetUtil.toSocketAddressString(host, port);
         }
 
