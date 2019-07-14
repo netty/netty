@@ -79,22 +79,25 @@ public final class ByteBufUtil {
         ByteBufAllocator alloc;
         if ("unpooled".equals(allocType)) {
             alloc = UnpooledByteBufAllocator.DEFAULT;
-            logger.debug("-Dio.netty.allocator.type: {}", allocType);
+            logger.debug("-D{}: {}", SystemPropertyUtil.propertyName("io.netty.allocator.type"), allocType);
         } else if ("pooled".equals(allocType)) {
             alloc = PooledByteBufAllocator.DEFAULT;
-            logger.debug("-Dio.netty.allocator.type: {}", allocType);
+            logger.debug("-D{}: {}", SystemPropertyUtil.propertyName("io.netty.allocator.type"), allocType);
         } else {
             alloc = PooledByteBufAllocator.DEFAULT;
-            logger.debug("-Dio.netty.allocator.type: pooled (unknown: {})", allocType);
+            logger.debug("-D{}: pooled (unknown: {})",
+                    SystemPropertyUtil.propertyName("io.netty.allocator.type"), allocType);
         }
 
         DEFAULT_ALLOCATOR = alloc;
 
         THREAD_LOCAL_BUFFER_SIZE = SystemPropertyUtil.getInt("io.netty.threadLocalDirectBufferSize", 0);
-        logger.debug("-Dio.netty.threadLocalDirectBufferSize: {}", THREAD_LOCAL_BUFFER_SIZE);
+        logger.debug("-D{}: {}", SystemPropertyUtil.propertyName("io.netty.threadLocalDirectBufferSize"),
+                THREAD_LOCAL_BUFFER_SIZE);
 
         MAX_CHAR_BUFFER_SIZE = SystemPropertyUtil.getInt("io.netty.maxThreadLocalCharBufferSize", 16 * 1024);
-        logger.debug("-Dio.netty.maxThreadLocalCharBufferSize: {}", MAX_CHAR_BUFFER_SIZE);
+        logger.debug("-D{}: {}", SystemPropertyUtil.propertyName("io.netty.maxThreadLocalCharBufferSize"),
+                MAX_CHAR_BUFFER_SIZE);
     }
 
     static final int MAX_TL_ARRAY_LEN = 1024;

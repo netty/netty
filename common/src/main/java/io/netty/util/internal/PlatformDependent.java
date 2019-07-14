@@ -156,14 +156,16 @@ public final class PlatformDependent {
                 DIRECT_MEMORY_COUNTER = new AtomicLong();
             }
         }
-        logger.debug("-Dio.netty.maxDirectMemory: {} bytes", maxDirectMemory);
+        logger.debug("-D{}: {} bytes", SystemPropertyUtil.propertyName("io.netty.maxDirectMemory"), maxDirectMemory);
         DIRECT_MEMORY_LIMIT = maxDirectMemory >= 1 ? maxDirectMemory : MAX_DIRECT_MEMORY;
 
         int tryAllocateUninitializedArray =
                 SystemPropertyUtil.getInt("io.netty.uninitializedArrayAllocationThreshold", 1024);
         UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD = javaVersion() >= 9 && PlatformDependent0.hasAllocateArrayMethod() ?
                 tryAllocateUninitializedArray : -1;
-        logger.debug("-Dio.netty.uninitializedArrayAllocationThreshold: {}", UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD);
+        logger.debug("-D{}: {}",
+                SystemPropertyUtil.propertyName("io.netty.uninitializedArrayAllocationThreshold"),
+                UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD);
 
         MAYBE_SUPER_USER = maybeSuperUser0();
 
@@ -183,7 +185,8 @@ public final class PlatformDependent {
         DIRECT_BUFFER_PREFERRED = CLEANER != NOOP
                                   && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
         if (logger.isDebugEnabled()) {
-            logger.debug("-Dio.netty.noPreferDirect: {}", !DIRECT_BUFFER_PREFERRED);
+            logger.debug("-D{}: {}",
+                    SystemPropertyUtil.propertyName("io.netty.noPreferDirect"), !DIRECT_BUFFER_PREFERRED);
         }
 
         /*
@@ -1080,13 +1083,14 @@ public final class PlatformDependent {
         try {
             f = toDirectory(SystemPropertyUtil.get("io.netty.tmpdir"));
             if (f != null) {
-                logger.debug("-Dio.netty.tmpdir: {}", f);
+                logger.debug("-D{}: {}", SystemPropertyUtil.propertyName("io.netty.tmpdir"), f);
                 return f;
             }
 
             f = toDirectory(SystemPropertyUtil.get("java.io.tmpdir"));
             if (f != null) {
-                logger.debug("-Dio.netty.tmpdir: {} (java.io.tmpdir)", f);
+                logger.debug("-D{}: {} (java.io.tmpdir)",
+                        SystemPropertyUtil.propertyName("io.netty.tmpdir"), f);
                 return f;
             }
 
@@ -1094,7 +1098,7 @@ public final class PlatformDependent {
             if (isWindows()) {
                 f = toDirectory(System.getenv("TEMP"));
                 if (f != null) {
-                    logger.debug("-Dio.netty.tmpdir: {} (%TEMP%)", f);
+                    logger.debug("-D{}: {} (%TEMP%)", SystemPropertyUtil.propertyName("io.netty.tmpdir"), f);
                     return f;
                 }
 
@@ -1102,20 +1106,22 @@ public final class PlatformDependent {
                 if (userprofile != null) {
                     f = toDirectory(userprofile + "\\AppData\\Local\\Temp");
                     if (f != null) {
-                        logger.debug("-Dio.netty.tmpdir: {} (%USERPROFILE%\\AppData\\Local\\Temp)", f);
+                        logger.debug("-D{}: {} (%USERPROFILE%\\AppData\\Local\\Temp)",
+                                SystemPropertyUtil.propertyName("io.netty.tmpdir"), f);
                         return f;
                     }
 
                     f = toDirectory(userprofile + "\\Local Settings\\Temp");
                     if (f != null) {
-                        logger.debug("-Dio.netty.tmpdir: {} (%USERPROFILE%\\Local Settings\\Temp)", f);
+                        logger.debug("-D{}: {} (%USERPROFILE%\\Local Settings\\Temp)",
+                                SystemPropertyUtil.propertyName("io.netty.tmpdir"), f);
                         return f;
                     }
                 }
             } else {
                 f = toDirectory(System.getenv("TMPDIR"));
                 if (f != null) {
-                    logger.debug("-Dio.netty.tmpdir: {} ($TMPDIR)", f);
+                    logger.debug("-D{}: {} ($TMPDIR)", SystemPropertyUtil.propertyName("io.netty.tmpdir"), f);
                     return f;
                 }
             }
@@ -1158,19 +1164,21 @@ public final class PlatformDependent {
         // Check user-specified bit mode first.
         int bitMode = SystemPropertyUtil.getInt("io.netty.bitMode", 0);
         if (bitMode > 0) {
-            logger.debug("-Dio.netty.bitMode: {}", bitMode);
+            logger.debug("-D{}: {}", SystemPropertyUtil.propertyName("io.netty.bitMode"), bitMode);
             return bitMode;
         }
 
         // And then the vendor specific ones which is probably most reliable.
         bitMode = SystemPropertyUtil.getInt("sun.arch.data.model", 0);
         if (bitMode > 0) {
-            logger.debug("-Dio.netty.bitMode: {} (sun.arch.data.model)", bitMode);
+            logger.debug("-D{}: {} (sun.arch.data.model)",
+                    SystemPropertyUtil.propertyName("io.netty.bitMode"), bitMode);
             return bitMode;
         }
         bitMode = SystemPropertyUtil.getInt("com.ibm.vm.bitmode", 0);
         if (bitMode > 0) {
-            logger.debug("-Dio.netty.bitMode: {} (com.ibm.vm.bitmode)", bitMode);
+            logger.debug("-D{}: {} (com.ibm.vm.bitmode)",
+                    SystemPropertyUtil.propertyName("io.netty.bitMode"), bitMode);
             return bitMode;
         }
 
@@ -1183,7 +1191,8 @@ public final class PlatformDependent {
         }
 
         if (bitMode > 0) {
-            logger.debug("-Dio.netty.bitMode: {} (os.arch: {})", bitMode, arch);
+            logger.debug("-D{}: {} (os.arch: {})",
+                    SystemPropertyUtil.propertyName("io.netty.bitMode"), bitMode, arch);
         }
 
         // Last resort: guess from VM name and then fall back to most common 64-bit mode.

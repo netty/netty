@@ -139,27 +139,52 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
                 "io.netty.allocator.maxCachedByteBuffersPerChunk", 1023);
 
         if (logger.isDebugEnabled()) {
-            logger.debug("-Dio.netty.allocator.numHeapArenas: {}", DEFAULT_NUM_HEAP_ARENA);
-            logger.debug("-Dio.netty.allocator.numDirectArenas: {}", DEFAULT_NUM_DIRECT_ARENA);
+            logger.debug("-D{}: {}",
+                    SystemPropertyUtil.propertyName("io.netty.allocator.numHeapArenas"), DEFAULT_NUM_HEAP_ARENA);
+            logger.debug("-D{}: {}",
+                    SystemPropertyUtil.propertyName("io.netty.allocator.numDirectArena"), DEFAULT_NUM_DIRECT_ARENA);
             if (pageSizeFallbackCause == null) {
-                logger.debug("-Dio.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE);
+                logger.debug("-D{}: {}",
+                        SystemPropertyUtil.propertyName("io.netty.allocator.pageSize"), DEFAULT_PAGE_SIZE);
             } else {
-                logger.debug("-Dio.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE, pageSizeFallbackCause);
+                logger.debug("-D{}: {}",
+                        SystemPropertyUtil.propertyName("io.netty.allocator.pageSize"), DEFAULT_PAGE_SIZE,
+                        pageSizeFallbackCause);
             }
             if (maxOrderFallbackCause == null) {
-                logger.debug("-Dio.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER);
+                logger.debug("-D{}: {}",
+                        SystemPropertyUtil.propertyName("io.netty.allocator.maxOrder"), DEFAULT_MAX_ORDER);
             } else {
-                logger.debug("-Dio.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER, maxOrderFallbackCause);
+                logger.debug("-D{}: {}",
+                        SystemPropertyUtil.propertyName("io.netty.allocator.maxOrder"), DEFAULT_MAX_ORDER,
+                        maxOrderFallbackCause);
             }
-            logger.debug("-Dio.netty.allocator.chunkSize: {}", DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER);
-            logger.debug("-Dio.netty.allocator.tinyCacheSize: {}", DEFAULT_TINY_CACHE_SIZE);
-            logger.debug("-Dio.netty.allocator.smallCacheSize: {}", DEFAULT_SMALL_CACHE_SIZE);
-            logger.debug("-Dio.netty.allocator.normalCacheSize: {}", DEFAULT_NORMAL_CACHE_SIZE);
-            logger.debug("-Dio.netty.allocator.maxCachedBufferCapacity: {}", DEFAULT_MAX_CACHED_BUFFER_CAPACITY);
-            logger.debug("-Dio.netty.allocator.cacheTrimInterval: {}", DEFAULT_CACHE_TRIM_INTERVAL);
-            logger.debug("-Dio.netty.allocator.cacheTrimIntervalMillis: {}", DEFAULT_CACHE_TRIM_INTERVAL_MILLIS);
-            logger.debug("-Dio.netty.allocator.useCacheForAllThreads: {}", DEFAULT_USE_CACHE_FOR_ALL_THREADS);
-            logger.debug("-Dio.netty.allocator.maxCachedByteBuffersPerChunk: {}",
+            logger.debug("-D{}: {}",
+                    SystemPropertyUtil.propertyName("io.netty.allocator.chunkSize"),
+                    DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER);
+            logger.debug("-D{}: {}",
+                    SystemPropertyUtil.propertyName("io.netty.allocator.tinyCacheSize"),
+                    DEFAULT_TINY_CACHE_SIZE);
+            logger.debug("-D{}: {}",
+                    SystemPropertyUtil.propertyName("io.netty.allocator.smallCacheSize"),
+                    DEFAULT_SMALL_CACHE_SIZE);
+            logger.debug("-D{}: {}",
+                    SystemPropertyUtil.propertyName("io.netty.allocator.normalCacheSize"),
+                    DEFAULT_NORMAL_CACHE_SIZE);
+            logger.debug("-D{}: {}",
+                    SystemPropertyUtil.propertyName("io.netty.allocator.maxCachedBufferCapacity"),
+                    DEFAULT_MAX_CACHED_BUFFER_CAPACITY);
+            logger.debug("-D{}: {}",
+                    SystemPropertyUtil.propertyName("io.netty.allocator.cacheTrimInterval"),
+                    DEFAULT_CACHE_TRIM_INTERVAL);
+            logger.debug("-D{}: {}",
+                    SystemPropertyUtil.propertyName("io.netty.allocator.cacheTrimIntervalMillis"),
+                    DEFAULT_CACHE_TRIM_INTERVAL_MILLIS);
+            logger.debug("-D{}: {}",
+                    SystemPropertyUtil.propertyName("io.netty.allocator.useCacheForAllThreads"),
+                    DEFAULT_USE_CACHE_FOR_ALL_THREADS);
+            logger.debug("-D{}: {}",
+                    SystemPropertyUtil.propertyName("io.netty.allocator.maxCachedByteBuffersPerChunk"),
                     DEFAULT_MAX_CACHED_BYTEBUFFERS_PER_CHUNK);
         }
     }

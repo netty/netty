@@ -44,7 +44,8 @@ final class AdvancedLeakAwareByteBuf extends SimpleLeakAwareByteBuf {
         ACQUIRE_AND_RELEASE_ONLY = SystemPropertyUtil.getBoolean(PROP_ACQUIRE_AND_RELEASE_ONLY, false);
 
         if (logger.isDebugEnabled()) {
-            logger.debug("-D{}: {}", PROP_ACQUIRE_AND_RELEASE_ONLY, ACQUIRE_AND_RELEASE_ONLY);
+            logger.debug("-D{}: {}", SystemPropertyUtil.propertyName(PROP_ACQUIRE_AND_RELEASE_ONLY),
+                    ACQUIRE_AND_RELEASE_ONLY);
         }
 
         ResourceLeakDetector.addExclusions(

@@ -67,16 +67,19 @@ public final class DefaultChannelId implements ChannelId {
 
             if (processId < 0) {
                 processId = -1;
-                logger.warn("-Dio.netty.processId: {} (malformed)", customProcessId);
+                logger.warn("-D{}: {} (malformed)",
+                        SystemPropertyUtil.propertyName("io.netty.processId"), customProcessId);
             } else if (logger.isDebugEnabled()) {
-                logger.debug("-Dio.netty.processId: {} (user-set)", processId);
+                logger.debug("-D{}: {} (user-set)",
+                        SystemPropertyUtil.propertyName("io.netty.processId"), processId);
             }
         }
 
         if (processId < 0) {
             processId = defaultProcessId();
             if (logger.isDebugEnabled()) {
-                logger.debug("-Dio.netty.processId: {} (auto-detected)", processId);
+                logger.debug("-D{}: {} (auto-detected)",
+                        SystemPropertyUtil.propertyName("io.netty.processId"), processId);
             }
         }
 
@@ -88,17 +91,20 @@ public final class DefaultChannelId implements ChannelId {
             try {
                 machineId = parseMAC(customMachineId);
             } catch (Exception e) {
-                logger.warn("-Dio.netty.machineId: {} (malformed)", customMachineId, e);
+                logger.warn("-D{}: {} (malformed)",
+                        SystemPropertyUtil.propertyName("io.netty.machineId"), customMachineId, e);
             }
             if (machineId != null) {
-                logger.debug("-Dio.netty.machineId: {} (user-set)", customMachineId);
+                logger.debug("-D{}: {} (user-set)",
+                        SystemPropertyUtil.propertyName("io.netty.machineId"), customMachineId);
             }
         }
 
         if (machineId == null) {
             machineId = defaultMachineId();
             if (logger.isDebugEnabled()) {
-                logger.debug("-Dio.netty.machineId: {} (auto-detected)", MacAddressUtil.formatAddress(machineId));
+                logger.debug("-D{}: {} (auto-detected)",
+                        SystemPropertyUtil.propertyName("io.netty.machineId"), MacAddressUtil.formatAddress(machineId));
             }
         }
 

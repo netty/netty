@@ -104,10 +104,11 @@ public class ResourceLeakDetector<T> {
         final boolean disabled;
         if (SystemPropertyUtil.get("io.netty.noResourceLeakDetection") != null) {
             disabled = SystemPropertyUtil.getBoolean("io.netty.noResourceLeakDetection", false);
-            logger.debug("-Dio.netty.noResourceLeakDetection: {}", disabled);
+            logger.debug("-D{}: {}", SystemPropertyUtil.propertyName("io.netty.noResourceLeakDetection"), disabled);
             logger.warn(
-                    "-Dio.netty.noResourceLeakDetection is deprecated. Use '-D{}={}' instead.",
-                    PROP_LEVEL, DEFAULT_LEVEL.name().toLowerCase());
+                    "-D{} is deprecated. Use '-D{}={}' instead.",
+                    SystemPropertyUtil.propertyName("io.netty.noResourceLeakDetection"),
+                    SystemPropertyUtil.propertyName(PROP_LEVEL), DEFAULT_LEVEL.name().toLowerCase());
         } else {
             disabled = false;
         }
@@ -126,8 +127,8 @@ public class ResourceLeakDetector<T> {
 
         ResourceLeakDetector.level = level;
         if (logger.isDebugEnabled()) {
-            logger.debug("-D{}: {}", PROP_LEVEL, level.name().toLowerCase());
-            logger.debug("-D{}: {}", PROP_TARGET_RECORDS, TARGET_RECORDS);
+            logger.debug("-D{}: {}", SystemPropertyUtil.propertyName(PROP_LEVEL), level.name().toLowerCase());
+            logger.debug("-D{}: {}", SystemPropertyUtil.propertyName(PROP_TARGET_RECORDS), TARGET_RECORDS);
         }
     }
 

@@ -59,8 +59,8 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
         checkBounds = SystemPropertyUtil.getBoolean(PROP_CHECK_BOUNDS, true);
         if (logger.isDebugEnabled()) {
-            logger.debug("-D{}: {}", PROP_CHECK_ACCESSIBLE, checkAccessible);
-            logger.debug("-D{}: {}", PROP_CHECK_BOUNDS, checkBounds);
+            logger.debug("-D{}: {}", SystemPropertyUtil.propertyName(PROP_CHECK_ACCESSIBLE), checkAccessible);
+            logger.debug("-D{}: {}", SystemPropertyUtil.propertyName(PROP_CHECK_BOUNDS), checkBounds);
         }
     }
 

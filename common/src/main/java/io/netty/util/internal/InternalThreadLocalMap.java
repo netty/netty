@@ -51,10 +51,14 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     static {
         STRING_BUILDER_INITIAL_SIZE =
                 SystemPropertyUtil.getInt("io.netty.threadLocalMap.stringBuilder.initialSize", 1024);
-        logger.debug("-Dio.netty.threadLocalMap.stringBuilder.initialSize: {}", STRING_BUILDER_INITIAL_SIZE);
+        logger.debug("-D{}: {}",
+                SystemPropertyUtil.propertyName("io.netty.threadLocalMap.stringBuilder.initialSize"),
+                STRING_BUILDER_INITIAL_SIZE);
 
         STRING_BUILDER_MAX_SIZE = SystemPropertyUtil.getInt("io.netty.threadLocalMap.stringBuilder.maxSize", 1024 * 4);
-        logger.debug("-Dio.netty.threadLocalMap.stringBuilder.maxSize: {}", STRING_BUILDER_MAX_SIZE);
+        logger.debug("-D{}: {}",
+                SystemPropertyUtil.propertyName("io.netty.threadLocalMap.stringBuilder.maxSize"),
+                STRING_BUILDER_MAX_SIZE);
     }
 
     public static InternalThreadLocalMap getIfSet() {

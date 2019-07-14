@@ -209,7 +209,9 @@ public final class ThreadLocalRandom extends Random {
                                 actualCurrent,
                                 TimeUnit.NANOSECONDS.toMillis(seedGeneratorEndTime - seedGeneratorStartTime)));
                     } else {
-                        logger.debug(String.format("-Dio.netty.initialSeedUniquifier: 0x%016x", actualCurrent));
+                        logger.debug(String.format("-D{}: 0x%016x",
+                                SystemPropertyUtil.propertyName("io.netty.initialSeedUniquifier"),
+                                actualCurrent));
                     }
                 }
                 return next ^ System.nanoTime();

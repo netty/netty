@@ -36,10 +36,10 @@ public final class ZlibCodecFactory {
     static {
         noJdkZlibDecoder = SystemPropertyUtil.getBoolean("io.netty.noJdkZlibDecoder",
                 PlatformDependent.javaVersion() < 7);
-        logger.debug("-Dio.netty.noJdkZlibDecoder: {}", noJdkZlibDecoder);
+        logger.debug("-D{}: {}", SystemPropertyUtil.propertyName("io.netty.noJdkZlibDecoder"), noJdkZlibDecoder);
 
         noJdkZlibEncoder = SystemPropertyUtil.getBoolean("io.netty.noJdkZlibEncoder", false);
-        logger.debug("-Dio.netty.noJdkZlibEncoder: {}", noJdkZlibEncoder);
+        logger.debug("-D{}: {}", SystemPropertyUtil.propertyName("io.netty.noJdkZlibEncoder"), noJdkZlibEncoder);
 
         supportsWindowSizeAndMemLevel = noJdkZlibDecoder || PlatformDependent.javaVersion() >= 7;
     }

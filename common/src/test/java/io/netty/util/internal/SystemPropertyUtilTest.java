@@ -125,4 +125,20 @@ public class SystemPropertyUtilTest {
         assertEquals(1, SystemPropertyUtil.getLong("key", 1));
     }
 
+    @Test
+    public void computePrefix() {
+        // not relocated
+        assertEquals("", SystemPropertyUtil
+                .computePrefix("io.netty.util.internal.SystemPropertyUtil",
+                               "io.netty.util.internal.SystemPropertyUtil"));
+        // prepended suffix
+        assertEquals("shaded.", SystemPropertyUtil
+                .computePrefix("io.netty.util.internal.SystemPropertyUtil",
+                               "shaded.io.netty.util.internal.SystemPropertyUtil"));
+        // prepended suffix and changed root package name io.netty
+        assertEquals("shadednetty.", SystemPropertyUtil
+                .computePrefix("io.netty.util.internal.SystemPropertyUtil",
+                               "shadednetty.util.internal.SystemPropertyUtil"));
+    }
+
 }

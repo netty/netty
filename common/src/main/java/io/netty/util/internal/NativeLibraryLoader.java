@@ -67,19 +67,23 @@ public final class NativeLibraryLoader {
             }
 
             WORKDIR = f;
-            logger.debug("-Dio.netty.native.workdir: " + WORKDIR);
+            logger.debug("-D{}: {}", SystemPropertyUtil.propertyName("io.netty.native.workdir"), WORKDIR);
         } else {
             WORKDIR = PlatformDependent.tmpdir();
-            logger.debug("-Dio.netty.native.workdir: " + WORKDIR + " (io.netty.tmpdir)");
+            logger.debug("-D{}: {} ({})",
+                    SystemPropertyUtil.propertyName("io.netty.native.workdir"), WORKDIR,
+                    SystemPropertyUtil.propertyName("io.netty.tmpdir"));
         }
 
         DELETE_NATIVE_LIB_AFTER_LOADING = SystemPropertyUtil.getBoolean(
                 "io.netty.native.deleteLibAfterLoading", true);
-        logger.debug("-Dio.netty.native.deleteLibAfterLoading: {}", DELETE_NATIVE_LIB_AFTER_LOADING);
+        logger.debug("-D{}: {}", SystemPropertyUtil.propertyName("io.netty.native.deleteLibAfterLoading"),
+                DELETE_NATIVE_LIB_AFTER_LOADING);
 
         TRY_TO_PATCH_SHADED_ID = SystemPropertyUtil.getBoolean(
                 "io.netty.native.tryPatchShadedId", true);
-        logger.debug("-Dio.netty.native.tryPatchShadedId: {}", TRY_TO_PATCH_SHADED_ID);
+        logger.debug("-D{}: {}", SystemPropertyUtil.propertyName("io.netty.native.tryPatchShadedId"),
+                TRY_TO_PATCH_SHADED_ID);
     }
 
     /**
@@ -139,7 +143,8 @@ public final class NativeLibraryLoader {
             suppressed.add(ex);
             logger.debug(
                     "{} cannot be loaded from java.library.path, "
-                    + "now trying export to -Dio.netty.native.workdir: {}", name, WORKDIR, ex);
+                    + "now trying export to -D{}: {}", name,
+                    SystemPropertyUtil.propertyName("io.netty.native.workdir"), WORKDIR, ex);
         }
 
         String libname = System.mapLibraryName(name);

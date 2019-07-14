@@ -31,7 +31,8 @@ public final class Epoll {
 
         if (SystemPropertyUtil.getBoolean("io.netty.transport.noNative", false)) {
             cause = new UnsupportedOperationException(
-                    "Native transport was explicit disabled with -Dio.netty.transport.noNative=true");
+                    "Native transport was explicit disabled with -D" +
+                            SystemPropertyUtil.propertyName("io.netty.transport.noNative") + "=true");
         } else {
             FileDescriptor epollFd = null;
             FileDescriptor eventFd = null;

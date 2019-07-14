@@ -392,11 +392,12 @@ final class PlatformDependent0 {
 
     private static Throwable explicitNoUnsafeCause0() {
         final boolean noUnsafe = SystemPropertyUtil.getBoolean("io.netty.noUnsafe", false);
-        logger.debug("-Dio.netty.noUnsafe: {}", noUnsafe);
+        logger.debug("-D{}: {}", SystemPropertyUtil.propertyName("io.netty.noUnsafe"), noUnsafe);
 
         if (noUnsafe) {
-            logger.debug("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
-            return new UnsupportedOperationException("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
+            logger.debug("sun.misc.Unsafe: unavailable ({})", SystemPropertyUtil.propertyName("io.netty.noUnsafe"));
+            return new UnsupportedOperationException("sun.misc.Unsafe: unavailable ("
+                    + SystemPropertyUtil.propertyName("io.netty.noUnsafe") + ")");
         }
 
         // Legacy properties
@@ -408,7 +409,7 @@ final class PlatformDependent0 {
         }
 
         if (!SystemPropertyUtil.getBoolean(unsafePropName, true)) {
-            String msg = "sun.misc.Unsafe: unavailable (" + unsafePropName + ")";
+            String msg = "sun.misc.Unsafe: unavailable (" + SystemPropertyUtil.propertyName(unsafePropName) + ")";
             logger.debug(msg);
             return new UnsupportedOperationException(msg);
         }

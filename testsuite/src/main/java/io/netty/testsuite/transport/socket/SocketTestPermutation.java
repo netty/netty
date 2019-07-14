@@ -49,8 +49,8 @@ public class SocketTestPermutation {
 
     static {
         InternalLogger logger = InternalLoggerFactory.getInstance(SocketConnectionAttemptTest.class);
-        logger.debug("-Dio.netty.testsuite.badHost: {}", BAD_HOST);
-        logger.debug("-Dio.netty.testsuite.badPort: {}", BAD_PORT);
+        logger.debug("-D{}: {}", SystemPropertyUtil.propertyName("io.netty.testsuite.badHost"), BAD_HOST);
+        logger.debug("-D{}: {}", SystemPropertyUtil.propertyName("io.netty.testsuite.badPort"), BAD_PORT);
     }
 
     static final SocketTestPermutation INSTANCE = new SocketTestPermutation();

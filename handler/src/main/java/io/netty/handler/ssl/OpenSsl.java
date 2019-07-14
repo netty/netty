@@ -110,7 +110,8 @@ public final class OpenSsl {
 
         if (SystemPropertyUtil.getBoolean("io.netty.handler.ssl.noOpenSsl", false)) {
             cause = new UnsupportedOperationException(
-                    "OpenSSL was explicit disabled with -Dio.netty.handler.ssl.noOpenSsl=true");
+                    "OpenSSL was explicit disabled with -D" +
+                            SystemPropertyUtil.propertyName("io.netty.handler.ssl.noOpenSsl") + "=true");
 
             logger.debug(
                     "netty-tcnative explicit disabled; " +
@@ -256,15 +257,19 @@ public final class OpenSsl {
 
                                     if (propertySet) {
                                         logger.info("System property " +
-                                                "'io.netty.handler.ssl.openssl.useKeyManagerFactory'" +
-                                                " is deprecated and so will be ignored in the future");
+                                                "'{}'" +
+                                                " is deprecated and so will be ignored in the future",
+                                                SystemPropertyUtil.propertyName(
+                                                        "io.netty.handler.ssl.openssl.useKeyManagerFactory"));
                                     }
                                 } else {
                                     useKeyManagerFactory = true;
                                     if (propertySet) {
                                         logger.info("System property " +
-                                                "'io.netty.handler.ssl.openssl.useKeyManagerFactory'" +
-                                                " is deprecated and will be ignored when using BoringSSL");
+                                                "'{}'" +
+                                                " is deprecated and will be ignored when using BoringSSL",
+                                                SystemPropertyUtil.propertyName(
+                                                        "io.netty.handler.ssl.openssl.useKeyManagerFactory"));
                                     }
                                 }
                             } catch (Throwable ignore) {

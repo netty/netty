@@ -110,7 +110,8 @@ public abstract class ResourceLeakDetectorFactory {
                     }
                 });
             } catch (Throwable cause) {
-                logger.error("Could not access System property: io.netty.customResourceLeakDetector", cause);
+                logger.error("Could not access System property: {}",
+                        SystemPropertyUtil.propertyName("io.netty.customResourceLeakDetector"), cause);
                 customLeakDetector = null;
             }
             if (customLeakDetector == null) {

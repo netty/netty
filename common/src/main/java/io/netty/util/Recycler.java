@@ -88,15 +88,27 @@ public abstract class Recycler<T> {
 
         if (logger.isDebugEnabled()) {
             if (DEFAULT_MAX_CAPACITY_PER_THREAD == 0) {
-                logger.debug("-Dio.netty.recycler.maxCapacityPerThread: disabled");
-                logger.debug("-Dio.netty.recycler.maxSharedCapacityFactor: disabled");
-                logger.debug("-Dio.netty.recycler.linkCapacity: disabled");
-                logger.debug("-Dio.netty.recycler.ratio: disabled");
+                logger.debug("-D{}: disabled",
+                        SystemPropertyUtil.propertyName("io.netty.recycler.maxCapacityPerThread"));
+                logger.debug("-D{}: disabled",
+                        SystemPropertyUtil.propertyName("io.netty.recycler.maxSharedCapacityFactor"));
+                logger.debug("-D{}: disabled",
+                        SystemPropertyUtil.propertyName("io.netty.recycler.linkCapacity"));
+                logger.debug("-D{}: disabled",
+                        SystemPropertyUtil.propertyName("io.netty.recycler.ratio"));
             } else {
-                logger.debug("-Dio.netty.recycler.maxCapacityPerThread: {}", DEFAULT_MAX_CAPACITY_PER_THREAD);
-                logger.debug("-Dio.netty.recycler.maxSharedCapacityFactor: {}", MAX_SHARED_CAPACITY_FACTOR);
-                logger.debug("-Dio.netty.recycler.linkCapacity: {}", LINK_CAPACITY);
-                logger.debug("-Dio.netty.recycler.ratio: {}", RATIO);
+                logger.debug("-D{}: {}",
+                        SystemPropertyUtil.propertyName("io.netty.recycler.maxCapacityPerThread"),
+                        DEFAULT_MAX_CAPACITY_PER_THREAD);
+                logger.debug("-D{}: {}",
+                        SystemPropertyUtil.propertyName("io.netty.recycler.maxSharedCapacityFactor"),
+                        MAX_SHARED_CAPACITY_FACTOR);
+                logger.debug("-D{}: {}",
+                        SystemPropertyUtil.propertyName("io.netty.recycler.linkCapacity"),
+                        LINK_CAPACITY);
+                logger.debug("-D{}: {}",
+                        SystemPropertyUtil.propertyName("io.netty.recycler.ratio"),
+                        RATIO);
             }
         }
 

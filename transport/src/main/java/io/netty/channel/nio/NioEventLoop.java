@@ -103,8 +103,12 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         SELECTOR_AUTO_REBUILD_THRESHOLD = selectorAutoRebuildThreshold;
 
         if (logger.isDebugEnabled()) {
-            logger.debug("-Dio.netty.noKeySetOptimization: {}", DISABLE_KEY_SET_OPTIMIZATION);
-            logger.debug("-Dio.netty.selectorAutoRebuildThreshold: {}", SELECTOR_AUTO_REBUILD_THRESHOLD);
+            logger.debug("-D{}: {}",
+                    SystemPropertyUtil.propertyName("io.netty.noKeySetOptimization"),
+                    DISABLE_KEY_SET_OPTIMIZATION);
+            logger.debug("-D{}: {}",
+                    SystemPropertyUtil.propertyName("io.netty.selectorAutoRebuildThreshold"),
+                    SELECTOR_AUTO_REBUILD_THRESHOLD);
         }
     }
 
