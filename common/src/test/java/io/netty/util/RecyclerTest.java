@@ -133,36 +133,6 @@ public class RecyclerTest {
         object2.recycle();
     }
 
-    /**
-     * Test to make sure bug #2848 never happens again
-     * https://github.com/netty/netty/issues/2848
-     */
-    @Test
-    public void testMaxCapacity() {
-        testMaxCapacity(300);
-        Random rand = new Random();
-        for (int i = 0; i < 50; i++) {
-            testMaxCapacity(rand.nextInt(1000) + 256); // 256 - 1256
-        }
-    }
-
-    private static void testMaxCapacity(int maxCapacity) {
-        Recycler<HandledObject> recycler = newRecycler(maxCapacity);
-        HandledObject[] objects = new HandledObject[maxCapacity * 3];
-        for (int i = 0; i < objects.length; i++) {
-            objects[i] = recycler.get();
-        }
-
-        for (int i = 0; i < objects.length; i++) {
-            objects[i].recycle();
-            objects[i] = null;
-        }
-
-        assertTrue("The threadLocalCapacity (" + recycler.threadLocalCapacity() + ") must be <= maxCapacity ("
-                + maxCapacity + ") as we not pool all new handles internally",
-                maxCapacity >= recycler.threadLocalCapacity());
-    }
-
     @Test
     public void testRecycleAtDifferentThread() throws Exception {
         final Recycler<HandledObject> recycler = new Recycler<HandledObject>(256, 10, 2, 10) {
@@ -172,60 +142,25 @@ public class RecyclerTest {
             }
         };
 
-        final HandledObject o = recycler.get();
-        final HandledObject o2 = recycler.get();
-        final Thread thread = new Thread() {
+        class CreateObjectsThread extends Thread {
+            HandledObject o;
+            HandledObject o2;
+
             @Override
             public void run() {
-                o.recycle();
-                o2.recycle();
+                o = recycler.get(); // This will be recyclable
+                o2 = recycler.get(); // This won't be, because of allocationCount
             }
-        };
+        }
+
+        final CreateObjectsThread thread = new CreateObjectsThread();
         thread.start();
         thread.join();
+        thread.o.recycle();
+        thread.o2.recycle();
 
-        assertSame(recycler.get(), o);
-        assertNotSame(recycler.get(), o2);
-    }
-
-    @Test
-    public void testMaxCapacityWithRecycleAtDifferentThread() throws Exception {
-        final int maxCapacity = 4; // Choose the number smaller than WeakOrderQueue.LINK_CAPACITY
-        final Recycler<HandledObject> recycler = newRecycler(maxCapacity);
-
-        // Borrow 2 * maxCapacity objects.
-        // Return the half from the same thread.
-        // Return the other half from the different thread.
-
-        final HandledObject[] array = new HandledObject[maxCapacity * 3];
-        for (int i = 0; i < array.length; i ++) {
-            array[i] = recycler.get();
-        }
-
-        for (int i = 0; i < maxCapacity; i ++) {
-            array[i].recycle();
-        }
-
-        final Thread thread = new Thread() {
-            @Override
-            public void run() {
-                for (int i = maxCapacity; i < array.length; i ++) {
-                    array[i].recycle();
-                }
-            }
-        };
-        thread.start();
-        thread.join();
-
-        assertEquals(maxCapacity, recycler.threadLocalCapacity());
-        assertEquals(1, recycler.threadLocalSize());
-
-        for (int i = 0; i < array.length; i ++) {
-            recycler.get();
-        }
-
-        assertEquals(maxCapacity, recycler.threadLocalCapacity());
-        assertEquals(0, recycler.threadLocalSize());
+        assertSame(thread.o, recycler.get());
+        assertNotSame(thread.o2, recycler.get());
     }
 
     @Test
