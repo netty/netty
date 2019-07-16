@@ -533,7 +533,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         protected final void clearEpollIn0() {
             assert eventLoop().inEventLoop();
             readPending = false;
-            if (!isFlagSet(Native.EPOLLET)) {
+            if (isFlagSet(Native.EPOLLET)) {
                 return;
             }
             try {
