@@ -228,7 +228,8 @@ public class CorsHandler extends ChannelDuplexHandler {
     }
 
     private static void forbidden(final ChannelHandlerContext ctx, final HttpRequest request) {
-        HttpResponse response = new DefaultFullHttpResponse(request.protocolVersion(), FORBIDDEN);
+        HttpResponse response = new DefaultFullHttpResponse(
+                request.protocolVersion(), FORBIDDEN, ctx.alloc().buffer(0));
         response.headers().set(HttpHeaderNames.CONTENT_LENGTH, HttpHeaderValues.ZERO);
         release(request);
         respond(ctx, request, response);

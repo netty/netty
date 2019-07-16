@@ -14,6 +14,7 @@
  */
 package io.netty.example.http2.helloworld.client;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -137,7 +138,7 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             DefaultFullHttpRequest upgradeRequest =
-                    new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+                    new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/", Unpooled.EMPTY_BUFFER);
 
             // Set HOST header as the remote peer may require it.
             InetSocketAddress remote = (InetSocketAddress) ctx.channel().remoteAddress();

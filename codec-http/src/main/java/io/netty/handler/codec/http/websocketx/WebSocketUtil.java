@@ -21,6 +21,7 @@ import io.netty.handler.codec.base64.Base64;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -90,7 +91,11 @@ final class WebSocketUtil {
      * @param data The data to encode
      * @return An encoded string containing the data
      */
+    @SuppressJava6Requirement(reason = "Guarded with java version check")
     static String base64(byte[] data) {
+        if (PlatformDependent.javaVersion() >= 8) {
+            return java.util.Base64.getEncoder().encodeToString(data);
+        }
         ByteBuf encodedData = Unpooled.wrappedBuffer(data);
         ByteBuf encoded = Base64.encode(encodedData);
         String encodedString = encoded.toString(CharsetUtil.UTF_8);

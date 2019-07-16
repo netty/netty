@@ -272,9 +272,6 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
     private static final Pattern ALLOWED_FILE_NAME = Pattern.compile("[^-\\._]?[^<>&\\\"]*");
 
     private void sendListing(ChannelHandlerContext ctx, File dir, String dirPath) {
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK);
-        response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTF-8");
-
         StringBuilder buf = new StringBuilder()
             .append("<!DOCTYPE html>\r\n")
             .append("<html><head><meta charset='utf-8' /><title>")
@@ -307,15 +304,18 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         }
 
         buf.append("</ul></body></html>\r\n");
-        ByteBuf buffer = Unpooled.copiedBuffer(buf, CharsetUtil.UTF_8);
-        response.content().writeBytes(buffer);
-        buffer.release();
+
+        ByteBuf buffer = ctx.alloc().buffer(buf.length());
+        buffer.writeCharSequence(buf.toString(), CharsetUtil.UTF_8);
+
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, buffer);
+        response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTF-8");
 
         this.sendAndCleanupConnection(ctx, response);
     }
 
     private void sendRedirect(ChannelHandlerContext ctx, String newUri) {
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, FOUND);
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, FOUND, Unpooled.EMPTY_BUFFER);
         response.headers().set(HttpHeaderNames.LOCATION, newUri);
 
         this.sendAndCleanupConnection(ctx, response);
@@ -336,7 +336,7 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
      *            Context
      */
     private void sendNotModified(ChannelHandlerContext ctx) {
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, NOT_MODIFIED);
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, NOT_MODIFIED, Unpooled.EMPTY_BUFFER);
         setDateHeader(response);
 
         this.sendAndCleanupConnection(ctx, response);

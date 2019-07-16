@@ -141,7 +141,8 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
 
         // Create the WebSocket handshake response.
         FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, new HttpResponseStatus(101,
-                isHixie76 ? "WebSocket Protocol Handshake" : "Web Socket Protocol Handshake"));
+                isHixie76 ? "WebSocket Protocol Handshake" : "Web Socket Protocol Handshake"),
+                req.content().alloc().buffer(0));
         if (headers != null) {
             res.headers().add(headers);
         }

@@ -108,7 +108,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> implements W
 
         if (type == (byte) 0xFF && frameSize == 0) {
             receivedClosingHandshake = true;
-            return new CloseWebSocketFrame();
+            return new CloseWebSocketFrame(true, 0, ctx.alloc().buffer(0));
         }
         ByteBuf payload = readBytes(ctx.alloc(), buffer, (int) frameSize);
         return new BinaryWebSocketFrame(payload);
