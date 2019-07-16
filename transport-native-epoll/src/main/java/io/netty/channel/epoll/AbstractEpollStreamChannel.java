@@ -201,7 +201,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     public final ChannelFuture spliceTo(final FileDescriptor ch, final int offset, final int len,
                                         final ChannelPromise promise) {
         checkPositiveOrZero(len, "len");
-        checkPositiveOrZero(offset, "offser");
+        checkPositiveOrZero(offset, "offset");
         if (config().getEpollMode() != EpollMode.LEVEL_TRIGGERED) {
             throw new IllegalStateException("spliceTo() supported only when using " + EpollMode.LEVEL_TRIGGERED);
         }
@@ -949,7 +949,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     private final class SpliceFdTask extends SpliceInTask {
         private final FileDescriptor fd;
         private final ChannelPromise promise;
-        private final int offset;
+        private int offset;
 
         SpliceFdTask(FileDescriptor fd, int offset, int len, ChannelPromise promise) {
             super(len, promise);
@@ -979,6 +979,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                         }
                         do {
                             int splicedOut = Native.splice(pipeIn.intValue(), -1, fd.intValue(), offset, splicedIn);
+                            offset += splicedOut;
                             splicedIn -= splicedOut;
                         } while (splicedIn > 0);
                         if (len == 0) {
