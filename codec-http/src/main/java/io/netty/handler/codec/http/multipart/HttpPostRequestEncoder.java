@@ -977,7 +977,11 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         if (buffer.capacity() == 0) {
             currentData = null;
             if (currentBuffer == null) {
-                currentBuffer = delimiter;
+                if (delimiter == null) {
+                    return null;
+                } else {
+                    currentBuffer = delimiter;
+                }
             } else {
                 if (delimiter != null) {
                     currentBuffer = wrappedBuffer(currentBuffer, delimiter);
