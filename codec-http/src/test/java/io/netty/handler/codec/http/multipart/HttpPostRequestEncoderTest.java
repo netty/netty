@@ -18,10 +18,12 @@ package io.netty.handler.codec.http.multipart;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.EncoderMode;
@@ -442,5 +444,28 @@ public class HttpPostRequestEncoderTest {
         assertTrue("Chunk size is not in expected range (" + expectedSizeMin + " - " + expectedSizeMax + "), was: "
                 + readable, expectedSize);
         httpContent.release();
+    }
+
+    @Test
+    public void testEncodeChunkedContent() throws Exception {
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(req, false);
+
+        int length = 8077 + 8096;
+        char[] array = new char[length];
+        Arrays.fill(array, 'a');
+        String longText = new String(array);
+
+        encoder.addBodyAttribute("data", longText);
+        encoder.addBodyAttribute("moreData", "abcd");
+
+        assertNotNull(encoder.finalizeRequest());
+
+        while (!encoder.isEndOfInput()) {
+            encoder.readChunk((ByteBufAllocator) null).release();
+        }
+
+        assertTrue(encoder.isEndOfInput());
+        encoder.cleanFiles();
     }
 }
