@@ -123,15 +123,21 @@ public class WebSocketServerProtocolHandlerTest {
         EmbeddedChannel ch = createChannel(customTextFrameHandler);
         writeUpgradeRequest(ch);
 
+        FullHttpResponse response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+
         if (ch.pipeline().context(HttpRequestDecoder.class) != null) {
             // Removing the HttpRequestDecoder because we are writing a TextWebSocketFrame and thus
             // decoding is not necessary.
             ch.pipeline().remove(HttpRequestDecoder.class);
         }
 
+        TextWebSocketFrame textWebSocketFrame = new TextWebSocketFrame("payload");
         ch.writeInbound(new TextWebSocketFrame("payload"));
 
         assertEquals("processed: payload", customTextFrameHandler.getContent());
+        textWebSocketFrame.release();
     }
 
     private EmbeddedChannel createChannel() {
