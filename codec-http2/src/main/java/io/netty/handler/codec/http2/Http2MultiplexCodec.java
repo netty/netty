@@ -116,10 +116,6 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         }
         // Creates the Http2Stream in the Connection.
         super.onHttpClientUpgrade();
-        // Now make a new FrameStream, set it's underlying Http2Stream, and initialize it.
-        DefaultHttp2FrameStream codecStream = newStream();
-        codecStream.setStreamAndProperty(streamKey, connection().stream(HTTP_UPGRADE_STREAM_ID));
-        onHttp2UpgradeStreamInitialized(ctx, codecStream);
     }
 
     @Override
@@ -174,6 +170,11 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         DefaultHttp2FrameStream s = (DefaultHttp2FrameStream) stream;
 
         switch (stream.state()) {
+            case HALF_CLOSED_LOCAL:
+                if (stream.id() == HTTP_UPGRADE_STREAM_ID) {
+                    onHttp2UpgradeStreamInitialized(ctx, s);
+                }
+                break;
             case HALF_CLOSED_REMOTE:
             case OPEN:
                 if (s.attachment != null) {
