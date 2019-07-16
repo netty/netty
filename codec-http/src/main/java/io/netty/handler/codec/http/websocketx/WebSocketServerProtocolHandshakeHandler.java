@@ -44,8 +44,6 @@ import static io.netty.util.internal.ObjectUtil.*;
  */
 class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapter {
 
-    private static final long DEFAULT_HANDSHAKE_TIMEOUT_MS = 10000L;
-
     private final String websocketPath;
     private final String subprotocols;
     private final boolean checkStartsWith;

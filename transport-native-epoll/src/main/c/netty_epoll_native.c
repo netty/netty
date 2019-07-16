@@ -385,7 +385,7 @@ static jint netty_epoll_native_splice0(JNIEnv* env, jclass clazz, jint fd, jlong
     loff_t off_out = (loff_t) offOut;
 
     loff_t* p_off_in = off_in >= 0 ? &off_in : NULL;
-    loff_t* p_off_out = off_in >= 0 ? &off_out : NULL;
+    loff_t* p_off_out = off_out >= 0 ? &off_out : NULL;
 
     do {
        res = splice(fd, p_off_in, fdOut, p_off_out, (size_t) len, SPLICE_F_NONBLOCK | SPLICE_F_MOVE);

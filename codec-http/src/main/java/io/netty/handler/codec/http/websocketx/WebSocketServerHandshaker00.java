@@ -134,8 +134,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
                             req.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_KEY2);
 
         String origin = req.headers().get(HttpHeaderNames.ORIGIN);
-
-        //throw before DefaultFullHttpResponse allocation
+        //throw before allocating FullHttpResponse
         if (origin == null && !isHixie76) {
             throw new WebSocketHandshakeException("Missing origin header, got only " + req.headers().names());
         }
@@ -154,6 +153,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         // Fill in the headers and contents depending on handshake getMethod.
         if (isHixie76) {
             // New handshake getMethod with a challenge:
+
             res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, origin)
                          .add(HttpHeaderNames.SEC_WEBSOCKET_LOCATION, uri());
 

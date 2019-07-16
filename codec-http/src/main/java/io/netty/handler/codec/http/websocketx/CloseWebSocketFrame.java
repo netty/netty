@@ -138,10 +138,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
         }
 
         binaryData.readerIndex(0);
-        int statusCode = binaryData.readShort();
-        binaryData.readerIndex(0);
-
-        return statusCode;
+        return binaryData.getShort(0);
     }
 
     /**
