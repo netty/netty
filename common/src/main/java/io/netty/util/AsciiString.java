@@ -477,7 +477,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return this;
         }
 
-        if (string.getClass() == AsciiString.class) {
+        if (string instanceof AsciiString) {
             AsciiString that = (AsciiString) string;
             if (isEmpty()) {
                 return that;
@@ -530,7 +530,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return false;
         }
 
-        if (string.getClass() == AsciiString.class) {
+        if (string instanceof AsciiString) {
             AsciiString rhs = (AsciiString) string;
             for (int i = arrayOffset(), j = rhs.arrayOffset(); i < length(); ++i, ++j) {
                 if (!equalsIgnoreCase(value[i], rhs.value[j])) {
@@ -983,7 +983,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return a new string with characters {@code <= \\u0020} removed from the beginning and the end.
      */
     public static CharSequence trim(CharSequence c) {
-        if (c.getClass() == AsciiString.class) {
+        if (c instanceof AsciiString) {
             return ((AsciiString) c).trim();
         }
         if (c instanceof String) {
@@ -1038,7 +1038,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         if (a == null || a.length() != length()) {
             return false;
         }
-        if (a.getClass() == AsciiString.class) {
+        if (a instanceof AsciiString) {
             return equals(a);
         }
 
@@ -1387,7 +1387,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * {@link AsciiString}, just returns the same instance.
      */
     public static AsciiString of(CharSequence string) {
-        return string.getClass() == AsciiString.class ? (AsciiString) string : new AsciiString(string);
+        return string instanceof AsciiString ? (AsciiString) string : new AsciiString(string);
     }
 
     /**
@@ -1411,7 +1411,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         if (value == null) {
             return 0;
         }
-        if (value.getClass() == AsciiString.class) {
+        if (value instanceof AsciiString) {
             return value.hashCode();
         }
 
@@ -1441,10 +1441,10 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return a == b;
         }
 
-        if (a.getClass() == AsciiString.class) {
+        if (a instanceof AsciiString) {
             return ((AsciiString) a).contentEqualsIgnoreCase(b);
         }
-        if (b.getClass() == AsciiString.class) {
+        if (b instanceof AsciiString) {
             return ((AsciiString) b).contentEqualsIgnoreCase(a);
         }
 
@@ -1503,11 +1503,11 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return a == b;
         }
 
-        if (a.getClass() == AsciiString.class) {
+        if (a instanceof AsciiString) {
             return ((AsciiString) a).contentEquals(b);
         }
 
-        if (b.getClass() == AsciiString.class) {
+        if (b instanceof AsciiString) {
             return ((AsciiString) b).contentEquals(a);
         }
 
