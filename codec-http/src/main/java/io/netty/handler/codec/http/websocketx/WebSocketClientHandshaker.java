@@ -248,17 +248,18 @@ public abstract class WebSocketClientHandshaker {
      *            the {@link ChannelPromise} to be notified when the opening handshake is sent
      */
     public final ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
-        FullHttpRequest request =  newHandshakeRequest();
-
-        HttpResponseDecoder decoder = channel.pipeline().get(HttpResponseDecoder.class);
+        ChannelPipeline pipeline = channel.pipeline();
+        HttpResponseDecoder decoder = pipeline.get(HttpResponseDecoder.class);
         if (decoder == null) {
-            HttpClientCodec codec = channel.pipeline().get(HttpClientCodec.class);
+            HttpClientCodec codec = pipeline.get(HttpClientCodec.class);
             if (codec == null) {
                promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
                        "a HttpResponseDecoder or HttpClientCodec"));
                return promise;
             }
         }
+
+        FullHttpRequest request = newHandshakeRequest();
 
         channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
             @Override
@@ -584,14 +585,15 @@ public abstract class WebSocketClientHandshaker {
             return wsURL.getHost();
         }
         String host = wsURL.getHost();
+        String scheme = wsURL.getScheme();
         if (port == HttpScheme.HTTP.port()) {
-            return HttpScheme.HTTP.name().contentEquals(wsURL.getScheme())
-                    || WebSocketScheme.WS.name().contentEquals(wsURL.getScheme()) ?
+            return HttpScheme.HTTP.name().contentEquals(scheme)
+                    || WebSocketScheme.WS.name().contentEquals(scheme) ?
                     host : NetUtil.toSocketAddressString(host, port);
         }
         if (port == HttpScheme.HTTPS.port()) {
-            return HttpScheme.HTTPS.name().contentEquals(wsURL.getScheme())
-                    || WebSocketScheme.WSS.name().contentEquals(wsURL.getScheme()) ?
+            return HttpScheme.HTTPS.name().contentEquals(scheme)
+                    || WebSocketScheme.WSS.name().contentEquals(scheme) ?
                     host : NetUtil.toSocketAddressString(host, port);
         }
 
