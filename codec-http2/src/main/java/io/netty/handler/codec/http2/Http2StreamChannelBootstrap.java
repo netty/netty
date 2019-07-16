@@ -94,16 +94,24 @@ public final class Http2StreamChannelBootstrap {
     /**
      * the {@link ChannelHandler} to use for serving the requests.
      */
-    @SuppressWarnings("unchecked")
     public Http2StreamChannelBootstrap handler(ChannelHandler handler) {
         this.handler = ObjectUtil.checkNotNull(handler, "handler");
         return this;
     }
 
+    /**
+     * Open a new {@link Http2StreamChannel} to use.
+     * @return the {@link Future} that will be notified once the channel was opened successfully or it failed.
+     */
     public Future<Http2StreamChannel> open() {
         return open(channel.eventLoop().<Http2StreamChannel>newPromise());
     }
 
+    /**
+     * Open a new {@link Http2StreamChannel} to use and notifies the given {@link Promise}.
+     * @return the {@link Future} that will be notified once the channel was opened successfully or it failed.
+     */
+    @SuppressWarnings("deprecation")
     public Future<Http2StreamChannel> open(final Promise<Http2StreamChannel> promise) {
         ChannelHandlerContext ctx = channel.pipeline().context(Http2MultiplexCodec.class);
         if (ctx == null) {
@@ -133,6 +141,10 @@ public final class Http2StreamChannelBootstrap {
         return promise;
     }
 
+    /**
+     * @deprecated should not be used directly. Use {@link #open()} or {@link #open(Promise)}
+      */
+    @Deprecated
     public void open0(ChannelHandlerContext ctx, final Promise<Http2StreamChannel> promise) {
         assert ctx.executor().inEventLoop();
         final Http2StreamChannel streamChannel;
@@ -178,7 +190,7 @@ public final class Http2StreamChannelBootstrap {
             p.addLast(handler);
         }
         synchronized (options) {
-            setChannelOptions(channel, options, logger);
+            setChannelOptions(channel, options);
         }
 
         synchronized (attrs) {
@@ -189,15 +201,15 @@ public final class Http2StreamChannelBootstrap {
     }
 
     private static void setChannelOptions(
-            Channel channel, Map<ChannelOption<?>, Object> options, InternalLogger logger) {
+            Channel channel, Map<ChannelOption<?>, Object> options) {
         for (Map.Entry<ChannelOption<?>, Object> e: options.entrySet()) {
-            setChannelOption(channel, e.getKey(), e.getValue(), logger);
+            setChannelOption(channel, e.getKey(), e.getValue());
         }
     }
 
     @SuppressWarnings("unchecked")
     private static void setChannelOption(
-            Channel channel, ChannelOption<?> option, Object value, InternalLogger logger) {
+            Channel channel, ChannelOption<?> option, Object value) {
         try {
             if (!channel.config().setOption((ChannelOption<Object>) option, value)) {
                 logger.warn("Unknown channel option '{}' for channel '{}'", option, channel);
