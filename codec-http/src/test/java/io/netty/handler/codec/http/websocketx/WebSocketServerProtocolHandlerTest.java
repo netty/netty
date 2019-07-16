@@ -133,11 +133,9 @@ public class WebSocketServerProtocolHandlerTest {
             ch.pipeline().remove(HttpRequestDecoder.class);
         }
 
-        TextWebSocketFrame textWebSocketFrame = new TextWebSocketFrame("payload");
         ch.writeInbound(new TextWebSocketFrame("payload"));
 
         assertEquals("processed: payload", customTextFrameHandler.getContent());
-        textWebSocketFrame.release();
     }
 
     private EmbeddedChannel createChannel() {
