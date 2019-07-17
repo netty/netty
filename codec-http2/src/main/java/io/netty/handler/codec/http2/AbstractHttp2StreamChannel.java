@@ -783,7 +783,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 do {
                     flowControlledBytes += doRead0((Http2Frame) message, allocHandle);
                 } while ((readEOS || (continueReading = allocHandle.continueReading())) &&
-                        (message = inboundBuffer.poll()) != null);
+                        inboundBuffer != null && (message = inboundBuffer.poll()) != null);
 
                 if (continueReading && isParentReadInProgress() && !readEOS) {
                     // Currently the parent and child channel are on the same EventLoop thread. If the parent is
