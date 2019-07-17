@@ -304,6 +304,42 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     }
 
     @Test
+    public void channelReadShouldRespectAutoReadAndNotProduceNPE() throws Exception {
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
+        assertTrue(childChannel.config().isAutoRead());
+        Http2HeadersFrame headersFrame = inboundHandler.readInbound();
+        assertNotNull(headersFrame);
+
+        childChannel.config().setAutoRead(false);
+        childChannel.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+            private int count;
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                ctx.fireChannelRead(msg);
+                // Close channel after 2 reads so there is still something in the inboundBuffer when the close happens.
+                if (++count == 2) {
+                    ctx.close();
+                }
+            }
+        });
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("hello world"), 0, false);
+        Http2DataFrame dataFrame0 = inboundHandler.readInbound();
+        assertNotNull(dataFrame0);
+        release(dataFrame0);
+
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("foo"), 0, false);
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("bar"), 0, false);
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("bar"), 0, false);
+
+        assertNull(inboundHandler.readInbound());
+
+        childChannel.config().setAutoRead(true);
+        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 3);
+        inboundHandler.checkException();
+    }
+
+    @Test
     public void readInChannelReadWithoutAutoRead() {
         useReadWithoutAutoRead(false);
     }
