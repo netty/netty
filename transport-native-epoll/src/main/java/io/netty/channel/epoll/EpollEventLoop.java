@@ -47,6 +47,10 @@ class EpollEventLoop extends SingleThreadEventLoop {
     private static final AtomicIntegerFieldUpdater<EpollEventLoop> WAKEN_UP_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(EpollEventLoop.class, "wakenUp");
 
+    private static final int WAKEUP_ALLOWED = 0;
+    private static final int WAKEUP_INPROGRESS = 1;
+    private static final int WAKEUP_NOT_ALLOWED = -1;
+
     static {
         // Ensure JNI is initialized by the time this class is loaded by this time!
         // We use unix-common methods in this class which are backed by JNI methods.
@@ -73,7 +77,8 @@ class EpollEventLoop extends SingleThreadEventLoop {
             return epollWaitNow();
         }
     };
-    @SuppressWarnings("unused") // AtomicIntegerFieldUpdater
+    // wakenUp is a packed field, where the bottom bit indicates if the loop is trying to exit
+    // The high bits indicate if there are multiple non-loop threads trying to wake up the loop.
     private volatile int wakenUp;
     private volatile int ioRatio = 50;
 
@@ -177,9 +182,13 @@ class EpollEventLoop extends SingleThreadEventLoop {
 
     @Override
     protected void wakeup(boolean inEventLoop) {
-        if (!inEventLoop && WAKEN_UP_UPDATER.getAndSet(this, 1) == 0) {
+        if (!inEventLoop && WAKEN_UP_UPDATER.compareAndSet(this, WAKEUP_ALLOWED, WAKEUP_INPROGRESS)) {
             // write to the evfd which will then wake-up epoll_wait(...)
-            Native.eventFdWrite(eventFd.intValue(), 1L);
+            try {
+                Native.eventFdWrite(eventFd.intValue(), 1L);
+            } finally {
+                WAKEN_UP_UPDATER.compareAndSet(this, WAKEUP_INPROGRESS, WAKEUP_NOT_ALLOWED);
+            }
         }
     }
 
@@ -298,8 +307,8 @@ class EpollEventLoop extends SingleThreadEventLoop {
                         break;
 
                     case SelectStrategy.SELECT:
-                        if (wakenUp == 1) {
-                            wakenUp = 0;
+                        if (wakenUp != WAKEUP_ALLOWED) {
+                            wakenUp = WAKEUP_ALLOWED;
                         }
                         if (!hasTasks()) {
                             strategy = epollWait();
@@ -454,6 +463,15 @@ class EpollEventLoop extends SingleThreadEventLoop {
                 logger.warn("Failed to close the epoll fd.", e);
             }
             try {
+                // There are three possibilities:
+                // a.  wakenUp is WAKEUP_ALLOWED, which means no pending write
+                // b.  wakenUp is WAKEUP_NOT_ALLOWED, which means no pending writes
+                // c.  wakenUp is WAKEUP_INPROGRESS, which means will it will eventually reach WAKEUP_NOT_ALLOWED.
+                WAKEN_UP_UPDATER.compareAndSet(this, WAKEUP_ALLOWED, WAKEUP_NOT_ALLOWED);
+
+                // Busy loop until the last wakeup() is out of the critical section.
+                while (wakenUp != WAKEUP_NOT_ALLOWED) { /* spin */ }
+
                 eventFd.close();
             } catch (IOException e) {
                 logger.warn("Failed to close the event fd.", e);
