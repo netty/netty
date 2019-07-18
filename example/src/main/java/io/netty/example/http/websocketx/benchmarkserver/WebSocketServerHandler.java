@@ -72,13 +72,13 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
     private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest req) {
         // Handle a bad request.
         if (!req.decoderResult().isSuccess()) {
-            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST));
+            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST, Unpooled.EMPTY_BUFFER));
             return;
         }
 
         // Allow only GET methods.
         if (!GET.equals(req.method())) {
-            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
+            sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN, Unpooled.EMPTY_BUFFER));
             return;
         }
 
@@ -94,7 +94,7 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
             return;
         }
         if ("/favicon.ico".equals(req.uri())) {
-            FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, NOT_FOUND);
+            FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, NOT_FOUND, Unpooled.EMPTY_BUFFER);
             sendHttpResponse(ctx, req, res);
             return;
         }

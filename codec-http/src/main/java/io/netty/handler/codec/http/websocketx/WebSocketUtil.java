@@ -17,7 +17,6 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.util.concurrent.FastThreadLocal;
 
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
