@@ -266,7 +266,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
                 if (msg instanceof FullHttpRequest) {
                     ((FullHttpRequest) msg).release();
                     FullHttpResponse response =
-                            new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN);
+                            new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN, ctx.alloc().buffer(0));
                     ctx.channel().writeAndFlush(response);
                 } else {
                     ctx.fireChannelRead(msg);

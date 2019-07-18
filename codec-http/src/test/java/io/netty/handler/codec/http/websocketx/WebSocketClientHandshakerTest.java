@@ -258,7 +258,9 @@ public abstract class WebSocketClientHandshakerTest {
         // Create a EmbeddedChannel which we will use to encode a BinaryWebsocketFrame to bytes and so use these
         // to test the actual handshaker.
         WebSocketServerHandshakerFactory factory = new WebSocketServerHandshakerFactory(url, null, false);
-        WebSocketServerHandshaker socketServerHandshaker = factory.newHandshaker(shaker.newHandshakeRequest());
+        FullHttpRequest request = shaker.newHandshakeRequest();
+        WebSocketServerHandshaker socketServerHandshaker = factory.newHandshaker(request);
+        request.release();
         EmbeddedChannel websocketChannel = new EmbeddedChannel(socketServerHandshaker.newWebSocketEncoder(),
                 socketServerHandshaker.newWebsocketDecoder());
         assertTrue(websocketChannel.writeOutbound(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(data))));
