@@ -178,7 +178,8 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         URI wsURL = uri();
 
         // Format request
-        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, upgradeUrl(wsURL));
+        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, upgradeUrl(wsURL),
+                Unpooled.wrappedBuffer(key3));
         HttpHeaders headers = request.headers();
 
         if (customHeaders != null) {
@@ -200,7 +201,6 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         // Set Content-Length to workaround some known defect.
         // See also: http://www.ietf.org/mail-archive/web/hybi/current/msg02149.html
         headers.set(HttpHeaderNames.CONTENT_LENGTH, key3.length);
-        request.content().writeBytes(key3);
         return request;
     }
 

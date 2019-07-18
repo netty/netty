@@ -50,7 +50,7 @@ public class SpdyServerHandler extends SimpleChannelInboundHandler<Object> {
             HttpRequest req = (HttpRequest) msg;
 
             if (is100ContinueExpected(req)) {
-                ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
+                ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, Unpooled.EMPTY_BUFFER));
             }
             boolean keepAlive = isKeepAlive(req);
 

@@ -76,6 +76,7 @@ public class WebSocket08EncoderDecoderTest {
         Assert.assertNotNull(response);
         Assert.assertEquals(expectedStatus.code(), response.statusCode());
         Assert.assertEquals(errorMessage, response.reasonText());
+        response.release();
 
         // Without auto-close
         config = WebSocketDecoderConfig.newBuilder()
