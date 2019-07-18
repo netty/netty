@@ -45,6 +45,9 @@ public final class Http2StreamChannelBootstrap {
     private final Channel channel;
     private volatile ChannelHandler handler;
 
+    // Cache the ChannelHandlerContext to speed up open(...) operations.
+    private volatile ChannelHandlerContext multiplexCtx;
+
     public Http2StreamChannelBootstrap(Channel channel) {
         this.channel = ObjectUtil.checkNotNull(channel, "channel");
     }
@@ -113,18 +116,8 @@ public final class Http2StreamChannelBootstrap {
      */
     @SuppressWarnings("deprecation")
     public Future<Http2StreamChannel> open(final Promise<Http2StreamChannel> promise) {
-        ChannelHandlerContext ctx = channel.pipeline().context(Http2MultiplexCodec.class);
-        if (ctx == null) {
-            ctx = channel.pipeline().context(Http2MultiplexHandler.class);
-        }
-        if (ctx == null) {
-            if (channel.isActive()) {
-                promise.setFailure(new IllegalStateException(StringUtil.simpleClassName(Http2MultiplexCodec.class) +
-                        " must be in the ChannelPipeline of Channel " + channel));
-            } else {
-                promise.setFailure(new ClosedChannelException());
-            }
-        } else {
+        try {
+            ChannelHandlerContext ctx = findCtx();
             EventExecutor executor = ctx.executor();
             if (executor.inEventLoop()) {
                 open0(ctx, promise);
@@ -137,13 +130,39 @@ public final class Http2StreamChannelBootstrap {
                     }
                 });
             }
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
         }
         return promise;
     }
 
+    private ChannelHandlerContext findCtx() throws ClosedChannelException {
+        // First try to use cached context and if this not work lets try to lookup the context.
+        ChannelHandlerContext ctx = this.multiplexCtx;
+        if (ctx != null && !ctx.isRemoved()) {
+            return ctx;
+        }
+        ChannelPipeline pipeline = channel.pipeline();
+        ctx = pipeline.context(Http2MultiplexCodec.class);
+        if (ctx == null) {
+            ctx = pipeline.context(Http2MultiplexHandler.class);
+        }
+        if (ctx == null) {
+            if (channel.isActive()) {
+                throw new IllegalStateException(StringUtil.simpleClassName(Http2MultiplexCodec.class) + " or "
+                        + StringUtil.simpleClassName(Http2MultiplexHandler.class)
+                        + " must be in the ChannelPipeline of Channel " + channel);
+            } else {
+                throw new ClosedChannelException();
+            }
+        }
+        this.multiplexCtx = ctx;
+        return ctx;
+    }
+
     /**
      * @deprecated should not be used directly. Use {@link #open()} or {@link #open(Promise)}
-      */
+     */
     @Deprecated
     public void open0(ChannelHandlerContext ctx, final Promise<Http2StreamChannel> promise) {
         assert ctx.executor().inEventLoop();
@@ -164,7 +183,7 @@ public final class Http2StreamChannelBootstrap {
         ChannelFuture future = ctx.channel().eventLoop().register(streamChannel);
         future.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 if (future.isSuccess()) {
                     promise.setSuccess(streamChannel);
                 } else if (future.isCancelled()) {
@@ -183,7 +202,7 @@ public final class Http2StreamChannelBootstrap {
     }
 
     @SuppressWarnings("unchecked")
-    private void init(Channel channel) throws Exception {
+    private void init(Channel channel) {
         ChannelPipeline p = channel.pipeline();
         ChannelHandler handler = this.handler;
         if (handler != null) {
