@@ -18,13 +18,13 @@ package io.netty.handler.codec.http2;
 
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_RESERVED_STREAMS;
 import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
@@ -107,6 +107,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private Http2PromisedRequestVerifier promisedRequestVerifier = ALWAYS_VERIFY;
     private boolean autoAckSettingsFrame = true;
     private boolean autoAckPingFrame = true;
+    private int maxQueuedControlFrames = Http2CodecUtil.DEFAULT_MAX_QUEUED_CONTROL_FRAMES;
 
     /**
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
@@ -326,6 +327,30 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
+     * Returns the maximum number of queued control frames that are allowed before the connection is closed.
+     * This allows to protected against various attacks that can lead to high CPU / memory usage if the remote-peer
+     * floods us with frames that would have us produce control frames, but stops to read from the underlying socket.
+     *
+     * {@code 0} means no protection is in place.
+     */
+    protected int encoderEnforceMaxQueuedControlFrames() {
+        return maxQueuedControlFrames;
+    }
+
+    /**
+     * Sets the maximum number of queued control frames that are allowed before the connection is closed.
+     * This allows to protected against various attacks that can lead to high CPU / memory usage if the remote-peer
+     * floods us with frames that would have us produce control frames, but stops to read from the underlying socket.
+     *
+     * {@code 0} means no protection should be applied.
+     */
+    protected B encoderEnforceMaxQueuedControlFrames(int maxQueuedControlFrames) {
+        enforceNonCodecConstraints("encoderEnforceMaxQueuedControlFrames");
+        this.maxQueuedControlFrames = ObjectUtil.checkPositiveOrZero(maxQueuedControlFrames, "maxQueuedControlFrames");
+        return self();
+    }
+
+    /**
      * Returns the {@link SensitivityDetector} to use.
      */
     protected SensitivityDetector headerSensitivityDetector() {
@@ -470,6 +495,9 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, writer);
         boolean encoderEnforceMaxConcurrentStreams = encoderEnforceMaxConcurrentStreams();
 
+        if (maxQueuedControlFrames != 0) {
+            encoder = new Http2ControlFrameLimitEncoder(encoder, maxQueuedControlFrames);
+        }
         if (encoderEnforceMaxConcurrentStreams) {
             if (connection.isServer()) {
                 encoder.close();
