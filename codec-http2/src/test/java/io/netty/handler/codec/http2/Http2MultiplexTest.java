@@ -287,20 +287,41 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         Http2HeadersFrame headersFrame = inboundHandler.readInbound();
         assertNotNull(headersFrame);
 
+        int initialWindowSize = localWindowSize(childChannel);
         childChannel.config().setAutoRead(false);
 
-        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("hello world"), 0, false);
+        ByteBuf data = bb("hello world");
+        int dataLength = data.readableBytes();
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), data, 0, false);
         Http2DataFrame dataFrame0 = inboundHandler.readInbound();
         assertNotNull(dataFrame0);
         release(dataFrame0);
 
+        assertEquals(initialWindowSize - dataLength, localWindowSize(childChannel));
+
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("foo"), 0, false);
-        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("bar"), 0, false);
+        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 1);
 
-        assertNull(inboundHandler.readInbound());
+        int newWindowSize = localWindowSize(childChannel);
 
+        // Write an inbound data frame that will use up all our credits.
+        frameInboundWriter.writeInboundData(childChannel.stream().id(),
+                Unpooled.buffer(newWindowSize).writeZero(newWindowSize), 0, false);
+
+        // As autoRead is false we should not issue an window update to the remote peer and so the windowSize
+        // should stay 0.
+        assertEquals(0, localWindowSize(childChannel));
+
+        // Once we set back to autoRead true we should trigger a window update frame and so give back credits.
         childChannel.config().setAutoRead(true);
-        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 2);
+
+        verifySplitFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, newWindowSize);
+        assertEquals(initialWindowSize, localWindowSize(childChannel));
+    }
+
+    private int localWindowSize(Http2StreamChannel childChannel) {
+        return codec.connection().local().flowController().windowSize(
+                codec.connection().stream(childChannel.stream().id()));
     }
 
     @Test
@@ -323,19 +344,27 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
                 }
             }
         });
-        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("hello world"), 0, false);
+        int initialWindowSize = localWindowSize(childChannel);
+        ByteBuf data = bb("hello world");
+        int dataLength = data.readableBytes();
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), data, 0, false);
         Http2DataFrame dataFrame0 = inboundHandler.readInbound();
         assertNotNull(dataFrame0);
         release(dataFrame0);
+
+        int windowSize = localWindowSize(childChannel);
+        assertEquals(initialWindowSize - dataLength, windowSize);
 
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("foo"), 0, false);
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("bar"), 0, false);
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("bar"), 0, false);
 
-        assertNull(inboundHandler.readInbound());
-
+        assertFalse(childChannel.isOpen());
         childChannel.config().setAutoRead(true);
-        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 3);
+
+        // Only 1 should make it through as we closed the stream before the last 2 could be processed.
+        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 1);
+
         inboundHandler.checkException();
     }
 
@@ -908,11 +937,6 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         // Detecting EOS should flush all pending data regardless of read calls.
         assertEqualsAndRelease(dataFrame2, inboundHandler.<Http2DataFrame>readInbound());
-        assertNull(inboundHandler.readInbound());
-
-        // As we limited the number to 1 we also need to call read() again.
-        childChannel.read();
-
         assertEqualsAndRelease(dataFrame3, inboundHandler.<Http2DataFrame>readInbound());
         assertEqualsAndRelease(dataFrame4, inboundHandler.<Http2DataFrame>readInbound());
 
@@ -1017,8 +1041,8 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         parentChannel.pipeline().remove(readCompleteSupressHandler);
         parentChannel.flushInbound();
 
-        // 3 = 1 for initialization + 1 for read when auto read was off + 1 for when auto read was back on
-        assertEquals(3, channelReadCompleteCount.get());
+        // 3 = 1 for initialization + 1 for read when auto read was off + 2 for when auto read was back on
+        assertEquals(4, channelReadCompleteCount.get());
     }
 
     @Test
@@ -1076,7 +1100,6 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertEqualsAndRelease(dataFrame3, inboundHandler.<Http2Frame>readInbound());
 
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("4"), 0, false);
-        assertNull(inboundHandler.readInbound());
 
         childChannel.read();
 
@@ -1090,7 +1113,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         // 3 = 1 for initialization + 1 for first read of 2 items + 1 for second read of 2 items +
         // 1 for parent channel readComplete
-        assertEquals(4, channelReadCompleteCount.get());
+        assertEquals(5, channelReadCompleteCount.get());
     }
 
     @Test
@@ -1150,6 +1173,15 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("bar2"), 0, true);
 
         verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 3);
+    }
+
+    private static void verifySplitFramesMultiplexedToCorrectChannel(Http2StreamChannel streamChannel,
+                                                                LastInboundHandler inboundHandler,
+                                                                int size) {
+        int remainder = size % Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
+        verifyFramesMultiplexedToCorrectChannel(
+                streamChannel, inboundHandler, size / Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND +
+                        (remainder == 0 ? 0 : 1));
     }
 
     private static void verifyFramesMultiplexedToCorrectChannel(Http2StreamChannel streamChannel,
