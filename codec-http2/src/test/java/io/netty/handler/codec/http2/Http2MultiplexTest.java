@@ -1041,8 +1041,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         parentChannel.pipeline().remove(readCompleteSupressHandler);
         parentChannel.flushInbound();
 
-        // 3 = 1 for initialization + 1 for read when auto read was off + 2 for when auto read was back on
-        assertEquals(4, channelReadCompleteCount.get());
+        assertEquals(2, channelReadCompleteCount.get());
     }
 
     @Test
@@ -1111,9 +1110,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         parentChannel.pipeline().remove(readCompleteSupressHandler);
         parentChannel.flushInbound();
 
-        // 3 = 1 for initialization + 1 for first read of 2 items + 1 for second read of 2 items +
-        // 1 for parent channel readComplete
-        assertEquals(5, channelReadCompleteCount.get());
+        assertEquals(2, channelReadCompleteCount.get());
     }
 
     @Test

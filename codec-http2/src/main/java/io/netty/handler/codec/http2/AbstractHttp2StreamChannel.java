@@ -262,9 +262,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
     void streamClosed() {
         unsafe.readEOS();
-
-        // Attempt to drain any queued data from the queue and deliver it to the application before closing this
-        // channel.
         unsafe.closeForcibly();
     }
 
@@ -517,26 +514,17 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         if (!isActive()) {
             ReferenceCountUtil.release(frame);
         } else {
-            final RecvByteBufAllocator.Handle allocHandle = unsafe.recvBufAllocHandle();
-            unsafe.doRead0(frame, allocHandle);
-            // We currently don't need to check for readEOS because the parent channel and child channel are limited
-            // to the same EventLoop thread. There are a limited number of frame types that may come after EOS is
-            // read (unknown, reset) and the trade off is less conditionals for the hot path (headers/data) at the
-            // cost of additional readComplete notifications on the rare path.
-            if (allocHandle.continueReading()) {
-                if (!readCompletePending) {
-                    readCompletePending = true;
-                    addChannelToReadCompletePendingQueue();
-                }
-            } else {
-                unsafe.notifyReadComplete(allocHandle, true);
+            unsafe.doRead0(frame);
+            if (!readCompletePending) {
+                readCompletePending = true;
+                addChannelToReadCompletePendingQueue();
             }
         }
     }
 
     void fireChildReadComplete() {
         assert eventLoop().inEventLoop();
-        unsafe.notifyReadComplete(unsafe.recvBufAllocHandle(), false);
+        unsafe.notifyReadComplete();
     }
 
     private final class Http2ChannelUnsafe implements Unsafe {
@@ -754,14 +742,14 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             }
         }
 
-        void notifyReadComplete(RecvByteBufAllocator.Handle allocHandle, boolean forceReadComplete) {
-            if (!readCompletePending && !forceReadComplete) {
+        void notifyReadComplete() {
+            if (!readCompletePending) {
                 return;
             }
             // Set to false just in case we added the channel multiple times before.
             readCompletePending = false;
 
-            allocHandle.readComplete();
+            unsafe.recvBufAllocHandle().readComplete();
             pipeline().fireChannelReadComplete();
             // Reading data may result in frames being written (e.g. WINDOW_UPDATE, RST, etc..). If the parent
             // channel is not currently reading we need to force a flush at the child channel, because we cannot
@@ -773,7 +761,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         @SuppressWarnings("deprecation")
-        void doRead0(Http2Frame frame, RecvByteBufAllocator.Handle allocHandle) {
+        void doRead0(Http2Frame frame) {
             final int bytes;
             if (frame instanceof Http2DataFrame) {
                 bytes = ((Http2DataFrame) frame).initialFlowControlledBytes();
@@ -787,6 +775,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             } else {
                 bytes = MIN_HTTP2_FRAME_SIZE;
             }
+            RecvByteBufAllocator.Handle allocHandle = unsafe.recvBufAllocHandle();
             // Update before firing event through the pipeline to be consistent with other Channel implementation.
             allocHandle.attemptedBytesRead(bytes);
             allocHandle.lastBytesRead(bytes);
