@@ -613,11 +613,11 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
     private void onHttp2StreamWritabilityChanged(ChannelHandlerContext ctx, Http2FrameStream stream,
                                          @SuppressWarnings("unused") boolean writable) {
-        ctx.fireUserEventTriggered(Http2FrameStreamEvent.writabilityChanged(stream));
+        ctx.fireUserEventTriggered(((DefaultHttp2FrameStream) stream).writabilityChanged);
     }
 
     void onHttp2StreamStateChanged(ChannelHandlerContext ctx, Http2FrameStream stream) {
-        ctx.fireUserEventTriggered(Http2FrameStreamEvent.stateChanged(stream));
+        ctx.fireUserEventTriggered(((DefaultHttp2FrameStream) stream).stateChanged);
     }
 
     void onHttp2Frame(ChannelHandlerContext ctx, Http2Frame frame) {
@@ -648,6 +648,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         private volatile int id = -1;
         volatile Http2Stream stream;
+
+        final Http2FrameStreamEvent stateChanged = Http2FrameStreamEvent.stateChanged(this);
+        final Http2FrameStreamEvent writabilityChanged = Http2FrameStreamEvent.writabilityChanged(this);
 
         Channel attachment;
 
