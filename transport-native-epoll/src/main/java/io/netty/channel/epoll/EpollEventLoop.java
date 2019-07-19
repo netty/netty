@@ -77,8 +77,6 @@ class EpollEventLoop extends SingleThreadEventLoop {
             return epollWaitNow();
         }
     };
-    // wakenUp is a packed field, where the bottom bit indicates if the loop is trying to exit
-    // The high bits indicate if there are multiple non-loop threads trying to wake up the loop.
     private volatile int wakenUp = WAKEUP_NOT_ALLOWED;
     private volatile int ioRatio = 50;
 
@@ -469,7 +467,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
                     // Busy loop until the last wakeup() is out of the critical section.
                     while (wakenUp != WAKEUP_NOT_ALLOWED) { /* spin */ }
                 }
-                
+
                 eventFd.close();
             } catch (IOException e) {
                 logger.warn("Failed to close the event fd.", e);
