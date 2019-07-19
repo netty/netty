@@ -79,7 +79,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
     };
     // wakenUp is a packed field, where the bottom bit indicates if the loop is trying to exit
     // The high bits indicate if there are multiple non-loop threads trying to wake up the loop.
-    private volatile int wakenUp;
+    private volatile int wakenUp = WAKEUP_NOT_ALLOWED;
     private volatile int ioRatio = 50;
 
     // See http://man7.org/linux/man-pages/man2/timerfd_create.2.html.
@@ -307,9 +307,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
                         break;
 
                     case SelectStrategy.SELECT:
-                        if (wakenUp != WAKEUP_ALLOWED) {
-                            wakenUp = WAKEUP_ALLOWED;
-                        }
+                        wakenUp = WAKEUP_ALLOWED;
                         if (!hasTasks()) {
                             strategy = epollWait();
                         }
@@ -467,11 +465,11 @@ class EpollEventLoop extends SingleThreadEventLoop {
                 // a.  wakenUp is WAKEUP_ALLOWED, which means no pending write
                 // b.  wakenUp is WAKEUP_NOT_ALLOWED, which means no pending writes
                 // c.  wakenUp is WAKEUP_INPROGRESS, which means will it will eventually reach WAKEUP_NOT_ALLOWED.
-                WAKEN_UP_UPDATER.compareAndSet(this, WAKEUP_ALLOWED, WAKEUP_NOT_ALLOWED);
-
-                // Busy loop until the last wakeup() is out of the critical section.
-                while (wakenUp != WAKEUP_NOT_ALLOWED) { /* spin */ }
-
+                if (!WAKEN_UP_UPDATER.compareAndSet(this, WAKEUP_ALLOWED, WAKEUP_NOT_ALLOWED)) {
+                    // Busy loop until the last wakeup() is out of the critical section.
+                    while (wakenUp != WAKEUP_NOT_ALLOWED) { /* spin */ }
+                }
+                
                 eventFd.close();
             } catch (IOException e) {
                 logger.warn("Failed to close the event fd.", e);
