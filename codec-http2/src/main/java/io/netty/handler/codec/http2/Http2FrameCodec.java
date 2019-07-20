@@ -423,7 +423,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             return;
         }
 
-        Http2FrameStream stream2 = newStream().setStreamAndProperty(streamKey, stream);
+        DefaultHttp2FrameStream stream2 = newStream().setStreamAndProperty(streamKey, stream);
         onHttp2StreamStateChanged(ctx, stream2);
     }
 
@@ -454,7 +454,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         }
 
         private void onHttp2StreamStateChanged0(Http2Stream stream) {
-            Http2FrameStream stream2 = stream.getProperty(streamKey);
+            DefaultHttp2FrameStream stream2 = stream.getProperty(streamKey);
             if (stream2 != null) {
                 onHttp2StreamStateChanged(ctx, stream2);
             }
@@ -611,13 +611,13 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         ctx.fireUserEventTriggered(evt);
     }
 
-    private void onHttp2StreamWritabilityChanged(ChannelHandlerContext ctx, Http2FrameStream stream,
+    private void onHttp2StreamWritabilityChanged(ChannelHandlerContext ctx, DefaultHttp2FrameStream stream,
                                          @SuppressWarnings("unused") boolean writable) {
-        ctx.fireUserEventTriggered(((DefaultHttp2FrameStream) stream).writabilityChanged);
+        ctx.fireUserEventTriggered(stream.writabilityChanged);
     }
 
-    void onHttp2StreamStateChanged(ChannelHandlerContext ctx, Http2FrameStream stream) {
-        ctx.fireUserEventTriggered(((DefaultHttp2FrameStream) stream).stateChanged);
+    void onHttp2StreamStateChanged(ChannelHandlerContext ctx, DefaultHttp2FrameStream stream) {
+        ctx.fireUserEventTriggered(stream.stateChanged);
     }
 
     void onHttp2Frame(ChannelHandlerContext ctx, Http2Frame frame) {
@@ -631,7 +631,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     private final class Http2RemoteFlowControllerListener implements Http2RemoteFlowController.Listener {
         @Override
         public void writabilityChanged(Http2Stream stream) {
-            Http2FrameStream frameStream = stream.getProperty(streamKey);
+            DefaultHttp2FrameStream frameStream = stream.getProperty(streamKey);
             if (frameStream == null) {
                 return;
             }
