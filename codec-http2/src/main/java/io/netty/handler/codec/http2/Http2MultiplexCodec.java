@@ -166,23 +166,22 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
     }
 
     @Override
-    final void onHttp2StreamStateChanged(ChannelHandlerContext ctx, Http2FrameStream stream) {
-        DefaultHttp2FrameStream s = (DefaultHttp2FrameStream) stream;
+    final void onHttp2StreamStateChanged(ChannelHandlerContext ctx, DefaultHttp2FrameStream stream) {
 
         switch (stream.state()) {
             case HALF_CLOSED_LOCAL:
                 if (stream.id() == HTTP_UPGRADE_STREAM_ID) {
-                    onHttp2UpgradeStreamInitialized(ctx, s);
+                    onHttp2UpgradeStreamInitialized(ctx, stream);
                 }
                 break;
             case HALF_CLOSED_REMOTE:
             case OPEN:
-                if (s.attachment != null) {
+                if (stream.attachment != null) {
                     // ignore if child channel was already created.
                     break;
                 }
                 // fall-trough
-                ChannelFuture future = new Http2MultiplexCodecStreamChannel(s, inboundStreamHandler).register();
+                ChannelFuture future = new Http2MultiplexCodecStreamChannel(stream, inboundStreamHandler).register();
                 if (future.isDone()) {
                     Http2MultiplexHandler.registerDone(future);
                 } else {
@@ -190,7 +189,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                 }
                 break;
             case CLOSED:
-                AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel) s.attachment;
+                AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel) stream.attachment;
                 if (channel != null) {
                     channel.streamClosed();
                 }
