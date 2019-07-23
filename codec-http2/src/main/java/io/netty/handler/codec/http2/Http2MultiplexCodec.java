@@ -149,40 +149,34 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         ctx.fireChannelRead(frame);
     }
 
-    private void onHttp2UpgradeStreamInitialized(ChannelHandlerContext ctx, DefaultHttp2FrameStream stream) {
-        assert stream.state() == Http2Stream.State.HALF_CLOSED_LOCAL;
-        AbstractHttp2StreamChannel ch = new Http2MultiplexCodecStreamChannel(stream, null);
-        ch.closeOutbound();
-
-        // Add our upgrade handler to the channel and then register the channel.
-        // The register call fires the channelActive, etc.
-        ch.pipeline().addLast(upgradeStreamHandler);
-        ChannelFuture future = ctx.channel().eventLoop().register(ch);
-        if (future.isDone()) {
-            Http2MultiplexHandler.registerDone(future);
-        } else {
-            future.addListener(Http2MultiplexHandler.CHILD_CHANNEL_REGISTRATION_LISTENER);
-        }
-    }
-
     @Override
     final void onHttp2StreamStateChanged(ChannelHandlerContext ctx, DefaultHttp2FrameStream stream) {
-
         switch (stream.state()) {
             case HALF_CLOSED_LOCAL:
-                if (stream.id() == HTTP_UPGRADE_STREAM_ID) {
-                    onHttp2UpgradeStreamInitialized(ctx, stream);
+                if (stream.id() != HTTP_UPGRADE_STREAM_ID) {
+                    // Ignore everything which was not caused by an upgrade
+                    break;
                 }
-                break;
+                // fall-through
             case HALF_CLOSED_REMOTE:
+                // fall-through
             case OPEN:
                 if (stream.attachment != null) {
                     // ignore if child channel was already created.
                     break;
                 }
-                // fall-trough
-                ChannelFuture future = ctx.channel().eventLoop().register(
-                        new Http2MultiplexCodecStreamChannel(stream, inboundStreamHandler));
+                final Http2MultiplexCodecStreamChannel streamChannel;
+                // We need to handle upgrades special when on the client side.
+                if (stream.id() == HTTP_UPGRADE_STREAM_ID && !connection().isServer()) {
+                    // Add our upgrade handler to the channel and then register the channel.
+                    // The register call fires the channelActive, etc.
+                    assert upgradeStreamHandler != null;
+                    streamChannel = new Http2MultiplexCodecStreamChannel(stream, upgradeStreamHandler);
+                    streamChannel.closeOutbound();
+                } else {
+                    streamChannel = new Http2MultiplexCodecStreamChannel(stream, inboundStreamHandler);
+                }
+                ChannelFuture future = ctx.channel().eventLoop().register(streamChannel);
                 if (future.isDone()) {
                     Http2MultiplexHandler.registerDone(future);
                 } else {
