@@ -22,21 +22,23 @@ import io.netty.channel.embedded.EmbeddedChannel;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public abstract class Http2MultiplexClientUpgradeTest<C extends Http2FrameCodec> {
 
     @ChannelHandler.Sharable
-    final class NoopHandler implements ChannelHandler {
+    static final class NoopHandler implements ChannelHandler {
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
             ctx.channel().close();
         }
     }
 
-    private final class UpgradeHandler implements ChannelHandler {
+    private static final class UpgradeHandler implements ChannelHandler {
         Http2Stream.State stateOnActive;
         int streamId;
+        boolean channelInactiveCalled;
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -44,6 +46,12 @@ public abstract class Http2MultiplexClientUpgradeTest<C extends Http2FrameCodec>
             stateOnActive = ch.stream().state();
             streamId = ch.stream().id();
             ctx.fireChannelActive();
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            channelInactiveCalled = true;
+            ctx.fireChannelInactive();
         }
     }
 
@@ -61,8 +69,10 @@ public abstract class Http2MultiplexClientUpgradeTest<C extends Http2FrameCodec>
 
         assertFalse(upgradeHandler.stateOnActive.localSideOpen());
         assertTrue(upgradeHandler.stateOnActive.remoteSideOpen());
-        assertEquals(1, upgradeHandler.streamId);
+        assertNotNull(codec.connection().stream(Http2CodecUtil.HTTP_UPGRADE_STREAM_ID).getProperty(codec.streamKey));
+        assertEquals(Http2CodecUtil.HTTP_UPGRADE_STREAM_ID, upgradeHandler.streamId);
         assertTrue(ch.finishAndReleaseAll());
+        assertTrue(upgradeHandler.channelInactiveCalled);
     }
 
     @Test(expected = Http2Exception.class)
