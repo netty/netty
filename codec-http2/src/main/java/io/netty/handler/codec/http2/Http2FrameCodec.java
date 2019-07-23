@@ -240,13 +240,6 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         // sub-class can override this for extra steps that needs to be done when the handler is added.
     }
 
-    @Override
-    public void onHttpClientUpgrade() throws Http2Exception {
-        super.onHttpClientUpgrade();
-        // Now make a new Http2FrameStream, set it's underlying Http2Stream, and initialize it.
-        newStream().setStreamAndProperty(streamKey, connection().stream(HTTP_UPGRADE_STREAM_ID));
-    }
-
     /**
      * Handles the cleartext HTTP upgrade event. If an upgrade occurred, sends a simple response via
      * HTTP/2 on stream 1 (the stream specifically reserved for cleartext HTTP upgrade).
