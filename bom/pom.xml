@@ -30,11 +30,11 @@
 
   <name>Netty/BOM</name>
   <description>Netty (Bill of Materials)</description>
-  <url>http://netty.io/</url>
+  <url>https://netty.io/</url>
 
   <organization>
     <name>The Netty Project</name>
-    <url>http://netty.io/</url>
+    <url>https://netty.io/</url>
   </organization>
 
   <licenses>
@@ -57,9 +57,9 @@
       <id>netty.io</id>
       <name>The Netty Project Contributors</name>
       <email>netty@googlegroups.com</email>
-      <url>http://netty.io/</url>
+      <url>https://netty.io/</url>
       <organization>The Netty Project</organization>
-      <organizationUrl>http://netty.io/</organizationUrl>
+      <organizationUrl>https://netty.io/</organizationUrl>
     </developer>
   </developers>
 

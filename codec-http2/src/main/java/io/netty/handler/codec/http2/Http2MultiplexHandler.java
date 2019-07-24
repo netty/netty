@@ -64,7 +64,7 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
  * reference counted objects (e.g. {@link ByteBuf}s). The multiplex codec will call {@link ReferenceCounted#retain()}
  * before propagating a reference counted object through the pipeline, and thus an application handler needs to release
  * such an object after having consumed it. For more information on reference counting take a look at
- * http://netty.io/wiki/reference-counted-objects.html
+ * https://netty.io/wiki/reference-counted-objects.html
  *
  * <h3>Channel Events</h3>
  *
@@ -214,26 +214,24 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                             // Ignore everything which was not caused by an upgrade
                             break;
                         }
-                        // We must have an upgrade handler or else we can't handle the stream
-                        if (upgradeStreamHandler == null) {
-                            throw connectionError(INTERNAL_ERROR,
-                                    "Client is misconfigured for upgrade requests");
-                        }
-                        // fall-trough
+                        // fall-through
                     case HALF_CLOSED_REMOTE:
-                        // fall-trough
+                        // fall-through
                     case OPEN:
                         if (stream.attachment != null) {
                             // ignore if child channel was already created.
                             break;
                         }
                         final AbstractHttp2StreamChannel ch;
-                        if (stream.state() == Http2Stream.State.HALF_CLOSED_LOCAL) {
-                            ch = new Http2MultiplexHandlerStreamChannel(stream, null);
+                        // We need to handle upgrades special when on the client side.
+                        if (stream.id() == Http2CodecUtil.HTTP_UPGRADE_STREAM_ID && !isServer(ctx)) {
+                            // We must have an upgrade handler or else we can't handle the stream
+                            if (upgradeStreamHandler == null) {
+                                throw connectionError(INTERNAL_ERROR,
+                                        "Client is misconfigured for upgrade requests");
+                            }
+                            ch = new Http2MultiplexHandlerStreamChannel(stream, upgradeStreamHandler);
                             ch.closeOutbound();
-                            // Add our upgrade handler to the channel and then register the channel.
-                            // The register call fires the channelActive, etc.
-                            ch.pipeline().addLast(upgradeStreamHandler);
                         } else {
                             ch = new Http2MultiplexHandlerStreamChannel(stream, inboundStreamHandler);
                         }
@@ -282,9 +280,13 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         ctx.fireExceptionCaught(cause);
     }
 
+    private static boolean isServer(ChannelHandlerContext ctx) {
+        return ctx.channel().parent() instanceof ServerChannel;
+    }
+
     private void onHttp2GoAwayFrame(ChannelHandlerContext ctx, final Http2GoAwayFrame goAwayFrame) {
         try {
-            final boolean server = ctx.channel().parent() instanceof ServerChannel;
+            final boolean server = isServer(ctx);
             forEachActiveStream(new Http2FrameStreamVisitor() {
                 @Override
                 public boolean visit(Http2FrameStream stream) {

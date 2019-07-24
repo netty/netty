@@ -21,6 +21,7 @@ import java.math.BigInteger;
 import javax.net.ssl.SSLSession;
 import javax.security.cert.X509Certificate;
 
+import io.netty.buffer.Unpooled;
 import org.bouncycastle.asn1.ocsp.OCSPResponseStatus;
 import org.bouncycastle.cert.ocsp.BasicOCSPResp;
 import org.bouncycastle.cert.ocsp.CertificateStatus;
@@ -164,7 +165,8 @@ public class OcspClientExample {
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+            FullHttpRequest request = new DefaultFullHttpRequest(
+                    HttpVersion.HTTP_1_1, HttpMethod.GET, "/", Unpooled.EMPTY_BUFFER);
             request.headers().set(HttpHeaderNames.HOST, host);
             request.headers().set(HttpHeaderNames.USER_AGENT, "netty-ocsp-example/1.0");
 

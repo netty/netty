@@ -28,8 +28,8 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
  * <p>
- * Performs server side opening and closing handshakes for <a href="http://netty.io/s/rfc6455">RFC 6455</a>
- * (originally web socket specification <a href="http://netty.io/s/ws-17">draft-ietf-hybi-thewebsocketprotocol-17</a>).
+ * Performs server side opening and closing handshakes for <a href="https://netty.io/s/rfc6455">RFC 6455</a>
+ * (originally web socket specification <a href="https://netty.io/s/ws-17">draft-ietf-hybi-thewebsocketprotocol-17</a>).
  * </p>
  */
 public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
@@ -115,7 +115,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      * Upgrade: websocket
      * Connection: Upgrade
      * Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
-     * Sec-WebSocket-Origin: http://example.com
+     * Origin: http://example.com
      * Sec-WebSocket-Protocol: chat, superchat
      * Sec-WebSocket-Version: 13
      * </pre>
@@ -134,15 +134,17 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      */
     @Override
     protected FullHttpResponse newHandshakeResponse(FullHttpRequest req, HttpHeaders headers) {
-        FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
-        if (headers != null) {
-            res.headers().add(headers);
-        }
-
         CharSequence key = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
         if (key == null) {
             throw new WebSocketHandshakeException("not a WebSocket request: missing key");
         }
+
+        FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS,
+                req.content().alloc().buffer(0));
+        if (headers != null) {
+            res.headers().add(headers);
+        }
+
         String acceptSeed = key + WEBSOCKET_13_ACCEPT_GUID;
         byte[] sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII));
         String accept = WebSocketUtil.base64(sha1);

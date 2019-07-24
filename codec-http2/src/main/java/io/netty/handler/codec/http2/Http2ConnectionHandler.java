@@ -477,19 +477,27 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         doGracefulShutdown(ctx, f, promise);
     }
 
+    private ChannelFutureListener newClosingChannelFutureListener(
+            ChannelHandlerContext ctx, ChannelPromise promise) {
+        long gracefulShutdownTimeoutMillis = this.gracefulShutdownTimeoutMillis;
+        return gracefulShutdownTimeoutMillis < 0 ?
+                new ClosingChannelFutureListener(ctx, promise) :
+                new ClosingChannelFutureListener(ctx, promise, gracefulShutdownTimeoutMillis, MILLISECONDS);
+    }
+
     private void doGracefulShutdown(ChannelHandlerContext ctx, ChannelFuture future, final ChannelPromise promise) {
+        final ChannelFutureListener listener = newClosingChannelFutureListener(ctx, promise);
         if (isGracefulShutdownComplete()) {
-            // If there are no active streams, close immediately after the GO_AWAY write completes.
-            future.addListener(new ClosingChannelFutureListener(ctx, promise));
+            // If there are no active streams, close immediately after the GO_AWAY write completes or the timeout
+            // elapsed.
+            future.addListener(listener);
         } else {
             // If there are active streams we should wait until they are all closed before closing the connection.
-            final ClosingChannelFutureListener tmp = gracefulShutdownTimeoutMillis < 0 ?
-                    new ClosingChannelFutureListener(ctx, promise) :
-                    new ClosingChannelFutureListener(ctx, promise, gracefulShutdownTimeoutMillis, MILLISECONDS);
+
             // The ClosingChannelFutureListener will cascade promise completion. We need to always notify the
             // new ClosingChannelFutureListener when the graceful close completes if the promise is not null.
             if (closeListener == null) {
-                closeListener = tmp;
+                closeListener = listener;
             } else if (promise != null) {
                 final ChannelFutureListener oldCloseListener = closeListener;
                 closeListener = new ChannelFutureListener() {
@@ -498,7 +506,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                         try {
                             oldCloseListener.operationComplete(future);
                         } finally {
-                            tmp.operationComplete(future);
+                            listener.operationComplete(future);
                         }
                     }
                 };
@@ -665,7 +673,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         if (http2Ex.shutdownHint() == Http2Exception.ShutdownHint.GRACEFUL_SHUTDOWN) {
             doGracefulShutdown(ctx, future, promise);
         } else {
-            future.addListener(new ClosingChannelFutureListener(ctx, promise));
+            future.addListener(newClosingChannelFutureListener(ctx, promise));
         }
     }
 

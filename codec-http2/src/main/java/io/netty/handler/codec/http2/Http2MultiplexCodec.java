@@ -61,7 +61,7 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
  * reference counted objects (e.g. {@link ByteBuf}s). The multiplex codec will call {@link ReferenceCounted#retain()}
  * before propagating a reference counted object through the pipeline, and thus an application handler needs to release
  * such an object after having consumed it. For more information on reference counting take a look at
- * http://netty.io/wiki/reference-counted-objects.html
+ * https://netty.io/wiki/reference-counted-objects.html
  *
  * <h3>Channel Events</h3>
  *
@@ -116,10 +116,6 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         }
         // Creates the Http2Stream in the Connection.
         super.onHttpClientUpgrade();
-        // Now make a new FrameStream, set it's underlying Http2Stream, and initialize it.
-        DefaultHttp2FrameStream codecStream = newStream();
-        codecStream.setStreamAndProperty(streamKey, connection().stream(HTTP_UPGRADE_STREAM_ID));
-        onHttp2UpgradeStreamInitialized(ctx, codecStream);
     }
 
     @Override
@@ -153,36 +149,34 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         ctx.fireChannelRead(frame);
     }
 
-    private void onHttp2UpgradeStreamInitialized(ChannelHandlerContext ctx, DefaultHttp2FrameStream stream) {
-        assert stream.state() == Http2Stream.State.HALF_CLOSED_LOCAL;
-        AbstractHttp2StreamChannel ch = new Http2MultiplexCodecStreamChannel(stream, null);
-        ch.closeOutbound();
-
-        // Add our upgrade handler to the channel and then register the channel.
-        // The register call fires the channelActive, etc.
-        ch.pipeline().addLast(upgradeStreamHandler);
-        ChannelFuture future = ctx.channel().eventLoop().register(ch);
-        if (future.isDone()) {
-            Http2MultiplexHandler.registerDone(future);
-        } else {
-            future.addListener(Http2MultiplexHandler.CHILD_CHANNEL_REGISTRATION_LISTENER);
-        }
-    }
-
     @Override
-    final void onHttp2StreamStateChanged(ChannelHandlerContext ctx, Http2FrameStream stream) {
-        DefaultHttp2FrameStream s = (DefaultHttp2FrameStream) stream;
-
+    final void onHttp2StreamStateChanged(ChannelHandlerContext ctx, DefaultHttp2FrameStream stream) {
         switch (stream.state()) {
+            case HALF_CLOSED_LOCAL:
+                if (stream.id() != HTTP_UPGRADE_STREAM_ID) {
+                    // Ignore everything which was not caused by an upgrade
+                    break;
+                }
+                // fall-through
             case HALF_CLOSED_REMOTE:
+                // fall-through
             case OPEN:
-                if (s.attachment != null) {
+                if (stream.attachment != null) {
                     // ignore if child channel was already created.
                     break;
                 }
-                // fall-trough
-                ChannelFuture future = ctx.channel().eventLoop().register(
-                        new Http2MultiplexCodecStreamChannel(s, inboundStreamHandler));
+                final Http2MultiplexCodecStreamChannel streamChannel;
+                // We need to handle upgrades special when on the client side.
+                if (stream.id() == HTTP_UPGRADE_STREAM_ID && !connection().isServer()) {
+                    // Add our upgrade handler to the channel and then register the channel.
+                    // The register call fires the channelActive, etc.
+                    assert upgradeStreamHandler != null;
+                    streamChannel = new Http2MultiplexCodecStreamChannel(stream, upgradeStreamHandler);
+                    streamChannel.closeOutbound();
+                } else {
+                    streamChannel = new Http2MultiplexCodecStreamChannel(stream, inboundStreamHandler);
+                }
+                ChannelFuture future = ctx.channel().eventLoop().register(streamChannel);
                 if (future.isDone()) {
                     Http2MultiplexHandler.registerDone(future);
                 } else {
@@ -190,7 +184,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                 }
                 break;
             case CLOSED:
-                AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel) s.attachment;
+                AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel) stream.attachment;
                 if (channel != null) {
                     channel.streamClosed();
                 }

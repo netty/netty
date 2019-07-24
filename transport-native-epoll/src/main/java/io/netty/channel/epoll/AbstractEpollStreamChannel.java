@@ -70,9 +70,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             ((AbstractEpollUnsafe) unsafe()).flush0();
         }
     };
-    private Queue<SpliceInTask> spliceQueue;
 
     // Lazy init these if we need to splice(...)
+    private volatile Queue<SpliceInTask> spliceQueue;
     private FileDescriptor pipeIn;
     private FileDescriptor pipeOut;
 
@@ -205,7 +205,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     public final ChannelFuture spliceTo(final FileDescriptor ch, final int offset, final int len,
                                         final ChannelPromise promise) {
         checkPositiveOrZero(len, "len");
-        checkPositiveOrZero(offset, "offser");
+        checkPositiveOrZero(offset, "offset");
         if (config().getEpollMode() != EpollMode.LEVEL_TRIGGERED) {
             throw new IllegalStateException("spliceTo() supported only when using " + EpollMode.LEVEL_TRIGGERED);
         }
@@ -678,13 +678,14 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     }
 
     private void clearSpliceQueue() {
-        if (spliceQueue == null) {
+        Queue<SpliceInTask> sQueue = spliceQueue;
+        if (sQueue == null) {
             return;
         }
         ClosedChannelException exception = null;
 
         for (;;) {
-            SpliceInTask task = spliceQueue.poll();
+            SpliceInTask task = sQueue.poll();
             if (task == null) {
                 break;
             }
@@ -755,15 +756,16 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             ByteBuf byteBuf = null;
             boolean close = false;
             try {
+                Queue<SpliceInTask> sQueue = null;
                 do {
-                    if (spliceQueue != null) {
-                        SpliceInTask spliceTask = spliceQueue.peek();
+                    if (sQueue != null || (sQueue = spliceQueue) != null) {
+                        SpliceInTask spliceTask = sQueue.peek();
                         if (spliceTask != null) {
                             if (spliceTask.spliceIn(allocHandle)) {
                                 // We need to check if it is still active as if not we removed all SpliceTasks in
                                 // doClose(...)
                                 if (isActive()) {
-                                    spliceQueue.remove();
+                                    sQueue.remove();
                                 }
                                 continue;
                             } else {
@@ -823,24 +825,16 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     }
 
     private void addToSpliceQueue(final SpliceInTask task) {
-        EventLoop eventLoop = eventLoop();
-        if (eventLoop.inEventLoop()) {
-            addToSpliceQueue0(task);
-        } else {
-            eventLoop.execute(new Runnable() {
-                @Override
-                public void run() {
-                    addToSpliceQueue0(task);
+        Queue<SpliceInTask> sQueue = spliceQueue;
+        if (sQueue == null) {
+            synchronized (this) {
+                sQueue = spliceQueue;
+                if (sQueue == null) {
+                    spliceQueue = sQueue = PlatformDependent.newMpscQueue();
                 }
-            });
+            }
         }
-    }
-
-    private void addToSpliceQueue0(SpliceInTask task) {
-        if (spliceQueue == null) {
-            spliceQueue = PlatformDependent.newMpscQueue();
-        }
-        spliceQueue.add(task);
+        sQueue.add(task);
     }
 
     protected abstract class SpliceInTask {
@@ -983,7 +977,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     private final class SpliceFdTask extends SpliceInTask {
         private final FileDescriptor fd;
         private final ChannelPromise promise;
-        private final int offset;
+        private int offset;
 
         SpliceFdTask(FileDescriptor fd, int offset, int len, ChannelPromise promise) {
             super(len, promise);
@@ -1013,6 +1007,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                         }
                         do {
                             int splicedOut = Native.splice(pipeIn.intValue(), -1, fd.intValue(), offset, splicedIn);
+                            offset += splicedOut;
                             splicedIn -= splicedOut;
                         } while (splicedIn > 0);
                         if (len == 0) {

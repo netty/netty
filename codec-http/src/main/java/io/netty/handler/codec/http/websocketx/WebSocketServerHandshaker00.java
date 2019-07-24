@@ -133,9 +133,16 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         boolean isHixie76 = req.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_KEY1) &&
                             req.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_KEY2);
 
+        String origin = req.headers().get(HttpHeaderNames.ORIGIN);
+        //throw before allocating FullHttpResponse
+        if (origin == null && !isHixie76) {
+            throw new WebSocketHandshakeException("Missing origin header, got only " + req.headers().names());
+        }
+
         // Create the WebSocket handshake response.
         FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, new HttpResponseStatus(101,
-                isHixie76 ? "WebSocket Protocol Handshake" : "Web Socket Protocol Handshake"));
+                isHixie76 ? "WebSocket Protocol Handshake" : "Web Socket Protocol Handshake"),
+                req.content().alloc().buffer(0));
         if (headers != null) {
             res.headers().add(headers);
         }
@@ -146,7 +153,7 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
         // Fill in the headers and contents depending on handshake getMethod.
         if (isHixie76) {
             // New handshake getMethod with a challenge:
-            res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, req.headers().get(HttpHeaderNames.ORIGIN));
+            res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, origin);
             res.headers().add(HttpHeaderNames.SEC_WEBSOCKET_LOCATION, uri());
 
             String subprotocols = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
@@ -176,10 +183,6 @@ public class WebSocketServerHandshaker00 extends WebSocketServerHandshaker {
             res.content().writeBytes(WebSocketUtil.md5(input.array()));
         } else {
             // Old Hixie 75 handshake getMethod with no challenge:
-            String origin = req.headers().get(HttpHeaderNames.ORIGIN);
-            if (origin == null) {
-                throw new WebSocketHandshakeException("Missing origin header, got only " + req.headers().names());
-            }
             res.headers().add(HttpHeaderNames.WEBSOCKET_ORIGIN, origin);
             res.headers().add(HttpHeaderNames.WEBSOCKET_LOCATION, uri());
 

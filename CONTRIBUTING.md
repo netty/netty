@@ -42,5 +42,5 @@ My system has IPv6 disabled.
 
 ## How to contribute your work
 
-Before submitting a pull request or push a commit, please read [our developer guide](http://netty.io/wiki/developer-guide.html).
+Before submitting a pull request or push a commit, please read [our developer guide](https://netty.io/wiki/developer-guide.html).
 

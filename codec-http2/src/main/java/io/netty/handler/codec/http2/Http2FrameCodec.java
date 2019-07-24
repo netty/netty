@@ -136,7 +136,7 @@ import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
  * reference counted objects (e.g. {@link ByteBuf}s). The frame codec will call {@link ReferenceCounted#retain()} before
  * propagating a reference counted object through the pipeline, and thus an application handler needs to release such
  * an object after having consumed it. For more information on reference counting take a look at
- * http://netty.io/wiki/reference-counted-objects.html
+ * https://netty.io/wiki/reference-counted-objects.html
  *
  * <h3>HTTP Upgrade</h3>
  *
@@ -161,7 +161,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             new IntObjectHashMap<DefaultHttp2FrameStream>(8);
     private final ChannelFutureListener bufferedStreamsListener = new ChannelFutureListener() {
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(ChannelFuture future) {
             numBufferedStreams--;
         }
     };
@@ -416,7 +416,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             return;
         }
 
-        Http2FrameStream stream2 = newStream().setStreamAndProperty(streamKey, stream);
+        DefaultHttp2FrameStream stream2 = newStream().setStreamAndProperty(streamKey, stream);
         onHttp2StreamStateChanged(ctx, stream2);
     }
 
@@ -438,15 +438,16 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         @Override
         public void onStreamClosed(Http2Stream stream) {
-            Http2FrameStream stream2 = stream.getProperty(streamKey);
-            if (stream2 != null) {
-                onHttp2StreamStateChanged(ctx, stream2);
-            }
+            onHttp2StreamStateChanged0(stream);
         }
 
         @Override
         public void onStreamHalfClosed(Http2Stream stream) {
-            Http2FrameStream stream2 = stream.getProperty(streamKey);
+            onHttp2StreamStateChanged0(stream);
+        }
+
+        private void onHttp2StreamStateChanged0(Http2Stream stream) {
+            DefaultHttp2FrameStream stream2 = stream.getProperty(streamKey);
             if (stream2 != null) {
                 onHttp2StreamStateChanged(ctx, stream2);
             }
@@ -603,13 +604,13 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         ctx.fireUserEventTriggered(evt);
     }
 
-    private void onHttp2StreamWritabilityChanged(ChannelHandlerContext ctx, Http2FrameStream stream,
+    private void onHttp2StreamWritabilityChanged(ChannelHandlerContext ctx, DefaultHttp2FrameStream stream,
                                          @SuppressWarnings("unused") boolean writable) {
-        ctx.fireUserEventTriggered(Http2FrameStreamEvent.writabilityChanged(stream));
+        ctx.fireUserEventTriggered(stream.writabilityChanged);
     }
 
-    void onHttp2StreamStateChanged(ChannelHandlerContext ctx, Http2FrameStream stream) {
-        ctx.fireUserEventTriggered(Http2FrameStreamEvent.stateChanged(stream));
+    void onHttp2StreamStateChanged(ChannelHandlerContext ctx, DefaultHttp2FrameStream stream) {
+        ctx.fireUserEventTriggered(stream.stateChanged);
     }
 
     void onHttp2Frame(ChannelHandlerContext ctx, Http2Frame frame) {
@@ -623,7 +624,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     private final class Http2RemoteFlowControllerListener implements Http2RemoteFlowController.Listener {
         @Override
         public void writabilityChanged(Http2Stream stream) {
-            Http2FrameStream frameStream = stream.getProperty(streamKey);
+            DefaultHttp2FrameStream frameStream = stream.getProperty(streamKey);
             if (frameStream == null) {
                 return;
             }
@@ -640,6 +641,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         private volatile int id = -1;
         volatile Http2Stream stream;
+
+        final Http2FrameStreamEvent stateChanged = Http2FrameStreamEvent.stateChanged(this);
+        final Http2FrameStreamEvent writabilityChanged = Http2FrameStreamEvent.writabilityChanged(this);
 
         Channel attachment;
 

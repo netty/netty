@@ -44,8 +44,6 @@ import static io.netty.util.internal.ObjectUtil.*;
  */
 class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapter {
 
-    private static final long DEFAULT_HANDSHAKE_TIMEOUT_MS = 10000L;
-
     private final String websocketPath;
     private final String subprotocols;
     private final boolean checkStartsWith;
@@ -79,7 +77,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
 
         try {
             if (!GET.equals(req.method())) {
-                sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN));
+                sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN, ctx.alloc().buffer(0)));
                 return;
             }
 
