@@ -16,6 +16,10 @@
 package io.netty.buffer;
 
 import io.netty.util.ResourceLeakTracker;
+import org.junit.Test;
+
+import static io.netty.buffer.Unpooled.*;
+import static org.junit.Assert.assertArrayEquals;
 
 public class AdvancedLeakAwareByteBufTest extends SimpleLeakAwareByteBufTest {
 
@@ -27,5 +31,19 @@ public class AdvancedLeakAwareByteBufTest extends SimpleLeakAwareByteBufTest {
     @Override
     protected SimpleLeakAwareByteBuf wrap(ByteBuf buffer, ResourceLeakTracker<ByteBuf> tracker) {
         return new AdvancedLeakAwareByteBuf(buffer, tracker);
+    }
+
+    @Test
+    public void testAddComponentWithLeakAwareByteBuf() {
+        NoopResourceLeakTracker<ByteBuf> tracker = new NoopResourceLeakTracker<ByteBuf>();
+
+        ByteBuf buffer = wrappedBuffer("hello world".getBytes()).slice(6, 5);
+        ByteBuf leakAwareBuf = wrap(buffer, tracker);
+
+        CompositeByteBuf composite = compositeBuffer();
+        composite.addComponent(true, leakAwareBuf);
+        byte[] result = new byte[5];
+        composite.component(0).readBytes(result);
+        assertArrayEquals("world".getBytes(), result);
     }
 }
