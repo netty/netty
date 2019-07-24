@@ -15,11 +15,12 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.CharsetUtil;
 import io.netty.util.ResourceLeakTracker;
 import org.junit.Test;
 
 import static io.netty.buffer.Unpooled.*;
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.*;
 
 public class AdvancedLeakAwareByteBufTest extends SimpleLeakAwareByteBufTest {
 
@@ -37,13 +38,14 @@ public class AdvancedLeakAwareByteBufTest extends SimpleLeakAwareByteBufTest {
     public void testAddComponentWithLeakAwareByteBuf() {
         NoopResourceLeakTracker<ByteBuf> tracker = new NoopResourceLeakTracker<ByteBuf>();
 
-        ByteBuf buffer = wrappedBuffer("hello world".getBytes()).slice(6, 5);
+        ByteBuf buffer = wrappedBuffer("hello world".getBytes(CharsetUtil.US_ASCII)).slice(6, 5);
         ByteBuf leakAwareBuf = wrap(buffer, tracker);
 
         CompositeByteBuf composite = compositeBuffer();
         composite.addComponent(true, leakAwareBuf);
         byte[] result = new byte[5];
         composite.component(0).readBytes(result);
-        assertArrayEquals("world".getBytes(), result);
+        assertArrayEquals("world".getBytes(CharsetUtil.US_ASCII), result);
+        composite.release();
     }
 }
