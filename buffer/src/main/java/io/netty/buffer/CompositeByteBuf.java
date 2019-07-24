@@ -306,6 +306,10 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         int srcIndex = buf.readerIndex(), len = buf.readableBytes();
         ByteBuf slice = null;
         // unwrap if already sliced
+
+        if (buf instanceof WrappedByteBuf) {
+            buf = buf.unwrap();
+        }
         if (buf instanceof AbstractUnpooledSlicedByteBuf) {
             srcIndex += ((AbstractUnpooledSlicedByteBuf) buf).idx(0);
             slice = buf;
