@@ -15,8 +15,7 @@
  */
 package io.netty.buffer;
 
-import org.junit.After;
-import org.junit.Before;
+import io.netty.util.ResourceLeakDetector;
 import org.junit.Test;
 
 import static io.netty.buffer.Unpooled.*;
@@ -24,31 +23,23 @@ import static org.junit.Assert.*;
 
 public class CompositeByteBufTest {
 
-    @Before
-    public void setUp() throws Exception {
-        System.setProperty("io.netty.leakDetection.level", "paranoid");
-        System.setProperty("io.netty.leakDetection.samplingInterval", "1");
-    }
-
-    @After
-    public void tearDown() throws Exception {
-        System.clearProperty("io.netty.leakDetection.level");
-        System.clearProperty("io.netty.leakDetection.samplingInterval");
-    }
-
     @Test
     public void testAddComponentWithLeakAwareByteBuf() {
+        ResourceLeakDetector.Level level = ResourceLeakDetector.getLevel();
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
 
-        ByteBuf buffer = wrappedBuffer("hello world".getBytes()).slice(6, 5);
-        ByteBuf leakAwareBuffer = UnpooledByteBufAllocator.toLeakAwareBuffer(buffer);
+        try {
+            ByteBuf buffer = wrappedBuffer("hello world".getBytes()).slice(6, 5);
+            ByteBuf leakAwareBuffer = UnpooledByteBufAllocator.toLeakAwareBuffer(buffer);
 
-        CompositeByteBuf composite = compositeBuffer();
-        composite.addComponents(true, leakAwareBuffer);
-        byte[] result = new byte[5];
+            CompositeByteBuf composite = compositeBuffer();
+            composite.addComponents(true, leakAwareBuffer);
+            byte[] result = new byte[5];
 
-        composite.component(0).readBytes(result);
-        assertArrayEquals("world".getBytes(), result);
+            composite.component(0).readBytes(result);
+            assertArrayEquals("world".getBytes(), result);
+        } finally {
+            ResourceLeakDetector.setLevel(level);
+        }
     }
-
-
 }
