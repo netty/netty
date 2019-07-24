@@ -305,11 +305,14 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         }
         int srcIndex = buf.readerIndex(), len = buf.readableBytes();
         ByteBuf slice = null;
-        // unwrap if already sliced
+        SimpleLeakAwareByteBuf leakAwareBuf = null;
 
-        if (buf instanceof WrappedByteBuf) {
+        if (buf instanceof SimpleLeakAwareByteBuf) {
+            leakAwareBuf = (SimpleLeakAwareByteBuf) buf;
             buf = buf.unwrap();
         }
+
+        // unwrap if already sliced
         if (buf instanceof AbstractUnpooledSlicedByteBuf) {
             srcIndex += ((AbstractUnpooledSlicedByteBuf) buf).idx(0);
             slice = buf;
@@ -318,6 +321,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             srcIndex += ((PooledSlicedByteBuf) buf).adjustment;
             slice = buf;
             buf = buf.unwrap();
+        } else if (buf instanceof SimpleLeakAwareByteBuf) {
+            buf = leakAwareBuf;
         }
         return new Component(buf.order(ByteOrder.BIG_ENDIAN), srcIndex, offset, len, slice);
     }
