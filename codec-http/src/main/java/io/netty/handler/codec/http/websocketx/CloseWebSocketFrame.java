@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2019 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -33,7 +33,31 @@ public class CloseWebSocketFrame extends WebSocketFrame {
     }
 
     /**
-     * Creates a new empty close frame with closing getStatus code and reason text
+     * Creates a new empty close frame with closing status code and reason text
+     *
+     * @param status
+     *            Status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
+     *            example, <tt>1000</tt> indicates normal closure.
+     */
+    public CloseWebSocketFrame(WebSocketCloseStatus status) {
+        this(status.code(), status.reasonText());
+    }
+
+    /**
+     * Creates a new empty close frame with closing status code and reason text
+     *
+     * @param status
+     *            Status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
+     *            example, <tt>1000</tt> indicates normal closure.
+     * @param reasonText
+     *            Reason text. Set to null if no text.
+     */
+    public CloseWebSocketFrame(WebSocketCloseStatus status, String reasonText) {
+        this(status.code(), reasonText);
+    }
+
+    /**
+     * Creates a new empty close frame with closing status code and reason text
      *
      * @param statusCode
      *            Integer status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
@@ -46,7 +70,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
     }
 
     /**
-     * Creates a new close frame with no losing getStatus code and no reason text
+     * Creates a new close frame with no losing status code and no reason text
      *
      * @param finalFragment
      *            flag indicating if this frame is the final fragment
@@ -105,7 +129,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
 
     /**
      * Returns the closing status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. If
-     * a getStatus code is set, -1 is returned.
+     * a status code is set, -1 is returned.
      */
     public int statusCode() {
         ByteBuf binaryData = content();
@@ -114,10 +138,7 @@ public class CloseWebSocketFrame extends WebSocketFrame {
         }
 
         binaryData.readerIndex(0);
-        int statusCode = binaryData.readShort();
-        binaryData.readerIndex(0);
-
-        return statusCode;
+        return binaryData.getShort(0);
     }
 
     /**

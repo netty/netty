@@ -316,42 +316,79 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
 
     @Override
     public boolean isLoopbackModeDisabled() {
-        return false;
+        try {
+            return ((EpollDatagramChannel) channel).socket.isLoopbackModeDisabled();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public DatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
-        throw new UnsupportedOperationException("Multicast not supported");
+        try {
+            ((EpollDatagramChannel) channel).socket.setLoopbackModeDisabled(loopbackModeDisabled);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public int getTimeToLive() {
-        return -1;
+        try {
+            return ((EpollDatagramChannel) channel).socket.getTimeToLive();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public EpollDatagramChannelConfig setTimeToLive(int ttl) {
-        throw new UnsupportedOperationException("Multicast not supported");
+        try {
+            ((EpollDatagramChannel) channel).socket.setTimeToLive(ttl);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public InetAddress getInterface() {
-        return null;
+        try {
+            return ((EpollDatagramChannel) channel).socket.getInterface();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public EpollDatagramChannelConfig setInterface(InetAddress interfaceAddress) {
-        throw new UnsupportedOperationException("Multicast not supported");
+        try {
+            ((EpollDatagramChannel) channel).socket.setInterface(interfaceAddress);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public NetworkInterface getNetworkInterface() {
-        return null;
+        try {
+            return ((EpollDatagramChannel) channel).socket.getNetworkInterface();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public EpollDatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
-        throw new UnsupportedOperationException("Multicast not supported");
+        try {
+            EpollDatagramChannel datagramChannel = (EpollDatagramChannel) channel;
+            datagramChannel.socket.setNetworkInterface(networkInterface);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override

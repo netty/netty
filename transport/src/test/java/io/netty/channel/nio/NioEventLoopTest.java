@@ -17,15 +17,20 @@ package io.netty.channel.nio;
 
 import io.netty.channel.AbstractEventLoopTest;
 import io.netty.channel.Channel;
+import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.IntSupplier;
+import io.netty.util.concurrent.DefaultEventExecutorChooserFactory;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.RejectedExecutionHandlers;
+import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import org.hamcrest.core.IsInstanceOf;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -36,9 +41,12 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
+import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
@@ -281,4 +289,35 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             group.shutdownGracefully();
         }
     }
+
+    @Test
+    public void testCustomQueue()  {
+        final AtomicBoolean called = new AtomicBoolean();
+        NioEventLoopGroup group = new NioEventLoopGroup(1,
+                new ThreadPerTaskExecutor(new DefaultThreadFactory(NioEventLoopGroup.class)),
+                DefaultEventExecutorChooserFactory.INSTANCE, SelectorProvider.provider(),
+                DefaultSelectStrategyFactory.INSTANCE, RejectedExecutionHandlers.reject(),
+                new EventLoopTaskQueueFactory() {
+                    @Override
+                    public Queue<Runnable> newTaskQueue(int maxCapacity) {
+                        called.set(true);
+                        return new LinkedBlockingQueue<Runnable>(maxCapacity);
+                    }
+        });
+
+        final NioEventLoop loop = (NioEventLoop) group.next();
+
+        try {
+            loop.submit(new Runnable() {
+                @Override
+                public void run() {
+                    // NOOP.
+                }
+            }).syncUninterruptibly();
+            assertTrue(called.get());
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
 }

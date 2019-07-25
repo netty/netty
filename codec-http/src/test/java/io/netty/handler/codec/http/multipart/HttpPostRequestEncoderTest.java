@@ -18,10 +18,12 @@ package io.netty.handler.codec.http.multipart;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder.EncoderMode;
@@ -32,7 +34,6 @@ import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
 
@@ -139,9 +140,11 @@ public class HttpPostRequestEncoderTest {
         HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(request, true);
         File file1 = new File(getClass().getResource("/file-01.txt").toURI());
         File file2 = new File(getClass().getResource("/file-02.txt").toURI());
+        File file3 = new File(getClass().getResource("/file-03.txt").toURI());
         encoder.addBodyAttribute("foo", "bar");
         encoder.addBodyFileUpload("quux", file1, "text/plain", false);
         encoder.addBodyFileUpload("quux", file2, "text/plain", false);
+        encoder.addBodyFileUpload("quux", file3, "text/plain", false);
 
         // We have to query the value of these two fields before finalizing
         // the request, which unsets one of them.
@@ -160,7 +163,7 @@ public class HttpPostRequestEncoderTest {
                 CONTENT_TYPE + ": multipart/mixed; boundary=" + multipartMixedBoundary + "\r\n" +
                 "\r\n" +
                 "--" + multipartMixedBoundary + "\r\n" +
-                CONTENT_DISPOSITION + ": attachment; filename=\"file-02.txt\"" + "\r\n" +
+                CONTENT_DISPOSITION + ": attachment; filename=\"file-01.txt\"" + "\r\n" +
                 CONTENT_LENGTH + ": " + file1.length() + "\r\n" +
                 CONTENT_TYPE + ": text/plain" + "\r\n" +
                 CONTENT_TRANSFER_ENCODING + ": binary" + "\r\n" +
@@ -174,6 +177,14 @@ public class HttpPostRequestEncoderTest {
                 CONTENT_TRANSFER_ENCODING + ": binary" + "\r\n" +
                 "\r\n" +
                 "File 02" + StringUtil.NEWLINE +
+                "\r\n" +
+                "--" + multipartMixedBoundary + "\r\n" +
+                CONTENT_DISPOSITION + ": attachment; filename=\"file-03.txt\"" + "\r\n" +
+                CONTENT_LENGTH + ": " + file3.length() + "\r\n" +
+                CONTENT_TYPE + ": text/plain" + "\r\n" +
+                CONTENT_TRANSFER_ENCODING + ": binary" + "\r\n" +
+                "\r\n" +
+                "File 03" + StringUtil.NEWLINE +
                 "\r\n" +
                 "--" + multipartMixedBoundary + "--" + "\r\n" +
                 "--" + multipartDataBoundary + "--" + "\r\n";
@@ -433,5 +444,28 @@ public class HttpPostRequestEncoderTest {
         assertTrue("Chunk size is not in expected range (" + expectedSizeMin + " - " + expectedSizeMax + "), was: "
                 + readable, expectedSize);
         httpContent.release();
+    }
+
+    @Test
+    public void testEncodeChunkedContent() throws Exception {
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(req, false);
+
+        int length = 8077 + 8096;
+        char[] array = new char[length];
+        Arrays.fill(array, 'a');
+        String longText = new String(array);
+
+        encoder.addBodyAttribute("data", longText);
+        encoder.addBodyAttribute("moreData", "abcd");
+
+        assertNotNull(encoder.finalizeRequest());
+
+        while (!encoder.isEndOfInput()) {
+            encoder.readChunk((ByteBufAllocator) null).release();
+        }
+
+        assertTrue(encoder.isEndOfInput());
+        encoder.cleanFiles();
     }
 }

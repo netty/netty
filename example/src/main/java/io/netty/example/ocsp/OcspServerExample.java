@@ -54,7 +54,7 @@ import io.netty.util.CharsetUtil;
 
 /**
  * ATTENTION: This is an incomplete example! In order to provide a fully functional
- * end-to-end example we'd need a X.509 certificate and the matching PrivateKey.
+ * end-to-end example we'd need an X.509 certificate and the matching PrivateKey.
  */
 @SuppressWarnings("unused")
 public class OcspServerExample {

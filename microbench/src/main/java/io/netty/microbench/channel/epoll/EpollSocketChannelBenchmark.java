@@ -30,10 +30,15 @@ import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.GroupThreads;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.TearDown;
 
 public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
+    private static final Runnable runnable = new Runnable() {
+        @Override
+        public void run() { }
+    };
 
     private EpollEventLoopGroup group;
     private Channel serverChan;
@@ -135,5 +140,16 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     public Object pingPong() throws Exception {
         return chan.pipeline().writeAndFlush(abyte.retainedSlice()).sync();
+    }
+
+    @Benchmark
+    public Object executeSingle() throws Exception {
+        return chan.eventLoop().submit(runnable).get();
+    }
+
+    @Benchmark
+    @GroupThreads(3)
+    public Object executeMulti() throws Exception {
+        return chan.eventLoop().submit(runnable).get();
     }
 }

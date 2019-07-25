@@ -31,6 +31,7 @@ public abstract class EmbeddedChannelWriteReleaseHandlerContext extends Embedded
         super(alloc, handler, channel);
     }
 
+    @Override
     protected abstract void handleException(Throwable t);
 
     @Override

@@ -272,7 +272,7 @@ public class HttpContentCompressorTest {
         assertEncodedResponse(ch);
 
         ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
-        HttpContent chunk = (HttpContent) ch.readOutbound();
+        HttpContent chunk = ch.readOutbound();
         assertThat(ByteBufUtil.hexDump(chunk.content()), is("1f8b080000000000000003000000000000000000"));
         assertThat(chunk, is(instanceOf(HttpContent.class)));
         chunk.release();
@@ -423,7 +423,7 @@ public class HttpContentCompressorTest {
         res.headers().set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.IDENTITY);
         assertTrue(ch.writeOutbound(res));
 
-        FullHttpResponse response = (FullHttpResponse) ch.readOutbound();
+        FullHttpResponse response = ch.readOutbound();
         assertEquals(String.valueOf(len), response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
         assertEquals(HttpHeaderValues.IDENTITY.toString(), response.headers().get(HttpHeaderNames.CONTENT_ENCODING));
         assertEquals("Hello, World", response.content().toString(CharsetUtil.US_ASCII));
@@ -445,7 +445,7 @@ public class HttpContentCompressorTest {
         res.headers().set(HttpHeaderNames.CONTENT_ENCODING, "ascii");
         assertTrue(ch.writeOutbound(res));
 
-        FullHttpResponse response = (FullHttpResponse) ch.readOutbound();
+        FullHttpResponse response = ch.readOutbound();
         assertEquals(String.valueOf(len), response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
         assertEquals("ascii", response.headers().get(HttpHeaderNames.CONTENT_ENCODING));
         assertEquals("Hello, World", response.content().toString(CharsetUtil.US_ASCII));

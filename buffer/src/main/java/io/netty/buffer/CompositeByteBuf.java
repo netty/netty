@@ -1606,8 +1606,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         case 0:
             return EMPTY_NIO_BUFFER;
         case 1:
-            Component c = components[0];
-            return c.buf.internalNioBuffer(c.idx(index), length);
+            return components[0].internalNioBuffer(index, length);
         default:
             throw new UnsupportedOperationException();
         }
@@ -1631,7 +1630,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         ByteBuffer[] buffers = nioBuffers(index, length);
 
         if (buffers.length == 1) {
-            return buffers[0].duplicate();
+            return buffers[0];
         }
 
         ByteBuffer merged = ByteBuffer.allocate(length).order(order());
@@ -1887,6 +1886,16 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
         ByteBuf duplicate() {
             return buf.duplicate().setIndex(idx(offset), idx(endOffset));
+        }
+
+        ByteBuffer internalNioBuffer(int index, int length) {
+            // We must not return the unwrapped buffer's internal buffer
+            // if it was originally added as a slice - this check of the
+            // slice field is threadsafe since we only care whether it
+            // was set upon Component construction, and we aren't
+            // attempting to access the referenced slice itself
+            return slice != null ? buf.nioBuffer(idx(index), length)
+                    : buf.internalNioBuffer(idx(index), length);
         }
 
         void free() {

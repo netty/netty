@@ -223,7 +223,7 @@ public abstract class ZlibTest {
     // Test for https://github.com/netty/netty/issues/2572
     private void testDecompressOnly(ZlibWrapper decoderWrapper, byte[] compressed, byte[] data) throws Exception {
         EmbeddedChannel chDecoder = new EmbeddedChannel(createDecoder(decoderWrapper));
-        chDecoder.writeInbound(Unpooled.wrappedBuffer(compressed));
+        chDecoder.writeInbound(Unpooled.copiedBuffer(compressed));
         assertTrue(chDecoder.finish());
 
         ByteBuf decoded = Unpooled.buffer(data.length);
@@ -236,7 +236,7 @@ public abstract class ZlibTest {
             decoded.writeBytes(buf);
             buf.release();
         }
-        assertEquals(Unpooled.wrappedBuffer(data), decoded);
+        assertEquals(Unpooled.copiedBuffer(data), decoded);
         decoded.release();
     }
 

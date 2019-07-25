@@ -23,7 +23,10 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * A builder for {@link Http2MultiplexCodec}.
+ *
+ * @deprecated use {@link Http2FrameCodecBuilder} together with {@link Http2MultiplexHandler}.
  */
+@Deprecated
 @UnstableApi
 public class Http2MultiplexCodecBuilder
         extends AbstractHttp2ConnectionHandlerBuilder<Http2MultiplexCodec, Http2MultiplexCodecBuilder> {
@@ -163,6 +166,7 @@ public class Http2MultiplexCodecBuilder
     }
 
     @Override
+    @Deprecated
     public Http2MultiplexCodecBuilder initialHuffmanDecodeCapacity(int initialHuffmanDecodeCapacity) {
         return super.initialHuffmanDecodeCapacity(initialHuffmanDecodeCapacity);
     }
@@ -170,6 +174,11 @@ public class Http2MultiplexCodecBuilder
     @Override
     public Http2MultiplexCodecBuilder autoAckSettingsFrame(boolean autoAckSettings) {
         return super.autoAckSettingsFrame(autoAckSettings);
+    }
+
+    @Override
+    public Http2MultiplexCodecBuilder autoAckPingFrame(boolean autoAckPingFrame) {
+        return super.autoAckPingFrame(autoAckPingFrame);
     }
 
     @Override
@@ -198,7 +207,7 @@ public class Http2MultiplexCodecBuilder
                 encoder = new StreamBufferingEncoder(encoder);
             }
             Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader,
-                    promisedRequestVerifier(), isAutoAckSettingsFrame());
+                    promisedRequestVerifier(), isAutoAckSettingsFrame(), isAutoAckPingFrame());
 
             return build(decoder, encoder, initialSettings());
         }

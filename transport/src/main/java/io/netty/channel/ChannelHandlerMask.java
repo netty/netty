@@ -18,11 +18,14 @@ package io.netty.channel;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Method;
 import java.net.SocketAddress;
 import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
@@ -30,6 +33,7 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 final class ChannelHandlerMask {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelHandlerMask.class);
 
     // Using to mask which methods must be called for a ChannelHandler.
     static final int MASK_EXCEPTION_CAUGHT = 1;
@@ -163,7 +167,15 @@ final class ChannelHandlerMask {
         return AccessController.doPrivileged(new PrivilegedExceptionAction<Boolean>() {
             @Override
             public Boolean run() throws Exception {
-                return handlerType.getMethod(methodName, paramTypes).isAnnotationPresent(Skip.class);
+                Method m;
+                try {
+                    m = handlerType.getMethod(methodName, paramTypes);
+                } catch (NoSuchMethodException e) {
+                    logger.debug(
+                        "Class {} missing method {}, assume we can not skip execution", handlerType, methodName, e);
+                    return false;
+                }
+                return m != null && m.isAnnotationPresent(Skip.class);
             }
         });
     }

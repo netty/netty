@@ -17,7 +17,6 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -26,20 +25,15 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.oio.OioDatagramChannel;
 import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.util.NetUtil;
 import io.netty.util.internal.SocketUtils;
 import org.junit.Assume;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.net.Inet4Address;
-import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
 import java.util.List;
@@ -73,12 +67,15 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
         sb.option(ChannelOption.IP_MULTICAST_IF, iface);
         sb.option(ChannelOption.SO_REUSEADDR, true);
+
         cb.option(ChannelOption.IP_MULTICAST_IF, iface);
         cb.option(ChannelOption.SO_REUSEADDR, true);
 
-        Channel sc = sb.bind(newSocketAddress(iface)).sync().channel();
+        DatagramChannel sc = (DatagramChannel) sb.bind(newSocketAddress(iface)).sync().channel();
+        assertEquals(iface, sc.config().getNetworkInterface());
+        assertInterfaceAddress(iface, sc.config().getInterface());
 
-        InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
+        InetSocketAddress addr = sc.localAddress();
         cb.localAddress(addr.getPort());
 
         if (sc instanceof OioDatagramChannel) {
@@ -89,6 +86,8 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
             return;
         }
         DatagramChannel cc = (DatagramChannel) cb.bind().sync().channel();
+        assertEquals(iface, cc.config().getNetworkInterface());
+        assertInterfaceAddress(iface, cc.config().getInterface());
 
         InetSocketAddress groupAddress = SocketUtils.socketAddress(groupAddress(), addr.getPort());
 
@@ -107,8 +106,30 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         sc.writeAndFlush(new DatagramPacket(Unpooled.copyInt(1), groupAddress)).sync();
         mhandler.await();
 
+        cc.config().setLoopbackModeDisabled(false);
+        sc.config().setLoopbackModeDisabled(false);
+
+        assertFalse(cc.config().isLoopbackModeDisabled());
+        assertFalse(sc.config().isLoopbackModeDisabled());
+
+        cc.config().setLoopbackModeDisabled(true);
+        sc.config().setLoopbackModeDisabled(true);
+
+        assertTrue(cc.config().isLoopbackModeDisabled());
+        assertTrue(sc.config().isLoopbackModeDisabled());
+
         sc.close().awaitUninterruptibly();
         cc.close().awaitUninterruptibly();
+    }
+
+    private static void assertInterfaceAddress(NetworkInterface networkInterface, InetAddress expected) {
+        Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
+        while (addresses.hasMoreElements()) {
+            if (expected.equals(addresses.nextElement())) {
+                return;
+            }
+        }
+        fail();
     }
 
     private static final class MulticastTestHandler extends SimpleChannelInboundHandler<DatagramPacket> {

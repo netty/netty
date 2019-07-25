@@ -54,6 +54,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 final class HpackEncoder {
+    static final int HUFF_CODE_THRESHOLD = 512;
     // a linked hash map of header fields
     private final HeaderEntry[] headerFields;
     private final HeaderEntry head = new HeaderEntry(-1, AsciiString.EMPTY_STRING,
@@ -61,6 +62,7 @@ final class HpackEncoder {
     private final HpackHuffmanEncoder hpackHuffmanEncoder = new HpackHuffmanEncoder();
     private final byte hashMask;
     private final boolean ignoreMaxHeaderListSize;
+    private final int huffCodeThreshold;
     private long size;
     private long maxHeaderTableSize;
     private long maxHeaderListSize;
@@ -76,13 +78,13 @@ final class HpackEncoder {
      * Creates a new encoder.
      */
     HpackEncoder(boolean ignoreMaxHeaderListSize) {
-        this(ignoreMaxHeaderListSize, 16);
+        this(ignoreMaxHeaderListSize, 16, HUFF_CODE_THRESHOLD);
     }
 
     /**
      * Creates a new encoder.
      */
-    HpackEncoder(boolean ignoreMaxHeaderListSize, int arraySizeHint) {
+    HpackEncoder(boolean ignoreMaxHeaderListSize, int arraySizeHint, int huffCodeThreshold) {
         this.ignoreMaxHeaderListSize = ignoreMaxHeaderListSize;
         maxHeaderTableSize = DEFAULT_HEADER_TABLE_SIZE;
         maxHeaderListSize = MAX_HEADER_LIST_SIZE;
@@ -91,6 +93,7 @@ final class HpackEncoder {
         headerFields = new HeaderEntry[findNextPositivePowerOfTwo(max(2, min(arraySizeHint, 128)))];
         hashMask = (byte) (headerFields.length - 1);
         head.before = head.after = head;
+        this.huffCodeThreshold = huffCodeThreshold;
     }
 
     /**
@@ -250,8 +253,9 @@ final class HpackEncoder {
      * Encode string literal according to Section 5.2.
      */
     private void encodeStringLiteral(ByteBuf out, CharSequence string) {
-        int huffmanLength = hpackHuffmanEncoder.getEncodedLength(string);
-        if (huffmanLength < string.length()) {
+        int huffmanLength;
+        if (string.length() >= huffCodeThreshold
+                && (huffmanLength = hpackHuffmanEncoder.getEncodedLength(string)) < string.length()) {
             encodeInteger(out, 0x80, 7, huffmanLength);
             hpackHuffmanEncoder.encode(out, string);
         } else {

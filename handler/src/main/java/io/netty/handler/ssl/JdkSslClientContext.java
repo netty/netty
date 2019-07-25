@@ -16,6 +16,7 @@
 
 package io.netty.handler.ssl;
 
+import java.security.KeyStore;
 import java.security.Provider;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -169,12 +170,12 @@ public final class JdkSslClientContext extends JdkSslContext {
     }
 
     JdkSslClientContext(Provider provider,
-        File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
-        Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
-        long sessionCacheSize, long sessionTimeout) throws SSLException {
+                        File trustCertCollectionFile, TrustManagerFactory trustManagerFactory,
+                        Iterable<String> ciphers, CipherSuiteFilter cipherFilter, JdkApplicationProtocolNegotiator apn,
+                        long sessionCacheSize, long sessionTimeout) throws SSLException {
         super(newSSLContext(provider, toX509CertificatesInternal(trustCertCollectionFile),
                 trustManagerFactory, null, null,
-                null, null, sessionCacheSize, sessionTimeout), true,
+                null, null, sessionCacheSize, sessionTimeout, KeyStore.getDefaultType()), true,
                 ciphers, cipherFilter, apn, ClientAuth.NONE, null, false);
     }
 
@@ -257,7 +258,7 @@ public final class JdkSslClientContext extends JdkSslContext {
         super(newSSLContext(null, toX509CertificatesInternal(
                 trustCertCollectionFile), trustManagerFactory,
                 toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
-                keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout), true,
+                keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout, KeyStore.getDefaultType()), true,
                 ciphers, cipherFilter, apn, ClientAuth.NONE, null, false);
     }
 
@@ -265,10 +266,12 @@ public final class JdkSslClientContext extends JdkSslContext {
                         X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
                         X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
                         KeyManagerFactory keyManagerFactory, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-                        ApplicationProtocolConfig apn, String[] protocols, long sessionCacheSize, long sessionTimeout)
+                        ApplicationProtocolConfig apn, String[] protocols, long sessionCacheSize, long sessionTimeout,
+                        String keyStoreType)
             throws SSLException {
         super(newSSLContext(sslContextProvider, trustCertCollection, trustManagerFactory,
-                            keyCertChain, key, keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout),
+                            keyCertChain, key, keyPassword, keyManagerFactory, sessionCacheSize,
+                            sessionTimeout, keyStoreType),
                 true, ciphers, cipherFilter, toNegotiator(apn, false), ClientAuth.NONE, protocols, false);
     }
 
@@ -276,13 +279,14 @@ public final class JdkSslClientContext extends JdkSslContext {
                                             X509Certificate[] trustCertCollection,
                                             TrustManagerFactory trustManagerFactory, X509Certificate[] keyCertChain,
                                             PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
-                                            long sessionCacheSize, long sessionTimeout) throws SSLException {
+                                            long sessionCacheSize, long sessionTimeout,
+                                            String keyStore) throws SSLException {
         try {
             if (trustCertCollection != null) {
-                trustManagerFactory = buildTrustManagerFactory(trustCertCollection, trustManagerFactory);
+                trustManagerFactory = buildTrustManagerFactory(trustCertCollection, trustManagerFactory, keyStore);
             }
             if (keyCertChain != null) {
-                keyManagerFactory = buildKeyManagerFactory(keyCertChain, key, keyPassword, keyManagerFactory);
+                keyManagerFactory = buildKeyManagerFactory(keyCertChain, key, keyPassword, keyManagerFactory, null);
             }
             SSLContext ctx = sslContextProvider == null ? SSLContext.getInstance(PROTOCOL)
                 : SSLContext.getInstance(PROTOCOL, sslContextProvider);

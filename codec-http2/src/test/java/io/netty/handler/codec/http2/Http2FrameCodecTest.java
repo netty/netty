@@ -330,8 +330,8 @@ public class Http2FrameCodecTest {
         channel.writeOutbound(goAwayFrame);
         verify(frameWriter).writeGoAway(eqFrameCodecCtx(), eq(7),
                 eq(NO_ERROR.code()), eq(expected), anyChannelPromise());
-        assertEquals(State.CLOSED, stream.state());
-        assertFalse(channel.isActive());
+        assertEquals(State.OPEN, stream.state());
+        assertTrue(channel.isActive());
         expected.release();
         debugData.release();
     }
@@ -395,8 +395,8 @@ public class Http2FrameCodecTest {
         verify(frameWriter).writeGoAway(eqFrameCodecCtx(), eq(Integer.MAX_VALUE),
                 eq(NO_ERROR.code()), eq(debugData), anyChannelPromise());
         debugData.release();
-        assertEquals(State.CLOSED, stream.state());
-        assertFalse(channel.isActive());
+        assertEquals(State.OPEN, stream.state());
+        assertTrue(channel.isActive());
     }
 
     @Test
@@ -757,6 +757,30 @@ public class Http2FrameCodecTest {
         expectedStreams.add(activeInbond);
         expectedStreams.add(activeOutbound);
         assertEquals(expectedStreams, activeStreams);
+    }
+
+    @Test
+    public void autoAckPingTrue() throws Exception {
+        setUp(Http2FrameCodecBuilder.forServer().autoAckPingFrame(true), new Http2Settings());
+        frameInboundWriter.writeInboundPing(false, 8);
+        Http2PingFrame frame = inboundHandler.readInbound();
+        assertFalse(frame.ack());
+        assertEquals(8, frame.content());
+        verify(frameWriter).writePing(eqFrameCodecCtx(), eq(true), eq(8L), anyChannelPromise());
+    }
+
+    @Test
+    public void autoAckPingFalse() throws Exception {
+        setUp(Http2FrameCodecBuilder.forServer().autoAckPingFrame(false), new Http2Settings());
+        frameInboundWriter.writeInboundPing(false, 8);
+        verify(frameWriter, never()).writePing(eqFrameCodecCtx(), eq(true), eq(8L), anyChannelPromise());
+        Http2PingFrame frame = inboundHandler.readInbound();
+        assertFalse(frame.ack());
+        assertEquals(8, frame.content());
+
+        // Now ack the frame manually.
+        channel.writeAndFlush(new DefaultHttp2PingFrame(8, true));
+        verify(frameWriter).writePing(eqFrameCodecCtx(), eq(true), eq(8L), anyChannelPromise());
     }
 
     @Test

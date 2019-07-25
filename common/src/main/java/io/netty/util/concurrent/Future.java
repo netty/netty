@@ -155,14 +155,14 @@ public interface Future<V> extends java.util.concurrent.Future<V> {
      * Return the result without blocking. If the future is not done yet this will return {@code null}.
      *
      * As it is possible that a {@code null} value is used to mark the future as successful you also need to check
-     * if the future is really done with {@link #isDone()} and not relay on the returned {@code null} value.
+     * if the future is really done with {@link #isDone()} and not rely on the returned {@code null} value.
      */
     V getNow();
 
     /**
      * {@inheritDoc}
      *
-     * If the cancellation was successful it will fail the future with an {@link CancellationException}.
+     * If the cancellation was successful it will fail the future with a {@link CancellationException}.
      */
     @Override
     boolean cancel(boolean mayInterruptIfRunning);

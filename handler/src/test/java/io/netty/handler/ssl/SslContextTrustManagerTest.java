@@ -110,7 +110,7 @@ public class SslContextTrustManagerTest {
             throws Exception {
         X509Certificate[] certCollection = loadCertCollection(resourceNames);
         TrustManagerFactory tmf = SslContext.buildTrustManagerFactory(
-                certCollection, null);
+                certCollection, null, null);
 
         for (TrustManager tm : tmf.getTrustManagers()) {
             if (tm instanceof X509TrustManager) {

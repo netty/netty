@@ -16,37 +16,24 @@
 package io.netty.channel.kqueue;
 
 import io.netty.channel.DefaultFileRegion;
-import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.Socket;
-import io.netty.util.internal.ThrowableUtil;
 
 import java.io.IOException;
-import java.nio.channels.ClosedChannelException;
 
 import static io.netty.channel.kqueue.AcceptFilter.PLATFORM_UNSUPPORTED;
-import static io.netty.channel.unix.Errors.ERRNO_EPIPE_NEGATIVE;
 import static io.netty.channel.unix.Errors.ioResult;
-import static io.netty.channel.unix.Errors.newConnectionResetException;
 
 /**
  * A socket which provides access BSD native methods.
  */
 final class BsdSocket extends Socket {
-    private static final Errors.NativeIoException SENDFILE_CONNECTION_RESET_EXCEPTION;
-    private static final ClosedChannelException SENDFILE_CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), Native.class, "sendfile(..)");
 
     // These limits are just based on observations. I couldn't find anything in header files which formally
     // define these limits.
     private static final int APPLE_SND_LOW_AT_MAX = 1 << 17;
     private static final int FREEBSD_SND_LOW_AT_MAX = 1 << 15;
     static final int BSD_SND_LOW_AT_MAX = Math.min(APPLE_SND_LOW_AT_MAX, FREEBSD_SND_LOW_AT_MAX);
-
-    static {
-        SENDFILE_CONNECTION_RESET_EXCEPTION = newConnectionResetException("syscall:sendfile",
-                ERRNO_EPIPE_NEGATIVE);
-    }
 
     BsdSocket(int fd) {
         super(fd);
@@ -90,7 +77,7 @@ final class BsdSocket extends Socket {
         if (res >= 0) {
             return res;
         }
-        return ioResult("sendfile", (int) res, SENDFILE_CONNECTION_RESET_EXCEPTION, SENDFILE_CLOSED_CHANNEL_EXCEPTION);
+        return ioResult("sendfile", (int) res);
     }
 
     public static BsdSocket newSocketStream() {

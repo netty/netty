@@ -91,6 +91,7 @@ final class OpenSslPrivateKey extends AbstractReferenceCounted implements Privat
      *
      * @see Destroyable#destroy()
      */
+    @Override
     public void destroy() {
         release(refCnt());
     }
@@ -102,6 +103,7 @@ final class OpenSslPrivateKey extends AbstractReferenceCounted implements Privat
      *
      * @see Destroyable#isDestroyed()
      */
+    @Override
     public boolean isDestroyed() {
         return refCnt() == 0;
     }

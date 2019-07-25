@@ -387,6 +387,7 @@ public abstract class Recycler<T> {
                     return false;
                 }
                 this.head.link = head = head.next;
+                this.head.reclaimSpace(LINK_CAPACITY);
             }
 
             final int srcStart = head.readIndex;

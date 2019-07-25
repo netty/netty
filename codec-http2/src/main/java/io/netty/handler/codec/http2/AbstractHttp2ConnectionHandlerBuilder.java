@@ -21,7 +21,6 @@ import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_INITIAL_HUFFMAN_DECODE_CAPACITY;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_RESERVED_STREAMS;
 import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -64,7 +63,6 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  *   <li>{@link #headerSensitivityDetector(SensitivityDetector)}</li>
  *   <li>{@link #encoderEnforceMaxConcurrentStreams(boolean)}</li>
  *   <li>{@link #encoderIgnoreMaxHeaderListSize(boolean)}</li>
- *   <li>{@link #initialHuffmanDecodeCapacity(int)}</li>
  * </ul>
  *
  * <h3>Exposing necessary methods in a subclass</h3>
@@ -106,9 +104,9 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private SensitivityDetector headerSensitivityDetector;
     private Boolean encoderEnforceMaxConcurrentStreams;
     private Boolean encoderIgnoreMaxHeaderListSize;
-    private int initialHuffmanDecodeCapacity = DEFAULT_INITIAL_HUFFMAN_DECODE_CAPACITY;
     private Http2PromisedRequestVerifier promisedRequestVerifier = ALWAYS_VERIFY;
     private boolean autoAckSettingsFrame = true;
+    private boolean autoAckPingFrame = true;
 
     /**
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
@@ -357,13 +355,12 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
-     * Sets the initial size of an intermediate buffer used during HPACK huffman decoding.
-     * @param initialHuffmanDecodeCapacity initial size of an intermediate buffer used during HPACK huffman decoding.
-     * @return this.
+     * Does nothing, do not call.
+     *
+     * @deprecated Huffman decoding no longer depends on having a decode capacity.
      */
+    @Deprecated
     protected B initialHuffmanDecodeCapacity(int initialHuffmanDecodeCapacity) {
-        enforceNonCodecConstraints("initialHuffmanDecodeCapacity");
-        this.initialHuffmanDecodeCapacity = checkPositive(initialHuffmanDecodeCapacity, "initialHuffmanDecodeCapacity");
         return self();
     }
 
@@ -401,6 +398,24 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected boolean isAutoAckSettingsFrame() {
         return autoAckSettingsFrame;
+    }
+
+    /**
+     * Determine if PING frame should automatically be acknowledged or not.
+     * @return this.
+     */
+    protected B autoAckPingFrame(boolean autoAckPingFrame) {
+        enforceNonCodecConstraints("autoAckPingFrame");
+        this.autoAckPingFrame = autoAckPingFrame;
+        return self();
+    }
+
+    /**
+     * Determine if the PING frames should be automatically acknowledged or not.
+     * @return {@code true} if the PING frames should be automatically acknowledged.
+     */
+    protected boolean isAutoAckPingFrame() {
+        return autoAckPingFrame;
     }
 
     /**
@@ -442,7 +457,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         Long maxHeaderListSize = initialSettings.maxHeaderListSize();
         Http2FrameReader reader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(isValidateHeaders(),
                 maxHeaderListSize == null ? DEFAULT_HEADER_LIST_SIZE : maxHeaderListSize,
-                initialHuffmanDecodeCapacity));
+                /* initialHuffmanDecodeCapacity= */ -1));
         Http2FrameWriter writer = encoderIgnoreMaxHeaderListSize == null ?
                 new DefaultHttp2FrameWriter(headerSensitivityDetector()) :
                 new DefaultHttp2FrameWriter(headerSensitivityDetector(), encoderIgnoreMaxHeaderListSize);
@@ -467,7 +482,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         }
 
         DefaultHttp2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
-                promisedRequestVerifier(), isAutoAckSettingsFrame());
+                promisedRequestVerifier(), isAutoAckSettingsFrame(), isAutoAckPingFrame());
         return buildFromCodec(decoder, encoder);
     }
 

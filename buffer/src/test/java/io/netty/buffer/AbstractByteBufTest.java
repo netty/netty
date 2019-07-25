@@ -4878,4 +4878,16 @@ public abstract class AbstractByteBufTest {
             buffer.release();
         }
     }
+
+    @Test
+    public void testMaxFastWritableBytes() {
+        ByteBuf buffer = newBuffer(150, 500).writerIndex(100);
+        assertEquals(50, buffer.writableBytes());
+        assertEquals(150, buffer.capacity());
+        assertEquals(500, buffer.maxCapacity());
+        assertEquals(400, buffer.maxWritableBytes());
+        // Default implementation has fast writable == writable
+        assertEquals(50, buffer.maxFastWritableBytes());
+        buffer.release();
+    }
 }

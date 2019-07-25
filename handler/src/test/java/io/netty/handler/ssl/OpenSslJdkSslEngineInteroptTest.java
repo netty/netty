@@ -21,7 +21,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
+
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -117,6 +117,13 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
     public void testHandshakeSession() throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testHandshakeSession();
+    }
+
+    @Override
+    @Test
+    public void testSupportedSignatureAlgorithms() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testSupportedSignatureAlgorithms();
     }
 
     @Override
