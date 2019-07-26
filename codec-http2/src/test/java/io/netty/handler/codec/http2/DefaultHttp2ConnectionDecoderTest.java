@@ -24,6 +24,7 @@ import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
 import junit.framework.AssertionFailedError;
+import org.hamcrest.CoreMatchers;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -47,6 +48,7 @@ import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.handler.codec.http2.Http2TestUtil.newHttp2HeadersWithRequestPseudoHeaders;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
@@ -277,13 +279,16 @@ public class DefaultHttp2ConnectionDecoderTest {
         }
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void dataReadForUnknownStreamThatNeverExistedShouldThrow() throws Exception {
         when(connection.streamMayHaveExisted(STREAM_ID)).thenReturn(false);
         when(connection.stream(STREAM_ID)).thenReturn(null);
         final ByteBuf data = dummyData();
         try {
             decode().onDataRead(ctx, STREAM_ID, data, 0, true);
+            fail();
+        } catch (Http2Exception expected) {
+            assertThat(expected, CoreMatchers.not(CoreMatchers.instanceOf(Http2Exception.StreamException.class)));
         } finally {
             data.release();
         }
