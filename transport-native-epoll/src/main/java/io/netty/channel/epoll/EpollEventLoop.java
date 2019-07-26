@@ -60,7 +60,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
     private final FileDescriptor eventFd;
     private final FileDescriptor timerFd;
     private final IntObjectMap<AbstractEpollChannel> channels = new IntObjectHashMap<AbstractEpollChannel>(4096);
-    private final BitSet pendingFlagChannels = new BitSet(); //TODO maybe just regular set of AbstractEpollChannels?
+    private final BitSet pendingFlagChannels = new BitSet();
 
     private final boolean allowGrowing;
     private final EpollEventArray events;
@@ -245,10 +245,14 @@ class EpollEventLoop extends SingleThreadEventLoop {
 
             // If we found another Channel in the map that is mapped to the same FD the given Channel MUST be closed.
             assert !ch.isOpen();
-        } else if (ch.isOpen()) {
-            // Remove the epoll. This is only needed if it's still open as otherwise it will be automatically
-            // removed once the file-descriptor is closed.
-            Native.epollCtlDel(epollFd.intValue(), fd);
+        } else {
+            ch.activeFlags = 0;
+            pendingFlagChannels.clear(fd);
+            if (ch.isOpen()) {
+                // Remove the epoll. This is only needed if it's still open as otherwise it will be automatically
+                // removed once the file-descriptor is closed.
+                Native.epollCtlDel(epollFd.intValue(), fd);
+            }
         }
     }
 

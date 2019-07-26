@@ -248,6 +248,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 ((SocketChannelConfig) config).isAllowHalfClosure();
     }
 
+    private Runnable clearEpollInTask;
+
     final void clearEpollIn() {
         // Only clear if registered with an EventLoop as otherwise
         final EventLoop loop = isRegistered() ? eventLoop() : null;
@@ -257,15 +259,19 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             return;
         }
         // schedule a task to clear the EPOLLIN as it is not safe to modify it directly
-        loop.execute(new Runnable() {
-            @Override
-            public void run() {
-                if (!unsafe.readPending && !config().isAutoRead()) {
-                    // Still no read triggered so clear it now
-                    unsafe.clearEpollIn0();
+        Runnable clearFlagTask = clearEpollInTask;
+        if (clearFlagTask == null) {
+            clearEpollInTask = clearFlagTask = new Runnable() {
+                @Override
+                public void run() {
+                    if (!unsafe.readPending && !config().isAutoRead()) {
+                        // Still no read triggered so clear it now
+                        unsafe.clearEpollIn0();
+                    }
                 }
-            }
-        });
+            };
+        }
+        loop.execute(clearFlagTask);
     }
 
     void modifyEvents() throws IOException {
