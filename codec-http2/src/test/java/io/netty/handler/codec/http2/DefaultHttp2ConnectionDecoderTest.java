@@ -301,10 +301,19 @@ public class DefaultHttp2ConnectionDecoderTest {
         int padding = 10;
         int processedBytes = data.readableBytes() + padding;
         try {
+            // Verify that we will notify once about the closed stream.
+            try {
+                decode().onDataRead(ctx, STREAM_ID, data, padding, true);
+                fail();
+            } catch (Http2Exception.StreamException e) {
+                assertEquals(STREAM_ID, e.streamId());
+                assertEquals(Http2Error.STREAM_CLOSED, e.error());
+            }
+
             decode().onDataRead(ctx, STREAM_ID, data, padding, true);
-            verify(localFlow)
+            verify(localFlow, times(2))
                 .receiveFlowControlledFrame(eq((Http2Stream) null), eq(data), eq(padding), eq(true));
-            verify(localFlow).consumeBytes(eq((Http2Stream) null), eq(processedBytes));
+            verify(localFlow, times(2)).consumeBytes(eq((Http2Stream) null), eq(processedBytes));
             verify(localFlow).frameWriter(any(Http2FrameWriter.class));
             verifyNoMoreInteractions(localFlow);
 
@@ -451,6 +460,15 @@ public class DefaultHttp2ConnectionDecoderTest {
     @Test
     public void headersReadForUnknownStreamThatMayHaveExistedShouldBeIgnored() throws Exception {
         when(connection.stream(STREAM_ID)).thenReturn(null);
+        // Verify that we will notify once about the closed stream.
+        try {
+            decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
+            fail();
+        } catch (Http2Exception.StreamException e) {
+            assertEquals(STREAM_ID, e.streamId());
+            assertEquals(Http2Error.STREAM_CLOSED, e.error());
+        }
+
         decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
 
         // Verify that the event was absorbed and not propagated to the observer.

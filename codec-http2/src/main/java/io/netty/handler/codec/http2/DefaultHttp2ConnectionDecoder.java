@@ -63,6 +63,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private final Http2SettingsReceivedConsumer settingsReceivedConsumer;
     private final boolean autoAckPing;
     private final boolean validateHeaders;
+    private final Http2StreamRingBuffer rstStreams = new Http2StreamRingBuffer();
 
     public DefaultHttp2ConnectionDecoder(Http2Connection connection,
                                          Http2ConnectionEncoder encoder,
@@ -606,6 +607,31 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 // after a RST_STREAM has been sent. Since we don't retain metadata about streams that have been
                 // reset we can't know this for sure.
                 verifyStreamMayHaveExisted(streamId);
+
+                // We use a ring-buffer of streams for which we did already throw the streamError here. If it is
+                // not included yet we will throw it once and so propagate a RST_FRAME back to the remote peer.
+                // We will only write a RST_FRAME again once we overwrote the stream ID in the ring-buffer itself.
+                // This should hopefully give us enough time to have the remote peer realize that we did close the
+                // stream and so reduce the overhead. That said at worse we will just write multiple RST Frames
+                // which is allowed per RFC:
+                //
+                // RFC7540 5.1.  Stream States
+                //  ...
+                //
+                //      If this state is reached as a result of sending a RST_STREAM
+                //      frame, the peer that receives the RST_STREAM might have already
+                //      sent -- or enqueued for sending -- frames on the stream that
+                //      cannot be withdrawn.  An endpoint MUST ignore frames that it
+                //      receives on closed streams after it has sent a RST_STREAM frame.
+                //      An endpoint MAY choose to limit the period over which it ignores
+                //      frames and treat frames that arrive after this time as being in
+                //      error.
+                // ...
+                //
+                if (rstStreams.add(streamId)) {
+                    throw streamError(
+                            streamId, STREAM_CLOSED, "Received %s frame for an unknown stream %d", frameName, streamId);
+                }
                 return true;
             } else if (stream.isResetSent() || streamCreatedAfterGoAwaySent(streamId)) {
                 // If we have sent a reset stream it is assumed the stream will be closed after the write completes.
@@ -764,4 +790,5 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             onUnknownFrame0(ctx, frameType, streamId, flags, payload);
         }
     }
+
 }
