@@ -275,7 +275,7 @@ public class DefaultChannelConfig implements ChannelConfig {
         this.writeSpinCount = writeSpinCount;
         return this;
     }
-
+    /** Tony: 如果没有配置位unpooled，channel默认就是用pool类型 */
     @Override
     public ByteBufAllocator getAllocator() {
         return allocator;

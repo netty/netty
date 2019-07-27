@@ -31,13 +31,11 @@ import static java.lang.Math.min;
 
 @UnstableApi
 public class KQueueChannelConfig extends DefaultChannelConfig {
-    final AbstractKQueueChannel channel;
     private volatile boolean transportProvidesGuess;
     private volatile long maxBytesPerGatheringWrite = SSIZE_MAX;
 
     KQueueChannelConfig(AbstractKQueueChannel channel) {
         super(channel);
-        this.channel = channel;
     }
 
     @Override
@@ -154,7 +152,7 @@ public class KQueueChannelConfig extends DefaultChannelConfig {
 
     @Override
     protected final void autoReadCleared() {
-        channel.clearReadFilter();
+        ((AbstractKQueueChannel) channel).clearReadFilter();
     }
 
     final void setMaxBytesPerGatheringWrite(long maxBytesPerGatheringWrite) {

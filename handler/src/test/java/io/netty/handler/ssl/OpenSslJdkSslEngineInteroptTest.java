@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.util.internal.PlatformDependent;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -34,17 +35,21 @@ import static org.junit.Assume.assumeTrue;
 @RunWith(Parameterized.class)
 public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
 
-    @Parameterized.Parameters(name = "{index}: bufferType = {0}")
-    public static Collection<Object> data() {
-        List<Object> params = new ArrayList<Object>();
+    @Parameterized.Parameters(name = "{index}: bufferType = {0}, combo = {1}")
+    public static Collection<Object[]> data() {
+        List<Object[]> params = new ArrayList<Object[]>();
         for (BufferType type: BufferType.values()) {
-            params.add(type);
+            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12()});
+
+            if (PlatformDependent.javaVersion() >= 11 && OpenSsl.isTlsv13Supported()) {
+                params.add(new Object[] { type, ProtocolCipherCombo.tlsv13() });
+            }
         }
         return params;
     }
 
-    public OpenSslJdkSslEngineInteroptTest(BufferType type) {
-        super(type);
+    public OpenSslJdkSslEngineInteroptTest(BufferType type, ProtocolCipherCombo combo) {
+        super(type, combo);
     }
 
     @BeforeClass

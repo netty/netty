@@ -34,7 +34,7 @@ import java.nio.charset.Charset;
 /**
  * An empty {@link ByteBuf} whose capacity and maximum capacity are all {@code 0}.
  */
-public final class EmptyByteBuf extends ByteBuf {
+public final class EmptyByteBuf extends ByteBuf {// Tony: 四大皆空，就这样
 
     static final int EMPTY_BYTE_BUF_HASH_CODE = 1;
     private static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocateDirect(0);

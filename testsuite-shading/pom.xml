@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.30.Final-SNAPSHOT</version>
+    <version>4.1.32.Final</version>
   </parent>
 
   <artifactId>netty-testsuite-shading</artifactId>
@@ -66,6 +66,35 @@
   </dependencies>
   <profiles>
     <profile>
+      <id>windows</id>
+      <activation>
+        <os>
+          <family>windows</family>
+        </os>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-common</artifactId>
+          <version>${project.version}</version>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-handler</artifactId>
+          <version>${project.version}</version>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>${tcnative.artifactId}</artifactId>
+          <version>${tcnative.version}</version>
+          <classifier>${tcnative.classifier}</classifier>
+          <scope>compile</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
       <id>mac</id>
       <activation>
         <os>
@@ -74,9 +103,14 @@
       </activation>
       <properties>
         <nativeTransportLib>netty_transport_native_kqueue_${os.detected.arch}.jnilib</nativeTransportLib>
-        <nativeTcnativeLib>netty_tcnative.jnilib</nativeTcnativeLib>
       </properties>
       <dependencies>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-common</artifactId>
+          <version>${project.version}</version>
+          <scope>compile</scope>
+        </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-kqueue</artifactId>
@@ -168,6 +202,10 @@
                     <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTransportLib}" />
                     <delete file="${classesShadedNativeDir}/lib${nativeTransportLib}" />
 
+                    <condition property="nativeTcnativeLib" value="netty_tcnative_osx_${os.detected.arch}.jnilib" else="netty_tcnative.jnilib">
+                      <equals arg1="${tcnative.classifier}" arg2="" />
+                    </condition>
+
                     <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTcnativeLib}" />
                     <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTcnativeLib}" />
                     <delete file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" />
@@ -209,9 +247,14 @@
       </activation>
       <properties>
         <nativeTransportLib>netty_transport_native_epoll_${os.detected.arch}.so</nativeTransportLib>
-        <nativeTcnativeLib>netty_tcnative.so</nativeTcnativeLib>
       </properties>
       <dependencies>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-common</artifactId>
+          <version>${project.version}</version>
+          <scope>compile</scope>
+        </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
@@ -302,6 +345,10 @@
                     <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTransportLib}" />
                     <copy file="${classesShadedNativeDir}/lib${nativeTransportLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTransportLib}" />
                     <delete file="${classesShadedNativeDir}/lib${nativeTransportLib}" />
+
+                    <condition property="nativeTcnativeLib" value="netty_tcnative_linux_${os.detected.arch}.so" else="netty_tcnative.so">
+                      <equals arg1="${tcnative.classifier}" arg2="" />
+                    </condition>
 
                     <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix}_${nativeTcnativeLib}" />
                     <copy file="${classesShadedNativeDir}/lib${nativeTcnativeLib}" tofile="${classesShadedNativeDir}/lib${shadingPrefix2}_${nativeTcnativeLib}" />

@@ -66,11 +66,11 @@ class OpenSslKeyMaterialProvider {
 
             OpenSslKeyMaterial keyMaterial;
             if (key instanceof OpenSslPrivateKey) {
-                keyMaterial = ((OpenSslPrivateKey) key).toKeyMaterial(chain);
+                keyMaterial = ((OpenSslPrivateKey) key).toKeyMaterial(chain, certificates);
             } else {
                 pkeyBio = toBIO(allocator, key);
                 pkey = key == null ? 0 : SSL.parsePrivateKey(pkeyBio, password);
-                keyMaterial = new DefaultOpenSslKeyMaterial(chain, pkey);
+                keyMaterial = new DefaultOpenSslKeyMaterial(chain, pkey, certificates);
             }
 
             // See the chain and pkey to 0 so we will not release it as the ownership was

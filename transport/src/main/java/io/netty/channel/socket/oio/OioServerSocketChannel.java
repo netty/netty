@@ -38,7 +38,10 @@ import java.util.concurrent.locks.ReentrantLock;
  * {@link ServerSocketChannel} which accepts new connections and create the {@link OioSocketChannel}'s for them.
  *
  * This implementation use Old-Blocking-IO.
+ *
+ * @deprecated use NIO / EPOLL / KQUEUE transport.
  */
+@Deprecated
 public class OioServerSocketChannel extends AbstractOioMessageChannel
                                     implements ServerSocketChannel {
 

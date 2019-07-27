@@ -140,6 +140,22 @@ public class UnixResolverDnsServerAddressStreamProviderTest {
     }
 
     @Test
+    public void searchDomainsWithMultipleSearchSeperatedByWhitespace() throws IOException {
+        File f = buildFile("search linecorp.local squarecorp.local\n" +
+                           "nameserver 127.0.0.2\n");
+        List<String> domains = UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains(f);
+        assertEquals(Arrays.asList("linecorp.local", "squarecorp.local"), domains);
+    }
+
+    @Test
+    public void searchDomainsWithMultipleSearchSeperatedByTab() throws IOException {
+        File f = buildFile("search linecorp.local\tsquarecorp.local\n" +
+                "nameserver 127.0.0.2\n");
+        List<String> domains = UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains(f);
+        assertEquals(Arrays.asList("linecorp.local", "squarecorp.local"), domains);
+    }
+
+    @Test
     public void searchDomainsPrecedence() throws IOException {
         File f = buildFile("domain linecorp.local\n" +
                            "search squarecorp.local\n" +

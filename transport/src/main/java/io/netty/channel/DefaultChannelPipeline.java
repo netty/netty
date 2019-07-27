@@ -1016,7 +1016,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        return tail.bind(localAddress, promise);
+        return tail.bind(localAddress, promise);// Tony: outBound执行顺序是从职责链的末尾端开始
     }
 
     @Override
@@ -1316,7 +1316,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            onUnhandledInboundMessage(msg);
+            onUnhandledInboundMessage(msg);// Tony: 对于read事件，tailContext，作的最后一个操作就是释放read占用的资源
         }
 
         @Override
@@ -1331,7 +1331,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         private final Unsafe unsafe;
 
         HeadContext(DefaultChannelPipeline pipeline) {
-            super(pipeline, null, HEAD_NAME, false, true);
+            super(pipeline, null, HEAD_NAME, true, true);
             unsafe = pipeline.channel().unsafe();
             setAddComplete();
         }
@@ -1440,7 +1440,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             readIfIsAutoRead();
         }
-
+        /** Tony: 根据配置项，自动请求将socket数据读取出来（简单理解为注册OP_READ事件） */
         private void readIfIsAutoRead() {
             if (channel.config().isAutoRead()) {
                 channel.read();

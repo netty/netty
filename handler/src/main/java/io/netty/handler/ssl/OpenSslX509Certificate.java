@@ -15,20 +15,25 @@
  */
 package io.netty.handler.ssl;
 
+import javax.security.auth.x500.X500Principal;
 import java.io.ByteArrayInputStream;
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Principal;
+import java.security.Provider;
 import java.security.PublicKey;
 import java.security.SignatureException;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
+import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
+import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 
 final class OpenSslX509Certificate extends X509Certificate {
@@ -48,6 +53,37 @@ final class OpenSslX509Certificate extends X509Certificate {
     @Override
     public void checkValidity(Date date) throws CertificateExpiredException, CertificateNotYetValidException {
         unwrap().checkValidity(date);
+    }
+
+    @Override
+    public X500Principal getIssuerX500Principal() {
+        return unwrap().getIssuerX500Principal();
+    }
+
+    @Override
+    public X500Principal getSubjectX500Principal() {
+        return unwrap().getSubjectX500Principal();
+    }
+
+    @Override
+    public List<String> getExtendedKeyUsage() throws CertificateParsingException {
+        return unwrap().getExtendedKeyUsage();
+    }
+
+    @Override
+    public Collection<List<?>> getSubjectAlternativeNames() throws CertificateParsingException {
+        return unwrap().getSubjectAlternativeNames();
+    }
+
+    @Override
+    public Collection<List<?>> getIssuerAlternativeNames() throws CertificateParsingException {
+        return unwrap().getSubjectAlternativeNames();
+    }
+
+    // No @Override annotation as it was only introduced in Java8.
+    public void verify(PublicKey key, Provider sigProvider)
+            throws CertificateException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+        unwrap().verify(key, sigProvider);
     }
 
     @Override

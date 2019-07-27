@@ -62,6 +62,13 @@ final class Java8SslUtils {
         return sniServerNames;
     }
 
+    static List getSniHostName(byte[] hostname) {
+        if (hostname == null || hostname.length == 0) {
+            return Collections.emptyList();
+        }
+        return Collections.singletonList(new SNIHostName(hostname));
+    }
+
     static boolean getUseCipherSuitesOrder(SSLParameters sslParameters) {
         return sslParameters.getUseCipherSuitesOrder();
     }

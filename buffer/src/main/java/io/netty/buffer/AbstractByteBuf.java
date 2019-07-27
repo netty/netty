@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
@@ -41,11 +42,11 @@ import static io.netty.util.internal.MathUtil.isOutOfBounds;
 /**
  * A skeletal implementation of a buffer.
  */
-public abstract class AbstractByteBuf extends ByteBuf {
+public abstract class AbstractByteBuf extends ByteBuf {// Tony: 方法超级多，翻译一把代码注释，自己看看吧，很简单易懂的
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractByteBuf.class);
     private static final String LEGACY_PROP_CHECK_ACCESSIBLE = "io.netty.buffer.bytebuf.checkAccessible";
     private static final String PROP_CHECK_ACCESSIBLE = "io.netty.buffer.checkAccessible";
-    private static final boolean checkAccessible;
+    static final boolean checkAccessible; // accessed from CompositeByteBuf
     private static final String PROP_CHECK_BOUNDS = "io.netty.buffer.checkBounds";
     private static final boolean checkBounds;
 
@@ -279,7 +280,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     final void ensureWritable0(int minWritableBytes) {
-        ensureAccessible();
+        ensureAccessible();// Tony: 检查ByteBuf对象的引用计数，如果为0，则不允许再进行操作
         if (minWritableBytes <= writableBytes()) {
             return;
         }
@@ -290,12 +291,12 @@ public abstract class AbstractByteBuf extends ByteBuf {
                         writerIndex, minWritableBytes, maxCapacity, this));
             }
         }
-
+        // Tony: 扩容计算，当前容量扩容至2的幂次方大小。
         // Normalize the current capacity to the power of 2.
         int newCapacity = alloc().calculateNewCapacity(writerIndex + minWritableBytes, maxCapacity);
 
         // Adjust to the new capacity.
-        capacity(newCapacity);
+        capacity(newCapacity);// Tony: 设置新的容量值
     }
 
     @Override
@@ -331,11 +332,11 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf order(ByteOrder endianness) {
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
         if (endianness == order()) {
             return this;
+        }
+        if (endianness == null) {
+            throw new NullPointerException("endianness");
         }
         return newSwappedByteBuf();
     }
@@ -503,7 +504,10 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public CharSequence getCharSequence(int index, int length, Charset charset) {
-        // TODO: We could optimize this for UTF8 and US_ASCII
+        if (CharsetUtil.US_ASCII.equals(charset) || CharsetUtil.ISO_8859_1.equals(charset)) {
+            // ByteBufUtil.getBytes(...) will return a new copy which the AsciiString uses directly
+            return new AsciiString(ByteBufUtil.getBytes(this, index, length, true), false);
+        }
         return toString(index, length, charset);
     }
 
@@ -1066,7 +1070,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeBytes(byte[] src, int srcIndex, int length) {
-        ensureWritable(length);
+        ensureWritable(length);// Tony: 检查是否有足够的可写空间，是否要扩容
         setBytes(writerIndex, src, srcIndex, length);
         writerIndex += length;
         return this;
@@ -1289,7 +1293,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
     }
 
-    private int forEachByteAsc0(int start, int end, ByteProcessor processor) throws Exception {
+    int forEachByteAsc0(int start, int end, ByteProcessor processor) throws Exception {
         for (; start < end; ++start) {
             if (!processor.process(_getByte(start))) {
                 return start;
@@ -1321,7 +1325,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
     }
 
-    private int forEachByteDesc0(int rStart, final int rEnd, ByteProcessor processor) throws Exception {
+    int forEachByteDesc0(int rStart, final int rEnd, ByteProcessor processor) throws Exception {
         for (; rStart >= rEnd; --rStart) {
             if (!processor.process(_getByte(rStart))) {
                 return rStart;

@@ -26,7 +26,10 @@ import java.util.List;
 
 /**
  * Abstract base class for OIO which reads and writes objects from/to a Socket
+ *
+ * @deprecated use NIO / EPOLL / KQUEUE transport.
  */
+@Deprecated
 public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
     private final List<Object> readBuf = new ArrayList<Object>();

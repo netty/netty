@@ -120,6 +120,21 @@ public final class Native {
     }
     private static native int epollWait0(int efd, long address, int len, int timerFd, int timeoutSec, int timeoutNs);
 
+    /**
+     * Non-blocking variant of
+     * {@link #epollWait(FileDescriptor, EpollEventArray, FileDescriptor, int, int)}
+     * that will also hint to processor we are in a busy-wait loop.
+     */
+    public static int epollBusyWait(FileDescriptor epollFd, EpollEventArray events) throws IOException {
+        int ready = epollBusyWait0(epollFd.intValue(), events.memoryAddress(), events.length());
+        if (ready < 0) {
+            throw newIOException("epoll_wait", ready);
+        }
+        return ready;
+    }
+
+    private static native int epollBusyWait0(int efd, long address, int len);
+
     public static void epollCtlAdd(int efd, final int fd, final int flags) throws IOException {
         int res = epollCtlAdd0(efd, fd, flags);
         if (res < 0) {

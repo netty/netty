@@ -17,6 +17,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -26,6 +27,7 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.Provider;
 import java.security.Security;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
@@ -34,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -58,11 +61,13 @@ public class JdkSslContext extends SslContext {
     static final String PROTOCOL = "TLS";
     private static final String[] DEFAULT_PROTOCOLS;
     private static final List<String> DEFAULT_CIPHERS;
+    private static final List<String> DEFAULT_CIPHERS_NON_TLSV13;
     private static final Set<String> SUPPORTED_CIPHERS;
+    private static final Set<String> SUPPORTED_CIPHERS_NON_TLSV13;
+    private static final Provider DEFAULT_PROVIDER;
 
     static {
         SSLContext context;
-        int i;
         try {
             context = SSLContext.getInstance(PROTOCOL);
             context.init(null, null, null);
@@ -70,31 +75,54 @@ public class JdkSslContext extends SslContext {
             throw new Error("failed to initialize the default SSL context", e);
         }
 
-        SSLEngine engine = context.createSSLEngine();
+        DEFAULT_PROVIDER = context.getProvider();
 
+        SSLEngine engine = context.createSSLEngine();
+        DEFAULT_PROTOCOLS = defaultProtocols(engine);
+
+        SUPPORTED_CIPHERS = Collections.unmodifiableSet(supportedCiphers(engine));
+        DEFAULT_CIPHERS = Collections.unmodifiableList(defaultCiphers(engine, SUPPORTED_CIPHERS));
+
+        List<String> ciphersNonTLSv13 = new ArrayList<String>(DEFAULT_CIPHERS);
+        ciphersNonTLSv13.removeAll(Arrays.asList(SslUtils.DEFAULT_TLSV13_CIPHER_SUITES));
+        DEFAULT_CIPHERS_NON_TLSV13 = Collections.unmodifiableList(ciphersNonTLSv13);
+
+        Set<String> suppertedCiphersNonTLSv13 = new LinkedHashSet<String>(SUPPORTED_CIPHERS);
+        suppertedCiphersNonTLSv13.removeAll(Arrays.asList(SslUtils.DEFAULT_TLSV13_CIPHER_SUITES));
+        SUPPORTED_CIPHERS_NON_TLSV13 = Collections.unmodifiableSet(suppertedCiphersNonTLSv13);
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("Default protocols (JDK): {} ", Arrays.asList(DEFAULT_PROTOCOLS));
+            logger.debug("Default cipher suites (JDK): {}", DEFAULT_CIPHERS);
+        }
+    }
+
+    private static String[] defaultProtocols(SSLEngine engine) {
         // Choose the sensible default list of protocols.
         final String[] supportedProtocols = engine.getSupportedProtocols();
         Set<String> supportedProtocolsSet = new HashSet<String>(supportedProtocols.length);
-        for (i = 0; i < supportedProtocols.length; ++i) {
+        for (int i = 0; i < supportedProtocols.length; ++i) {
             supportedProtocolsSet.add(supportedProtocols[i]);
         }
         List<String> protocols = new ArrayList<String>();
         addIfSupported(
                 supportedProtocolsSet, protocols,
-                "TLSv1.2", "TLSv1.1", "TLSv1");
+                // Do not include TLSv1.3 for now by default.
+                SslUtils.PROTOCOL_TLS_V1_2, SslUtils.PROTOCOL_TLS_V1_1, SslUtils.PROTOCOL_TLS_V1);
 
         if (!protocols.isEmpty()) {
-            DEFAULT_PROTOCOLS = protocols.toArray(new String[0]);
-        } else {
-            DEFAULT_PROTOCOLS = engine.getEnabledProtocols();
+            return protocols.toArray(new String[0]);
         }
+        return engine.getEnabledProtocols();
+    }
 
+    private static Set<String> supportedCiphers(SSLEngine engine) {
         // Choose the sensible default list of cipher suites.
         final String[] supportedCiphers = engine.getSupportedCipherSuites();
-        SUPPORTED_CIPHERS = new HashSet<String>(supportedCiphers.length);
-        for (i = 0; i < supportedCiphers.length; ++i) {
+        Set<String> supportedCiphersSet = new LinkedHashSet<String>(supportedCiphers.length);
+        for (int i = 0; i < supportedCiphers.length; ++i) {
             String supportedCipher = supportedCiphers[i];
-            SUPPORTED_CIPHERS.add(supportedCipher);
+            supportedCiphersSet.add(supportedCipher);
             // IBM's J9 JVM utilizes a custom naming scheme for ciphers and only returns ciphers with the "SSL_"
             // prefix instead of the "TLS_" prefix (as defined in the JSSE cipher suite names [1]). According to IBM's
             // documentation [2] the "SSL_" prefix is "interchangeable" with the "TLS_" prefix.
@@ -108,21 +136,29 @@ public class JdkSslContext extends SslContext {
                 final String tlsPrefixedCipherName = "TLS_" + supportedCipher.substring("SSL_".length());
                 try {
                     engine.setEnabledCipherSuites(new String[]{tlsPrefixedCipherName});
-                    SUPPORTED_CIPHERS.add(tlsPrefixedCipherName);
+                    supportedCiphersSet.add(tlsPrefixedCipherName);
                 } catch (IllegalArgumentException ignored) {
                     // The cipher is not supported ... move on to the next cipher.
                 }
             }
         }
-        List<String> ciphers = new ArrayList<String>();
-        addIfSupported(SUPPORTED_CIPHERS, ciphers, DEFAULT_CIPHER_SUITES);
-        useFallbackCiphersIfDefaultIsEmpty(ciphers, engine.getEnabledCipherSuites());
-        DEFAULT_CIPHERS = Collections.unmodifiableList(ciphers);
+        return supportedCiphersSet;
+    }
 
-        if (logger.isDebugEnabled()) {
-            logger.debug("Default protocols (JDK): {} ", Arrays.asList(DEFAULT_PROTOCOLS));
-            logger.debug("Default cipher suites (JDK): {}", DEFAULT_CIPHERS);
+    private static List<String> defaultCiphers(SSLEngine engine, Set<String> supportedCiphers) {
+        List<String> ciphers = new ArrayList<String>();
+        addIfSupported(supportedCiphers, ciphers, DEFAULT_CIPHER_SUITES);
+        useFallbackCiphersIfDefaultIsEmpty(ciphers, engine.getEnabledCipherSuites());
+        return ciphers;
+    }
+
+    private static boolean isTlsV13Supported(String[] protocols) {
+        for (String protocol: protocols) {
+            if (SslUtils.PROTOCOL_TLS_V1_3.equals(protocol)) {
+                return true;
+            }
         }
+        return false;
     }
 
     private final String[] protocols;
@@ -140,7 +176,10 @@ public class JdkSslContext extends SslContext {
      * @param sslContext the {@link SSLContext} to use.
      * @param isClient {@code true} if this context should create {@link SSLEngine}s for client-side usage.
      * @param clientAuth the {@link ClientAuth} to use. This will only be used when {@param isClient} is {@code false}.
+     * @deprecated Use {@link #JdkSslContext(SSLContext, boolean, Iterable, CipherSuiteFilter,
+     * ApplicationProtocolConfig, ClientAuth, String[], boolean)}
      */
+    @Deprecated
     public JdkSslContext(SSLContext sslContext, boolean isClient,
                          ClientAuth clientAuth) {
         this(sslContext, isClient, null, IdentityCipherSuiteFilter.INSTANCE,
@@ -156,11 +195,44 @@ public class JdkSslContext extends SslContext {
      * @param cipherFilter the filter to use.
      * @param apn the {@link ApplicationProtocolConfig} to use.
      * @param clientAuth the {@link ClientAuth} to use. This will only be used when {@param isClient} is {@code false}.
+     * @deprecated Use {@link #JdkSslContext(SSLContext, boolean, Iterable, CipherSuiteFilter,
+     * ApplicationProtocolConfig, ClientAuth, String[], boolean)}
      */
+    @Deprecated
     public JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers,
                          CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
                          ClientAuth clientAuth) {
-        this(sslContext, isClient, ciphers, cipherFilter, toNegotiator(apn, !isClient), clientAuth, null, false);
+        this(sslContext, isClient, ciphers, cipherFilter, apn, clientAuth, null, false);
+    }
+
+    /**
+     * Creates a new {@link JdkSslContext} from a pre-configured {@link SSLContext}.
+     *
+     * @param sslContext the {@link SSLContext} to use.
+     * @param isClient {@code true} if this context should create {@link SSLEngine}s for client-side usage.
+     * @param ciphers the ciphers to use or {@code null} if the standard should be used.
+     * @param cipherFilter the filter to use.
+     * @param apn the {@link ApplicationProtocolConfig} to use.
+     * @param clientAuth the {@link ClientAuth} to use. This will only be used when {@param isClient} is {@code false}.
+     * @param protocols the protocols to enable, or {@code null} to enable the default protocols.
+     * @param startTls {@code true} if the first write request shouldn't be encrypted
+     */
+    public JdkSslContext(SSLContext sslContext,
+                         boolean isClient,
+                         Iterable<String> ciphers,
+                         CipherSuiteFilter cipherFilter,
+                         ApplicationProtocolConfig apn,
+                         ClientAuth clientAuth,
+                         String[] protocols,
+                         boolean startTls) {
+        this(sslContext,
+                isClient,
+                ciphers,
+                cipherFilter,
+                toNegotiator(apn, !isClient),
+                clientAuth,
+                protocols == null ? null : protocols.clone(),
+                startTls);
     }
 
     @SuppressWarnings("deprecation")
@@ -169,11 +241,49 @@ public class JdkSslContext extends SslContext {
         super(startTls);
         this.apn = checkNotNull(apn, "apn");
         this.clientAuth = checkNotNull(clientAuth, "clientAuth");
-        cipherSuites = checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
-                ciphers, DEFAULT_CIPHERS, SUPPORTED_CIPHERS);
-        this.protocols = protocols == null ? DEFAULT_PROTOCOLS : protocols;
-        unmodifiableCipherSuites = Collections.unmodifiableList(Arrays.asList(cipherSuites));
         this.sslContext = checkNotNull(sslContext, "sslContext");
+
+        final List<String> defaultCiphers;
+        final Set<String> supportedCiphers;
+        if (DEFAULT_PROVIDER.equals(sslContext.getProvider())) {
+            this.protocols = protocols == null? DEFAULT_PROTOCOLS : protocols;
+            if (isTlsV13Supported(this.protocols)) {
+                supportedCiphers = SUPPORTED_CIPHERS;
+                defaultCiphers = DEFAULT_CIPHERS;
+            } else {
+                // TLSv1.3 is not supported, ensure we do not include any TLSv1.3 ciphersuite.
+                supportedCiphers = SUPPORTED_CIPHERS_NON_TLSV13;
+                defaultCiphers = DEFAULT_CIPHERS_NON_TLSV13;
+            }
+        } else {
+            // This is a different Provider then the one used by the JDK by default so we can not just assume
+            // the same protocols and ciphers are supported. For example even if Java11+ is used Conscrypt will
+            // not support TLSv1.3 and the TLSv1.3 ciphersuites.
+            SSLEngine engine = sslContext.createSSLEngine();
+            try {
+                if (protocols == null) {
+                    this.protocols = defaultProtocols(engine);
+                } else {
+                    this.protocols = protocols;
+                }
+                supportedCiphers = supportedCiphers(engine);
+                defaultCiphers = defaultCiphers(engine, supportedCiphers);
+                if (!isTlsV13Supported(this.protocols)) {
+                    // TLSv1.3 is not supported, ensure we do not include any TLSv1.3 ciphersuite.
+                    for (String cipher: SslUtils.DEFAULT_TLSV13_CIPHER_SUITES) {
+                        supportedCiphers.remove(cipher);
+                        defaultCiphers.remove(cipher);
+                    }
+                }
+            } finally {
+                ReferenceCountUtil.release(engine);
+            }
+        }
+
+        cipherSuites = checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
+                ciphers, defaultCiphers, supportedCiphers);
+
+        unmodifiableCipherSuites = Collections.unmodifiableList(Arrays.asList(cipherSuites));
         this.isClient = isClient;
     }
 

@@ -89,7 +89,7 @@ final class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRespo
         return question;
     }
 
-    void query(ChannelPromise writePromise) {
+    void query(boolean flush, ChannelPromise writePromise) {
         final DnsQuestion question = question();
         final InetSocketAddress nameServerAddr = nameServerAddr();
         final DatagramDnsQuery query = new DatagramDnsQuery(null, nameServerAddr, id);
@@ -110,18 +110,21 @@ final class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRespo
             logger.debug("{} WRITE: [{}: {}], {}", parent.ch, id, nameServerAddr, question);
         }
 
-        sendQuery(query, writePromise);
+        sendQuery(query, flush, writePromise);
     }
 
-    private void sendQuery(final DnsQuery query, final ChannelPromise writePromise) {
+    private void sendQuery(final DnsQuery query, final boolean flush, final ChannelPromise writePromise) {
         if (parent.channelFuture.isDone()) {
-            writeQuery(query, writePromise);
+            writeQuery(query, flush, writePromise);
         } else {
             parent.channelFuture.addListener(new GenericFutureListener<Future<? super Channel>>() {
                 @Override
                 public void operationComplete(Future<? super Channel> future) {
                     if (future.isSuccess()) {
-                        writeQuery(query, writePromise);
+                        // If the query is done in a late fashion (as the channel was not ready yet) we always flush
+                        // to ensure we did not race with a previous flush() that was done when the Channel was not
+                        // ready yet.
+                        writeQuery(query, true, writePromise);
                     } else {
                         Throwable cause = future.cause();
                         promise.tryFailure(cause);
@@ -132,8 +135,9 @@ final class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRespo
         }
     }
 
-    private void writeQuery(final DnsQuery query, final ChannelPromise writePromise) {
-        final ChannelFuture writeFuture = parent.ch.writeAndFlush(query, writePromise);
+    private void writeQuery(final DnsQuery query, final boolean flush, final ChannelPromise writePromise) {
+        final ChannelFuture writeFuture = flush ? parent.ch.writeAndFlush(query, writePromise) :
+                parent.ch.write(query, writePromise);
         if (writeFuture.isDone()) {
             onQueryWriteCompletion(writeFuture);
         } else {

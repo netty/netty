@@ -23,8 +23,8 @@ import javax.net.ssl.SSLEngine;
 
 public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
 
-    public ReferenceCountedOpenSslEngineTest(BufferType type) {
-        super(type);
+    public ReferenceCountedOpenSslEngineTest(BufferType type, ProtocolCipherCombo combo) {
+        super(type, combo);
     }
 
     @Override
@@ -60,9 +60,11 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
     @Test(expected = NullPointerException.class)
     public void testNotLeakOnException() throws Exception {
         clientSslCtx = SslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .sslProvider(sslClientProvider())
-                .build();
+                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                                        .sslProvider(sslClientProvider())
+                                        .protocols(protocols())
+                                        .ciphers(ciphers())
+                                        .build();
 
         clientSslCtx.newEngine(null);
     }

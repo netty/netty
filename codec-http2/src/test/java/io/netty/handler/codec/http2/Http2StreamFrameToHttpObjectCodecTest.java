@@ -19,6 +19,7 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
@@ -870,5 +871,66 @@ public class Http2StreamFrameToHttpObjectCodecTest {
             goaway.release();
             frame.release();
         }
+    }
+
+    @Test
+    public void testIsSharableBetweenChannels() throws Exception {
+        final Queue<Http2StreamFrame> frames = new ConcurrentLinkedQueue<Http2StreamFrame>();
+        final ChannelHandler sharedHandler = new Http2StreamFrameToHttpObjectCodec(false);
+
+        final SslContext ctx = SslContextBuilder.forClient().sslProvider(SslProvider.JDK).build();
+        EmbeddedChannel tlsCh = new EmbeddedChannel(ctx.newHandler(ByteBufAllocator.DEFAULT),
+            new ChannelOutboundHandlerAdapter() {
+                @Override
+                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                    if (msg instanceof Http2StreamFrame) {
+                        frames.add((Http2StreamFrame) msg);
+                        promise.setSuccess();
+                    } else {
+                        ctx.write(msg, promise);
+                    }
+                }
+            }, sharedHandler);
+
+        EmbeddedChannel plaintextCh = new EmbeddedChannel(
+            new ChannelOutboundHandlerAdapter() {
+                @Override
+                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                    if (msg instanceof Http2StreamFrame) {
+                        frames.add((Http2StreamFrame) msg);
+                        promise.setSuccess();
+                    } else {
+                        ctx.write(msg, promise);
+                    }
+                }
+            }, sharedHandler);
+
+        FullHttpRequest req = new DefaultFullHttpRequest(
+            HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world");
+        assertTrue(tlsCh.writeOutbound(req));
+        assertTrue(tlsCh.finishAndReleaseAll());
+
+        Http2HeadersFrame headersFrame = (Http2HeadersFrame) frames.poll();
+        Http2Headers headers = headersFrame.headers();
+
+        assertThat(headers.scheme().toString(), is("https"));
+        assertThat(headers.method().toString(), is("GET"));
+        assertThat(headers.path().toString(), is("/hello/world"));
+        assertTrue(headersFrame.isEndStream());
+        assertNull(frames.poll());
+
+        // Run the plaintext channel
+        req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world");
+        assertFalse(plaintextCh.writeOutbound(req));
+        assertFalse(plaintextCh.finishAndReleaseAll());
+
+        headersFrame = (Http2HeadersFrame) frames.poll();
+        headers = headersFrame.headers();
+
+        assertThat(headers.scheme().toString(), is("http"));
+        assertThat(headers.method().toString(), is("GET"));
+        assertThat(headers.path().toString(), is("/hello/world"));
+        assertTrue(headersFrame.isEndStream());
+        assertNull(frames.poll());
     }
 }

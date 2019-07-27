@@ -142,8 +142,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     abstract boolean isDirect();
 
     PooledByteBuf<T> allocate(PoolThreadCache cache, int reqCapacity, int maxCapacity) {
-        PooledByteBuf<T> buf = newByteBuf(maxCapacity);
-        allocate(cache, buf, reqCapacity);
+        PooledByteBuf<T> buf = newByteBuf(maxCapacity);// Tony: 获取到一个buf对象
+        allocate(cache, buf, reqCapacity);// Tony: 开始分配内存
         return buf;
     }
 
@@ -173,11 +173,11 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     private void allocate(PoolThreadCache cache, PooledByteBuf<T> buf, final int reqCapacity) {
         final int normCapacity = normalizeCapacity(reqCapacity);
-        if (isTinyOrSmall(normCapacity)) { // capacity < pageSize
+        if (isTinyOrSmall(normCapacity)) { // capacity < pageSize  // Tony: 如果需要的容量小于pageSize
             int tableIdx;
             PoolSubpage<T>[] table;
             boolean tiny = isTiny(normCapacity);
-            if (tiny) { // < 512
+            if (tiny) { // < 512 // Tony: 小于512字节，分配一个tiny缓存
                 if (cache.allocateTiny(this, buf, reqCapacity, normCapacity)) {
                     // was able to allocate out of the cache so move on
                     return;
@@ -228,7 +228,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             }
         } else {
             // Huge allocations are never served via the cache so just call allocateHuge
-            allocateHuge(buf, reqCapacity);
+            allocateHuge(buf, reqCapacity);// Tony: 分配超大内存，不会进行缓存
         }
     }
 
@@ -257,25 +257,25 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     private void allocateHuge(PooledByteBuf<T> buf, int reqCapacity) {
-        PoolChunk<T> chunk = newUnpooledChunk(reqCapacity);
+        PoolChunk<T> chunk = newUnpooledChunk(reqCapacity);// Tony: 注意是unpool，这个字节缓冲release后不会缓存
         activeBytesHuge.add(chunk.chunkSize());
         buf.initUnpooled(chunk, reqCapacity);
         allocationsHuge.increment();
     }
-
+    // Tony: 释放缓存块
     void free(PoolChunk<T> chunk, long handle, int normCapacity, PoolThreadCache cache) {
-        if (chunk.unpooled) {
+        if (chunk.unpooled) {// Tony: 如果不需要再复用，则完全销毁掉
             int size = chunk.chunkSize();
             destroyChunk(chunk);
             activeBytesHuge.add(-size);
             deallocationsHuge.increment();
-        } else {
+        } else { // Tony: 如果是一个需要缓存的块，则加入缓存
             SizeClass sizeClass = sizeClass(normCapacity);
             if (cache != null && cache.add(this, chunk, handle, normCapacity, sizeClass)) {
                 // cached so not free it.
                 return;
             }
-
+            // Tony: 如果无法继续加入缓存，则销毁掉这个chunk
             freeChunk(chunk, handle, sizeClass);
         }
     }
@@ -725,11 +725,16 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             return true;
         }
 
-        private int offsetCacheLine(ByteBuffer memory) {
+        // mark as package-private, only for unit test
+        int offsetCacheLine(ByteBuffer memory) {
             // We can only calculate the offset if Unsafe is present as otherwise directBufferAddress(...) will
             // throw an NPE.
-            return HAS_UNSAFE ?
-                    (int) (PlatformDependent.directBufferAddress(memory) & directMemoryCacheAlignmentMask) : 0;
+            int remainder = HAS_UNSAFE
+                    ? (int) (PlatformDependent.directBufferAddress(memory) & directMemoryCacheAlignmentMask)
+                    : 0;
+
+            // offset = alignment - address & (alignment - 1)
+            return directMemoryCacheAlignment - remainder;
         }
 
         @Override
@@ -775,7 +780,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         @Override
         protected PooledByteBuf<ByteBuffer> newByteBuf(int maxCapacity) {
-            if (HAS_UNSAFE) {
+            if (HAS_UNSAFE) {// Tony: 能拿到unsafe对象，就用unsafe。此处有复用的实现
                 return PooledUnsafeDirectByteBuf.newInstance(maxCapacity);
             } else {
                 return PooledDirectByteBuf.newInstance(maxCapacity);

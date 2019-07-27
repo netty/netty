@@ -584,7 +584,9 @@ final class UnsafeByteBufUtil {
         buf.checkIndex(index, length);
         if (length != 0) {
             int len = Math.min(length, ByteBufUtil.WRITE_CHUNK_SIZE);
-            if (buf.alloc().isDirectBufferPooled()) {
+            if (len <= ByteBufUtil.MAX_TL_ARRAY_LEN || !buf.alloc().isDirectBufferPooled()) {
+                getBytes(addr, ByteBufUtil.threadLocalTempArray(len), 0, len, out, length);
+            } else {
                 // if direct buffers are pooled chances are good that heap buffers are pooled as well.
                 ByteBuf tmpBuf = buf.alloc().heapBuffer(len);
                 try {
@@ -594,8 +596,6 @@ final class UnsafeByteBufUtil {
                 } finally {
                     tmpBuf.release();
                 }
-            } else {
-                getBytes(addr, new byte[len], 0, len, out, length);
             }
         }
     }

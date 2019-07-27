@@ -294,7 +294,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
 
         try {
-            ch.register(selector, interestOps, task);
+            ch.register(unwrappedSelector, interestOps, task);
         } catch (Exception e) {
             throw new EventLoopException("failed to register a channel", e);
         }
@@ -398,12 +398,17 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
     @Override
-    protected void run() {
-        for (;;) {
+    protected void run() {// Tony: 有任务提交后，被触发执行
+        for (;;) {// Tony: 执行两件事selector,select的事件 和 taskQueue里面的内容
             try {
-                switch (selectStrategy.calculateStrategy(selectNowSupplier, hasTasks())) {
+                try {
+                    switch (selectStrategy.calculateStrategy(selectNowSupplier, hasTasks())) {
                     case SelectStrategy.CONTINUE:
                         continue;
+
+                    case SelectStrategy.BUSY_WAIT:
+                        // fall-through to SELECT since the busy-wait is not supported with NIO
+
                     case SelectStrategy.SELECT:
                         select(wakenUp.getAndSet(false));
 
@@ -440,13 +445,20 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                         }
                         // fall through
                     default:
+                    }
+                } catch (IOException e) {
+                    // If we receive an IOException here its because the Selector is messed up. Let's rebuild
+                    // the selector and retry. https://github.com/netty/netty/issues/8566
+                    rebuildSelector0();
+                    handleLoopException(e);
+                    continue;
                 }
 
                 cancelledKeys = 0;
                 needsToSelectAgain = false;
                 final int ioRatio = this.ioRatio;
                 if (ioRatio == 100) {
-                    try {
+                    try {// Tony: 处理事件
                         processSelectedKeys();
                     } finally {
                         // Ensure we always run tasks.
@@ -494,7 +506,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private void processSelectedKeys() {
         if (selectedKeys != null) {
             processSelectedKeysOptimized();
-        } else {
+        } else {// Tony: 处理事件
             processSelectedKeysPlain(selector.selectedKeys());
         }
     }
@@ -533,14 +545,14 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         if (selectedKeys.isEmpty()) {
             return;
         }
-
+        // Tony: 获取selector所有选中的事件（ServerSocketChannel主要是OP_ACCEPT,SocketChannle主要是OP_READ）
         Iterator<SelectionKey> i = selectedKeys.iterator();
         for (;;) {
             final SelectionKey k = i.next();
             final Object a = k.attachment();
             i.remove();
 
-            if (a instanceof AbstractNioChannel) {
+            if (a instanceof AbstractNioChannel) {// Tony: 处理niochannel事件
                 processSelectedKey(k, (AbstractNioChannel) a);
             } else {
                 @SuppressWarnings("unchecked")
@@ -596,7 +608,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     private void processSelectedKey(SelectionKey k, AbstractNioChannel ch) {
         final AbstractNioChannel.NioUnsafe unsafe = ch.unsafe();
-        if (!k.isValid()) {
+        if (!k.isValid()) {// Tony: 判断是否可用
             final EventLoop eventLoop;
             try {
                 eventLoop = ch.eventLoop();
@@ -619,10 +631,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
 
         try {
-            int readyOps = k.readyOps();
+            int readyOps = k.readyOps();// Tony: 获取事件类型
             // We first need to call finishConnect() before try to trigger a read(...) or write(...) as otherwise
             // the NIO JDK channel implementation may throw a NotYetConnectedException.
-            if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
+            if ((readyOps & SelectionKey.OP_CONNECT) != 0) {// Tony: connect主要用于客户端
                 // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
                 // See https://github.com/netty/netty/issues/924
                 int ops = k.interestOps();
@@ -641,8 +653,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
             // to a spin loop
             if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
-                unsafe.read();
-            }
+                unsafe.read();// Tony: accept 和 read 都在这里处理。
+            }// Tony: ServerSocketChannel用的是NioMessageUnsafe，socketchannel用的是niobyteunsafe
         } catch (CancelledKeyException ignored) {
             unsafe.close(unsafe.voidPromise());
         }
@@ -781,17 +793,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     selectCnt = 1;
                 } else if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&
                         selectCnt >= SELECTOR_AUTO_REBUILD_THRESHOLD) {
-                    // The selector returned prematurely many times in a row.
-                    // Rebuild the selector to work around the problem.
-                    logger.warn(
-                            "Selector.select() returned prematurely {} times in a row; rebuilding Selector {}.",
-                            selectCnt, selector);
-
-                    rebuildSelector();
-                    selector = this.selector;
-
-                    // Select again to populate selectedKeys.
-                    selector.selectNow();
+                    // The code exists in an extra method to ensure the method is not too big to inline as this
+                    // branch is not very likely to get hit very frequently.
+                    selector = selectRebuildSelector(selectCnt);
                     selectCnt = 1;
                     break;
                 }
@@ -812,6 +816,21 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
             // Harmless exception - log anyway
         }
+    }
+
+    private Selector selectRebuildSelector(int selectCnt) throws IOException {
+        // The selector returned prematurely many times in a row.
+        // Rebuild the selector to work around the problem.
+        logger.warn(
+                "Selector.select() returned prematurely {} times in a row; rebuilding Selector {}.",
+                selectCnt, selector);
+
+        rebuildSelector();
+        Selector selector = this.selector;
+
+        // Select again to populate selectedKeys.
+        selector.selectNow();
+        return selector;
     }
 
     private void selectAgain() {

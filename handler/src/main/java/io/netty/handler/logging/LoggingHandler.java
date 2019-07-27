@@ -187,7 +187,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "BIND", localAddress));
-        }
+        }// Tony: 是否继续传播这个事件，由handler自身决定。LoggingHandler仅作为日志记录，所以每个事件都会继续传播
         ctx.bind(localAddress, promise);
     }
 

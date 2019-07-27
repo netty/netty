@@ -20,11 +20,14 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static java.util.Collections.singletonMap;
 
 /**
  * Converts a Java cipher suite string to an OpenSSL cipher suite string and vice versa.
@@ -95,6 +98,26 @@ final class CipherSuiteConverter {
      */
     private static final ConcurrentMap<String, Map<String, String>> o2j = PlatformDependent.newConcurrentHashMap();
 
+    private static final Map<String, String> j2oTls13;
+    private static final Map<String, Map<String, String>> o2jTls13;
+
+    static {
+        Map<String, String> j2oTls13Map = new HashMap<String, String>();
+        j2oTls13Map.put("TLS_AES_128_GCM_SHA256", "AEAD-AES128-GCM-SHA256");
+        j2oTls13Map.put("TLS_AES_256_GCM_SHA384", "AEAD-AES256-GCM-SHA384");
+        j2oTls13Map.put("TLS_CHACHA20_POLY1305_SHA256", "AEAD-CHACHA20-POLY1305-SHA256");
+        j2oTls13 = Collections.unmodifiableMap(j2oTls13Map);
+
+        Map<String, Map<String, String>> o2jTls13Map = new HashMap<String, Map<String, String>>();
+        o2jTls13Map.put("TLS_AES_128_GCM_SHA256", singletonMap("TLS", "TLS_AES_128_GCM_SHA256"));
+        o2jTls13Map.put("TLS_AES_256_GCM_SHA384", singletonMap("TLS", "TLS_AES_256_GCM_SHA384"));
+        o2jTls13Map.put("TLS_CHACHA20_POLY1305_SHA256", singletonMap("TLS", "TLS_CHACHA20_POLY1305_SHA256"));
+        o2jTls13Map.put("AEAD-AES128-GCM-SHA256", singletonMap("TLS", "TLS_AES_128_GCM_SHA256"));
+        o2jTls13Map.put("AEAD-AES256-GCM-SHA384", singletonMap("TLS", "TLS_AES_256_GCM_SHA384"));
+        o2jTls13Map.put("AEAD-CHACHA20-POLY1305-SHA256", singletonMap("TLS", "TLS_CHACHA20_POLY1305_SHA256"));
+        o2jTls13 = Collections.unmodifiableMap(o2jTls13Map);
+    }
+
     /**
      * Clears the cache for testing purpose.
      */
@@ -123,48 +146,25 @@ final class CipherSuiteConverter {
     }
 
     /**
-     * Converts the specified Java cipher suites to the colon-separated OpenSSL cipher suite specification.
-     */
-    static String toOpenSsl(Iterable<String> javaCipherSuites) {
-        final StringBuilder buf = new StringBuilder();
-        for (String c: javaCipherSuites) {
-            if (c == null) {
-                break;
-            }
-
-            String converted = toOpenSsl(c);
-            if (converted != null) {
-                c = converted;
-            }
-
-            buf.append(c);
-            buf.append(':');
-        }
-
-        if (buf.length() > 0) {
-            buf.setLength(buf.length() - 1);
-            return buf.toString();
-        } else {
-            return "";
-        }
-    }
-
-    /**
      * Converts the specified Java cipher suite to its corresponding OpenSSL cipher suite name.
      *
      * @return {@code null} if the conversion has failed
      */
-    static String toOpenSsl(String javaCipherSuite) {
+    static String toOpenSsl(String javaCipherSuite, boolean boringSSL) {
         String converted = j2o.get(javaCipherSuite);
         if (converted != null) {
             return converted;
-        } else {
-            return cacheFromJava(javaCipherSuite);
         }
+        return cacheFromJava(javaCipherSuite, boringSSL);
     }
 
-    private static String cacheFromJava(String javaCipherSuite) {
-        String openSslCipherSuite = toOpenSslUncached(javaCipherSuite);
+    private static String cacheFromJava(String javaCipherSuite, boolean boringSSL) {
+        String converted = j2oTls13.get(javaCipherSuite);
+        if (converted != null) {
+            return boringSSL ? converted : javaCipherSuite;
+        }
+
+        String openSslCipherSuite = toOpenSslUncached(javaCipherSuite, boringSSL);
         if (openSslCipherSuite == null) {
             return null;
         }
@@ -185,7 +185,12 @@ final class CipherSuiteConverter {
         return openSslCipherSuite;
     }
 
-    static String toOpenSslUncached(String javaCipherSuite) {
+    static String toOpenSslUncached(String javaCipherSuite, boolean boringSSL) {
+        String converted = j2oTls13.get(javaCipherSuite);
+        if (converted != null) {
+            return boringSSL ? converted : javaCipherSuite;
+        }
+
         Matcher m = JAVA_CIPHERSUITE_PATTERN.matcher(javaCipherSuite);
         if (!m.matches()) {
             return null;
@@ -287,14 +292,23 @@ final class CipherSuiteConverter {
 
         String javaCipherSuite = p2j.get(protocol);
         if (javaCipherSuite == null) {
-            javaCipherSuite = protocol + '_' + p2j.get("");
+            String cipher = p2j.get("");
+            if (cipher == null) {
+                return null;
+            }
+            javaCipherSuite = protocol + '_' + cipher;
         }
 
         return javaCipherSuite;
     }
 
     private static Map<String, String> cacheFromOpenSsl(String openSslCipherSuite) {
-        String javaCipherSuiteSuffix = toJavaUncached(openSslCipherSuite);
+        Map<String, String> converted = o2jTls13.get(openSslCipherSuite);
+        if (converted != null) {
+            return converted;
+        }
+
+        String javaCipherSuiteSuffix = toJavaUncached0(openSslCipherSuite, false);
         if (javaCipherSuiteSuffix == null) {
             return null;
         }
@@ -320,6 +334,17 @@ final class CipherSuiteConverter {
     }
 
     static String toJavaUncached(String openSslCipherSuite) {
+        return toJavaUncached0(openSslCipherSuite, true);
+    }
+
+    private static String toJavaUncached0(String openSslCipherSuite, boolean checkTls13) {
+        if (checkTls13) {
+            Map<String, String> converted = o2jTls13.get(openSslCipherSuite);
+            if (converted != null) {
+                return converted.get("TLS");
+            }
+        }
+
         Matcher m = OPENSSL_CIPHERSUITE_PATTERN.matcher(openSslCipherSuite);
         if (!m.matches()) {
             return null;
@@ -421,6 +446,48 @@ final class CipherSuiteConverter {
         //   * MD5
         //
         return hmacAlgo;
+    }
+
+    /**
+     * Convert the given ciphers if needed to OpenSSL format and append them to the correct {@link StringBuilder}
+     * depending on if its a TLSv1.3 cipher or not. If this methods returns without throwing an exception its
+     * guaranteed that at least one of the {@link StringBuilder}s contain some ciphers that can be used to configure
+     * OpenSSL.
+     */
+    static void convertToCipherStrings(Iterable<String> cipherSuites, StringBuilder cipherBuilder,
+                                       StringBuilder cipherTLSv13Builder, boolean boringSSL) {
+        for (String c: cipherSuites) {
+            if (c == null) {
+                break;
+            }
+
+            String converted = toOpenSsl(c, boringSSL);
+            if (converted == null) {
+                converted = c;
+            }
+
+            if (!OpenSsl.isCipherSuiteAvailable(converted)) {
+                throw new IllegalArgumentException("unsupported cipher suite: " + c + '(' + converted + ')');
+            }
+
+            if (SslUtils.isTLSv13Cipher(converted) || SslUtils.isTLSv13Cipher(c)) {
+                cipherTLSv13Builder.append(converted);
+                cipherTLSv13Builder.append(':');
+            } else {
+                cipherBuilder.append(converted);
+                cipherBuilder.append(':');
+            }
+        }
+
+        if (cipherBuilder.length() == 0 && cipherTLSv13Builder.length() == 0) {
+            throw new IllegalArgumentException("empty cipher suites");
+        }
+        if (cipherBuilder.length() > 0) {
+            cipherBuilder.setLength(cipherBuilder.length() - 1);
+        }
+        if (cipherTLSv13Builder.length() > 0) {
+            cipherTLSv13Builder.setLength(cipherTLSv13Builder.length() - 1);
+        }
     }
 
     private CipherSuiteConverter() { }

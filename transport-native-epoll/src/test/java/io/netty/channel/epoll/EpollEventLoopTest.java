@@ -15,32 +15,52 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.RejectedExecutionHandlers;
+import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class EpollEventLoopTest {
 
     @Test
     public void testScheduleBigDelayNotOverflow() {
-        EventLoopGroup group = new EpollEventLoopGroup(1);
+        final AtomicReference<Throwable> capture = new AtomicReference<Throwable>();
 
-        final EventLoop el = group.next();
-        Future<?> future = el.schedule(new Runnable() {
+        final EventLoopGroup group = new EpollEventLoop(null,
+                new ThreadPerTaskExecutor(new DefaultThreadFactory(getClass())), 0,
+                DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy(), RejectedExecutionHandlers.reject()) {
             @Override
-            public void run() {
-                // NOOP
+            void handleLoopException(Throwable t) {
+                capture.set(t);
+                super.handleLoopException(t);
             }
-        }, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+        };
 
-        assertFalse(future.awaitUninterruptibly(1000));
-        assertTrue(future.cancel(true));
-        group.shutdownGracefully();
+        try {
+            final EventLoop eventLoop = group.next();
+            Future<?> future = eventLoop.schedule(new Runnable() {
+                @Override
+                public void run() {
+                    // NOOP
+                }
+            }, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+
+            assertFalse(future.awaitUninterruptibly(1000));
+            assertTrue(future.cancel(true));
+            assertNull(capture.get());
+        } finally {
+            group.shutdownGracefully();
+        }
     }
 }

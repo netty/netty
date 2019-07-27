@@ -25,7 +25,10 @@ import java.net.SocketAddress;
 
 /**
  * Abstract base class for {@link Channel} implementations that use Old-Blocking-IO
+ *
+ * @deprecated use NIO / EPOLL / KQUEUE transport.
  */
+@Deprecated
 public abstract class AbstractOioChannel extends AbstractChannel {
 
     protected static final int SO_TIMEOUT = 1000;

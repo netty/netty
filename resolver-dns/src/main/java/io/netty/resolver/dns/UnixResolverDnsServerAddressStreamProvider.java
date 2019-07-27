@@ -27,12 +27,12 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -59,6 +59,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
     static final int DEFAULT_NDOTS = 1;
     private final DnsServerAddresses defaultNameServerAddresses;
     private final Map<String, DnsServerAddresses> domainToNameServerStreamMap;
+    private static final Pattern SEARCH_DOMAIN_PATTERN = Pattern.compile("\\s+");
 
     /**
      * Attempt to parse {@code /etc/resolv.conf} and files in the {@code /etc/resolver} directory by default.
@@ -323,7 +324,10 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                 } else if (line.startsWith(SEARCH_ROW_LABEL)) {
                     int i = indexOfNonWhiteSpace(line, SEARCH_ROW_LABEL.length());
                     if (i >= 0) {
-                        searchDomains.add(line.substring(i));
+                        // May contain more then one entry, either seperated by whitespace or tab.
+                        // See https://linux.die.net/man/5/resolver
+                        String[] domains = SEARCH_DOMAIN_PATTERN.split(line.substring(i));
+                        Collections.addAll(searchDomains, domains);
                     }
                 }
             }

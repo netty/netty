@@ -167,12 +167,12 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
 
         @Override
         public WebSocketExtensionEncoder newExtensionEncoder() {
-            return new PerMessageDeflateEncoder(compressionLevel, clientWindowSize, clientNoContext);
+            return new PerMessageDeflateEncoder(compressionLevel, serverWindowSize, serverNoContext);
         }
 
         @Override
         public WebSocketExtensionDecoder newExtensionDecoder() {
-            return new PerMessageDeflateDecoder(serverNoContext);
+            return new PerMessageDeflateDecoder(clientNoContext);
         }
 
         @Override

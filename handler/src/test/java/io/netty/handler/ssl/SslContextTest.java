@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 
 import javax.net.ssl.SSLContext;
@@ -112,6 +113,11 @@ public abstract class SslContextTest {
 
         SslContext sslContext = newServerContext(crtFile, keyFile, null);
         assertFalse(sslContext.cipherSuites().contains(unsupportedCipher));
+    }
+
+    @Test(expected = CertificateException.class)
+    public void test() throws CertificateException {
+        SslContext.toX509Certificates(new File(getClass().getResource("ec_params_unsupported.pem").getFile()));
     }
 
     protected abstract SslContext newServerContext(File crtFile, File keyFile, String pass) throws SSLException;

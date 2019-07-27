@@ -191,7 +191,7 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
      */
     public boolean isReusePort() {
         try {
-            return channel.socket.isReusePort();
+            return ((EpollServerSocketChannel) channel).socket.isReusePort();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -206,7 +206,7 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
      */
     public EpollServerSocketChannelConfig setReusePort(boolean reusePort) {
         try {
-            channel.socket.setReusePort(reusePort);
+            ((EpollServerSocketChannel) channel).socket.setReusePort(reusePort);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -219,7 +219,7 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
      */
     public boolean isFreeBind() {
         try {
-            return channel.socket.isIpFreeBind();
+            return ((EpollServerSocketChannel) channel).socket.isIpFreeBind();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -231,7 +231,7 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
      */
     public EpollServerSocketChannelConfig setFreeBind(boolean freeBind) {
         try {
-            channel.socket.setIpFreeBind(freeBind);
+            ((EpollServerSocketChannel) channel).socket.setIpFreeBind(freeBind);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -244,7 +244,7 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
      */
     public boolean isIpTransparent() {
         try {
-            return channel.socket.isIpTransparent();
+            return ((EpollServerSocketChannel) channel).socket.isIpTransparent();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -256,7 +256,7 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
      */
     public EpollServerSocketChannelConfig setIpTransparent(boolean transparent) {
         try {
-            channel.socket.setIpTransparent(transparent);
+            ((EpollServerSocketChannel) channel).socket.setIpTransparent(transparent);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -268,7 +268,7 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
      */
     public EpollServerSocketChannelConfig setTcpDeferAccept(int deferAccept) {
         try {
-            channel.socket.setTcpDeferAccept(deferAccept);
+            ((EpollServerSocketChannel) channel).socket.setTcpDeferAccept(deferAccept);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -280,7 +280,7 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
      */
     public int getTcpDeferAccept() {
         try {
-            return channel.socket.getTcpDeferAccept();
+            return ((EpollServerSocketChannel) channel).socket.getTcpDeferAccept();
         } catch (IOException e) {
             throw new ChannelException(e);
         }

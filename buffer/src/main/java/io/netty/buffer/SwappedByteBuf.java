@@ -34,7 +34,7 @@ import java.nio.charset.Charset;
  * instead.
  */
 @Deprecated
-public class SwappedByteBuf extends ByteBuf {
+public class SwappedByteBuf extends ByteBuf {// Tony: 不用看了，废弃
 
     private final ByteBuf buf;
     private final ByteOrder order;

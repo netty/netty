@@ -170,6 +170,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         if (localAddress == null) {
             try {
                 this.localAddress = localAddress = unsafe().localAddress();
+            } catch (Error e) {
+                throw e;
             } catch (Throwable t) {
                 // Sometimes fails on a closed socket in Windows.
                 return null;
@@ -192,6 +194,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         if (remoteAddress == null) {
             try {
                 this.remoteAddress = remoteAddress = unsafe().remoteAddress();
+            } catch (Error e) {
+                throw e;
             } catch (Throwable t) {
                 // Sometimes fails on a closed socket in Windows.
                 return null;
@@ -250,8 +254,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        return pipeline.bind(localAddress, promise);
+    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {// Tony: 核心的绑定实现在这个channel抽象类中
+        return pipeline.bind(localAddress, promise);// Tony: 这里触发一个netty职责链中的bind事件，由应用代码发起到底层，属于outBound
     }
 
     @Override
@@ -471,9 +475,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             AbstractChannel.this.eventLoop = eventLoop;
-
+            // Tony: 如果调用register方法的线程和EventLoop执行线程不是同一个线程，则以任务形式提交绑定操作
             if (eventLoop.inEventLoop()) {
-                register0(promise);
+                register0(promise);// Tony: 实际就是调用这个方法
             } else {
                 try {
                     eventLoop.execute(new Runnable() {
@@ -501,7 +505,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     return;
                 }
                 boolean firstRegistration = neverRegistered;
-                doRegister();
+                doRegister();// Tony: NIOchannel中，将Channel和NioEventLoop里面的Selector进行绑定
                 neverRegistered = false;
                 registered = true;
 
@@ -510,18 +514,18 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 pipeline.invokeHandlerAddedIfNeeded();
 
                 safeSetSuccess(promise);
-                pipeline.fireChannelRegistered();
+                pipeline.fireChannelRegistered();// Tony: 传播通道完成注册的事件
                 // Only fire a channelActive if the channel has never been registered. This prevents firing
                 // multiple channel actives if the channel is deregistered and re-registered.
-                if (isActive()) {
-                    if (firstRegistration) {
+                if (isActive()) {// Tony: ServerSocketChannel服务端完成bind之后，才会变成active。
+                    if (firstRegistration) {// Tony: 如果是socketChannel，active的判断就是是否连接、是否开启
                         pipeline.fireChannelActive();
                     } else if (config().isAutoRead()) {
                         // This channel was registered before and autoRead() is set. This means we need to begin read
                         // again so that we process inbound data.
                         //
                         // See https://github.com/netty/netty/issues/4805
-                        beginRead();
+                        beginRead();// Tony: 如果是取消register，再重新绑定的，就会直接注册到OP_READ
                     }
                 }
             } catch (Throwable t) {
@@ -844,7 +848,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             try {
-                doBeginRead();
+                doBeginRead();// Tony: NIO下面，这个方法就是注册OP_READ
             } catch (final Exception e) {
                 invokeLater(new Runnable() {
                     @Override

@@ -123,17 +123,33 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             "autoRead = {5}, useChunkedWriteHandler = {6}, useCompositeByteBuf = {7}")
     public static Collection<Object[]> data() throws Exception {
         List<SslContext> serverContexts = new ArrayList<SslContext>();
-        serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.JDK).build());
+        serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE)
+                                            .sslProvider(SslProvider.JDK)
+                                            // As we test renegotiation we should use a protocol that support it.
+                                            .protocols("TLSv1.2")
+                                            .build());
 
         List<SslContext> clientContexts = new ArrayList<SslContext>();
-        clientContexts.add(SslContextBuilder.forClient().sslProvider(SslProvider.JDK).trustManager(CERT_FILE).build());
+        clientContexts.add(SslContextBuilder.forClient()
+                                            .sslProvider(SslProvider.JDK)
+                                            .trustManager(CERT_FILE)
+                                            // As we test renegotiation we should use a protocol that support it.
+                                            .protocols("TLSv1.2")
+                                            .build());
 
         boolean hasOpenSsl = OpenSsl.isAvailable();
         if (hasOpenSsl) {
             serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE)
-                                                .sslProvider(SslProvider.OPENSSL).build());
-            clientContexts.add(SslContextBuilder.forClient().sslProvider(SslProvider.OPENSSL)
-                                                .trustManager(CERT_FILE).build());
+                                                .sslProvider(SslProvider.OPENSSL)
+                                                // As we test renegotiation we should use a protocol that support it.
+                                                .protocols("TLSv1.2")
+                                                .build());
+            clientContexts.add(SslContextBuilder.forClient()
+                                                .sslProvider(SslProvider.OPENSSL)
+                                                .trustManager(CERT_FILE)
+                                                // As we test renegotiation we should use a protocol that support it.
+                                                .protocols("TLSv1.2")
+                                                .build());
         } else {
             logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
         }

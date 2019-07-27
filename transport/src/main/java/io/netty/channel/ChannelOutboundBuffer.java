@@ -434,21 +434,9 @@ public final class ChannelOutboundBuffer {
                         }
                         nioBuffers[nioBufferCount++] = nioBuf;
                     } else {
-                        ByteBuffer[] nioBufs = entry.bufs;
-                        if (nioBufs == null) {
-                            // cached ByteBuffers as they may be expensive to create in terms
-                            // of Object allocation
-                            entry.bufs = nioBufs = buf.nioBuffers();
-                        }
-                        for (int i = 0; i < nioBufs.length && nioBufferCount < maxCount; ++i) {
-                            ByteBuffer nioBuf = nioBufs[i];
-                            if (nioBuf == null) {
-                                break;
-                            } else if (!nioBuf.hasRemaining()) {
-                                continue;
-                            }
-                            nioBuffers[nioBufferCount++] = nioBuf;
-                        }
+                        // The code exists in an extra method to ensure the method is not too big to inline as this
+                        // branch is not very likely to get hit very frequently.
+                        nioBufferCount = nioBuffers(entry, buf, nioBuffers, nioBufferCount, maxCount);
                     }
                     if (nioBufferCount == maxCount) {
                         break;
@@ -461,6 +449,25 @@ public final class ChannelOutboundBuffer {
         this.nioBufferSize = nioBufferSize;
 
         return nioBuffers;
+    }
+
+    private static int nioBuffers(Entry entry, ByteBuf buf, ByteBuffer[] nioBuffers, int nioBufferCount, int maxCount) {
+        ByteBuffer[] nioBufs = entry.bufs;
+        if (nioBufs == null) {
+            // cached ByteBuffers as they may be expensive to create in terms
+            // of Object allocation
+            entry.bufs = nioBufs = buf.nioBuffers();
+        }
+        for (int i = 0; i < nioBufs.length && nioBufferCount < maxCount; ++i) {
+            ByteBuffer nioBuf = nioBufs[i];
+            if (nioBuf == null) {
+                break;
+            } else if (!nioBuf.hasRemaining()) {
+                continue;
+            }
+            nioBuffers[nioBufferCount++] = nioBuf;
+        }
+        return nioBufferCount;
     }
 
     private static ByteBuffer[] expandNioBufferArray(ByteBuffer[] array, int neededSpace, int size) {

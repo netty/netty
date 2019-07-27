@@ -32,13 +32,11 @@ import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_REUSEADDR;
 
 public class EpollServerChannelConfig extends EpollChannelConfig implements ServerSocketChannelConfig {
-    protected final AbstractEpollChannel channel;
     private volatile int backlog = NetUtil.SOMAXCONN;
     private volatile int pendingFastOpenRequestsThreshold;
 
     EpollServerChannelConfig(AbstractEpollChannel channel) {
         super(channel);
-        this.channel = channel;
     }
 
     @Override
@@ -85,7 +83,7 @@ public class EpollServerChannelConfig extends EpollChannelConfig implements Serv
 
     public boolean isReuseAddress() {
         try {
-            return channel.socket.isReuseAddress();
+            return ((AbstractEpollChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -93,7 +91,7 @@ public class EpollServerChannelConfig extends EpollChannelConfig implements Serv
 
     public EpollServerChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
-            channel.socket.setReuseAddress(reuseAddress);
+            ((AbstractEpollChannel) channel).socket.setReuseAddress(reuseAddress);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -102,7 +100,7 @@ public class EpollServerChannelConfig extends EpollChannelConfig implements Serv
 
     public int getReceiveBufferSize() {
         try {
-            return channel.socket.getReceiveBufferSize();
+            return ((AbstractEpollChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -110,7 +108,7 @@ public class EpollServerChannelConfig extends EpollChannelConfig implements Serv
 
     public EpollServerChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
-            channel.socket.setReceiveBufferSize(receiveBufferSize);
+            ((AbstractEpollChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);

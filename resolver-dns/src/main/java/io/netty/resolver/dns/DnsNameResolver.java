@@ -47,6 +47,7 @@ import io.netty.resolver.InetNameResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -174,6 +175,7 @@ public class DnsNameResolver extends InetNameResolver {
      */
     private final DnsCache resolveCache;
     private final AuthoritativeDnsServerCache authoritativeDnsServerCache;
+    private final DnsCnameCache cnameCache;
 
     private final FastThreadLocal<DnsServerAddressStream> nameServerAddrStream =
             new FastThreadLocal<DnsServerAddressStream>() {
@@ -225,9 +227,7 @@ public class DnsNameResolver extends InetNameResolver {
      * @param ndots the ndots value
      * @param decodeIdn {@code true} if domain / host names should be decoded to unicode when received.
      *                        See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>.
-     * @deprecated Use {@link DnsNameResolver(EventLoop, ChannelFactory, DnsCache, AuthoritativeDnsServerCache,
-     * DnsQueryLifecycleObserverFactory, long, ResolvedAddressTypes, boolean, int, boolean, int, boolean,
-     * HostsFileEntriesResolver, DnsServerAddressStreamProvider, String[], int, boolean)}
+     * @deprecated Use {@link DnsNameResolverBuilder}.
      */
     @Deprecated
     public DnsNameResolver(
@@ -279,11 +279,38 @@ public class DnsNameResolver extends InetNameResolver {
      * @param ndots the ndots value
      * @param decodeIdn {@code true} if domain / host names should be decoded to unicode when received.
      *                        See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>.
+     * @deprecated Use {@link DnsNameResolverBuilder}.
      */
+    @Deprecated
     public DnsNameResolver(
             EventLoop eventLoop,
             ChannelFactory<? extends DatagramChannel> channelFactory,
             final DnsCache resolveCache,
+            final AuthoritativeDnsServerCache authoritativeDnsServerCache,
+            DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory,
+            long queryTimeoutMillis,
+            ResolvedAddressTypes resolvedAddressTypes,
+            boolean recursionDesired,
+            int maxQueriesPerResolve,
+            boolean traceEnabled,
+            int maxPayloadSize,
+            boolean optResourceEnabled,
+            HostsFileEntriesResolver hostsFileEntriesResolver,
+            DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
+            String[] searchDomains,
+            int ndots,
+            boolean decodeIdn) {
+        this(eventLoop, channelFactory, resolveCache, NoopDnsCnameCache.INSTANCE, authoritativeDnsServerCache,
+             dnsQueryLifecycleObserverFactory, queryTimeoutMillis, resolvedAddressTypes, recursionDesired,
+             maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled, hostsFileEntriesResolver,
+             dnsServerAddressStreamProvider, searchDomains, ndots, decodeIdn);
+    }
+
+    DnsNameResolver(
+            EventLoop eventLoop,
+            ChannelFactory<? extends DatagramChannel> channelFactory,
+            final DnsCache resolveCache,
+            final DnsCnameCache cnameCache,
             final AuthoritativeDnsServerCache authoritativeDnsServerCache,
             DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory,
             long queryTimeoutMillis,
@@ -309,6 +336,7 @@ public class DnsNameResolver extends InetNameResolver {
         this.dnsServerAddressStreamProvider =
                 checkNotNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
         this.resolveCache = checkNotNull(resolveCache, "resolveCache");
+        this.cnameCache = checkNotNull(cnameCache, "cnameCache");
         this.dnsQueryLifecycleObserverFactory = traceEnabled ?
                 dnsQueryLifecycleObserverFactory instanceof NoopDnsQueryLifecycleObserverFactory ?
                         new TraceDnsQueryLifeCycleObserverFactory() :
@@ -347,7 +375,7 @@ public class DnsNameResolver extends InetNameResolver {
             default:
                 throw new IllegalArgumentException("Unknown ResolvedAddressTypes " + resolvedAddressTypes);
         }
-        preferredAddressType = preferredAddressType(resolvedAddressTypes);
+        preferredAddressType = preferredAddressType(this.resolvedAddressTypes);
         this.authoritativeDnsServerCache = checkNotNull(authoritativeDnsServerCache, "authoritativeDnsServerCache");
         nameServerComparator = new NameServerComparator(preferredAddressType.addressType());
 
@@ -382,6 +410,7 @@ public class DnsNameResolver extends InetNameResolver {
             @Override
             public void operationComplete(ChannelFuture future) {
                 resolveCache.clear();
+                cnameCache.clear();
                 authoritativeDnsServerCache.clear();
             }
         });
@@ -422,8 +451,14 @@ public class DnsNameResolver extends InetNameResolver {
      */
     protected DnsServerAddressStream newRedirectDnsServerStream(
             @SuppressWarnings("unused") String hostname, List<InetSocketAddress> nameservers) {
-        Collections.sort(nameservers, nameServerComparator);
-        return new SequentialDnsServerAddressStream(nameservers, 0);
+        DnsServerAddressStream cached = authoritativeDnsServerCache().get(hostname);
+        if (cached == null || cached.size() == 0) {
+            // If there is no cache hit (which may be the case for example when a NoopAuthoritativeDnsServerCache
+            // is used), we will just directly use the provided nameservers.
+            Collections.sort(nameservers, nameServerComparator);
+            return new SequentialDnsServerAddressStream(nameservers, 0);
+        }
+        return cached;
     }
 
     /**
@@ -431,6 +466,13 @@ public class DnsNameResolver extends InetNameResolver {
      */
     public DnsCache resolveCache() {
         return resolveCache;
+    }
+
+    /**
+     * Returns the {@link DnsCnameCache}.
+     */
+    DnsCnameCache cnameCache() {
+        return cnameCache;
     }
 
     /**
@@ -921,10 +963,32 @@ public class DnsNameResolver extends InetNameResolver {
         }
     }
 
-    private void doResolveAllUncached(String hostname,
+    private void doResolveAllUncached(final String hostname,
+                                      final DnsRecord[] additionals,
+                                      final Promise<List<InetAddress>> promise,
+                                      final DnsCache resolveCache) {
+        // Call doResolveUncached0(...) in the EventLoop as we may need to submit multiple queries which would need
+        // to submit multiple Runnable at the end if we are not already on the EventLoop.
+        EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            doResolveAllUncached0(hostname, additionals, promise, resolveCache);
+        } else {
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    doResolveAllUncached0(hostname, additionals, promise, resolveCache);
+                }
+            });
+        }
+    }
+
+    private void doResolveAllUncached0(String hostname,
                                       DnsRecord[] additionals,
                                       Promise<List<InetAddress>> promise,
                                       DnsCache resolveCache) {
+
+        assert executor().inEventLoop();
+
         final DnsServerAddressStream nameServerAddrs =
                 dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
         new DnsAddressResolveContext(this, hostname, additionals, nameServerAddrs,
@@ -973,8 +1037,8 @@ public class DnsNameResolver extends InetNameResolver {
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
             InetSocketAddress nameServerAddr, DnsQuestion question) {
 
-        return query0(nameServerAddr, question, EMPTY_ADDITIONALS,
-                ch.eventLoop().<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
+        return query0(nameServerAddr, question, EMPTY_ADDITIONALS, true, ch.newPromise(),
+                      ch.eventLoop().<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
     }
 
     /**
@@ -983,8 +1047,8 @@ public class DnsNameResolver extends InetNameResolver {
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
             InetSocketAddress nameServerAddr, DnsQuestion question, Iterable<DnsRecord> additionals) {
 
-        return query0(nameServerAddr, question, toArray(additionals, false),
-                ch.eventLoop().<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
+        return query0(nameServerAddr, question, toArray(additionals, false), true, ch.newPromise(),
+                     ch.eventLoop().<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
     }
 
     /**
@@ -994,7 +1058,7 @@ public class DnsNameResolver extends InetNameResolver {
             InetSocketAddress nameServerAddr, DnsQuestion question,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
 
-        return query0(nameServerAddr, question, EMPTY_ADDITIONALS, promise);
+        return query0(nameServerAddr, question, EMPTY_ADDITIONALS, true, ch.newPromise(), promise);
     }
 
     /**
@@ -1005,7 +1069,7 @@ public class DnsNameResolver extends InetNameResolver {
             Iterable<DnsRecord> additionals,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
 
-        return query0(nameServerAddr, question, toArray(additionals, false), promise);
+        return query0(nameServerAddr, question, toArray(additionals, false), true, ch.newPromise(), promise);
     }
 
     /**
@@ -1026,16 +1090,14 @@ public class DnsNameResolver extends InetNameResolver {
         return cause != null && cause.getCause() instanceof DnsNameResolverTimeoutException;
     }
 
-    final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query0(
-            InetSocketAddress nameServerAddr, DnsQuestion question,
-            DnsRecord[] additionals,
-            Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
-        return query0(nameServerAddr, question, additionals, ch.newPromise(), promise);
+    final void flushQueries() {
+        ch.flush();
     }
 
     final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query0(
             InetSocketAddress nameServerAddr, DnsQuestion question,
             DnsRecord[] additionals,
+            boolean flush,
             ChannelPromise writePromise,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
         assert !writePromise.isVoid();
@@ -1043,7 +1105,8 @@ public class DnsNameResolver extends InetNameResolver {
         final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> castPromise = cast(
                 checkNotNull(promise, "promise"));
         try {
-            new DnsQueryContext(this, nameServerAddr, question, additionals, castPromise).query(writePromise);
+            new DnsQueryContext(this, nameServerAddr, question, additionals, castPromise)
+                    .query(flush, writePromise);
             return castPromise;
         } catch (Exception e) {
             return castPromise.setFailure(e);

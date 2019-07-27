@@ -19,7 +19,9 @@ package io.netty.channel;
  * {@link SingleThreadEventLoop} which is used to handle OIO {@link Channel}'s. So in general there will be
  * one {@link ThreadPerChannelEventLoop} per {@link Channel}.
  *
+ * @deprecated this will be remove in the next-major release.
  */
+@Deprecated
 public class ThreadPerChannelEventLoop extends SingleThreadEventLoop {
 
     private final ThreadPerChannelEventLoopGroup parent;

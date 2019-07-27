@@ -40,6 +40,7 @@ public final class DnsNameResolverBuilder {
     private EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
     private DnsCache resolveCache;
+    private DnsCnameCache cnameCache;
     private AuthoritativeDnsServerCache authoritativeDnsServerCache;
     private Integer minTtl;
     private Integer maxTtl;
@@ -120,6 +121,17 @@ public final class DnsNameResolverBuilder {
      */
     public DnsNameResolverBuilder resolveCache(DnsCache resolveCache) {
         this.resolveCache  = resolveCache;
+        return this;
+    }
+
+    /**
+     * Sets the cache for {@code CNAME} mappings.
+     *
+     * @param cnameCache the cache used to cache {@code CNAME} mappings for a domain.
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder cnameCache(DnsCnameCache cnameCache) {
+        this.cnameCache  = cnameCache;
         return this;
     }
 
@@ -376,6 +388,11 @@ public final class DnsNameResolverBuilder {
                 new NameServerComparator(DnsNameResolver.preferredAddressType(resolvedAddressTypes).addressType()));
     }
 
+    private DnsCnameCache newCnameCache() {
+        return new DefaultDnsCnameCache(
+                intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE));
+    }
+
     /**
      * Set if domain / host names should be decoded to unicode when received.
      * See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>.
@@ -407,12 +424,14 @@ public final class DnsNameResolverBuilder {
         }
 
         DnsCache resolveCache = this.resolveCache != null ? this.resolveCache : newCache();
+        DnsCnameCache cnameCache = this.cnameCache != null ? this.cnameCache : newCnameCache();
         AuthoritativeDnsServerCache authoritativeDnsServerCache = this.authoritativeDnsServerCache != null ?
                 this.authoritativeDnsServerCache : newAuthoritativeDnsServerCache();
         return new DnsNameResolver(
                 eventLoop,
                 channelFactory,
                 resolveCache,
+                cnameCache,
                 authoritativeDnsServerCache,
                 dnsQueryLifecycleObserverFactory,
                 queryTimeoutMillis,
@@ -449,6 +468,9 @@ public final class DnsNameResolverBuilder {
             copiedBuilder.resolveCache(resolveCache);
         }
 
+        if (cnameCache != null) {
+            copiedBuilder.cnameCache(cnameCache);
+        }
         if (maxTtl != null && minTtl != null) {
             copiedBuilder.ttl(minTtl, maxTtl);
         }

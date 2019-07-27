@@ -537,7 +537,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 // elsewhere so we don't close the stream or otherwise modify the stream's state.
 
                 if (logger.isInfoEnabled()) {
-                    logger.info("{} ignoring {} frame for stream {} {}", ctx.channel(), frameName,
+                    logger.info("{} ignoring {} frame for stream {}", ctx.channel(), frameName,
                             stream.isResetSent() ? "RST_STREAM sent." :
                                 ("Stream created after GOAWAY sent. Last known stream by peer " +
                                  connection.remote().lastStreamKnownByPeer()));

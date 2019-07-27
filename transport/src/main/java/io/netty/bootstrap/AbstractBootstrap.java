@@ -250,7 +250,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      * Create a new {@link Channel} and bind it.
      */
     public ChannelFuture bind(int inetPort) {
-        return bind(new InetSocketAddress(inetPort));
+        return bind(new InetSocketAddress(inetPort)); // Tony: 绑定端口的入口代码
     }
 
     /**
@@ -275,20 +275,20 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
         }
-        return doBind(localAddress);
+        return doBind(localAddress);// Tony: 真正干事的代码
     }
 
     private ChannelFuture doBind(final SocketAddress localAddress) {
-        final ChannelFuture regFuture = initAndRegister();
+        final ChannelFuture regFuture = initAndRegister();// Tony: 创建/初始化ServerSocketChannel对象，并注册到Selector
         final Channel channel = regFuture.channel();
         if (regFuture.cause() != null) {
             return regFuture;
         }
-
+        // Tony: 等注册完成之后，再绑定端口。 防止端口开放了，却不能处理请求
         if (regFuture.isDone()) {
             // At this point we know that the registration was complete and successful.
             ChannelPromise promise = channel.newPromise();
-            doBind0(regFuture, channel, localAddress, promise);
+            doBind0(regFuture, channel, localAddress, promise);// Tony: 实际操作绑定端口的代码
             return promise;
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
@@ -329,7 +329,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             // as the Channel is not registered yet we need to force the usage of the GlobalEventExecutor
             return new DefaultChannelPromise(new FailedChannel(), GlobalEventExecutor.INSTANCE).setFailure(t);
         }
-
+        // Tony: （一开始初始化的group）MultithreadEventLoopGroup里面选择一个eventLoop进行绑定
         ChannelFuture regFuture = config().group().register(channel);
         if (regFuture.cause() != null) {
             if (channel.isRegistered()) {
@@ -361,8 +361,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         // the pipeline in its channelRegistered() implementation.
         channel.eventLoop().execute(new Runnable() {
             @Override
-            public void run() {
-                if (regFuture.isSuccess()) {
+            public void run() {// Tony: 这里向EventLoop提交任务，一旦有任务提交则会触发EventLoop的轮询
+                if (regFuture.isSuccess()) {// Tony: 本质又绕回到channel的bind方法上面。
                     channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
                 } else {
                     promise.setFailure(regFuture.cause());

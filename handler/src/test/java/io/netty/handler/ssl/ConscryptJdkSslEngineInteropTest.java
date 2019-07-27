@@ -31,17 +31,17 @@ import static org.junit.Assume.assumeTrue;
 @RunWith(Parameterized.class)
 public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
 
-    @Parameterized.Parameters(name = "{index}: bufferType = {0}")
-    public static Collection<Object> data() {
-        List<Object> params = new ArrayList<Object>();
+    @Parameterized.Parameters(name = "{index}: bufferType = {0}, combo = {1}")
+    public static Collection<Object[]> data() {
+        List<Object[]> params = new ArrayList<Object[]>();
         for (BufferType type: BufferType.values()) {
-            params.add(type);
+            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12()});
         }
         return params;
     }
 
-    public ConscryptJdkSslEngineInteropTest(BufferType type) {
-        super(type);
+    public ConscryptJdkSslEngineInteropTest(BufferType type, ProtocolCipherCombo combo) {
+        super(type, combo);
     }
 
     @BeforeClass

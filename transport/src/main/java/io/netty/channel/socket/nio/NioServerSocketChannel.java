@@ -43,7 +43,7 @@ import java.util.Map;
  * NIO selector based implementation to accept new connections.
  */
 public class NioServerSocketChannel extends AbstractNioMessageChannel
-                             implements io.netty.channel.socket.ServerSocketChannel {
+        implements io.netty.channel.socket.ServerSocketChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
@@ -51,8 +51,8 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
 
     private static ServerSocketChannel newSocket(SelectorProvider provider) {
-        try {
-            /**
+        try {// Tony: netty没有直接用Selector.open()，因为open方法会多次调用SelectorProvider.provider()。
+            /** 而这个方法有锁，为了避免频繁调用带来的不必要的性能损耗,netty直接弄了一个DEFAULT_SELECTOR_PROVIDER静态变量
              *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
              *  {@link SelectorProvider#provider()} which is called by each ServerSocketChannel.open() otherwise.
              *

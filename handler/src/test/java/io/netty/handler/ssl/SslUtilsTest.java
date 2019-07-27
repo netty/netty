@@ -28,6 +28,7 @@ import java.security.NoSuchAlgorithmException;
 
 import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class SslUtilsTest {
@@ -63,4 +64,15 @@ public class SslUtilsTest {
         engine.beginHandshake();
         return engine;
     }
+
+    @Test
+    public void testIsTLSv13Cipher() {
+        assertTrue(SslUtils.isTLSv13Cipher("TLS_AES_128_GCM_SHA256"));
+        assertTrue(SslUtils.isTLSv13Cipher("TLS_AES_256_GCM_SHA384"));
+        assertTrue(SslUtils.isTLSv13Cipher("TLS_CHACHA20_POLY1305_SHA256"));
+        assertTrue(SslUtils.isTLSv13Cipher("TLS_AES_128_CCM_SHA256"));
+        assertTrue(SslUtils.isTLSv13Cipher("TLS_AES_128_CCM_8_SHA256"));
+        assertFalse(SslUtils.isTLSv13Cipher("TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"));
+    }
+
 }

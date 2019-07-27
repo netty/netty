@@ -18,9 +18,11 @@ package io.netty.handler.ssl;
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.internal.EmptyArrays;
 
 import javax.security.auth.Destroyable;
 import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 
 final class OpenSslPrivateKey extends AbstractReferenceCounted implements PrivateKey {
 
@@ -110,16 +112,24 @@ final class OpenSslPrivateKey extends AbstractReferenceCounted implements Privat
     /**
      * Convert to a {@link OpenSslKeyMaterial}. Reference count of both is shared.
      */
-    OpenSslKeyMaterial toKeyMaterial(long certificateChain) {
-        return new OpenSslPrivateKeyMaterial(certificateChain);
+    OpenSslKeyMaterial toKeyMaterial(long certificateChain, X509Certificate[] chain) {
+        return new OpenSslPrivateKeyMaterial(certificateChain, chain);
     }
 
     private final class OpenSslPrivateKeyMaterial implements OpenSslKeyMaterial {
 
         private long certificateChain;
+        private final X509Certificate[] x509CertificateChain;
 
-        OpenSslPrivateKeyMaterial(long certificateChain) {
+        OpenSslPrivateKeyMaterial(long certificateChain, X509Certificate[] x509CertificateChain) {
             this.certificateChain = certificateChain;
+            this.x509CertificateChain = x509CertificateChain == null ?
+                    EmptyArrays.EMPTY_X509_CERTIFICATES : x509CertificateChain;
+        }
+
+        @Override
+        public X509Certificate[] certificateChain() {
+            return x509CertificateChain.clone();
         }
 
         @Override

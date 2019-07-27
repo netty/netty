@@ -146,7 +146,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
                 this.offset = start;
             }
         } else {
-            this.value = new byte[length];
+            this.value = PlatformDependent.allocateUninitializedArray(length);
             int oldPos = value.position();
             value.get(this.value, 0, length);
             value.position(oldPos);
@@ -172,7 +172,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
                             + ") <= " + "value.length(" + value.length + ')');
         }
 
-        this.value = new byte[length];
+        this.value = PlatformDependent.allocateUninitializedArray(length);
         for (int i = 0, j = start; i < length; i++, j++) {
             this.value[i] = c2b(value[j]);
         }
@@ -219,7 +219,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
                             + ") <= " + "value.length(" + value.length() + ')');
         }
 
-        this.value = new byte[length];
+        this.value = PlatformDependent.allocateUninitializedArray(length);
         for (int i = 0, j = start; i < length; i++, j++) {
             this.value[i] = c2b(value.charAt(j));
         }
@@ -483,7 +483,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
                 return that;
             }
 
-            byte[] newValue = new byte[thisLen + thatLen];
+            byte[] newValue = PlatformDependent.allocateUninitializedArray(thisLen + thatLen);
             System.arraycopy(value, arrayOffset(), newValue, 0, thisLen);
             System.arraycopy(that.value, that.arrayOffset(), newValue, thisLen, thatLen);
             return new AsciiString(newValue, false);
@@ -493,7 +493,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return new AsciiString(string);
         }
 
-        byte[] newValue = new byte[thisLen + thatLen];
+        byte[] newValue = PlatformDependent.allocateUninitializedArray(thisLen + thatLen);
         System.arraycopy(value, arrayOffset(), newValue, 0, thisLen);
         for (int i = thisLen, j = 0; i < newValue.length; i++, j++) {
             newValue[i] = c2b(string.charAt(j));
@@ -881,7 +881,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         final int len = offset + length;
         for (int i = offset; i < len; ++i) {
             if (value[i] == oldCharAsByte) {
-                byte[] buffer = new byte[length()];
+                byte[] buffer = PlatformDependent.allocateUninitializedArray(length());
                 System.arraycopy(value, offset, buffer, 0, i - offset);
                 buffer[i - offset] = newCharAsByte;
                 ++i;
@@ -942,7 +942,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return this;
         }
 
-        final byte[] newValue = new byte[length()];
+        final byte[] newValue = PlatformDependent.allocateUninitializedArray(length());
         for (i = 0, j = arrayOffset(); i < newValue.length; ++i, ++j) {
             newValue[i] = toLowerCase(value[j]);
         }
@@ -972,7 +972,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return this;
         }
 
-        final byte[] newValue = new byte[length()];
+        final byte[] newValue = PlatformDependent.allocateUninitializedArray(length());
         for (i = 0, j = arrayOffset(); i < newValue.length; ++i, ++j) {
             newValue[i] = toUpperCase(value[j]);
         }

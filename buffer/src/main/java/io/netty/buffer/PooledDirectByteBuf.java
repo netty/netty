@@ -351,8 +351,8 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
         checkIndex(index, length);
-        byte[] tmp = new byte[length];
-        int readBytes = in.read(tmp);
+        byte[] tmp = ByteBufUtil.threadLocalTempArray(length);
+        int readBytes = in.read(tmp, 0, length);
         if (readBytes <= 0) {
             return readBytes;
         }

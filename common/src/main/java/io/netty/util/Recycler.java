@@ -156,14 +156,14 @@ public abstract class Recycler<T> {
     public final T get() {
         if (maxCapacityPerThread == 0) {
             return newObject((Handle<T>) NOOP_HANDLE);
-        }
+        }// Tony: 在线程变量中维护了一个栈，弹出一个handle对象
         Stack<T> stack = threadLocal.get();
         DefaultHandle<T> handle = stack.pop();
-        if (handle == null) {
+        if (handle == null) {// Tony: 如果没有则创建一个新的handle
             handle = stack.newHandle();
             handle.value = newObject(handle);
-        }
-        return (T) handle.value;
+        }// Tony: 返回已经存在的buf对象
+        return (T) handle.value;// Tony: value是当buf回收时调用deallocate，存放进来的。
     }
 
     /**

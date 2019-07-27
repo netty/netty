@@ -155,7 +155,8 @@ public class SniClientTest {
             Assert.assertNull(handler.engine().getHandshakeSession());
 
             if (PlatformDependent.javaVersion() >= 8) {
-                SniClientJava8TestUtil.assertSSLSession(handler.engine().getSession(), sniHostName);
+                SniClientJava8TestUtil.assertSSLSession(
+                        handler.engine().getUseClientMode(), handler.engine().getSession(), sniHostName);
             }
         } finally {
             if (cc != null) {

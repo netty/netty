@@ -17,16 +17,16 @@ package io.netty.util.internal;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.jctools.queues.MpscArrayQueue;
-import org.jctools.queues.MpscChunkedArrayQueue;
-import org.jctools.queues.MpscUnboundedArrayQueue;
-import org.jctools.queues.SpscLinkedQueue;
-import org.jctools.queues.atomic.MpscAtomicArrayQueue;
-import org.jctools.queues.atomic.MpscGrowableAtomicArrayQueue;
-import org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
-import org.jctools.queues.atomic.SpscLinkedAtomicQueue;
-import org.jctools.util.Pow2;
-import org.jctools.util.UnsafeAccess;
+import io.netty.util.internal.shaded.org.jctools.queues.MpscArrayQueue;
+import io.netty.util.internal.shaded.org.jctools.queues.MpscChunkedArrayQueue;
+import io.netty.util.internal.shaded.org.jctools.queues.MpscUnboundedArrayQueue;
+import io.netty.util.internal.shaded.org.jctools.queues.SpscLinkedQueue;
+import io.netty.util.internal.shaded.org.jctools.queues.atomic.MpscAtomicArrayQueue;
+import io.netty.util.internal.shaded.org.jctools.queues.atomic.MpscGrowableAtomicArrayQueue;
+import io.netty.util.internal.shaded.org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
+import io.netty.util.internal.shaded.org.jctools.queues.atomic.SpscLinkedAtomicQueue;
+import io.netty.util.internal.shaded.org.jctools.util.Pow2;
+import io.netty.util.internal.shaded.org.jctools.util.UnsafeAccess;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -154,8 +154,8 @@ public final class PlatformDependent {
                 DIRECT_MEMORY_COUNTER = new AtomicLong();
             }
         }
-        DIRECT_MEMORY_LIMIT = maxDirectMemory;
         logger.debug("-Dio.netty.maxDirectMemory: {} bytes", maxDirectMemory);
+        DIRECT_MEMORY_LIMIT = maxDirectMemory >= 1 ? maxDirectMemory : MAX_DIRECT_MEMORY;
 
         int tryAllocateUninitializedArray =
                 SystemPropertyUtil.getInt("io.netty.uninitializedArrayAllocationThreshold", 1024);
@@ -176,7 +176,7 @@ public final class PlatformDependent {
         } else {
             CLEANER = NOOP;
         }
-
+        // Tony: 能用堆外内存就用堆外内存
         // We should always prefer direct buffers by default if we can use a Cleaner to release direct buffers.
         DIRECT_BUFFER_PREFERRED = CLEANER != NOOP
                                   && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
@@ -284,7 +284,7 @@ public final class PlatformDependent {
      * Returns the maximum memory reserved for direct buffer allocation.
      */
     public static long maxDirectMemory() {
-        return MAX_DIRECT_MEMORY;
+        return DIRECT_MEMORY_LIMIT;
     }
 
     /**
@@ -402,6 +402,10 @@ public final class PlatformDependent {
         }
         throw new UnsupportedOperationException(
                 "sun.misc.Unsafe or java.nio.DirectByteBuffer.<init>(long, int) not available");
+    }
+
+    public static Object getObject(Object object, long fieldOffset) {
+        return PlatformDependent0.getObject(object, fieldOffset);
     }
 
     public static int getInt(Object object, long fieldOffset) {
@@ -645,16 +649,12 @@ public final class PlatformDependent {
 
     private static void incrementMemoryCounter(int capacity) {
         if (DIRECT_MEMORY_COUNTER != null) {
-            for (;;) {
-                long usedMemory = DIRECT_MEMORY_COUNTER.get();
-                long newUsedMemory = usedMemory + capacity;
-                if (newUsedMemory > DIRECT_MEMORY_LIMIT) {
-                    throw new OutOfDirectMemoryError("failed to allocate " + capacity
-                            + " byte(s) of direct memory (used: " + usedMemory + ", max: " + DIRECT_MEMORY_LIMIT + ')');
-                }
-                if (DIRECT_MEMORY_COUNTER.compareAndSet(usedMemory, newUsedMemory)) {
-                    break;
-                }
+            long newUsedMemory = DIRECT_MEMORY_COUNTER.addAndGet(capacity);
+            if (newUsedMemory > DIRECT_MEMORY_LIMIT) {
+                DIRECT_MEMORY_COUNTER.addAndGet(-capacity);
+                throw new OutOfDirectMemoryError("failed to allocate " + capacity
+                        + " byte(s) of direct memory (used: " + (newUsedMemory - capacity)
+                        + ", max: " + DIRECT_MEMORY_LIMIT + ')');
             }
         }
     }

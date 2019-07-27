@@ -17,10 +17,17 @@ package io.netty.handler.ssl;
 
 import io.netty.util.ReferenceCounted;
 
+import java.security.cert.X509Certificate;
+
 /**
  * Holds references to the native key-material that is used by OpenSSL.
  */
 interface OpenSslKeyMaterial extends ReferenceCounted {
+
+    /**
+     * Returns the configured {@link X509Certificate}s.
+     */
+    X509Certificate[] certificateChain();
 
     /**
      * Returns the pointer to the {@code STACK_OF(X509)} which holds the certificate chain.

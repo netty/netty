@@ -256,24 +256,24 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
             throw new IllegalArgumentException(String.format(
                     "minNewCapacity: %d (expected: not greater than maxCapacity(%d)",
                     minNewCapacity, maxCapacity));
-        }
+        }// Tony: 阈值4兆。 这个阈值的用意：容量要求4兆以内，每次扩容以2的倍数进行计算。超过4兆容量，另外的计算方式
         final int threshold = CALCULATE_THRESHOLD; // 4 MiB page
 
-        if (minNewCapacity == threshold) {
+        if (minNewCapacity == threshold) {// Tony: 新容量的最小要求，如果等于阈值，则立刻返回
             return threshold;
         }
 
         // If over threshold, do not double but just increase by threshold.
-        if (minNewCapacity > threshold) {
-            int newCapacity = minNewCapacity / threshold * threshold;
-            if (newCapacity > maxCapacity - threshold) {
+        if (minNewCapacity > threshold) {// Tony: 如果新容量的最小要求大于阈值
+            int newCapacity = minNewCapacity / threshold * threshold;// Tony: 新容量 = 新容量最小要求/阈值 * 阈值
+            if (newCapacity > maxCapacity - threshold) {// Tony: 大于 max(默认Integer.MAX_VALUE)，则返回最大限制值
                 newCapacity = maxCapacity;
             } else {
-                newCapacity += threshold;
+                newCapacity += threshold;// Tony: 否则新容量 = 新容量最小要求/阈值 * 阈值 + 阈值
             }
             return newCapacity;
         }
-
+        // Tony: 如果容量要求没超过阈值，则从64字节开始，不断增加一倍，直至满足新容量最小要求
         // Not over threshold. Double up to 4 MiB, starting from 64.
         int newCapacity = 64;
         while (newCapacity < minNewCapacity) {

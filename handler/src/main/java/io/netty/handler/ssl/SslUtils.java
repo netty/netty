@@ -22,9 +22,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.base64.Base64Dialect;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -36,7 +41,11 @@ import static java.util.Arrays.asList;
  * Constants for SSL packets.
  */
 final class SslUtils {
-
+    // See https://tools.ietf.org/html/rfc8446#appendix-B.4
+    static final Set<String> TLSV13_CIPHERS = Collections.unmodifiableSet(new LinkedHashSet<String>(
+            asList("TLS_AES_256_GCM_SHA384", "TLS_CHACHA20_POLY1305_SHA256",
+                          "TLS_AES_128_GCM_SHA256", "TLS_AES_128_CCM_8_SHA256",
+                          "TLS_AES_128_CCM_SHA256")));
     // Protocols
     static final String PROTOCOL_SSL_V2_HELLO = "SSLv2Hello";
     static final String PROTOCOL_SSL_V2 = "SSLv2";
@@ -44,6 +53,9 @@ final class SslUtils {
     static final String PROTOCOL_TLS_V1 = "TLSv1";
     static final String PROTOCOL_TLS_V1_1 = "TLSv1.1";
     static final String PROTOCOL_TLS_V1_2 = "TLSv1.2";
+    static final String PROTOCOL_TLS_V1_3 = "TLSv1.3";
+
+    static final String INVALID_CIPHER = "SSL_NULL_WITH_NULL_NULL";
 
     /**
      * change cipher spec
@@ -85,20 +97,37 @@ final class SslUtils {
      */
     static final int NOT_ENCRYPTED = -2;
 
-    static final String[] DEFAULT_CIPHER_SUITES = {
+    static final String[] DEFAULT_CIPHER_SUITES;
+    static final String[] DEFAULT_TLSV13_CIPHER_SUITES;
+    static final String[] TLSV13_CIPHER_SUITES = { "TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384" };
+
+    static {
+        if (PlatformDependent.javaVersion() >= 11) {
+            DEFAULT_TLSV13_CIPHER_SUITES = TLSV13_CIPHER_SUITES;
+        } else {
+            DEFAULT_TLSV13_CIPHER_SUITES = EmptyArrays.EMPTY_STRINGS;
+        }
+
+        List<String> defaultCiphers = new ArrayList<String>();
         // GCM (Galois/Counter Mode) requires JDK 8.
-        "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
-        "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
-        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-        "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+        defaultCiphers.add("TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384");
+        defaultCiphers.add("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
+        defaultCiphers.add("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256");
+        defaultCiphers.add("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA");
         // AES256 requires JCE unlimited strength jurisdiction policy files.
-        "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+        defaultCiphers.add("TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA");
         // GCM (Galois/Counter Mode) requires JDK 8.
-        "TLS_RSA_WITH_AES_128_GCM_SHA256",
-        "TLS_RSA_WITH_AES_128_CBC_SHA",
+        defaultCiphers.add("TLS_RSA_WITH_AES_128_GCM_SHA256");
+        defaultCiphers.add("TLS_RSA_WITH_AES_128_CBC_SHA");
         // AES256 requires JCE unlimited strength jurisdiction policy files.
-        "TLS_RSA_WITH_AES_256_CBC_SHA"
-    };
+        defaultCiphers.add("TLS_RSA_WITH_AES_256_CBC_SHA");
+
+        for (String tlsv13Cipher: DEFAULT_TLSV13_CIPHER_SUITES) {
+            defaultCiphers.add(tlsv13Cipher);
+        }
+
+        DEFAULT_CIPHER_SUITES = defaultCiphers.toArray(new String[0]);
+    }
 
     /**
      * Add elements from {@code names} into {@code enabled} if they are in {@code supported}.
@@ -359,6 +388,14 @@ final class SslUtils {
                !hostname.endsWith(".") &&
                !NetUtil.isValidIpV4Address(hostname) &&
                !NetUtil.isValidIpV6Address(hostname);
+    }
+
+    /**
+     * Returns {@code true} if the the given cipher (in openssl format) is for TLSv1.3, {@code false} otherwise.
+     */
+    static boolean isTLSv13Cipher(String cipher) {
+        // See https://tools.ietf.org/html/rfc8446#appendix-B.4
+        return TLSV13_CIPHERS.contains(cipher);
     }
 
     private SslUtils() {

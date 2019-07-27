@@ -16,6 +16,7 @@
 package io.netty.channel.socket.oio;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -53,7 +54,9 @@ import java.util.Locale;
  *
  * @see AddressedEnvelope
  * @see DatagramPacket
+ * @deprecated use NIO / EPOLL / KQUEUE transport.
  */
+@Deprecated
 public class OioDatagramChannel extends AbstractOioMessageChannel
                                 implements DatagramChannel {
 
@@ -276,9 +279,7 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
                 if (data.hasArray()) {
                     tmpPacket.setData(data.array(), data.arrayOffset() + data.readerIndex(), length);
                 } else {
-                    byte[] tmp = new byte[length];
-                    data.getBytes(data.readerIndex(), tmp);
-                    tmpPacket.setData(tmp);
+                    tmpPacket.setData(ByteBufUtil.getBytes(data, data.readerIndex(), length));
                 }
                 socket.send(tmpPacket);
                 in.remove();

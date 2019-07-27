@@ -129,7 +129,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         }
 
         @Override
-        public final void read() {
+        public final void read() {// Tony: 客户端发送过来的请求，具体数据的读取
             final ChannelConfig config = config();
             if (shouldBreakReadReady(config)) {
                 clearReadPending();
@@ -144,8 +144,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             boolean close = false;
             try {
                 do {
-                    byteBuf = allocHandle.allocate(allocator);
-                    allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                    byteBuf = allocHandle.allocate(allocator);// Tony: 申请一个字节缓冲区
+                    allocHandle.lastBytesRead(doReadBytes(byteBuf));// Tony: 内容读取道bytebuf缓冲区
                     if (allocHandle.lastBytesRead() <= 0) {
                         // nothing was read. release the buffer.
                         byteBuf.release();
@@ -160,12 +160,12 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
                     allocHandle.incMessagesRead(1);
                     readPending = false;
-                    pipeline.fireChannelRead(byteBuf);
+                    pipeline.fireChannelRead(byteBuf);// Tony: 读取的过程中，每次读取到一些数据后，传播一次read事件
                     byteBuf = null;
                 } while (allocHandle.continueReading());
 
                 allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
+                pipeline.fireChannelReadComplete();// Tony: 读取接收后，传播一次ReadComplete事件
 
                 if (close) {
                     closeOnRead(pipeline);

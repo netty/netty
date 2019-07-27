@@ -31,7 +31,10 @@ import java.nio.channels.WritableByteChannel;
 
 /**
  * Abstract base class for OIO Channels that are based on streams.
+ *
+ * @deprecated use NIO / EPOLL / KQUEUE transport.
  */
+@Deprecated
 public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
 
     private static final InputStream CLOSED_IN = new InputStream() {

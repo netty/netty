@@ -42,6 +42,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
@@ -767,6 +768,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             sentFirstMessage = true;
             pendingUnencryptedWrites.writeAndRemoveAll(ctx);
             forceFlush(ctx);
+            // Explicit start handshake processing once we send the first message. This will also ensure
+            // we will schedule the timeout if needed.
+            startHandshakeProcessing();
             return;
         }
 
@@ -1385,13 +1389,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             wrapLater = true;
                             continue;
                         }
-                        if (flushedBeforeHandshake) {
-                            // We need to call wrap(...) in case there was a flush done before the handshake completed.
-                            //
-                            // See https://github.com/netty/netty/pull/2437
-                            flushedBeforeHandshake = false;
-                            wrapLater = true;
-                        }
+
                         // If we are not handshaking and there is no more data to unwrap then the next call to unwrap
                         // will not produce any data. We can avoid the potentially costly unwrap operation and break
                         // out of the loop.
@@ -1412,6 +1410,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
                     break;
                 }
+            }
+
+            if (flushedBeforeHandshake && handshakePromise.isDone()) {
+                // We need to call wrap(...) in case there was a flush done before the handshake completed to ensure
+                // we do not stale.
+                //
+                // See https://github.com/netty/netty/pull/2437
+                flushedBeforeHandshake = false;
+                wrapLater = true;
             }
 
             if (wrapLater) {
@@ -1563,7 +1570,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         //
                         // See https://github.com/netty/netty/issues/1340
                         String msg = e.getMessage();
-                        if (msg == null || !msg.contains("possible truncation attack")) {
+                        if (msg == null || !(msg.contains("possible truncation attack") ||
+                                msg.contains("closing inbound before receiving peer's close_notify"))) {
                             logger.debug("{} SSLEngine.closeInbound() raised an exception.", ctx.channel(), e);
                         }
                     }
@@ -1658,14 +1666,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     private void startHandshakeProcessing() {
-        handshakeStarted = true;
-        if (engine.getUseClientMode()) {
-            // Begin the initial handshake.
-            // channelActive() event has been fired already, which means this.channelActive() will
-            // not be invoked. We have to initialize here instead.
-            handshake(null);
-        } else {
-            applyHandshakeTimeout(null);
+        if (!handshakeStarted) {
+            handshakeStarted = true;
+            if (engine.getUseClientMode()) {
+                // Begin the initial handshake.
+                // channelActive() event has been fired already, which means this.channelActive() will
+                // not be invoked. We have to initialize here instead.
+                handshake();
+            }
+            applyHandshakeTimeout();
         }
     }
 
@@ -1699,52 +1708,46 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    handshake(promise);
+                    renegotiateOnEventLoop(promise);
                 }
             });
             return promise;
         }
 
-        handshake(promise);
+        renegotiateOnEventLoop(promise);
         return promise;
+    }
+
+    private void renegotiateOnEventLoop(final Promise<Channel> newHandshakePromise) {
+        final Promise<Channel> oldHandshakePromise = handshakePromise;
+        if (!oldHandshakePromise.isDone()) {
+            // There's no need to handshake because handshake is in progress already.
+            // Merge the new promise into the old one.
+            oldHandshakePromise.addListener(new PromiseNotifier<Channel, Future<Channel>>(newHandshakePromise));
+        } else {
+            handshakePromise = newHandshakePromise;
+            handshake();
+            applyHandshakeTimeout();
+        }
     }
 
     /**
      * Performs TLS (re)negotiation.
-     *
-     * @param newHandshakePromise if {@code null}, use the existing {@link #handshakePromise},
-     *                            assuming that the current negotiation has not been finished.
-     *                            Currently, {@code null} is expected only for the initial handshake.
      */
-    private void handshake(final Promise<Channel> newHandshakePromise) {
-        final Promise<Channel> p;
-        if (newHandshakePromise != null) {
-            final Promise<Channel> oldHandshakePromise = handshakePromise;
-            if (!oldHandshakePromise.isDone()) {
-                // There's no need to handshake because handshake is in progress already.
-                // Merge the new promise into the old one.
-                oldHandshakePromise.addListener(new FutureListener<Channel>() {
-                    @Override
-                    public void operationComplete(Future<Channel> future) throws Exception {
-                        if (future.isSuccess()) {
-                            newHandshakePromise.setSuccess(future.getNow());
-                        } else {
-                            newHandshakePromise.setFailure(future.cause());
-                        }
-                    }
-                });
-                return;
-            }
-
-            handshakePromise = p = newHandshakePromise;
-        } else if (engine.getHandshakeStatus() != HandshakeStatus.NOT_HANDSHAKING) {
+    private void handshake() {
+        if (engine.getHandshakeStatus() != HandshakeStatus.NOT_HANDSHAKING) {
             // Not all SSLEngine implementations support calling beginHandshake multiple times while a handshake
             // is in progress. See https://github.com/netty/netty/issues/4718.
             return;
         } else {
-            // Forced to reuse the old handshake.
-            p = handshakePromise;
-            assert !p.isDone();
+            if (handshakePromise.isDone()) {
+                // If the handshake is done already lets just return directly as there is no need to trigger it again.
+                // This can happen if the handshake(...) was triggered before we called channelActive(...) by a
+                // flush() that was triggered by a ChannelFutureListener that was added to the ChannelFuture returned
+                // from the connect(...) method. In this case we will see the flush() happen before we had a chance to
+                // call fireChannelActive() on the pipeline.
+                return;
+            }
         }
 
         // Begin handshake.
@@ -1755,27 +1758,27 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         } catch (Throwable e) {
             setHandshakeFailure(ctx, e);
         } finally {
-           forceFlush(ctx);
+            forceFlush(ctx);
         }
-        applyHandshakeTimeout(p);
     }
 
-    private void applyHandshakeTimeout(Promise<Channel> p) {
-        final Promise<Channel> promise = p == null ? handshakePromise : p;
+    private void applyHandshakeTimeout() {
+        final Promise<Channel> localHandshakePromise = this.handshakePromise;
+
         // Set timeout if necessary.
         final long handshakeTimeoutMillis = this.handshakeTimeoutMillis;
-        if (handshakeTimeoutMillis <= 0 || promise.isDone()) {
+        if (handshakeTimeoutMillis <= 0 || localHandshakePromise.isDone()) {
             return;
         }
 
         final ScheduledFuture<?> timeoutFuture = ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {
-                if (promise.isDone()) {
+                if (localHandshakePromise.isDone()) {
                     return;
                 }
                 try {
-                    if (handshakePromise.tryFailure(HANDSHAKE_TIMED_OUT)) {
+                    if (localHandshakePromise.tryFailure(HANDSHAKE_TIMED_OUT)) {
                         SslUtils.handleHandshakeFailure(ctx, HANDSHAKE_TIMED_OUT, true);
                     }
                 } finally {
@@ -1785,7 +1788,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
 
         // Cancel the handshake timeout when handshake is finished.
-        promise.addListener(new FutureListener<Channel>() {
+        localHandshakePromise.addListener(new FutureListener<Channel>() {
             @Override
             public void operationComplete(Future<Channel> f) throws Exception {
                 timeoutFuture.cancel(false);

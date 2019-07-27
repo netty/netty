@@ -42,7 +42,10 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * An {@link EventLoopGroup} that creates one {@link EventLoop} per {@link Channel}.
+ *
+ * @deprecated this will be remove in the next-major release.
  */
+@Deprecated
 public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup implements EventLoopGroup {
 
     private final Object[] childArgs;
