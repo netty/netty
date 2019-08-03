@@ -72,6 +72,7 @@ public final class EchoServer {
                             }
                             //p.addLast(new LoggingHandler(LogLevel.INFO));
                             p.addLast(serverHandler);
+                            //开一个新的分支
                         }
                     });
 
