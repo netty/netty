@@ -179,8 +179,8 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
             frameRsv = (b & 0x70) >> 4;
             frameOpcode = b & 0x0F;
 
-            if (logger.isDebugEnabled()) {
-                logger.debug("Decoding WebSocket Frame opCode={}", frameOpcode);
+            if (logger.isTraceEnabled()) {
+                logger.trace("Decoding WebSocket Frame opCode={}", frameOpcode);
             }
 
             state = State.READING_SECOND;
@@ -288,8 +288,8 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 return;
             }
 
-            if (logger.isDebugEnabled()) {
-                logger.debug("Decoding WebSocket Frame length={}", framePayloadLength);
+            if (logger.isTraceEnabled()) {
+                logger.trace("Decoding WebSocket Frame length={}", framePayloadLength);
             }
 
             state = State.MASKING_KEY;

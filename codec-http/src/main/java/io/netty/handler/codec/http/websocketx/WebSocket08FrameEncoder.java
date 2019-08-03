@@ -126,8 +126,8 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
 
         int length = data.readableBytes();
 
-        if (logger.isDebugEnabled()) {
-            logger.debug("Encoding WebSocket Frame opCode=" + opcode + " length=" + length);
+        if (logger.isTraceEnabled()) {
+            logger.trace("Encoding WebSocket Frame opCode={} length={}", opcode, length);
         }
 
         int b0 = 0;
