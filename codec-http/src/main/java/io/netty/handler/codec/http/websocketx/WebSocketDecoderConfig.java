@@ -17,6 +17,8 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.util.internal.ObjectUtil;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+
 /**
  * Frames decoder configuration.
  */
@@ -28,6 +30,11 @@ public final class WebSocketDecoderConfig {
     private final boolean allowExtensions;
     private final boolean closeOnProtocolViolation;
     private final boolean withUTF8Validator;
+    private final boolean dropPongFrames;
+    private final String webSocketPath;
+    private final String subprotocols;
+    private final boolean checkStartsWith;
+    private final long handshakeTimeoutMillis;
 
     /**
      * Constructor
@@ -51,14 +58,21 @@ public final class WebSocketDecoderConfig {
      *            when you use only BinaryWebSocketFrame within your web socket connection.
      */
     private WebSocketDecoderConfig(int maxFramePayloadLength, boolean expectMaskedFrames, boolean allowMaskMismatch,
-                                  boolean allowExtensions, boolean closeOnProtocolViolation,
-                                  boolean withUTF8Validator) {
+                                   boolean allowExtensions, boolean closeOnProtocolViolation,
+                                   boolean withUTF8Validator, boolean dropPongFrames,
+                                   String webSocketPath, String subprotocols,
+                                   boolean checkStartsWith, long handshakeTimeoutMillis) {
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.expectMaskedFrames = expectMaskedFrames;
         this.allowMaskMismatch = allowMaskMismatch;
         this.allowExtensions = allowExtensions;
         this.closeOnProtocolViolation = closeOnProtocolViolation;
         this.withUTF8Validator = withUTF8Validator;
+        this.dropPongFrames = dropPongFrames;
+        this.webSocketPath = webSocketPath;
+        this.subprotocols = subprotocols;
+        this.checkStartsWith = checkStartsWith;
+        this.handshakeTimeoutMillis = handshakeTimeoutMillis;
     }
 
     public int maxFramePayloadLength() {
@@ -85,16 +99,41 @@ public final class WebSocketDecoderConfig {
         return withUTF8Validator;
     }
 
+    public boolean dropPongFrames() {
+        return dropPongFrames;
+    }
+
+    public String webSocketPath() {
+        return webSocketPath;
+    }
+
+    public String subprotocols() {
+        return subprotocols;
+    }
+
+    public boolean checkStartsWith() {
+        return checkStartsWith;
+    }
+
+    public long handshakeTimeoutMillis() {
+        return handshakeTimeoutMillis;
+    }
+
     @Override
     public String toString() {
         return "WebSocketDecoderConfig" +
-            " [maxFramePayloadLength=" + maxFramePayloadLength +
-            ", expectMaskedFrames=" + expectMaskedFrames +
-            ", allowMaskMismatch=" + allowMaskMismatch +
-            ", allowExtensions=" + allowExtensions +
-            ", closeOnProtocolViolation=" + closeOnProtocolViolation +
-            ", withUTF8Validator=" + withUTF8Validator +
-            "]";
+                "[maxFramePayloadLength=" + maxFramePayloadLength +
+                ", expectMaskedFrames=" + expectMaskedFrames +
+                ", allowMaskMismatch=" + allowMaskMismatch +
+                ", allowExtensions=" + allowExtensions +
+                ", closeOnProtocolViolation=" + closeOnProtocolViolation +
+                ", withUTF8Validator=" + withUTF8Validator +
+                ", dropPongFrames=" + dropPongFrames +
+                ", websocketPath='" + webSocketPath + '\'' +
+                ", subprotocols='" + subprotocols + '\'' +
+                ", checkStartsWith=" + checkStartsWith +
+                ", handshakeTimeoutMillis=" + handshakeTimeoutMillis +
+                ']';
     }
 
     public Builder toBuilder() {
@@ -112,6 +151,11 @@ public final class WebSocketDecoderConfig {
         private boolean allowExtensions;
         private boolean closeOnProtocolViolation = true;
         private boolean withUTF8Validator = true;
+        private boolean dropPongFrames = true;
+        private String websocketPath;
+        private String subprotocols;
+        private boolean checkStartsWith;
+        private long handshakeTimeoutMillis = 10000L;
 
         private Builder() {
             /* No-op */
@@ -125,6 +169,11 @@ public final class WebSocketDecoderConfig {
             allowExtensions = decoderConfig.allowExtensions();
             closeOnProtocolViolation = decoderConfig.closeOnProtocolViolation();
             withUTF8Validator = decoderConfig.withUTF8Validator();
+            dropPongFrames = decoderConfig.dropPongFrames();
+            websocketPath = decoderConfig.webSocketPath();
+            subprotocols = decoderConfig.subprotocols();
+            checkStartsWith = decoderConfig.checkStartsWith();
+            handshakeTimeoutMillis = decoderConfig.handshakeTimeoutMillis();
         }
 
         public Builder maxFramePayloadLength(int maxFramePayloadLength) {
@@ -157,10 +206,37 @@ public final class WebSocketDecoderConfig {
             return this;
         }
 
+        public Builder dropPongFrames(boolean dropPongFrames) {
+            this.dropPongFrames = dropPongFrames;
+            return this;
+        }
+
+        public Builder websocketPath(String websocketPath) {
+            this.websocketPath = websocketPath;
+            return this;
+        }
+
+        public Builder subprotocols(String subprotocols) {
+            this.subprotocols = subprotocols;
+            return this;
+        }
+
+        public Builder checkStartsWith(boolean checkStartsWith) {
+            this.checkStartsWith = checkStartsWith;
+            return this;
+        }
+
+        public Builder handshakeTimeoutMillis(long handshakeTimeoutMillis) {
+            this.handshakeTimeoutMillis = checkPositive(handshakeTimeoutMillis, "handshakeTimeoutMillis");
+            return this;
+        }
+
         public WebSocketDecoderConfig build() {
             return new WebSocketDecoderConfig(
                     maxFramePayloadLength, expectMaskedFrames, allowMaskMismatch,
-                    allowExtensions, closeOnProtocolViolation, withUTF8Validator);
+                    allowExtensions, closeOnProtocolViolation, withUTF8Validator,
+                    dropPongFrames, websocketPath,
+                    subprotocols, checkStartsWith, handshakeTimeoutMillis);
         }
     }
 }

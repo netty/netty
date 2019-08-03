@@ -33,18 +33,17 @@ import io.netty.util.concurrent.FutureListener;
 
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.handler.codec.http.HttpMethod.*;
-import static io.netty.handler.codec.http.HttpResponseStatus.*;
-import static io.netty.handler.codec.http.HttpUtil.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
-import static io.netty.util.internal.ObjectUtil.*;
+import static io.netty.handler.codec.http.HttpMethod.GET;
+import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
+import static io.netty.handler.codec.http.HttpUtil.isKeepAlive;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
  * Handles the HTTP handshake (the HTTP Upgrade request) for {@link WebSocketServerProtocolHandler}.
  */
 class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapter {
 
-    private final String websocketPath;
+    private final String webSocketPath;
     private final String subprotocols;
     private final boolean checkStartsWith;
     private final long handshakeTimeoutMillis;
@@ -52,13 +51,12 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     private ChannelHandlerContext ctx;
     private ChannelPromise handshakePromise;
 
-    WebSocketServerProtocolHandshakeHandler(String websocketPath, String subprotocols,
-            boolean checkStartsWith, long handshakeTimeoutMillis, WebSocketDecoderConfig decoderConfig) {
-        this.websocketPath = websocketPath;
-        this.subprotocols = subprotocols;
-        this.checkStartsWith = checkStartsWith;
-        this.handshakeTimeoutMillis = checkPositive(handshakeTimeoutMillis, "handshakeTimeoutMillis");
-        this.decoderConfig = checkNotNull(decoderConfig, "decoderConfig");
+    WebSocketServerProtocolHandshakeHandler(WebSocketDecoderConfig decoderConfig) {
+        this.webSocketPath = decoderConfig.webSocketPath();
+        this.subprotocols = decoderConfig.subprotocols();
+        this.checkStartsWith = decoderConfig.checkStartsWith();
+        this.handshakeTimeoutMillis = decoderConfig.handshakeTimeoutMillis();
+        this.decoderConfig = decoderConfig;
     }
 
     @Override
@@ -82,7 +80,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
             }
 
             final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
-                    getWebSocketLocation(ctx.pipeline(), req, websocketPath), subprotocols, decoderConfig);
+                    getWebSocketLocation(ctx.pipeline(), req, webSocketPath), subprotocols, decoderConfig);
             final WebSocketServerHandshaker handshaker = wsFactory.newHandshaker(req);
             final ChannelPromise localHandshakePromise = handshakePromise;
             if (handshaker == null) {
@@ -117,7 +115,7 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     }
 
     private boolean isNotWebSocketPath(FullHttpRequest req) {
-        return checkStartsWith ? !req.uri().startsWith(websocketPath) : !req.uri().equals(websocketPath);
+        return checkStartsWith ? !req.uri().startsWith(webSocketPath) : !req.uri().equals(webSocketPath);
     }
 
     private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {

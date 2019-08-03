@@ -105,10 +105,6 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
 
     private static final long DEFAULT_HANDSHAKE_TIMEOUT_MS = 10000L;
 
-    private final String websocketPath;
-    private final String subprotocols;
-    private final boolean checkStartsWith;
-    private final long handshakeTimeoutMillis;
     private final WebSocketDecoderConfig decoderConfig;
 
     public WebSocketServerProtocolHandler(String websocketPath) {
@@ -116,7 +112,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, long handshakeTimeoutMillis) {
-        this(websocketPath, null, false);
+        this(websocketPath, null, false, handshakeTimeoutMillis);
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, boolean checkStartsWith) {
@@ -189,23 +185,43 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols, boolean allowExtensions,
                                           int maxFrameSize, boolean allowMaskMismatch, boolean checkStartsWith,
                                           boolean dropPongFrames, long handshakeTimeoutMillis) {
-        this(websocketPath, subprotocols, checkStartsWith, dropPongFrames, handshakeTimeoutMillis,
-            WebSocketDecoderConfig.newBuilder()
+        this(WebSocketDecoderConfig.newBuilder()
+                .websocketPath(websocketPath)
+                .subprotocols(subprotocols)
+                .checkStartsWith(checkStartsWith)
+                .dropPongFrames(dropPongFrames)
+                .handshakeTimeoutMillis(handshakeTimeoutMillis)
                 .maxFramePayloadLength(maxFrameSize)
                 .allowMaskMismatch(allowMaskMismatch)
                 .allowExtensions(allowExtensions)
                 .build());
     }
 
+    /**
+     * @deprecated Use {@link #WebSocketServerProtocolHandler(WebSocketDecoderConfig decoderConfig)} instead.
+     */
+    @Deprecated
     public WebSocketServerProtocolHandler(String websocketPath, String subprotocols, boolean checkStartsWith,
                                           boolean dropPongFrames, long handshakeTimeoutMillis,
                                           WebSocketDecoderConfig decoderConfig) {
-        super(dropPongFrames);
-        this.websocketPath = websocketPath;
-        this.subprotocols = subprotocols;
-        this.checkStartsWith = checkStartsWith;
-        this.handshakeTimeoutMillis = checkPositive(handshakeTimeoutMillis, "handshakeTimeoutMillis");
-        this.decoderConfig = checkNotNull(decoderConfig, "decoderConfig");
+        this(WebSocketDecoderConfig.newBuilder()
+                     .websocketPath(websocketPath)
+                     .subprotocols(subprotocols)
+                     .checkStartsWith(checkStartsWith)
+                     .dropPongFrames(dropPongFrames)
+                     .handshakeTimeoutMillis(handshakeTimeoutMillis)
+                     .maxFramePayloadLength(checkNotNull(decoderConfig, "decoderConfig").maxFramePayloadLength())
+                     .allowMaskMismatch(decoderConfig.allowMaskMismatch())
+                     .allowExtensions(decoderConfig.allowExtensions())
+                     .expectMaskedFrames(decoderConfig.expectMaskedFrames())
+                     .closeOnProtocolViolation(decoderConfig.closeOnProtocolViolation())
+                     .withUTF8Validator(decoderConfig.withUTF8Validator())
+                     .build());
+    }
+
+    public WebSocketServerProtocolHandler(WebSocketDecoderConfig decoderConfig) {
+        super(checkNotNull(decoderConfig, "decoderConfig").dropPongFrames());
+        this.decoderConfig = decoderConfig;
     }
 
     @Override
@@ -214,8 +230,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
         if (cp.get(WebSocketServerProtocolHandshakeHandler.class) == null) {
             // Add the WebSocketHandshakeHandler before this one.
             cp.addBefore(ctx.name(), WebSocketServerProtocolHandshakeHandler.class.getName(),
-                    new WebSocketServerProtocolHandshakeHandler(
-                        websocketPath, subprotocols, checkStartsWith, handshakeTimeoutMillis, decoderConfig));
+                    new WebSocketServerProtocolHandshakeHandler(decoderConfig));
         }
         if (decoderConfig.withUTF8Validator() && cp.get(Utf8FrameValidator.class) == null) {
             // Add the UFT8 checking before this one.
