@@ -55,7 +55,8 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
     private final int lengthFieldLength;
     private final boolean lengthIncludesLengthFieldLength;
     private final int lengthAdjustment;
-
+    private final int writeLengthIndex;
+    
     /**
      * Creates a new instance.
      *
@@ -66,7 +67,7 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
      *         if {@code lengthFieldLength} is not 1, 2, 3, 4, or 8
      */
     public LengthFieldPrepender(int lengthFieldLength) {
-        this(lengthFieldLength, false);
+        this(lengthFieldLength, false, -1);
     }
 
     /**
@@ -82,8 +83,8 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
      * @throws IllegalArgumentException
      *         if {@code lengthFieldLength} is not 1, 2, 3, 4, or 8
      */
-    public LengthFieldPrepender(int lengthFieldLength, boolean lengthIncludesLengthFieldLength) {
-        this(lengthFieldLength, 0, lengthIncludesLengthFieldLength);
+    public LengthFieldPrepender(int lengthFieldLength, boolean lengthIncludesLengthFieldLength, int writeLengthIndex) {
+        this(lengthFieldLength, 0, lengthIncludesLengthFieldLength, writeLengthIndex);
     }
 
     /**
@@ -97,8 +98,8 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
      * @throws IllegalArgumentException
      *         if {@code lengthFieldLength} is not 1, 2, 3, 4, or 8
      */
-    public LengthFieldPrepender(int lengthFieldLength, int lengthAdjustment) {
-        this(lengthFieldLength, lengthAdjustment, false);
+    public LengthFieldPrepender(int lengthFieldLength, int lengthAdjustment, int writeLengthIndex)) {
+        this(lengthFieldLength, lengthAdjustment, false, writeLengthIndex);
     }
 
     /**
@@ -116,8 +117,8 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
      * @throws IllegalArgumentException
      *         if {@code lengthFieldLength} is not 1, 2, 3, 4, or 8
      */
-    public LengthFieldPrepender(int lengthFieldLength, int lengthAdjustment, boolean lengthIncludesLengthFieldLength) {
-        this(ByteOrder.BIG_ENDIAN, lengthFieldLength, lengthAdjustment, lengthIncludesLengthFieldLength);
+    public LengthFieldPrepender(int lengthFieldLength, int lengthAdjustment, boolean lengthIncludesLengthFieldLength, int writeLengthIndex) {
+        this(ByteOrder.BIG_ENDIAN, lengthFieldLength, lengthAdjustment, lengthIncludesLengthFieldLength, writeLengthIndex);
     }
 
     /**
@@ -138,7 +139,7 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
      */
     public LengthFieldPrepender(
             ByteOrder byteOrder, int lengthFieldLength,
-            int lengthAdjustment, boolean lengthIncludesLengthFieldLength) {
+            int lengthAdjustment, boolean lengthIncludesLengthFieldLength, int writeLengthIndex) {
         if (lengthFieldLength != 1 && lengthFieldLength != 2 &&
             lengthFieldLength != 3 && lengthFieldLength != 4 &&
             lengthFieldLength != 8) {
@@ -152,6 +153,7 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
         this.lengthFieldLength = lengthFieldLength;
         this.lengthIncludesLengthFieldLength = lengthIncludesLengthFieldLength;
         this.lengthAdjustment = lengthAdjustment;
+        this.writeLengthIndex = writeLengthIndex;
     }
 
     @Override
@@ -165,7 +167,15 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
             throw new IllegalArgumentException(
                     "Adjusted frame length (" + length + ") is less than zero");
         }
-
+        
+        if(writeLengthIndex >= 0){
+            if(writeLengthIndex > msg.readableBytes() - lengthFieldLength){
+                throw new IllegalArgumentException(
+                    "writeLengthIndex (" + writeLengthIndex + ") can't greater than readableBytes + lengthFieldLength");
+            }
+            out.markWriterIndex();
+			out.writerIndex(writeLengthIndex);
+        }
         switch (lengthFieldLength) {
         case 1:
             if (length >= 256) {
@@ -197,12 +207,19 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
         default:
             throw new Error("should not reach here");
         }
-
-        out.writeBytes(msg, msg.readerIndex(), msg.readableBytes());
+        if(writeLengthIndex < 0) {
+            out.writeBytes(msg, msg.readerIndex(), msg.readableBytes());
+        } else {
+            out.resetWriterIndex();
+        }
     }
 
     @Override
     protected ByteBuf allocateBuffer(ChannelHandlerContext ctx, ByteBuf msg, boolean preferDirect) throws Exception {
-        return super.allocateBuffer(ctx, msg, preferDirect).order(byteOrder);
+        if(writeLengthIndex < 0) {
+            return super.allocateBuffer(ctx, msg, preferDirect).order(byteOrder);
+        } else {
+            return msg;   
+        }
     }
 }
