@@ -106,7 +106,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
                 try {
                     encode(ctx, cast, buf);
                 } finally {
-                    ReferenceCountUtil.release(cast);
+                    if (cast != buf) ReferenceCountUtil.release(cast);
                 }
 
                 if (buf.isReadable()) {
