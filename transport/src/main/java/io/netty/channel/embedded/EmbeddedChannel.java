@@ -872,7 +872,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
         @Override
         protected void onUnhandledInboundMessage(ChannelHandlerContext ctx, Object msg) {
-          handleInboundMessage(msg);
+            handleInboundMessage(msg);
         }
     }
 }
