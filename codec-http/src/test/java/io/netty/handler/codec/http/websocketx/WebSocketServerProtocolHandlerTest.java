@@ -122,6 +122,46 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
+    public void testCreateUTF8Validator() {
+        WebSocketDecoderConfig config = WebSocketDecoderConfig.newBuilder()
+                .withUTF8Validator(true)
+                .build();
+
+        EmbeddedChannel ch = new EmbeddedChannel(
+                new WebSocketServerProtocolHandler("/test", null, false, false, 1000L, config),
+                new HttpRequestDecoder(),
+                new HttpResponseEncoder(),
+                new MockOutboundHandler());
+        writeUpgradeRequest(ch);
+
+        FullHttpResponse response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+
+        assertNotNull(ch.pipeline().get(Utf8FrameValidator.class));
+    }
+
+    @Test
+    public void testDoNotCreateUTF8Validator() {
+        WebSocketDecoderConfig config = WebSocketDecoderConfig.newBuilder()
+                .withUTF8Validator(false)
+                .build();
+
+        EmbeddedChannel ch = new EmbeddedChannel(
+                new WebSocketServerProtocolHandler("/test", null, false, false, 1000L, config),
+                new HttpRequestDecoder(),
+                new HttpResponseEncoder(),
+                new MockOutboundHandler());
+        writeUpgradeRequest(ch);
+
+        FullHttpResponse response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+
+        assertNull(ch.pipeline().get(Utf8FrameValidator.class));
+    }
+
+    @Test
     public void testHandleTextFrame() {
         CustomTextFrameHandler customTextFrameHandler = new CustomTextFrameHandler();
         EmbeddedChannel ch = createChannel(customTextFrameHandler);
