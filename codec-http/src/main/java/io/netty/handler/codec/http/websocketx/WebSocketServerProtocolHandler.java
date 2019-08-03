@@ -217,7 +217,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
                     new WebSocketServerProtocolHandshakeHandler(
                         websocketPath, subprotocols, checkStartsWith, handshakeTimeoutMillis, decoderConfig));
         }
-        if (cp.get(Utf8FrameValidator.class) == null) {
+        if (decoderConfig.withUTF8Validator() && cp.get(Utf8FrameValidator.class) == null) {
             // Add the UFT8 checking before this one.
             cp.addBefore(ctx.name(), Utf8FrameValidator.class.getName(),
                     new Utf8FrameValidator());
