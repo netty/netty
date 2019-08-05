@@ -408,8 +408,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                     writerIndex = newCapacity;
                 }
                 memoryCopy(
-                        oldMemory, oldOffset + readerIndex,
-                        buf.memory, buf.offset + readerIndex, writerIndex - readerIndex);
+                        oldMemory, oldOffset,
+                        buf.memory, buf.offset, newCapacity);
             } else {
                 readerIndex = writerIndex = newCapacity;
             }

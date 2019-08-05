@@ -166,8 +166,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
                 if (writerIndex > newCapacity) {
                     writerIndex(writerIndex = newCapacity);
                 }
-                oldBuffer.position(readerIndex).limit(writerIndex);
-                newBuffer.position(readerIndex).limit(writerIndex);
+                oldBuffer.position(0).limit(newCapacity);
+                newBuffer.position(0).limit(newCapacity);
                 newBuffer.put(oldBuffer);
                 newBuffer.clear();
             } else {

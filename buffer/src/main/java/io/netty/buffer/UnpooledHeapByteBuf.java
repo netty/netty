@@ -136,7 +136,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
                 if (writerIndex > newCapacity) {
                     writerIndex(writerIndex = newCapacity);
                 }
-                System.arraycopy(oldArray, readerIndex, newArray, readerIndex, writerIndex - readerIndex);
+                System.arraycopy(oldArray, 0, newArray, 0, newCapacity);
             } else {
                 setIndex(newCapacity, newCapacity);
             }
