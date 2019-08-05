@@ -174,7 +174,7 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
                     "writeLengthIndex (" + writeLengthIndex + ") can't greater than readableBytes + lengthFieldLength");
             }
             out.markWriterIndex();
-			out.writerIndex(writeLengthIndex);
+	    out.writerIndex(writeLengthIndex);
         }
         switch (lengthFieldLength) {
         case 1:
