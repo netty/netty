@@ -84,6 +84,7 @@
                          explicitly set the target platform. Otherwise we may get fatal link errors due to weakly linked
                          methods which are not expected to be present on MacOS (e.g. accept4). -->
                     <arg>MACOSX_DEPLOYMENT_TARGET=10.6</arg>
+                    <configureArg>--libdir=${project.build.directory}/native-build/target/lib</configureArg>
                   </configureArgs>
                 </configuration>
                 <goals>
