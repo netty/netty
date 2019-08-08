@@ -682,7 +682,7 @@ public final class ByteBufUtil {
                 // Surrogate Pair consumes 2 characters.
                 if (++i == end) {
                     encodedLength++;
-                 // WRITE_UTF_UNKNOWN
+                    // WRITE_UTF_UNKNOWN
                     break;
                 }
                 if (!Character.isLowSurrogate(seq.charAt(i))) {
