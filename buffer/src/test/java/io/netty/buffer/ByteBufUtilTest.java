@@ -525,6 +525,20 @@ public class ByteBufUtilTest {
     }
 
     @Test
+    public void testWriteUtf8SubsequenceSplitSurrogate() {
+        String usAscii = "\uD800\uDC00"; // surrogate pair: one code point, two chars
+        ByteBuf buf = Unpooled.buffer(16);
+        buf.writeBytes(usAscii.substring(0, 1).getBytes(CharsetUtil.UTF_8));
+        ByteBuf buf2 = Unpooled.buffer(16);
+        ByteBufUtil.writeUtf8(buf2, usAscii, 0, 1);
+
+        assertEquals(buf, buf2);
+
+        buf.release();
+        buf2.release();
+    }
+
+    @Test
     public void testReserveAndWriteUtf8Subsequence() {
         String usAscii = "Some UTF-8 like äÄ∏ŒŒ";
         ByteBuf buf = Unpooled.buffer(16);
