@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -393,7 +394,7 @@ public final class HttpUtil {
             if (charsetCharSequence != null) {
                 try {
                     return Charset.forName(charsetCharSequence.toString());
-                } catch (UnsupportedCharsetException ignored) {
+                } catch (UnsupportedCharsetException | IllegalCharsetNameException ignored) {
                     return defaultCharset;
                 }
             } else {
