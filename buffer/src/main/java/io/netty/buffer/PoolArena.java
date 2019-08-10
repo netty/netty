@@ -379,9 +379,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     void reallocate(PooledByteBuf<T> buf, int newCapacity, boolean freeOldMemory) {
-        if (newCapacity < 0 || newCapacity > buf.maxCapacity()) {
-            throw new IllegalArgumentException("newCapacity: " + newCapacity);
-        }
+        assert newCapacity >= 0 && newCapacity <= buf.maxCapacity();
 
         int oldCapacity = buf.length;
         if (oldCapacity == newCapacity) {
@@ -394,29 +392,21 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         T oldMemory = buf.memory;
         int oldOffset = buf.offset;
         int oldMaxLength = buf.maxLength;
-        int readerIndex = buf.readerIndex();
-        int writerIndex = buf.writerIndex();
 
+        // This does not touch buf's reader/writer indices
         allocate(parent.threadCache(), buf, newCapacity);
+        int bytesToCopy;
         if (newCapacity > oldCapacity) {
-            memoryCopy(
-                    oldMemory, oldOffset,
-                    buf.memory, buf.offset, oldCapacity);
-        } else if (newCapacity < oldCapacity) {
-            if (readerIndex < newCapacity) {
-                if (writerIndex > newCapacity) {
-                    writerIndex = newCapacity;
-                }
-                memoryCopy(
-                        oldMemory, oldOffset,
-                        buf.memory, buf.offset, newCapacity);
-            } else {
-                readerIndex = writerIndex = newCapacity;
+            bytesToCopy = oldCapacity;
+        } else {
+            bytesToCopy = newCapacity;
+            if (buf.readerIndex() > newCapacity) {
+                buf.setIndex(newCapacity, newCapacity);
+            } else if (buf.writerIndex() > newCapacity) {
+                buf.writerIndex(newCapacity);
             }
         }
-
-        buf.setIndex(readerIndex, writerIndex);
-
+        memoryCopy(oldMemory, oldOffset, buf.memory, buf.offset, bytesToCopy);
         if (freeOldMemory) {
             free(oldChunk, oldNioBuffer, oldHandle, oldMaxLength, buf.cache);
         }
