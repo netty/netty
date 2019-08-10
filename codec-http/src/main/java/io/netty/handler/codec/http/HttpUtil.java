@@ -18,6 +18,7 @@ package io.netty.handler.codec.http;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -391,15 +392,14 @@ public final class HttpUtil {
             if (charsetCharSequence != null) {
                 try {
                     return Charset.forName(charsetCharSequence.toString());
+                } catch (IllegalCharsetNameException ignored) {
+                    // just return the default charset
                 } catch (UnsupportedCharsetException ignored) {
-                    return defaultCharset;
+                    // just return the default charset
                 }
-            } else {
-                return defaultCharset;
             }
-        } else {
-            return defaultCharset;
         }
+        return defaultCharset;
     }
 
     /**
