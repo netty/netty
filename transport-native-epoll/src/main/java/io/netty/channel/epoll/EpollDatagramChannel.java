@@ -67,7 +67,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
      * on the Operation Systems default which will be chosen.
      */
     public EpollDatagramChannel() {
-        this((InternetProtocolFamily) null);
+        this(null);
     }
 
     /**
@@ -76,7 +76,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
      */
     public EpollDatagramChannel(InternetProtocolFamily family) {
         this(family == null ?
-                newSocketDgram(Socket.isIPv6Preferred()) : newSocketDgram(family == InternetProtocolFamily.IPv6));
+                newSocketDgram(Socket.isIPv6Preferred()) : newSocketDgram(family == InternetProtocolFamily.IPv6),
+                false);
     }
 
     /**
@@ -84,11 +85,11 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
      * on the Operation Systems default which will be chosen.
      */
     public EpollDatagramChannel(int fd) {
-        this(new LinuxSocket(fd));
+        this(new LinuxSocket(fd), true);
     }
 
-    private EpollDatagramChannel(LinuxSocket fd) {
-        super(null, fd, true);
+    private EpollDatagramChannel(LinuxSocket fd, boolean active) {
+        super(null, fd, active);
         config = new EpollDatagramChannelConfig(this);
     }
 
