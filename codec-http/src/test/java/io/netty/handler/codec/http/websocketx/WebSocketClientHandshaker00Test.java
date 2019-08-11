@@ -39,12 +39,11 @@ public class WebSocketClientHandshaker00Test extends WebSocketClientHandshakerTe
     }
 
     @Override
-    protected CharSequence[] getHandshakeHeaderNames() {
+    protected CharSequence[] getHandshakeRequiredHeaderNames() {
         return new CharSequence[] {
                 HttpHeaderNames.CONNECTION,
                 HttpHeaderNames.UPGRADE,
                 HttpHeaderNames.HOST,
-                HttpHeaderNames.ORIGIN,
                 HttpHeaderNames.SEC_WEBSOCKET_KEY1,
                 HttpHeaderNames.SEC_WEBSOCKET_KEY2,
         };
