@@ -154,12 +154,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         if (newCapacity > oldCapacity) {
             bytesToCopy = oldCapacity;
         } else {
+            trimIndicesToCapacity(newCapacity);
             bytesToCopy = newCapacity;
-            if (readerIndex() > newCapacity) {
-                setIndex(newCapacity, newCapacity);
-            } else if (writerIndex() > newCapacity) {
-                writerIndex(newCapacity);
-            }
         }
         ByteBuffer oldBuffer = buffer;
         ByteBuffer newBuffer = allocateDirect(newCapacity);

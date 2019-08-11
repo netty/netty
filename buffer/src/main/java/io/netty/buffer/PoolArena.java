@@ -399,12 +399,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         if (newCapacity > oldCapacity) {
             bytesToCopy = oldCapacity;
         } else {
+            buf.trimIndicesToCapacity(newCapacity);
             bytesToCopy = newCapacity;
-            if (buf.readerIndex() > newCapacity) {
-                buf.setIndex(newCapacity, newCapacity);
-            } else if (buf.writerIndex() > newCapacity) {
-                buf.writerIndex(newCapacity);
-            }
         }
         memoryCopy(oldMemory, oldOffset, buf.memory, buf.offset, bytesToCopy);
         if (freeOldMemory) {

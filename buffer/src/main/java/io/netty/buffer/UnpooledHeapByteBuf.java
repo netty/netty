@@ -130,12 +130,8 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         if (newCapacity > oldCapacity) {
             bytesToCopy = oldCapacity;
         } else {
+            trimIndicesToCapacity(newCapacity);
             bytesToCopy = newCapacity;
-            if (readerIndex() > newCapacity) {
-                setIndex(newCapacity, newCapacity);
-            } else if (writerIndex() > newCapacity) {
-                writerIndex(newCapacity);
-            }
         }
         byte[] newArray = allocateArray(newCapacity);
         //TODO Arrays.copyOf would be preferable here
