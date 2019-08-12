@@ -536,9 +536,7 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuf copy(int index, int length) {
         checkIndex(index, length);
-        UnpooledHeapByteBuf copy = new UnpooledHeapByteBuf(alloc(), length, maxCapacity());
-        System.arraycopy(array, index, copy.array, 0, length);
-        return copy.writerIndex(length);
+        return alloc().heapBuffer(length, maxCapacity()).writeBytes(array, index, length);
     }
 
     private ByteBuffer internalNioBuffer() {
