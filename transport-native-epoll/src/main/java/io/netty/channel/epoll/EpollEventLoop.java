@@ -224,7 +224,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
                         ch.modifyEvents();
                     } catch (IOException e) {
                         ch.pipeline().fireExceptionCaught(e);
-                        ch.close(ch.voidPromise());
+                        ch.close();
                     }
                 }
             }
