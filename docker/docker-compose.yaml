@@ -12,9 +12,9 @@ services:
     image: netty:default
     depends_on: [runtime-setup]
     volumes:
-      - ~/.ssh:/root/.ssh
-      - ~/.gnupg:/root/.gnupg
-      - ..:/code
+      - ~/.ssh:/root/.ssh:delegated
+      - ~/.gnupg:/root/.gnupg:delegated
+      - ..:/code:delegated
     working_dir: /code
 
   test-leak:
@@ -35,8 +35,8 @@ services:
       - SANOTYPE_USER
       - SANOTYPE_PASSWORD
     volumes:
-      - ~/.ssh:/root/.ssh
-      - ~/.gnupg:/root/.gnupg
-      - ..:/code
-      - ~/.m2:/root/.m2
+      - ~/.ssh:/root/.ssh:delegated
+      - ~/.gnupg:/root/.gnupg:delegated
+      - ..:/code:delegated
+      - ~/.m2:/root/.m2:delegated
     entrypoint: /bin/bash
