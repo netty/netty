@@ -108,6 +108,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private boolean autoAckSettingsFrame = true;
     private boolean autoAckPingFrame = true;
     private int maxQueuedControlFrames = Http2CodecUtil.DEFAULT_MAX_QUEUED_CONTROL_FRAMES;
+    private int maxConsecutiveEmptyFrames = 2;
 
     /**
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
@@ -408,6 +409,31 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
+     * Returns the maximum number of consecutive empty DATA frames (without end_of_stream flag) that are allowed before
+     * the connection is closed. This allows to protected against the remote peer flooding us with such frames and
+     * so use up a lot of CPU. There is no valid use-case for empty DATA frames without end_of_stream flag.
+     *
+     * {@code 0} means no protection is in place.
+     */
+    protected int decoderEnforceMaxConsecutiveEmptyDataFrames() {
+        return maxConsecutiveEmptyFrames;
+    }
+
+    /**
+     * Sets the maximum number of consecutive empty DATA frames (without end_of_stream flag) that are allowed before
+     * the connection is closed. This allows to protected against the remote peer flooding us with such frames and
+     * so use up a lot of CPU. There is no valid use-case for empty DATA frames without end_of_stream flag.
+     *
+     * {@code 0} means no protection should be applied.
+     */
+    protected B decoderEnforceMaxConsecutiveEmptyDataFrames(int maxConsecutiveEmptyFrames) {
+        enforceNonCodecConstraints("maxConsecutiveEmptyFrames");
+        this.maxConsecutiveEmptyFrames = ObjectUtil.checkPositiveOrZero(
+                maxConsecutiveEmptyFrames, "maxConsecutiveEmptyFrames");
+        return self();
+    }
+
+    /**
      * Determine if settings frame should automatically be acknowledged and applied.
      * @return this.
      */
@@ -515,6 +541,10 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     private T buildFromCodec(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder) {
+        int maxConsecutiveEmptyDataFrames = decoderEnforceMaxConsecutiveEmptyDataFrames();
+        if (maxConsecutiveEmptyDataFrames > 0) {
+            decoder = new Http2EmptyDataFrameConnectionDecoder(decoder, maxConsecutiveEmptyDataFrames);
+        }
         final T handler;
         try {
             // Call the abstract build method
