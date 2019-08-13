@@ -132,6 +132,8 @@ public final class Http2CodecUtil {
 
     public static final long DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS = MILLISECONDS.convert(30, SECONDS);
 
+    public static final int DEFAULT_MAX_QUEUED_CONTROL_FRAMES = 10000;
+
     /**
      * Returns {@code true} if the stream is an outbound stream.
      *
