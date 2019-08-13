@@ -237,10 +237,20 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
      * HTTP/2 on stream 1 (the stream specifically reserved for cleartext HTTP upgrade).
      */
     @Override
-    public final void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public final void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
         if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {
             // The user event implies that we are on the client.
             tryExpandConnectionFlowControlWindow(connection());
+
+            // We schedule this on the EventExecutor to allow to have any extra handlers added to the pipeline
+            // before we pass the event to the next handler. This is needed as the event may be called from within
+            // handlerAdded(...) which will be run before other handlers will be added to the pipeline.
+            ctx.executor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    ctx.fireUserEventTriggered(evt);
+                }
+            });
         } else if (evt instanceof UpgradeEvent) {
             UpgradeEvent upgrade = (UpgradeEvent) evt;
             try {
@@ -260,9 +270,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             } finally {
                 upgrade.release();
             }
-            return;
+        } else {
+            ctx.fireUserEventTriggered(evt);
         }
-        super.userEventTriggered(ctx, evt);
     }
 
     /**
