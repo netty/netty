@@ -150,6 +150,16 @@ public class Http2MultiplexCodecBuilder
     }
 
     @Override
+    public int encoderEnforceMaxQueuedControlFrames() {
+        return super.encoderEnforceMaxQueuedControlFrames();
+    }
+
+    @Override
+    public Http2MultiplexCodecBuilder encoderEnforceMaxQueuedControlFrames(int maxQueuedControlFrames) {
+        return super.encoderEnforceMaxQueuedControlFrames(maxQueuedControlFrames);
+    }
+
+    @Override
     public Http2HeadersEncoder.SensitivityDetector headerSensitivityDetector() {
         return super.headerSensitivityDetector();
     }
