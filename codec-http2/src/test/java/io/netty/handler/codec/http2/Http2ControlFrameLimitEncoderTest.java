@@ -38,6 +38,9 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 
+import java.util.ArrayDeque;
+import java.util.Queue;
+
 import static io.netty.handler.codec.http2.Http2CodecUtil.*;
 import static io.netty.handler.codec.http2.Http2Error.CANCEL;
 import static io.netty.handler.codec.http2.Http2Error.ENHANCE_YOUR_CALM;
@@ -70,6 +73,8 @@ public class Http2ControlFrameLimitEncoderTest {
     private EventExecutor executor;
 
     private int numWrites;
+
+    private Queue<ChannelPromise> goAwayPromises = new ArrayDeque<ChannelPromise>();
 
     /**
      * Init fields and do mocking.
@@ -116,7 +121,9 @@ public class Http2ControlFrameLimitEncoderTest {
             @Override
             public ChannelFuture answer(InvocationOnMock invocationOnMock) {
                 ReferenceCountUtil.release(invocationOnMock.getArgument(3));
-                return handlePromise(invocationOnMock, 4);
+                ChannelPromise promise = invocationOnMock.getArgument(4);
+                goAwayPromises.offer(promise);
+                return promise;
             }
         });
         Http2Connection connection = new DefaultHttp2Connection(false);
@@ -168,6 +175,16 @@ public class Http2ControlFrameLimitEncoderTest {
     public void teardown() {
         // Close and release any buffered frames.
         encoder.close();
+
+        // Notify all goAway ChannelPromise instances now as these will also release the retained ByteBuf for the
+        // debugData.
+        for (;;) {
+            ChannelPromise promise = goAwayPromises.poll();
+            if (promise == null) {
+                break;
+            }
+            promise.setSuccess();
+        }
     }
 
     @Test
@@ -252,12 +269,6 @@ public class Http2ControlFrameLimitEncoderTest {
             verify(writer, times(1)).writeGoAway(eq(ctx), eq(0), eq(ENHANCE_YOUR_CALM.code()),
                     any(ByteBuf.class), any(ChannelPromise.class));
         }
-    }
-
-    private static void assertWriteFailure(ChannelFuture future) {
-        Http2Exception exception = (Http2Exception) future.cause();
-        assertEquals(ShutdownHint.HARD_SHUTDOWN, exception.shutdownHint());
-        assertEquals(Http2Error.ENHANCE_YOUR_CALM, exception.error());
     }
 
     private ChannelPromise newPromise() {
