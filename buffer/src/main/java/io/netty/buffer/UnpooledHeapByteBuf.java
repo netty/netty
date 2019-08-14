@@ -134,7 +134,6 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
             bytesToCopy = newCapacity;
         }
         byte[] newArray = allocateArray(newCapacity);
-        //TODO Arrays.copyOf would be preferable here
         System.arraycopy(oldArray, 0, newArray, 0, bytesToCopy);
         setArray(newArray);
         freeArray(oldArray);
