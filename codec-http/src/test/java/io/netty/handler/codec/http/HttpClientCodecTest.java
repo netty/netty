@@ -331,4 +331,28 @@ public class HttpClientCodecTest {
 
         assertThat(ch.readInbound(), is(nullValue()));
     }
+
+    @Test
+    public void testMultipleResponses() {
+        String response = "HTTP/1.1 200 OK\r\n" +
+                "Content-Length: 0\r\n\r\n";
+
+        HttpClientCodec codec = new HttpClientCodec(4096, 8192, 8192, true);
+        EmbeddedChannel ch = new EmbeddedChannel(codec, new HttpObjectAggregator(1024));
+
+        HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/");
+        assertTrue(ch.writeOutbound(request));
+
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(response, CharsetUtil.UTF_8)));
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(response, CharsetUtil.UTF_8)));
+        FullHttpResponse resp = ch.readInbound();
+        assertTrue(resp.decoderResult().isSuccess());
+        resp.release();
+
+        resp = ch.readInbound();
+        assertTrue(resp.decoderResult().isSuccess());
+        resp.release();
+        assertTrue(ch.finishAndReleaseAll());
+    }
+
 }
