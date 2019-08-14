@@ -38,6 +38,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -394,11 +395,18 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     final Map<ChannelOption<?>, Object> options() {
-        return Collections.unmodifiableMap(options);
+        return copiedMap(options);
     }
 
     final Map<AttributeKey<?>, Object> attrs() {
-        return Collections.unmodifiableMap(attrs);
+        return copiedMap(attrs);
+    }
+
+    static <K, V> Map<K, V> copiedMap(Map<K, V> map) {
+        if (map.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return Collections.unmodifiableMap(new HashMap<K, V>(map));
     }
 
     static void setAttributes(Channel channel, Map.Entry<AttributeKey<?>, Object>[] attrs) {
