@@ -84,6 +84,7 @@ public final class Native {
     public static native void eventFdWrite(int fd, long value);
     public static native void eventFdRead(int fd);
     static native void timerFdRead(int fd);
+    static native void timerFdSetTime(int fd, int sec, int nsec) throws IOException;
 
     public static FileDescriptor newEpollCreate() {
         return new FileDescriptor(epollCreate());
@@ -91,6 +92,10 @@ public final class Native {
 
     private static native int epollCreate();
 
+    /**
+     * @deprecated this method is no longer supported. This functionality is internal to this package.
+     */
+    @Deprecated
     public static int epollWait(FileDescriptor epollFd, EpollEventArray events, FileDescriptor timerFd,
                                 int timeoutSec, int timeoutNs) throws IOException {
         int ready = epollWait0(epollFd.intValue(), events.memoryAddress(), events.length(), timerFd.intValue(),
@@ -100,7 +105,14 @@ public final class Native {
         }
         return ready;
     }
-    private static native int epollWait0(int efd, long address, int len, int timerFd, int timeoutSec, int timeoutNs);
+
+    static int epollWait(FileDescriptor epollFd, EpollEventArray events, boolean immediatePoll) throws IOException {
+        int ready = epollWaitNoTimeout(epollFd.intValue(), events.memoryAddress(), events.length(), immediatePoll);
+        if (ready < 0) {
+            throw newIOException("epoll_wait", ready);
+        }
+        return ready;
+    }
 
     /**
      * Non-blocking variant of
@@ -115,6 +127,8 @@ public final class Native {
         return ready;
     }
 
+    private static native int epollWait0(int efd, long address, int len, int timerFd, int timeoutSec, int timeoutNs);
+    private static native int epollWaitNoTimeout(int efd, long address, int len, boolean immediatePoll);
     private static native int epollBusyWait0(int efd, long address, int len);
 
     public static void epollCtlAdd(int efd, final int fd, final int flags) throws IOException {

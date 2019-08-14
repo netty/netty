@@ -186,6 +186,31 @@ static jint netty_epoll_native_epollCreate(JNIEnv* env, jclass clazz) {
     return efd;
 }
 
+static void netty_epoll_native_timerFdSetTime(JNIEnv* env, jclass clazz, jint timerFd, jint tvSec, jint tvNsec) {
+    struct itimerspec ts;
+    memset(&ts.it_interval, 0, sizeof(struct timespec));
+    ts.it_value.tv_sec = tvSec;
+    ts.it_value.tv_nsec = tvNsec;
+    if (timerfd_settime(timerFd, 0, &ts, NULL) < 0) {
+        netty_unix_errors_throwIOExceptionErrorNo(env, "timerfd_settime() failed: ", errno);
+    }
+}
+
+static jint netty_epoll_native_epollWaitNoTimeout(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jboolean immediatePoll) {
+    struct epoll_event *ev = (struct epoll_event*) (intptr_t) address;
+    const int timeout = immediatePoll ? 0 : -1;
+    int result, err;
+
+    do {
+        result = epoll_wait(efd, ev, len, timeout);
+        if (result >= 0) {
+            return result;
+        }
+    } while((err = errno) == EINTR);
+    return -err;
+}
+
+// This method is deprecated!
 static jint netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timerFd, jint tvSec, jint tvNsec) {
     struct epoll_event *ev = (struct epoll_event*) (intptr_t) address;
     int result, err;
@@ -429,8 +454,10 @@ static const JNINativeMethod fixed_method_table[] = {
   { "eventFdWrite", "(IJ)V", (void *) netty_epoll_native_eventFdWrite },
   { "eventFdRead", "(I)V", (void *) netty_epoll_native_eventFdRead },
   { "timerFdRead", "(I)V", (void *) netty_epoll_native_timerFdRead },
+  { "timerFdSetTime", "(III)V", (void *) netty_epoll_native_timerFdSetTime },
   { "epollCreate", "()I", (void *) netty_epoll_native_epollCreate },
-  { "epollWait0", "(IJIIII)I", (void *) netty_epoll_native_epollWait0 },
+  { "epollWait0", "(IJIIII)I", (void *) netty_epoll_native_epollWait0 }, // This method is deprecated!
+  { "epollWaitNoTimeout", "(IJIZ)I", (void *) netty_epoll_native_epollWaitNoTimeout },
   { "epollBusyWait0", "(IJI)I", (void *) netty_epoll_native_epollBusyWait0 },
   { "epollCtlAdd0", "(III)I", (void *) netty_epoll_native_epollCtlAdd0 },
   { "epollCtlMod0", "(III)I", (void *) netty_epoll_native_epollCtlMod0 },

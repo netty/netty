@@ -102,6 +102,20 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
         return promise;
     }
 
+    @Override
+    protected void executeScheduledRunnable(final Runnable runnable, boolean isAddition, long deadlineNanos) {
+        super.executeScheduledRunnable(wakesUpForScheduledRunnable() ? runnable : new NonWakeupRunnable() {
+            @Override
+            public void run() {
+                runnable.run();
+            }
+        }, isAddition, deadlineNanos);
+    }
+
+    protected boolean wakesUpForScheduledRunnable() {
+        return true;
+    }
+
     /**
      * Adds a task to be run once at the end of next (or current) {@code eventloop} iteration.
      *
