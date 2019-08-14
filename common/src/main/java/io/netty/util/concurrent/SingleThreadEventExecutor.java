@@ -73,6 +73,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             // Do nothing.
         }
     };
+    private static final Runnable BOOKEND_TASK = new Runnable() {
+        @Override
+        public void run() {
+            // Do nothing.
+        }
+    };
 
     private static final AtomicIntegerFieldUpdater<SingleThreadEventExecutor> STATE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(SingleThreadEventExecutor.class, "state");
@@ -283,17 +289,39 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     private boolean fetchFromScheduledTaskQueue() {
+        if (scheduledTaskQueue == null || scheduledTaskQueue.isEmpty()) {
+            return true;
+        }
         long nanoTime = AbstractScheduledEventExecutor.nanoTime();
-        Runnable scheduledTask  = pollScheduledTask(nanoTime);
+        Runnable scheduledTask = pollScheduledTask(scheduledTaskQueue, nanoTime, true);
         while (scheduledTask != null) {
             if (!taskQueue.offer(scheduledTask)) {
                 // No space left in the task queue add it back to the scheduledTaskQueue so we pick it up again.
-                scheduledTaskQueue().add((ScheduledFutureTask<?>) scheduledTask);
+                scheduledTaskQueue.add((ScheduledFutureTask<?>) scheduledTask);
                 return false;
             }
-            scheduledTask  = pollScheduledTask(nanoTime);
+            scheduledTask = pollScheduledTask(scheduledTaskQueue, nanoTime, false);
         }
         return true;
+    }
+
+    /**
+     * @return {@code true} if at least one scheduled task was executed.
+     */
+    private boolean executeExpiredScheduledTasks(boolean notifyMinimumDeadlineRemoved) {
+        if (scheduledTaskQueue == null || scheduledTaskQueue.isEmpty()) {
+            return false;
+        }
+        long nanoTime = AbstractScheduledEventExecutor.nanoTime();
+        Runnable scheduledTask = pollScheduledTask(scheduledTaskQueue, nanoTime, notifyMinimumDeadlineRemoved);
+        if (scheduledTask != null) {
+            do {
+                safeExecute(scheduledTask);
+                scheduledTask = pollScheduledTask(scheduledTaskQueue, nanoTime, false);
+            } while (scheduledTask != null);
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -377,6 +405,36 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
+     * Execute all expired scheduled tasks and all current tasks in the executor queue until both queues are empty,
+     * or {@code maxDrainAttempts} has been exceeded.
+     * @param maxDrainAttempts The maximum amount of times this method attempts to drain from queues. This is to prevent
+     *                         continuous task execution and scheduling from preventing the EventExecutor thread to
+     *                         make progress and return to the selector mechanism to process inbound I/O events.
+     * @return {@code true} if at least one task was run.
+     */
+    protected final boolean runScheduledAndExecutorTasks(final int maxDrainAttempts) {
+        assert inEventLoop();
+        // We must run the taskQueue tasks first, because the scheduled tasks from outside the EventLoop are queued
+        // here because the taskQueue is thread safe and the scheduledTaskQueue is not thread safe.
+        boolean ranAtLeastOneExecutorTask = runExistingTasksFrom(taskQueue);
+        boolean ranAtLeastOneScheduledTask = executeExpiredScheduledTasks(true);
+        int drainAttempt = 0;
+        while ((ranAtLeastOneExecutorTask || ranAtLeastOneScheduledTask) && ++drainAttempt < maxDrainAttempts) {
+            // We must run the taskQueue tasks first, because the scheduled tasks from outside the EventLoop are queued
+            // here because the taskQueue is thread safe and the scheduledTaskQueue is not thread safe.
+            ranAtLeastOneExecutorTask = runExistingTasksFrom(taskQueue);
+            ranAtLeastOneScheduledTask = executeExpiredScheduledTasks(false);
+        }
+
+        if (drainAttempt > 0) {
+            lastExecutionTime = ScheduledFutureTask.nanoTime();
+        }
+        afterRunningAllTasks();
+
+        return drainAttempt > 0;
+    }
+
+    /**
      * Runs all tasks from the passed {@code taskQueue}.
      *
      * @param taskQueue To poll and execute all tasks.
@@ -395,6 +453,55 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 return true;
             }
         }
+    }
+
+    /**
+     * What ever tasks are present in {@code taskQueue} when this method is invoked will be {@link Runnable#run()}.
+     * @param taskQueue the task queue to drain.
+     * @return {@code true} if at least {@link Runnable#run()} was called.
+     */
+    private boolean runExistingTasksFrom(Queue<Runnable> taskQueue) {
+        return taskQueue.offer(BOOKEND_TASK) ? runExistingTasksUntilBookend(taskQueue)
+                                             : runExistingTasksUntilMaxTasks(taskQueue);
+    }
+
+    private boolean runExistingTasksUntilBookend(Queue<Runnable> taskQueue) {
+        Runnable task = pollTaskFrom(taskQueue);
+        // null is not expected because this method isn't called unless BOOKEND_TASK was inserted into the queue, and
+        // null elements are not permitted to be inserted into the queue.
+        if (task == BOOKEND_TASK) {
+            return false;
+        }
+        for (;;) {
+            safeExecute(task);
+            task = pollTaskFrom(taskQueue);
+            // null is not expected because this method isn't called unless BOOKEND_TASK was inserted into the queue,
+            // and null elements are not permitted to be inserted into the queue.
+            if (task == BOOKEND_TASK) {
+                return true;
+            }
+        }
+    }
+
+    private boolean runExistingTasksUntilMaxTasks(Queue<Runnable> taskQueue) {
+        Runnable task = pollTaskFrom(taskQueue);
+        // BOOKEND_TASK is not expected because this method isn't called unless BOOKEND_TASK fails to be inserted into
+        // the queue, and if was previously inserted we always drain all the elements from queue including BOOKEND_TASK.
+        if (task == null) {
+            return false;
+        }
+        int i = 0;
+        do {
+            safeExecute(task);
+            task = pollTaskFrom(taskQueue);
+            // BOOKEND_TASK is not expected because this method isn't called unless BOOKEND_TASK fails to be inserted
+            // into the queue, and if was previously inserted we always drain all the elements from queue including
+            // BOOKEND_TASK.
+            if (task == null) {
+                return true;
+            }
+        } while (++i < maxPendingTasks);
+        return true;
     }
 
     /**
@@ -443,6 +550,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      */
     @UnstableApi
     protected void afterRunningAllTasks() { }
+
     /**
      * Returns the amount of time left until the scheduled task with the closest dead line is executed.
      */
@@ -846,8 +954,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         return threadProperties;
     }
 
-    @SuppressWarnings("unused")
-    protected boolean wakesUpForTask(Runnable task) {
+    protected boolean wakesUpForTask(@SuppressWarnings("unused") Runnable task) {
         return true;
     }
 
