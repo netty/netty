@@ -108,7 +108,7 @@ public final class WebSocketClientHandshakerFactory {
             boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength,
             boolean performMasking, boolean allowMaskMismatch) {
         return newHandshaker(webSocketURL, version, subprotocol, allowExtensions, customHeaders,
-                maxFramePayloadLength, true, false, -1);
+                maxFramePayloadLength, performMasking, allowMaskMismatch, -1);
     }
 
     /**
