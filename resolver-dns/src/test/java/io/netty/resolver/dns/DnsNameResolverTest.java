@@ -2796,7 +2796,6 @@ public class DnsNameResolverTest {
         dnsServer2.start();
         DnsNameResolver resolver = null;
         ServerSocket serverSocket = null;
-        Socket socket = null;
         try {
             DnsNameResolverBuilder builder = newResolver()
                     .queryTimeoutMillis(10000)
@@ -2807,6 +2806,7 @@ public class DnsNameResolverTest {
             if (tcpFallback) {
                 // If we are configured to use TCP as a fallback also bind a TCP socket
                 serverSocket = new ServerSocket(dnsServer2.localAddress().getPort());
+                serverSocket.setReuseAddress(true);
 
                 builder.socketChannelType(NioSocketChannel.class);
             }
@@ -2816,7 +2816,7 @@ public class DnsNameResolverTest {
 
             if (tcpFallback) {
                 // If we are configured to use TCP as a fallback lets replay the dns message over TCP
-                socket = serverSocket.accept();
+                Socket socket = serverSocket.accept();
 
                 IoBuffer ioBuffer = IoBuffer.allocate(1024);
                 new DnsMessageEncoder().encode(ioBuffer, messageRef.get());
@@ -2834,7 +2834,11 @@ public class DnsNameResolverTest {
                     socket.getOutputStream().write(ioBuffer.get());
                 }
                 socket.getOutputStream().flush();
-                socket.getOutputStream().close();
+                // Let's wait until we received the envelope before closing the socket.
+                envelopeFuture.syncUninterruptibly();
+
+                socket.close();
+                serverSocket.close();
             }
 
             AddressedEnvelope<DnsResponse, InetSocketAddress> envelope = envelopeFuture.syncUninterruptibly().getNow();
@@ -2859,12 +2863,6 @@ public class DnsNameResolverTest {
             envelope.release();
         } finally {
             dnsServer2.stop();
-            if (socket != null) {
-                socket.close();
-            }
-            if (serverSocket != null) {
-                serverSocket.close();
-            }
             if (resolver != null) {
                 resolver.close();
             }
