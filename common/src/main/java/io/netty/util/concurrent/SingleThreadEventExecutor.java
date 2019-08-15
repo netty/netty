@@ -185,6 +185,33 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
+     * Called from arbitrary non-eventloop thread prior to scheduled task submission.
+     * Returns true if the eventloop should be woken immediately to process the scheduled
+     * task (if not already awake).
+     * <p>
+     * If false is returned, {@link #afterFutureTaskScheduled(long)} will be called with
+     * the same value _after_ the scheduled task is enqueued, providing another opportunity
+     * to wake the event loop if required.
+     *
+     * @param deadlineNanos deadline of the to-be-scheduled task
+     *     relative to {@link AbstractScheduledEventExecutor#nanoTime()}
+     * @return true if the event loop should be woken, false otherwise
+     */
+    protected boolean beforeFutureTaskScheduled(long deadlineNanos) {
+        return true;
+    }
+
+    /**
+     * See {@link #beforeFutureTaskScheduled(long)}. Called only after that method returns false.
+     *
+     * @param deadlineNanos relative to {@link AbstractScheduledEventExecutor#nanoTime()}
+     * @return true if the event loop should be woken, false otherwise
+     */
+    protected boolean afterFutureTaskScheduled(long deadlineNanos) {
+        return true;
+    }
+
+    /**
      * @deprecated Please use and override {@link #newTaskQueue(int)}.
      */
     @Deprecated
@@ -293,14 +320,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             return true;
         }
         long nanoTime = AbstractScheduledEventExecutor.nanoTime();
-        Runnable scheduledTask = pollScheduledTask(scheduledTaskQueue, nanoTime, true);
-        while (scheduledTask != null) {
+        for (Runnable scheduledTask; (scheduledTask = pollScheduledTask(nanoTime)) != null;) {
             if (!taskQueue.offer(scheduledTask)) {
                 // No space left in the task queue add it back to the scheduledTaskQueue so we pick it up again.
                 scheduledTaskQueue.add((ScheduledFutureTask<?>) scheduledTask);
                 return false;
             }
-            scheduledTask = pollScheduledTask(scheduledTaskQueue, nanoTime, false);
         }
         return true;
     }
@@ -313,15 +338,14 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             return false;
         }
         long nanoTime = AbstractScheduledEventExecutor.nanoTime();
-        Runnable scheduledTask = pollScheduledTask(scheduledTaskQueue, nanoTime, notifyMinimumDeadlineRemoved);
-        if (scheduledTask != null) {
-            do {
-                safeExecute(scheduledTask);
-                scheduledTask = pollScheduledTask(scheduledTaskQueue, nanoTime, false);
-            } while (scheduledTask != null);
-            return true;
+        Runnable scheduledTask = pollScheduledTask(nanoTime);
+        if (scheduledTask == null) {
+            return false;
         }
-        return false;
+        do {
+            safeExecute(scheduledTask);
+        } while ((scheduledTask = pollScheduledTask(nanoTime)) != null);
+        return true;
     }
 
     /**
@@ -604,6 +628,25 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             // Use offer as we actually only need this to unblock the thread and if offer fails we do not care as there
             // is already something in the queue.
             taskQueue.offer(WAKEUP_TASK);
+        }
+    }
+
+    @Override
+    final void executeScheduledRunnable(final Runnable runnable, boolean isAddition, long deadlineNanos) {
+        // Don't wake up for removals
+        if (isAddition && beforeFutureTaskScheduled(deadlineNanos)) {
+            super.executeScheduledRunnable(runnable, isAddition, deadlineNanos);
+        } else {
+            super.executeScheduledRunnable(new NonWakeupRunnable() {
+                @Override
+                public void run() {
+                    runnable.run();
+                }
+            }, isAddition, deadlineNanos);
+            // Second hook after scheduling to facilitate race-avoidance
+            if (isAddition && afterFutureTaskScheduled(deadlineNanos)) {
+                wakeup(false);
+            }
         }
     }
 
@@ -954,8 +997,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         return threadProperties;
     }
 
-    protected boolean wakesUpForTask(@SuppressWarnings("unused") Runnable task) {
-        return true;
+    /**
+     * Marker interface for {@link Runnable} that will not trigger an {@link #wakeup(boolean)} in all cases.
+     */
+    protected interface NonWakeupRunnable extends Runnable { }
+
+    protected boolean wakesUpForTask(Runnable task) {
+        return !(task instanceof NonWakeupRunnable);
     }
 
     protected static void reject() {
