@@ -234,7 +234,7 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
             HttpMethod method = queue.poll();
 
             // If the remote peer did for example send multiple responses for one request (which is not allowed per
-            // spec but may still be possible method will be null so guard against it.
+            // spec but may still be possible) method will be null so guard against it.
             if (method != null) {
                 char firstChar = method.name().charAt(0);
                 switch (firstChar) {
