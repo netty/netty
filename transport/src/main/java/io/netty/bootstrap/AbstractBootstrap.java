@@ -38,8 +38,9 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Collections;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * {@link AbstractBootstrap} is a helper class that makes it easy to bootstrap a {@link Channel}. It support
@@ -54,8 +55,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     @SuppressWarnings("deprecation")
     private volatile ChannelFactory<? extends C> channelFactory;
     private volatile SocketAddress localAddress;
-    private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
-    private final Map<AttributeKey<?>, Object> attrs = new LinkedHashMap<AttributeKey<?>, Object>();
+    private final Map<ChannelOption<?>, Object> options = new ConcurrentHashMap<ChannelOption<?>, Object>();
+    private final Map<AttributeKey<?>, Object> attrs = new ConcurrentHashMap<AttributeKey<?>, Object>();
     private volatile ChannelHandler handler;
 
     AbstractBootstrap() {
@@ -67,12 +68,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         channelFactory = bootstrap.channelFactory;
         handler = bootstrap.handler;
         localAddress = bootstrap.localAddress;
-        synchronized (bootstrap.options) {
-            options.putAll(bootstrap.options);
-        }
-        synchronized (bootstrap.attrs) {
-            attrs.putAll(bootstrap.attrs);
-        }
+        options.putAll(bootstrap.options);
+        attrs.putAll(bootstrap.attrs);
     }
 
     /**
@@ -166,13 +163,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     public <T> B option(ChannelOption<T> option, T value) {
         ObjectUtil.checkNotNull(option, "option");
         if (value == null) {
-            synchronized (options) {
-                options.remove(option);
-            }
+            options.remove(option);
         } else {
-            synchronized (options) {
-                options.put(option, value);
-            }
+            options.put(option, value);
         }
         return self();
     }
@@ -184,13 +177,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     public <T> B attr(AttributeKey<T> key, T value) {
         ObjectUtil.checkNotNull(key, "key");
         if (value == null) {
-            synchronized (attrs) {
-                attrs.remove(key);
-            }
+            attrs.remove(key);
         } else {
-            synchronized (attrs) {
-                attrs.put(key, value);
-            }
+            attrs.put(key, value);
         }
         return self();
     }
@@ -384,17 +373,6 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      */
     public abstract AbstractBootstrapConfig<B, C> config();
 
-    static <K, V> Map<K, V> copiedMap(Map<K, V> map) {
-        final Map<K, V> copied;
-        synchronized (map) {
-            if (map.isEmpty()) {
-                return Collections.emptyMap();
-            }
-            copied = new LinkedHashMap<K, V>(map);
-        }
-        return Collections.unmodifiableMap(copied);
-    }
-
     final Map<ChannelOption<?>, Object> options0() {
         return options;
     }
@@ -424,10 +402,18 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         return copiedMap(attrs);
     }
 
-    static void setChannelOptions(
-            Channel channel, Map<ChannelOption<?>, Object> options, InternalLogger logger) {
-        for (Map.Entry<ChannelOption<?>, Object> e: options.entrySet()) {
-            setChannelOption(channel, e.getKey(), e.getValue(), logger);
+    static <K, V> Map<K, V> copiedMap(Map<K, V> map) {
+        if (map.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return Collections.unmodifiableMap(new HashMap<K, V>(map));
+    }
+
+    static void setAttributes(Channel channel, Map.Entry<AttributeKey<?>, Object>[] attrs) {
+        for (Map.Entry<AttributeKey<?>, Object> e: attrs) {
+            @SuppressWarnings("unchecked")
+            AttributeKey<Object> key = (AttributeKey<Object>) e.getKey();
+            channel.attr(key).set(e.getValue());
         }
     }
 
@@ -436,6 +422,16 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         for (Map.Entry<ChannelOption<?>, Object> e: options) {
             setChannelOption(channel, e.getKey(), e.getValue(), logger);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    static Map.Entry<AttributeKey<?>, Object>[] newAttrArray(int size) {
+        return new Map.Entry[size];
+    }
+
+    @SuppressWarnings("unchecked")
+    static Map.Entry<ChannelOption<?>, Object>[] newOptionArray(int size) {
+        return new Map.Entry[size];
     }
 
     @SuppressWarnings("unchecked")
