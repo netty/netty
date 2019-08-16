@@ -179,17 +179,17 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
-     * Called from arbitrary non-eventloop thread prior to scheduled task submission.
-     * Returns true if the eventloop should be woken immediately to process the scheduled
-     * task (if not already awake).
+     * Called from arbitrary non-{@link EventExecutor} threads prior to scheduled task submission.
+     * Returns {@code true} if the {@link EventExecutor} thread should be woken immediately to
+     * process the scheduled task (if not already awake).
      * <p>
-     * If false is returned, {@link #afterFutureTaskScheduled(long)} will be called with
-     * the same value _after_ the scheduled task is enqueued, providing another opportunity
-     * to wake the event loop if required.
+     * If {@code false} is returned, {@link #afterFutureTaskScheduled(long)} will be called with
+     * the same value <i>after</i> the scheduled task is enqueued, providing another opportunity
+     * to wake the {@link EventExecutor} thread if required.
      *
      * @param deadlineNanos deadline of the to-be-scheduled task
      *     relative to {@link AbstractScheduledEventExecutor#nanoTime()}
-     * @return true if the event loop should be woken, false otherwise
+     * @return {@code true} if the {@link EventExecutor} thread should be woken, {@code false} otherwise
      */
     protected boolean beforeFutureTaskScheduled(long deadlineNanos) {
         return true;
@@ -199,7 +199,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * See {@link #beforeFutureTaskScheduled(long)}. Called only after that method returns false.
      *
      * @param deadlineNanos relative to {@link AbstractScheduledEventExecutor#nanoTime()}
-     * @return true if the event loop should be woken, false otherwise
+     * @return  {@code true} if the {@link EventExecutor} thread should be woken, {@code false} otherwise
      */
     protected boolean afterFutureTaskScheduled(long deadlineNanos) {
         return true;
@@ -473,14 +473,15 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * @param taskQueue the task queue to drain.
      * @return {@code true} if at least {@link Runnable#run()} was called.
      */
-    private static boolean runExistingTasksFrom(Queue<Runnable> taskQueue) {
+    private boolean runExistingTasksFrom(Queue<Runnable> taskQueue) {
         Runnable task = pollTaskFrom(taskQueue);
         if (task == null) {
             return false;
         }
-        int remaining = taskQueue.size();
+        int remaining = Math.min(maxPendingTasks, taskQueue.size());
         safeExecute(task);
-        // Use taskQueue.poll() directly to account for all entries
+        // Use taskQueue.poll() directly rather than pollTaskFrom() since the latter may
+        // silently consume more than one item from the queue (skips over WAKEUP_TASK instances)
         while (remaining-- > 0 && (task = taskQueue.poll()) != null) {
             safeExecute(task);
         }
@@ -592,7 +593,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     @Override
     final void executeScheduledRunnable(final Runnable runnable, boolean isAddition, long deadlineNanos) {
-        // Don't wake up for removals
+        // Don't wakeup if this is a removal task or if beforeFutureTaskScheduled returns false
         if (isAddition && beforeFutureTaskScheduled(deadlineNanos)) {
             super.executeScheduledRunnable(runnable, isAddition, deadlineNanos);
         } else {
@@ -957,10 +958,18 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
-     * Marker interface for {@link Runnable} that will not trigger an {@link #wakeup(boolean)} in all cases.
+     * Marker interface for {@link Runnable} to indicate that it should be queued for execution
+     * but does not need to run immediately. The default implementation of
+     * {@link SingleThreadEventExecutor#wakesUpForTask(Runnable)} uses this to avoid waking up
+     * the {@link EventExecutor} thread when not necessary.
      */
     protected interface NonWakeupRunnable extends Runnable { }
 
+    /**
+     * Can be overridden to control which tasks require waking the {@link EventExecutor} thread
+     * if it is waiting so that they can be run immediately. The default implementation
+     * decides based on whether the task implements {@link NonWakeupRunnable}.
+     */
     protected boolean wakesUpForTask(Runnable task) {
         return !(task instanceof NonWakeupRunnable);
     }

@@ -207,9 +207,12 @@ class EpollEventLoop extends SingleThreadEventLoop {
             long nextDeadline = nextDeadlineNanos.get();
             if (nextDeadline <= candidateNextDeadline) {
                 // This includes case where nextDeadline is negative (event loop is awake)
-                break;
+                return;
             }
             if (nextDeadlineNanos.compareAndSet(nextDeadline, candidateNextDeadline)) {
+                // We must serialize calls to setTimerFd to avoid the set of a later deadline
+                // racing with a sooner one and overwriting it. A second check of nextDeadlineNanos
+                // is made within the sync block to avoid having the CAS within the sync
                 synchronized (nextDeadlineNanos) {
                     nextDeadline = nextDeadlineNanos.get();
                     if (nextDeadline == candidateNextDeadline ||
@@ -404,9 +407,8 @@ class EpollEventLoop extends SingleThreadEventLoop {
                 }
 
                 try {
-                    boolean timerFdFired = processReady(events, strategy);
-                    if (timerFdFired) {
-                        // Conservatively assume that no timer is set
+                    if (processReady(events, strategy)) {
+                        // Polled events include timerFd expiry; conservatively assume that no timer is set
                         timerFdDeadline = Long.MAX_VALUE;
                     }
                 } finally {

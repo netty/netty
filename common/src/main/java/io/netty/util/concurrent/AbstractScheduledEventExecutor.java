@@ -120,7 +120,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
         Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
         ScheduledFutureTask<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
-        if (scheduledTask == null || scheduledTask.deadlineNanos() > nanoTime) {
+        if (scheduledTask == null || scheduledTask.deadlineNanos() - nanoTime > 0) {
             return null;
         }
         scheduledTaskQueue.remove();
