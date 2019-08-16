@@ -10,10 +10,10 @@ cd /path/to/netty/
 docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml run test
 ```
 
-## centos 7 with java 9
+## centos 7 with java 11
 
 ```
-docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-7.19.yaml run test
+docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run test
 ```
 
 etc, etc

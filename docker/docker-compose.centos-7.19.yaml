@@ -7,7 +7,7 @@ services:
     build:
       args:
         centos_version : "7"
-        java_version : "openjdk@1.9.0-7"
+        java_version : "zulu@1.9.0-7"
 
   test:
     image: netty:centos-7-1.9
