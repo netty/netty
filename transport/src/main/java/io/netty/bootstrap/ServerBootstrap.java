@@ -37,9 +37,9 @@ import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -51,8 +51,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ServerBootstrap.class);
 
-    private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<>();
-    private final Map<AttributeKey<?>, Object> childAttrs = new LinkedHashMap<>();
+    private final Map<ChannelOption<?>, Object> childOptions = new ConcurrentHashMap<>();
+    private final Map<AttributeKey<?>, Object> childAttrs = new ConcurrentHashMap<>();
     private final ServerBootstrapConfig config = new ServerBootstrapConfig(this);
     private volatile EventLoopGroup childGroup;
     private volatile ChannelHandler childHandler;
@@ -65,12 +65,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         childGroup = bootstrap.childGroup;
         childHandler = bootstrap.childHandler;
         channelFactory = bootstrap.channelFactory;
-        synchronized (bootstrap.childOptions) {
-            childOptions.putAll(bootstrap.childOptions);
-        }
-        synchronized (bootstrap.childAttrs) {
-            childAttrs.putAll(bootstrap.childAttrs);
-        }
+        childOptions.putAll(bootstrap.childOptions);
+        childAttrs.putAll(bootstrap.childAttrs);
     }
 
     /**
@@ -104,13 +100,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     public <T> ServerBootstrap childOption(ChannelOption<T> childOption, T value) {
         requireNonNull(childOption, "childOption");
         if (value == null) {
-            synchronized (childOptions) {
-                childOptions.remove(childOption);
-            }
+            childOptions.remove(childOption);
         } else {
-            synchronized (childOptions) {
-                childOptions.put(childOption, value);
-            }
+            childOptions.put(childOption, value);
         }
         return this;
     }
@@ -168,36 +160,19 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     @Override
     ChannelFuture init(Channel channel) {
         final ChannelPromise promise = channel.newPromise();
-
-        final Map<ChannelOption<?>, Object> options = options0();
-        synchronized (options) {
-            setChannelOptions(channel, options, logger);
-        }
-
-        final Map<AttributeKey<?>, Object> attrs = attrs0();
-        synchronized (attrs) {
-            for (Entry<AttributeKey<?>, Object> e: attrs.entrySet()) {
-                @SuppressWarnings("unchecked")
-                AttributeKey<Object> key = (AttributeKey<Object>) e.getKey();
-                channel.attr(key).set(e.getValue());
-            }
-        }
+        setChannelOptions(channel, options0().entrySet().toArray(newOptionArray(0)), logger);
+        setAttributes(channel, attrs0().entrySet().toArray(newAttrArray(0)));
 
         ChannelPipeline p = channel.pipeline();
 
         final ChannelHandler currentChildHandler = childHandler;
-        final Entry<ChannelOption<?>, Object>[] currentChildOptions;
-        final Entry<AttributeKey<?>, Object>[] currentChildAttrs;
-        synchronized (childOptions) {
-            currentChildOptions = childOptions.entrySet().toArray(newOptionArray(0));
-        }
-        synchronized (childAttrs) {
-            currentChildAttrs = childAttrs.entrySet().toArray(newAttrArray(0));
-        }
+        final Entry<ChannelOption<?>, Object>[] currentChildOptions =
+                childOptions.entrySet().toArray(newOptionArray(0));
+        final Entry<AttributeKey<?>, Object>[] currentChildAttrs = childAttrs.entrySet().toArray(newAttrArray(0));
 
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
-            public void initChannel(final Channel ch) throws Exception {
+            public void initChannel(final Channel ch) {
                 final ChannelPipeline pipeline = ch.pipeline();
                 ChannelHandler handler = config.handler();
                 if (handler != null) {
@@ -233,16 +208,6 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             childGroup = config.group();
         }
         return this;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Entry<AttributeKey<?>, Object>[] newAttrArray(int size) {
-        return new Entry[size];
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Map.Entry<ChannelOption<?>, Object>[] newOptionArray(int size) {
-        return new Map.Entry[size];
     }
 
     private static class ServerBootstrapAcceptor implements ChannelInboundHandler {
@@ -284,17 +249,13 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             }
         }
 
-        @SuppressWarnings("unchecked")
         private void initChild(final Channel child) {
             assert child.eventLoop().inEventLoop();
             try {
                 child.pipeline().addLast(childHandler);
 
                 setChannelOptions(child, childOptions, logger);
-
-                for (Entry<AttributeKey<?>, Object> e : childAttrs) {
-                    child.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
-                }
+                setAttributes(child, childAttrs);
 
                 child.register().addListener((ChannelFutureListener) future -> {
                     if (!future.isSuccess()) {

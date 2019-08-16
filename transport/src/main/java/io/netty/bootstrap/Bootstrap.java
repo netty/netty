@@ -21,7 +21,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
@@ -31,7 +30,6 @@ import io.netty.resolver.AddressResolver;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.NameResolver;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.internal.logging.InternalLogger;
@@ -40,8 +38,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.Map;
-import java.util.Map.Entry;
 
 /**
  * A {@link Bootstrap} that makes it easy to bootstrap a {@link Channel} to use
@@ -276,23 +272,14 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     ChannelFuture init(Channel channel) {
         ChannelPromise promise = channel.newPromise();
         ChannelPipeline p = channel.pipeline();
         p.addLast(config.handler());
 
-        final Map<ChannelOption<?>, Object> options = options0();
-        synchronized (options) {
-            setChannelOptions(channel, options, logger);
-        }
+        setChannelOptions(channel, options0().entrySet().toArray(newOptionArray(0)), logger);
+        setAttributes(channel, attrs0().entrySet().toArray(newAttrArray(0)));
 
-        final Map<AttributeKey<?>, Object> attrs = attrs0();
-        synchronized (attrs) {
-            for (Entry<AttributeKey<?>, Object> e: attrs.entrySet()) {
-                channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
-            }
-        }
         return promise.setSuccess();
     }
 
