@@ -24,7 +24,7 @@ final class Http2EmptyDataFrameConnectionDecoder extends DecoratingHttp2Connecti
 
     private final int maxConsecutiveEmptyFrames;
 
-    Http2EmptyDataFrameConnectionDecoder(Http2ConnectionDecoder delegate,  int maxConsecutiveEmptyFrames) {
+    Http2EmptyDataFrameConnectionDecoder(Http2ConnectionDecoder delegate, int maxConsecutiveEmptyFrames) {
         super(delegate);
         this.maxConsecutiveEmptyFrames = ObjectUtil.checkPositive(
                 maxConsecutiveEmptyFrames, "maxConsecutiveEmptyFrames");
@@ -37,5 +37,20 @@ final class Http2EmptyDataFrameConnectionDecoder extends DecoratingHttp2Connecti
         } else {
             super.frameListener(null);
         }
+    }
+
+    @Override
+    public Http2FrameListener frameListener() {
+        Http2FrameListener frameListener = frameListener0();
+        // Unwrap the original Http2FrameListener as we add this decoder under the hood.
+        if (frameListener instanceof Http2EmptyDataFrameListener) {
+            return ((Http2EmptyDataFrameListener) frameListener).listener;
+        }
+        return frameListener;
+    }
+
+    // Package-private for testing
+    Http2FrameListener frameListener0() {
+        return super.frameListener();
     }
 }

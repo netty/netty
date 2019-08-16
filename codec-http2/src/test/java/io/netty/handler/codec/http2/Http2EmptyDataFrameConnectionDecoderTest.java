@@ -44,7 +44,9 @@ public class Http2EmptyDataFrameConnectionDecoderTest {
         decoder.frameListener(listener);
         verify(delegate).frameListener(listenerArgumentCaptor.capture());
 
-        assertThat(decoder.frameListener(), CoreMatchers.instanceOf(Http2EmptyDataFrameListener.class));
+        assertThat(decoder.frameListener(),
+                CoreMatchers.not(CoreMatchers.instanceOf(Http2EmptyDataFrameListener.class)));
+        assertThat(decoder.frameListener0(), CoreMatchers.instanceOf(Http2EmptyDataFrameListener.class));
     }
 
     @Test
