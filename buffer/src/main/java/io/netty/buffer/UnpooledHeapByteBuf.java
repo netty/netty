@@ -120,29 +120,23 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuf capacity(int newCapacity) {
         checkNewCapacity(newCapacity);
-
-        int oldCapacity = array.length;
         byte[] oldArray = array;
-        if (newCapacity > oldCapacity) {
-            byte[] newArray = allocateArray(newCapacity);
-            System.arraycopy(oldArray, 0, newArray, 0, oldArray.length);
-            setArray(newArray);
-            freeArray(oldArray);
-        } else if (newCapacity < oldCapacity) {
-            byte[] newArray = allocateArray(newCapacity);
-            int readerIndex = readerIndex();
-            if (readerIndex < newCapacity) {
-                int writerIndex = writerIndex();
-                if (writerIndex > newCapacity) {
-                    writerIndex(writerIndex = newCapacity);
-                }
-                System.arraycopy(oldArray, readerIndex, newArray, readerIndex, writerIndex - readerIndex);
-            } else {
-                setIndex(newCapacity, newCapacity);
-            }
-            setArray(newArray);
-            freeArray(oldArray);
+        int oldCapacity = oldArray.length;
+        if (newCapacity == oldCapacity) {
+            return this;
         }
+
+        int bytesToCopy;
+        if (newCapacity > oldCapacity) {
+            bytesToCopy = oldCapacity;
+        } else {
+            trimIndicesToCapacity(newCapacity);
+            bytesToCopy = newCapacity;
+        }
+        byte[] newArray = allocateArray(newCapacity);
+        System.arraycopy(oldArray, 0, newArray, 0, bytesToCopy);
+        setArray(newArray);
+        freeArray(oldArray);
         return this;
     }
 

@@ -268,6 +268,13 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
     }
 
+    // Called after a capacity reduction
+    protected final void trimIndicesToCapacity(int newCapacity) {
+        if (writerIndex() > newCapacity) {
+            setIndex0(Math.min(readerIndex(), newCapacity), newCapacity);
+        }
+    }
+
     @Override
     public ByteBuf ensureWritable(int minWritableBytes) {
         checkPositiveOrZero(minWritableBytes, "minWritableBytes");
