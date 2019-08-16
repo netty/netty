@@ -109,7 +109,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
                     (maxLength > 512 || newCapacity > maxLength - 16)) {
                 // here newCapacity < length
                 length = newCapacity;
-                setIndex(Math.min(readerIndex(), newCapacity), Math.min(writerIndex(), newCapacity));
+                trimIndicesToCapacity(newCapacity);
                 return this;
             }
         }

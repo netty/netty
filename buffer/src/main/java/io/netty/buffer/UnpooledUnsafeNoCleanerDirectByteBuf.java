@@ -48,18 +48,8 @@ class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
             return this;
         }
 
-        ByteBuffer newBuffer = reallocateDirect(buffer, newCapacity);
-
-        if (newCapacity < oldCapacity) {
-            if (readerIndex() < newCapacity) {
-                if (writerIndex() > newCapacity) {
-                    writerIndex(newCapacity);
-                }
-            } else {
-                setIndex(newCapacity, newCapacity);
-            }
-        }
-        setByteBuffer(newBuffer, false);
+        trimIndicesToCapacity(newCapacity);
+        setByteBuffer(reallocateDirect(buffer, newCapacity), false);
         return this;
     }
 }
