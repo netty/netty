@@ -1,8 +1,0 @@
-version: "2"
-
-compose-dev-file-path: 'docker-sync-compose.centos-6.18.yaml'
-
-syncs:
-  #IMPORTANT: ensure this name is unique and does not match your other application container name
-  code-sync: #tip: add -sync and you keep consistent names as a convention
-    src: '../'
