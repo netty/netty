@@ -121,7 +121,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
         // Request file region which is bigger then the underlying file.
         FileRegion region = new DefaultFileRegion(
-                new FileInputStream(file).getChannel(), 0, data.length + 1024);
+                new RandomAccessFile(file, "r").getChannel(), 0, data.length + 1024);
 
         assertThat(cc.writeAndFlush(region).await().cause(), CoreMatchers.<Throwable>instanceOf(IOException.class));
         cc.close().sync();
