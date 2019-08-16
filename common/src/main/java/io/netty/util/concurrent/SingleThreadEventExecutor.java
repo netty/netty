@@ -73,12 +73,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             // Do nothing.
         }
     };
-    private static final Runnable BOOKEND_TASK = new Runnable() {
-        @Override
-        public void run() {
-            // Do nothing.
-        }
-    };
 
     private static final AtomicIntegerFieldUpdater<SingleThreadEventExecutor> STATE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(SingleThreadEventExecutor.class, "state");
@@ -252,10 +246,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     protected static Runnable pollTaskFrom(Queue<Runnable> taskQueue) {
         for (;;) {
             Runnable task = taskQueue.poll();
-            if (task == WAKEUP_TASK) {
-                continue;
+            if (task != WAKEUP_TASK) {
+                return task;
             }
-            return task;
         }
     }
 
@@ -333,7 +326,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     /**
      * @return {@code true} if at least one scheduled task was executed.
      */
-    private boolean executeExpiredScheduledTasks(boolean notifyMinimumDeadlineRemoved) {
+    private boolean executeExpiredScheduledTasks() {
         if (scheduledTaskQueue == null || scheduledTaskQueue.isEmpty()) {
             return false;
         }
@@ -438,17 +431,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      */
     protected final boolean runScheduledAndExecutorTasks(final int maxDrainAttempts) {
         assert inEventLoop();
-        // We must run the taskQueue tasks first, because the scheduled tasks from outside the EventLoop are queued
-        // here because the taskQueue is thread safe and the scheduledTaskQueue is not thread safe.
-        boolean ranAtLeastOneExecutorTask = runExistingTasksFrom(taskQueue);
-        boolean ranAtLeastOneScheduledTask = executeExpiredScheduledTasks(true);
+        boolean ranAtLeastOneTask;
         int drainAttempt = 0;
-        while ((ranAtLeastOneExecutorTask || ranAtLeastOneScheduledTask) && ++drainAttempt < maxDrainAttempts) {
+        do {
             // We must run the taskQueue tasks first, because the scheduled tasks from outside the EventLoop are queued
             // here because the taskQueue is thread safe and the scheduledTaskQueue is not thread safe.
-            ranAtLeastOneExecutorTask = runExistingTasksFrom(taskQueue);
-            ranAtLeastOneScheduledTask = executeExpiredScheduledTasks(false);
-        }
+            ranAtLeastOneTask = runExistingTasksFrom(taskQueue) | executeExpiredScheduledTasks();
+        } while (ranAtLeastOneTask && ++drainAttempt < maxDrainAttempts);
 
         if (drainAttempt > 0) {
             lastExecutionTime = ScheduledFutureTask.nanoTime();
@@ -484,47 +473,17 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * @param taskQueue the task queue to drain.
      * @return {@code true} if at least {@link Runnable#run()} was called.
      */
-    private boolean runExistingTasksFrom(Queue<Runnable> taskQueue) {
-        return taskQueue.offer(BOOKEND_TASK) ? runExistingTasksUntilBookend(taskQueue)
-                                             : runExistingTasksUntilMaxTasks(taskQueue);
-    }
-
-    private boolean runExistingTasksUntilBookend(Queue<Runnable> taskQueue) {
+    private static boolean runExistingTasksFrom(Queue<Runnable> taskQueue) {
         Runnable task = pollTaskFrom(taskQueue);
-        // null is not expected because this method isn't called unless BOOKEND_TASK was inserted into the queue, and
-        // null elements are not permitted to be inserted into the queue.
-        if (task == BOOKEND_TASK) {
-            return false;
-        }
-        for (;;) {
-            safeExecute(task);
-            task = pollTaskFrom(taskQueue);
-            // null is not expected because this method isn't called unless BOOKEND_TASK was inserted into the queue,
-            // and null elements are not permitted to be inserted into the queue.
-            if (task == BOOKEND_TASK) {
-                return true;
-            }
-        }
-    }
-
-    private boolean runExistingTasksUntilMaxTasks(Queue<Runnable> taskQueue) {
-        Runnable task = pollTaskFrom(taskQueue);
-        // BOOKEND_TASK is not expected because this method isn't called unless BOOKEND_TASK fails to be inserted into
-        // the queue, and if was previously inserted we always drain all the elements from queue including BOOKEND_TASK.
         if (task == null) {
             return false;
         }
-        int i = 0;
-        do {
+        int remaining = taskQueue.size();
+        safeExecute(task);
+        // Use taskQueue.poll() directly to account for all entries
+        while (remaining-- > 0 && (task = taskQueue.poll()) != null) {
             safeExecute(task);
-            task = pollTaskFrom(taskQueue);
-            // BOOKEND_TASK is not expected because this method isn't called unless BOOKEND_TASK fails to be inserted
-            // into the queue, and if was previously inserted we always drain all the elements from queue including
-            // BOOKEND_TASK.
-            if (task == null) {
-                return true;
-            }
-        } while (++i < maxPendingTasks);
+        }
         return true;
     }
 
