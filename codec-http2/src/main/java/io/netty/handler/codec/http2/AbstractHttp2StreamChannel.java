@@ -751,6 +751,8 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             if (!isActive()) {
                 return;
             }
+            updateLocalWindowIfNeeded();
+
             switch (readStatus) {
                 case IDLE:
                     readStatus = ReadStatus.IN_PROGRESS;
@@ -826,8 +828,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             } else {
                 readStatus = ReadStatus.IDLE;
             }
-
-            updateLocalWindowIfNeeded();
 
             allocHandle.readComplete();
             pipeline().fireChannelReadComplete();
