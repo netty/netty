@@ -38,6 +38,15 @@ public class AsciiStringCharacterTest {
     private static final Random r = new Random();
 
     @Test
+    public void testContentEqualsIgnoreCase() {
+        byte[] bytes = { 32, 'a' };
+        AsciiString asciiString = new AsciiString(bytes, 1, 1, false);
+        // https://github.com/netty/netty/issues/9475
+        assertFalse(asciiString.contentEqualsIgnoreCase("b"));
+        assertFalse(asciiString.contentEqualsIgnoreCase(AsciiString.of("b")));
+    }
+
+    @Test
     public void testGetBytesStringBuilder() {
         final StringBuilder b = new StringBuilder();
         for (int i = 0; i < 1 << 16; ++i) {
