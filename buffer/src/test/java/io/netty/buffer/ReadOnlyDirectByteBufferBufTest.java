@@ -21,9 +21,8 @@ import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.FileChannel;
@@ -307,12 +306,12 @@ public class ReadOnlyDirectByteBufferBufTest {
         ByteBuf b2 = null;
 
         try {
-            output = new FileOutputStream(file).getChannel();
+            output = new RandomAccessFile(file, "rw").getChannel();
             byte[] bytes = new byte[1024];
             PlatformDependent.threadLocalRandom().nextBytes(bytes);
             output.write(ByteBuffer.wrap(bytes));
 
-            input = new FileInputStream(file).getChannel();
+            input = new RandomAccessFile(file, "r").getChannel();
             ByteBuffer m = input.map(FileChannel.MapMode.READ_ONLY, 0, input.size());
 
             b1 = buffer(m);
