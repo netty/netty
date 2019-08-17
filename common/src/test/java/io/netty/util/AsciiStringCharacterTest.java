@@ -47,6 +47,15 @@ public class AsciiStringCharacterTest {
             { UTF_16, UTF_16BE, UTF_16LE, UTF_8, ISO_8859_1, US_ASCII };
 
     @Test
+    public void testContentEqualsIgnoreCase() {
+        byte[] bytes = { 32, 'a' };
+        AsciiString asciiString = new AsciiString(bytes, 1, 1, false);
+        // https://github.com/netty/netty/issues/9475
+        assertFalse(asciiString.contentEqualsIgnoreCase("b"));
+        assertFalse(asciiString.contentEqualsIgnoreCase(AsciiString.of("b")));
+    }
+
+    @Test
     public void testGetBytesStringBuilder() {
         final StringBuilder b = new StringBuilder();
         for (int i = 0; i < 1 << 16; ++i) {
