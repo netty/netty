@@ -31,6 +31,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.dns.DatagramDnsQueryEncoder;
@@ -186,7 +187,25 @@ public class DnsNameResolver extends InetNameResolver {
         return (List<String>) nameservers.invoke(instance);
     }
 
-    private static final DatagramDnsResponseDecoder DATAGRAM_DECODER = new DatagramDnsResponseDecoder();
+    private static final DatagramDnsResponseDecoder DATAGRAM_DECODER = new DatagramDnsResponseDecoder() {
+        @Override
+        protected DnsResponse decodeResponse(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
+            DnsResponse response = super.decodeResponse(ctx, packet);
+            if (packet.content().isReadable()) {
+                // If there is still something to read we did stop parsing because of a truncated message.
+                // This can happen if we enabled EDNS0 but our MTU is not big enough to handle all the
+                // data.
+                response.setTruncated(true);
+
+                if (logger.isDebugEnabled()) {
+                    logger.debug(
+                            "{} RECEIVED: UDP truncated packet received, consider adjusting maxPayloadSize for the {}.",
+                            ctx.channel(), StringUtil.simpleClassName(DnsNameResolver.class));
+                }
+            }
+            return response;
+        }
+    };
     private static final DatagramDnsQueryEncoder DATAGRAM_ENCODER = new DatagramDnsQueryEncoder();
     private static final TcpDnsQueryEncoder TCP_ENCODER = new TcpDnsQueryEncoder();
 

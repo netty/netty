@@ -232,4 +232,24 @@ public class DefaultDnsRecordDecoderTest {
             buffer.release();
         }
     }
+
+    @Test
+    public void testTruncatedPacket() throws Exception {
+        ByteBuf buffer = Unpooled.buffer();
+        buffer.writeByte(0);
+        buffer.writeShort(DnsRecordType.A.intValue());
+        buffer.writeShort(1);
+        buffer.writeInt(32);
+
+        // Write a truncated last value.
+        buffer.writeByte(0);
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
+        try {
+            int readerIndex = buffer.readerIndex();
+            assertNull(decoder.decodeRecord(buffer));
+            assertEquals(readerIndex, buffer.readerIndex());
+        } finally {
+            buffer.release();
+        }
+    }
 }
