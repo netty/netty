@@ -21,6 +21,7 @@ import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -44,6 +45,7 @@ import static io.netty.channel.unix.Errors.newIOException;
  * <p><strong>Internal usage only!</strong>
  * <p>Static members which call JNI methods must be defined in {@link NativeStaticallyReferencedJniMethods}.
  */
+@UnstableApi
 public final class Native {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
 
@@ -82,7 +84,7 @@ public final class Native {
     private static native int eventFd();
     private static native int timerFd();
     public static native void eventFdWrite(int fd, long value);
-    public static native void eventFdRead(int fd);
+    public static native long eventFdRead(int fd);
     static native void timerFdRead(int fd);
     static native void timerFdSetTime(int fd, int sec, int nsec) throws IOException;
 

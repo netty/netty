@@ -64,6 +64,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
      */
     private final AtomicLong nextDeadlineNanos = new AtomicLong(-1L);
     private final AtomicInteger wakenUp = new AtomicInteger();
+    private long eventFdWriteCount;
     private final FileDescriptor epollFd;
     private final FileDescriptor eventFd;
     private final FileDescriptor timerFd;
@@ -385,17 +386,20 @@ class EpollEventLoop extends SingleThreadEventLoop {
                         break;
 
                     case SelectStrategy.SELECT:
-                        if (wakenUp.get() == 1) {
-                            wakenUp.set(0);
-                        }
-                        if (!hasTasks()) {
-                            // When we are in the EventLoop we don't bother setting the timerFd for each
-                            // scheduled task, but instead defer the processing until the end of the EventLoop
-                            // (next wait) to reduce the timerFd modifications.
-                            timerFdDeadline = checkScheduleTaskQueueForNewDelay(timerFdDeadline);
-                            try {
+                        wakenUp.lazySet(0);
+                        try {
+                            if (!hasTasks()) {
+                                // When we are in the EventLoop we don't bother setting the timerFd for each
+                                // scheduled task, but instead defer the processing until the end of the EventLoop
+                                // (next wait) to reduce the timerFd modifications.
+                                timerFdDeadline = checkScheduleTaskQueueForNewDelay(timerFdDeadline);
                                 strategy = epollWait();
-                            } finally {
+                            }
+                        } finally {
+                            if (wakenUp.get() == 1 || wakenUp.getAndSet(1) == 1) {
+                                eventFdWriteCount++;
+                            }
+                            if (timerFdDeadline >= 0) {
                                 // This getAndAdd will change the raw value of nextDeadlineNanos to be negative
                                 // which will block any *new* timerFd mods by other threads while also "preserving"
                                 // its last value to avoid disrupting a possibly-concurrent setTimerFd call
@@ -546,6 +550,11 @@ class EpollEventLoop extends SingleThreadEventLoop {
                 logger.warn("Failed to close the epoll fd.", e);
             }
             try {
+                // Ensure any inflight wakeup writes have been performed prior to closing eventFd.
+                // Cap number of iterations to avoid indefinite spin in the case of a failed write.
+                for (int i = 0; eventFdWriteCount != 0L && i < 10000; i++) {
+                    eventFdWriteCount -= Native.eventFdRead(eventFd.intValue());
+                }
                 eventFd.close();
             } catch (IOException e) {
                 logger.warn("Failed to close the event fd.", e);

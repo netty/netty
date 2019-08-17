@@ -140,13 +140,17 @@ static void netty_epoll_native_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, 
     }
 }
 
-static void netty_epoll_native_eventFdRead(JNIEnv* env, jclass clazz, jint fd) {
-    uint64_t eventfd_t;
+static jlong netty_epoll_native_eventFdRead(JNIEnv* env, jclass clazz, jint fd) {
+    uint64_t val;
 
-    if (eventfd_read(fd, &eventfd_t) != 0) {
+    if (eventfd_read(fd, &val) != 0) {
+        if (errno == EAGAIN) {
+            return (jlong) 0;
+        }
         // something is serious wrong
         netty_unix_errors_throwRuntimeException(env, "eventfd_read() failed");
     }
+    return (jlong) val;
 }
 
 static void netty_epoll_native_timerFdRead(JNIEnv* env, jclass clazz, jint fd) {
@@ -452,7 +456,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "eventFd", "()I", (void *) netty_epoll_native_eventFd },
   { "timerFd", "()I", (void *) netty_epoll_native_timerFd },
   { "eventFdWrite", "(IJ)V", (void *) netty_epoll_native_eventFdWrite },
-  { "eventFdRead", "(I)V", (void *) netty_epoll_native_eventFdRead },
+  { "eventFdRead", "(I)J", (void *) netty_epoll_native_eventFdRead },
   { "timerFdRead", "(I)V", (void *) netty_epoll_native_timerFdRead },
   { "timerFdSetTime", "(III)V", (void *) netty_epoll_native_timerFdSetTime },
   { "epollCreate", "()I", (void *) netty_epoll_native_epollCreate },
