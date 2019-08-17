@@ -88,6 +88,15 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
             if (handshaker == null) {
                 WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
             } else {
+                // Ensure we set the handshaker and replace this handler before we
+                // trigger the actual handshake. Otherwise we may receive websocket bytes in this handler
+                // before we had a chance to replace it.
+                //
+                // See https://github.com/netty/netty/issues/9471.
+                WebSocketServerProtocolHandler.setHandshaker(ctx.channel(), handshaker);
+                ctx.pipeline().replace(this, "WS403Responder",
+                        WebSocketServerProtocolHandler.forbiddenHttpRequestResponder());
+
                 final ChannelFuture handshakeFuture = handshaker.handshake(ctx.channel(), req);
                 handshakeFuture.addListener(new ChannelFutureListener() {
                     @Override
@@ -107,9 +116,6 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
                     }
                 });
                 applyHandshakeTimeout();
-                WebSocketServerProtocolHandler.setHandshaker(ctx.channel(), handshaker);
-                ctx.pipeline().replace(this, "WS403Responder",
-                        WebSocketServerProtocolHandler.forbiddenHttpRequestResponder());
             }
         } finally {
             req.release();
