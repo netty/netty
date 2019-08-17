@@ -22,10 +22,9 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
@@ -125,9 +124,10 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 }
                 return;
             }
-            FileOutputStream outputStream = new FileOutputStream(file);
+            RandomAccessFile accessFile = new RandomAccessFile(file, "rw");
+            accessFile.setLength(0);
             try {
-                FileChannel localfileChannel = outputStream.getChannel();
+                FileChannel localfileChannel = accessFile.getChannel();
                 ByteBuffer byteBuffer = buffer.nioBuffer();
                 int written = 0;
                 while (written < size) {
@@ -136,7 +136,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 buffer.readerIndex(buffer.readerIndex() + written);
                 localfileChannel.force(false);
             } finally {
-                outputStream.close();
+                accessFile.close();
             }
             setCompleted();
         } finally {
@@ -163,8 +163,8 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                     file = tempFile();
                 }
                 if (fileChannel == null) {
-                    FileOutputStream outputStream = new FileOutputStream(file);
-                    fileChannel = outputStream.getChannel();
+                    RandomAccessFile accessFile = new RandomAccessFile(file, "rw");
+                    fileChannel = accessFile.getChannel();
                 }
                 while (written < localsize) {
                     written += fileChannel.write(byteBuffer);
@@ -182,8 +182,8 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 file = tempFile();
             }
             if (fileChannel == null) {
-                FileOutputStream outputStream = new FileOutputStream(file);
-                fileChannel = outputStream.getChannel();
+                RandomAccessFile accessFile = new RandomAccessFile(file, "rw");
+                fileChannel = accessFile.getChannel();
             }
             fileChannel.force(false);
             fileChannel.close();
@@ -217,10 +217,11 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             delete();
         }
         file = tempFile();
-        FileOutputStream outputStream = new FileOutputStream(file);
+        RandomAccessFile accessFile = new RandomAccessFile(file, "rw");
+        accessFile.setLength(0);
         int written = 0;
         try {
-            FileChannel localfileChannel = outputStream.getChannel();
+            FileChannel localfileChannel = accessFile.getChannel();
             byte[] bytes = new byte[4096 * 4];
             ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
             int read = inputStream.read(bytes);
@@ -232,7 +233,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             }
             localfileChannel.force(false);
         } finally {
-            outputStream.close();
+            accessFile.close();
         }
         size = written;
         if (definedSize > 0 && definedSize < size) {
@@ -290,8 +291,8 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             return EMPTY_BUFFER;
         }
         if (fileChannel == null) {
-            FileInputStream inputStream = new FileInputStream(file);
-            fileChannel = inputStream.getChannel();
+            RandomAccessFile accessFile = new RandomAccessFile(file, "r");
+            fileChannel = accessFile.getChannel();
         }
         int read = 0;
         ByteBuffer byteBuffer = ByteBuffer.allocate(length);
@@ -349,15 +350,15 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         if (!file.renameTo(dest)) {
             // must copy
             IOException exception = null;
-            FileInputStream inputStream = null;
-            FileOutputStream outputStream = null;
+            RandomAccessFile inputAccessFile = null;
+            RandomAccessFile outputAccessFile = null;
             long chunkSize = 8196;
             long position = 0;
             try {
-                inputStream = new FileInputStream(file);
-                outputStream = new FileOutputStream(dest);
-                FileChannel in = inputStream.getChannel();
-                FileChannel out = outputStream.getChannel();
+                inputAccessFile = new RandomAccessFile(file, "r");
+                outputAccessFile = new RandomAccessFile(dest, "rw");
+                FileChannel in = inputAccessFile.getChannel();
+                FileChannel out = outputAccessFile.getChannel();
                 while (position < size) {
                     if (chunkSize < size - position) {
                         chunkSize = size - position;
@@ -367,9 +368,9 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             } catch (IOException e) {
                 exception = e;
             } finally {
-                if (inputStream != null) {
+                if (inputAccessFile != null) {
                     try {
-                        inputStream.close();
+                        inputAccessFile.close();
                     } catch (IOException e) {
                         if (exception == null) { // Choose to report the first exception
                             exception = e;
@@ -378,9 +379,9 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                         }
                     }
                 }
-                if (outputStream != null) {
+                if (outputAccessFile != null) {
                     try {
-                        outputStream.close();
+                        outputAccessFile.close();
                     } catch (IOException e) {
                         if (exception == null) { // Choose to report the first exception
                             exception = e;
@@ -422,17 +423,17 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             throw new IllegalArgumentException(
                     "File too big to be loaded in memory");
         }
-        FileInputStream inputStream = new FileInputStream(src);
+        RandomAccessFile accessFile = new RandomAccessFile(src, "r");
         byte[] array = new byte[(int) srcsize];
         try {
-            FileChannel fileChannel = inputStream.getChannel();
+            FileChannel fileChannel = accessFile.getChannel();
             ByteBuffer byteBuffer = ByteBuffer.wrap(array);
             int read = 0;
             while (read < srcsize) {
                 read += fileChannel.read(byteBuffer);
             }
         } finally {
-            inputStream.close();
+            accessFile.close();
         }
         return array;
     }
