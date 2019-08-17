@@ -61,8 +61,15 @@ abstract class DnsResponseDecoder<A extends SocketAddress> {
             final int additionalRecordCount = buffer.readUnsignedShort();
 
             decodeQuestions(response, buffer, questionCount);
-            decodeRecords(response, DnsSection.ANSWER, buffer, answerCount);
-            decodeRecords(response, DnsSection.AUTHORITY, buffer, authorityRecordCount);
+            if (!decodeRecords(response, DnsSection.ANSWER, buffer, answerCount)) {
+                success = true;
+                return response;
+            }
+            if (!decodeRecords(response, DnsSection.AUTHORITY, buffer, authorityRecordCount)) {
+                success = true;
+                return response;
+            }
+
             decodeRecords(response, DnsSection.ADDITIONAL, buffer, additionalRecordCount);
             success = true;
             return response;
@@ -82,16 +89,17 @@ abstract class DnsResponseDecoder<A extends SocketAddress> {
         }
     }
 
-    private void decodeRecords(
+    private boolean decodeRecords(
             DnsResponse response, DnsSection section, ByteBuf buf, int count) throws Exception {
         for (int i = count; i > 0; i --) {
             final DnsRecord r = recordDecoder.decodeRecord(buf);
             if (r == null) {
                 // Truncated response
-                break;
+                return false;
             }
 
             response.addRecord(section, r);
         }
+        return true;
     }
 }

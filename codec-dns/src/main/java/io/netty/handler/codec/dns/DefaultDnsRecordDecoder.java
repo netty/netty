@@ -47,7 +47,7 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
         final String name = decodeName(in);
 
         final int endOffset = in.writerIndex();
-        if (endOffset - startOffset < 10) {
+        if (endOffset - in.readerIndex() < 10) {
             // Not enough data
             in.readerIndex(startOffset);
             return null;
