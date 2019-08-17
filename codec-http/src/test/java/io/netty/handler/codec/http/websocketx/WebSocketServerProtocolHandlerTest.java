@@ -64,6 +64,28 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
+    public void testWebSocketServerProtocolHandshakeHandlerReplacedBeforeHandshake() throws Exception {
+        EmbeddedChannel ch = createChannel(new MockOutboundHandler());
+        ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
+        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
+                    // We should have removed the handler already.
+                    assertNull(ctx.pipeline().context(WebSocketServerProtocolHandshakeHandler.class));
+                }
+            }
+        });
+        writeUpgradeRequest(ch);
+
+        FullHttpResponse response = responses.remove();
+        assertEquals(SWITCHING_PROTOCOLS, response.status());
+        response.release();
+        assertNotNull(WebSocketServerProtocolHandler.getHandshaker(handshakerCtx.channel()));
+        assertFalse(ch.finish());
+    }
+
+    @Test
     public void testSubsequentHttpRequestsAfterUpgradeShouldReturn403() throws Exception {
         EmbeddedChannel ch = createChannel();
 
