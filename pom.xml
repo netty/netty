@@ -718,6 +718,7 @@
             </ignoreMissingClassesByRegularExpressions>
             <excludes>
               <exclude>@io.netty.util.internal.UnstableApi</exclude>
+              <exclude>io.netty.channel.epoll.Native</exclude>
             </excludes>
           </parameter>
           <skip>${skipJapicmp}</skip>
