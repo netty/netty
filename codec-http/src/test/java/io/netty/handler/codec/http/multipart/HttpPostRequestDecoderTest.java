@@ -711,6 +711,6 @@ public class HttpPostRequestDecoderTest {
         assertEquals("15200", ((Attribute) decoder.getBodyHttpData("msg_id")).getValue());
 
         decoder.destroy();
-        assertEquals(0, req.refCnt());
+        assertEquals(1, req.refCnt());
     }
 }
