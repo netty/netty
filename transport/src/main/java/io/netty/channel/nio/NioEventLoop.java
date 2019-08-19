@@ -763,12 +763,12 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
     @Override
-    protected boolean beforeFutureTaskScheduled(long deadlineNanos) {
+    protected boolean beforeScheduledTaskSubmitted(long deadlineNanos) {
         return deadlineNanos < nextWakeupTime;
     }
 
     @Override
-    protected boolean afterFutureTaskScheduled(long deadlineNanos) {
+    protected boolean afterScheduledTaskSubmitted(long deadlineNanos) {
         return deadlineNanos < nextWakeupTime;
     }
 

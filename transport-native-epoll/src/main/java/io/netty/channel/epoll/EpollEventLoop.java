@@ -181,12 +181,12 @@ class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     @Override
-    protected boolean beforeFutureTaskScheduled(long deadlineNanos) {
+    protected boolean beforeScheduledTaskSubmitted(long deadlineNanos) {
         return false; // don't wake event loop
     }
 
     @Override
-    protected boolean afterFutureTaskScheduled(long deadlineNanos) {
+    protected boolean afterScheduledTaskSubmitted(long deadlineNanos) {
         try {
             trySetTimerFd(deadlineNanos);
         } catch (IOException e) {
@@ -244,9 +244,11 @@ class EpollEventLoop extends SingleThreadEventLoop {
         assert nextDeadlineNanos.get() < 0;
         final long nextTaskDeadlineNanos = nextScheduledTaskDeadlineNanos();
         if (nextTaskDeadlineNanos == -1 || nextTaskDeadlineNanos >= timerFdDeadline) {
-            nextDeadlineNanos.lazySet(timerFdDeadline); // restore to preexisting timerFd value
+            // Just restore to preexisting timerFd value, update not needed
+            nextDeadlineNanos.lazySet(timerFdDeadline);
         } else {
             synchronized (nextDeadlineNanos) {
+                // Shorter delay required than current timerFd setting, update it
                 nextDeadlineNanos.lazySet(timerFdDeadline = nextTaskDeadlineNanos);
                 setTimerFd(deadlineToDelayNanos(timerFdDeadline));
             }

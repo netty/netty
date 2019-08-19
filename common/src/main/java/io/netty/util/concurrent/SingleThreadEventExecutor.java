@@ -183,7 +183,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * Returns {@code true} if the {@link EventExecutor} thread should be woken immediately to
      * process the scheduled task (if not already awake).
      * <p>
-     * If {@code false} is returned, {@link #afterFutureTaskScheduled(long)} will be called with
+     * If {@code false} is returned, {@link #afterScheduledTaskSubmitted(long)} will be called with
      * the same value <i>after</i> the scheduled task is enqueued, providing another opportunity
      * to wake the {@link EventExecutor} thread if required.
      *
@@ -191,17 +191,17 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      *     relative to {@link AbstractScheduledEventExecutor#nanoTime()}
      * @return {@code true} if the {@link EventExecutor} thread should be woken, {@code false} otherwise
      */
-    protected boolean beforeFutureTaskScheduled(long deadlineNanos) {
+    protected boolean beforeScheduledTaskSubmitted(long deadlineNanos) {
         return true;
     }
 
     /**
-     * See {@link #beforeFutureTaskScheduled(long)}. Called only after that method returns false.
+     * See {@link #beforeScheduledTaskSubmitted(long)}. Called only after that method returns false.
      *
      * @param deadlineNanos relative to {@link AbstractScheduledEventExecutor#nanoTime()}
      * @return  {@code true} if the {@link EventExecutor} thread should be woken, {@code false} otherwise
      */
-    protected boolean afterFutureTaskScheduled(long deadlineNanos) {
+    protected boolean afterScheduledTaskSubmitted(long deadlineNanos) {
         return true;
     }
 
@@ -594,7 +594,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     @Override
     final void executeScheduledRunnable(final Runnable runnable, boolean isAddition, long deadlineNanos) {
         // Don't wakeup if this is a removal task or if beforeFutureTaskScheduled returns false
-        if (isAddition && beforeFutureTaskScheduled(deadlineNanos)) {
+        if (isAddition && beforeScheduledTaskSubmitted(deadlineNanos)) {
             super.executeScheduledRunnable(runnable, isAddition, deadlineNanos);
         } else {
             super.executeScheduledRunnable(new NonWakeupRunnable() {
@@ -604,7 +604,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 }
             }, isAddition, deadlineNanos);
             // Second hook after scheduling to facilitate race-avoidance
-            if (isAddition && afterFutureTaskScheduled(deadlineNanos)) {
+            if (isAddition && afterScheduledTaskSubmitted(deadlineNanos)) {
                 wakeup(false);
             }
         }
