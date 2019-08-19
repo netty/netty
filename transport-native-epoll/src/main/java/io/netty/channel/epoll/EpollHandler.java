@@ -36,6 +36,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.util.BitSet;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -62,6 +63,7 @@ public class EpollHandler implements IoHandler {
     private final FileDescriptor eventFd;
     private final FileDescriptor timerFd;
     private final IntObjectMap<AbstractEpollChannel> channels = new IntObjectHashMap<>(4096);
+    private final BitSet pendingFlagChannels = new BitSet();
     private final boolean allowGrowing;
     private final EpollEventArray events;
 
@@ -188,8 +190,8 @@ public class EpollHandler implements IoHandler {
         final AbstractEpollChannel epollChannel = cast(channel);
         epollChannel.register0(new EpollRegistration() {
             @Override
-            public void update() throws IOException {
-                EpollHandler.this.modify(epollChannel);
+            public void update()  {
+                EpollHandler.this.updatePendingFlagsSet(epollChannel);
             }
 
             @Override
@@ -229,6 +231,8 @@ public class EpollHandler implements IoHandler {
     private void add(AbstractEpollChannel ch) throws IOException {
         int fd = ch.socket.intValue();
         Native.epollCtlAdd(epollFd.intValue(), fd, ch.flags);
+        ch.activeFlags = ch.flags;
+
         AbstractEpollChannel old = channels.put(fd, ch);
 
         // We either expect to have no Channel in the map with the same FD or that the FD of the old Channel is already
@@ -236,11 +240,32 @@ public class EpollHandler implements IoHandler {
         assert old == null || !old.isOpen();
     }
 
+    void updatePendingFlagsSet(AbstractEpollChannel ch) {
+        pendingFlagChannels.set(ch.socket.intValue(), ch.flags != ch.activeFlags);
+    }
+
+    private void processPendingChannelFlags() {
+        // Call epollCtlMod for any channels that require event interest changes before epollWaiting
+        if (!pendingFlagChannels.isEmpty()) {
+            for (int fd = 0; (fd = pendingFlagChannels.nextSetBit(fd)) >= 0; pendingFlagChannels.clear(fd)) {
+                AbstractEpollChannel ch = channels.get(fd);
+                if (ch != null) {
+                    try {
+                        modify(ch);
+                    } catch (IOException e) {
+                        ch.pipeline().fireExceptionCaught(e);
+                        ch.close();
+                    }
+                }
+            }
+        }
+    }
     /**
      * The flags of the given epoll was modified so update the registration
      */
     private void modify(AbstractEpollChannel ch) throws IOException {
         Native.epollCtlMod(epollFd.intValue(), ch.socket.intValue(), ch.flags);
+        ch.activeFlags = ch.flags;
     }
 
     /**
@@ -256,10 +281,14 @@ public class EpollHandler implements IoHandler {
 
             // If we found another Channel in the map that is mapped to the same FD the given Channel MUST be closed.
             assert !ch.isOpen();
-        } else if (ch.isOpen()) {
-            // Remove the epoll. This is only needed if it's still open as otherwise it will be automatically
-            // removed once the file-descriptor is closed.
-            Native.epollCtlDel(epollFd.intValue(), fd);
+        } else {
+            ch.activeFlags = 0;
+            pendingFlagChannels.clear(fd);
+            if (ch.isOpen()) {
+                // Remove the epoll. This is only needed if it's still open as otherwise it will be automatically
+                // removed once the file-descriptor is closed.
+                Native.epollCtlDel(epollFd.intValue(), fd);
+            }
         }
     }
 
@@ -291,6 +320,7 @@ public class EpollHandler implements IoHandler {
     public final int run(IoExecutionContext context) {
         int handled = 0;
         try {
+            processPendingChannelFlags();
             int strategy = selectStrategy.calculateStrategy(selectNowSupplier, !context.canBlock());
             switch (strategy) {
                 case SelectStrategy.CONTINUE:

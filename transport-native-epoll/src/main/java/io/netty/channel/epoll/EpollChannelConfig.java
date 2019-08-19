@@ -16,14 +16,12 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 
-import java.io.IOException;
 import java.util.Map;
 
 import static io.netty.channel.unix.Limits.SSIZE_MAX;
@@ -149,7 +147,6 @@ public class EpollChannelConfig extends DefaultChannelConfig {
      */
     public EpollChannelConfig setEpollMode(EpollMode mode) {
         requireNonNull(mode, "mode");
-        try {
             switch (mode) {
             case EDGE_TRIGGERED:
                 checkChannelNotRegistered();
@@ -161,9 +158,6 @@ public class EpollChannelConfig extends DefaultChannelConfig {
                 break;
             default:
                 throw new Error();
-            }
-        } catch (IOException e) {
-            throw new ChannelException(e);
         }
         return this;
     }

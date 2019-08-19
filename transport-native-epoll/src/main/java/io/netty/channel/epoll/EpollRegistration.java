@@ -20,14 +20,14 @@ import io.netty.channel.unix.IovArray;
 import java.io.IOException;
 
 /**
- * Registration with an {@link EpollEventLoop}.
+ * Registration with an {@link EpollHandler}.
  */
 interface EpollRegistration {
 
     /**
      * Update the registration as some flags did change.
      */
-    void update() throws IOException;
+    void update();
 
     /**
      * Remove the registration. No more IO will be handled for it.
