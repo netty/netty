@@ -20,16 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.DefaultHttpContent;
-import io.netty.handler.codec.http.DefaultHttpRequest;
-import io.netty.handler.codec.http.DefaultLastHttpContent;
-import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.*;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 
@@ -705,13 +696,13 @@ public class HttpPostRequestDecoderTest {
                 "test message\n" +
                 "--" + BOUNDARY + "--").getBytes());
 
-        DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.POST, "/up", byteBuf);
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.POST, "/up", byteBuf);
         req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + BOUNDARY);
 
         HttpPostRequestDecoder decoder =
                 new HttpPostRequestDecoder(new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE),
                         req,
-                        java.nio.charset.Charset.forName("utf-8"));
+                        CharsetUtil.UTF_8);
 
         assertTrue(decoder.isMultipart());
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
@@ -720,5 +711,6 @@ public class HttpPostRequestDecoderTest {
         assertEquals("15200", ((Attribute) decoder.getBodyHttpData("msg_id")).getValue());
 
         decoder.destroy();
+        assertEquals(0, req.refCnt());
     }
 }
