@@ -15,6 +15,8 @@
 
 package io.netty.handler.codec.http2;
 
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayList;
@@ -58,6 +60,22 @@ public class Http2Exception extends Exception {
 
     public Http2Exception(Http2Error error, String message, Throwable cause, ShutdownHint shutdownHint) {
         super(message, cause);
+        this.error = checkNotNull(error, "error");
+        this.shutdownHint = checkNotNull(shutdownHint, "shutdownHint");
+    }
+
+    static Http2Exception newStatic(Http2Error error, String message, ShutdownHint shutdownHint) {
+        if (PlatformDependent.javaVersion() >= 7) {
+            return new Http2Exception(error, message, shutdownHint, true);
+        }
+        return new Http2Exception(error, message, shutdownHint);
+    }
+
+    @SuppressJava6Requirement(reason = "uses Java 7+ Exception.<init>(String, Throwable, boolean, boolean)" +
+            " but is guarded by version checks")
+    private Http2Exception(Http2Error error, String message, ShutdownHint shutdownHint, boolean shared) {
+        super(message, null, false, true);
+        assert shared;
         this.error = checkNotNull(error, "error");
         this.shutdownHint = checkNotNull(shutdownHint, "shutdownHint");
     }
@@ -207,7 +225,7 @@ public class Http2Exception extends Exception {
         /**
          * Close the channel immediately after a {@code GOAWAY} is sent.
          */
-        HARD_SHUTDOWN;
+        HARD_SHUTDOWN
     }
 
     /**

@@ -22,7 +22,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
+
 import java.security.Provider;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -111,16 +111,9 @@ public class ConscryptOpenSslEngineInteropTest extends ConscryptSslEngineTest {
 
     @Override
     @Test
-    public void testClientHostnameValidationSuccess() throws InterruptedException, SSLException {
-        assumeTrue(OpenSsl.supportsHostnameValidation());
-        super.testClientHostnameValidationSuccess();
-    }
-
-    @Override
-    @Test
-    public void testClientHostnameValidationFail() throws InterruptedException, SSLException {
-        assumeTrue(OpenSsl.supportsHostnameValidation());
-        super.testClientHostnameValidationFail();
+    public void testSessionAfterHandshakeKeyManagerFactory() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testSessionAfterHandshakeKeyManagerFactory();
     }
 
     @Override
@@ -128,6 +121,13 @@ public class ConscryptOpenSslEngineInteropTest extends ConscryptSslEngineTest {
     public void testSessionAfterHandshakeKeyManagerFactoryMutualAuth() throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSessionAfterHandshakeKeyManagerFactoryMutualAuth();
+    }
+
+    @Override
+    @Test
+    public void testSupportedSignatureAlgorithms() throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testSupportedSignatureAlgorithms();
     }
 
     @Override

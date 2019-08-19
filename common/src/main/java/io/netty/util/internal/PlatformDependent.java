@@ -15,6 +15,7 @@
  */
 package io.netty.util.internal;
 
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.jctools.queues.MpscArrayQueue;
@@ -28,19 +29,28 @@ import org.jctools.queues.atomic.SpscLinkedAtomicQueue;
 import org.jctools.util.Pow2;
 import org.jctools.util.UnsafeAccess;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
@@ -75,6 +85,7 @@ public final class PlatformDependent {
     private static final boolean IS_WINDOWS = isWindows0();
     private static final boolean IS_OSX = isOsx0();
     private static final boolean IS_J9_JVM = isJ9Jvm0();
+    private static final boolean IS_IVKVM_DOT_NET = isIkvmDotNet0();
 
     private static final boolean MAYBE_SUPER_USER;
 
@@ -95,6 +106,10 @@ public final class PlatformDependent {
     private static final int BIT_MODE = bitMode0();
     private static final String NORMALIZED_ARCH = normalizeArch(SystemPropertyUtil.get("os.arch", ""));
     private static final String NORMALIZED_OS = normalizeOs(SystemPropertyUtil.get("os.name", ""));
+
+    // keep in sync with maven's pom.xml via os.detection.classifierWithLikes!
+    private static final String[] ALLOWED_LINUX_OS_CLASSIFIERS = {"fedora", "suse", "arch"};
+    private static final Set<String> LINUX_OS_CLASSIFIERS;
 
     private static final int ADDRESS_SIZE = addressSize0();
     private static final boolean USE_DIRECT_BUFFER_NO_CLEANER;
@@ -195,6 +210,50 @@ public final class PlatformDependent {
                     "Unless explicitly requested, heap buffer will always be preferred to avoid potential system " +
                     "instability.");
         }
+
+        // For specifications, see https://www.freedesktop.org/software/systemd/man/os-release.html
+        final String[] OS_RELEASE_FILES = {"/etc/os-release", "/usr/lib/os-release"};
+        final String LINUX_ID_PREFIX = "ID=";
+        final String LINUX_ID_LIKE_PREFIX = "ID_LIKE=";
+        Set<String> allowedClassifiers = new HashSet<String>(Arrays.asList(ALLOWED_LINUX_OS_CLASSIFIERS));
+        allowedClassifiers = Collections.unmodifiableSet(allowedClassifiers);
+        Set<String> availableClassifiers = new LinkedHashSet<String>();
+
+        for (String osReleaseFileName : OS_RELEASE_FILES) {
+            final File file = new File(osReleaseFileName);
+            if (file.exists()) {
+                BufferedReader reader = null;
+                try {
+                    reader = new BufferedReader(
+                            new InputStreamReader(
+                                    new FileInputStream(file), CharsetUtil.UTF_8));
+
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        if (line.startsWith(LINUX_ID_PREFIX)) {
+                            String id = normalizeOsReleaseVariableValue(line.substring(LINUX_ID_PREFIX.length()));
+                            addClassifier(allowedClassifiers, availableClassifiers, id);
+                        } else if (line.startsWith(LINUX_ID_LIKE_PREFIX)) {
+                            line = normalizeOsReleaseVariableValue(line.substring(LINUX_ID_LIKE_PREFIX.length()));
+                            addClassifier(allowedClassifiers, availableClassifiers, line.split("[ ]+"));
+                        }
+                    }
+                } catch (IOException ignored) {
+                    // Ignore
+                } finally {
+                    if (reader != null) {
+                        try {
+                            reader.close();
+                        } catch (IOException ignored) {
+                            // Ignore
+                        }
+                    }
+                }
+                // specification states we should only fall back if /etc/os-release does not exist
+                break;
+            }
+        }
+        LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
     }
 
     public static boolean hasDirectBufferNoCleanerConstructor() {
@@ -953,6 +1012,12 @@ public final class PlatformDependent {
             logger.debug("sun.misc.Unsafe: unavailable (Android)");
             return new UnsupportedOperationException("sun.misc.Unsafe: unavailable (Android)");
         }
+
+        if (isIkvmDotNet()) {
+            logger.debug("sun.misc.Unsafe: unavailable (IKVM.NET)");
+            return new UnsupportedOperationException("sun.misc.Unsafe: unavailable (IKVM.NET)");
+        }
+
         Throwable cause = PlatformDependent0.getUnsafeUnavailabilityCause();
         if (cause != null) {
             return cause;
@@ -980,6 +1045,18 @@ public final class PlatformDependent {
     private static boolean isJ9Jvm0() {
         String vmName = SystemPropertyUtil.get("java.vm.name", "").toLowerCase();
         return vmName.startsWith("ibm j9") || vmName.startsWith("eclipse openj9");
+    }
+
+    /**
+     * Returns {@code true} if the running JVM is <a href="https://www.ikvm.net">IKVM.NET</a>, {@code false} otherwise.
+     */
+    public static boolean isIkvmDotNet() {
+        return IS_IVKVM_DOT_NET;
+    }
+
+    private static boolean isIkvmDotNet0() {
+        String vmName = SystemPropertyUtil.get("java.vm.name", "").toUpperCase(Locale.US);
+        return vmName.equals("IKVM.NET");
     }
 
     private static long maxDirectMemory0() {
@@ -1169,8 +1246,8 @@ public final class PlatformDependent {
 
         // Last resort: guess from VM name and then fall back to most common 64-bit mode.
         String vm = SystemPropertyUtil.get("java.vm.name", "").toLowerCase(Locale.US);
-        Pattern BIT_PATTERN = Pattern.compile("([1-9][0-9]+)-?bit");
-        Matcher m = BIT_PATTERN.matcher(vm);
+        Pattern bitPattern = Pattern.compile("([1-9][0-9]+)-?bit");
+        Matcher m = bitPattern.matcher(vm);
         if (m.find()) {
             return Integer.parseInt(m.group(1));
         } else {
@@ -1253,6 +1330,30 @@ public final class PlatformDependent {
 
     public static String normalizedOs() {
         return NORMALIZED_OS;
+    }
+
+    public static Set<String> normalizedLinuxClassifiers() {
+        return LINUX_OS_CLASSIFIERS;
+    }
+
+    /**
+     * Adds only those classifier strings to <tt>dest</tt> which are present in <tt>allowed</tt>.
+     *
+     * @param allowed          allowed classifiers
+     * @param dest             destination set
+     * @param maybeClassifiers potential classifiers to add
+     */
+    private static void addClassifier(Set<String> allowed, Set<String> dest, String... maybeClassifiers) {
+        for (String id : maybeClassifiers) {
+            if (allowed.contains(id)) {
+                dest.add(id);
+            }
+        }
+    }
+
+    private static String normalizeOsReleaseVariableValue(String value) {
+        // Variable assignment values may be enclosed in double or single quotes.
+        return value.trim().replaceAll("[\"']", "");
     }
 
     private static String normalize(String value) {

@@ -35,27 +35,37 @@ import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ThrowableUtil;
 
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
 import java.util.Locale;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * Base class for web socket client handshake implementations
  */
 public abstract class WebSocketClientHandshaker {
-    private static final ClosedChannelException CLOSED_CHANNEL_EXCEPTION = ThrowableUtil.unknownStackTrace(
-            new ClosedChannelException(), WebSocketClientHandshaker.class, "processHandshake(...)");
 
     private static final String HTTP_SCHEME_PREFIX = HttpScheme.HTTP + "://";
     private static final String HTTPS_SCHEME_PREFIX = HttpScheme.HTTPS + "://";
+    protected static final int DEFAULT_FORCE_CLOSE_TIMEOUT_MILLIS = 10000;
 
     private final URI uri;
 
     private final WebSocketVersion version;
 
     private volatile boolean handshakeComplete;
+
+    private volatile long forceCloseTimeoutMillis = DEFAULT_FORCE_CLOSE_TIMEOUT_MILLIS;
+
+    private volatile int forceCloseInit;
+
+    private static final AtomicIntegerFieldUpdater<WebSocketClientHandshaker> FORCE_CLOSE_INIT_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(WebSocketClientHandshaker.class, "forceCloseInit");
+
+    private volatile boolean forceCloseComplete;
 
     private final String expectedSubprotocol;
 
@@ -64,6 +74,8 @@ public abstract class WebSocketClientHandshaker {
     protected final HttpHeaders customHeaders;
 
     private final int maxFramePayloadLength;
+
+    private final boolean absoluteUpgradeUrl;
 
     /**
      * Base constructor
@@ -82,11 +94,62 @@ public abstract class WebSocketClientHandshaker {
      */
     protected WebSocketClientHandshaker(URI uri, WebSocketVersion version, String subprotocol,
                                         HttpHeaders customHeaders, int maxFramePayloadLength) {
+        this(uri, version, subprotocol, customHeaders, maxFramePayloadLength, DEFAULT_FORCE_CLOSE_TIMEOUT_MILLIS);
+    }
+
+    /**
+     * Base constructor
+     *
+     * @param uri
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
+     * @param forceCloseTimeoutMillis
+     *            Close the connection if it was not closed by the server after timeout specified
+     */
+    protected WebSocketClientHandshaker(URI uri, WebSocketVersion version, String subprotocol,
+                                        HttpHeaders customHeaders, int maxFramePayloadLength,
+                                        long forceCloseTimeoutMillis) {
+        this(uri, version, subprotocol, customHeaders, maxFramePayloadLength, forceCloseTimeoutMillis, false);
+    }
+
+    /**
+     * Base constructor
+     *
+     * @param uri
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
+     * @param forceCloseTimeoutMillis
+     *            Close the connection if it was not closed by the server after timeout specified
+     * @param  absoluteUpgradeUrl
+     *            Use an absolute url for the Upgrade request, typically when connecting through an HTTP proxy over
+     *            clear HTTP
+     */
+    protected WebSocketClientHandshaker(URI uri, WebSocketVersion version, String subprotocol,
+                                        HttpHeaders customHeaders, int maxFramePayloadLength,
+                                        long forceCloseTimeoutMillis, boolean absoluteUpgradeUrl) {
         this.uri = uri;
         this.version = version;
         expectedSubprotocol = subprotocol;
         this.customHeaders = customHeaders;
         this.maxFramePayloadLength = maxFramePayloadLength;
+        this.forceCloseTimeoutMillis = forceCloseTimeoutMillis;
+        this.absoluteUpgradeUrl = absoluteUpgradeUrl;
     }
 
     /**
@@ -140,6 +203,29 @@ public abstract class WebSocketClientHandshaker {
         this.actualSubprotocol = actualSubprotocol;
     }
 
+    public long forceCloseTimeoutMillis() {
+        return forceCloseTimeoutMillis;
+    }
+
+    /**
+     * Flag to indicate if the closing handshake was initiated because of timeout.
+     * For testing only.
+     */
+    protected boolean isForceCloseComplete() {
+        return forceCloseComplete;
+    }
+
+    /**
+     * Sets timeout to close the connection if it was not closed by the server.
+     *
+     * @param forceCloseTimeoutMillis
+     *            Close the connection if it was not closed by the server after timeout specified
+     */
+    public WebSocketClientHandshaker setForceCloseTimeoutMillis(long forceCloseTimeoutMillis) {
+        this.forceCloseTimeoutMillis = forceCloseTimeoutMillis;
+        return this;
+    }
+
     /**
      * Begins the opening handshake
      *
@@ -162,17 +248,18 @@ public abstract class WebSocketClientHandshaker {
      *            the {@link ChannelPromise} to be notified when the opening handshake is sent
      */
     public final ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
-        FullHttpRequest request =  newHandshakeRequest();
-
-        HttpResponseDecoder decoder = channel.pipeline().get(HttpResponseDecoder.class);
+        ChannelPipeline pipeline = channel.pipeline();
+        HttpResponseDecoder decoder = pipeline.get(HttpResponseDecoder.class);
         if (decoder == null) {
-            HttpClientCodec codec = channel.pipeline().get(HttpClientCodec.class);
+            HttpClientCodec codec = pipeline.get(HttpClientCodec.class);
             if (codec == null) {
                promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
                        "a HttpResponseDecoder or HttpClientCodec"));
                return promise;
             }
         }
+
+        FullHttpRequest request = newHandshakeRequest();
 
         channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
             @Override
@@ -374,7 +461,9 @@ public abstract class WebSocketClientHandshaker {
                 @Override
                 public void channelInactive(ChannelHandlerContext ctx) throws Exception {
                     // Fail promise if Channel was closed
-                    promise.tryFailure(CLOSED_CHANNEL_EXCEPTION);
+                    if (!promise.isDone()) {
+                        promise.tryFailure(new ClosedChannelException());
+                    }
                     ctx.fireChannelInactive();
                 }
             });
@@ -431,13 +520,56 @@ public abstract class WebSocketClientHandshaker {
         if (channel == null) {
             throw new NullPointerException("channel");
         }
-        return channel.writeAndFlush(frame, promise);
+        channel.writeAndFlush(frame, promise);
+        applyForceCloseTimeout(channel, promise);
+        return promise;
+    }
+
+    private void applyForceCloseTimeout(final Channel channel, ChannelFuture flushFuture) {
+        final long forceCloseTimeoutMillis = this.forceCloseTimeoutMillis;
+        final WebSocketClientHandshaker handshaker = this;
+        if (forceCloseTimeoutMillis <= 0 || !channel.isActive() || forceCloseInit != 0) {
+            return;
+        }
+
+        flushFuture.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                // If flush operation failed, there is no reason to expect
+                // a server to receive CloseFrame. Thus this should be handled
+                // by the application separately.
+                // Also, close might be called twice from different threads.
+                if (future.isSuccess() && channel.isActive() &&
+                        FORCE_CLOSE_INIT_UPDATER.compareAndSet(handshaker, 0, 1)) {
+                    final Future<?> forceCloseFuture = channel.eventLoop().schedule(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (channel.isActive()) {
+                                channel.close();
+                                forceCloseComplete = true;
+                            }
+                        }
+                    }, forceCloseTimeoutMillis, TimeUnit.MILLISECONDS);
+
+                    channel.closeFuture().addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            forceCloseFuture.cancel(false);
+                        }
+                    });
+                }
+            }
+        });
     }
 
     /**
      * Return the constructed raw path for the give {@link URI}.
      */
-    static String rawPath(URI wsURL) {
+    protected String upgradeUrl(URI wsURL) {
+        if (absoluteUpgradeUrl) {
+            return wsURL.toString();
+        }
+
         String path = wsURL.getRawPath();
         String query = wsURL.getRawQuery();
         if (query != null && !query.isEmpty()) {
@@ -453,14 +585,15 @@ public abstract class WebSocketClientHandshaker {
             return wsURL.getHost();
         }
         String host = wsURL.getHost();
+        String scheme = wsURL.getScheme();
         if (port == HttpScheme.HTTP.port()) {
-            return HttpScheme.HTTP.name().contentEquals(wsURL.getScheme())
-                    || WebSocketScheme.WS.name().contentEquals(wsURL.getScheme()) ?
+            return HttpScheme.HTTP.name().contentEquals(scheme)
+                    || WebSocketScheme.WS.name().contentEquals(scheme) ?
                     host : NetUtil.toSocketAddressString(host, port);
         }
         if (port == HttpScheme.HTTPS.port()) {
-            return HttpScheme.HTTPS.name().contentEquals(wsURL.getScheme())
-                    || WebSocketScheme.WSS.name().contentEquals(wsURL.getScheme()) ?
+            return HttpScheme.HTTPS.name().contentEquals(scheme)
+                    || WebSocketScheme.WSS.name().contentEquals(scheme) ?
                     host : NetUtil.toSocketAddressString(host, port);
         }
 

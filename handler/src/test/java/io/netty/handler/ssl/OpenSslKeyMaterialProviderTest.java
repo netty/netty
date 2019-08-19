@@ -15,13 +15,21 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.internal.tcnative.SSL;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.X509KeyManager;
 
+import java.net.Socket;
 import java.security.KeyStore;
+import java.security.Principal;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
@@ -71,5 +79,95 @@ public class OpenSslKeyMaterialProviderTest {
         assertRelease(material);
 
         provider.destroy();
+    }
+
+    /**
+     * Test class used by testChooseOpenSslPrivateKeyMaterial().
+     */
+    private static final class SingleKeyManager implements X509KeyManager {
+        private final String keyAlias;
+        private final PrivateKey pk;
+        private final X509Certificate[] certChain;
+
+        SingleKeyManager(String keyAlias, PrivateKey pk, X509Certificate[] certChain) {
+            this.keyAlias = keyAlias;
+            this.pk = pk;
+            this.certChain = certChain;
+        }
+
+        @Override
+        public String[] getClientAliases(String keyType, Principal[] issuers) {
+            return new String[]{keyAlias};
+        }
+
+        @Override
+        public String chooseClientAlias(String[] keyType, Principal[] issuers, Socket socket) {
+            return keyAlias;
+        }
+
+        @Override
+        public String[] getServerAliases(String keyType, Principal[] issuers) {
+            return new String[]{keyAlias};
+        }
+
+        @Override
+        public String chooseServerAlias(String keyType, Principal[] issuers, Socket socket) {
+            return keyAlias;
+        }
+
+        @Override
+        public X509Certificate[] getCertificateChain(String alias) {
+            return certChain;
+        }
+
+        @Override
+        public PrivateKey getPrivateKey(String alias) {
+            return pk;
+        }
+    }
+
+    @Test
+    public void testChooseOpenSslPrivateKeyMaterial() throws Exception {
+        PrivateKey privateKey = SslContext.toPrivateKey(
+                getClass().getResourceAsStream("localhost_server.key"),
+                null);
+        assertNotNull(privateKey);
+        assertEquals("PKCS#8", privateKey.getFormat());
+        final X509Certificate[] certChain = SslContext.toX509Certificates(
+                getClass().getResourceAsStream("localhost_server.pem"));
+        assertNotNull(certChain);
+        PemEncoded pemKey = null;
+        long pkeyBio = 0L;
+        OpenSslPrivateKey sslPrivateKey;
+        try {
+            pemKey = PemPrivateKey.toPEM(ByteBufAllocator.DEFAULT, true, privateKey);
+            pkeyBio = ReferenceCountedOpenSslContext.toBIO(ByteBufAllocator.DEFAULT, pemKey.retain());
+            sslPrivateKey = new OpenSslPrivateKey(SSL.parsePrivateKey(pkeyBio, null));
+        } finally {
+            ReferenceCountUtil.safeRelease(pemKey);
+            if (pkeyBio != 0L) {
+                SSL.freeBIO(pkeyBio);
+            }
+        }
+        final String keyAlias = "key";
+
+        OpenSslKeyMaterialProvider provider = new OpenSslKeyMaterialProvider(
+                new SingleKeyManager(keyAlias, sslPrivateKey, certChain),
+                null);
+        OpenSslKeyMaterial material = provider.chooseKeyMaterial(ByteBufAllocator.DEFAULT, keyAlias);
+        assertNotNull(material);
+        assertEquals(2, sslPrivateKey.refCnt());
+        assertEquals(1, material.refCnt());
+        assertTrue(material.release());
+        assertEquals(1, sslPrivateKey.refCnt());
+        // Can get material multiple times from the same key
+        material = provider.chooseKeyMaterial(ByteBufAllocator.DEFAULT, keyAlias);
+        assertNotNull(material);
+        assertEquals(2, sslPrivateKey.refCnt());
+        assertTrue(material.release());
+        assertTrue(sslPrivateKey.release());
+        assertEquals(0, sslPrivateKey.refCnt());
+        assertEquals(0, material.refCnt());
+        assertEquals(0, ((OpenSslPrivateKey.OpenSslPrivateKeyMaterial) material).certificateChain);
     }
 }

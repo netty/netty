@@ -71,11 +71,13 @@ final class OpenSslX509TrustManagerWrapper {
                             @Override
                             public void checkClientTrusted(X509Certificate[] x509Certificates, String s)
                                     throws CertificateException {
+                                throw new CertificateException();
                             }
 
                             @Override
                             public void checkServerTrusted(X509Certificate[] x509Certificates, String s)
                                     throws CertificateException {
+                                throw new CertificateException();
                             }
 
                             @Override

@@ -20,17 +20,21 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.pool.FixedChannelPool.AcquireTimeoutAction;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -43,7 +47,7 @@ public class FixedChannelPoolTest {
 
     @BeforeClass
     public static void createEventLoop() {
-        group = new LocalEventLoopGroup();
+        group = new DefaultEventLoopGroup();
     }
 
     @AfterClass
@@ -88,7 +92,7 @@ public class FixedChannelPoolTest {
         assertSame(channel, channel2);
         assertEquals(1, handler.channelCount());
 
-        assertEquals(1, handler.acquiredCount());
+        assertEquals(2, handler.acquiredCount());
         assertEquals(1, handler.releasedCount());
 
         sc.close().syncUninterruptibly();
@@ -310,7 +314,7 @@ public class FixedChannelPoolTest {
             pool.release(channel).syncUninterruptibly();
             fail();
         } catch (IllegalStateException e) {
-            assertSame(FixedChannelPool.POOL_CLOSED_ON_RELEASE_EXCEPTION, e);
+            // expected
         }
         // Since the pool is closed, the Channel should have been closed as well.
         channel.closeFuture().syncUninterruptibly();
@@ -344,6 +348,42 @@ public class FixedChannelPoolTest {
         pool.release(channel).syncUninterruptibly();
 
         sc.close().syncUninterruptibly();
+    }
+
+    @Test
+    public void testCloseAsync() throws ExecutionException, InterruptedException {
+        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        Bootstrap cb = new Bootstrap();
+        cb.remoteAddress(addr);
+        cb.group(group).channel(LocalChannel.class);
+
+        ServerBootstrap sb = new ServerBootstrap();
+        sb.group(group)
+                .channel(LocalServerChannel.class)
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    public void initChannel(LocalChannel ch) throws Exception {
+                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                    }
+                });
+
+        // Start server
+        final Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+
+        final FixedChannelPool pool = new FixedChannelPool(cb, new TestChannelPoolHandler(), 2);
+
+        pool.acquire().get();
+        pool.acquire().get();
+
+        final ChannelPromise closePromise = sc.newPromise();
+        pool.closeAsync().addListener(new GenericFutureListener<Future<? super Void>>() {
+            @Override
+            public void operationComplete(Future<? super Void> future) throws Exception {
+                Assert.assertEquals(0, pool.acquiredChannelCount());
+                sc.close(closePromise).syncUninterruptibly();
+            }
+        }).awaitUninterruptibly();
+        closePromise.awaitUninterruptibly();
     }
 
     private static final class TestChannelPoolHandler extends AbstractChannelPoolHandler {

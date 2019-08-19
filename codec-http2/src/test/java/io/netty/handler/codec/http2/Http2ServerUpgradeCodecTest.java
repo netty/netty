@@ -18,6 +18,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.DefaultChannelId;
+import io.netty.channel.ServerChannel;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
@@ -32,40 +34,59 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class Http2ServerUpgradeCodecTest {
 
     @Test
     public void testUpgradeToHttp2ConnectionHandler() {
-        testUpgrade(new Http2ConnectionHandlerBuilder().frameListener(new Http2FrameAdapter()).build());
+        testUpgrade(new Http2ConnectionHandlerBuilder().frameListener(new Http2FrameAdapter()).build(), null);
     }
 
     @Test
     public void testUpgradeToHttp2FrameCodec() {
-        testUpgrade(new Http2FrameCodecBuilder(true).build());
+        testUpgrade(new Http2FrameCodecBuilder(true).build(), null);
     }
 
     @Test
     public void testUpgradeToHttp2MultiplexCodec() {
-        testUpgrade(new Http2MultiplexCodecBuilder(true, new HttpInboundHandler()).build());
+        testUpgrade(new Http2MultiplexCodecBuilder(true, new HttpInboundHandler()).build(), null);
     }
 
-    private static void testUpgrade(Http2ConnectionHandler handler) {
+    @Test
+    public void testUpgradeToHttp2FrameCodecWithMultiplexer() {
+        testUpgrade(new Http2FrameCodecBuilder(true).build(),
+                new Http2MultiplexHandler(new HttpInboundHandler()));
+    }
+
+    private static void testUpgrade(Http2ConnectionHandler handler, ChannelHandler multiplexer) {
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "*");
         request.headers().set(HttpHeaderNames.HOST, "netty.io");
         request.headers().set(HttpHeaderNames.CONNECTION, "Upgrade, HTTP2-Settings");
         request.headers().set(HttpHeaderNames.UPGRADE, "h2c");
         request.headers().set("HTTP2-Settings", "AAMAAABkAAQAAP__");
 
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
+        ServerChannel parent = Mockito.mock(ServerChannel.class);
+        EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
+                new ChannelInboundHandlerAdapter());
         ChannelHandlerContext ctx = channel.pipeline().firstContext();
-        Http2ServerUpgradeCodec codec = new Http2ServerUpgradeCodec("connectionHandler", handler);
+        Http2ServerUpgradeCodec codec;
+        if (multiplexer == null) {
+            codec = new Http2ServerUpgradeCodec(handler);
+        } else {
+            codec = new Http2ServerUpgradeCodec((Http2FrameCodec) handler, multiplexer);
+        }
         assertTrue(codec.prepareUpgradeResponse(ctx, request, new DefaultHttpHeaders()));
         codec.upgradeTo(ctx, request);
         // Flush the channel to ensure we write out all buffered data
         channel.flush();
 
-        assertSame(handler, channel.pipeline().remove("connectionHandler"));
+        channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf());
+        Http2FrameInboundWriter writer = new Http2FrameInboundWriter(channel);
+        writer.writeInboundSettings(new Http2Settings());
+        writer.writeInboundRstStream(Http2CodecUtil.HTTP_UPGRADE_STREAM_ID, Http2Error.CANCEL.code());
+
+        assertSame(handler, channel.pipeline().remove(handler.getClass()));
         assertNull(channel.pipeline().get(handler.getClass()));
         assertTrue(channel.finish());
 
@@ -73,6 +94,10 @@ public class Http2ServerUpgradeCodecTest {
         ByteBuf settingsBuffer = channel.readOutbound();
         assertNotNull(settingsBuffer);
         settingsBuffer.release();
+
+        ByteBuf buf = channel.readOutbound();
+        assertNotNull(buf);
+        buf.release();
 
         assertNull(channel.readOutbound());
     }

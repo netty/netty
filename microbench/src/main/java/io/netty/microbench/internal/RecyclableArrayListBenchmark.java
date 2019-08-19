@@ -36,8 +36,8 @@ public class RecyclableArrayListBenchmark extends AbstractMicrobenchmark {
     public int size;
 
     @Benchmark
-    public void recycleSameThread() {
+    public boolean recycleSameThread() {
         RecyclableArrayList list = RecyclableArrayList.newInstance(size);
-        list.recycle();
+        return list.recycle();
     }
 }

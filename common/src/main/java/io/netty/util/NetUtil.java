@@ -323,7 +323,7 @@ public final class NetUtil {
                 if (line.startsWith(sysctlKey)) {
                     for (int i = line.length() - 1; i > sysctlKey.length(); --i) {
                         if (!Character.isDigit(line.charAt(i))) {
-                            return Integer.valueOf(line.substring(i + 1, line.length()));
+                            return Integer.valueOf(line.substring(i + 1));
                         }
                     }
                 }

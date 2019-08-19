@@ -18,6 +18,7 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.ThreadExecutorMap;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -31,11 +32,11 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -72,6 +73,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             // Do nothing.
         }
     };
+    private static final Runnable BOOKEND_TASK = new Runnable() {
+        @Override
+        public void run() {
+            // Do nothing.
+        }
+    };
 
     private static final AtomicIntegerFieldUpdater<SingleThreadEventExecutor> STATE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(SingleThreadEventExecutor.class, "state");
@@ -87,7 +94,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private final Executor executor;
     private volatile boolean interrupted;
 
-    private final Semaphore threadLock = new Semaphore(0);
+    private final CountDownLatch threadLock = new CountDownLatch(1);
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
     private final boolean addTaskWakesUp;
     private final int maxPendingTasks;
@@ -161,8 +168,19 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         super(parent);
         this.addTaskWakesUp = addTaskWakesUp;
         this.maxPendingTasks = Math.max(16, maxPendingTasks);
-        this.executor = ObjectUtil.checkNotNull(executor, "executor");
+        this.executor = ThreadExecutorMap.apply(executor, this);
         taskQueue = newTaskQueue(this.maxPendingTasks);
+        rejectedExecutionHandler = ObjectUtil.checkNotNull(rejectedHandler, "rejectedHandler");
+    }
+
+    protected SingleThreadEventExecutor(EventExecutorGroup parent, Executor executor,
+                                        boolean addTaskWakesUp, Queue<Runnable> taskQueue,
+                                        RejectedExecutionHandler rejectedHandler) {
+        super(parent);
+        this.addTaskWakesUp = addTaskWakesUp;
+        this.maxPendingTasks = DEFAULT_MAX_PENDING_EXECUTOR_TASKS;
+        this.executor = ThreadExecutorMap.apply(executor, this);
+        this.taskQueue = ObjectUtil.checkNotNull(taskQueue, "taskQueue");
         rejectedExecutionHandler = ObjectUtil.checkNotNull(rejectedHandler, "rejectedHandler");
     }
 
@@ -271,17 +289,39 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     private boolean fetchFromScheduledTaskQueue() {
+        if (scheduledTaskQueue == null || scheduledTaskQueue.isEmpty()) {
+            return true;
+        }
         long nanoTime = AbstractScheduledEventExecutor.nanoTime();
-        Runnable scheduledTask  = pollScheduledTask(nanoTime);
+        Runnable scheduledTask = pollScheduledTask(scheduledTaskQueue, nanoTime, true);
         while (scheduledTask != null) {
             if (!taskQueue.offer(scheduledTask)) {
                 // No space left in the task queue add it back to the scheduledTaskQueue so we pick it up again.
-                scheduledTaskQueue().add((ScheduledFutureTask<?>) scheduledTask);
+                scheduledTaskQueue.add((ScheduledFutureTask<?>) scheduledTask);
                 return false;
             }
-            scheduledTask  = pollScheduledTask(nanoTime);
+            scheduledTask = pollScheduledTask(scheduledTaskQueue, nanoTime, false);
         }
         return true;
+    }
+
+    /**
+     * @return {@code true} if at least one scheduled task was executed.
+     */
+    private boolean executeExpiredScheduledTasks(boolean notifyMinimumDeadlineRemoved) {
+        if (scheduledTaskQueue == null || scheduledTaskQueue.isEmpty()) {
+            return false;
+        }
+        long nanoTime = AbstractScheduledEventExecutor.nanoTime();
+        Runnable scheduledTask = pollScheduledTask(scheduledTaskQueue, nanoTime, notifyMinimumDeadlineRemoved);
+        if (scheduledTask != null) {
+            do {
+                safeExecute(scheduledTask);
+                scheduledTask = pollScheduledTask(scheduledTaskQueue, nanoTime, false);
+            } while (scheduledTask != null);
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -365,6 +405,36 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
+     * Execute all expired scheduled tasks and all current tasks in the executor queue until both queues are empty,
+     * or {@code maxDrainAttempts} has been exceeded.
+     * @param maxDrainAttempts The maximum amount of times this method attempts to drain from queues. This is to prevent
+     *                         continuous task execution and scheduling from preventing the EventExecutor thread to
+     *                         make progress and return to the selector mechanism to process inbound I/O events.
+     * @return {@code true} if at least one task was run.
+     */
+    protected final boolean runScheduledAndExecutorTasks(final int maxDrainAttempts) {
+        assert inEventLoop();
+        // We must run the taskQueue tasks first, because the scheduled tasks from outside the EventLoop are queued
+        // here because the taskQueue is thread safe and the scheduledTaskQueue is not thread safe.
+        boolean ranAtLeastOneExecutorTask = runExistingTasksFrom(taskQueue);
+        boolean ranAtLeastOneScheduledTask = executeExpiredScheduledTasks(true);
+        int drainAttempt = 0;
+        while ((ranAtLeastOneExecutorTask || ranAtLeastOneScheduledTask) && ++drainAttempt < maxDrainAttempts) {
+            // We must run the taskQueue tasks first, because the scheduled tasks from outside the EventLoop are queued
+            // here because the taskQueue is thread safe and the scheduledTaskQueue is not thread safe.
+            ranAtLeastOneExecutorTask = runExistingTasksFrom(taskQueue);
+            ranAtLeastOneScheduledTask = executeExpiredScheduledTasks(false);
+        }
+
+        if (drainAttempt > 0) {
+            lastExecutionTime = ScheduledFutureTask.nanoTime();
+        }
+        afterRunningAllTasks();
+
+        return drainAttempt > 0;
+    }
+
+    /**
      * Runs all tasks from the passed {@code taskQueue}.
      *
      * @param taskQueue To poll and execute all tasks.
@@ -383,6 +453,55 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 return true;
             }
         }
+    }
+
+    /**
+     * What ever tasks are present in {@code taskQueue} when this method is invoked will be {@link Runnable#run()}.
+     * @param taskQueue the task queue to drain.
+     * @return {@code true} if at least {@link Runnable#run()} was called.
+     */
+    private boolean runExistingTasksFrom(Queue<Runnable> taskQueue) {
+        return taskQueue.offer(BOOKEND_TASK) ? runExistingTasksUntilBookend(taskQueue)
+                                             : runExistingTasksUntilMaxTasks(taskQueue);
+    }
+
+    private boolean runExistingTasksUntilBookend(Queue<Runnable> taskQueue) {
+        Runnable task = pollTaskFrom(taskQueue);
+        // null is not expected because this method isn't called unless BOOKEND_TASK was inserted into the queue, and
+        // null elements are not permitted to be inserted into the queue.
+        if (task == BOOKEND_TASK) {
+            return false;
+        }
+        for (;;) {
+            safeExecute(task);
+            task = pollTaskFrom(taskQueue);
+            // null is not expected because this method isn't called unless BOOKEND_TASK was inserted into the queue,
+            // and null elements are not permitted to be inserted into the queue.
+            if (task == BOOKEND_TASK) {
+                return true;
+            }
+        }
+    }
+
+    private boolean runExistingTasksUntilMaxTasks(Queue<Runnable> taskQueue) {
+        Runnable task = pollTaskFrom(taskQueue);
+        // BOOKEND_TASK is not expected because this method isn't called unless BOOKEND_TASK fails to be inserted into
+        // the queue, and if was previously inserted we always drain all the elements from queue including BOOKEND_TASK.
+        if (task == null) {
+            return false;
+        }
+        int i = 0;
+        do {
+            safeExecute(task);
+            task = pollTaskFrom(taskQueue);
+            // BOOKEND_TASK is not expected because this method isn't called unless BOOKEND_TASK fails to be inserted
+            // into the queue, and if was previously inserted we always drain all the elements from queue including
+            // BOOKEND_TASK.
+            if (task == null) {
+                return true;
+            }
+        } while (++i < maxPendingTasks);
+        return true;
     }
 
     /**
@@ -431,6 +550,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      */
     @UnstableApi
     protected void afterRunningAllTasks() { }
+
     /**
      * Returns the amount of time left until the scheduled task with the closest dead line is executed.
      */
@@ -739,9 +859,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             throw new IllegalStateException("cannot await termination of the current thread");
         }
 
-        if (threadLock.tryAcquire(timeout, unit)) {
-            threadLock.release();
-        }
+        threadLock.await(timeout, unit);
 
         return isTerminated();
     }
@@ -836,8 +954,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         return threadProperties;
     }
 
-    @SuppressWarnings("unused")
-    protected boolean wakesUpForTask(Runnable task) {
+    protected boolean wakesUpForTask(@SuppressWarnings("unused") Runnable task) {
         return true;
     }
 
@@ -861,11 +978,14 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private void startThread() {
         if (state == ST_NOT_STARTED) {
             if (STATE_UPDATER.compareAndSet(this, ST_NOT_STARTED, ST_STARTED)) {
+                boolean success = false;
                 try {
                     doStartThread();
-                } catch (Throwable cause) {
-                    STATE_UPDATER.set(this, ST_NOT_STARTED);
-                    PlatformDependent.throwException(cause);
+                    success = true;
+                } finally {
+                    if (!success) {
+                        STATE_UPDATER.compareAndSet(this, ST_STARTED, ST_NOT_STARTED);
+                    }
                 }
             }
         }
@@ -942,12 +1062,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                             FastThreadLocal.removeAll();
 
                             STATE_UPDATER.set(SingleThreadEventExecutor.this, ST_TERMINATED);
-                            threadLock.release();
-                            if (!taskQueue.isEmpty()) {
-                                if (logger.isWarnEnabled()) {
-                                    logger.warn("An event executor terminated with " +
-                                            "non-empty task queue (" + taskQueue.size() + ')');
-                                }
+                            threadLock.countDown();
+                            if (logger.isWarnEnabled() && !taskQueue.isEmpty()) {
+                                logger.warn("An event executor terminated with " +
+                                        "non-empty task queue (" + taskQueue.size() + ')');
                             }
                             terminationFuture.setSuccess(null);
                         }

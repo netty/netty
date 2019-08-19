@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -68,7 +69,8 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      */
     public WebSocketClientHandshaker13(URI webSocketURL, WebSocketVersion version, String subprotocol,
                                        boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength) {
-        this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength, true, false);
+        this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength,
+                true, false);
     }
 
     /**
@@ -98,7 +100,79 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
     public WebSocketClientHandshaker13(URI webSocketURL, WebSocketVersion version, String subprotocol,
             boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength,
             boolean performMasking, boolean allowMaskMismatch) {
-        super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
+        this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength,
+                performMasking, allowMaskMismatch, DEFAULT_FORCE_CLOSE_TIMEOUT_MILLIS);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param allowExtensions
+     *            Allow extensions to be used in the reserved bits of the web socket frame
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
+     * @param performMasking
+     *            Whether to mask all written websocket frames. This must be set to true in order to be fully compatible
+     *            with the websocket specifications. Client applications that communicate with a non-standard server
+     *            which doesn't require masking might set this to false to achieve a higher performance.
+     * @param allowMaskMismatch
+     *            When set to true, frames which are not masked properly according to the standard will still be
+     *            accepted
+     * @param forceCloseTimeoutMillis
+     *            Close the connection if it was not closed by the server after timeout specified.
+     */
+    public WebSocketClientHandshaker13(URI webSocketURL, WebSocketVersion version, String subprotocol,
+                                       boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength,
+                                       boolean performMasking, boolean allowMaskMismatch,
+                                       long forceCloseTimeoutMillis) {
+        this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength, performMasking,
+                allowMaskMismatch, forceCloseTimeoutMillis, false);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param allowExtensions
+     *            Allow extensions to be used in the reserved bits of the web socket frame
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
+     * @param performMasking
+     *            Whether to mask all written websocket frames. This must be set to true in order to be fully compatible
+     *            with the websocket specifications. Client applications that communicate with a non-standard server
+     *            which doesn't require masking might set this to false to achieve a higher performance.
+     * @param allowMaskMismatch
+     *            When set to true, frames which are not masked properly according to the standard will still be
+     *            accepted
+     * @param forceCloseTimeoutMillis
+     *            Close the connection if it was not closed by the server after timeout specified.
+     * @param  absoluteUpgradeUrl
+     *            Use an absolute url for the Upgrade request, typically when connecting through an HTTP proxy over
+     *            clear HTTP
+     */
+    WebSocketClientHandshaker13(URI webSocketURL, WebSocketVersion version, String subprotocol,
+                                boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength,
+                                boolean performMasking, boolean allowMaskMismatch,
+                                long forceCloseTimeoutMillis, boolean absoluteUpgradeUrl) {
+        super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength, forceCloseTimeoutMillis,
+                absoluteUpgradeUrl);
         this.allowExtensions = allowExtensions;
         this.performMasking = performMasking;
         this.allowMaskMismatch = allowMaskMismatch;
@@ -116,7 +190,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      * Upgrade: websocket
      * Connection: Upgrade
      * Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
-     * Sec-WebSocket-Origin: http://example.com
+     * Origin: http://example.com
      * Sec-WebSocket-Protocol: chat, superchat
      * Sec-WebSocket-Version: 13
      * </pre>
@@ -124,9 +198,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      */
     @Override
     protected FullHttpRequest newHandshakeRequest() {
-        // Get path
         URI wsURL = uri();
-        String path = rawPath(wsURL);
 
         // Get 16 bit nonce and base 64 encode it
         byte[] nonce = WebSocketUtil.randomBytes(16);
@@ -143,7 +215,8 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         }
 
         // Format request
-        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
+        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, upgradeUrl(wsURL),
+                Unpooled.EMPTY_BUFFER);
         HttpHeaders headers = request.headers();
 
         if (customHeaders != null) {
@@ -153,8 +226,11 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
         headers.set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET)
                .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
                .set(HttpHeaderNames.SEC_WEBSOCKET_KEY, key)
-               .set(HttpHeaderNames.HOST, websocketHostValue(wsURL))
-               .set(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, websocketOriginValue(wsURL));
+               .set(HttpHeaderNames.HOST, websocketHostValue(wsURL));
+
+        if (!headers.contains(HttpHeaderNames.ORIGIN)) {
+            headers.set(HttpHeaderNames.ORIGIN, websocketOriginValue(wsURL));
+        }
 
         String expectedSubprotocol = expectedSubprotocol();
         if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
@@ -180,7 +256,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
      *
      * @param response
      *            HTTP response returned from the server for the request sent by beginOpeningHandshake00().
-     * @throws WebSocketHandshakeException
+     * @throws WebSocketHandshakeException if handshake response is invalid.
      */
     @Override
     protected void verify(FullHttpResponse response) {
@@ -217,4 +293,11 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
     protected WebSocketFrameEncoder newWebSocketEncoder() {
         return new WebSocket13FrameEncoder(performMasking);
     }
+
+    @Override
+    public WebSocketClientHandshaker13 setForceCloseTimeoutMillis(long forceCloseTimeoutMillis) {
+        super.setForceCloseTimeoutMillis(forceCloseTimeoutMillis);
+        return this;
+    }
+
 }

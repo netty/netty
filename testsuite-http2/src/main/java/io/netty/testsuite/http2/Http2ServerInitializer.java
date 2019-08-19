@@ -33,7 +33,6 @@ import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodecFactory;
 import io.netty.handler.codec.http2.CleartextHttp2ServerUpgradeHandler;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
-import io.netty.handler.ssl.SslContext;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 

@@ -24,7 +24,9 @@ import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.TransportProtocol;
 import io.netty.util.CharsetUtil;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.List;
 
@@ -32,6 +34,8 @@ import static io.netty.buffer.Unpooled.*;
 import static org.junit.Assert.*;
 
 public class HAProxyMessageDecoderTest {
+    @Rule
+    public ExpectedException exceptionRule = ExpectedException.none();
 
     private EmbeddedChannel ch;
 
@@ -58,6 +62,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(443, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test
@@ -78,6 +83,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(443, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test
@@ -98,6 +104,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(0, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test(expected = HAProxyProtocolException.class)
@@ -159,6 +166,43 @@ public class HAProxyMessageDecoderTest {
         String header = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 " +
                         "00000000000000000000000000000000000000000000000000000000000000000443\r\n";
         ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));
+    }
+
+    @Test
+    public void testFailSlowHeaderTooLong() {
+        EmbeddedChannel slowFailCh = new EmbeddedChannel(new HAProxyMessageDecoder(false));
+        try {
+            String headerPart1 = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 " +
+                                 "000000000000000000000000000000000000000000000000000000000000000000000443";
+            // Should not throw exception
+            assertFalse(slowFailCh.writeInbound(copiedBuffer(headerPart1, CharsetUtil.US_ASCII)));
+            String headerPart2 = "more header data";
+            // Should not throw exception
+            assertFalse(slowFailCh.writeInbound(copiedBuffer(headerPart2, CharsetUtil.US_ASCII)));
+            String headerPart3 = "end of header\r\n";
+
+            int discarded = headerPart1.length() + headerPart2.length() + headerPart3.length() - 2;
+            // Should throw exception
+            exceptionRule.expect(HAProxyProtocolException.class);
+            exceptionRule.expectMessage("over " + discarded);
+            assertFalse(slowFailCh.writeInbound(copiedBuffer(headerPart3, CharsetUtil.US_ASCII)));
+        } finally {
+            assertFalse(slowFailCh.finishAndReleaseAll());
+        }
+    }
+
+    @Test
+    public void testFailFastHeaderTooLong() {
+        EmbeddedChannel fastFailCh = new EmbeddedChannel(new HAProxyMessageDecoder(true));
+        try {
+            String headerPart1 = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 " +
+                                 "000000000000000000000000000000000000000000000000000000000000000000000443";
+            exceptionRule.expect(HAProxyProtocolException.class); // Should throw exception, fail fast
+            exceptionRule.expectMessage("over " + headerPart1.length());
+            assertFalse(fastFailCh.writeInbound(copiedBuffer(headerPart1, CharsetUtil.US_ASCII)));
+        } finally {
+            assertFalse(fastFailCh.finishAndReleaseAll());
+        }
     }
 
     @Test
@@ -264,6 +308,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(443, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test
@@ -319,6 +364,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(443, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test
@@ -398,6 +444,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(443, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test
@@ -476,6 +523,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(0, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test
@@ -531,6 +579,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(0, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test
@@ -586,6 +635,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(0, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test
@@ -642,15 +692,58 @@ public class HAProxyMessageDecoderTest {
         assertTrue(0 < firstTlv.refCnt());
         assertTrue(0 < secondTlv.refCnt());
         assertTrue(0 < thirdTLV.refCnt());
-        assertFalse(thirdTLV.release());
-        assertFalse(secondTlv.release());
-        assertTrue(firstTlv.release());
+        assertTrue(msg.release());
         assertEquals(0, firstTlv.refCnt());
         assertEquals(0, secondTlv.refCnt());
         assertEquals(0, thirdTLV.refCnt());
 
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testReleaseHAProxyMessage() {
+        ch = new EmbeddedChannel(new HAProxyMessageDecoder());
+
+        final byte[] bytes = {
+                13, 10, 13, 10, 0, 13, 10, 81, 85, 73, 84, 10, 33, 17, 0, 35, 127, 0, 0, 1, 127, 0, 0, 1,
+                -55, -90, 7, 89, 32, 0, 20, 5, 0, 0, 0, 0, 33, 0, 5, 84, 76, 83, 118, 49, 34, 0, 4, 76, 69, 65, 70
+        };
+
+        int startChannels = ch.pipeline().names().size();
+        assertTrue(ch.writeInbound(copiedBuffer(bytes)));
+        Object msgObj = ch.readInbound();
+        assertEquals(startChannels - 1, ch.pipeline().names().size());
+        HAProxyMessage msg = (HAProxyMessage) msgObj;
+
+        final List<HAProxyTLV> tlvs = msg.tlvs();
+        assertEquals(3, tlvs.size());
+
+        assertEquals(1, msg.refCnt());
+        for (HAProxyTLV tlv : tlvs) {
+            assertEquals(3, tlv.refCnt());
+        }
+
+        // Retain the haproxy message
+        msg.retain();
+        assertEquals(2, msg.refCnt());
+        for (HAProxyTLV tlv : tlvs) {
+            assertEquals(3, tlv.refCnt());
+        }
+
+        // Decrease the haproxy message refCnt
+        msg.release();
+        assertEquals(1, msg.refCnt());
+        for (HAProxyTLV tlv : tlvs) {
+            assertEquals(3, tlv.refCnt());
+        }
+
+        // Release haproxy message, TLVs will be released with it
+        msg.release();
+        assertEquals(0, msg.refCnt());
+        for (HAProxyTLV tlv : tlvs) {
+            assertEquals(0, tlv.refCnt());
+        }
     }
 
     @Test
@@ -738,6 +831,7 @@ public class HAProxyMessageDecoderTest {
         assertEquals(0, msg.destinationPort());
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
+        assertTrue(msg.release());
     }
 
     @Test(expected = HAProxyProtocolException.class)

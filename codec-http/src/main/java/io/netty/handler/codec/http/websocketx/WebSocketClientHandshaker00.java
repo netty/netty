@@ -48,7 +48,7 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
     private ByteBuf expectedChallengeResponseBytes;
 
     /**
-     * Constructor specifying the destination web socket location and version to initiate
+     * Creates a new instance with the specified destination WebSocket location and version to initiate.
      *
      * @param webSocketURL
      *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
@@ -64,7 +64,58 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
      */
     public WebSocketClientHandshaker00(URI webSocketURL, WebSocketVersion version, String subprotocol,
             HttpHeaders customHeaders, int maxFramePayloadLength) {
-        super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength);
+        this(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength,
+                DEFAULT_FORCE_CLOSE_TIMEOUT_MILLIS);
+    }
+
+    /**
+     * Creates a new instance with the specified destination WebSocket location and version to initiate.
+     *
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
+     * @param forceCloseTimeoutMillis
+     *            Close the connection if it was not closed by the server after timeout specified
+     */
+    public WebSocketClientHandshaker00(URI webSocketURL, WebSocketVersion version, String subprotocol,
+                                       HttpHeaders customHeaders, int maxFramePayloadLength,
+                                       long forceCloseTimeoutMillis) {
+        this(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength, forceCloseTimeoutMillis, false);
+    }
+
+    /**
+     * Creates a new instance with the specified destination WebSocket location and version to initiate.
+     *
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
+     * @param forceCloseTimeoutMillis
+     *            Close the connection if it was not closed by the server after timeout specified
+     * @param  absoluteUpgradeUrl
+     *            Use an absolute url for the Upgrade request, typically when connecting through an HTTP proxy over
+     *            clear HTTP
+     */
+    WebSocketClientHandshaker00(URI webSocketURL, WebSocketVersion version, String subprotocol,
+                                HttpHeaders customHeaders, int maxFramePayloadLength,
+                                long forceCloseTimeoutMillis, boolean absoluteUpgradeUrl) {
+        super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength, forceCloseTimeoutMillis,
+                absoluteUpgradeUrl);
     }
 
     /**
@@ -124,12 +175,11 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         System.arraycopy(key3, 0, challenge, 8, 8);
         expectedChallengeResponseBytes = Unpooled.wrappedBuffer(WebSocketUtil.md5(challenge));
 
-        // Get path
         URI wsURL = uri();
-        String path = rawPath(wsURL);
 
         // Format request
-        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, path);
+        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, upgradeUrl(wsURL),
+                Unpooled.wrappedBuffer(key3));
         HttpHeaders headers = request.headers();
 
         if (customHeaders != null) {
@@ -139,9 +189,12 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         headers.set(HttpHeaderNames.UPGRADE, WEBSOCKET)
                .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE)
                .set(HttpHeaderNames.HOST, websocketHostValue(wsURL))
-               .set(HttpHeaderNames.ORIGIN, websocketOriginValue(wsURL))
                .set(HttpHeaderNames.SEC_WEBSOCKET_KEY1, key1)
                .set(HttpHeaderNames.SEC_WEBSOCKET_KEY2, key2);
+
+        if (!headers.contains(HttpHeaderNames.ORIGIN)) {
+            headers.set(HttpHeaderNames.ORIGIN, websocketOriginValue(wsURL));
+        }
 
         String expectedSubprotocol = expectedSubprotocol();
         if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
@@ -151,7 +204,6 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
         // Set Content-Length to workaround some known defect.
         // See also: http://www.ietf.org/mail-archive/web/hybi/current/msg02149.html
         headers.set(HttpHeaderNames.CONTENT_LENGTH, key3.length);
-        request.content().writeBytes(key3);
         return request;
     }
 
@@ -243,4 +295,11 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
     protected WebSocketFrameEncoder newWebSocketEncoder() {
         return new WebSocket00FrameEncoder();
     }
+
+    @Override
+    public WebSocketClientHandshaker00 setForceCloseTimeoutMillis(long forceCloseTimeoutMillis) {
+        super.setForceCloseTimeoutMillis(forceCloseTimeoutMillis);
+        return this;
+    }
+
 }

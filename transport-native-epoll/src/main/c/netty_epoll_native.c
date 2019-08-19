@@ -116,10 +116,27 @@ static jint netty_epoll_native_timerFd(JNIEnv* env, jclass clazz) {
 }
 
 static void netty_epoll_native_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlong value) {
-    jint eventFD = eventfd_write(fd, (eventfd_t) value);
+    uint64_t val;
 
-    if (eventFD < 0) {
-        netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_write() failed: ", errno);
+    for (;;) {
+        jint ret = eventfd_write(fd, (eventfd_t) value);
+
+        if (ret < 0) {
+            // We need to read before we can write again, let's try to read and then write again and if this
+            // fails we will bail out.
+            //
+            // See http://man7.org/linux/man-pages/man2/eventfd.2.html.
+            if (errno == EAGAIN) {
+                if (eventfd_read(fd, &val) == 0 || errno == EAGAIN) {
+                    // Try again
+                    continue;
+                }
+                netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_read(...) failed: ", errno);
+            } else {
+                netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_write(...) failed: ", errno);
+            }
+        }
+        break;
     }
 }
 
@@ -169,6 +186,31 @@ static jint netty_epoll_native_epollCreate(JNIEnv* env, jclass clazz) {
     return efd;
 }
 
+static void netty_epoll_native_timerFdSetTime(JNIEnv* env, jclass clazz, jint timerFd, jint tvSec, jint tvNsec) {
+    struct itimerspec ts;
+    memset(&ts.it_interval, 0, sizeof(struct timespec));
+    ts.it_value.tv_sec = tvSec;
+    ts.it_value.tv_nsec = tvNsec;
+    if (timerfd_settime(timerFd, 0, &ts, NULL) < 0) {
+        netty_unix_errors_throwIOExceptionErrorNo(env, "timerfd_settime() failed: ", errno);
+    }
+}
+
+static jint netty_epoll_native_epollWaitNoTimeout(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jboolean immediatePoll) {
+    struct epoll_event *ev = (struct epoll_event*) (intptr_t) address;
+    const int timeout = immediatePoll ? 0 : -1;
+    int result, err;
+
+    do {
+        result = epoll_wait(efd, ev, len, timeout);
+        if (result >= 0) {
+            return result;
+        }
+    } while((err = errno) == EINTR);
+    return -err;
+}
+
+// This method is deprecated!
 static jint netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timerFd, jint tvSec, jint tvNsec) {
     struct epoll_event *ev = (struct epoll_event*) (intptr_t) address;
     int result, err;
@@ -265,7 +307,7 @@ static jint netty_epoll_native_epollCtlDel0(JNIEnv* env, jclass clazz, jint efd,
     return res;
 }
 
-static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, jobjectArray packets, jint offset, jint len) {
+static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jobjectArray packets, jint offset, jint len) {
     struct mmsghdr msg[len];
     struct sockaddr_storage addr[len];
     socklen_t addrSize;
@@ -280,7 +322,7 @@ static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, job
         jint scopeId = (*env)->GetIntField(env, packet, packetScopeIdFieldId);
         jint port = (*env)->GetIntField(env, packet, packetPortFieldId);
 
-        if (netty_unix_socket_initSockaddr(env, address, scopeId, port, &addr[i], &addrSize) == -1) {
+        if (netty_unix_socket_initSockaddr(env, ipv6, address, scopeId, port, &addr[i], &addrSize) == -1) {
             return -1;
         }
 
@@ -368,7 +410,7 @@ static jint netty_epoll_native_splice0(JNIEnv* env, jclass clazz, jint fd, jlong
     loff_t off_out = (loff_t) offOut;
 
     loff_t* p_off_in = off_in >= 0 ? &off_in : NULL;
-    loff_t* p_off_out = off_in >= 0 ? &off_out : NULL;
+    loff_t* p_off_out = off_out >= 0 ? &off_out : NULL;
 
     do {
        res = splice(fd, p_off_in, fdOut, p_off_out, (size_t) len, SPLICE_F_NONBLOCK | SPLICE_F_MOVE);
@@ -412,8 +454,10 @@ static const JNINativeMethod fixed_method_table[] = {
   { "eventFdWrite", "(IJ)V", (void *) netty_epoll_native_eventFdWrite },
   { "eventFdRead", "(I)V", (void *) netty_epoll_native_eventFdRead },
   { "timerFdRead", "(I)V", (void *) netty_epoll_native_timerFdRead },
+  { "timerFdSetTime", "(III)V", (void *) netty_epoll_native_timerFdSetTime },
   { "epollCreate", "()I", (void *) netty_epoll_native_epollCreate },
-  { "epollWait0", "(IJIIII)I", (void *) netty_epoll_native_epollWait0 },
+  { "epollWait0", "(IJIIII)I", (void *) netty_epoll_native_epollWait0 }, // This method is deprecated!
+  { "epollWaitNoTimeout", "(IJIZ)I", (void *) netty_epoll_native_epollWaitNoTimeout },
   { "epollBusyWait0", "(IJI)I", (void *) netty_epoll_native_epollBusyWait0 },
   { "epollCtlAdd0", "(III)I", (void *) netty_epoll_native_epollCtlAdd0 },
   { "epollCtlMod0", "(III)I", (void *) netty_epoll_native_epollCtlMod0 },
@@ -435,7 +479,7 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     char* dynamicTypeName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;II)I");
     JNINativeMethod* dynamicMethod = &dynamicMethods[fixed_method_table_size];
     dynamicMethod->name = "sendmmsg0";
-    dynamicMethod->signature = netty_unix_util_prepend("(I[L", dynamicTypeName);
+    dynamicMethod->signature = netty_unix_util_prepend("(IZ[L", dynamicTypeName);
     dynamicMethod->fnPtr = (void *) netty_epoll_native_sendmmsg0;
     free(dynamicTypeName);
     return dynamicMethods;

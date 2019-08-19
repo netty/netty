@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2019 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -28,16 +28,13 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 
 /**
  * <p>
- * Performs server side opening and closing handshakes for <a href="http://netty.io/s/rfc6455">RFC 6455</a>
- * (originally web socket specification <a href="http://netty.io/s/ws-17">draft-ietf-hybi-thewebsocketprotocol-17</a>).
+ * Performs server side opening and closing handshakes for <a href="https://netty.io/s/rfc6455">RFC 6455</a>
+ * (originally web socket specification <a href="https://netty.io/s/ws-17">draft-ietf-hybi-thewebsocketprotocol-17</a>).
  * </p>
  */
 public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
 
     public static final String WEBSOCKET_13_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-
-    private final boolean allowExtensions;
-    private final boolean allowMaskMismatch;
 
     /**
      * Constructor specifying the destination web socket location
@@ -78,9 +75,27 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
     public WebSocketServerHandshaker13(
             String webSocketURL, String subprotocols, boolean allowExtensions, int maxFramePayloadLength,
             boolean allowMaskMismatch) {
-        super(WebSocketVersion.V13, webSocketURL, subprotocols, maxFramePayloadLength);
-        this.allowExtensions = allowExtensions;
-        this.allowMaskMismatch = allowMaskMismatch;
+        this(webSocketURL, subprotocols, WebSocketDecoderConfig.newBuilder()
+            .allowExtensions(allowExtensions)
+            .maxFramePayloadLength(maxFramePayloadLength)
+            .allowMaskMismatch(allowMaskMismatch)
+            .build());
+    }
+
+    /**
+     * Constructor specifying the destination web socket location
+     *
+     * @param webSocketURL
+     *        URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web
+     *        socket frames will be sent to this URL.
+     * @param subprotocols
+     *        CSV of supported protocols
+     * @param decoderConfig
+     *            Frames decoder configuration.
+     */
+    public WebSocketServerHandshaker13(
+            String webSocketURL, String subprotocols, WebSocketDecoderConfig decoderConfig) {
+        super(WebSocketVersion.V13, webSocketURL, subprotocols, decoderConfig);
     }
 
     /**
@@ -100,7 +115,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      * Upgrade: websocket
      * Connection: Upgrade
      * Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
-     * Sec-WebSocket-Origin: http://example.com
+     * Origin: http://example.com
      * Sec-WebSocket-Protocol: chat, superchat
      * Sec-WebSocket-Version: 13
      * </pre>
@@ -119,15 +134,17 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
      */
     @Override
     protected FullHttpResponse newHandshakeResponse(FullHttpRequest req, HttpHeaders headers) {
-        FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
-        if (headers != null) {
-            res.headers().add(headers);
-        }
-
         CharSequence key = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
         if (key == null) {
             throw new WebSocketHandshakeException("not a WebSocket request: missing key");
         }
+
+        FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS,
+                req.content().alloc().buffer(0));
+        if (headers != null) {
+            res.headers().add(headers);
+        }
+
         String acceptSeed = key + WEBSOCKET_13_ACCEPT_GUID;
         byte[] sha1 = WebSocketUtil.sha1(acceptSeed.getBytes(CharsetUtil.US_ASCII));
         String accept = WebSocketUtil.base64(sha1);
@@ -156,7 +173,7 @@ public class WebSocketServerHandshaker13 extends WebSocketServerHandshaker {
 
     @Override
     protected WebSocketFrameDecoder newWebsocketDecoder() {
-        return new WebSocket13FrameDecoder(true, allowExtensions, maxFramePayloadLength(), allowMaskMismatch);
+        return new WebSocket13FrameDecoder(decoderConfig());
     }
 
     @Override

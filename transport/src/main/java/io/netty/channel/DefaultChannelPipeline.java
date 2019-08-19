@@ -1199,6 +1199,19 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     /**
+     * Called once a message hit the end of the {@link ChannelPipeline} without been handled by the user
+     * in {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object)}. This method is responsible
+     * to call {@link ReferenceCountUtil#release(Object)} on the given msg at some point.
+     */
+    protected void onUnhandledInboundMessage(ChannelHandlerContext ctx, Object msg) {
+        onUnhandledInboundMessage(msg);
+        if (logger.isDebugEnabled()) {
+            logger.debug("Discarded message pipeline : {}. Channel : {}.",
+                         ctx.pipeline().names(), ctx.channel());
+        }
+    }
+
+    /**
      * Called once the {@link ChannelInboundHandler#channelReadComplete(ChannelHandlerContext)} event hit
      * the end of the {@link ChannelPipeline}.
      */
@@ -1243,7 +1256,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     final class TailContext extends AbstractChannelHandlerContext implements ChannelInboundHandler {
 
         TailContext(DefaultChannelPipeline pipeline) {
-            super(pipeline, null, TAIL_NAME, true, false);
+            super(pipeline, null, TAIL_NAME, TailContext.class);
             setAddComplete();
         }
 
@@ -1291,7 +1304,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
-            onUnhandledInboundMessage(msg);
+            onUnhandledInboundMessage(ctx, msg);
         }
 
         @Override
@@ -1306,7 +1319,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         private final Unsafe unsafe;
 
         HeadContext(DefaultChannelPipeline pipeline) {
-            super(pipeline, null, HEAD_NAME, true, true);
+            super(pipeline, null, HEAD_NAME, HeadContext.class);
             unsafe = pipeline.channel().unsafe();
             setAddComplete();
         }

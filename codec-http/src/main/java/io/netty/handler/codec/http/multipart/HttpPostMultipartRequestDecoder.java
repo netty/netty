@@ -764,8 +764,6 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                         }
                     }
                 }
-            } else {
-                throw new ErrorDataDecoderException("Unknown Params: " + newline);
             }
         }
         // Is it a FileUpload

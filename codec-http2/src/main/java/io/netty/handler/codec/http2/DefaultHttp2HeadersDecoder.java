@@ -20,7 +20,6 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_INITIAL_HUFFMAN_DECODE_CAPACITY;
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
@@ -57,7 +56,7 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
      *  (which is dangerous).
      */
     public DefaultHttp2HeadersDecoder(boolean validateHeaders, long maxHeaderListSize) {
-        this(validateHeaders, maxHeaderListSize, DEFAULT_INITIAL_HUFFMAN_DECODE_CAPACITY);
+        this(validateHeaders, maxHeaderListSize, /* initialHuffmanDecodeCapacity= */ -1);
     }
 
     /**
@@ -67,11 +66,11 @@ public class DefaultHttp2HeadersDecoder implements Http2HeadersDecoder, Http2Hea
      *  This is because <a href="https://tools.ietf.org/html/rfc7540#section-6.5.1">SETTINGS_MAX_HEADER_LIST_SIZE</a>
      *  allows a lower than advertised limit from being enforced, and the default limit is unlimited
      *  (which is dangerous).
-     * @param initialHuffmanDecodeCapacity Size of an intermediate buffer used during huffman decode.
+     * @param initialHuffmanDecodeCapacity Does nothing, do not use.
      */
     public DefaultHttp2HeadersDecoder(boolean validateHeaders, long maxHeaderListSize,
-                                      int initialHuffmanDecodeCapacity) {
-        this(validateHeaders, new HpackDecoder(maxHeaderListSize, initialHuffmanDecodeCapacity));
+                                      @Deprecated int initialHuffmanDecodeCapacity) {
+        this(validateHeaders, new HpackDecoder(maxHeaderListSize));
     }
 
     /**

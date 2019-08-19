@@ -26,10 +26,10 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.35.Final-SNAPSHOT</version>
+  <version>4.1.40.Final-SNAPSHOT</version>
 
   <name>Netty</name>
-  <url>http://netty.io/</url>
+  <url>https://netty.io/</url>
   <description>
     Netty is an asynchronous event-driven network application framework for
     rapid development of maintainable high performance protocol servers and
@@ -38,7 +38,7 @@
 
   <organization>
     <name>The Netty Project</name>
-    <url>http://netty.io/</url>
+    <url>https://netty.io/</url>
   </organization>
 
   <licenses>
@@ -61,13 +61,28 @@
       <id>netty.io</id>
       <name>The Netty Project Contributors</name>
       <email>netty@googlegroups.com</email>
-      <url>http://netty.io/</url>
+      <url>https://netty.io/</url>
       <organization>The Netty Project</organization>
-      <organizationUrl>http://netty.io/</organizationUrl>
+      <organizationUrl>https://netty.io/</organizationUrl>
     </developer>
   </developers>
 
   <profiles>
+    <!-- Detect if we use GraalVM and if so enable the native image testsuite -->
+    <profile>
+      <id>graal</id>
+      <activation>
+        <file>
+          <!-- GraalVM Component Updater should exists when using GraalVM-->
+          <exists>${java.home}/bin/gu</exists>
+        </file>
+      </activation>
+      <properties>
+        <skipNativeImageTestsuite>false</skipNativeImageTestsuite>
+        <forbiddenapis.skip>true</forbiddenapis.skip>
+        <testJvm />
+      </properties>
+    </profile>
     <!-- JDK13 -->
     <profile>
       <id>java13</id>
@@ -166,7 +181,7 @@
         <argLine.java9>--illegal-access=deny --add-modules java.xml.bind ${argLine.java9.extras}</argLine.java9>
         <!-- Not use alpn agent as Java9 supports alpn out of the box -->
         <argLine.alpnAgent />
-        <!-- Skip as maven plugin not works with Java9 yet --> 
+        <!-- Skip as maven plugin not works with Java9 yet -->
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
         <enforcer.plugin.version>3.0.0-M1</enforcer.plugin.version>
@@ -262,7 +277,7 @@
     <netty.dev.tools.directory>${project.build.directory}/dev-tools</netty.dev.tools.directory>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <netty.build.version>23</netty.build.version>
+    <netty.build.version>25</netty.build.version>
     <jboss.marshalling.version>1.4.11.Final</jboss.marshalling.version>
     <jetty.alpnAgent.version>2.0.8</jetty.alpnAgent.version>
     <jetty.alpnAgent.path>"${settings.localRepository}"/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
@@ -281,9 +296,11 @@
     <argLine.javaProperties>-D_</argLine.javaProperties>
     <!-- Configure the os-maven-plugin extension to expand the classifier on                  -->
     <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
-    <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
+    <osmaven.version>1.6.2</osmaven.version>
+    <!-- keep in sync with PlatformDependent#ALLOWED_LINUX_OS_CLASSIFIERS -->
+    <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
-    <tcnative.version>2.0.22.Final</tcnative.version>
+    <tcnative.version>2.0.25.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -294,11 +311,15 @@
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.6.2</log4j2.version>
     <enforcer.plugin.version>1.4.1</enforcer.plugin.version>
-    <testJavaHome>${env.JAVA_HOME}</testJavaHome>
+    <testJavaHome>${java.home}</testJavaHome>
+    <testJvm>${testJavaHome}/bin/java</testJvm>
     <skipOsgiTestsuite>false</skipOsgiTestsuite>
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
     <skipJapicmp>false</skipJapicmp>
+    <graalvm.version>19.0.0</graalvm.version>
+    <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
+    <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
   </properties>
 
   <modules>
@@ -337,6 +358,7 @@
     <module>testsuite-http2</module>
     <module>testsuite-osgi</module>
     <module>testsuite-shading</module>
+    <module>testsuite-native-image</module>
     <module>microbench</module>
     <module>bom</module>
   </modules>
@@ -433,7 +455,7 @@
         <optional>true</optional>
       </dependency>
 
-      <!-- 
+      <!--
         Completely optional and only needed for OCSP stapling to construct and
         parse OCSP requests and responses.
       -->
@@ -675,7 +697,7 @@
       <extension>
         <groupId>kr.motd.maven</groupId>
         <artifactId>os-maven-plugin</artifactId>
-        <version>1.6.0</version>
+        <version>${osmaven.version}</version>
       </extension>
     </extensions>
 
@@ -794,8 +816,8 @@
             <ignore>java.nio.channels.SocketChannel</ignore>
             <ignore>java.net.StandardProtocolFamily</ignore>
             <ignore>java.nio.channels.spi.SelectorProvider</ignore>
-            <ignore>java.net.SocketOption</ignore> 
-            <ignore>java.net.StandardSocketOptions</ignore> 
+            <ignore>java.net.SocketOption</ignore>
+            <ignore>java.net.StandardSocketOptions</ignore>
             <ignore>java.nio.channels.NetworkChannel</ignore>
 
             <!-- Self-signed certificate generation -->
@@ -892,6 +914,11 @@
         </executions>
         <dependencies>
           <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>8.18</version>
+          </dependency>
+          <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>netty-build</artifactId>
             <version>${netty.build.version}</version>
@@ -964,8 +991,8 @@
               <value>io.netty.build.junit.TimedOutTestsListener</value>
             </property>
           </properties>
-          <jvm>${testJavaHome}/bin/java</jvm>
-           <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 --> 
+          <jvm>${testJvm}</jvm>
+           <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
           <trimStackTrace>false</trimStackTrace>
         </configuration>
       </plugin>

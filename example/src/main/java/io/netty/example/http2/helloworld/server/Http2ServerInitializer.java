@@ -101,8 +101,7 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
                 // If this handler is hit then no upgrade has been attempted and the client is just talking HTTP.
                 System.err.println("Directly talking: " + msg.protocolVersion() + " (no upgrade was attempted)");
                 ChannelPipeline pipeline = ctx.pipeline();
-                ChannelHandlerContext thisCtx = pipeline.context(this);
-                pipeline.addAfter(thisCtx.name(), null, new HelloWorldHttp1Handler("Direct. No Upgrade Attempted."));
+                pipeline.addAfter(ctx.name(), null, new HelloWorldHttp1Handler("Direct. No Upgrade Attempted."));
                 pipeline.replace(this, null, new HttpObjectAggregator(maxHttpContentLength));
                 ctx.fireChannelRead(ReferenceCountUtil.retain(msg));
             }

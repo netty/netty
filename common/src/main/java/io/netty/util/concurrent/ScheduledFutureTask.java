@@ -40,6 +40,10 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         return deadlineNanos < 0 ? Long.MAX_VALUE : deadlineNanos;
     }
 
+    static long initialNanoTime() {
+        return START_TIME;
+    }
+
     private final long id = nextTaskId.getAndIncrement();
     private long deadlineNanos;
     /* 0 - no repeat, >0 - repeat at fixed rate, <0 - repeat with fixed delay */
@@ -85,7 +89,11 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     }
 
     public long delayNanos() {
-        return Math.max(0, deadlineNanos() - nanoTime());
+        return deadlineToDelayNanos(deadlineNanos());
+    }
+
+    static long deadlineToDelayNanos(long deadlineNanos) {
+        return Math.max(0, deadlineNanos - nanoTime());
     }
 
     public long delayNanos(long currentTimeNanos) {
@@ -111,9 +119,8 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
             return 1;
         } else if (id < that.id) {
             return -1;
-        } else if (id == that.id) {
-            throw new Error();
         } else {
+            assert id != that.id;
             return 1;
         }
     }
@@ -132,11 +139,10 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
                 if (!isCancelled()) {
                     task.call();
                     if (!executor().isShutdown()) {
-                        long p = periodNanos;
-                        if (p > 0) {
-                            deadlineNanos += p;
+                        if (periodNanos > 0) {
+                            deadlineNanos += periodNanos;
                         } else {
-                            deadlineNanos = nanoTime() - p;
+                            deadlineNanos = nanoTime() - periodNanos;
                         }
                         if (!isCancelled()) {
                             // scheduledTaskQueue can never be null as we lazy init it before submit the task!

@@ -122,7 +122,7 @@ public class HttpResponseDecoderTest {
         for (int i = 0; i < 10; i++) {
             assertFalse(ch.writeInbound(Unpooled.copiedBuffer(Integer.toHexString(data.length) + "\r\n",
                     CharsetUtil.US_ASCII)));
-            assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(data)));
+            assertTrue(ch.writeInbound(Unpooled.copiedBuffer(data)));
             HttpContent content = ch.readInbound();
             assertEquals(data.length, content.content().readableBytes());
 
@@ -164,7 +164,7 @@ public class HttpResponseDecoderTest {
         for (int i = 0; i < 10; i++) {
             assertFalse(ch.writeInbound(Unpooled.copiedBuffer(Integer.toHexString(data.length) + "\r\n",
                     CharsetUtil.US_ASCII)));
-            assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(data)));
+            assertTrue(ch.writeInbound(Unpooled.copiedBuffer(data)));
 
             byte[] decodedData = new byte[data.length];
             HttpContent content = ch.readInbound();
@@ -448,11 +448,11 @@ public class HttpResponseDecoderTest {
 
             // if header is done it should produce a HttpRequest
             boolean headerDone = a + amount == headerLength;
-            assertEquals(headerDone, ch.writeInbound(Unpooled.wrappedBuffer(content, a, amount)));
+            assertEquals(headerDone, ch.writeInbound(Unpooled.copiedBuffer(content, a, amount)));
             a += amount;
         }
 
-        ch.writeInbound(Unpooled.wrappedBuffer(content, headerLength, content.length - headerLength));
+        ch.writeInbound(Unpooled.copiedBuffer(content, headerLength, content.length - headerLength));
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
         assertThat(res.status(), is(HttpResponseStatus.OK));
@@ -483,8 +483,8 @@ public class HttpResponseDecoderTest {
         for (int i = 0; i < data.length; i++) {
             data[i] = (byte) i;
         }
-        ch.writeInbound(Unpooled.wrappedBuffer(data, 0, data.length / 2));
-        ch.writeInbound(Unpooled.wrappedBuffer(data, 5, data.length / 2));
+        ch.writeInbound(Unpooled.copiedBuffer(data, 0, data.length / 2));
+        ch.writeInbound(Unpooled.copiedBuffer(data, 5, data.length / 2));
 
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
@@ -492,12 +492,12 @@ public class HttpResponseDecoderTest {
 
         HttpContent firstContent = ch.readInbound();
         assertThat(firstContent.content().readableBytes(), is(5));
-        assertEquals(Unpooled.wrappedBuffer(data, 0, 5), firstContent.content());
+        assertEquals(Unpooled.copiedBuffer(data, 0, 5), firstContent.content());
         firstContent.release();
 
         LastHttpContent lastContent = ch.readInbound();
         assertEquals(5, lastContent.content().readableBytes());
-        assertEquals(Unpooled.wrappedBuffer(data, 5, 5), lastContent.content());
+        assertEquals(Unpooled.copiedBuffer(data, 5, 5), lastContent.content());
         lastContent.release();
 
         assertThat(ch.finish(), is(false));
@@ -524,15 +524,15 @@ public class HttpResponseDecoderTest {
                 amount = header.length -  a;
             }
 
-            ch.writeInbound(Unpooled.wrappedBuffer(header, a, amount));
+            ch.writeInbound(Unpooled.copiedBuffer(header, a, amount));
             a += amount;
         }
         byte[] data = new byte[10];
         for (int i = 0; i < data.length; i++) {
             data[i] = (byte) i;
         }
-        ch.writeInbound(Unpooled.wrappedBuffer(data, 0, data.length / 2));
-        ch.writeInbound(Unpooled.wrappedBuffer(data, 5, data.length / 2));
+        ch.writeInbound(Unpooled.copiedBuffer(data, 0, data.length / 2));
+        ch.writeInbound(Unpooled.copiedBuffer(data, 5, data.length / 2));
 
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
@@ -589,7 +589,7 @@ public class HttpResponseDecoderTest {
         byte[] otherData = {1, 2, 3, 4};
 
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
-        ch.writeInbound(Unpooled.wrappedBuffer(data, otherData));
+        ch.writeInbound(Unpooled.copiedBuffer(data, otherData));
 
         HttpResponse res = ch.readInbound();
         assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
@@ -625,7 +625,7 @@ public class HttpResponseDecoderTest {
 
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
 
-        ch.writeInbound(Unpooled.wrappedBuffer(data));
+        ch.writeInbound(Unpooled.copiedBuffer(data));
 
         // Garbage input should generate the 999 Unknown response.
         HttpResponse res = ch.readInbound();
@@ -636,7 +636,7 @@ public class HttpResponseDecoderTest {
         assertThat(ch.readInbound(), is(nullValue()));
 
         // More garbage should not generate anything (i.e. the decoder discards anything beyond this point.)
-        ch.writeInbound(Unpooled.wrappedBuffer(data));
+        ch.writeInbound(Unpooled.copiedBuffer(data));
         assertThat(ch.readInbound(), is(nullValue()));
 
         // Closing the connection should not generate anything since the protocol has been violated.

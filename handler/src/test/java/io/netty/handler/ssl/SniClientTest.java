@@ -29,7 +29,6 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.Mapping;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.Assert;
@@ -114,7 +113,7 @@ public class SniClientTest {
                 KeyManagerFactory kmf = PlatformDependent.javaVersion() >= 8 ?
                         SniClientJava8TestUtil.newSniX509KeyManagerFactory(cert, sniHostName) :
                         SslContext.buildKeyManagerFactory(
-                                new X509Certificate[] { cert.cert() }, cert.key(), null, null);
+                                new X509Certificate[] { cert.cert() }, cert.key(), null, null, null);
 
                sslServerContext = SslContextBuilder.forServer(kmf)
                                                    .sslProvider(sslServerProvider)

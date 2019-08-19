@@ -117,7 +117,6 @@ public final class Http2CodecUtil {
     public static final int SMALLEST_MAX_CONCURRENT_STREAMS = 100;
     static final int DEFAULT_MAX_RESERVED_STREAMS = SMALLEST_MAX_CONCURRENT_STREAMS;
     static final int DEFAULT_MIN_ALLOCATION_CHUNK = 1024;
-    static final int DEFAULT_INITIAL_HUFFMAN_DECODE_CAPACITY = 32;
 
     /**
      * Calculate the threshold in bytes which should trigger a {@code GO_AWAY} if a set of headers exceeds this amount.
@@ -132,6 +131,8 @@ public final class Http2CodecUtil {
     }
 
     public static final long DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS = MILLISECONDS.convert(30, SECONDS);
+
+    public static final int DEFAULT_MAX_QUEUED_CONTROL_FRAMES = 10000;
 
     /**
      * Returns {@code true} if the stream is an outbound stream.
@@ -149,6 +150,10 @@ public final class Http2CodecUtil {
      */
     public static boolean isStreamIdValid(int streamId) {
         return streamId >= 0;
+    }
+
+    static boolean isStreamIdValid(int streamId, boolean server) {
+        return isStreamIdValid(streamId) && server == ((streamId & 1) == 0);
     }
 
     /**

@@ -187,29 +187,110 @@ public class ByteBufStreamTest {
 
         String s = in.readLine();
         assertNull(s);
+        in.close();
 
+        ByteBuf buf2 = Unpooled.buffer();
         int charCount = 7; //total chars in the string below without new line characters
         byte[] abc = "\na\n\nb\r\nc\nd\ne".getBytes(utf8);
-        buf.writeBytes(abc);
-        in.mark(charCount);
-        assertEquals("", in.readLine());
-        assertEquals("a", in.readLine());
-        assertEquals("", in.readLine());
-        assertEquals("b", in.readLine());
-        assertEquals("c", in.readLine());
-        assertEquals("d", in.readLine());
-        assertEquals("e", in.readLine());
+        buf2.writeBytes(abc);
+
+        ByteBufInputStream in2 = new ByteBufInputStream(buf2, true);
+        in2.mark(charCount);
+        assertEquals("", in2.readLine());
+        assertEquals("a", in2.readLine());
+        assertEquals("", in2.readLine());
+        assertEquals("b", in2.readLine());
+        assertEquals("c", in2.readLine());
+        assertEquals("d", in2.readLine());
+        assertEquals("e", in2.readLine());
         assertNull(in.readLine());
 
-        in.reset();
+        in2.reset();
         int count = 0;
-        while (in.readLine() != null) {
+        while (in2.readLine() != null) {
             ++count;
             if (count > charCount) {
                 fail("readLine() should have returned null");
             }
         }
         assertEquals(charCount, count);
+        in2.close();
+    }
+
+    @Test
+    public void testRead() throws Exception {
+        // case1
+        ByteBuf buf = Unpooled.buffer(16);
+        buf.writeBytes(new byte[]{1, 2, 3, 4, 5, 6});
+
+        ByteBufInputStream in = new ByteBufInputStream(buf, 3);
+
+        assertEquals(1, in.read());
+        assertEquals(2, in.read());
+        assertEquals(3, in.read());
+        assertEquals(-1, in.read());
+        assertEquals(-1, in.read());
+        assertEquals(-1, in.read());
+
+        buf.release();
         in.close();
+
+        // case2
+        ByteBuf buf2 = Unpooled.buffer(16);
+        buf2.writeBytes(new byte[]{1, 2, 3, 4, 5, 6});
+
+        ByteBufInputStream in2 = new ByteBufInputStream(buf2, 4);
+
+        assertEquals(1, in2.read());
+        assertEquals(2, in2.read());
+        assertEquals(3, in2.read());
+        assertEquals(4, in2.read());
+        assertNotEquals(5, in2.read());
+        assertEquals(-1, in2.read());
+
+        buf2.release();
+        in2.close();
+    }
+
+    @Test
+    public void testReadLineLengthRespected1() throws Exception {
+        // case1
+        ByteBuf buf = Unpooled.buffer(16);
+        buf.writeBytes(new byte[] { 1, 2, 3, 4, 5, 6 });
+
+        ByteBufInputStream in = new ByteBufInputStream(buf, 0);
+
+        assertNull(in.readLine());
+        buf.release();
+        in.close();
+    }
+
+    @Test
+    public void testReadLineLengthRespected2() throws Exception {
+        ByteBuf buf2 = Unpooled.buffer(16);
+        buf2.writeBytes(new byte[] { 'A', 'B', '\n', 'C', 'E', 'F'});
+
+        ByteBufInputStream in2 = new ByteBufInputStream(buf2, 4);
+
+        assertEquals("AB", in2.readLine());
+        assertEquals("C", in2.readLine());
+        assertNull(in2.readLine());
+        buf2.release();
+        in2.close();
+    }
+
+    @Test(expected = EOFException.class)
+    public void testReadByteLengthRespected() throws Exception {
+        // case1
+        ByteBuf buf = Unpooled.buffer(16);
+        buf.writeBytes(new byte[] { 1, 2, 3, 4, 5, 6 });
+
+        ByteBufInputStream in = new ByteBufInputStream(buf, 0);
+        try {
+            in.readByte();
+        } finally {
+            buf.release();
+            in.close();
+        }
     }
 }

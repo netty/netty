@@ -276,7 +276,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 return;
             }
 
-            freeChunk(chunk, handle, sizeClass, nioBuffer);
+            freeChunk(chunk, handle, sizeClass, nioBuffer, false);
         }
     }
 
@@ -287,21 +287,25 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         return isTiny(normCapacity) ? SizeClass.Tiny : SizeClass.Small;
     }
 
-    void freeChunk(PoolChunk<T> chunk, long handle, SizeClass sizeClass, ByteBuffer nioBuffer) {
+    void freeChunk(PoolChunk<T> chunk, long handle, SizeClass sizeClass, ByteBuffer nioBuffer, boolean finalizer) {
         final boolean destroyChunk;
         synchronized (this) {
-            switch (sizeClass) {
-            case Normal:
-                ++deallocationsNormal;
-                break;
-            case Small:
-                ++deallocationsSmall;
-                break;
-            case Tiny:
-                ++deallocationsTiny;
-                break;
-            default:
-                throw new Error();
+            // We only call this if freeChunk is not called because of the PoolThreadCache finalizer as otherwise this
+            // may fail due lazy class-loading in for example tomcat.
+            if (!finalizer) {
+                switch (sizeClass) {
+                    case Normal:
+                        ++deallocationsNormal;
+                        break;
+                    case Small:
+                        ++deallocationsSmall;
+                        break;
+                    case Tiny:
+                        ++deallocationsTiny;
+                        break;
+                    default:
+                        throw new Error();
+                }
             }
             destroyChunk = !chunk.parent.free(chunk, handle, nioBuffer);
         }
@@ -375,9 +379,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     void reallocate(PooledByteBuf<T> buf, int newCapacity, boolean freeOldMemory) {
-        if (newCapacity < 0 || newCapacity > buf.maxCapacity()) {
-            throw new IllegalArgumentException("newCapacity: " + newCapacity);
-        }
+        assert newCapacity >= 0 && newCapacity <= buf.maxCapacity();
 
         int oldCapacity = buf.length;
         if (oldCapacity == newCapacity) {
@@ -390,29 +392,17 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         T oldMemory = buf.memory;
         int oldOffset = buf.offset;
         int oldMaxLength = buf.maxLength;
-        int readerIndex = buf.readerIndex();
-        int writerIndex = buf.writerIndex();
 
+        // This does not touch buf's reader/writer indices
         allocate(parent.threadCache(), buf, newCapacity);
+        int bytesToCopy;
         if (newCapacity > oldCapacity) {
-            memoryCopy(
-                    oldMemory, oldOffset,
-                    buf.memory, buf.offset, oldCapacity);
-        } else if (newCapacity < oldCapacity) {
-            if (readerIndex < newCapacity) {
-                if (writerIndex > newCapacity) {
-                    writerIndex = newCapacity;
-                }
-                memoryCopy(
-                        oldMemory, oldOffset + readerIndex,
-                        buf.memory, buf.offset + readerIndex, writerIndex - readerIndex);
-            } else {
-                readerIndex = writerIndex = newCapacity;
-            }
+            bytesToCopy = oldCapacity;
+        } else {
+            buf.trimIndicesToCapacity(newCapacity);
+            bytesToCopy = newCapacity;
         }
-
-        buf.setIndex(readerIndex, writerIndex);
-
+        memoryCopy(oldMemory, oldOffset, buf.memory, buf.offset, bytesToCopy);
         if (freeOldMemory) {
             free(oldChunk, oldNioBuffer, oldHandle, oldMaxLength, buf.cache);
         }

@@ -113,6 +113,7 @@ final class SslUtils {
         defaultCiphers.add("TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384");
         defaultCiphers.add("TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
         defaultCiphers.add("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256");
+        defaultCiphers.add("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384");
         defaultCiphers.add("TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA");
         // AES256 requires JCE unlimited strength jurisdiction policy files.
         defaultCiphers.add("TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA");
@@ -122,9 +123,7 @@ final class SslUtils {
         // AES256 requires JCE unlimited strength jurisdiction policy files.
         defaultCiphers.add("TLS_RSA_WITH_AES_256_CBC_SHA");
 
-        for (String tlsv13Cipher: DEFAULT_TLSV13_CIPHER_SUITES) {
-            defaultCiphers.add(tlsv13Cipher);
-        }
+        Collections.addAll(defaultCiphers, DEFAULT_TLSV13_CIPHER_SUITES);
 
         DEFAULT_CIPHER_SUITES = defaultCiphers.toArray(new String[0]);
     }

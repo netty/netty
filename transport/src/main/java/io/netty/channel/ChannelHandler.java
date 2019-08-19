@@ -191,7 +191,8 @@ public interface ChannelHandler {
     /**
      * Gets called if a {@link Throwable} was thrown.
      *
-     * @deprecated is part of {@link ChannelInboundHandler}
+     * @deprecated if you want to handle this event you should implement {@link ChannelInboundHandler} and
+     * implement the method there.
      */
     @Deprecated
     void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception;

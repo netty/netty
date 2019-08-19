@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
 /**
- * Web Socket frame containing binary data
+ * Web Socket frame containing binary data.
  */
 public class PongWebSocketFrame extends WebSocketFrame {
 

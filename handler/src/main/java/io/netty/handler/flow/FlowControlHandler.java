@@ -88,7 +88,7 @@ public class FlowControlHandler extends ChannelDuplexHandler {
      * testing, debugging and inspection purposes and it is not Thread safe!
      */
     boolean isQueueEmpty() {
-        return queue.isEmpty();
+        return queue == null || queue.isEmpty();
     }
 
     /**
@@ -172,32 +172,33 @@ public class FlowControlHandler extends ChannelDuplexHandler {
      * @see #channelRead(ChannelHandlerContext, Object)
      */
     private int dequeue(ChannelHandlerContext ctx, int minConsume) {
-        if (queue != null) {
+        int consumed = 0;
 
-            int consumed = 0;
-
-            Object msg;
-            while ((consumed < minConsume) || config.isAutoRead()) {
-                msg = queue.poll();
-                if (msg == null) {
-                    break;
-                }
-
-                ++consumed;
-                ctx.fireChannelRead(msg);
+        // fireChannelRead(...) may call ctx.read() and so this method may reentrance. Because of this we need to
+        // check if queue was set to null in the meantime and if so break the loop.
+        while (queue != null && (consumed < minConsume || config.isAutoRead())) {
+            Object msg = queue.poll();
+            if (msg == null) {
+                break;
             }
 
-            // We're firing a completion event every time one (or more)
-            // messages were consumed and the queue ended up being drained
-            // to an empty state.
-            if (queue.isEmpty() && consumed > 0) {
-                ctx.fireChannelReadComplete();
-            }
-
-            return consumed;
+            ++consumed;
+            ctx.fireChannelRead(msg);
         }
 
-        return 0;
+        // We're firing a completion event every time one (or more)
+        // messages were consumed and the queue ended up being drained
+        // to an empty state.
+        if (queue != null && queue.isEmpty()) {
+            queue.recycle();
+            queue = null;
+
+            if (consumed > 0) {
+                ctx.fireChannelReadComplete();
+            }
+        }
+
+        return consumed;
     }
 
     /**

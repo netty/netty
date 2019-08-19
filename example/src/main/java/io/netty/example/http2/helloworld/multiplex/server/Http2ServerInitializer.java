@@ -29,8 +29,9 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodecFactory;
-import io.netty.handler.codec.http2.Http2MultiplexCodecBuilder;
+import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
 import io.netty.handler.codec.http2.Http2CodecUtil;
+import io.netty.handler.codec.http2.Http2MultiplexHandler;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.AsciiString;
@@ -47,7 +48,8 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
         public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
             if (AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME, protocol)) {
                 return new Http2ServerUpgradeCodec(
-                        Http2MultiplexCodecBuilder.forServer(new HelloWorldHttp2Handler()).build());
+                        Http2FrameCodecBuilder.forServer().build(),
+                        new Http2MultiplexHandler(new HelloWorldHttp2Handler()));
             } else {
                 return null;
             }
@@ -100,8 +102,7 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
                 // If this handler is hit then no upgrade has been attempted and the client is just talking HTTP.
                 System.err.println("Directly talking: " + msg.protocolVersion() + " (no upgrade was attempted)");
                 ChannelPipeline pipeline = ctx.pipeline();
-                ChannelHandlerContext thisCtx = pipeline.context(this);
-                pipeline.addAfter(thisCtx.name(), null, new HelloWorldHttp1Handler("Direct. No Upgrade Attempted."));
+                pipeline.addAfter(ctx.name(), null, new HelloWorldHttp1Handler("Direct. No Upgrade Attempted."));
                 pipeline.replace(this, null, new HttpObjectAggregator(maxHttpContentLength));
                 ctx.fireChannelRead(ReferenceCountUtil.retain(msg));
             }

@@ -95,4 +95,9 @@ public class ThreadPerChannelEventLoop extends SingleThreadEventLoop {
         parent.activeChildren.remove(this);
         parent.idleChildren.add(this);
     }
+
+    @Override
+    public int registeredChannels() {
+        return 1;
+    }
 }
