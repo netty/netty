@@ -398,6 +398,8 @@ class EpollEventLoop extends SingleThreadEventLoop {
                                 strategy = epollWait();
                             }
                         } finally {
+                            // Try get() first to avoid much more expensive CAS in the case we
+                            // were woken via the wakeup() method (submitted task)
                             if (wakenUp.get() == 1 || wakenUp.getAndSet(1) == 1) {
                                 eventFdWriteCount++;
                             }

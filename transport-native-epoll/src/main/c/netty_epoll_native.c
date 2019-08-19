@@ -145,6 +145,7 @@ static jlong netty_epoll_native_eventFdRead(JNIEnv* env, jclass clazz, jint fd) 
 
     if (eventfd_read(fd, &val) != 0) {
         if (errno == EAGAIN) {
+            // EAGAIN means counter value is 0 (see http://man7.org/linux/man-pages/man2/eventfd.2.html)
             return (jlong) 0;
         }
         // something is serious wrong
