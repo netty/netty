@@ -386,6 +386,8 @@ class EpollEventLoop extends SingleThreadEventLoop {
                         break;
 
                     case SelectStrategy.SELECT:
+                        // Ordered store is sufficient here since the only access outside this
+                        // thread is a getAndSet in the wakeup() method
                         wakenUp.lazySet(0);
                         try {
                             if (!hasTasks()) {
