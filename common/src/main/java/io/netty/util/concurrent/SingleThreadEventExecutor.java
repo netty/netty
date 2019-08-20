@@ -313,14 +313,17 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             return true;
         }
         long nanoTime = AbstractScheduledEventExecutor.nanoTime();
-        for (Runnable scheduledTask; (scheduledTask = pollScheduledTask(nanoTime)) != null;) {
+        for (;;) {
+            Runnable scheduledTask = pollScheduledTask(nanoTime);
+            if (scheduledTask == null) {
+                return true;
+            }
             if (!taskQueue.offer(scheduledTask)) {
                 // No space left in the task queue add it back to the scheduledTaskQueue so we pick it up again.
                 scheduledTaskQueue.add((ScheduledFutureTask<?>) scheduledTask);
                 return false;
             }
         }
-        return true;
     }
 
     /**
@@ -593,7 +596,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     @Override
     final void executeScheduledRunnable(final Runnable runnable, boolean isAddition, long deadlineNanos) {
-        // Don't wakeup if this is a removal task or if beforeFutureTaskScheduled returns false
+        // Don't wakeup if this is a removal task or if beforeScheduledTaskSubmitted returns false
         if (isAddition && beforeScheduledTaskSubmitted(deadlineNanos)) {
             super.executeScheduledRunnable(runnable, isAddition, deadlineNanos);
         } else {
