@@ -86,6 +86,14 @@
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
     </dependency>
+
+    <dependency>
+      <groupId>software.amazon.cryptools</groupId>
+      <artifactId>AmazonCorrettoCryptoProvider</artifactId>
+      <version>1.1.0</version>
+      <classifier>linux-x86_64</classifier>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 </project>
 
