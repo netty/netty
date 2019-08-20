@@ -35,7 +35,7 @@ import java.util.List;
 import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
-public class AccpSslEngineTest extends SSLEngineTest {
+public class AmazonCorrettoSslEngineTest extends SSLEngineTest {
 
     @Parameterized.Parameters(name = "{index}: bufferType = {0}, combo = {1}, delegate = {2}")
     public static Collection<Object[]> data() {
@@ -52,7 +52,7 @@ public class AccpSslEngineTest extends SSLEngineTest {
         return params;
     }
 
-    public AccpSslEngineTest(BufferType type, ProtocolCipherCombo combo, boolean delegate) {
+    public AmazonCorrettoSslEngineTest(BufferType type, ProtocolCipherCombo combo, boolean delegate) {
         super(type, combo, delegate);
     }
 
