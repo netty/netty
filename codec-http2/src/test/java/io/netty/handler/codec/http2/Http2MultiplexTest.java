@@ -31,6 +31,7 @@ import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.handler.codec.http2.LastInboundHandler.Consumer;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.Future;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -100,7 +101,6 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
             parentChannel.pipeline().addLast(multiplexer);
         }
 
-        parentChannel.runPendingTasks();
         parentChannel.pipeline().fireChannelActive();
 
         parentChannel.writeInbound(Http2CodecUtil.connectionPrefaceBuf());
@@ -152,8 +152,6 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         });
         assertTrue(childChannel.isActive());
 
-        parentChannel.runPendingTasks();
-
         verify(frameWriter).writeFrame(eq(codec.ctx), eq((byte) 99), eqStreamId(childChannel), any(Http2Flags.class),
                 any(ByteBuf.class), any(ChannelPromise.class));
     }
@@ -177,7 +175,6 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         };
 
         frameInboundWriter.writeInboundHeaders(streamId, request, 0, endStream);
-        parentChannel.runPendingTasks();
         Http2StreamChannel channel = streamChannelRef.get();
         assertEquals(streamId, channel.stream().id());
         return channel;
@@ -384,8 +381,9 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     }
 
     private Http2StreamChannel newOutboundStream(ChannelHandler handler) {
-        return new Http2StreamChannelBootstrap(parentChannel).handler(handler)
-                .open().syncUninterruptibly().getNow();
+        Future<Http2StreamChannel> future = new Http2StreamChannelBootstrap(parentChannel).handler(handler)
+                .open();
+        return future.syncUninterruptibly().getNow();
     }
 
     /**
@@ -400,7 +398,6 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertTrue(childChannel.isActive());
 
         childChannel.close();
-        parentChannel.runPendingTasks();
 
         assertFalse(childChannel.isOpen());
         assertFalse(childChannel.isActive());
@@ -455,7 +452,6 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertFalse(childChannel.isActive());
 
         childChannel.close();
-        parentChannel.runPendingTasks();
         // The channel was never active so we should not generate a RST frame.
         verify(frameWriter, never()).writeRstStream(eqCodecCtx(), eqStreamId(childChannel), anyLong(),
                 anyChannelPromise());
@@ -540,7 +536,6 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         // Close the child channel.
         childChannel.close();
 
-        parentChannel.runPendingTasks();
         // An active outbound stream should emit a RST_STREAM frame.
         verify(frameWriter).writeRstStream(eqCodecCtx(), eqStreamId(childChannel),
                 anyLong(), anyChannelPromise());
@@ -824,7 +819,6 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         });
 
         childChannel.pipeline().fireUserEventTriggered(new Object());
-        parentChannel.runPendingTasks();
 
         // The events should have happened in this order because the inactive and deregistration events
         // get deferred as they do in the AbstractChannel.

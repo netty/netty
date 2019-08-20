@@ -414,7 +414,9 @@ public class DefaultPromiseTest {
         try {
             final AtomicInteger state = new AtomicInteger();
             final CountDownLatch latch1 = new CountDownLatch(1);
-            final CountDownLatch latch2 = new CountDownLatch(2);
+            final CountDownLatch latch2 = new CountDownLatch(1);
+            final CountDownLatch latch3 = new CountDownLatch(1);
+
             final Promise<Void> promise = new DefaultPromise<>(executor);
 
             // Add a listener before completion so "lateListener" is used next time we add a listener.
@@ -443,15 +445,16 @@ public class DefaultPromiseTest {
                 assertTrue(state.compareAndSet(2, 3));
                 latch2.countDown();
             }));
+            latch2.await();
 
             // Simulate a read operation being queued up in the executor.
             executor.execute(() -> {
                 // This is the key, we depend upon the state being set in the next listener.
                 assertEquals(3, state.get());
-                latch2.countDown();
+                latch3.countDown();
             });
 
-            latch2.await();
+            latch3.await();
         } finally {
             executor.shutdownGracefully(0, 0, TimeUnit.SECONDS).sync();
         }
