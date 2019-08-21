@@ -66,7 +66,7 @@ public class WebSocketServerProtocolHandlerTest {
     public void testWebSocketServerProtocolHandshakeHandlerReplacedBeforeHandshake() throws Exception {
         EmbeddedChannel ch = createChannel(new MockOutboundHandler());
         ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
-        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+        ch.pipeline().addLast(new ChannelHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
