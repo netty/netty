@@ -47,10 +47,6 @@ import static java.lang.Math.min;
  */
 class EpollEventLoop extends SingleThreadEventLoop {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollEventLoop.class);
-    /**
-     * The maximum deadline value before overlap occurs on the time source.
-     */
-    private static final long MAXIMUM_DEADLINE = initialNanoTime() - 1;
 
     static {
         // Ensure JNI is initialized by the time this class is loaded by this time!
@@ -59,10 +55,14 @@ class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     /**
+     * When in epollWait(), this mirrors the currently-set deadline of the timerFd. A negative value
+     * means that the event loop is awake, which blocks rescheduling activity by other threads.
+     * It is restored to the real timerFd expiry time again prior to entering epollWait().
+     *
      * Note that we use deadline instead of delay because deadline is just a fixed number but delay requires interacting
      * with the time source (e.g. calling System.nanoTime()) which can be expensive.
      */
-    private final AtomicLong nextDeadlineNanos = new AtomicLong(MAXIMUM_DEADLINE);
+    private final AtomicLong nextDeadlineNanos = new AtomicLong(-1L);
     private final AtomicInteger wakenUp = new AtomicInteger();
     private final FileDescriptor epollFd;
     private final FileDescriptor eventFd;
@@ -181,31 +181,18 @@ class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     @Override
-    protected void executeScheduledRunnable(Runnable runnable, boolean isAddition, long deadlineNanos) {
-        if (isAddition) {
-            try {
-                trySetTimerFd(deadlineNanos);
-            } catch (IOException cause) {
-                throw new RejectedExecutionException(cause);
-            }
-        }
-        // else this is a removal of scheduled task and we could attempt to detect if this task was responsible
-        // for the next delay, and find the next lowest delay in the queue to re-set the timer. However this
-        // is not practical for the following reasons:
-        // 1. The data structure is a PriorityQueue, and the scheduled task has not yet been removed. This means
-        //    we would have to add/remove the head element to find the "next timeout".
-        // 2. We are not on the EventLoop thread, and the PriorityQueue is not thread safe. We could attempt
-        //    to do (1) if we are on the EventLoop but when the EventLoop wakes up it checks if the timeout changes
-        //    when it is woken up and before it calls epoll_wait again and adjusts the timer accordingly.
-        // The result is we wait until we are in the EventLoop and doing the actual removal, and also processing
-        // regular polling in the EventLoop too.
-
-        execute(runnable);
+    protected boolean beforeScheduledTaskSubmitted(long deadlineNanos) {
+        return false; // don't wake event loop
     }
 
     @Override
-    protected boolean wakesUpForScheduledRunnable() {
-        return false;
+    protected boolean afterScheduledTaskSubmitted(long deadlineNanos) {
+        try {
+            trySetTimerFd(deadlineNanos);
+        } catch (IOException e) {
+            throw new RejectedExecutionException(e);
+        }
+        return false; // don't wake event loop
     }
 
     @Override
@@ -218,19 +205,22 @@ class EpollEventLoop extends SingleThreadEventLoop {
     private void trySetTimerFd(long candidateNextDeadline) throws IOException {
         for (;;) {
             long nextDeadline = nextDeadlineNanos.get();
-            if (nextDeadline - candidateNextDeadline <= 0) {
-                break;
+            if (nextDeadline <= candidateNextDeadline) {
+                // This includes case where nextDeadline is negative (event loop is awake)
+                return;
             }
             if (nextDeadlineNanos.compareAndSet(nextDeadline, candidateNextDeadline)) {
-                setTimerFd(deadlineToDelayNanos(candidateNextDeadline));
-                // We are setting the timerFd outside of the EventLoop so it is possible that we raced with another call
-                // to set the timer and temporarily increased the value, in which case we should set it back to the
-                // lower value.
-                nextDeadline = nextDeadlineNanos.get();
-                if (nextDeadline - candidateNextDeadline < 0) {
-                    setTimerFd(deadlineToDelayNanos(nextDeadline));
+                // We must serialize calls to setTimerFd to avoid the set of a later deadline
+                // racing with a sooner one and overwriting it. A second check of nextDeadlineNanos
+                // is made within the sync block to avoid having the CAS within the sync
+                synchronized (nextDeadlineNanos) {
+                    nextDeadline = nextDeadlineNanos.get();
+                    if (nextDeadline == candidateNextDeadline ||
+                            (nextDeadline + Long.MAX_VALUE + 1) == candidateNextDeadline) {
+                        setTimerFd(deadlineToDelayNanos(candidateNextDeadline));
+                    }
                 }
-                break;
+                return;
             }
         }
     }
@@ -250,37 +240,23 @@ class EpollEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    private void checkScheduleTaskQueueForNewDelay() throws IOException {
-        final long deadlineNanos = nextScheduledTaskDeadlineNanos();
-        if (deadlineNanos != -1) {
-            trySetTimerFd(deadlineNanos);
+    private long checkScheduleTaskQueueForNewDelay(long timerFdDeadline) throws IOException {
+        assert nextDeadlineNanos.get() < 0;
+        final long nextTaskDeadlineNanos = nextScheduledTaskDeadlineNanos();
+        if (nextTaskDeadlineNanos == -1 || nextTaskDeadlineNanos >= timerFdDeadline) {
+            // Just restore to preexisting timerFd value, update not needed
+            nextDeadlineNanos.lazySet(timerFdDeadline);
+        } else {
+            synchronized (nextDeadlineNanos) {
+                // Shorter delay required than current timerFd setting, update it
+                nextDeadlineNanos.lazySet(timerFdDeadline = nextTaskDeadlineNanos);
+                setTimerFd(deadlineToDelayNanos(timerFdDeadline));
+            }
         }
+        return timerFdDeadline;
         // Don't disarm the timerFd even if there are no more queued tasks. Since we are setting timerFd from outside
         // the EventLoop it is possible that another thread has set the timer and we may miss a wakeup if we disarm
         // the timer here. Instead we wait for the timer wakeup on the EventLoop and clear state for the next timer.
-    }
-
-    @Override
-    protected void minimumDelayScheduledTaskRemoved(@SuppressWarnings("unused") Runnable task,
-                                                    @SuppressWarnings("unused") long deadlineNanos) {
-        // It is OK to reset nextDeadlineNanos here because we are in the event loop thread, and the event loop is
-        // guaranteed to transfer all pending ScheduledFutureTasks from the executor queue to the scheduled
-        // PriorityQueue and we will set the next expiration time. If another thread races with this thread inserting a
-        // ScheduledFutureTasks into the executor queue it should be OK, assuming the executor queue insertion is
-        // visible to the event loop thread.
-        //
-        // Assume the current minimum timer is delayNanos = 10
-        // Thread A -> execute(ScheduledFutureTask(delayNanos = 12)),
-        //             add ScheduledFutureTask to the executor queue
-        //             fail to set nextDeadlineNanos, so no call to setTimerFd is made
-        // EventLoop -> minimumDelayScheduledTaskRemoved(10),
-        //              set nextDeadlineNanos to MAXIMUM_DEADLINE
-        //              ... process more tasks ...
-        //              drain all the tasks from the executor queue, see that 12 is the next delay, call setTimerFd
-        nextDeadlineNanos.set(MAXIMUM_DEADLINE);
-
-        // Note that we don't actually call setTimerFd here, we don't want to interrupt the actual timerFd and let
-        // the end of the EventLoop determine what the timerFd value should be (after execute queue is drained).
     }
 
     @Override
@@ -395,6 +371,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
 
     @Override
     protected void run() {
+        long timerFdDeadline = Long.MAX_VALUE;
         for (;;) {
             try {
                 processPendingChannelFlags();
@@ -412,28 +389,34 @@ class EpollEventLoop extends SingleThreadEventLoop {
                             wakenUp.set(0);
                         }
                         if (!hasTasks()) {
-                            strategy = epollWait();
+                            // When we are in the EventLoop we don't bother setting the timerFd for each
+                            // scheduled task, but instead defer the processing until the end of the EventLoop
+                            // (next wait) to reduce the timerFd modifications.
+                            timerFdDeadline = checkScheduleTaskQueueForNewDelay(timerFdDeadline);
+                            try {
+                                strategy = epollWait();
+                            } finally {
+                                // This getAndAdd will change the raw value of nextDeadlineNanos to be negative
+                                // which will block any *new* timerFd mods by other threads while also "preserving"
+                                // its last value to avoid disrupting a possibly-concurrent setTimerFd call
+                                // (so that we can know the timerFd really did/will get updated to the read value).
+                                timerFdDeadline = nextDeadlineNanos.getAndAdd(Long.MAX_VALUE + 1);
+                                // The value of nextDeadlineNanos is now guaranteed to be negative
+                            }
                         }
                         // fallthrough
                     default:
                 }
 
                 try {
-                    processReady(events, strategy);
-                } finally {
-                    try {
-                        // Note the timerFd code depends upon running all the tasks on each event loop run. This is so
-                        // we can get an accurate "next wakeup time" after the event loop run completes.
-                        runAllTasks();
-                    } finally {
-                        // No need to drainScheduledQueue() after the fact, because all in event loop scheduling results
-                        // in direct addition to the scheduled priority queue.
-
-                        // When we are in the EventLoop we don't bother setting the timerFd for each scheduled task, but
-                        // instead defer the processing until the end of the EventLoop to reduce the timerFd
-                        // modifications.
-                        checkScheduleTaskQueueForNewDelay();
+                    if (processReady(events, strategy)) {
+                        // Polled events include timerFd expiry; conservatively assume that no timer is set
+                        timerFdDeadline = Long.MAX_VALUE;
                     }
+                } finally {
+                    runAllTasks();
+                    // No need to drainScheduledQueue() after the fact, because all in event loop scheduling results
+                    // in direct addition to the scheduled priority queue.
                 }
                 if (allowGrowing && strategy == events.length()) {
                     //increase the size of the array as we needed the whole space for the events
@@ -487,7 +470,9 @@ class EpollEventLoop extends SingleThreadEventLoop {
         }
     }
 
-    private void processReady(EpollEventArray events, int ready) {
+    // Returns true if a timerFd event was encountered
+    private boolean processReady(EpollEventArray events, int ready) {
+        boolean timerFired = false;
         for (int i = 0; i < ready; ++i) {
             final int fd = events.fd(i);
             if (fd == eventFd.intValue()) {
@@ -495,27 +480,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
                 //
                 // See also https://stackoverflow.com/a/12492308/1074097
             } else if (fd == timerFd.intValue()) {
-                // consume wakeup event, necessary because the timer is added with ET mode.
-                Native.timerFdRead(fd);
-
-                // The timer is normalized, monotonically increasing, and the next value is always set to the minimum
-                // value of the pending timers. When the timer fires we can unset the timer value.
-                // Worst case another thread races with this thread and we set another timer event while processing
-                // this timer event and we get a duplicate wakeup some time in the future.
-                //
-                // This works because we always drain all ScheduledFutureTasks from the executor queue to the scheduled
-                // PriorityQueue and we will set the next expiration time. If another thread races with this thread
-                // inserting a ScheduledFutureTasks into the executor queue it should be OK, assuming the executor queue
-                // insertion is visible to the event loop thread.
-                //
-                // Assume the current minimum timer is nextDeadlineNanos = 10
-                // Thread A -> execute(ScheduledFutureTask(delayNanos = 12)),
-                //             add ScheduledFutureTask to the executor queue
-                //             fail to set nextDeadlineNanos, so no call to setTimerFd is made
-                // EventLoop -> process timer wakeup here, set nextDeadlineNanos to MAXIMUM_DEADLINE
-                //              ... process more tasks ...
-                //              drain all the tasks from executor queue, see 12 is the next delay, call setTimerFd
-                nextDeadlineNanos.set(MAXIMUM_DEADLINE);
+                timerFired = true;
             } else {
                 final long ev = events.events(i);
 
@@ -569,6 +534,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
                 }
             }
         }
+        return timerFired;
     }
 
     @Override

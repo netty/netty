@@ -102,10 +102,6 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
 
         scheduledTaskQueue.clearIgnoringIndexes();
-
-        // calling minimumDelayScheduledTaskRemoved was considered here to give a chance for EventLoop
-        // implementations the opportunity to cleanup any timerFds, but this is currently only called when the EventLoop
-        // is being shutdown, so the timerFd and associated polling mechanism will be destroyed anyways.
     }
 
     /**
@@ -120,24 +116,15 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
      * You should use {@link #nanoTime()} to retrieve the correct {@code nanoTime}.
      */
     protected final Runnable pollScheduledTask(long nanoTime) {
-        Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
-        return scheduledTaskQueue != null ? pollScheduledTask(scheduledTaskQueue, nanoTime, true) : null;
-    }
-
-    final Runnable pollScheduledTask(Queue<ScheduledFutureTask<?>> scheduledTaskQueue, long nanoTime,
-                                     boolean notifyMinimumDeadlineRemoved) {
-        assert scheduledTaskQueue != null;
         assert inEventLoop();
 
-        ScheduledFutureTask<?> scheduledTask = scheduledTaskQueue.peek();
-        if (scheduledTask != null && scheduledTask.deadlineNanos() <= nanoTime) {
-            scheduledTaskQueue.poll();
-            if (notifyMinimumDeadlineRemoved) {
-                minimumDelayScheduledTaskRemoved(scheduledTask, scheduledTask.deadlineNanos());
-            }
-            return scheduledTask;
+        Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
+        ScheduledFutureTask<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
+        if (scheduledTask == null || scheduledTask.deadlineNanos() - nanoTime > 0) {
+            return null;
         }
-        return null;
+        scheduledTaskQueue.remove();
+        return scheduledTask;
     }
 
     /**
@@ -269,26 +256,14 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     final void removeScheduled(final ScheduledFutureTask<?> task) {
         if (inEventLoop()) {
-            removedSchedule0(task);
+            scheduledTaskQueue().removeTyped(task);
         } else {
             executeScheduledRunnable(new Runnable() {
                 @Override
                 public void run() {
-                    removedSchedule0(task);
+                    scheduledTaskQueue().removeTyped(task);
                 }
             }, false, task.deadlineNanos());
-        }
-    }
-
-    private void removedSchedule0(final ScheduledFutureTask<?> task) {
-        if (scheduledTaskQueue == null || task == null) {
-            return;
-        }
-        if (scheduledTaskQueue.peek() == task) {
-            scheduledTaskQueue.poll();
-            minimumDelayScheduledTaskRemoved(task, task.deadlineNanos());
-        } else {
-            scheduledTaskQueue.removeTyped(task);
         }
     }
 
@@ -301,16 +276,9 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
      *                   action
      * @param deadlineNanos the deadline in nanos of the scheduled task that will be added or removed.
      */
-    protected void executeScheduledRunnable(Runnable runnable,
+    void executeScheduledRunnable(Runnable runnable,
                                             @SuppressWarnings("unused") boolean isAddition,
                                             @SuppressWarnings("unused") long deadlineNanos) {
         execute(runnable);
-    }
-
-    /**
-     * The next task to expire (e.g. minimum delay) has been removed from the scheduled priority queue.
-     */
-    protected void minimumDelayScheduledTaskRemoved(@SuppressWarnings("unused") Runnable task,
-                                                    @SuppressWarnings("unused") long deadlineNanos) {
     }
 }
