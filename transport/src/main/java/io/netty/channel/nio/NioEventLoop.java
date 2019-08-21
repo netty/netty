@@ -344,8 +344,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
     /**
-     * Sets the percentage of the desired amount of time spent for I/O in the event loop.  The default value is
-     * {@code 50}, which means the event loop will try to spend the same amount of time for I/O as for non-I/O tasks.
+     * Sets the percentage of the desired amount of time spent for I/O in the event loop. Value range from 1-100.
+     * The default value is {@code 50}, which means the event loop will try to spend the same amount of time for I/O
+     * as for non-I/O tasks. The lower the number the more time can be spent on non-I/O tasks. If value set to
+     * {@code 100}, this feature will be disabled and event loop will not attempt to balance I/O and non-I/O tasks.
      */
     public void setIoRatio(int ioRatio) {
         if (ioRatio <= 0 || ioRatio > 100) {
