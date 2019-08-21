@@ -124,6 +124,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
      * waken up.
      */
     private final AtomicBoolean wakenUp = new AtomicBoolean();
+    private volatile long nextWakeupTime = Long.MAX_VALUE;
 
     private final SelectStrategy selectStrategy;
 
@@ -763,6 +764,16 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    @Override
+    protected boolean beforeScheduledTaskSubmitted(long deadlineNanos) {
+        return deadlineNanos < nextWakeupTime;
+    }
+
+    @Override
+    protected boolean afterScheduledTaskSubmitted(long deadlineNanos) {
+        return deadlineNanos < nextWakeupTime;
+    }
+
     Selector unwrappedSelector() {
         return unwrappedSelector;
     }
@@ -784,6 +795,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             int selectCnt = 0;
             long currentTimeNanos = System.nanoTime();
             long selectDeadLineNanos = currentTimeNanos + delayNanos(currentTimeNanos);
+
+            long normalizedDeadlineNanos = selectDeadLineNanos - initialNanoTime();
+            if (nextWakeupTime != normalizedDeadlineNanos) {
+                nextWakeupTime = normalizedDeadlineNanos;
+            }
 
             for (;;) {
                 long timeoutMillis = (selectDeadLineNanos - currentTimeNanos + 500000L) / 1000000L;

@@ -73,12 +73,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             // Do nothing.
         }
     };
-    private static final Runnable BOOKEND_TASK = new Runnable() {
-        @Override
-        public void run() {
-            // Do nothing.
-        }
-    };
 
     private static final AtomicIntegerFieldUpdater<SingleThreadEventExecutor> STATE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(SingleThreadEventExecutor.class, "state");
@@ -185,6 +179,33 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
+     * Called from arbitrary non-{@link EventExecutor} threads prior to scheduled task submission.
+     * Returns {@code true} if the {@link EventExecutor} thread should be woken immediately to
+     * process the scheduled task (if not already awake).
+     * <p>
+     * If {@code false} is returned, {@link #afterScheduledTaskSubmitted(long)} will be called with
+     * the same value <i>after</i> the scheduled task is enqueued, providing another opportunity
+     * to wake the {@link EventExecutor} thread if required.
+     *
+     * @param deadlineNanos deadline of the to-be-scheduled task
+     *     relative to {@link AbstractScheduledEventExecutor#nanoTime()}
+     * @return {@code true} if the {@link EventExecutor} thread should be woken, {@code false} otherwise
+     */
+    protected boolean beforeScheduledTaskSubmitted(long deadlineNanos) {
+        return true;
+    }
+
+    /**
+     * See {@link #beforeScheduledTaskSubmitted(long)}. Called only after that method returns false.
+     *
+     * @param deadlineNanos relative to {@link AbstractScheduledEventExecutor#nanoTime()}
+     * @return  {@code true} if the {@link EventExecutor} thread should be woken, {@code false} otherwise
+     */
+    protected boolean afterScheduledTaskSubmitted(long deadlineNanos) {
+        return true;
+    }
+
+    /**
      * @deprecated Please use and override {@link #newTaskQueue(int)}.
      */
     @Deprecated
@@ -225,10 +246,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     protected static Runnable pollTaskFrom(Queue<Runnable> taskQueue) {
         for (;;) {
             Runnable task = taskQueue.poll();
-            if (task == WAKEUP_TASK) {
-                continue;
+            if (task != WAKEUP_TASK) {
+                return task;
             }
-            return task;
         }
     }
 
@@ -293,35 +313,35 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             return true;
         }
         long nanoTime = AbstractScheduledEventExecutor.nanoTime();
-        Runnable scheduledTask = pollScheduledTask(scheduledTaskQueue, nanoTime, true);
-        while (scheduledTask != null) {
+        for (;;) {
+            Runnable scheduledTask = pollScheduledTask(nanoTime);
+            if (scheduledTask == null) {
+                return true;
+            }
             if (!taskQueue.offer(scheduledTask)) {
                 // No space left in the task queue add it back to the scheduledTaskQueue so we pick it up again.
                 scheduledTaskQueue.add((ScheduledFutureTask<?>) scheduledTask);
                 return false;
             }
-            scheduledTask = pollScheduledTask(scheduledTaskQueue, nanoTime, false);
         }
-        return true;
     }
 
     /**
      * @return {@code true} if at least one scheduled task was executed.
      */
-    private boolean executeExpiredScheduledTasks(boolean notifyMinimumDeadlineRemoved) {
+    private boolean executeExpiredScheduledTasks() {
         if (scheduledTaskQueue == null || scheduledTaskQueue.isEmpty()) {
             return false;
         }
         long nanoTime = AbstractScheduledEventExecutor.nanoTime();
-        Runnable scheduledTask = pollScheduledTask(scheduledTaskQueue, nanoTime, notifyMinimumDeadlineRemoved);
-        if (scheduledTask != null) {
-            do {
-                safeExecute(scheduledTask);
-                scheduledTask = pollScheduledTask(scheduledTaskQueue, nanoTime, false);
-            } while (scheduledTask != null);
-            return true;
+        Runnable scheduledTask = pollScheduledTask(nanoTime);
+        if (scheduledTask == null) {
+            return false;
         }
-        return false;
+        do {
+            safeExecute(scheduledTask);
+        } while ((scheduledTask = pollScheduledTask(nanoTime)) != null);
+        return true;
     }
 
     /**
@@ -414,17 +434,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      */
     protected final boolean runScheduledAndExecutorTasks(final int maxDrainAttempts) {
         assert inEventLoop();
-        // We must run the taskQueue tasks first, because the scheduled tasks from outside the EventLoop are queued
-        // here because the taskQueue is thread safe and the scheduledTaskQueue is not thread safe.
-        boolean ranAtLeastOneExecutorTask = runExistingTasksFrom(taskQueue);
-        boolean ranAtLeastOneScheduledTask = executeExpiredScheduledTasks(true);
+        boolean ranAtLeastOneTask;
         int drainAttempt = 0;
-        while ((ranAtLeastOneExecutorTask || ranAtLeastOneScheduledTask) && ++drainAttempt < maxDrainAttempts) {
+        do {
             // We must run the taskQueue tasks first, because the scheduled tasks from outside the EventLoop are queued
             // here because the taskQueue is thread safe and the scheduledTaskQueue is not thread safe.
-            ranAtLeastOneExecutorTask = runExistingTasksFrom(taskQueue);
-            ranAtLeastOneScheduledTask = executeExpiredScheduledTasks(false);
-        }
+            ranAtLeastOneTask = runExistingTasksFrom(taskQueue) | executeExpiredScheduledTasks();
+        } while (ranAtLeastOneTask && ++drainAttempt < maxDrainAttempts);
 
         if (drainAttempt > 0) {
             lastExecutionTime = ScheduledFutureTask.nanoTime();
@@ -461,46 +477,17 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * @return {@code true} if at least {@link Runnable#run()} was called.
      */
     private boolean runExistingTasksFrom(Queue<Runnable> taskQueue) {
-        return taskQueue.offer(BOOKEND_TASK) ? runExistingTasksUntilBookend(taskQueue)
-                                             : runExistingTasksUntilMaxTasks(taskQueue);
-    }
-
-    private boolean runExistingTasksUntilBookend(Queue<Runnable> taskQueue) {
         Runnable task = pollTaskFrom(taskQueue);
-        // null is not expected because this method isn't called unless BOOKEND_TASK was inserted into the queue, and
-        // null elements are not permitted to be inserted into the queue.
-        if (task == BOOKEND_TASK) {
-            return false;
-        }
-        for (;;) {
-            safeExecute(task);
-            task = pollTaskFrom(taskQueue);
-            // null is not expected because this method isn't called unless BOOKEND_TASK was inserted into the queue,
-            // and null elements are not permitted to be inserted into the queue.
-            if (task == BOOKEND_TASK) {
-                return true;
-            }
-        }
-    }
-
-    private boolean runExistingTasksUntilMaxTasks(Queue<Runnable> taskQueue) {
-        Runnable task = pollTaskFrom(taskQueue);
-        // BOOKEND_TASK is not expected because this method isn't called unless BOOKEND_TASK fails to be inserted into
-        // the queue, and if was previously inserted we always drain all the elements from queue including BOOKEND_TASK.
         if (task == null) {
             return false;
         }
-        int i = 0;
-        do {
+        int remaining = Math.min(maxPendingTasks, taskQueue.size());
+        safeExecute(task);
+        // Use taskQueue.poll() directly rather than pollTaskFrom() since the latter may
+        // silently consume more than one item from the queue (skips over WAKEUP_TASK instances)
+        while (remaining-- > 0 && (task = taskQueue.poll()) != null) {
             safeExecute(task);
-            task = pollTaskFrom(taskQueue);
-            // BOOKEND_TASK is not expected because this method isn't called unless BOOKEND_TASK fails to be inserted
-            // into the queue, and if was previously inserted we always drain all the elements from queue including
-            // BOOKEND_TASK.
-            if (task == null) {
-                return true;
-            }
-        } while (++i < maxPendingTasks);
+        }
         return true;
     }
 
@@ -604,6 +591,25 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             // Use offer as we actually only need this to unblock the thread and if offer fails we do not care as there
             // is already something in the queue.
             taskQueue.offer(WAKEUP_TASK);
+        }
+    }
+
+    @Override
+    final void executeScheduledRunnable(final Runnable runnable, boolean isAddition, long deadlineNanos) {
+        // Don't wakeup if this is a removal task or if beforeScheduledTaskSubmitted returns false
+        if (isAddition && beforeScheduledTaskSubmitted(deadlineNanos)) {
+            super.executeScheduledRunnable(runnable, isAddition, deadlineNanos);
+        } else {
+            super.executeScheduledRunnable(new NonWakeupRunnable() {
+                @Override
+                public void run() {
+                    runnable.run();
+                }
+            }, isAddition, deadlineNanos);
+            // Second hook after scheduling to facilitate race-avoidance
+            if (isAddition && afterScheduledTaskSubmitted(deadlineNanos)) {
+                wakeup(false);
+            }
         }
     }
 
@@ -954,8 +960,21 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         return threadProperties;
     }
 
-    protected boolean wakesUpForTask(@SuppressWarnings("unused") Runnable task) {
-        return true;
+    /**
+     * Marker interface for {@link Runnable} to indicate that it should be queued for execution
+     * but does not need to run immediately. The default implementation of
+     * {@link SingleThreadEventExecutor#wakesUpForTask(Runnable)} uses this to avoid waking up
+     * the {@link EventExecutor} thread when not necessary.
+     */
+    protected interface NonWakeupRunnable extends Runnable { }
+
+    /**
+     * Can be overridden to control which tasks require waking the {@link EventExecutor} thread
+     * if it is waiting so that they can be run immediately. The default implementation
+     * decides based on whether the task implements {@link NonWakeupRunnable}.
+     */
+    protected boolean wakesUpForTask(Runnable task) {
+        return !(task instanceof NonWakeupRunnable);
     }
 
     protected static void reject() {

@@ -102,20 +102,6 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
         return promise;
     }
 
-    @Override
-    protected void executeScheduledRunnable(final Runnable runnable, boolean isAddition, long deadlineNanos) {
-        super.executeScheduledRunnable(wakesUpForScheduledRunnable() ? runnable : new NonWakeupRunnable() {
-            @Override
-            public void run() {
-                runnable.run();
-            }
-        }, isAddition, deadlineNanos);
-    }
-
-    protected boolean wakesUpForScheduledRunnable() {
-        return true;
-    }
-
     /**
      * Adds a task to be run once at the end of next (or current) {@code eventloop} iteration.
      *
@@ -150,11 +136,6 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     }
 
     @Override
-    protected boolean wakesUpForTask(Runnable task) {
-        return !(task instanceof NonWakeupRunnable);
-    }
-
-    @Override
     protected void afterRunningAllTasks() {
         runAllTasksFrom(tailTasks);
     }
@@ -182,5 +163,5 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     /**
      * Marker interface for {@link Runnable} that will not trigger an {@link #wakeup(boolean)} in all cases.
      */
-    interface NonWakeupRunnable extends Runnable { }
+    interface NonWakeupRunnable extends SingleThreadEventExecutor.NonWakeupRunnable { }
 }
