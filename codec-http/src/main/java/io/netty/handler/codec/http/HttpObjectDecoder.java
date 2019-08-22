@@ -575,7 +575,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
         if (line.length() > 0) {
             do {
-                char firstChar = line.charAt(0);
+                char firstChar = line.charAtUnsafe(0);
                 if (name != null && (firstChar == ' ' || firstChar == '\t')) {
                     //please do not make one line from below code
                     //as it breaks +XX:OptimizeStringConcat optimization
@@ -643,7 +643,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             trailer = this.trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
         }
         while (line.length() > 0) {
-            char firstChar = line.charAt(0);
+            char firstChar = line.charAtUnsafe(0);
             if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
                 List<String> current = trailer.trailingHeaders().getAll(lastHeader);
                 if (!current.isEmpty()) {
@@ -727,14 +727,14 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         nameStart = findNonWhitespace(sb, 0);
         for (nameEnd = nameStart; nameEnd < length; nameEnd ++) {
-            char ch = sb.charAt(nameEnd);
+            char ch = sb.charAtUnsafe(nameEnd);
             if (ch == ':' || Character.isWhitespace(ch)) {
                 break;
             }
         }
 
         for (colonEnd = nameEnd; colonEnd < length; colonEnd ++) {
-            if (sb.charAt(colonEnd) == ':') {
+            if (sb.charAtUnsafe(colonEnd) == ':') {
                 colonEnd ++;
                 break;
             }
