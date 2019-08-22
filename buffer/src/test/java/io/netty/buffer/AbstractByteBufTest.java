@@ -2131,10 +2131,13 @@ public abstract class AbstractByteBufTest {
         buffer.writeByte((byte) 2);
         buffer.writeByte((byte) 1);
 
+        assertEquals(0, buffer.indexOf(0, 4, (byte) 1));
         assertEquals(-1, buffer.indexOf(1, 4, (byte) 1));
-        assertEquals(-1, buffer.indexOf(4, 1, (byte) 1));
+        assertEquals(4, buffer.indexOf(4, 1, (byte) 1));
         assertEquals(1, buffer.indexOf(1, 4, (byte) 2));
         assertEquals(3, buffer.indexOf(4, 1, (byte) 2));
+        assertEquals(-1, buffer.indexOf(4, 3, (byte) 2));
+        assertEquals(4, buffer.indexOf(4, 3, (byte) 1));
     }
 
     @Test

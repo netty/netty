@@ -470,7 +470,8 @@ public final class ByteBufUtil {
             return -1;
         }
 
-        return buffer.forEachByteDesc(toIndex, fromIndex - toIndex, new ByteProcessor.IndexOfProcessor(value));
+        // the toIndex is exclusive so we need to skip it.
+        return buffer.forEachByteDesc(toIndex + 1, fromIndex - toIndex, new ByteProcessor.IndexOfProcessor(value));
     }
 
     private static CharSequence checkCharSequenceBounds(CharSequence seq, int start, int end) {
