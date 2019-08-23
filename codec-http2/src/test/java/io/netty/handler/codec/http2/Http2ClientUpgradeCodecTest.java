@@ -49,12 +49,13 @@ public class Http2ClientUpgradeCodecTest {
     }
 
     @Test
-    public void testUpgradeToHttp2FrameCodecWithMultiplexer() throws Exception{
+    public void testUpgradeToHttp2FrameCodecWithMultiplexer() throws Exception {
         testUpgrade(Http2FrameCodecBuilder.forClient().build(),
             new Http2MultiplexHandler(new HttpInboundHandler(), new HttpInboundHandler()));
     }
 
-    private static void testUpgrade(Http2ConnectionHandler handler, Http2MultiplexHandler multiplexer) throws Exception {
+    private static void testUpgrade(Http2ConnectionHandler handler, Http2MultiplexHandler multiplexer)
+            throws Exception {
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "*");
 
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
