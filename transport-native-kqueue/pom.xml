@@ -71,7 +71,7 @@
                 <id>build-native-lib</id>
                 <configuration>
                   <name>netty_transport_native_kqueue_${os.detected.arch}</name>
-                  <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
+                  <nativeSourceDirectory>${nativeSourceDirectory}</nativeSourceDirectory>
                   <libDirectory>${project.build.outputDirectory}</libDirectory>
                   <!-- We use Maven's artifact classifier instead.
                        This hack will make the hawtjni plugin to put the native library
@@ -181,7 +181,7 @@
                 <id>build-native-lib</id>
                 <configuration>
                   <name>netty_transport_native_kqueue_${os.detected.arch}</name>
-                  <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
+                  <nativeSourceDirectory>${nativeSourceDirectory}</nativeSourceDirectory>
                   <libDirectory>${project.build.outputDirectory}</libDirectory>
                   <!-- We use Maven's artifact classifier instead.
                        This hack will make the hawtjni plugin to put the native library
@@ -287,7 +287,7 @@
                 <id>build-native-lib</id>
                 <configuration>
                   <name>netty_transport_native_kqueue_${os.detected.arch}</name>
-                  <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
+                  <nativeSourceDirectory>${nativeSourceDirectory}</nativeSourceDirectory>
                   <libDirectory>${project.build.outputDirectory}</libDirectory>
                   <!-- We use Maven's artifact classifier instead.
                        This hack will make the hawtjni plugin to put the native library
@@ -361,6 +361,7 @@
     <unix.common.include.unpacked.dir>${unix.common.lib.dir}/META-INF/native/include</unix.common.include.unpacked.dir>
     <jni.compiler.args.cflags>CFLAGS=-O3 -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
     <jni.compiler.args.ldflags>LDFLAGS=-z now -L${unix.common.lib.unpacked.dir} -Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive</jni.compiler.args.ldflags>
+    <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <skipTests>true</skipTests>
   </properties>
 
@@ -407,6 +408,24 @@
 
   <build>
     <plugins>
+      <!-- Also include c files in source jar -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${nativeSourceDirectory}</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
