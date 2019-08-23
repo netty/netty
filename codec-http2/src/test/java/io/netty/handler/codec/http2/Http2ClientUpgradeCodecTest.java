@@ -75,7 +75,7 @@ public class Http2ClientUpgradeCodecTest {
         codec.upgradeTo(ctx, null);
         assertNotNull(channel.pipeline().get("connectionHandler"));
 
-        if(multiplexer != null) {
+        if (multiplexer != null) {
             assertNotNull(channel.pipeline().get(Http2MultiplexHandler.class));
         }
 
