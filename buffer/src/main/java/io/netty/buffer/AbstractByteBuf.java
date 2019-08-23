@@ -1275,6 +1275,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (fromIndex >= toIndex || capacity() == 0) {
             return -1;
         }
+        checkIndex(fromIndex, toIndex - fromIndex);
 
         for (int i = fromIndex; i < toIndex; i ++) {
             if (_getByte(i) == value) {
@@ -1290,6 +1291,8 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (fromIndex < 0 || capacity() == 0) {
             return -1;
         }
+
+        checkIndex(toIndex, fromIndex - toIndex);
 
         for (int i = fromIndex - 1; i >= toIndex; i --) {
             if (_getByte(i) == value) {
