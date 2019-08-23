@@ -355,11 +355,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     private int epollWait() throws IOException {
-        // If a task was submitted when wakenUp value was 1, the task didn't get a chance to produce wakeup event.
-        // So we need to check task queue again before calling epoll_wait. If we don't, the task might be pended
-        // until epoll_wait was timed out. It might be pended until idle timeout if IdleStateHandler existed
-        // in pipeline.
-        return Native.epollWait(epollFd, events, hasTasks());
+        return Native.epollWait(epollFd, events, false);
     }
 
     private int epollWaitNow() throws IOException {
@@ -390,11 +386,11 @@ class EpollEventLoop extends SingleThreadEventLoop {
                         // thread is a getAndSet in the wakeup() method
                         wakenUp.lazySet(0);
                         try {
+                            // When we are in the EventLoop we don't bother setting the timerFd for each
+                            // scheduled task, but instead defer the processing until the end of the EventLoop
+                            // (next wait) to reduce the timerFd modifications.
+                            timerFdDeadline = checkScheduleTaskQueueForNewDelay(timerFdDeadline);
                             if (!hasTasks()) {
-                                // When we are in the EventLoop we don't bother setting the timerFd for each
-                                // scheduled task, but instead defer the processing until the end of the EventLoop
-                                // (next wait) to reduce the timerFd modifications.
-                                timerFdDeadline = checkScheduleTaskQueueForNewDelay(timerFdDeadline);
                                 strategy = epollWait();
                             }
                         } finally {
