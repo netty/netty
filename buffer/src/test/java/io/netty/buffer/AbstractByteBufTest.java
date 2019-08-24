@@ -2125,6 +2125,9 @@ public abstract class AbstractByteBufTest {
     @Test
     public void testIndexOf() {
         buffer.clear();
+        // Ensure the buffer is completely zero'ed.
+        buffer.setZero(0, buffer.capacity());
+
         buffer.writeByte((byte) 1);
         buffer.writeByte((byte) 2);
         buffer.writeByte((byte) 3);
@@ -2135,6 +2138,38 @@ public abstract class AbstractByteBufTest {
         assertEquals(-1, buffer.indexOf(4, 1, (byte) 1));
         assertEquals(1, buffer.indexOf(1, 4, (byte) 2));
         assertEquals(3, buffer.indexOf(4, 1, (byte) 2));
+
+        try {
+            buffer.indexOf(0, buffer.capacity() + 1, (byte) 0);
+            fail();
+        } catch (IndexOutOfBoundsException expected) {
+            // expected
+        }
+
+        try {
+            buffer.indexOf(buffer.capacity(), -1, (byte) 0);
+            fail();
+        } catch (IndexOutOfBoundsException expected) {
+            // expected
+        }
+
+        assertEquals(4, buffer.indexOf(buffer.capacity() + 1, 0, (byte) 1));
+        assertEquals(0, buffer.indexOf(-1, buffer.capacity(), (byte) 1));
+    }
+
+    @Test
+    public void testIndexOfReleaseBuffer() {
+        ByteBuf buffer = releasedBuffer();
+        if (buffer.capacity() != 0) {
+            try {
+                buffer.indexOf(0, 1, (byte) 1);
+                fail();
+            } catch (IllegalReferenceCountException expected) {
+                // expected
+            }
+        } else {
+            assertEquals(-1, buffer.indexOf(0, 1, (byte) 1));
+        }
     }
 
     @Test
@@ -2570,7 +2605,6 @@ public abstract class AbstractByteBufTest {
 
     private ByteBuf releasedBuffer() {
         ByteBuf buffer = newBuffer(8);
-
         // Clear the buffer so we are sure the reader and writer indices are 0.
         // This is important as we may return a slice from newBuffer(...).
         buffer.clear();
