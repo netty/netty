@@ -77,9 +77,9 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
-        ByteBuf decompressedContent = decompressContent(ctx, msg);
+        final ByteBuf decompressedContent = decompressContent(ctx, msg);
 
-        WebSocketFrame outMsg;
+        final WebSocketFrame outMsg;
         if (msg instanceof TextWebSocketFrame) {
             outMsg = new TextWebSocketFrame(msg.isFinalFragment(), newRsv(msg), decompressedContent);
         } else if (msg instanceof BinaryWebSocketFrame) {

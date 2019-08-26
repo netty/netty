@@ -82,9 +82,8 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
     protected abstract boolean removeFrameTail(WebSocketFrame msg);
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg,
-            List<Object> out) throws Exception {
-        ByteBuf compressedContent;
+    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
+        final ByteBuf compressedContent;
         if (msg.content().isReadable()) {
             compressedContent = compressContent(ctx, msg);
         } else if (msg.isFinalFragment()) {
@@ -95,7 +94,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
             throw new CodecException("cannot compress content buffer");
         }
 
-        WebSocketFrame outMsg;
+        final WebSocketFrame outMsg;
         if (msg instanceof TextWebSocketFrame) {
             outMsg = new TextWebSocketFrame(msg.isFinalFragment(), rsv(msg), compressedContent);
         } else if (msg instanceof BinaryWebSocketFrame) {
