@@ -116,7 +116,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, long handshakeTimeoutMillis) {
-        this(websocketPath, null, false);
+        this(websocketPath, false, handshakeTimeoutMillis);
     }
 
     public WebSocketServerProtocolHandler(String websocketPath, boolean checkStartsWith) {
