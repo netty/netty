@@ -166,6 +166,9 @@ public final class Http2StreamChannelBootstrap {
     @Deprecated
     public void open0(ChannelHandlerContext ctx, final Promise<Http2StreamChannel> promise) {
         assert ctx.executor().inEventLoop();
+        if (!promise.setUncancellable()) {
+            return;
+        }
         final Http2StreamChannel streamChannel;
         if (ctx.handler() instanceof Http2MultiplexCodec) {
             streamChannel = ((Http2MultiplexCodec) ctx.handler()).newOutboundStream();
