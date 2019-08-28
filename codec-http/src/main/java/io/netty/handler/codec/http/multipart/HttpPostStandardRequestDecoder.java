@@ -149,13 +149,18 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
         this.request = requireNonNull(request, "request");
         this.charset = requireNonNull(charset, "charset");
         this.factory = requireNonNull(factory, "factory");
-        if (request instanceof HttpContent) {
-            // Offer automatically if the given request is als type of HttpContent
-            // See #1089
-            offer((HttpContent) request);
-        } else {
-            undecodedChunk = buffer();
-            parseBody();
+        try {
+            if (request instanceof HttpContent) {
+                // Offer automatically if the given request is als type of HttpContent
+                // See #1089
+                offer((HttpContent) request);
+            } else {
+                undecodedChunk = buffer();
+                parseBody();
+            }
+        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+            destroy();
+            throw e;
         }
     }
 
