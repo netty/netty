@@ -723,4 +723,15 @@ public class HttpPostRequestDecoderTest {
         decoder.destroy();
         assertEquals(1, req.refCnt());
     }
+
+    @Test(expected = HttpPostRequestDecoder.ErrorDataDecoderException.class)
+    public void testNotLeak() {
+        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/",
+                Unpooled.copiedBuffer("a=1&&b=2", CharsetUtil.US_ASCII));
+        try {
+            new HttpPostStandardRequestDecoder(request);
+        } finally {
+            assertTrue(request.release());
+        }
+    }
 }
