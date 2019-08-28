@@ -82,8 +82,39 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
     protected abstract boolean removeFrameTail(WebSocketFrame msg);
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg,
-            List<Object> out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
+        final ByteBuf compressedContent;
+        if (msg.content().isReadable()) {
+            compressedContent = compressContent(ctx, msg);
+        } else if (msg.isFinalFragment()) {
+            // Set empty DEFLATE block manually for unknown buffer size
+            // https://tools.ietf.org/html/rfc7692#section-7.2.3.6
+            compressedContent = EMPTY_DEFLATE_BLOCK.duplicate();
+        } else {
+            throw new CodecException("cannot compress content buffer");
+        }
+
+        final WebSocketFrame outMsg;
+        if (msg instanceof TextWebSocketFrame) {
+            outMsg = new TextWebSocketFrame(msg.isFinalFragment(), rsv(msg), compressedContent);
+        } else if (msg instanceof BinaryWebSocketFrame) {
+            outMsg = new BinaryWebSocketFrame(msg.isFinalFragment(), rsv(msg), compressedContent);
+        } else if (msg instanceof ContinuationWebSocketFrame) {
+            outMsg = new ContinuationWebSocketFrame(msg.isFinalFragment(), rsv(msg), compressedContent);
+        } else {
+            throw new CodecException("unexpected frame type: " + msg.getClass().getName());
+        }
+
+        out.add(outMsg);
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        cleanup();
+        super.handlerRemoved(ctx);
+    }
+
+    private ByteBuf compressContent(ChannelHandlerContext ctx, WebSocketFrame msg) {
         if (encoder == null) {
             encoder = new EmbeddedChannel(ZlibCodecFactory.newZlibEncoder(
                     ZlibWrapper.NONE, compressionLevel, windowSize, 8));
@@ -103,6 +134,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
             }
             fullCompressedContent.addComponent(true, partCompressedContent);
         }
+
         if (fullCompressedContent.numComponents() <= 0) {
             fullCompressedContent.release();
             throw new CodecException("cannot read compressed buffer");
@@ -120,23 +152,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
             compressedContent = fullCompressedContent;
         }
 
-        WebSocketFrame outMsg;
-        if (msg instanceof TextWebSocketFrame) {
-            outMsg = new TextWebSocketFrame(msg.isFinalFragment(), rsv(msg), compressedContent);
-        } else if (msg instanceof BinaryWebSocketFrame) {
-            outMsg = new BinaryWebSocketFrame(msg.isFinalFragment(), rsv(msg), compressedContent);
-        } else if (msg instanceof ContinuationWebSocketFrame) {
-            outMsg = new ContinuationWebSocketFrame(msg.isFinalFragment(), rsv(msg), compressedContent);
-        } else {
-            throw new CodecException("unexpected frame type: " + msg.getClass().getName());
-        }
-        out.add(outMsg);
-    }
-
-    @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        cleanup();
-        super.handlerRemoved(ctx);
+        return compressedContent;
     }
 
     private void cleanup() {

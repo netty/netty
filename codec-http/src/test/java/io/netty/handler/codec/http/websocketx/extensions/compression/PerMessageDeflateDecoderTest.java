@@ -33,6 +33,7 @@ import org.junit.Test;
 import java.util.Random;
 
 import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter.*;
+import static io.netty.handler.codec.http.websocketx.extensions.compression.DeflateDecoder.*;
 import static io.netty.util.CharsetUtil.*;
 import static org.junit.Assert.*;
 
@@ -308,6 +309,23 @@ public class PerMessageDeflateDecoderTest {
             assertTrue(finalPart.release());
             assertFalse(encoderChannel.finishAndReleaseAll());
         }
+    }
+
+    @Test
+    public void testEmptyFrameDecompression() {
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false));
+
+        TextWebSocketFrame emptyDeflateBlockFrame = new TextWebSocketFrame(true, WebSocketExtension.RSV1,
+                                                                           EMPTY_DEFLATE_BLOCK);
+
+        assertTrue(decoderChannel.writeInbound(emptyDeflateBlockFrame));
+        TextWebSocketFrame emptyBufferFrame = decoderChannel.readInbound();
+
+        assertFalse(emptyBufferFrame.content().isReadable());
+
+        // Composite empty buffer
+        assertTrue(emptyBufferFrame.release());
+        assertFalse(decoderChannel.finish());
     }
 
 }
