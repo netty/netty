@@ -329,9 +329,8 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             intermediateBuf = buf instanceof SwappedByteBuf && buf.unwrap() == intermediateBuf
                     ? buf : intermediateBuf.order(ByteOrder.BIG_ENDIAN);
         }
-        return buf.maxCapacity() == len && buf.capacity() == len
-                ? new AlreadySlicedComponent(buf, intermediateBuf, srcIndex, offset, len)
-                : new DefaultComponent(buf, origIndex, intermediateBuf, srcIndex, offset, len);
+        return buf.capacity() == len ? new Component(buf, intermediateBuf, srcIndex, offset, len)
+                : new UnslicedComponent(buf, origIndex, intermediateBuf, srcIndex, offset, len);
     }
 
     /**
@@ -466,7 +465,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 final int toIdx = Math.min(widx, component.endOffset);
                 final int len = toIdx - fromIdx;
                 if (len > 0) { // skip empty components
-                    addComp(componentCount, new DefaultComponent(component.sourceBuf.retain(),
+                    addComp(componentCount, new UnslicedComponent(component.sourceBuf.retain(),
                             component.srcIdx(fromIdx), component.buf, component.idx(fromIdx), newOffset, len));
                 }
                 if (widx == toIdx) {
@@ -545,7 +544,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 components[i].transferTo(consolidated);
             }
 
-            components[0] = new AlreadySlicedComponent(consolidated, consolidated, 0, 0, capacity);
+            components[0] = new Component(consolidated, consolidated, 0, 0, capacity);
             removeCompRange(1, size);
         }
     }
@@ -833,12 +832,12 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 final int cLength = c.length();
                 if (bytesToTrim < cLength) {
                     // Trim the last component
-                    if (c instanceof DefaultComponent) {
+                    if (c instanceof UnslicedComponent) {
                         c.endOffset -= bytesToTrim;
-                        ((DefaultComponent) c).slice = null;
+                        ((UnslicedComponent) c).slice = null;
                     } else {
                         int newLength = cLength - bytesToTrim;
-                        components[i] = new AlreadySlicedComponent(c.sourceBuf.slice(0, newLength),
+                        components[i] = new Component(c.sourceBuf.slice(0, newLength),
                                 c.buf, c.idx(c.offset), c.offset, newLength);
                     }
                     break;
@@ -1707,7 +1706,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             components[i].transferTo(consolidated);
         }
         lastAccessed = null;
-        components[0] = new AlreadySlicedComponent(consolidated, consolidated, 0, 0, capacity);
+        components[0] = new Component(consolidated, consolidated, 0, 0, capacity);
         removeCompRange(1, numComponents);
         return this;
     }
@@ -1734,7 +1733,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         }
         lastAccessed = null;
         removeCompRange(cIndex + 1, endCIndex);
-        components[cIndex] = new AlreadySlicedComponent(consolidated, consolidated, 0, 0, capacity);
+        components[cIndex] = new Component(consolidated, consolidated, 0, 0, capacity);
         updateComponentOffsets(cIndex);
         return this;
     }
@@ -1821,16 +1820,16 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         }
 
         // Replace the first readable component with a new slice.
-        if (c instanceof DefaultComponent) {
+        if (c instanceof UnslicedComponent) {
             c.offset = 0;
             c.endOffset -= readerIndex;
             c.adjustment += readerIndex;
-            ((DefaultComponent) c).slice = null;
+            ((UnslicedComponent) c).slice = null;
         } else {
             // We must replace the original slice with a derived one to ensure that
             // it can later be released properly in the case of PooledSlicedByteBuf
             int newLength = c.endOffset - readerIndex;
-            components[firstComponentId] = c = new AlreadySlicedComponent(
+            components[firstComponentId] = c = new Component(
                     c.sourceBuf.slice(readerIndex - c.offset, newLength),
                     c.buf, c.adjustment + readerIndex, 0, newLength);
         }
@@ -1857,7 +1856,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         return result + ", components=" + componentCount + ')';
     }
 
-    private abstract static class Component {
+    private static class Component {
         final ByteBuf sourceBuf;
         final ByteBuf buf;
         int adjustment;
@@ -1872,15 +1871,15 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             this.adjustment = srcOffset - offset;
         }
 
-        final int idx(int index) {
+        int idx(int index) {
             return index + adjustment;
         }
 
-        final int length() {
+        int length() {
             return endOffset - offset;
         }
 
-        final void reposition(int newOffset) {
+        void reposition(int newOffset) {
             int move = newOffset - offset;
             endOffset += move;
             adjustment -= move;
@@ -1888,7 +1887,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         }
 
         // copy then release
-        final void transferTo(ByteBuf dst) {
+        void transferTo(ByteBuf dst) {
             dst.writeBytes(buf, idx(offset), length());
             free();
         }
@@ -1900,43 +1899,29 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             return sourceBuf.internalNioBuffer(srcIdx(index), length);
         }
 
-        abstract int srcIdx(int index);
-
-        abstract ByteBuf slice();
-
-        abstract void free();
-    }
-
-    private static final class AlreadySlicedComponent extends Component {
-        // sourceBuf is a slice comprising the whole component, not necessarily aligned with working buf:
-        //     sourceBuf.getByte(i) == buf.getByte(i + idx(offset))
-
-        AlreadySlicedComponent(ByteBuf sourceBuf, ByteBuf buf, int srcOffset, int offset, int len) {
-            super(sourceBuf, buf, srcOffset, offset, len);
-            assert sourceBuf.capacity() == len;
-        }
-
-        @Override
-        ByteBuf slice() {
-            return sourceBuf;
-        }
-
-        @Override
         int srcIdx(int index) {
             return index - offset;
         }
 
-        @Override
+        ByteBuf slice() {
+            return sourceBuf;
+        }
+
         void free() {
             sourceBuf.release();
         }
     }
 
-    private static final class DefaultComponent extends Component {
+    /**
+     * {@link Component} whose length is smaller than its {@code sourceBuf}'s capacity and thus
+     * requires explicit slicing before returning from {@link CompositeByteBuf#internalComponent(int)}
+     * and similar methods. An additional offset also needs to be stored in this case.
+     */
+    private static final class UnslicedComponent extends Component {
         private final int srcAdjustment;
         private volatile ByteBuf slice; // lazy-cached slice, may be null
 
-        DefaultComponent(ByteBuf sourceBuf, int origOffset, ByteBuf buf, int srcOffset, int offset, int len) {
+        UnslicedComponent(ByteBuf sourceBuf, int origOffset, ByteBuf buf, int srcOffset, int offset, int len) {
             super(sourceBuf, buf, srcOffset, offset, len);
             this.srcAdjustment = origOffset - offset;
         }
