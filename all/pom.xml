@@ -585,7 +585,7 @@
             </goals>
             <configuration>
               <excludes>io/netty/internal/tcnative/**,io/netty/example/**,META-INF/native/libnetty_tcnative*,META-INF/native/include/**,META-INF/native/**/*.a</excludes>
-              <includes>io/netty/**,META-INF/native/**</includes>
+              <includes>io/netty/**,META-INF/native/**,META-INF/native-image/**</includes>
               <includeScope>runtime</includeScope>
               <includeGroupIds>${project.groupId}</includeGroupIds>
               <outputDirectory>${project.build.outputDirectory}</outputDirectory>
