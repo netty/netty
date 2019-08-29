@@ -119,9 +119,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
         try {
             doFlush(ctx);
         } catch (Exception e) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Unexpected exception while sending chunks.", e);
-            }
+            logger.warn("Unexpected exception while sending chunks.", e);
         }
     }
 
