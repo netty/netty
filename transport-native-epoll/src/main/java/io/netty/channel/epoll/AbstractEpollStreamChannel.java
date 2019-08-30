@@ -701,9 +701,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             try {
                 fd.close();
             } catch (IOException e) {
-                if (logger.isWarnEnabled()) {
-                    logger.warn("Error while closing a pipe", e);
-                }
+                logger.warn("Error while closing a pipe", e);
             }
         }
     }
