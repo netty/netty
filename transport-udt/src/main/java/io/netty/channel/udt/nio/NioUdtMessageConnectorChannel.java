@@ -79,9 +79,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
             try {
                 channelUDT.close();
             } catch (final Exception e2) {
-                if (logger.isWarnEnabled()) {
-                    logger.warn("Failed to close channel.", e2);
-                }
+                logger.warn("Failed to close channel.", e2);
             }
             throw new ChannelException("Failed to configure channel.", e);
         }
