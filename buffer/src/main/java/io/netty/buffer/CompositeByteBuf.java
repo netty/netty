@@ -308,7 +308,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     @SuppressWarnings("deprecation")
     private Component newComponent(final ByteBuf buf, final int offset) {
         final int srcIndex = buf.readerIndex();
-        final int len = buf.writerIndex() - buf.readerIndex();
+        final int len = buf.readableBytes();
 
         // unpeel any intermediate outer layers (UnreleasableByteBuf, LeakAwareByteBufs, SwappedByteBuf)
         ByteBuf unwrapped = buf;
@@ -1896,9 +1896,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         }
 
         ByteBuf duplicate() {
-            // We can only use the cached slice safely if it's equal to the source buffer,
-            // otherwise it might not be fully visible to us
-            return (slice == srcBuf ? srcBuf : srcBuf.slice()).duplicate();
+            return srcBuf.duplicate();
         }
 
         ByteBuffer internalNioBuffer(int index, int length) {
