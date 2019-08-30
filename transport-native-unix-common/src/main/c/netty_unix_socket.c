@@ -41,7 +41,6 @@ static jmethodID datagramSocketAddrMethodId = NULL;
 static jmethodID inetSocketAddrMethodId = NULL;
 static jclass inetSocketAddressClass = NULL;
 static int socketType = AF_INET;
-static const char* ip4prefix = "::ffff:";
 static const unsigned char wildcardAddress[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 static const unsigned char ipv4MappedWildcardAddress[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 };
 
@@ -68,47 +67,60 @@ static int nettyNonBlockingSocket(int domain, int type, int protocol) {
 #endif
 }
 
-static jobject createDatagramSocketAddress(JNIEnv* env, const struct sockaddr_storage* addr, int len, jobject local) {
-    char ipstr[INET6_ADDRSTRLEN];
-    int port;
-    jstring ipString;
+static int ipAddressLength(const struct sockaddr_storage* addr) {
     if (addr->ss_family == AF_INET) {
-        struct sockaddr_in* s = (struct sockaddr_in*) addr;
-        port = ntohs(s->sin_port);
-        inet_ntop(AF_INET, &s->sin_addr, ipstr, sizeof ipstr);
-        ipString = (*env)->NewStringUTF(env, ipstr);
-    } else {
-        struct sockaddr_in6* s = (struct sockaddr_in6*) addr;
-        port = ntohs(s->sin6_port);
-        inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof ipstr);
-
-        if (strncasecmp(ipstr, ip4prefix, 7) == 0) {
-            // IPv4-mapped-on-IPv6.
-            // Cut of ::ffff: prefix to workaround performance issues when parsing these
-            // addresses in InetAddress.getByName(...).
-            //
-            // See https://github.com/netty/netty/issues/2867
-            ipString = (*env)->NewStringUTF(env, &ipstr[7]);
-        } else {
-            ipString = (*env)->NewStringUTF(env, ipstr);
-        }
-    }
-    jobject socketAddr = (*env)->NewObject(env, datagramSocketAddressClass, datagramSocketAddrMethodId, ipString, port, len, local);
-    return socketAddr;
-}
-
-static jsize addressLength(const struct sockaddr_storage* addr) {
-    if (addr->ss_family == AF_INET) {
-        return 8;
+        return 4;
     }
     struct sockaddr_in6* s = (struct sockaddr_in6*) addr;
     if (s->sin6_addr.s6_addr[11] == 0xff && s->sin6_addr.s6_addr[10] == 0xff &&
-        s->sin6_addr.s6_addr[9] == 0x00 && s->sin6_addr.s6_addr[8] == 0x00 && s->sin6_addr.s6_addr[7] == 0x00 && s->sin6_addr.s6_addr[6] == 0x00 && s->sin6_addr.s6_addr[5] == 0x00 &&
-        s->sin6_addr.s6_addr[4] == 0x00 && s->sin6_addr.s6_addr[3] == 0x00 && s->sin6_addr.s6_addr[2] == 0x00 && s->sin6_addr.s6_addr[1] == 0x00 && s->sin6_addr.s6_addr[0] == 0x00) {
-        // IPv4-mapped-on-IPv6
-        return 8;
+            s->sin6_addr.s6_addr[9] == 0x00 && s->sin6_addr.s6_addr[8] == 0x00 && s->sin6_addr.s6_addr[7] == 0x00 && s->sin6_addr.s6_addr[6] == 0x00 && s->sin6_addr.s6_addr[5] == 0x00 &&
+            s->sin6_addr.s6_addr[4] == 0x00 && s->sin6_addr.s6_addr[3] == 0x00 && s->sin6_addr.s6_addr[2] == 0x00 && s->sin6_addr.s6_addr[1] == 0x00 && s->sin6_addr.s6_addr[0] == 0x00) {
+            // IPv4-mapped-on-IPv6
+         return 4;
     }
-    return 24;
+    return 16;
+}
+
+static jobject createDatagramSocketAddress(JNIEnv* env, const struct sockaddr_storage* addr, int len, jobject local) {
+    int port;
+    int scopeId;
+    int ipLength = ipAddressLength(addr);
+    jbyteArray addressBytes = (*env)->NewByteArray(env, ipLength);
+
+    if (addr->ss_family == AF_INET) {
+        struct sockaddr_in* s = (struct sockaddr_in*) addr;
+        port = ntohs(s->sin_port);
+        scopeId = 0;
+        (*env)->SetByteArrayRegion(env, addressBytes, 0, ipLength, (jbyte*) &s->sin_addr.s_addr);
+    } else {
+        struct sockaddr_in6* s = (struct sockaddr_in6*) addr;
+        port = ntohs(s->sin6_port);
+        scopeId = s->sin6_scope_id;
+
+        int offset;
+        if (ipLength == 4) {
+            // IPv4-mapped-on-IPv6.
+            offset = 12;
+        } else {
+            offset = 0;
+        }
+        (*env)->SetByteArrayRegion(env, addressBytes, offset, ipLength, (jbyte*) &s->sin6_addr.s6_addr);
+    }
+    jobject obj = (*env)->NewObject(env, datagramSocketAddressClass, datagramSocketAddrMethodId, addressBytes, scopeId, port, len, local);
+    if ((*env)->ExceptionCheck(env) == JNI_TRUE) {
+        return NULL;
+    }
+    return obj;
+}
+
+static jsize addressLength(const struct sockaddr_storage* addr) {
+    int len = ipAddressLength(addr);
+    if (len == 4) {
+        // Only encode port into it
+        return len + 4;
+    }
+    // we encode port + scope into it
+    return len + 8;
 }
 
 static void initInetSocketAddressArray(JNIEnv* env, const struct sockaddr_storage* addr, jbyteArray bArray, int offset, jsize len) {
@@ -378,6 +390,9 @@ static jobject _recvFrom(JNIEnv* env, jint fd, void* buffer, jint pos, jint limi
             if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_RECVORIGDSTADDR) {
                 memcpy (&daddr, CMSG_DATA(cmsg), sizeof (struct sockaddr_storage));
                 local = createDatagramSocketAddress(env, &daddr, res, NULL);
+                if (local == NULL) {
+                    return NULL;
+                }
                 break;
             }
         }
@@ -1054,12 +1069,12 @@ jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
 
     // Respect shading...
     char parameters[1024] = {0};
-    snprintf(parameters, sizeof(parameters), "(Ljava/lang/String;IIL%s;)V", nettyClassName);
+    snprintf(parameters, sizeof(parameters), "([BIIIL%s;)V", nettyClassName);
 
     datagramSocketAddrMethodId = (*env)->GetMethodID(env, datagramSocketAddressClass, "<init>", parameters);
     if (datagramSocketAddrMethodId == NULL) {
         char msg[1024] = {0};
-        snprintf(msg, sizeof(msg), "failed to get method ID: %s.<init>(String, int, int, %s)", nettyClassName, nettyClassName);
+        snprintf(msg, sizeof(msg), "failed to get method ID: %s.<init>(byte[], int, int, int, %s)", nettyClassName, nettyClassName);
         free(nettyClassName);
         nettyClassName = NULL;
         netty_unix_errors_throwRuntimeException(env, msg);
