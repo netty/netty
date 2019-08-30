@@ -1892,7 +1892,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
         }
 
         ByteBuf slice() {
-            return slice != null ? slice : (slice = srcBuf.slice(srcIdx(offset), length()));
+            ByteBuf s = slice;
+            if (s == null) {
+                slice = s = srcBuf.slice(srcIdx(offset), length());
+            }
+            return s;
         }
 
         ByteBuf duplicate() {
