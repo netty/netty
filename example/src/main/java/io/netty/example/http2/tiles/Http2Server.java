@@ -40,7 +40,7 @@ import java.security.cert.CertificateException;
 import javax.net.ssl.SSLException;
 
 /**
- * Demonstrates a Http2 server using Netty to display a bunch of images and
+ * Demonstrates an Http2 server using Netty to display a bunch of images and
  * simulate latency. It is a Netty version of the <a href="https://http2.golang.org/gophertiles?latency=0">
  * Go lang HTTP2 tiles demo</a>.
  */

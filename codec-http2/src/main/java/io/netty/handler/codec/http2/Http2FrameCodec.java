@@ -45,8 +45,8 @@ import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
  * <p><em>This API is very immature.</em> The Http2Connection-based API is currently preferred over this API.
  * This API is targeted to eventually replace or reduce the need for the {@link Http2ConnectionHandler} API.
  *
- * <p>A HTTP/2 handler that maps HTTP/2 frames to {@link Http2Frame} objects and vice versa. For every incoming HTTP/2
- * frame, a {@link Http2Frame} object is created and propagated via {@link #channelRead}. Outbound {@link Http2Frame}
+ * <p>An HTTP/2 handler that maps HTTP/2 frames to {@link Http2Frame} objects and vice versa. For every incoming HTTP/2
+ * frame, an {@link Http2Frame} object is created and propagated via {@link #channelRead}. Outbound {@link Http2Frame}
  * objects received via {@link #write} are converted to the HTTP/2 wire format. HTTP/2 frames specific to a stream
  * implement the {@link Http2StreamFrame} interface. The {@link Http2FrameCodec} is instantiated using the
  * {@link Http2FrameCodecBuilder}. It's recommended for channel handlers to inherit from the
@@ -79,7 +79,7 @@ import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
  *
  * <h3>New inbound Streams</h3>
  *
- * The first frame of a HTTP/2 stream must be a {@link Http2HeadersFrame}, which will have a {@link Http2FrameStream}
+ * The first frame of an HTTP/2 stream must be an {@link Http2HeadersFrame}, which will have an {@link Http2FrameStream}
  * object attached.
  *
  * <h3>New outbound Streams</h3>

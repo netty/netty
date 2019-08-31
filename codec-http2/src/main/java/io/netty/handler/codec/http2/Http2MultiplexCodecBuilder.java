@@ -57,7 +57,7 @@ public class Http2MultiplexCodecBuilder
     }
 
     /**
-     * Creates a builder for a HTTP/2 client.
+     * Creates a builder for an HTTP/2 client.
      *
      * @param childHandler the handler added to channels for remotely-created streams. It must be
      *     {@link ChannelHandler.Sharable}.
@@ -67,7 +67,7 @@ public class Http2MultiplexCodecBuilder
     }
 
     /**
-     * Creates a builder for a HTTP/2 server.
+     * Creates a builder for an HTTP/2 server.
      *
      * @param childHandler the handler added to channels for remotely-created streams. It must be
      *     {@link ChannelHandler.Sharable}.
