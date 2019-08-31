@@ -518,7 +518,7 @@ public final class HttpUtil {
 
     /**
      * Formats the host string of an address so it can be used for computing an HTTP component
-     * such as an URL or a Host header
+     * such as a URL or a Host header
      *
      * @param addr the address
      * @return the formatted String

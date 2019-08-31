@@ -25,7 +25,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 
 /**
- * Creates an URL-encoded URI from a path string and key-value parameter pairs.
+ * Creates a URL-encoded URI from a path string and key-value parameter pairs.
  * This encoder is for one time use only.  Create a new instance for each URI.
  *
  * <pre>
