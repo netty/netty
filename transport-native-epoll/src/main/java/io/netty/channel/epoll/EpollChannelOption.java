@@ -45,6 +45,8 @@ public final class EpollChannelOption<T> extends UnixChannelOption<T> {
 
     public static final ChannelOption<Map<InetAddress, byte[]>> TCP_MD5SIG = valueOf("TCP_MD5SIG");
 
+    public static final ChannelOption<Integer> MAX_DATAGRAM_PAYLOAD_SIZE = valueOf("MAX_DATAGRAM_PAYLOAD_SIZE");
+
     @SuppressWarnings({ "unused", "deprecation" })
     private EpollChannelOption() {
     }
