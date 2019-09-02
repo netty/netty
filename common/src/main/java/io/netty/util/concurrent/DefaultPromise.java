@@ -293,6 +293,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         }
         return (V) result;
     }
+    private static final CancellationException CANCEL_EX = new CancellationException() {
+        public Throwable fillInStackTrace() {
+            return this;
+        }
+    };
 
     /**
      * {@inheritDoc}
@@ -302,7 +307,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
         if (RESULT_UPDATER.get(this) == null &&
-                RESULT_UPDATER.compareAndSet(this, null, new CauseHolder(new CancellationException()))) {
+                RESULT_UPDATER.compareAndSet(this, null, new CauseHolder(CANCEL_EX))) {
             if (checkNotifyWaiters()) {
                 notifyListeners();
             }

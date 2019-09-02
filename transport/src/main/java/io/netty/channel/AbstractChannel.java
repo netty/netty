@@ -601,8 +601,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         public final void close(final ChannelPromise promise) {
             assertEventLoop();
 
-            ClosedChannelException closedChannelException = new ClosedChannelException();
-            close(promise, closedChannelException, closedChannelException, false);
+            close(promise, CLOSE_CHANNEL_EX, CLOSE_CHANNEL_EX, false);
         }
 
         /**
@@ -627,7 +626,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             if (outboundBuffer == null) {
-                promise.setFailure(new ClosedChannelException());
+                promise.setFailure(CLOSE_CHANNEL_EX);
                 return;
             }
             this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
@@ -952,10 +951,16 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         private ClosedChannelException newClosedChannelException(Throwable cause) {
-            ClosedChannelException exception = new ClosedChannelException();
-            if (cause != null) {
-                exception.initCause(cause);
+            if (cause == null) {
+                return CLOSE_CHANNEL_EX;
             }
+            ClosedChannelException exception = new ClosedChannelException() {
+                @Override
+                public Throwable fillInStackTrace() {
+                    return this;
+                }
+            };
+            exception.initCause(cause);
             return exception;
         }
 
@@ -1047,6 +1052,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
     }
 
+    private static final ClosedChannelException CLOSE_CHANNEL_EX = new ClosedChannelException() {
+        @Override
+        public Throwable fillInStackTrace() {
+            return this;
+        }
+    };
     /**
      * Return {@code true} if the given {@link EventLoop} is compatible with this instance.
      */
