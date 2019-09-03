@@ -159,6 +159,31 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
         return combo(bfs, bfs);
     }
 
+    List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> epollOnlyDatagram(
+            final InternetProtocolFamily family) {
+        return combo(Collections.singletonList(datagramBootstrapFactory(family)),
+                Collections.singletonList(datagramBootstrapFactory(family)));
+    }
+
+    private BootstrapFactory<Bootstrap> datagramBootstrapFactory(final InternetProtocolFamily family) {
+        return new BootstrapFactory<Bootstrap>() {
+            @Override
+            public Bootstrap newInstance() {
+                return new Bootstrap().group(EPOLL_WORKER_GROUP).channelFactory(new ChannelFactory<Channel>() {
+                    @Override
+                    public Channel newChannel() {
+                        return new EpollDatagramChannel(family);
+                    }
+
+                    @Override
+                    public String toString() {
+                        return InternetProtocolFamily.class.getSimpleName() + ".class";
+                    }
+                });
+            }
+        };
+    }
+
     public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> domainSocket() {
 
         List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> list =
