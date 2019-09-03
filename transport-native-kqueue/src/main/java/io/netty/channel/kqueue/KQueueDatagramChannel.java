@@ -308,7 +308,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
             }
         } else if (data.nioBufferCount() > 1) {
             IovArray array = registration().cleanArray();
-            array.add(data);
+            array.add(data, data.readerIndex(), data.readableBytes());
             int cnt = array.count();
             assert cnt != 0;
 
