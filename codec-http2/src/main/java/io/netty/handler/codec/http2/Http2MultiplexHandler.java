@@ -33,9 +33,6 @@ import io.netty.util.internal.UnstableApi;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
-import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
-import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-
 /**
  * An HTTP/2 handler that creates child channels for each stream. This handler must be used in combination
  * with {@link Http2FrameCodec}.
@@ -125,7 +122,8 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
      */
     public Http2MultiplexHandler(ChannelHandler inboundStreamHandler, ChannelHandler upgradeStreamHandler) {
         this.inboundStreamHandler = ObjectUtil.checkNotNull(inboundStreamHandler, "inboundStreamHandler");
-        this.upgradeStreamHandler = upgradeStreamHandler;
+        this.upgradeStreamHandler = upgradeStreamHandler == null ?
+                AbstractHttp2StreamChannel.NOOP_UPGRADE_HANDLER : upgradeStreamHandler;
     }
 
     static void registerDone(ChannelFuture future) {
@@ -225,11 +223,6 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                         final AbstractHttp2StreamChannel ch;
                         // We need to handle upgrades special when on the client side.
                         if (stream.id() == Http2CodecUtil.HTTP_UPGRADE_STREAM_ID && !isServer(ctx)) {
-                            // We must have an upgrade handler or else we can't handle the stream
-                            if (upgradeStreamHandler == null) {
-                                throw connectionError(INTERNAL_ERROR,
-                                        "Client is misconfigured for upgrade requests");
-                            }
                             ch = new Http2MultiplexHandlerStreamChannel(stream, upgradeStreamHandler);
                             ch.closeOutbound();
                         } else {

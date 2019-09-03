@@ -76,7 +76,7 @@ public abstract class Http2MultiplexClientUpgradeTest<C extends Http2FrameCodec>
         assertTrue(upgradeHandler.channelInactiveCalled);
     }
 
-    @Test(expected = Http2Exception.class)
+    @Test
     public void clientUpgradeWithoutUpgradeHandlerThrowsHttp2Exception() throws Http2Exception {
         C codec = newCodec(null);
         EmbeddedChannel ch = new EmbeddedChannel(codec, newMultiplexer(null));
