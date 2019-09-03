@@ -69,7 +69,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final VoidChannelPromise voidPromise;
     private final boolean touch = ResourceLeakDetector.isEnabled();
     private final List<DefaultChannelHandlerContext> handlers = new ArrayList<>(4);
-
     private volatile MessageSizeEstimator.Handle estimatorHandle;
 
     public DefaultChannelPipeline(Channel channel) {

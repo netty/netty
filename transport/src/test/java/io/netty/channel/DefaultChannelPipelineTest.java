@@ -49,10 +49,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -1368,6 +1370,87 @@ public class DefaultChannelPipelineTest {
 
         channel.close().syncUninterruptibly();
         channel2.close().syncUninterruptibly();
+    }
+
+    @Test
+    public void testReentranceInbound() throws Exception {
+        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(newLocalChannel());
+
+        BlockingQueue<Integer> queue = new LinkedBlockingDeque<>();
+        pipeline.addLast(new ChannelHandler() {
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) {
+                ctx.fireChannelRead(1);
+                ctx.fireChannelRead(2);
+            }
+        });
+        pipeline.addLast(new ChannelHandler() {
+            boolean called;
+            @Override
+            public void read(ChannelHandlerContext ctx) {
+                if (!called) {
+                    called = true;
+                    ctx.fireChannelRead(3);
+                }
+                ctx.read();
+            }
+        });
+        pipeline.addLast(new ChannelHandler() {
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                ctx.read();
+                queue.add((Integer) msg);
+            }
+        });
+
+        pipeline.fireChannelActive();
+
+        assertEquals(1, (int) queue.take());
+        assertEquals(3, (int) queue.take());
+        assertEquals(2, (int) queue.take());
+        pipeline.close().syncUninterruptibly();
+        assertNull(queue.poll());
+    }
+
+    @Test
+    public void testReentranceOutbound() throws Exception {
+        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(newLocalChannel());
+
+        BlockingQueue<Integer> queue = new LinkedBlockingDeque<>();
+        pipeline.addLast(new ChannelHandler() {
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                ctx.fireUserEventTriggered("");
+                queue.add((Integer) msg);
+            }
+        });
+        pipeline.addLast(new ChannelHandler() {
+            boolean called;
+
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                if (!called) {
+                    called = true;
+                    ctx.write(3);
+                }
+                ctx.fireUserEventTriggered(evt);
+            }
+        });
+        pipeline.addLast(new ChannelHandler() {
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) {
+                ctx.write(1);
+                ctx.write(2);
+            }
+        });
+
+        pipeline.fireChannelActive();
+
+        assertEquals(1, (int) queue.take());
+        assertEquals(3, (int) queue.take());
+        assertEquals(2, (int) queue.take());
+        pipeline.close().syncUninterruptibly();
+        assertNull(queue.poll());
     }
 
     @Test(timeout = 5000)

@@ -357,18 +357,18 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             ByteBuf buf = ctx.alloc().buffer(expectedBytes);
             buf.writerIndex(buf.writerIndex() + expectedBytes);
-            ctx.writeAndFlush(buf.retainedDuplicate());
+            ctx.writeAndFlush(buf.retainedDuplicate()).addListener((ChannelFutureListener) f -> {
+                // We wait here to ensure that we write before we have a chance to process the outbound
+                // shutdown event.
+                followerCloseLatch.await();
 
-            // We wait here to ensure that we write before we have a chance to process the outbound
-            // shutdown event.
-            followerCloseLatch.await();
-
-            // This write should fail, but we should still be allowed to read the peer's data
-            ctx.writeAndFlush(buf).addListener((ChannelFutureListener) future -> {
-                if (future.cause() == null) {
-                    causeRef.set(new IllegalStateException("second write should have failed!"));
-                    doneLatch.countDown();
-                }
+                // This write should fail, but we should still be allowed to read the peer's data
+                ctx.writeAndFlush(buf).addListener((ChannelFutureListener) future -> {
+                    if (future.cause() == null) {
+                        causeRef.set(new IllegalStateException("second write should have failed!"));
+                        doneLatch.countDown();
+                    }
+                });
             });
         }
 
