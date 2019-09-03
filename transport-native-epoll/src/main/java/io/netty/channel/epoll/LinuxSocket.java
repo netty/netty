@@ -54,6 +54,11 @@ final class LinuxSocket extends Socket {
         return Native.sendmmsg(intValue(), ipv6, msgs, offset, len);
     }
 
+    int recvmmsg(NativeDatagramPacketArray.NativeDatagramPacket[] msgs,
+                 int offset, int len) throws IOException {
+        return Native.recvmmsg(intValue(), ipv6, msgs, offset, len);
+    }
+
     void setTimeToLive(int ttl) throws IOException {
         setTimeToLive(intValue(), ttl);
     }
