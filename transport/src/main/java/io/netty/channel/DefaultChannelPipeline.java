@@ -482,7 +482,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return ctx;
     }
 
-    private static void remove0(AbstractChannelHandlerContext ctx) {
+    private void remove0(AbstractChannelHandlerContext ctx) {
+        assert Thread.holdsLock(this);
         AbstractChannelHandlerContext prev = ctx.prev;
         AbstractChannelHandlerContext next = ctx.next;
         prev.next = next;
@@ -611,7 +612,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } catch (Throwable t) {
             boolean removed = false;
             try {
-                remove0(ctx);
+                synchronized (this) {
+                    remove0(ctx);
+                }
                 ctx.callHandlerRemoved();
                 removed = true;
             } catch (Throwable t2) {
@@ -1481,7 +1484,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                                 "Can't invoke handlerAdded() as the EventExecutor {} rejected it, removing handler {}.",
                                 executor, ctx.name(), e);
                     }
-                    remove0(ctx);
+                    synchronized (this) {
+                        remove0(ctx);
+                    }
                     ctx.setRemoved();
                 }
             }

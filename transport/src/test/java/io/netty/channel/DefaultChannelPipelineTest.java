@@ -43,6 +43,7 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.UnorderedThreadPoolEventExecutor;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.net.SocketAddress;
@@ -73,10 +74,15 @@ import static org.junit.Assert.fail;
 
 public class DefaultChannelPipelineTest {
 
-    private static final EventLoopGroup group = new DefaultEventLoopGroup(1);
+    private static EventLoopGroup group;
 
     private Channel self;
     private Channel peer;
+
+    @BeforeClass
+    public static void beforeClass() throws Exception {
+        group = new DefaultEventLoopGroup(1);
+    }
 
     @AfterClass
     public static void afterClass() throws Exception {
@@ -1635,6 +1641,67 @@ public class DefaultChannelPipelineTest {
 
         channel.close().syncUninterruptibly();
         channel2.close().syncUninterruptibly();
+    }
+
+    @Test(timeout = 5000)
+    public void testHandlerAddedFailedButHandlerStillRemoved() throws InterruptedException {
+        testHandlerAddedFailedButHandlerStillRemoved0(false);
+    }
+
+    @Test(timeout = 5000)
+    public void testHandlerAddedFailedButHandlerStillRemovedWithLaterRegister() throws InterruptedException {
+        testHandlerAddedFailedButHandlerStillRemoved0(true);
+    }
+
+    private static void testHandlerAddedFailedButHandlerStillRemoved0(boolean lateRegister)
+            throws InterruptedException {
+        EventExecutorGroup executorGroup = new DefaultEventExecutorGroup(16);
+        final int numHandlers = 32;
+        try {
+            Channel channel = new LocalChannel();
+            channel.config().setOption(ChannelOption.SINGLE_EVENTEXECUTOR_PER_GROUP, false);
+            if (!lateRegister) {
+                group.register(channel).sync();
+            }
+            channel.pipeline().addFirst(newHandler());
+
+            List<CountDownLatch> latchList = new ArrayList<CountDownLatch>(numHandlers);
+            for (int i = 0; i < numHandlers; i++) {
+                CountDownLatch latch = new CountDownLatch(1);
+                channel.pipeline().addFirst(executorGroup, "h" + i, new BadChannelHandler(latch));
+                latchList.add(latch);
+            }
+            if (lateRegister) {
+                group.register(channel).sync();
+            }
+
+            for (int i = 0; i < numHandlers; i++) {
+                // Wait until the latch was countDown which means handlerRemoved(...) was called.
+                latchList.get(i).await();
+                assertNull(channel.pipeline().get("h" + i));
+            }
+        } finally {
+            executorGroup.shutdownGracefully();
+        }
+    }
+
+    private static final class BadChannelHandler extends ChannelHandlerAdapter {
+        private final CountDownLatch latch;
+
+        BadChannelHandler(CountDownLatch latch) {
+            this.latch = latch;
+        }
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            TimeUnit.MILLISECONDS.sleep(10);
+            throw new RuntimeException();
+        }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) {
+            latch.countDown();
+        }
     }
 
     @Test(timeout = 5000)
