@@ -71,7 +71,7 @@ public class DefaultPromiseTest {
         Mockito.when(executor.inEventLoop()).thenReturn(false);
 
         Promise<Void> promise = new DefaultPromise<Void>(executor);
-        promise.cancel(false);
+        assertTrue(promise.cancel(false));
         Mockito.verify(executor, Mockito.never()).execute(Mockito.any(Runnable.class));
         assertTrue(promise.isCancelled());
     }
@@ -103,7 +103,7 @@ public class DefaultPromiseTest {
     @Test(expected = CancellationException.class)
     public void testCancellationExceptionIsThrownWhenBlockingGet() throws InterruptedException, ExecutionException {
         final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
-        promise.cancel(false);
+        assertTrue(promise.cancel(false));
         promise.get();
     }
 
@@ -111,7 +111,7 @@ public class DefaultPromiseTest {
     public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() throws InterruptedException,
             ExecutionException, TimeoutException {
         final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
-        promise.cancel(false);
+        assertTrue(promise.cancel(false));
         promise.get(1, TimeUnit.SECONDS);
     }
 
@@ -119,7 +119,7 @@ public class DefaultPromiseTest {
     public void testCancellationExceptionIsReturnedAsCause() throws InterruptedException,
     ExecutionException, TimeoutException {
         final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
-        promise.cancel(false);
+        assertTrue(promise.cancel(false));
         assertThat(promise.cause(), instanceOf(CancellationException.class));
     }
 
