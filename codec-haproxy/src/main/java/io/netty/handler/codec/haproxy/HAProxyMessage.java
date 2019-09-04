@@ -274,7 +274,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
                 return new HAProxySSLTLV(verify, client, encapsulatedTlvs, rawContent);
             }
             return new HAProxySSLTLV(verify, client, Collections.<HAProxyTLV>emptyList(), rawContent);
-        // If we're not dealing with a SSL Type, we can use the same mechanism
+        // If we're not dealing with an SSL Type, we can use the same mechanism
         case PP2_TYPE_ALPN:
         case PP2_TYPE_AUTHORITY:
         case PP2_TYPE_SSL_VERSION:
