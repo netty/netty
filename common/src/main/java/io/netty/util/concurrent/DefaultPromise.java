@@ -152,12 +152,14 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     @Override
     public Throwable cause() {
         Object result = this.result;
-        if (result == CANCELLATION_CAUSE_HOLDER) {
-            CancellationException ce = new LeanCancellationException();
-            RESULT_UPDATER.lazySet(this, new CauseHolder(ce));
+        if (result != CANCELLATION_CAUSE_HOLDER) {
+            return (result instanceof CauseHolder) ? ((CauseHolder) result).cause : null;
+        }
+        CancellationException ce = new LeanCancellationException();
+        if (RESULT_UPDATER.compareAndSet(this, CANCELLATION_CAUSE_HOLDER, new CauseHolder(ce))) {
             return ce;
         }
-        return (result instanceof CauseHolder) ? ((CauseHolder) result).cause : null;
+        return ((CauseHolder) this.result).cause;
     }
 
     @Override
