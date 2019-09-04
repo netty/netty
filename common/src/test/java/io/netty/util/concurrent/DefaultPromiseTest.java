@@ -37,6 +37,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.Math.max;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.lessThan;
 import static org.junit.Assert.*;
 
@@ -112,6 +113,14 @@ public class DefaultPromiseTest {
         final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
         promise.cancel(false);
         promise.get(1, TimeUnit.SECONDS);
+    }
+
+    @Test
+    public void testCancellationExceptionIsReturnedAsCause() throws InterruptedException,
+    ExecutionException, TimeoutException {
+        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
+        promise.cancel(false);
+        assertThat(promise.cause(), instanceOf(CancellationException.class));
     }
 
     @Test
