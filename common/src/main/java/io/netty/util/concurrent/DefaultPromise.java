@@ -43,6 +43,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private static final Object UNCANCELLABLE = new Object();
     private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(ThrowableUtil.unknownStackTrace(
             new CancellationException(), DefaultPromise.class, "cancel(...)"));
+    private static final StackTraceElement[] CANCELLATION_STACK = CANCELLATION_CAUSE_HOLDER.cause.getStackTrace();
 
     private volatile Object result;
     private final EventExecutor executor;
@@ -139,7 +140,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         @Override
         public Throwable fillInStackTrace() {
-            setStackTrace(CANCELLATION_CAUSE_HOLDER.cause.getStackTrace());
+            setStackTrace(CANCELLATION_STACK);
             return this;
         }
         @Override
