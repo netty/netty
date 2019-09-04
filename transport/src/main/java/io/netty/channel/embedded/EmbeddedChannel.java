@@ -599,11 +599,7 @@ public class EmbeddedChannel extends AbstractChannel {
             recordException(e);
         }
 
-        try {
-            embeddedEventLoop.runScheduledTasks();
-        } catch (Exception e) {
-            recordException(e);
-        }
+        runScheduledPendingTasks();
     }
 
     /**
@@ -619,6 +615,9 @@ public class EmbeddedChannel extends AbstractChannel {
         } catch (Exception e) {
             recordException(e);
             return embeddedEventLoop.nextScheduledTask();
+        } finally {
+            // A scheduled task may put something on the taskQueue so lets run it.
+            embeddedEventLoop.runTasks();
         }
     }
 

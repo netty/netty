@@ -53,6 +53,7 @@ import java.net.InetSocketAddress;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
@@ -222,10 +223,22 @@ public class Http2FrameCodecTest {
         Http2FrameCodec codec = new Http2FrameCodec(enc, dec, new Http2Settings(), false);
         EmbeddedChannel em = new EmbeddedChannel(codec);
 
-        // We call #consumeBytes on a stream id which has not been seen yet to emulate the case
-        // where a stream is deregistered which in reality can happen in response to a RST.
-        assertFalse(codec.consumeBytes(1, 1));
+        AtomicReference<Http2Exception> errorRef = new AtomicReference<>();
+        em.eventLoop().execute(() -> {
+            try {
+                // We call #consumeBytes on a stream id which has not been seen yet to emulate the case
+                // where a stream is deregistered which in reality can happen in response to a RST.
+                assertFalse(codec.consumeBytes(1, 1));
+            } catch (Http2Exception e) {
+                errorRef.set(e);
+            }
+        });
+
         assertTrue(em.finishAndReleaseAll());
+        Http2Exception exception = errorRef.get();
+        if (exception != null) {
+            throw exception;
+        }
     }
 
     @Test
@@ -516,9 +529,23 @@ public class Http2FrameCodecTest {
         int initialWindowSizeBefore = localFlow.initialWindowSize();
         Http2Stream connectionStream = connection.connectionStream();
         int connectionWindowSizeBefore = localFlow.windowSize(connectionStream);
-        // We only replenish the flow control window after the amount consumed drops below the following threshold.
-        // We make the threshold very "high" so that window updates will be sent when the delta is relatively small.
-        ((DefaultHttp2LocalFlowController) localFlow).windowUpdateRatio(connectionStream, .999f);
+
+        AtomicReference<Http2Exception> errorRef = new AtomicReference<>();
+        channel.eventLoop().execute(() -> {
+            try {
+                // We only replenish the flow control window after the amount consumed drops below the following
+                // threshold. We make the threshold very "high" so that window updates will be sent when the delta is
+                // relatively small.
+                ((DefaultHttp2LocalFlowController) localFlow).windowUpdateRatio(connectionStream, .999f);
+            } catch (Http2Exception e) {
+                errorRef.set(e);
+            }
+        });
+
+        Http2Exception exception = errorRef.get();
+        if (exception != null) {
+            throw exception;
+        }
 
         int windowUpdate = 1024;
 
@@ -740,10 +767,21 @@ public class Http2FrameCodecTest {
         Http2FrameStream idleStream = frameCodec.newStream();
 
         final Set<Http2FrameStream> activeStreams = new HashSet<>();
-        frameCodec.forEachActiveStream(stream -> {
-            activeStreams.add(stream);
-            return true;
+        final AtomicReference<Http2Exception> errorRef = new AtomicReference<>();
+        channel.eventLoop().execute(() -> {
+            try {
+                frameCodec.forEachActiveStream(stream -> {
+                    activeStreams.add(stream);
+                    return true;
+                });
+            } catch (Http2Exception e) {
+                errorRef.set(e);
+            }
         });
+        Http2Exception exception = errorRef.get();
+        if (exception != null) {
+            throw exception;
+        }
 
         assertEquals(2, activeStreams.size());
 

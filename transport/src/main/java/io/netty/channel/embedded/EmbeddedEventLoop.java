@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements EventLoop {
 
     private final Queue<Runnable> tasks = new ArrayDeque<>(2);
+    private boolean running;
 
     private static EmbeddedChannel cast(Channel channel) {
         if (channel instanceof EmbeddedChannel) {
@@ -65,28 +66,47 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     public void execute(Runnable command) {
         requireNonNull(command, "command");
         tasks.add(command);
+        if (!running) {
+            runTasks();
+        }
     }
 
     void runTasks() {
-        for (;;) {
-            Runnable task = tasks.poll();
-            if (task == null) {
-                break;
-            }
+        boolean wasRunning = running;
+        try {
+            for (;;) {
+                running = true;
+                Runnable task = tasks.poll();
+                if (task == null) {
+                    break;
+                }
 
-            task.run();
+                task.run();
+            }
+        } finally {
+            if (!wasRunning) {
+                running = false;
+            }
         }
     }
 
     long runScheduledTasks() {
         long time = AbstractScheduledEventExecutor.nanoTime();
-        for (;;) {
-            Runnable task = pollScheduledTask(time);
-            if (task == null) {
-                return nextScheduledTaskNano();
-            }
+        boolean wasRunning = running;
+        try {
+            for (;;) {
+                running = true;
+                Runnable task = pollScheduledTask(time);
+                if (task == null) {
+                    return nextScheduledTaskNano();
+                }
 
-            task.run();
+                task.run();
+            }
+        } finally {
+            if (!wasRunning) {
+                running = false;
+            }
         }
     }
 
@@ -95,7 +115,12 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     }
 
     void cancelScheduled() {
-        cancelScheduledTasks();
+        running = true;
+        try {
+            cancelScheduledTasks();
+        } finally {
+            running = false;
+        }
     }
 
     @Override
@@ -136,6 +161,6 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
 
     @Override
     public boolean inEventLoop(Thread thread) {
-        return true;
+        return running;
     }
 }

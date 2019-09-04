@@ -75,8 +75,11 @@ public class Http2ServerUpgradeCodecTest {
         } else {
             codec = new Http2ServerUpgradeCodec((Http2FrameCodec) handler, multiplexer);
         }
-        assertTrue(codec.prepareUpgradeResponse(ctx, request, new DefaultHttpHeaders()));
-        codec.upgradeTo(ctx, request);
+        channel.eventLoop().execute(() -> {
+            assertTrue(codec.prepareUpgradeResponse(ctx, request, new DefaultHttpHeaders()));
+            codec.upgradeTo(ctx, request);
+        });
+
         // Flush the channel to ensure we write out all buffered data
         channel.flush();
 

@@ -119,7 +119,11 @@ public class LoggingHandlerTest {
         channel.config().setWriteBufferHighWaterMark(10);
         channel.write("hello", channel.newPromise());
 
-        verify(appender).doAppend(argThat(new RegexLogMatcher(".+WRITABILITY CHANGED$")));
+        // This is expected to be called 3 times:
+        // - Mark the channel unwritable when schedule the write on the EventLoop.
+        // - Mark writable when dequeue task
+        // - Mark unwritable when the write is actual be fired through the pipeline and hit the ChannelOutboundBuffer.
+        verify(appender, times(3)).doAppend(argThat(new RegexLogMatcher(".+WRITABILITY CHANGED$")));
     }
 
     @Test
