@@ -31,6 +31,7 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.unix.DatagramSocketAddress;
 import io.netty.channel.unix.Errors;
+import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannelUtil;
@@ -494,19 +495,27 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                     do {
                         ByteBuf byteBuf = allocHandle.allocate(allocator);
                         final boolean read;
-                        if (connected) {
-                            read = connectedRead(allocHandle, byteBuf);
-                        } else {
-                            int datagramSize = config().getMaxDatagramPayloadSize();
-                            int numDatagram = datagramSize == 0 ? 1 : byteBuf.writableBytes() / datagramSize;
+                        int datagramSize = config().getMaxDatagramPayloadSize();
+                        int numDatagram = datagramSize == 0 ? 1 : byteBuf.writableBytes() / datagramSize;
 
+                        try {
                             if (numDatagram <= 1) {
-                                read = read(allocHandle, byteBuf, datagramSize);
+                                if (connected) {
+                                    read = connectedRead(allocHandle, byteBuf);
+                                } else {
+                                    read = read(allocHandle, byteBuf, datagramSize);
+                                }
                             } else {
                                 // Try to use scattering reads via recvmmsg(...) syscall.
                                 read = scatteringRead(allocHandle, byteBuf, datagramSize, numDatagram);
                             }
+                        } catch (NativeIoException e) {
+                            if (connected) {
+                                throw translateForConnected(e);
+                            }
+                            throw e;
                         }
+
                         if (read) {
                             readPending = false;
                         } else {
@@ -533,18 +542,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             throws Exception {
         try {
             allocHandle.attemptedBytesRead(byteBuf.writableBytes());
+            allocHandle.lastBytesRead(doReadBytes(byteBuf));
 
-            try {
-                allocHandle.lastBytesRead(doReadBytes(byteBuf));
-            } catch (Errors.NativeIoException e) {
-                // We need to correctly translate connect errors to match NIO behaviour.
-                if (e.expectedErr() == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
-                    PortUnreachableException error = new PortUnreachableException(e.getMessage());
-                    error.initCause(e);
-                    throw error;
-                }
-                throw e;
-            }
             if (allocHandle.lastBytesRead() <= 0) {
                 // nothing was read, release the buffer.
                 return false;
@@ -560,6 +559,16 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 byteBuf.release();
             }
         }
+    }
+
+    private IOException translateForConnected(NativeIoException e) {
+        // We need to correctly translate connect errors to match NIO behaviour.
+        if (e.expectedErr() == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
+            PortUnreachableException error = new PortUnreachableException(e.getMessage());
+            error.initCause(e);
+            return error;
+        }
+        return e;
     }
 
     private boolean scatteringRead(EpollRecvByteAllocatorHandle allocHandle,
@@ -578,6 +587,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             allocHandle.attemptedBytesRead(offset - byteBuf.writerIndex());
 
             NativeDatagramPacketArray.NativeDatagramPacket[] packets = array.packets();
+
             int received = socket.recvmmsg(packets, 0, array.count());
             if (received == 0) {
                 allocHandle.lastBytesRead(-1);

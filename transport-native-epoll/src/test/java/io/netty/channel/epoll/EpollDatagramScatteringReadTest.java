@@ -53,7 +53,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
     }
 
     public void testScatteringReadPartial(Bootstrap sb, Bootstrap cb) throws Throwable {
-        testScatteringRead(sb, cb, true);
+        testScatteringRead(sb, cb, false, true);
     }
 
     @Test
@@ -62,12 +62,31 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
     }
 
     public void testScatteringRead(Bootstrap sb, Bootstrap cb) throws Throwable {
-        testScatteringRead(sb, cb, false);
+        testScatteringRead(sb, cb, false, false);
     }
 
-    private void testScatteringRead(Bootstrap sb, Bootstrap cb, boolean partial) throws Throwable {
+    @Test
+    public void testScatteringReadConnectedPartial() throws Throwable {
+        run();
+    }
+
+    public void testScatteringReadConnectedPartial(Bootstrap sb, Bootstrap cb) throws Throwable {
+        testScatteringRead(sb, cb, true, true);
+    }
+
+    @Test
+    public void testScatteringConnectedRead() throws Throwable {
+        run();
+    }
+
+    public void testScatteringConnectedRead(Bootstrap sb, Bootstrap cb) throws Throwable {
+        testScatteringRead(sb, cb, true, false);
+    }
+
+    private void testScatteringRead(Bootstrap sb, Bootstrap cb, boolean connected, boolean partial) throws Throwable {
         int packetSize = 512;
         int numPackets = 4;
+
         sb.option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvByteBufAllocator(
                 packetSize, packetSize * (partial ? numPackets / 2 : numPackets), 64 * 1024));
         sb.option(EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE, packetSize);
@@ -117,6 +136,10 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
             sc = sb.bind(newSocketAddress()).sync().channel();
             cc = cb.bind(newSocketAddress()).sync().channel();
 
+            if (connected) {
+                sc.connect(cc.localAddress()).syncUninterruptibly();
+            }
+
             InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
 
             List<ChannelFuture> futures = new ArrayList<ChannelFuture>(numPackets);
@@ -149,5 +172,4 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
             }
         }
     }
-
 }
