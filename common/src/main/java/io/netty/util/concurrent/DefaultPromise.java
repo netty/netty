@@ -19,6 +19,7 @@ import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -40,6 +41,9 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class, Object.class, "result");
     private static final Object SUCCESS = new Object();
     private static final Object UNCANCELLABLE = new Object();
+    private static final CauseHolder CANCELLATION_CAUSE_HOLDER = new CauseHolder(ThrowableUtil.unknownStackTrace(
+            new CancellationException(), DefaultPromise.class, "cancel(...)"));
+    private static final StackTraceElement[] CANCELLATION_STACK = CANCELLATION_CAUSE_HOLDER.cause.getStackTrace();
 
     private volatile Object result;
     private final EventExecutor executor;
@@ -131,10 +135,32 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         return result == null;
     }
 
+    private static final class LeanCancellationException extends CancellationException {
+        private static final long serialVersionUID = 2794674970981187807L;
+
+        @Override
+        public Throwable fillInStackTrace() {
+            setStackTrace(CANCELLATION_STACK);
+            return this;
+        }
+
+        @Override
+        public String toString() {
+            return CancellationException.class.getName();
+        }
+    }
+
     @Override
     public Throwable cause() {
         Object result = this.result;
-        return (result instanceof CauseHolder) ? ((CauseHolder) result).cause : null;
+        if (result != CANCELLATION_CAUSE_HOLDER) {
+            return (result instanceof CauseHolder) ? ((CauseHolder) result).cause : null;
+        }
+        CancellationException ce = new LeanCancellationException();
+        if (RESULT_UPDATER.compareAndSet(this, CANCELLATION_CAUSE_HOLDER, new CauseHolder(ce))) {
+            return ce;
+        }
+        return ((CauseHolder) this.result).cause;
     }
 
     @Override
@@ -301,8 +327,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      */
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
-        if (RESULT_UPDATER.get(this) == null &&
-                RESULT_UPDATER.compareAndSet(this, null, new CauseHolder(new CancellationException()))) {
+        if (RESULT_UPDATER.compareAndSet(this, null, CANCELLATION_CAUSE_HOLDER)) {
             if (checkNotifyWaiters()) {
                 notifyListeners();
             }
