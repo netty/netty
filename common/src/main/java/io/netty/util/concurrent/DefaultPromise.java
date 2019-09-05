@@ -135,7 +135,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         return result == null;
     }
 
-    private static class LeanCancellationException extends CancellationException {
+    private static final class LeanCancellationException extends CancellationException {
         private static final long serialVersionUID = 2794674970981187807L;
 
         @Override
@@ -143,6 +143,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             setStackTrace(CANCELLATION_STACK);
             return this;
         }
+
         @Override
         public String toString() {
             return CancellationException.class.getName();
