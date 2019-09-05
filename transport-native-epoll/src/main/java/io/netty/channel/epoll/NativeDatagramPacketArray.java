@@ -117,6 +117,8 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
         private int count;
 
         private final byte[] addr = new byte[16];
+        private final byte[] ipv4Bytes = new byte[4];
+
         private int addrLen;
         private int scopeId;
         private int port;
@@ -145,10 +147,11 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
 
         DatagramPacket newDatagramPacket(ByteBuf buffer, InetSocketAddress localAddress) throws UnknownHostException {
             final InetAddress address;
-            if (scopeId != 0) {
-                address = Inet6Address.getByAddress(null, addr, scopeId);
+            if (addrLen == ipv4Bytes.length) {
+                System.arraycopy(addr, 0, ipv4Bytes, 0, addrLen);
+                address = InetAddress.getByAddress(ipv4Bytes);
             } else {
-                address = InetAddress.getByAddress(addr);
+                address = Inet6Address.getByAddress(null, addr, scopeId);
             }
             return new DatagramPacket(buffer.writerIndex(count),
                     localAddress, new InetSocketAddress(address, port));

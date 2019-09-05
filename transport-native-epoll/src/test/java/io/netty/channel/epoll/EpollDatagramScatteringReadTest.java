@@ -29,6 +29,7 @@ import io.netty.util.internal.PlatformDependent;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -82,6 +83,9 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
                     // Nothing will be sent.
                 }
             });
+            cc = cb.bind(newSocketAddress()).sync().channel();
+            final SocketAddress ccAddress = cc.localAddress();
+
             final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
             final byte[] bytes = new byte[packetSize];
             PlatformDependent.threadLocalRandom().nextBytes(bytes);
@@ -98,6 +102,8 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
 
                 @Override
                 protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) {
+                    assertEquals(ccAddress, msg.sender());
+
                     assertEquals(bytes.length, msg.content().readableBytes());
                     byte[] receivedBytes = new byte[bytes.length];
                     msg.content().readBytes(receivedBytes);
@@ -115,7 +121,6 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
 
             sb.option(ChannelOption.AUTO_READ, false);
             sc = sb.bind(newSocketAddress()).sync().channel();
-            cc = cb.bind(newSocketAddress()).sync().channel();
 
             InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
 

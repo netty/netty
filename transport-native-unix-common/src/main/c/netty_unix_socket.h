@@ -23,6 +23,7 @@
 int netty_unix_socket_initSockaddr(JNIEnv* env, jboolean ipv6, jbyteArray address, jint scopeId, jint jport, const struct sockaddr_storage* addr, socklen_t* addrSize);
 int netty_unix_socket_getOption(JNIEnv* env, jint fd, int level, int optname, void* optval, socklen_t optlen);
 int netty_unix_socket_setOption(JNIEnv* env, jint fd, int level, int optname, const void* optval, socklen_t len);
+int netty_unix_socket_ipAddressLength(const struct sockaddr_storage* addr);
 
 // These method is sometimes needed if you want to special handle some errno value before throwing an exception.
 int netty_unix_socket_getOption0(jint fd, int level, int optname, void* optval, socklen_t optlen);
