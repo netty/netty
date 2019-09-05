@@ -158,15 +158,18 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
                 }
             });
 
+            final SocketAddress sender;
             if (bindClient) {
                 cc = cb.bind(newSocketAddress()).sync().channel();
+                sender = cc.localAddress();
             } else {
                 cb.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
                 cc = cb.register().sync().channel();
+                sender = null;
             }
 
             final CountDownLatch latch = new CountDownLatch(count);
-            sc = setupServerChannel(sb, bytes, cc.localAddress(), latch, false);
+            sc = setupServerChannel(sb, bytes, sender, latch, false);
 
             InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
             for (int i = 0; i < count; i++) {
