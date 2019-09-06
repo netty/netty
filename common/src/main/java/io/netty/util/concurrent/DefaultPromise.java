@@ -26,6 +26,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -153,10 +154,10 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     public Throwable cause() {
-        return cause(result);
+        return cause0(result);
     }
 
-    private Throwable cause(Object result) {
+    private Throwable cause0(Object result) {
         if (!(result instanceof CauseHolder)) {
             return null;
         }
@@ -329,12 +330,39 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @SuppressWarnings("unchecked")
     @Override
-    protected V getOrThrowNow() throws ExecutionException {
+    public V get() throws InterruptedException, ExecutionException {
+         Object result = this.result;
+         if (!isDone0(result)) {
+             await();
+             result = this.result;
+         }
+         if (result == SUCCESS || result == UNCANCELLABLE) {
+             return null;
+         }
+        Throwable cause = cause0(result);
+        if (cause == null) {
+            return (V) result;
+        }
+        if (cause instanceof CancellationException) {
+            throw (CancellationException) cause;
+        }
+        throw new ExecutionException(cause);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         Object result = this.result;
+        if (!isDone0(result)) {
+            if (!await(timeout, unit)) {
+                throw new TimeoutException();
+            }
+            result = this.result;
+        }
         if (result == SUCCESS || result == UNCANCELLABLE) {
             return null;
         }
-        Throwable cause = cause(result);
+        Throwable cause = cause0(result);
         if (cause == null) {
             return (V) result;
         }
