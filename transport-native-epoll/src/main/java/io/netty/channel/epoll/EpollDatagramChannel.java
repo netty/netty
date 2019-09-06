@@ -501,7 +501,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         try {
                             if (numDatagram <= 1) {
                                 if (connected) {
-                                    read = connectedRead(allocHandle, byteBuf);
+                                    read = connectedRead(allocHandle, byteBuf, datagramSize);
                                 } else {
                                     read = read(allocHandle, byteBuf, datagramSize);
                                 }
@@ -538,16 +538,26 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         }
     }
 
-    private boolean connectedRead(EpollRecvByteAllocatorHandle allocHandle, ByteBuf byteBuf)
+    private boolean connectedRead(EpollRecvByteAllocatorHandle allocHandle, ByteBuf byteBuf, int maxDatagramPacketSize)
             throws Exception {
         try {
-            allocHandle.attemptedBytesRead(byteBuf.writableBytes());
-            allocHandle.lastBytesRead(doReadBytes(byteBuf));
+            int writable = maxDatagramPacketSize != 0 ? Math.min(byteBuf.writableBytes(), maxDatagramPacketSize)
+                    : byteBuf.writableBytes();
+            allocHandle.attemptedBytesRead(writable);
 
-            if (allocHandle.lastBytesRead() <= 0) {
+            byteBuf.writerIndex(byteBuf.readerIndex() + writable);
+
+            int read = doReadBytes(byteBuf);
+
+            if (read <= 0) {
+                allocHandle.lastBytesRead(read);
+
                 // nothing was read, release the buffer.
                 return false;
             }
+            allocHandle.lastBytesRead(maxDatagramPacketSize <= 0 ?
+                    read : writable);
+
             DatagramPacket packet = new DatagramPacket(byteBuf, localAddress(), remoteAddress());
             allocHandle.incMessagesRead(1);
 
