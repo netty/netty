@@ -40,6 +40,10 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
     // We share one IovArray for all NativeDatagramPackets to reduce memory overhead. This will allow us to write
     // up to IOV_MAX iovec across all messages in one sendmmsg(...) call.
     private final IovArray iovArray = new IovArray();
+
+    // temporary array to copy the ipv4 part of ipv6-mapped-ipv4 addresses and then create a Inet4Address out of it.
+    private final byte[] ipv4Bytes = new byte[4];
+
     private int count;
 
     NativeDatagramPacketArray() {
@@ -110,14 +114,13 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
      * Used to pass needed data to JNI.
      */
     @SuppressWarnings("unused")
-    static final class NativeDatagramPacket {
+    final class NativeDatagramPacket {
 
         // This is the actual struct iovec*
         private long memoryAddress;
         private int count;
 
         private final byte[] addr = new byte[16];
-        private final byte[] ipv4Bytes = new byte[4];
 
         private int addrLen;
         private int scopeId;
