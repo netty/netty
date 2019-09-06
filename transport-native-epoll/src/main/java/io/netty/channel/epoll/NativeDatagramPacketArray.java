@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Limits;
@@ -32,7 +33,7 @@ import static io.netty.channel.unix.NativeInetAddress.copyIpv4MappedIpv6Address;
 /**
  * Support <a href="http://linux.die.net/man/2/sendmmsg">sendmmsg(...)</a> on linux with GLIBC 2.14+
  */
-final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessageProcessor {
+final class NativeDatagramPacketArray {
 
     // Use UIO_MAX_IOV as this is the maximum number we can write with one sendmmsg(...) call.
     private final NativeDatagramPacket[] packets = new NativeDatagramPacket[UIO_MAX_IOV];
@@ -43,6 +44,7 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
 
     // temporary array to copy the ipv4 part of ipv6-mapped-ipv4 addresses and then create a Inet4Address out of it.
     private final byte[] ipv4Bytes = new byte[4];
+    private final MyMessageProcessor processor = new MyMessageProcessor();
 
     private int count;
 
@@ -50,11 +52,6 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
         for (int i = 0; i < packets.length; i++) {
             packets[i] = new NativeDatagramPacket();
         }
-    }
-
-    private boolean addReadable(DatagramPacket packet) {
-        ByteBuf buf = packet.content();
-        return add0(buf, buf.readerIndex(), buf.readableBytes(), packet.recipient());
     }
 
     boolean addWritable(ByteBuf buf, int index, int len) {
@@ -82,9 +79,9 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
         return true;
     }
 
-    @Override
-    public boolean processMessage(Object msg) {
-        return msg instanceof DatagramPacket && addReadable((DatagramPacket) msg);
+    void add(ChannelOutboundBuffer buffer, boolean connected) throws Exception {
+        processor.connected = connected;
+        buffer.forEachFlushedMessage(processor);
     }
 
     /**
@@ -108,6 +105,24 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
 
     void release() {
         iovArray.release();
+    }
+
+    private final class MyMessageProcessor implements MessageProcessor {
+        private boolean connected;
+
+        @Override
+        public boolean processMessage(Object msg) {
+            if (msg instanceof DatagramPacket) {
+                DatagramPacket packet = (DatagramPacket) msg;
+                ByteBuf buf = packet.content();
+                return add0(buf, buf.readerIndex(), buf.readableBytes(), packet.recipient());
+            }
+            if (msg instanceof ByteBuf && connected) {
+                ByteBuf buf = (ByteBuf) msg;
+                return add0(buf, buf.readerIndex(), buf.readableBytes(), null);
+            }
+            return false;
+        }
     }
 
     /**

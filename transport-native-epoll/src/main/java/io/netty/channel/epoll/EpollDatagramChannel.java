@@ -311,7 +311,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 // Check if sendmmsg(...) is supported which is only the case for GLIBC 2.14+
                 if (Native.IS_SUPPORTING_SENDMMSG && in.size() > 1) {
                     NativeDatagramPacketArray array = cleanDatagramPacketArray();
-                    in.forEachFlushedMessage(array);
+                    array.add(in, isConnected());
                     int cnt = array.count();
 
                     if (cnt >= 1) {

@@ -32,6 +32,8 @@ import org.junit.Test;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.NotYetConnectedException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -242,25 +244,16 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
             cc.connect(sc.localAddress()).syncUninterruptibly();
 
+            List<ChannelFuture> futures = new ArrayList<ChannelFuture>();
             for (int i = 0; i < count; i++) {
-                switch (wrapType) {
-                    case DUP:
-                        cc.write(buf.retainedDuplicate());
-                        break;
-                    case SLICE:
-                        cc.write(buf.retainedSlice());
-                        break;
-                    case READ_ONLY:
-                        cc.write(buf.retain().asReadOnly());
-                        break;
-                    case NONE:
-                        cc.write(buf.retain());
-                        break;
-                    default:
-                        throw new Error("unknown wrap type: " + wrapType);
-                }
+                futures.add(write(cc, buf, wrapType));
             }
             cc.flush();
+
+            for (ChannelFuture future: futures) {
+                future.sync();
+            }
+
             assertTrue(latch.await(10, TimeUnit.SECONDS));
             assertTrue(clientLatch.await(10, TimeUnit.SECONDS));
             assertTrue(cc.isConnected());
@@ -279,6 +272,21 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
 
             closeChannel(cc);
             closeChannel(sc);
+        }
+    }
+
+    private static ChannelFuture write(Channel cc, ByteBuf buf, WrapType wrapType) {
+        switch (wrapType) {
+            case DUP:
+                return cc.write(buf.retainedDuplicate());
+            case SLICE:
+                return cc.write(buf.retainedSlice());
+            case READ_ONLY:
+                return cc.write(buf.retain().asReadOnly());
+            case NONE:
+                return cc.write(buf.retain());
+            default:
+                throw new Error("unknown wrap type: " + wrapType);
         }
     }
 

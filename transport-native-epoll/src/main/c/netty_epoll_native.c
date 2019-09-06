@@ -319,15 +319,18 @@ static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
 
         jobject packet = (*env)->GetObjectArrayElement(env, packets, i + offset);
         jbyteArray address = (jbyteArray) (*env)->GetObjectField(env, packet, packetAddrFieldId);
-        jint scopeId = (*env)->GetIntField(env, packet, packetScopeIdFieldId);
-        jint port = (*env)->GetIntField(env, packet, packetPortFieldId);
+        jint addrLen = (*env)->GetIntField(env, packet, packetAddrLenFieldId);
 
-        if (netty_unix_socket_initSockaddr(env, ipv6, address, scopeId, port, &addr[i], &addrSize) == -1) {
-            return -1;
+        if (addrLen != 0) {
+            jint scopeId = (*env)->GetIntField(env, packet, packetScopeIdFieldId);
+            jint port = (*env)->GetIntField(env, packet, packetPortFieldId);
+
+           if (netty_unix_socket_initSockaddr(env, ipv6, address, scopeId, port, &addr[i], &addrSize) == -1) {
+              return -1;
+           }
+           msg[i].msg_hdr.msg_name = &addr[i];
+           msg[i].msg_hdr.msg_namelen = addrSize;
         }
-
-        msg[i].msg_hdr.msg_name = &addr[i];
-        msg[i].msg_hdr.msg_namelen = addrSize;
 
         msg[i].msg_hdr.msg_iov = (struct iovec*) (intptr_t) (*env)->GetLongField(env, packet, packetMemoryAddressFieldId);
         msg[i].msg_hdr.msg_iovlen = (*env)->GetIntField(env, packet, packetCountFieldId);
