@@ -578,6 +578,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             boolean wasActive = isActive();
             try {
                 doDisconnect();
+                // Reset remoteAddress and localAddress
+                remoteAddress = null;
+                localAddress = null;
             } catch (Throwable t) {
                 safeSetFailure(promise, t);
                 closeIfClosed();

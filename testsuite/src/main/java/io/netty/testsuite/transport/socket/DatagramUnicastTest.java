@@ -257,9 +257,14 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
             assertTrue(clientLatch.await(10, TimeUnit.SECONDS));
             assertTrue(cc.isConnected());
 
+            assertNotNull(cc.localAddress());
+            assertNotNull(cc.remoteAddress());
+
             // Test what happens when we call disconnect()
             cc.disconnect().syncUninterruptibly();
             assertFalse(cc.isConnected());
+            assertNotNull(cc.localAddress());
+            assertNull(cc.remoteAddress());
 
             ChannelFuture future = cc.writeAndFlush(
                     buf.retain().duplicate()).awaitUninterruptibly();
