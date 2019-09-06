@@ -545,18 +545,25 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                     : byteBuf.writableBytes();
             allocHandle.attemptedBytesRead(writable);
 
-            byteBuf.writerIndex(byteBuf.readerIndex() + writable);
+            int writerIndex = byteBuf.writerIndex();
+            int localReadAmount;
+            if (byteBuf.hasMemoryAddress()) {
+                localReadAmount = socket.readAddress(byteBuf.memoryAddress(), writerIndex, writerIndex + writable);
+            } else {
+                ByteBuffer buf = byteBuf.internalNioBuffer(writerIndex, writable);
+                localReadAmount = socket.read(buf, buf.position(), buf.limit());
+            }
 
-            int read = doReadBytes(byteBuf);
-
-            if (read <= 0) {
-                allocHandle.lastBytesRead(read);
+            if (localReadAmount <= 0) {
+                allocHandle.lastBytesRead(localReadAmount);
 
                 // nothing was read, release the buffer.
                 return false;
             }
+            byteBuf.writerIndex(writerIndex + localReadAmount);
+
             allocHandle.lastBytesRead(maxDatagramPacketSize <= 0 ?
-                    read : writable);
+                    localReadAmount : writable);
 
             DatagramPacket packet = new DatagramPacket(byteBuf, localAddress(), remoteAddress());
             allocHandle.incMessagesRead(1);
