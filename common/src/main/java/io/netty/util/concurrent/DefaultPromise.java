@@ -24,6 +24,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -152,15 +153,21 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     public Throwable cause() {
-        Object result = this.result;
-        if (result != CANCELLATION_CAUSE_HOLDER) {
-            return (result instanceof CauseHolder) ? ((CauseHolder) result).cause : null;
+        return cause(result);
+    }
+
+    private Throwable cause(Object result) {
+        if (!(result instanceof CauseHolder)) {
+            return null;
         }
-        CancellationException ce = new LeanCancellationException();
-        if (RESULT_UPDATER.compareAndSet(this, CANCELLATION_CAUSE_HOLDER, new CauseHolder(ce))) {
-            return ce;
+        if (result == CANCELLATION_CAUSE_HOLDER) {
+            CancellationException ce = new LeanCancellationException();
+            if (RESULT_UPDATER.compareAndSet(this, CANCELLATION_CAUSE_HOLDER, new CauseHolder(ce))) {
+                return ce;
+            }
+            result = this.result;
         }
-        return ((CauseHolder) this.result).cause;
+        return ((CauseHolder) result).cause;
     }
 
     @Override
@@ -318,6 +325,23 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             return null;
         }
         return (V) result;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    protected V getOrThrowNow() throws ExecutionException {
+        Object result = this.result;
+        if (result == SUCCESS || result == UNCANCELLABLE) {
+            return null;
+        }
+        Throwable cause = cause(result);
+        if (cause == null) {
+            return (V) result;
+        }
+        if (cause instanceof CancellationException) {
+            throw (CancellationException) cause;
+        }
+        throw new ExecutionException(cause);
     }
 
     /**
