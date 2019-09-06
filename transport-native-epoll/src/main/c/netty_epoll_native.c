@@ -67,6 +67,7 @@ struct mmsghdr {
 
 // Those are initialized in the init(...) method and cached for performance reasons
 static jfieldID packetAddrFieldId = NULL;
+static jfieldID packetAddrLenFieldId = NULL;
 static jfieldID packetScopeIdFieldId = NULL;
 static jfieldID packetPortFieldId = NULL;
 static jfieldID packetMemoryAddressFieldId = NULL;
@@ -386,12 +387,20 @@ static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
             struct sockaddr_in* ipaddr = (struct sockaddr_in*) addr;
 
             (*env)->SetByteArrayRegion(env, address, 0, 4, (jbyte*) &ipaddr->sin_addr.s_addr);
+            (*env)->SetIntField(env, packet, packetAddrLenFieldId, 4);
             (*env)->SetIntField(env, packet, packetScopeIdFieldId, 0);
             (*env)->SetIntField(env, packet, packetPortFieldId, ntohs(ipaddr->sin_port));
         } else {
+              int addrLen = netty_unix_socket_ipAddressLength(addr);
               struct sockaddr_in6* ip6addr = (struct sockaddr_in6*) addr;
 
-              (*env)->SetByteArrayRegion(env, address, 0, 16, (jbyte*) &ip6addr->sin6_addr.s6_addr);
+              if (addrLen == 4) {
+                  // IPV4 mapped IPV6 address
+                  (*env)->SetByteArrayRegion(env, address, 12, 4, (jbyte*) &ip6addr->sin6_addr.s6_addr);
+              } else {
+                  (*env)->SetByteArrayRegion(env, address, 0, 16, (jbyte*) &ip6addr->sin6_addr.s6_addr);
+              }
+              (*env)->SetIntField(env, packet, packetAddrLenFieldId, addrLen);
               (*env)->SetIntField(env, packet, packetScopeIdFieldId, ip6addr->sin6_scope_id);
               (*env)->SetIntField(env, packet, packetPortFieldId, ntohs(ip6addr->sin6_port));
         }
@@ -631,6 +640,11 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
         netty_unix_errors_throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.addr");
         goto error;
     }
+    packetAddrLenFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "addrLen", "I");
+    if (packetAddrLenFieldId == NULL) {
+        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.addrLen");
+        goto error;
+    }
     packetScopeIdFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "scopeId", "I");
     if (packetScopeIdFieldId == NULL) {
         netty_unix_errors_throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.scopeId");
@@ -675,6 +689,7 @@ error:
        netty_epoll_linuxsocket_JNI_OnUnLoad(env);
    }
    packetAddrFieldId = NULL;
+   packetAddrLenFieldId = NULL;
    packetScopeIdFieldId = NULL;
    packetPortFieldId = NULL;
    packetMemoryAddressFieldId = NULL;
@@ -692,6 +707,7 @@ static void netty_epoll_native_JNI_OnUnLoad(JNIEnv* env) {
     netty_epoll_linuxsocket_JNI_OnUnLoad(env);
 
     packetAddrFieldId = NULL;
+    packetAddrLenFieldId = NULL;
     packetScopeIdFieldId = NULL;
     packetPortFieldId = NULL;
     packetMemoryAddressFieldId = NULL;
