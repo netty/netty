@@ -331,14 +331,14 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     @SuppressWarnings("unchecked")
     @Override
     public V get() throws InterruptedException, ExecutionException {
-         Object result = this.result;
-         if (!isDone0(result)) {
-             await();
-             result = this.result;
-         }
-         if (result == SUCCESS || result == UNCANCELLABLE) {
-             return null;
-         }
+        Object result = this.result;
+        if (!isDone0(result)) {
+            await();
+            result = this.result;
+        }
+        if (result == SUCCESS || result == UNCANCELLABLE) {
+            return null;
+        }
         Throwable cause = cause0(result);
         if (cause == null) {
             return (V) result;
