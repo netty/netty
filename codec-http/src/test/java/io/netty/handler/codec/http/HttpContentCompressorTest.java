@@ -503,18 +503,18 @@ public class HttpContentCompressorTest {
     @Test
     public void testMultipleAcceptEncodingHeaders() {
         FullHttpRequest request = newRequest();
-        request.headers().set(HttpHeaderNames.ACCEPT_ENCODING, "unknown")
-               .add(HttpHeaderNames.ACCEPT_ENCODING, "gzip")
-               .add(HttpHeaderNames.ACCEPT_ENCODING, "deflate");
+        request.headers().set(HttpHeaderNames.ACCEPT_ENCODING, "unknown; q=1.0")
+               .add(HttpHeaderNames.ACCEPT_ENCODING, "gzip; q=0.5")
+               .add(HttpHeaderNames.ACCEPT_ENCODING, "deflate; q=0");
 
         EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
 
-        ch.writeInbound(request);
+        assertTrue(ch.writeInbound(request));
 
         FullHttpResponse res = new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
                 Unpooled.copiedBuffer("Gzip Win", CharsetUtil.US_ASCII));
-        ch.writeOutbound(res);
+        assertTrue(ch.writeOutbound(res));
 
         assertEncodedResponse(ch);
         HttpContent c = ch.readOutbound();

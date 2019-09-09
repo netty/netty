@@ -537,10 +537,16 @@ public class StringUtilTest {
 
     @Test
     public void testJoin() {
-        assertEquals("", StringUtil.join(",", Collections.<CharSequence>emptyList().iterator()));
-        assertEquals("a", StringUtil.join(",", Collections.singletonList("a").iterator()));
-        assertEquals("a,b,c", StringUtil.join(",", Arrays.asList("a", "b", "c").iterator()));
-        assertEquals("a,b,c,null,d", StringUtil.join(",", Arrays.asList("a", "b", "c", null, "d").iterator()));
+        assertEquals("",
+                     StringUtil.join(",", Collections.<CharSequence>emptyList()).toString());
+        assertEquals("a",
+                     StringUtil.join(",", Collections.singletonList("a")).toString());
+        assertEquals("a,b",
+                     StringUtil.join(",", Arrays.asList("a", "b")).toString());
+        assertEquals("a,b,c",
+                     StringUtil.join(",", Arrays.asList("a", "b", "c")).toString());
+        assertEquals("a,b,c,null,d",
+                     StringUtil.join(",", Arrays.asList("a", "b", "c", null, "d")).toString());
     }
 
 }

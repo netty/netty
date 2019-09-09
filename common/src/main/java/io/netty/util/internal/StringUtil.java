@@ -599,27 +599,33 @@ public final class StringUtil {
     }
 
     /**
-     * Returns a new string that contains all {@code elements} joined by a given separator.
+     * Returns a char sequence that contains all {@code elements} joined by a given separator.
      *
      * @param separator for each element
      * @param elements to join together
      *
-     * @return a string joined by a given separator.
+     * @return a char sequence joined by a given separator.
      */
-    public static CharSequence join(CharSequence separator, Iterator<? extends CharSequence> elements) {
+    public static CharSequence join(CharSequence separator, Iterable<? extends CharSequence> elements) {
         ObjectUtil.checkNotNull(separator, "separator");
         ObjectUtil.checkNotNull(elements, "elements");
 
-        if (!elements.hasNext()) {
+        Iterator<? extends CharSequence> iterator = elements.iterator();
+        if (!iterator.hasNext()) {
             return EMPTY_STRING;
         }
 
-        StringBuilder builder = new StringBuilder().append(elements.next());
-        while (elements.hasNext()) {
-            builder.append(separator).append(elements.next());
+        CharSequence firstElement = iterator.next();
+        if (!iterator.hasNext()) {
+            return firstElement;
         }
 
-        return builder.toString();
+        StringBuilder builder = new StringBuilder(firstElement);
+        do {
+            builder.append(separator).append(iterator.next());
+        } while (iterator.hasNext());
+
+        return builder;
     }
 
     /**

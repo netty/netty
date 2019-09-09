@@ -74,27 +74,30 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out)
-            throws Exception {
-        CharSequence acceptedEncoding;
+    protected void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out) throws Exception {
+        CharSequence acceptEncoding;
         List<String> acceptEncodingHeaders = msg.headers().getAll(ACCEPT_ENCODING);
-        if (acceptEncodingHeaders.isEmpty()) {
-            acceptedEncoding = HttpContentDecoder.IDENTITY;
-        } else if (acceptEncodingHeaders.size() == 1) {
-            acceptedEncoding = acceptEncodingHeaders.get(0);
-        } else {
+        switch (acceptEncodingHeaders.size()) {
+        case 0:
+            acceptEncoding = HttpContentDecoder.IDENTITY;
+            break;
+        case 1:
+            acceptEncoding = acceptEncodingHeaders.get(0);
+            break;
+        default:
             // Multiple message-header fields https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
-            acceptedEncoding = StringUtil.join(",", acceptEncodingHeaders.iterator());
+            acceptEncoding = StringUtil.join(",", acceptEncodingHeaders);
+            break;
         }
 
         HttpMethod method = msg.method();
         if (HttpMethod.HEAD.equals(method)) {
-            acceptedEncoding = ZERO_LENGTH_HEAD;
+            acceptEncoding = ZERO_LENGTH_HEAD;
         } else if (HttpMethod.CONNECT.equals(method)) {
-            acceptedEncoding = ZERO_LENGTH_CONNECT;
+            acceptEncoding = ZERO_LENGTH_CONNECT;
         }
 
-        acceptEncodingQueue.add(acceptedEncoding);
+        acceptEncodingQueue.add(acceptEncoding);
         out.add(ReferenceCountUtil.retain(msg));
     }
 
