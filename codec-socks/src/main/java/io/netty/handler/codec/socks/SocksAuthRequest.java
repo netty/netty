@@ -29,7 +29,6 @@ import java.nio.charset.CharsetEncoder;
  * @see SocksAuthRequestDecoder
  */
 public final class SocksAuthRequest extends SocksRequest {
-    private static final CharsetEncoder asciiEncoder = CharsetUtil.encoder(CharsetUtil.US_ASCII);
     private static final SocksSubnegotiationVersion SUBNEGOTIATION_VERSION = SocksSubnegotiationVersion.AUTH_PASSWORD;
     private final String username;
     private final String password;
@@ -38,6 +37,8 @@ public final class SocksAuthRequest extends SocksRequest {
         super(SocksRequestType.AUTH);
         requireNonNull(username, "username");
         requireNonNull(password, "password");
+
+        final CharsetEncoder asciiEncoder = CharsetUtil.encoder(CharsetUtil.US_ASCII);
         if (!asciiEncoder.canEncode(username) || !asciiEncoder.canEncode(password)) {
             throw new IllegalArgumentException(
                     "username: " + username + " or password: **** values should be in pure ascii");
