@@ -24,7 +24,9 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -152,15 +154,21 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     public Throwable cause() {
-        Object result = this.result;
-        if (result != CANCELLATION_CAUSE_HOLDER) {
-            return (result instanceof CauseHolder) ? ((CauseHolder) result).cause : null;
+        return cause0(result);
+    }
+
+    private Throwable cause0(Object result) {
+        if (!(result instanceof CauseHolder)) {
+            return null;
         }
-        CancellationException ce = new LeanCancellationException();
-        if (RESULT_UPDATER.compareAndSet(this, CANCELLATION_CAUSE_HOLDER, new CauseHolder(ce))) {
-            return ce;
+        if (result == CANCELLATION_CAUSE_HOLDER) {
+            CancellationException ce = new LeanCancellationException();
+            if (RESULT_UPDATER.compareAndSet(this, CANCELLATION_CAUSE_HOLDER, new CauseHolder(ce))) {
+                return ce;
+            }
+            result = this.result;
         }
-        return ((CauseHolder) this.result).cause;
+        return ((CauseHolder) result).cause;
     }
 
     @Override
@@ -318,6 +326,50 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             return null;
         }
         return (V) result;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public V get() throws InterruptedException, ExecutionException {
+        Object result = this.result;
+        if (!isDone0(result)) {
+            await();
+            result = this.result;
+        }
+        if (result == SUCCESS || result == UNCANCELLABLE) {
+            return null;
+        }
+        Throwable cause = cause0(result);
+        if (cause == null) {
+            return (V) result;
+        }
+        if (cause instanceof CancellationException) {
+            throw (CancellationException) cause;
+        }
+        throw new ExecutionException(cause);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+        Object result = this.result;
+        if (!isDone0(result)) {
+            if (!await(timeout, unit)) {
+                throw new TimeoutException();
+            }
+            result = this.result;
+        }
+        if (result == SUCCESS || result == UNCANCELLABLE) {
+            return null;
+        }
+        Throwable cause = cause0(result);
+        if (cause == null) {
+            return (V) result;
+        }
+        if (cause instanceof CancellationException) {
+            throw (CancellationException) cause;
+        }
+        throw new ExecutionException(cause);
     }
 
     /**
