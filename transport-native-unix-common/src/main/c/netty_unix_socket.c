@@ -103,7 +103,8 @@ static jobject createDatagramSocketAddress(JNIEnv* env, const struct sockaddr_st
         } else {
             offset = 0;
         }
-        (*env)->SetByteArrayRegion(env, addressBytes, offset, ipLength, (jbyte*) &s->sin6_addr.s6_addr);
+        jbyte* addr = (jbyte*) &s->sin6_addr.s6_addr;
+        (*env)->SetByteArrayRegion(env, addressBytes, 0, ipLength, addr + offset);
     }
     jobject obj = (*env)->NewObject(env, datagramSocketAddressClass, datagramSocketAddrMethodId, addressBytes, scopeId, port, len, local);
     if ((*env)->ExceptionCheck(env) == JNI_TRUE) {
