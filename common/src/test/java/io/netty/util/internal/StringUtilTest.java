@@ -534,4 +534,19 @@ public class StringUtilTest {
         assertEquals("", StringUtil.trimOws("\t ").toString());
         assertEquals("a b", StringUtil.trimOws("\ta b \t").toString());
     }
+
+    @Test
+    public void testJoin() {
+        assertEquals("",
+                     StringUtil.join(",", Collections.<CharSequence>emptyList()).toString());
+        assertEquals("a",
+                     StringUtil.join(",", Collections.singletonList("a")).toString());
+        assertEquals("a,b",
+                     StringUtil.join(",", Arrays.asList("a", "b")).toString());
+        assertEquals("a,b,c",
+                     StringUtil.join(",", Arrays.asList("a", "b", "c")).toString());
+        assertEquals("a,b,c,null,d",
+                     StringUtil.join(",", Arrays.asList("a", "b", "c", null, "d")).toString());
+    }
+
 }
