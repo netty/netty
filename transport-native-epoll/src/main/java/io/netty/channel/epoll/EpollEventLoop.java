@@ -33,7 +33,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.util.BitSet;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
@@ -68,8 +67,6 @@ class EpollEventLoop extends SingleThreadEventLoop {
     private final FileDescriptor eventFd;
     private final FileDescriptor timerFd;
     private final IntObjectMap<AbstractEpollChannel> channels = new IntObjectHashMap<AbstractEpollChannel>(4096);
-    private final BitSet pendingFlagChannels = new BitSet();
-
     private final boolean allowGrowing;
     private final EpollEventArray events;
 
@@ -274,7 +271,6 @@ class EpollEventLoop extends SingleThreadEventLoop {
         assert inEventLoop();
         int fd = ch.socket.intValue();
         Native.epollCtlAdd(epollFd.intValue(), fd, ch.flags);
-        ch.activeFlags = ch.flags;
         AbstractEpollChannel old = channels.put(fd, ch);
 
         // We either expect to have no Channel in the map with the same FD or that the FD of the old Channel is already
@@ -288,28 +284,6 @@ class EpollEventLoop extends SingleThreadEventLoop {
     void modify(AbstractEpollChannel ch) throws IOException {
         assert inEventLoop();
         Native.epollCtlMod(epollFd.intValue(), ch.socket.intValue(), ch.flags);
-        ch.activeFlags = ch.flags;
-    }
-
-    void updatePendingFlagsSet(AbstractEpollChannel ch) {
-        pendingFlagChannels.set(ch.socket.intValue(), ch.flags != ch.activeFlags);
-    }
-
-    private void processPendingChannelFlags() {
-        // Call epollCtlMod for any channels that require event interest changes before epollWaiting
-        if (!pendingFlagChannels.isEmpty()) {
-            for (int fd = 0; (fd = pendingFlagChannels.nextSetBit(fd)) >= 0; pendingFlagChannels.clear(fd)) {
-                AbstractEpollChannel ch = channels.get(fd);
-                if (ch != null) {
-                    try {
-                        ch.modifyEvents();
-                    } catch (IOException e) {
-                        ch.pipeline().fireExceptionCaught(e);
-                        ch.close();
-                    }
-                }
-            }
-        }
     }
 
     /**
@@ -326,14 +300,10 @@ class EpollEventLoop extends SingleThreadEventLoop {
 
             // If we found another Channel in the map that is mapped to the same FD the given Channel MUST be closed.
             assert !ch.isOpen();
-        } else {
-            ch.activeFlags = 0;
-            pendingFlagChannels.clear(fd);
-            if (ch.isOpen()) {
-                // Remove the epoll. This is only needed if it's still open as otherwise it will be automatically
-                // removed once the file-descriptor is closed.
-                Native.epollCtlDel(epollFd.intValue(), fd);
-            }
+        } else if (ch.isOpen()) {
+            // Remove the epoll. This is only needed if it's still open as otherwise it will be automatically
+            // removed once the file-descriptor is closed.
+            Native.epollCtlDel(epollFd.intValue(), fd);
         }
     }
 
@@ -374,7 +344,6 @@ class EpollEventLoop extends SingleThreadEventLoop {
         long timerFdDeadline = Long.MAX_VALUE;
         for (;;) {
             try {
-                processPendingChannelFlags();
                 int strategy = selectStrategy.calculateStrategy(selectNowSupplier, hasTasks());
                 switch (strategy) {
                     case SelectStrategy.CONTINUE:
