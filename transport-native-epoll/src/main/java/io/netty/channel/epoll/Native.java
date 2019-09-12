@@ -21,7 +21,6 @@ import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -45,7 +44,6 @@ import static io.netty.channel.unix.Errors.newIOException;
  * <p><strong>Internal usage only!</strong>
  * <p>Static members which call JNI methods must be defined in {@link NativeStaticallyReferencedJniMethods}.
  */
-@UnstableApi
 public final class Native {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
 
@@ -109,11 +107,7 @@ public final class Native {
     }
 
     static int epollWait(FileDescriptor epollFd, EpollEventArray events, boolean immediatePoll) throws IOException {
-        return epollWait(epollFd, events, immediatePoll ? 0 : -1);
-    }
-
-    static int epollWait(FileDescriptor epollFd, EpollEventArray events, int timeout) throws IOException {
-        int ready = epollWait(epollFd.intValue(), events.memoryAddress(), events.length(), timeout);
+        int ready = epollWaitNoTimeout(epollFd.intValue(), events.memoryAddress(), events.length(), immediatePoll);
         if (ready < 0) {
             throw newIOException("epoll_wait", ready);
         }
@@ -134,7 +128,7 @@ public final class Native {
     }
 
     private static native int epollWait0(int efd, long address, int len, int timerFd, int timeoutSec, int timeoutNs);
-    private static native int epollWait(int efd, long address, int len, int timeout);
+    private static native int epollWaitNoTimeout(int efd, long address, int len, boolean immediatePoll);
     private static native int epollBusyWait0(int efd, long address, int len);
 
     public static void epollCtlAdd(int efd, final int fd, final int flags) throws IOException {
