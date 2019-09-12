@@ -63,8 +63,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
      * with the time source (e.g. calling System.nanoTime()) which can be expensive.
      */
     private final AtomicLong nextDeadlineNanos = new AtomicLong(-1L);
-    private final AtomicInteger wakenUp = new AtomicInteger(1);
-    private boolean pendingWakeup;
+    private final AtomicInteger wakenUp = new AtomicInteger();
     private final FileDescriptor epollFd;
     private final FileDescriptor eventFd;
     private final FileDescriptor timerFd;
@@ -355,16 +354,15 @@ class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     private int epollWait() throws IOException {
-        return Native.epollWait(epollFd, events, false);
+        // If a task was submitted when wakenUp value was 1, the task didn't get a chance to produce wakeup event.
+        // So we need to check task queue again before calling epoll_wait. If we don't, the task might be pended
+        // until epoll_wait was timed out. It might be pended until idle timeout if IdleStateHandler existed
+        // in pipeline.
+        return Native.epollWait(epollFd, events, hasTasks());
     }
 
     private int epollWaitNow() throws IOException {
         return Native.epollWait(epollFd, events, true);
-    }
-
-    private int epollWaitTimeboxed() throws IOException {
-        // Wait with 1 second "safeguard" timeout
-        return Native.epollWait(epollFd, events, 1000);
     }
 
     private int epollBusyWait() throws IOException {
@@ -387,39 +385,17 @@ class EpollEventLoop extends SingleThreadEventLoop {
                         break;
 
                     case SelectStrategy.SELECT:
-                        if (pendingWakeup) {
-                            // We are going to be immediately woken so no need to reset wakenUp
-                            // or check for timerfd adjustment.
-                            strategy = epollWaitTimeboxed();
-                            if (strategy != 0) {
-                                break;
-                            }
-                            // We timed out so assume that we missed the write event due to an
-                            // abnormally failed syscall (the write itself or a prior epoll_wait)
-                            pendingWakeup = false;
-                            if (hasTasks()) {
-                                break;
-                            }
-                            // fall-through
+                        if (wakenUp.get() == 1) {
+                            wakenUp.set(0);
                         }
-                        // Ordered store is sufficient here since the only access outside this
-                        // thread is a getAndSet in the wakeup() method
-                        wakenUp.lazySet(0);
-                        try {
+                        if (!hasTasks()) {
                             // When we are in the EventLoop we don't bother setting the timerFd for each
                             // scheduled task, but instead defer the processing until the end of the EventLoop
                             // (next wait) to reduce the timerFd modifications.
                             timerFdDeadline = checkScheduleTaskQueueForNewDelay(timerFdDeadline);
-                            if (!hasTasks()) {
+                            try {
                                 strategy = epollWait();
-                            }
-                        } finally {
-                            // Try get() first to avoid much more expensive CAS in the case we
-                            // were woken via the wakeup() method (submitted task)
-                            if (wakenUp.get() == 1 || wakenUp.getAndSet(1) == 1) {
-                                pendingWakeup = true;
-                            }
-                            if (timerFdDeadline >= 0) {
+                            } finally {
                                 // This getAndAdd will change the raw value of nextDeadlineNanos to be negative
                                 // which will block any *new* timerFd mods by other threads while also "preserving"
                                 // its last value to avoid disrupting a possibly-concurrent setTimerFd call
@@ -479,6 +455,12 @@ class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     private void closeAll() {
+        try {
+            epollWaitNow();
+        } catch (IOException ignore) {
+            // ignore on close
+        }
+
         // Using the intermediate collection to prevent ConcurrentModificationException.
         // In the `close()` method, the channel is deleted from `channels` map.
         AbstractEpollChannel[] localChannels = channels.values().toArray(new AbstractEpollChannel[0]);
@@ -494,7 +476,9 @@ class EpollEventLoop extends SingleThreadEventLoop {
         for (int i = 0; i < ready; ++i) {
             final int fd = events.fd(i);
             if (fd == eventFd.intValue()) {
-                pendingWakeup = false;
+                // Just ignore as we use ET mode for the eventfd and timerfd.
+                //
+                // See also https://stackoverflow.com/a/12492308/1074097
             } else if (fd == timerFd.intValue()) {
                 timerFired = true;
             } else {
@@ -557,28 +541,14 @@ class EpollEventLoop extends SingleThreadEventLoop {
     protected void cleanup() {
         try {
             try {
-                // Ensure any in-flight wakeup writes have been performed prior to closing eventFd.
-                while (pendingWakeup) {
-                    int count = epollWaitTimeboxed();
-                    if (count == 0) {
-                        // We timed-out so assume that the write we're expecting isn't coming
-                        break;
-                    }
-                    for (int i = 0; i < count; i++) {
-                        if (events.fd(i) == eventFd.intValue()) {
-                            pendingWakeup = false;
-                            break;
-                        }
-                    }
-                }
-                eventFd.close();
-            } catch (IOException e) {
-                logger.warn("Failed to close the event fd.", e);
-            }
-            try {
                 epollFd.close();
             } catch (IOException e) {
                 logger.warn("Failed to close the epoll fd.", e);
+            }
+            try {
+                eventFd.close();
+            } catch (IOException e) {
+                logger.warn("Failed to close the event fd.", e);
             }
             try {
                 timerFd.close();
