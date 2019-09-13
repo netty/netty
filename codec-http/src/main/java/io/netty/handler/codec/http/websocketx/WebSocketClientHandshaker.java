@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -76,6 +77,10 @@ public abstract class WebSocketClientHandshaker {
     private final int maxFramePayloadLength;
 
     private final boolean absoluteUpgradeUrl;
+
+    private final String httpRequestEncoderName;
+
+    private final String httpResponseDecoderName;
 
     /**
      * Base constructor
@@ -143,6 +148,46 @@ public abstract class WebSocketClientHandshaker {
     protected WebSocketClientHandshaker(URI uri, WebSocketVersion version, String subprotocol,
                                         HttpHeaders customHeaders, int maxFramePayloadLength,
                                         long forceCloseTimeoutMillis, boolean absoluteUpgradeUrl) {
+        this(uri, version, subprotocol, customHeaders, maxFramePayloadLength, forceCloseTimeoutMillis,
+            absoluteUpgradeUrl, null, null);
+    }
+
+    /**
+     * Base constructor
+     *
+     * @param uri
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
+     * @param forceCloseTimeoutMillis
+     *            Close the connection if it was not closed by the server after timeout specified
+     * @param  absoluteUpgradeUrl
+     *            Use an absolute url for the Upgrade request, typically when connecting through an HTTP proxy over
+     *            clear HTTP
+     * @param httpRequestEncoderName
+     *            After the handshake is complete, the {@link HttpRequestEncoder} or {@link HttpClientCodec}
+     *            in the pipeline needs to be replaced with a websocket encoder.  If httpRequestEncoderName is present,
+     *            the handshaker assumes that this is the name of the http request encoder that should be replaced.
+     *            If not specified, the first {@link HttpRequestEncoder} or {@link HttpClientCodec} found in the
+     *            pipeline will be replaced.
+     * @param httpResponseDecoderName
+     *            After the handshake is complete, the {@link HttpResponseDecoder} or {@link HttpClientCodec}
+     *            in the pipeline needs to be replaced with a websocket decoder.  If httpResponseDecoderName is present,
+     *            the handshaker assumes that this is the name of the http response decoder that should be replaced.
+     *            If not specified, the first {@link HttpResponseDecoder} or {@link HttpClientCodec} found in the
+     *            pipeline will be replaced
+     */
+    protected WebSocketClientHandshaker(URI uri, WebSocketVersion version, String subprotocol,
+                                        HttpHeaders customHeaders, int maxFramePayloadLength,
+                                        long forceCloseTimeoutMillis, boolean absoluteUpgradeUrl,
+                                        String httpRequestEncoderName, String httpResponseDecoderName) {
         this.uri = uri;
         this.version = version;
         expectedSubprotocol = subprotocol;
@@ -150,6 +195,8 @@ public abstract class WebSocketClientHandshaker {
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.forceCloseTimeoutMillis = forceCloseTimeoutMillis;
         this.absoluteUpgradeUrl = absoluteUpgradeUrl;
+        this.httpRequestEncoderName = httpRequestEncoderName;
+        this.httpResponseDecoderName = httpResponseDecoderName;
     }
 
     /**
@@ -248,15 +295,10 @@ public abstract class WebSocketClientHandshaker {
      *            the {@link ChannelPromise} to be notified when the opening handshake is sent
      */
     public final ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
-        ChannelPipeline pipeline = channel.pipeline();
-        HttpResponseDecoder decoder = pipeline.get(HttpResponseDecoder.class);
-        if (decoder == null) {
-            HttpClientCodec codec = pipeline.get(HttpClientCodec.class);
-            if (codec == null) {
-               promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
-                       "a HttpResponseDecoder or HttpClientCodec"));
-               return promise;
-            }
+        try {
+            findHttpResponseDecoderToReplace(channel.pipeline());
+        } catch (IllegalStateException e) {
+            return promise.setFailure(e);
         }
 
         FullHttpRequest request = newHandshakeRequest();
@@ -266,18 +308,14 @@ public abstract class WebSocketClientHandshaker {
             public void operationComplete(ChannelFuture future) {
                 if (future.isSuccess()) {
                     ChannelPipeline p = future.channel().pipeline();
-                    ChannelHandlerContext ctx = p.context(HttpRequestEncoder.class);
-                    if (ctx == null) {
-                        ctx = p.context(HttpClientCodec.class);
+                    try {
+                        ChannelHandlerContext ctx =
+                            p.context(findHttpRequestEncoderToReplace(future.channel().pipeline()));
+                        p.addAfter(ctx.name(), "ws-encoder", newWebSocketEncoder());
+                        promise.setSuccess();
+                    } catch (IllegalStateException e) {
+                        promise.setFailure(e);
                     }
-                    if (ctx == null) {
-                        promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
-                                "a HttpRequestEncoder or HttpClientCodec"));
-                        return;
-                    }
-                    p.addAfter(ctx.name(), "ws-encoder", newWebSocketEncoder());
-
-                    promise.setSuccess();
                 } else {
                     promise.setFailure(future.cause());
                 }
@@ -345,14 +383,10 @@ public abstract class WebSocketClientHandshaker {
             p.remove(aggregator);
         }
 
-        ChannelHandlerContext ctx = p.context(HttpResponseDecoder.class);
-        if (ctx == null) {
-            ctx = p.context(HttpClientCodec.class);
-            if (ctx == null) {
-                throw new IllegalStateException("ChannelPipeline does not contain " +
-                        "a HttpRequestEncoder or HttpClientCodec");
-            }
-            final HttpClientCodec codec =  (HttpClientCodec) ctx.handler();
+        ChannelHandler httpResponseDecoder = findHttpResponseDecoderToReplace(channel.pipeline());
+        ChannelHandlerContext ctx = p.context(httpResponseDecoder);
+        if (httpResponseDecoder instanceof HttpClientCodec) {
+            final HttpClientCodec codec = (HttpClientCodec) httpResponseDecoder;
             // Remove the encoder part of the codec as the user may start writing frames after this method returns.
             codec.removeOutboundHandler();
 
@@ -368,10 +402,11 @@ public abstract class WebSocketClientHandshaker {
                 }
             });
         } else {
-            if (p.get(HttpRequestEncoder.class) != null) {
-                // Remove the encoder part of the codec as the user may start writing frames after this method returns.
-                p.remove(HttpRequestEncoder.class);
-            }
+            // httpResponseDecoder is not an instance of HttpClientCodec, so it must be
+            // an instance of HttpResponseDecoder, and there must be a matching HttpRequestEncoder
+            // instance in the pipeline that needs to be removed as well
+            p.remove(findHttpRequestEncoderToReplace(channel.pipeline()));
+
             final ChannelHandlerContext context = ctx;
             p.addAfter(context.name(), "ws-decoder", newWebsocketDecoder());
 
@@ -424,13 +459,11 @@ public abstract class WebSocketClientHandshaker {
             }
         } else {
             ChannelPipeline p = channel.pipeline();
-            ChannelHandlerContext ctx = p.context(HttpResponseDecoder.class);
-            if (ctx == null) {
-                ctx = p.context(HttpClientCodec.class);
-                if (ctx == null) {
-                    return promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
-                            "a HttpResponseDecoder or HttpClientCodec"));
-                }
+            ChannelHandlerContext ctx;
+            try {
+                ctx = p.context(findHttpResponseDecoderToReplace(channel.pipeline()));
+            } catch (IllegalStateException e) {
+                return promise.setFailure(e);
             }
             // Add aggregator and ensure we feed the HttpResponse so it is aggregated. A limit of 8192 should be more
             // then enough for the websockets handshake payload.
@@ -577,6 +610,91 @@ public abstract class WebSocketClientHandshaker {
         }
 
         return path == null || path.isEmpty() ? "/" : path;
+    }
+
+    /**
+     * Finds the {@link ChannelHandler} instance in the pipeline that is responsible for encoding
+     * HTTP requests, which should be either a {@link HttpRequestEncoder} or a {@link HttpClientCodec}.
+     * This is the handler we will replace with a websocket encoder once the handshake is complete.
+     * By default this method will first look for an encoder with the name {@link #httpRequestEncoderName}
+     * if defined.  It no name is defined, an attempt will be made to find the first {@link HttpRequestEncoder}
+     * or {@link HttpClientCodec} in the pipeline.  This method may be overridden by subclasses to specify
+     * the exact encoder instance that should be removed.
+     * @param pipeline the pipeline in which to find the encoder.
+     * @return the {@link ChannelHandler} in the given pipeline that is used to encode HTTP requests.
+     * @throws IllegalStateException if the http request encoder could be found in the pipeline.
+     */
+    protected ChannelHandler findHttpRequestEncoderToReplace(ChannelPipeline pipeline) throws IllegalStateException {
+        // If a name was specified for the http request encoder, require that a handler with that name exists:
+        if (httpRequestEncoderName != null) {
+            final ChannelHandler encoder = pipeline.get(httpRequestEncoderName);
+            if (encoder == null) {
+                throw new IllegalStateException("No http request encoder found with name \"" +
+                    httpRequestEncoderName + "\"");
+            } else if (!(encoder instanceof HttpRequestEncoder || encoder instanceof HttpClientCodec)) {
+                throw new IllegalStateException("Expected encoder with name \"" + httpRequestEncoderName +
+                    "\" to be a " + HttpRequestEncoder.class.getSimpleName() + " or " +
+                    HttpClientCodec.class.getSimpleName() + " but found " +
+                    encoder.getClass().getCanonicalName());
+            }
+            return encoder;
+        }
+
+        // Otherwise fall back to the original logic of finding the first
+        // HttpRequestEncoder or HttpClientCodec:
+        ChannelHandler encoder = pipeline.get(HttpRequestEncoder.class);
+        if (encoder == null) {
+            encoder = pipeline.get(HttpClientCodec.class);
+            if (encoder == null) {
+                throw new IllegalStateException("ChannelPipeline does not contain " +
+                    "a " + HttpClientCodec.class.getSimpleName() + " or " +
+                    HttpClientCodec.class.getSimpleName());
+            }
+        }
+        return encoder;
+    }
+
+    /**
+     * Finds the {@link ChannelHandler} instance in the pipeline that is responsible for decoding
+     * HTTP responses, which should be either a {@link HttpResponseDecoder} or a {@link HttpClientCodec}.
+     * This is the handler we will replace with a websocket decoder once the handshake is complete.
+     * By default this method will first look for a decoder with the name {@link #httpResponseDecoderName}
+     * if defined.  It no name is defined, an attempt will be made to find the first {@link HttpResponseDecoder}
+     * or {@link HttpClientCodec} in the pipeline.  This method may be overridden by subclasses to specify
+     * the exact decoder instance that should be removed.
+     * @param pipeline the pipeline in which to find the decoder.
+     * @return the {@link ChannelHandler} in the given pipeline that is used to decode HTTP responses.
+     * @throws IllegalStateException if the http response decoder could be found in the pipeline.
+     */
+    protected ChannelHandler findHttpResponseDecoderToReplace(ChannelPipeline pipeline) throws IllegalStateException {
+        // If a name was specified for the http codec, require that a handler with that name exists:
+        if (httpResponseDecoderName != null) {
+            final ChannelHandler decoder = pipeline.get(httpResponseDecoderName);
+            if (decoder == null) {
+                throw new IllegalStateException("No http response decoder found with name \"" +
+                    httpResponseDecoderName + "\"");
+            }
+            if (!(decoder instanceof HttpResponseDecoder || decoder instanceof HttpClientCodec)) {
+                throw new IllegalStateException("Expected decoder with name \"" + httpResponseDecoderName +
+                    "\" to be a " + HttpResponseDecoder.class.getSimpleName() + " or " +
+                    HttpClientCodec.class.getSimpleName() + " but found " +
+                    decoder.getClass().getCanonicalName());
+            }
+            return decoder;
+        }
+
+        // Otherwise fall back to the original logic of finding the first
+        // HttpResponseDecoder or HttpClientCodec:
+        ChannelHandler decoder = pipeline.get(HttpResponseDecoder.class);
+        if (decoder == null) {
+            decoder = pipeline.get(HttpClientCodec.class);
+            if (decoder == null) {
+                throw new IllegalStateException("ChannelPipeline does not contain " +
+                    "a " + HttpResponseDecoder.class.getSimpleName() + " or " +
+                    HttpClientCodec.class.getSimpleName());
+            }
+        }
+        return decoder;
     }
 
     static CharSequence websocketHostValue(URI wsURL) {

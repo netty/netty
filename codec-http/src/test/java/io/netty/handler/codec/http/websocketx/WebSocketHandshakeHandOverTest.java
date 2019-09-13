@@ -17,10 +17,12 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.EmptyHttpHeaders;
@@ -106,6 +108,9 @@ public class WebSocketHandshakeHandOverTest {
             }
         });
 
+        // Before handshake the client pipeline should contain an HttpClientCodec
+        assertNotNull(clientChannel.pipeline().get(HttpClientCodec.class));
+
         // Transfer the handshake from the client to the server
         transferAllDataWithMerge(clientChannel, serverChannel);
         assertTrue(serverReceivedHandshake);
@@ -118,6 +123,9 @@ public class WebSocketHandshakeHandOverTest {
         transferAllDataWithMerge(serverChannel, clientChannel);
         assertTrue(clientReceivedHandshake);
         assertTrue(clientReceivedMessage);
+
+        // After the handshake the pipeline should no longer contain an HttpClientCodec
+        assertNull(clientChannel.pipeline().get(HttpClientCodec.class));
     }
 
     @Test(expected = WebSocketHandshakeException.class)
@@ -238,6 +246,65 @@ public class WebSocketHandshakeHandOverTest {
         assertFalse(clientChannel.finishAndReleaseAll());
     }
 
+    @Test
+    public void testRemoveHttpCodecByNameAfterHandshake() throws Exception {
+        EmbeddedChannel serverChannel = createServerChannel(new SimpleChannelInboundHandler<Object>() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                if (evt == ServerHandshakeStateEvent.HANDSHAKE_COMPLETE) {
+                    serverReceivedHandshake = true;
+                    // immediately send a message to the client on connect
+                    ctx.writeAndFlush(new TextWebSocketFrame("abc"));
+                } else if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
+                    serverHandshakeComplete = (WebSocketServerProtocolHandler.HandshakeComplete) evt;
+                }
+            }
+
+            @Override
+            protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                // Method not needed for this test; empty by design
+            }
+        });
+
+        final String httpCodecName = "testHttpCodec";
+        EmbeddedChannel clientChannel = createClientChannel(new SimpleChannelInboundHandler<Object>() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
+                    clientReceivedHandshake = true;
+                }
+            }
+            @Override
+            protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                if (msg instanceof TextWebSocketFrame) {
+                    clientReceivedMessage = true;
+                }
+            }
+        }, httpCodecName);
+
+        // Before handshake the client pipeline should contain an HttpClientCodec
+        // with the given name
+        assertNotNull(clientChannel.pipeline().get(httpCodecName));
+        assertTrue(clientChannel.pipeline().get(httpCodecName) instanceof HttpClientCodec);
+
+        // Transfer the handshake from the client to the server
+        transferAllDataWithMerge(clientChannel, serverChannel);
+        assertTrue(serverReceivedHandshake);
+        assertNotNull(serverHandshakeComplete);
+        assertEquals("/test", serverHandshakeComplete.requestUri());
+        assertEquals(8, serverHandshakeComplete.requestHeaders().size());
+        assertEquals("test-proto-2", serverHandshakeComplete.selectedSubprotocol());
+
+        // Transfer the handshake response and the websocket message to the client
+        transferAllDataWithMerge(serverChannel, clientChannel);
+        assertTrue(clientReceivedHandshake);
+        assertTrue(clientReceivedMessage);
+
+        // After the handshake the pipeline should no longer contain an HttpClientCodec
+        assertNull(clientChannel.pipeline().get(httpCodecName));
+        assertNull(clientChannel.pipeline().get(HttpClientCodec.class));
+    }
+
     /**
      * Transfers all pending data from the source channel into the destination channel.<br>
      * Merges all data into a single buffer before transmission into the destination.
@@ -272,12 +339,29 @@ public class WebSocketHandshakeHandOverTest {
 
     private static EmbeddedChannel createClientChannel(ChannelHandler handler) throws Exception {
         return new EmbeddedChannel(
-                new HttpClientCodec(),
-                new HttpObjectAggregator(8192),
-                new WebSocketClientProtocolHandler(new URI("ws://localhost:1234/test"),
-                                                   WebSocketVersion.V13, "test-proto-2",
-                                                   false, null, 65536),
-                handler);
+            new HttpClientCodec(),
+            new HttpObjectAggregator(8192),
+            new WebSocketClientProtocolHandler(new URI("ws://localhost:1234/test"),
+                                               WebSocketVersion.V13, "test-proto-2",
+                                               false, null, 65536),
+            handler);
+    }
+
+    private static EmbeddedChannel createClientChannel(final ChannelHandler handler,
+                                                       final String httpCodecName) throws Exception {
+        return new EmbeddedChannel(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ch.pipeline().addLast(httpCodecName, new HttpClientCodec());
+                ch.pipeline().addLast(
+                    new HttpObjectAggregator(8192),
+                    new WebSocketClientProtocolHandler(new URI("ws://localhost:1234/test"),
+                                                       WebSocketVersion.V13, "test-proto-2",
+                                                       false, null, 65536, true, true, false,
+                                                       10000L, httpCodecName, httpCodecName),
+                    handler);
+            }
+        });
     }
 
     private static EmbeddedChannel createClientChannel(WebSocketClientHandshaker handshaker,

@@ -20,10 +20,13 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequestEncoder;
+import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
@@ -114,8 +117,40 @@ public class WebSocketClientHandshaker00 extends WebSocketClientHandshaker {
     WebSocketClientHandshaker00(URI webSocketURL, WebSocketVersion version, String subprotocol,
                                 HttpHeaders customHeaders, int maxFramePayloadLength,
                                 long forceCloseTimeoutMillis, boolean absoluteUpgradeUrl) {
+        this(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength, forceCloseTimeoutMillis,
+                absoluteUpgradeUrl, null, null);
+    }
+
+    /**
+     * Creates a new instance with the specified destination WebSocket location and version to initiate.
+     *
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
+     * @param forceCloseTimeoutMillis
+     *            Close the connection if it was not closed by the server after timeout specified
+     * @param  absoluteUpgradeUrl
+     *            Use an absolute url for the Upgrade request, typically when connecting through an HTTP proxy over
+     *            clear HTTP
+     * @param httpRequestEncoderName
+     *            The name of the HTTP request encoder to be replaced when the handshake is complete
+     * @param httpResponseDecoderName
+     *            The name of the HTTP response decoder to be replaced when the handshake is complete
+     */
+    WebSocketClientHandshaker00(URI webSocketURL, WebSocketVersion version, String subprotocol,
+                                HttpHeaders customHeaders, int maxFramePayloadLength,
+                                long forceCloseTimeoutMillis, boolean absoluteUpgradeUrl,
+                                String httpRequestEncoderName, String httpResponseDecoderName) {
         super(webSocketURL, version, subprotocol, customHeaders, maxFramePayloadLength, forceCloseTimeoutMillis,
-                absoluteUpgradeUrl);
+                absoluteUpgradeUrl, httpRequestEncoderName, httpResponseDecoderName);
     }
 
     /**
