@@ -122,7 +122,7 @@ public final class HttpConversionUtil {
      */
     public enum ExtensionHeaderNames {
         /**
-         * HTTP extension header which will identify the stream id from the HTTP/2 event(s) responsible for 
+         * HTTP extension header which will identify the stream id from the HTTP/2 event(s) responsible for
          * generating an {@code HttpObject}
          * <p>
          * {@code "x-http2-stream-id"}
