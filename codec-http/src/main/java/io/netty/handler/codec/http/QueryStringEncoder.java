@@ -39,7 +39,7 @@ public class QueryStringEncoder {
     private final Charset charset;
     private final StringBuilder uriBuilder;
     private boolean hasParams;
-    private static BitSet dontNeedEncoding;
+    private static final BitSet dontNeedEncoding;
     private static final int CASE_DIFF = 'a' - 'A';
 
     static {
