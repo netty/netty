@@ -32,6 +32,7 @@ import java.util.BitSet;
  * encoder.addParam("recipient", "world");
  * assert encoder.toString().equals("/hello?recipient=world");
  * </pre>
+ *
  * @see QueryStringDecoder
  */
 public class QueryStringEncoder {
@@ -40,7 +41,6 @@ public class QueryStringEncoder {
     private final StringBuilder uriBuilder;
     private boolean hasParams;
     private static final BitSet dontNeedEncoding;
-    private static final int CASE_DIFF = 'a' - 'A';
 
     static {
         dontNeedEncoding = new BitSet(256);
@@ -130,7 +130,7 @@ public class QueryStringEncoder {
         //allocate memory until needed
         char[] buf = null;
 
-        for (int i = 0; i < s.length();) {
+        for (int i = 0; i < s.length(); ) {
             int c = s.charAt(i);
             if (dontNeedEncoding.get(c)) {
                 uriBuilder.append((char) c);
@@ -152,19 +152,26 @@ public class QueryStringEncoder {
                 for (byte b : bytes) {
                     uriBuilder.append('%');
 
-                    char ch = Character.forDigit((b >> 4) & 0xF, 16);
-                    if (ch >= 'a' && ch <= 'f') {
-                        ch -= CASE_DIFF;
-                    }
+                    char ch = forDigit((b >> 4) & 0xF);
                     uriBuilder.append(ch);
 
-                    ch = Character.forDigit(b & 0xF, 16);
-                    if (ch >= 'a' && ch <= 'f') {
-                        ch -= CASE_DIFF;
-                    }
+                    ch = forDigit(b & 0xF);
                     uriBuilder.append(ch);
                 }
             }
         }
+    }
+
+    /**
+     * convert the given digit to a upper hexadecimal char.
+     * <p>
+     * the 55 in this method means {@code 'A' - 10}
+     *
+     * @param digit the number to convert to a character.
+     * @return the {@code char} representation of the specified digit
+     * in hexadecimal.
+     */
+    private char forDigit(int digit) {
+        return (char) (digit < 10 ? '0' + digit : 55 + digit);
     }
 }
