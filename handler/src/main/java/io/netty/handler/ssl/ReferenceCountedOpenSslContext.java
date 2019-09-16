@@ -691,8 +691,12 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
         @Override
         public final int verify(long ssl, byte[][] chain, String auth) {
-            X509Certificate[] peerCerts = certificates(chain);
             final ReferenceCountedOpenSslEngine engine = engineMap.get(ssl);
+            if (engine == null) {
+                // May be null if it was destroyed in the meantime.
+                return CertificateVerifier.X509_V_ERR_UNSPECIFIED;
+            }
+            X509Certificate[] peerCerts = certificates(chain);
             try {
                 verify(engine, peerCerts, auth);
                 return CertificateVerifier.X509_V_OK;

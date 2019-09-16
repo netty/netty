@@ -48,6 +48,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.locks.Lock;
 
+import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
@@ -370,9 +371,29 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         leak = leakDetection ? leakDetector.track(this) : null;
     }
 
-    final void setKeyMaterial(OpenSslKeyMaterial keyMaterial) throws  Exception {
-        SSL.setKeyMaterial(ssl, keyMaterial.certificateChainAddress(), keyMaterial.privateKeyAddress());
+    final synchronized String[] authMethods() {
+        if (isDestroyed()) {
+            return EmptyArrays.EMPTY_STRINGS;
+        }
+        return SSL.authenticationMethods(ssl);
+    }
+
+    final boolean setKeyMaterial(OpenSslKeyMaterial keyMaterial) throws  Exception {
+        synchronized (this) {
+            if (isDestroyed()) {
+                return false;
+            }
+            SSL.setKeyMaterial(ssl, keyMaterial.certificateChainAddress(), keyMaterial.privateKeyAddress());
+        }
         localCertificateChain = keyMaterial.certificateChain();
+        return true;
+    }
+
+    final synchronized SecretKeySpec masterKey() {
+        if (isDestroyed()) {
+            return null;
+        }
+        return new SecretKeySpec(SSL.getMasterKey(ssl), "AES");
     }
 
     /**
@@ -389,7 +410,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
 
         synchronized (this) {
-            SSL.setOcspResponse(ssl, response);
+            if (!isDestroyed()) {
+                SSL.setOcspResponse(ssl, response);
+            }
         }
     }
 
@@ -407,6 +430,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
 
         synchronized (this) {
+            if (isDestroyed()) {
+                return EmptyArrays.EMPTY_BYTES;
+            }
             return SSL.getOcspResponse(ssl);
         }
     }
