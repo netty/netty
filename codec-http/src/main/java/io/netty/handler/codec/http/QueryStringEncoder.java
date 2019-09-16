@@ -15,7 +15,10 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ByteBufUtil;
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.StringUtil;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -39,6 +42,7 @@ public class QueryStringEncoder {
     private final Charset charset;
     private final StringBuilder uriBuilder;
     private boolean hasParams;
+    private static final byte WRITE_UTF_UNKNOWN = (byte) '?';
 
     /**
      * Creates a new encoder that encodes a URI that starts with the specified
@@ -76,6 +80,14 @@ public class QueryStringEncoder {
         }
     }
 
+    private void encodeComponent(String s) {
+        if (charset == CharsetUtil.UTF_8) {
+            encodeUtf8Component(s);
+        } else {
+            encodeNonUtf8Component(s);
+        }
+    }
+
     /**
      * Returns the URL-encoded URI object which was created from the path string
      * specified in the constructor and the parameters added by
@@ -105,7 +117,7 @@ public class QueryStringEncoder {
      *
      * @param s The String to encode
      */
-    private void encodeComponent(String s) {
+    private void encodeNonUtf8Component(String s) {
         //allocate memory until needed
         char[] buf = null;
 
@@ -129,16 +141,63 @@ public class QueryStringEncoder {
                 byte[] bytes = new String(buf, 0, index).getBytes(charset);
 
                 for (byte b : bytes) {
-                    uriBuilder.append('%');
-
-                    char ch = forDigit((b >> 4) & 0xF);
-                    uriBuilder.append(ch);
-
-                    ch = forDigit(b & 0xF);
-                    uriBuilder.append(ch);
+                    appendEncoded(b);
                 }
             }
         }
+    }
+
+    /**
+     * @see ByteBufUtil#writeUtf8(io.netty.buffer.ByteBuf, CharSequence, int, int)
+     */
+    private void encodeUtf8Component(String s) {
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c < 0x80) {
+                if (dontNeedEncoding(c)) {
+                    uriBuilder.append(c);
+                } else {
+                    appendEncoded(c);
+                }
+            } else if (c < 0x800) {
+                appendEncoded(0xc0 | (c >> 6));
+                appendEncoded(0x80 | (c & 0x3f));
+            } else if (StringUtil.isSurrogate(c)) {
+                if (!Character.isHighSurrogate(c)) {
+                    appendEncoded(WRITE_UTF_UNKNOWN);
+                    continue;
+                }
+                // Surrogate Pair consumes 2 characters.
+                if (++i == s.length()) {
+                    appendEncoded(WRITE_UTF_UNKNOWN);
+                    break;
+                }
+                // Extra method to allow inlining the rest of writeUtf8 which is the most likely code path.
+                writeUtf8Surrogate(c, s.charAt(i));
+            } else {
+                appendEncoded(0xe0 | (c >> 12));
+                appendEncoded(0x80 | ((c >> 6) & 0x3f));
+                appendEncoded(0x80 | (c & 0x3f));
+            }
+        }
+    }
+
+    private void writeUtf8Surrogate(char c, char c2) {
+        if (!Character.isLowSurrogate(c2)) {
+            appendEncoded(WRITE_UTF_UNKNOWN);
+            appendEncoded(Character.isHighSurrogate(c2) ? WRITE_UTF_UNKNOWN : c2);
+            return;
+        }
+        int codePoint = Character.toCodePoint(c, c2);
+        // See http://www.unicode.org/versions/Unicode7.0.0/ch03.pdf#G2630.
+        appendEncoded(0xf0 | (codePoint >> 18));
+        appendEncoded(0x80 | ((codePoint >> 12) & 0x3f));
+        appendEncoded(0x80 | ((codePoint >> 6) & 0x3f));
+        appendEncoded(0x80 | (codePoint & 0x3f));
+    }
+
+    private void appendEncoded(int b) {
+        uriBuilder.append('%').append(forDigit(b >> 4)).append(forDigit(b));
     }
 
     /**
@@ -151,6 +210,7 @@ public class QueryStringEncoder {
      * in hexadecimal.
      */
     private char forDigit(int digit) {
+        digit = digit & 0xF;
         return (char) (digit < 10 ? '0' + digit : 55 + digit);
     }
 
