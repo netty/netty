@@ -21,7 +21,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
-import java.util.BitSet;
 
 /**
  * Creates an URL-encoded URI from a path string and key-value parameter pairs.
@@ -40,26 +39,6 @@ public class QueryStringEncoder {
     private final Charset charset;
     private final StringBuilder uriBuilder;
     private boolean hasParams;
-    private static final BitSet dontNeedEncoding;
-
-    static {
-        dontNeedEncoding = new BitSet(256);
-        int i;
-        for (i = 'a'; i <= 'z'; i++) {
-            dontNeedEncoding.set(i);
-        }
-        for (i = 'A'; i <= 'Z'; i++) {
-            dontNeedEncoding.set(i);
-        }
-        for (i = '0'; i <= '9'; i++) {
-            dontNeedEncoding.set(i);
-        }
-
-        dontNeedEncoding.set('-');
-        dontNeedEncoding.set('_');
-        dontNeedEncoding.set('.');
-        dontNeedEncoding.set('*');
-    }
 
     /**
      * Creates a new encoder that encodes a URI that starts with the specified
@@ -130,10 +109,10 @@ public class QueryStringEncoder {
         //allocate memory until needed
         char[] buf = null;
 
-        for (int i = 0; i < s.length(); ) {
-            int c = s.charAt(i);
-            if (dontNeedEncoding.get(c)) {
-                uriBuilder.append((char) c);
+        for (int i = 0; i < s.length();) {
+            char c = s.charAt(i);
+            if (dontNeedEncoding(c)) {
+                uriBuilder.append(c);
                 i++;
             } else {
                 int index = 0;
@@ -142,10 +121,10 @@ public class QueryStringEncoder {
                 }
 
                 do {
-                    buf[index] = (char) c;
+                    buf[index] = c;
                     index++;
                     i++;
-                } while (i < s.length() && !dontNeedEncoding.get(c = s.charAt(i)));
+                } while (i < s.length() && !dontNeedEncoding(c = s.charAt(i)));
 
                 byte[] bytes = new String(buf, 0, index).getBytes(charset);
 
@@ -173,5 +152,21 @@ public class QueryStringEncoder {
      */
     private char forDigit(int digit) {
         return (char) (digit < 10 ? '0' + digit : 55 + digit);
+    }
+
+    /**
+     * Determines whether the given character is a unreserved character.
+     * <p>
+     * unreserved characters do not need to be encoded, and include uppercase and lowercase
+     * letters, decimal digits, hyphen, period, underscore, and tilde.
+     * <p>
+     * unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"
+     *
+     * @param ch the char to be judged whether it need to be encode
+     * @return true or false
+     */
+    private boolean dontNeedEncoding(char ch) {
+        return ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch >= '0' && ch <= '9'
+                || ch == '-' || ch == '_' || ch == '.' || ch == '*';
     }
 }
