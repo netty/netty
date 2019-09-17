@@ -1639,7 +1639,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     // We need more data so lets try to unwrap first and then call decode again which will feed us
                     // with buffered data (if there is any).
                     case NEED_UNWRAP:
-                        unwrapNonAppData(ctx);
+                        try {
+                            unwrapNonAppData(ctx);
+                        } catch (SSLException e) {
+                            handleUnwrapThrowable(ctx, e);
+                            return;
+                        }
                         tryDecodeAgain();
                         break;
 
