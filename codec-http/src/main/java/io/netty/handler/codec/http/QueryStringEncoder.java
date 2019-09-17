@@ -80,8 +80,8 @@ public class QueryStringEncoder {
         }
     }
 
-    private void encodeComponent(String s) {
-        if (charset == CharsetUtil.UTF_8) {
+    private void encodeComponent(CharSequence s) {
+        if (CharsetUtil.UTF_8.equals(charset)) {
             encodeUtf8Component(s);
         } else {
             encodeNonUtf8Component(s);
@@ -108,7 +108,7 @@ public class QueryStringEncoder {
     }
 
     /**
-     * encode the String as per RFC 3986, Section 2.
+     * Encode the String as per RFC 3986, Section 2.
      * <p>
      * There is a little different between the JDK's encode method : {@link URLEncoder#encode(String, String)}.
      * The JDK's encoder encode the space to {@code +} and this method directly encode the blank to {@code %20}
@@ -117,7 +117,7 @@ public class QueryStringEncoder {
      *
      * @param s The String to encode
      */
-    private void encodeNonUtf8Component(String s) {
+    private void encodeNonUtf8Component(CharSequence s) {
         //allocate memory until needed
         char[] buf = null;
 
@@ -150,7 +150,7 @@ public class QueryStringEncoder {
     /**
      * @see ByteBufUtil#writeUtf8(io.netty.buffer.ByteBuf, CharSequence, int, int)
      */
-    private void encodeUtf8Component(String s) {
+    private void encodeUtf8Component(CharSequence s) {
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
             if (c < 0x80) {
@@ -201,7 +201,7 @@ public class QueryStringEncoder {
     }
 
     /**
-     * convert the given digit to a upper hexadecimal char.
+     * Convert the given digit to a upper hexadecimal char.
      * <p>
      * the 55 in this method means {@code 'A' - 10}
      *
@@ -209,7 +209,7 @@ public class QueryStringEncoder {
      * @return the {@code char} representation of the specified digit
      * in hexadecimal.
      */
-    private char forDigit(int digit) {
+    private static char forDigit(int digit) {
         digit = digit & 0xF;
         return (char) (digit < 10 ? '0' + digit : 55 + digit);
     }
@@ -225,7 +225,7 @@ public class QueryStringEncoder {
      * @param ch the char to be judged whether it need to be encode
      * @return true or false
      */
-    private boolean dontNeedEncoding(char ch) {
+    private static boolean dontNeedEncoding(char ch) {
         return ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch >= '0' && ch <= '9'
                 || ch == '-' || ch == '_' || ch == '.' || ch == '*';
     }
