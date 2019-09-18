@@ -34,18 +34,25 @@ import static org.junit.Assume.assumeTrue;
 @RunWith(Parameterized.class)
 public class ConscryptOpenSslEngineInteropTest extends ConscryptSslEngineTest {
 
-    @Parameterized.Parameters(name = "{index}: bufferType = {0}, combo = {1}, delegate = {2}")
+    @Parameterized.Parameters(name = "{index}: bufferType = {0}, combo = {1}, delegate = {2}, useTasks = {3}")
     public static Collection<Object[]> data() {
         List<Object[]> params = new ArrayList<Object[]>();
         for (BufferType type: BufferType.values()) {
-            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), false });
-            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), true });
+            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), false, false });
+            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), false, true });
+
+            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), true, false });
+            params.add(new Object[] { type, ProtocolCipherCombo.tlsv12(), true, true });
         }
         return params;
     }
 
-    public ConscryptOpenSslEngineInteropTest(BufferType type, ProtocolCipherCombo combo, boolean delegate) {
+    private final boolean useTasks;
+
+    public ConscryptOpenSslEngineInteropTest(BufferType type, ProtocolCipherCombo combo,
+                                             boolean delegate, boolean useTasks) {
         super(type, combo, delegate);
+        this.useTasks = useTasks;
     }
 
     @BeforeClass
@@ -139,5 +146,13 @@ public class ConscryptOpenSslEngineInteropTest extends ConscryptSslEngineTest {
     @Override
     protected SSLEngine wrapEngine(SSLEngine engine) {
         return Java8SslTestUtils.wrapSSLEngineForTesting(engine);
+    }
+
+    @Override
+    protected SslContext wrapContext(SslContext context) {
+        if (context instanceof OpenSslContext) {
+            ((OpenSslContext) context).setUseTasks(useTasks);
+        }
+        return context;
     }
 }
