@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.40.Final-SNAPSHOT</version>
+  <version>4.1.42.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -68,6 +68,21 @@
   </developers>
 
   <profiles>
+    <profile>
+      <id>not_x86_64</id>
+      <activation>
+        <property>
+          <name>os.detected.arch</name>
+          <value>!x86_64</value>
+        </property>
+      </activation>
+      <properties>
+        <!-- Use no classifier as we only support x86_64 atm-->
+        <tcnative.classifier />
+        <skipShadingTestsuite>true</skipShadingTestsuite>
+      </properties>
+    </profile>
+
     <!-- Detect if we use GraalVM and if so enable the native image testsuite -->
     <profile>
       <id>graal</id>
@@ -320,6 +335,7 @@
     <graalvm.version>19.0.0</graalvm.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
+    <skipShadingTestsuite>false</skipShadingTestsuite>
   </properties>
 
   <modules>
@@ -752,10 +768,10 @@
                 </requireMavenVersion>
                 <requireProperty>
                   <regexMessage>
-                    x86_64/AARCH64 JDK must be used.
+                    x86_64/AARCH64/PPCLE64 JDK must be used.
                   </regexMessage>
                   <property>os.detected.arch</property>
-                  <regex>^(x86_64|aarch_64)$</regex>
+                  <regex>^(x86_64|aarch_64|ppcle_64)$</regex>
                 </requireProperty>
               </rules>
             </configuration>

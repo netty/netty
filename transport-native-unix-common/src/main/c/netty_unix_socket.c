@@ -43,6 +43,7 @@ static jclass inetSocketAddressClass = NULL;
 static int socketType = AF_INET;
 static const unsigned char wildcardAddress[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 static const unsigned char ipv4MappedWildcardAddress[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 };
+static const unsigned char ipv4MappedAddress[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff };
 
 // Optional external methods
 extern int accept4(int sockFd, struct sockaddr* addr, socklen_t* addrlen, int flags) __attribute__((weak)) __attribute__((weak_import));
@@ -67,15 +68,13 @@ static int nettyNonBlockingSocket(int domain, int type, int protocol) {
 #endif
 }
 
-static int ipAddressLength(const struct sockaddr_storage* addr) {
+int netty_unix_socket_ipAddressLength(const struct sockaddr_storage* addr) {
     if (addr->ss_family == AF_INET) {
         return 4;
     }
     struct sockaddr_in6* s = (struct sockaddr_in6*) addr;
-    if (s->sin6_addr.s6_addr[11] == 0xff && s->sin6_addr.s6_addr[10] == 0xff &&
-            s->sin6_addr.s6_addr[9] == 0x00 && s->sin6_addr.s6_addr[8] == 0x00 && s->sin6_addr.s6_addr[7] == 0x00 && s->sin6_addr.s6_addr[6] == 0x00 && s->sin6_addr.s6_addr[5] == 0x00 &&
-            s->sin6_addr.s6_addr[4] == 0x00 && s->sin6_addr.s6_addr[3] == 0x00 && s->sin6_addr.s6_addr[2] == 0x00 && s->sin6_addr.s6_addr[1] == 0x00 && s->sin6_addr.s6_addr[0] == 0x00) {
-            // IPv4-mapped-on-IPv6
+    if (memcmp(s->sin6_addr.s6_addr, ipv4MappedAddress, 12) == 0) {
+         // IPv4-mapped-on-IPv6
          return 4;
     }
     return 16;
@@ -84,7 +83,7 @@ static int ipAddressLength(const struct sockaddr_storage* addr) {
 static jobject createDatagramSocketAddress(JNIEnv* env, const struct sockaddr_storage* addr, int len, jobject local) {
     int port;
     int scopeId;
-    int ipLength = ipAddressLength(addr);
+    int ipLength = netty_unix_socket_ipAddressLength(addr);
     jbyteArray addressBytes = (*env)->NewByteArray(env, ipLength);
 
     if (addr->ss_family == AF_INET) {
@@ -104,7 +103,8 @@ static jobject createDatagramSocketAddress(JNIEnv* env, const struct sockaddr_st
         } else {
             offset = 0;
         }
-        (*env)->SetByteArrayRegion(env, addressBytes, offset, ipLength, (jbyte*) &s->sin6_addr.s6_addr);
+        jbyte* addr = (jbyte*) &s->sin6_addr.s6_addr;
+        (*env)->SetByteArrayRegion(env, addressBytes, 0, ipLength, addr + offset);
     }
     jobject obj = (*env)->NewObject(env, datagramSocketAddressClass, datagramSocketAddrMethodId, addressBytes, scopeId, port, len, local);
     if ((*env)->ExceptionCheck(env) == JNI_TRUE) {
@@ -114,7 +114,7 @@ static jobject createDatagramSocketAddress(JNIEnv* env, const struct sockaddr_st
 }
 
 static jsize addressLength(const struct sockaddr_storage* addr) {
-    int len = ipAddressLength(addr);
+    int len = netty_unix_socket_ipAddressLength(addr);
     if (len == 4) {
         // Only encode port into it
         return len + 4;

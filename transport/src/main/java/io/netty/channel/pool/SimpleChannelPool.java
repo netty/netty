@@ -39,7 +39,8 @@ import static io.netty.util.internal.ObjectUtil.*;
  *
  */
 public class SimpleChannelPool implements ChannelPool {
-    private static final AttributeKey<SimpleChannelPool> POOL_KEY = AttributeKey.newInstance("channelPool");
+    private final AttributeKey<SimpleChannelPool> poolKey = AttributeKey.newInstance("channelPool." +
+        System.identityHashCode(this));
     private final Deque<Channel> deque = PlatformDependent.newConcurrentDeque();
     private final ChannelPoolHandler handler;
     private final ChannelHealthChecker healthCheck;
@@ -171,7 +172,7 @@ public class SimpleChannelPool implements ChannelPool {
             if (ch == null) {
                 // No Channel left in the pool bootstrap a new Channel
                 Bootstrap bs = bootstrap.clone();
-                bs.attr(POOL_KEY, this);
+                bs.attr(poolKey, this);
                 ChannelFuture f = connectChannel(bs);
                 if (f.isDone()) {
                     notifyConnect(f, promise);
@@ -237,7 +238,7 @@ public class SimpleChannelPool implements ChannelPool {
         if (future.isSuccess()) {
             if (future.getNow()) {
                 try {
-                    ch.attr(POOL_KEY).set(this);
+                    ch.attr(poolKey).set(this);
                     handler.channelAcquired(ch);
                     promise.setSuccess(ch);
                 } catch (Throwable cause) {
@@ -293,7 +294,7 @@ public class SimpleChannelPool implements ChannelPool {
     private void doReleaseChannel(Channel channel, Promise<Void> promise) {
         assert channel.eventLoop().inEventLoop();
         // Remove the POOL_KEY attribute from the Channel and check if it was acquired from this pool, if not fail.
-        if (channel.attr(POOL_KEY).getAndSet(null) != this) {
+        if (channel.attr(poolKey).getAndSet(null) != this) {
             closeAndFail(channel,
                          // Better include a stacktrace here as this is an user error.
                          new IllegalArgumentException(
@@ -357,12 +358,12 @@ public class SimpleChannelPool implements ChannelPool {
         }
     }
 
-    private static void closeChannel(Channel channel) {
-        channel.attr(POOL_KEY).getAndSet(null);
+    private void closeChannel(Channel channel) {
+        channel.attr(poolKey).getAndSet(null);
         channel.close();
     }
 
-    private static void closeAndFail(Channel channel, Throwable cause, Promise<?> promise) {
+    private void closeAndFail(Channel channel, Throwable cause, Promise<?> promise) {
         closeChannel(channel);
         promise.tryFailure(cause);
     }

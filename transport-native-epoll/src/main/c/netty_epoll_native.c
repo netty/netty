@@ -67,6 +67,7 @@ struct mmsghdr {
 
 // Those are initialized in the init(...) method and cached for performance reasons
 static jfieldID packetAddrFieldId = NULL;
+static jfieldID packetAddrLenFieldId = NULL;
 static jfieldID packetScopeIdFieldId = NULL;
 static jfieldID packetPortFieldId = NULL;
 static jfieldID packetMemoryAddressFieldId = NULL;
@@ -319,18 +320,21 @@ static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
 
         jobject packet = (*env)->GetObjectArrayElement(env, packets, i + offset);
         jbyteArray address = (jbyteArray) (*env)->GetObjectField(env, packet, packetAddrFieldId);
-        jint scopeId = (*env)->GetIntField(env, packet, packetScopeIdFieldId);
-        jint port = (*env)->GetIntField(env, packet, packetPortFieldId);
+        jint addrLen = (*env)->GetIntField(env, packet, packetAddrLenFieldId);
 
-        if (netty_unix_socket_initSockaddr(env, ipv6, address, scopeId, port, &addr[i], &addrSize) == -1) {
-            return -1;
+        if (addrLen != 0) {
+            jint scopeId = (*env)->GetIntField(env, packet, packetScopeIdFieldId);
+            jint port = (*env)->GetIntField(env, packet, packetPortFieldId);
+
+           if (netty_unix_socket_initSockaddr(env, ipv6, address, scopeId, port, &addr[i], &addrSize) == -1) {
+              return -1;
+           }
+           msg[i].msg_hdr.msg_name = &addr[i];
+           msg[i].msg_hdr.msg_namelen = addrSize;
         }
 
-        msg[i].msg_hdr.msg_name = &addr[i];
-        msg[i].msg_hdr.msg_namelen = addrSize;
-
         msg[i].msg_hdr.msg_iov = (struct iovec*) (intptr_t) (*env)->GetLongField(env, packet, packetMemoryAddressFieldId);
-        msg[i].msg_hdr.msg_iovlen = (*env)->GetIntField(env, packet, packetCountFieldId);;
+        msg[i].msg_hdr.msg_iovlen = (*env)->GetIntField(env, packet, packetCountFieldId);
     }
 
     ssize_t res;
@@ -343,6 +347,69 @@ static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
     if (res < 0) {
         return -err;
     }
+    return (jint) res;
+}
+
+static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jobjectArray packets, jint offset, jint len) {
+    struct mmsghdr msg[len];
+    memset(msg, 0, sizeof(msg));
+    struct sockaddr_storage addr[len];
+    int addrSize = sizeof(addr);
+    memset(addr, 0, addrSize);
+
+    int i;
+
+    for (i = 0; i < len; i++) {
+        jobject packet = (*env)->GetObjectArrayElement(env, packets, i + offset);
+        msg[i].msg_hdr.msg_iov = (struct iovec*) (intptr_t) (*env)->GetLongField(env, packet, packetMemoryAddressFieldId);
+        msg[i].msg_hdr.msg_iovlen = (*env)->GetIntField(env, packet, packetCountFieldId);
+
+        msg[i].msg_hdr.msg_name = addr + i;
+        msg[i].msg_hdr.msg_namelen = (socklen_t) addrSize;
+    }
+
+    ssize_t res;
+    int err;
+    do {
+       res = recvmmsg(fd, msg, len, 0, NULL);
+       // keep on reading if it was interrupted
+    } while (res == -1 && ((err = errno) == EINTR));
+
+    if (res < 0) {
+        return -err;
+    }
+
+    for (i = 0; i < res; i++) {
+        jobject packet = (*env)->GetObjectArrayElement(env, packets, i + offset);
+        jbyteArray address = (jbyteArray) (*env)->GetObjectField(env, packet, packetAddrFieldId);
+
+        (*env)->SetIntField(env, packet, packetCountFieldId, msg[i].msg_len);
+
+        struct sockaddr_storage* addr = (struct sockaddr_storage*) msg[i].msg_hdr.msg_name;
+
+        if (addr->ss_family == AF_INET) {
+            struct sockaddr_in* ipaddr = (struct sockaddr_in*) addr;
+
+            (*env)->SetByteArrayRegion(env, address, 0, 4, (jbyte*) &ipaddr->sin_addr.s_addr);
+            (*env)->SetIntField(env, packet, packetAddrLenFieldId, 4);
+            (*env)->SetIntField(env, packet, packetScopeIdFieldId, 0);
+            (*env)->SetIntField(env, packet, packetPortFieldId, ntohs(ipaddr->sin_port));
+        } else {
+              int addrLen = netty_unix_socket_ipAddressLength(addr);
+              struct sockaddr_in6* ip6addr = (struct sockaddr_in6*) addr;
+
+              if (addrLen == 4) {
+                  // IPV4 mapped IPV6 address
+                  (*env)->SetByteArrayRegion(env, address, 12, 4, (jbyte*) &ip6addr->sin6_addr.s6_addr);
+              } else {
+                  (*env)->SetByteArrayRegion(env, address, 0, 16, (jbyte*) &ip6addr->sin6_addr.s6_addr);
+              }
+              (*env)->SetIntField(env, packet, packetAddrLenFieldId, addrLen);
+              (*env)->SetIntField(env, packet, packetScopeIdFieldId, ip6addr->sin6_scope_id);
+              (*env)->SetIntField(env, packet, packetPortFieldId, ntohs(ip6addr->sin6_port));
+        }
+    }
+
     return (jint) res;
 }
 
@@ -470,17 +537,25 @@ static const JNINativeMethod fixed_method_table[] = {
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
 
 static jint dynamicMethodsTableSize() {
-    return fixed_method_table_size + 1; // 1 is for the dynamic method signatures.
+    return fixed_method_table_size + 2; // 2 is for the dynamic method signatures.
 }
 
 static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     JNINativeMethod* dynamicMethods = malloc(sizeof(JNINativeMethod) * dynamicMethodsTableSize());
     memcpy(dynamicMethods, fixed_method_table, sizeof(fixed_method_table));
+
     char* dynamicTypeName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;II)I");
     JNINativeMethod* dynamicMethod = &dynamicMethods[fixed_method_table_size];
     dynamicMethod->name = "sendmmsg0";
     dynamicMethod->signature = netty_unix_util_prepend("(IZ[L", dynamicTypeName);
     dynamicMethod->fnPtr = (void *) netty_epoll_native_sendmmsg0;
+    free(dynamicTypeName);
+
+    dynamicTypeName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/epoll/NativeDatagramPacketArray$NativeDatagramPacket;II)I");
+    dynamicMethod = &dynamicMethods[fixed_method_table_size + 1];
+    dynamicMethod->name = "recvmmsg0";
+    dynamicMethod->signature = netty_unix_util_prepend("(IZ[L", dynamicTypeName);
+    dynamicMethod->fnPtr = (void *) netty_epoll_native_recvmmsg0;
     free(dynamicTypeName);
     return dynamicMethods;
 }
@@ -569,6 +644,11 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
         netty_unix_errors_throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.addr");
         goto error;
     }
+    packetAddrLenFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "addrLen", "I");
+    if (packetAddrLenFieldId == NULL) {
+        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.addrLen");
+        goto error;
+    }
     packetScopeIdFieldId = (*env)->GetFieldID(env, nativeDatagramPacketCls, "scopeId", "I");
     if (packetScopeIdFieldId == NULL) {
         netty_unix_errors_throwRuntimeException(env, "failed to get field ID: NativeDatagramPacket.scopeId");
@@ -613,6 +693,7 @@ error:
        netty_epoll_linuxsocket_JNI_OnUnLoad(env);
    }
    packetAddrFieldId = NULL;
+   packetAddrLenFieldId = NULL;
    packetScopeIdFieldId = NULL;
    packetPortFieldId = NULL;
    packetMemoryAddressFieldId = NULL;
@@ -630,6 +711,7 @@ static void netty_epoll_native_JNI_OnUnLoad(JNIEnv* env) {
     netty_epoll_linuxsocket_JNI_OnUnLoad(env);
 
     packetAddrFieldId = NULL;
+    packetAddrLenFieldId = NULL;
     packetScopeIdFieldId = NULL;
     packetPortFieldId = NULL;
     packetMemoryAddressFieldId = NULL;

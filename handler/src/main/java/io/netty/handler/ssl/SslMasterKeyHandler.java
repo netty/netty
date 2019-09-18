@@ -18,7 +18,6 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.internal.tcnative.SSL;
 import io.netty.util.internal.ReflectionUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -140,8 +139,7 @@ public abstract class SslMasterKeyHandler extends ChannelInboundHandlerAdapter {
                     }
                     accept(secretKey, sslSession);
                 } else if (OpenSsl.isAvailable() && engine instanceof ReferenceCountedOpenSslEngine) {
-                    SecretKeySpec secretKey = new SecretKeySpec(
-                            SSL.getMasterKey(((ReferenceCountedOpenSslEngine) engine).sslPointer()), "AES");
+                    SecretKeySpec secretKey = ((ReferenceCountedOpenSslEngine) engine).masterKey();
                     accept(secretKey, sslSession);
                 }
             }
