@@ -21,6 +21,7 @@ import io.netty.util.AttributeKey;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
+import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.OrderedEventExecutor;
 import io.netty.util.internal.PromiseNotificationUtil;
@@ -1103,7 +1104,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         }
     }
 
-    static final class WriteTask extends AbstractWriteTask implements SingleThreadEventLoop.NonWakeupRunnable {
+    static final class WriteTask extends AbstractWriteTask implements AbstractEventExecutor.LazyRunnable {
 
         private static final Recycler<WriteTask> RECYCLER = new Recycler<WriteTask>() {
             @Override

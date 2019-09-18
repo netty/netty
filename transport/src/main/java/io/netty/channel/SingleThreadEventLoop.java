@@ -118,7 +118,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
             reject(task);
         }
 
-        if (wakesUpForTask(task)) {
+        if (!(task instanceof LazyRunnable) && wakesUpForTask(task)) {
             wakeup(inEventLoop());
         }
     }
@@ -159,9 +159,4 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     public int registeredChannels() {
         return -1;
     }
-
-    /**
-     * Marker interface for {@link Runnable} that will not trigger an {@link #wakeup(boolean)} in all cases.
-     */
-    interface NonWakeupRunnable extends SingleThreadEventExecutor.NonWakeupRunnable { }
 }
