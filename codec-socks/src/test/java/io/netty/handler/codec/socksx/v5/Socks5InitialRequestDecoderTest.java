@@ -18,7 +18,6 @@ package io.netty.handler.codec.socksx.v5;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.socksx.SocksPortUnificationServerHandler;
 import org.junit.Test;
 
 import static org.junit.Assert.assertSame;
@@ -26,8 +25,8 @@ import static org.junit.Assert.assertTrue;
 
 public class Socks5InitialRequestDecoderTest {
     @Test
-    public void testSocks5InitialRequestDecoder() {
-        EmbeddedChannel e = new EmbeddedChannel(new SocksPortUnificationServerHandler());
+    public void testUnpackingCausesDecodeFail() {
+        EmbeddedChannel e = new EmbeddedChannel(new Socks5InitialRequestDecoder());
         e.writeInbound(Unpooled.wrappedBuffer(new byte[]{5, 2, 0}));
         e.writeInbound(Unpooled.wrappedBuffer(new byte[]{1}));
         Object o = e.readInbound();
