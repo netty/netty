@@ -57,8 +57,9 @@ public class QueryStringEncoder {
      * path string in the specified charset.
      */
     public QueryStringEncoder(String uri, Charset charset) {
+        ObjectUtil.checkNotNull(charset, "charset");
         uriBuilder = new StringBuilder(uri);
-        this.charset = charset;
+        this.charset = CharsetUtil.UTF_8.equals(charset) ? null : charset;
     }
 
     /**
@@ -81,7 +82,7 @@ public class QueryStringEncoder {
     }
 
     private void encodeComponent(CharSequence s) {
-        if (CharsetUtil.UTF_8.equals(charset)) {
+        if (charset == null) {
             encodeUtf8Component(s);
         } else {
             encodeNonUtf8Component(s);
@@ -118,7 +119,7 @@ public class QueryStringEncoder {
      * @param s The String to encode
      */
     private void encodeNonUtf8Component(CharSequence s) {
-        //allocate memory until needed
+        //Don't allocate memory until needed
         char[] buf = null;
 
         for (int i = 0; i < s.length();) {
