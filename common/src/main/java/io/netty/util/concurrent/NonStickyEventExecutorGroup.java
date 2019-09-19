@@ -274,7 +274,7 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
                         //
                         // The above cases can be distinguished by performing a
                         // compareAndSet(NONE, RUNNING). If it returns "false", it is case 1; otherwise it is case 2.
-                        if (tasks.peek() == null || !state.compareAndSet(NONE, RUNNING)) {
+                        if (tasks.isEmpty() || !state.compareAndSet(NONE, RUNNING)) {
                             return; // done
                         }
                     }
