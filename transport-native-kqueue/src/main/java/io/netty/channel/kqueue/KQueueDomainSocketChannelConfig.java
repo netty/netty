@@ -25,6 +25,7 @@ import io.netty.channel.unix.DomainSocketChannelConfig;
 import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.util.internal.UnstableApi;
 
+import java.io.IOException;
 import java.util.Map;
 
 import static io.netty.channel.unix.UnixChannelOption.*;
@@ -40,7 +41,7 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), DOMAIN_SOCKET_READ_MODE, ALLOW_HALF_CLOSURE);
+        return getOptions(super.getOptions(), DOMAIN_SOCKET_READ_MODE, ALLOW_HALF_CLOSURE, SO_SNDBUF, SO_RCVBUF);
     }
 
     @SuppressWarnings("unchecked")
@@ -51,6 +52,12 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
         }
         if (option == ALLOW_HALF_CLOSURE) {
             return (T) Boolean.valueOf(isAllowHalfClosure());
+        }
+        if (option == SO_SNDBUF) {
+            return (T) Integer.valueOf(getSendBufferSize());
+        }
+        if (option == SO_RCVBUF) {
+            return (T) Integer.valueOf(getReceiveBufferSize());
         }
         return super.getOption(option);
     }
@@ -157,6 +164,44 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
     @Override
     public DomainSocketReadMode getReadMode() {
         return mode;
+    }
+
+    @Override
+    public int getSendBufferSize() {
+        try {
+            return ((KQueueDomainSocketChannel) channel).socket.getSendBufferSize();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public KQueueDomainSocketChannelConfig setSendBufferSize(int sendBufferSize) {
+        try {
+            ((KQueueDomainSocketChannel) channel).socket.setSendBufferSize(sendBufferSize);
+            return this;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int getReceiveBufferSize() {
+        try {
+            return ((KQueueDomainSocketChannel) channel).socket.getReceiveBufferSize();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public KQueueDomainSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+        try {
+            ((KQueueDomainSocketChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
+            return this;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**

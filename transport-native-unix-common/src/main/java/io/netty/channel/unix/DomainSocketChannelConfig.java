@@ -21,6 +21,8 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 
+import java.net.StandardSocketOptions;
+
 /**
  * Special {@link ChannelConfig} for {@link DomainSocketChannel}s.
  */
@@ -77,4 +79,24 @@ public interface DomainSocketChannelConfig extends ChannelConfig {
      * Return the {@link DomainSocketReadMode} for the channel.
      */
     DomainSocketReadMode getReadMode();
+
+    /**
+     * Gets the {@link StandardSocketOptions#SO_SNDBUF} option.
+     */
+    int getSendBufferSize();
+
+    /**
+     * Sets the {@link StandardSocketOptions#SO_SNDBUF} option.
+     */
+    DomainSocketChannelConfig setSendBufferSize(int sendBufferSize);
+
+    /**
+     * Gets the {@link StandardSocketOptions#SO_RCVBUF} option.
+     */
+    int getReceiveBufferSize();
+
+    /**
+     * Sets the {@link StandardSocketOptions#SO_RCVBUF} option.
+     */
+    DomainSocketChannelConfig setReceiveBufferSize(int receiveBufferSize);
 }
