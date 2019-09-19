@@ -24,25 +24,6 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
         return new RunnableAdapter<T>(runnable, result);
     }
 
-    static class SentinelCallable<T> implements Callable<T> {
-        private final String name;
-        SentinelCallable(String name) {
-            this.name = name;
-        }
-        @Override
-        public T call() {
-            return null;
-        }
-        @Override
-        public String toString() {
-            return name;
-        }
-    }
-
-    static final Callable<?> COMPLETED = new SentinelCallable<Object>("COMPLETED");
-    static final Callable<?> CANCELLED = new SentinelCallable<Object>("CANCELLED");
-    static final Callable<?> FAILED = new SentinelCallable<Object>("FAILED");
-
     private static final class RunnableAdapter<T> implements Callable<T> {
         final Runnable task;
         final T result;
@@ -61,6 +42,25 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
         @Override
         public String toString() {
             return "Callable(task: " + task + ", result: " + result + ')';
+        }
+    }
+
+    private static final Callable<?> COMPLETED = new SentinelCallable<Object>("COMPLETED");
+    private static final Callable<?> CANCELLED = new SentinelCallable<Object>("CANCELLED");
+    private static final Callable<?> FAILED = new SentinelCallable<Object>("FAILED");
+
+    private static class SentinelCallable<T> implements Callable<T> {
+        private final String name;
+        SentinelCallable(String name) {
+            this.name = name;
+        }
+        @Override
+        public T call() {
+            return null;
+        }
+        @Override
+        public String toString() {
+            return name;
         }
     }
 
@@ -100,6 +100,10 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     @SuppressWarnings("unchecked")
     private boolean clearTaskAfterCompletion(boolean done, Callable<?> result) {
         if (done) {
+            // The only time where it might be possible for the sentinel task
+            // to be called is is in the case of a periodic ScheduledFutureTask,
+            // in which case it's a benign race with cancellation and the (null)
+            // return value is not used.
             task = (Callable<V>) result;
         }
         return done;
