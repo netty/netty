@@ -51,13 +51,16 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
 
     private static class SentinelCallable<T> implements Callable<T> {
         private final String name;
+
         SentinelCallable(String name) {
             this.name = name;
         }
+
         @Override
         public T call() {
             return null;
         }
+
         @Override
         public String toString() {
             return name;
@@ -101,7 +104,7 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     private boolean clearTaskAfterCompletion(boolean done, Callable<?> result) {
         if (done) {
             // The only time where it might be possible for the sentinel task
-            // to be called is is in the case of a periodic ScheduledFutureTask,
+            // to be called is in the case of a periodic ScheduledFutureTask,
             // in which case it's a benign race with cancellation and the (null)
             // return value is not used.
             task = (Callable<V>) result;
@@ -126,8 +129,7 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     protected final boolean tryFailureInternal(Throwable cause) {
-        boolean done = super.tryFailure(cause);
-        return clearTaskAfterCompletion(done, FAILED);
+        return clearTaskAfterCompletion(super.tryFailure(cause), FAILED);
     }
 
     @Override
@@ -147,8 +149,7 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     protected final boolean trySuccessInternal(V result) {
-        boolean done = super.trySuccess(result);
-        return clearTaskAfterCompletion(done, COMPLETED);
+        return clearTaskAfterCompletion(super.trySuccess(result), COMPLETED);
     }
 
     @Override
@@ -162,8 +163,7 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
 
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
-        boolean cancelled = super.cancel(mayInterruptIfRunning);
-        return clearTaskAfterCompletion(cancelled, CANCELLED);
+        return clearTaskAfterCompletion(super.cancel(mayInterruptIfRunning), CANCELLED);
     }
 
     @Override
