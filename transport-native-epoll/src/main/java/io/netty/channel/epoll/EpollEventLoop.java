@@ -203,6 +203,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
         return runScheduledAndExecutorTasks(4);
     }
 
+    // Note that this method is called from *outside* the event loop
     private void trySetTimerFd(long candidateNextDeadline) throws IOException {
         for (;;) {
             long nextDeadline = nextDeadlineNanos.get();
@@ -246,11 +247,11 @@ class EpollEventLoop extends SingleThreadEventLoop {
         final long nextTaskDeadlineNanos = nextScheduledTaskDeadlineNanos();
         if (nextTaskDeadlineNanos == -1 || nextTaskDeadlineNanos >= timerFdDeadline) {
             // Just restore to preexisting timerFd value, update not needed
-            nextDeadlineNanos.lazySet(timerFdDeadline);
+            nextDeadlineNanos.set(timerFdDeadline);
         } else {
             synchronized (nextDeadlineNanos) {
                 // Shorter delay required than current timerFd setting, update it
-                nextDeadlineNanos.lazySet(timerFdDeadline = nextTaskDeadlineNanos);
+                nextDeadlineNanos.set(timerFdDeadline = nextTaskDeadlineNanos);
                 setTimerFd(deadlineToDelayNanos(timerFdDeadline));
             }
         }
@@ -402,9 +403,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
                             }
                             // fall-through
                         }
-                        // Ordered store is sufficient here since the only access outside this
-                        // thread is a getAndSet in the wakeup() method
-                        wakenUp.lazySet(0);
+                        wakenUp.set(0);
                         try {
                             // When we are in the EventLoop we don't bother setting the timerFd for each
                             // scheduled task, but instead defer the processing until the end of the EventLoop
