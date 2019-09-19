@@ -541,6 +541,17 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
     }
 
+    // Exposed for testing only
+    final void setUseTasks(boolean useTasks) {
+        Lock writerLock = ctxLock.writeLock();
+        writerLock.lock();
+        try {
+            SSLContext.setUseTasks(ctx, useTasks);
+        } finally {
+            writerLock.unlock();
+        }
+    }
+
     // IMPORTANT: This method must only be called from either the constructor or the finalizer as a user MUST never
     //            get access to an OpenSslSessionContext after this method was called to prevent the user from
     //            producing a segfault.
