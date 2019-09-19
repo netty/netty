@@ -122,7 +122,7 @@ public class QueryStringEncoder {
         //Don't allocate memory until needed
         char[] buf = null;
 
-        for (int i = 0; i < s.length();) {
+        for (int i = 0, len = s.length(); i < len;) {
             char c = s.charAt(i);
             if (dontNeedEncoding(c)) {
                 uriBuilder.append(c);
@@ -152,7 +152,7 @@ public class QueryStringEncoder {
      * @see ByteBufUtil#writeUtf8(io.netty.buffer.ByteBuf, CharSequence, int, int)
      */
     private void encodeUtf8Component(CharSequence s) {
-        for (int i = 0; i < s.length(); i++) {
+        for (int i = 0, len = s.length(); i < len; i++) {
             char c = s.charAt(i);
             if (c < 0x80) {
                 if (dontNeedEncoding(c)) {
