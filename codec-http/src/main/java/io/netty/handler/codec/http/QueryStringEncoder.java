@@ -43,8 +43,7 @@ public class QueryStringEncoder {
     private final StringBuilder uriBuilder;
     private boolean hasParams;
     private static final byte WRITE_UTF_UNKNOWN = (byte) '?';
-    private static final char[] CHAR_MAP
-            = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+    private static final char[] CHAR_MAP = "0123456789ABCDEF".toCharArray();
 
     /**
      * Creates a new encoder that encodes a URI that starts with the specified
