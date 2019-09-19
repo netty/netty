@@ -309,7 +309,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     private boolean fetchFromScheduledTaskQueue() {
-        if (scheduledTaskQueue == null || scheduledTaskQueue.isEmpty()) {
+        if (isNullOrEmpty(scheduledTaskQueue)) {
             return true;
         }
         long nanoTime = AbstractScheduledEventExecutor.nanoTime();
@@ -330,7 +330,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * @return {@code true} if at least one scheduled task was executed.
      */
     private boolean executeExpiredScheduledTasks() {
-        if (scheduledTaskQueue == null || scheduledTaskQueue.isEmpty()) {
+        if (isNullOrEmpty(scheduledTaskQueue)) {
             return false;
         }
         long nanoTime = AbstractScheduledEventExecutor.nanoTime();
@@ -595,19 +595,19 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     @Override
-    final void executeScheduledRunnable(final Runnable runnable, boolean isAddition, long deadlineNanos) {
-        // Don't wakeup if this is a removal task or if beforeScheduledTaskSubmitted returns false
-        if (isAddition && beforeScheduledTaskSubmitted(deadlineNanos)) {
-            super.executeScheduledRunnable(runnable, isAddition, deadlineNanos);
+    final void executeScheduledRunnable(final Runnable runnable, long deadlineNanos) {
+        // Don't wakeup if beforeScheduledTaskSubmitted returns false
+        if (beforeScheduledTaskSubmitted(deadlineNanos)) {
+            super.executeScheduledRunnable(runnable, deadlineNanos);
         } else {
             super.executeScheduledRunnable(new NonWakeupRunnable() {
                 @Override
                 public void run() {
                     runnable.run();
                 }
-            }, isAddition, deadlineNanos);
+            }, deadlineNanos);
             // Second hook after scheduling to facilitate race-avoidance
-            if (isAddition && afterScheduledTaskSubmitted(deadlineNanos)) {
+            if (afterScheduledTaskSubmitted(deadlineNanos)) {
                 wakeup(false);
             }
         }

@@ -78,7 +78,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         return scheduledTaskQueue;
     }
 
-    private static boolean isNullOrEmpty(Queue<ScheduledFutureTask<?>> queue) {
+    static boolean isNullOrEmpty(Queue<ScheduledFutureTask<?>> queue) {
         return queue == null || queue.isEmpty();
     }
 
@@ -98,7 +98,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
                 scheduledTaskQueue.toArray(new ScheduledFutureTask<?>[0]);
 
         for (ScheduledFutureTask<?> task: scheduledTasks) {
-            task.cancelWithoutRemove(false);
+            task.cancel(false);
         }
 
         scheduledTaskQueue.clearIgnoringIndexes();
@@ -118,8 +118,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     protected final Runnable pollScheduledTask(long nanoTime) {
         assert inEventLoop();
 
-        Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
-        ScheduledFutureTask<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
+        ScheduledFutureTask<?> scheduledTask = peekScheduledTask();
         if (scheduledTask == null || scheduledTask.deadlineNanos() - nanoTime > 0) {
             return null;
         }
@@ -146,7 +145,14 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     final ScheduledFutureTask<?> peekScheduledTask() {
         Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
-        return scheduledTaskQueue != null ? scheduledTaskQueue.peek() : null;
+        if (scheduledTaskQueue == null) {
+            return null;
+        }
+        ScheduledFutureTask<?> scheduledTask;
+        while ((scheduledTask = scheduledTaskQueue.peek()) != null && scheduledTask.isDone()) {
+            scheduledTaskQueue.remove();
+        }
+        return scheduledTask;
     }
 
     /**
@@ -248,37 +254,20 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
                 public void run() {
                     scheduledTaskQueue().add(task);
                 }
-            }, true, task.deadlineNanos());
+            }, task.deadlineNanos());
         }
 
         return task;
     }
 
-    final void removeScheduled(final ScheduledFutureTask<?> task) {
-        if (inEventLoop()) {
-            scheduledTaskQueue().removeTyped(task);
-        } else {
-            executeScheduledRunnable(new Runnable() {
-                @Override
-                public void run() {
-                    scheduledTaskQueue().removeTyped(task);
-                }
-            }, false, task.deadlineNanos());
-        }
-    }
-
     /**
-     * Execute a {@link Runnable} from outside the event loop thread that is responsible for adding or removing
-     * a scheduled action. Note that schedule events which occur on the event loop thread do not interact with this
-     * method.
+     * Execute a {@link Runnable} from outside the event loop thread that is responsible for adding a scheduled
+     * action. Note that schedule events which occur on the event loop thread do not interact with this method.
+     *
      * @param runnable The {@link Runnable} to execute which will add or remove a scheduled action
-     * @param isAddition {@code true} if the {@link Runnable} will add an action, {@code false} if it will remove an
-     *                   action
      * @param deadlineNanos the deadline in nanos of the scheduled task that will be added or removed.
      */
-    void executeScheduledRunnable(Runnable runnable,
-                                            @SuppressWarnings("unused") boolean isAddition,
-                                            @SuppressWarnings("unused") long deadlineNanos) {
+    void executeScheduledRunnable(Runnable runnable, @SuppressWarnings("unused") long deadlineNanos) {
         execute(runnable);
     }
 }
