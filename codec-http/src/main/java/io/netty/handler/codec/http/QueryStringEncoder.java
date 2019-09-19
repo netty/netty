@@ -43,6 +43,7 @@ public class QueryStringEncoder {
     private final StringBuilder uriBuilder;
     private boolean hasParams;
     private static final byte WRITE_UTF_UNKNOWN = (byte) '?';
+    private static final char[] CHAR_MAP = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
 
     /**
      * Creates a new encoder that encodes a URI that starts with the specified
@@ -203,16 +204,13 @@ public class QueryStringEncoder {
 
     /**
      * Convert the given digit to a upper hexadecimal char.
-     * <p>
-     * the 55 in this method means {@code 'A' - 10}
      *
      * @param digit the number to convert to a character.
      * @return the {@code char} representation of the specified digit
      * in hexadecimal.
      */
     private static char forDigit(int digit) {
-        digit = digit & 0xF;
-        return (char) (digit < 10 ? '0' + digit : 55 + digit);
+        return CHAR_MAP[digit & 0xF];
     }
 
     /**
