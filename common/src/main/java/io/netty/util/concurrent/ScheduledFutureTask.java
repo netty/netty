@@ -19,7 +19,6 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.DefaultPriorityQueue;
 import io.netty.util.internal.PriorityQueueNode;
 
-import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
@@ -133,6 +132,8 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
                 if (setUncancellableInternal()) {
                     V result = task.call();
                     setSuccessInternal(result);
+                } else {
+                    scheduledExecutor().cancelledTaskDiscarded();
                 }
             } else {
                 // check if is done as it may was cancelled
@@ -146,17 +147,40 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
                         }
                         if (!isCancelled()) {
                             // scheduledTaskQueue can never be null as we lazy init it before submit the task!
-                            Queue<ScheduledFutureTask<?>> scheduledTaskQueue =
-                                    ((AbstractScheduledEventExecutor) executor()).scheduledTaskQueue;
-                            assert scheduledTaskQueue != null;
-                            scheduledTaskQueue.add(this);
+                            scheduledExecutor().scheduledTaskQueue.add(this);
+                        } else {
+                            scheduledExecutor().cancelledTaskDiscarded();
                         }
                     }
+                } else {
+                    scheduledExecutor().cancelledTaskDiscarded();
                 }
             }
         } catch (Throwable cause) {
             setFailureInternal(cause);
         }
+    }
+
+    private AbstractScheduledEventExecutor scheduledExecutor() {
+        return (AbstractScheduledEventExecutor) executor();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param mayInterruptIfRunning this value has no effect in this implementation.
+     */
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+        boolean canceled = super.cancel(mayInterruptIfRunning);
+        if (canceled) {
+            scheduledExecutor().taskCancelled(this);
+        }
+        return canceled;
+    }
+
+    boolean cancelWithoutRemove(boolean mayInterruptIfRunning) {
+        return super.cancel(mayInterruptIfRunning);
     }
 
     @Override

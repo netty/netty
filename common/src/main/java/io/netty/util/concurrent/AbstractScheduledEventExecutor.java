@@ -15,15 +15,18 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.concurrent.SingleThreadEventExecutor.NonWakeupRunnable;
 import io.netty.util.internal.DefaultPriorityQueue;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PriorityQueue;
+import io.netty.util.internal.RecyclableArrayList;
 
 import java.util.Comparator;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Abstract base class for {@link EventExecutor}s that want to support scheduling.
@@ -37,7 +40,16 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
                 }
             };
 
+    // This is actually ~ half of the theoretical max
+    private static final int MAX_UNREMOVED_CANCELS = 10000;
+
     PriorityQueue<ScheduledFutureTask<?>> scheduledTaskQueue;
+
+    // The sum of these two is the number of cancelled tasks in the queue
+    // The local count can go negative, but the atomic count and sum of the
+    // two counts will always be non-negative.
+    private int localCancelledCount;
+    private final AtomicInteger cancelledCount = new AtomicInteger();
 
     protected AbstractScheduledEventExecutor() {
     }
@@ -98,7 +110,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
                 scheduledTaskQueue.toArray(new ScheduledFutureTask<?>[0]);
 
         for (ScheduledFutureTask<?> task: scheduledTasks) {
-            task.cancel(false);
+            task.cancelWithoutRemove(false);
         }
 
         scheduledTaskQueue.clearIgnoringIndexes();
@@ -151,6 +163,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         ScheduledFutureTask<?> scheduledTask;
         while ((scheduledTask = scheduledTaskQueue.peek()) != null && scheduledTask.isDone()) {
             scheduledTaskQueue.remove();
+            cancelledTaskDiscarded();
         }
         return scheduledTask;
     }
@@ -258,6 +271,49 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
 
         return task;
+    }
+
+    final void taskCancelled(ScheduledFutureTask<?> task) {
+        if (inEventLoop()) {
+            if (localCancelledCount <= MAX_UNREMOVED_CANCELS) {
+                localCancelledCount++;
+            } else {
+                scheduledTaskQueue().removeTyped(task);
+            }
+        } else if (cancelledCount.incrementAndGet() == MAX_UNREMOVED_CANCELS) {
+            cancelledCount.addAndGet(-MAX_UNREMOVED_CANCELS);
+            execute(new NonWakeupRunnable() {
+                @Override
+                public void run() {
+                    int toPrune = localCancelledCount;
+                    // transfer from cancelledCount to localCancelledCount
+                    localCancelledCount = toPrune + MAX_UNREMOVED_CANCELS;
+                    if (toPrune <= 0) {
+                        return;
+                    }
+                    RecyclableArrayList list = RecyclableArrayList.newInstance(toPrune);
+                    for (ScheduledFutureTask<?> task : scheduledTaskQueue()) {
+                        if (task.isDone()) {
+                            list.add(task);
+                            if (list.size() == toPrune) {
+                                break;
+                            }
+                        }
+                    }
+                    toPrune = list.size();
+                    for (int i = 0; i < toPrune; i++) {
+                        scheduledTaskQueue.remove(list.get(i));
+                    }
+                    list.recycle();
+                    localCancelledCount -= toPrune;
+                }
+            });
+        }
+    }
+
+    final void cancelledTaskDiscarded() {
+        assert inEventLoop();
+        localCancelledCount--;
     }
 
     /**
