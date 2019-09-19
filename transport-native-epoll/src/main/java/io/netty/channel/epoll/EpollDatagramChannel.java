@@ -439,6 +439,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     protected void doDisconnect() throws Exception {
         socket.disconnect();
         connected = active = false;
+        resetCachedAddresses();
     }
 
     @Override

@@ -371,6 +371,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     protected void doDisconnect() throws Exception {
         socket.disconnect();
         connected = active = false;
+        resetCachedAddresses();
     }
 
     @Override

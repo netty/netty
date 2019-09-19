@@ -138,6 +138,11 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         doClose();
     }
 
+    void resetCachedAddresses() {
+        local = socket.localAddress();
+        remote = socket.remoteAddress();
+    }
+
     @Override
     public boolean isOpen() {
         return socket.isOpen();
