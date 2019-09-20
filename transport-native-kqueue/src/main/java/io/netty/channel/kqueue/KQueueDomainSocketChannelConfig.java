@@ -28,7 +28,10 @@ import io.netty.util.internal.UnstableApi;
 import java.io.IOException;
 import java.util.Map;
 
-import static io.netty.channel.unix.UnixChannelOption.*;
+import static io.netty.channel.ChannelOption.ALLOW_HALF_CLOSURE;
+import static io.netty.channel.ChannelOption.SO_RCVBUF;
+import static io.netty.channel.ChannelOption.SO_SNDBUF;
+import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
 @UnstableApi
 public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig implements DomainSocketChannelConfig {
@@ -70,6 +73,10 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
             setReadMode((DomainSocketReadMode) value);
         } else if (option == ALLOW_HALF_CLOSURE) {
             setAllowHalfClosure((Boolean) value);
+        } else if (option == SO_SNDBUF) {
+            setSendBufferSize((Integer) value);
+        } else if (option == SO_RCVBUF) {
+            setReceiveBufferSize((Integer) value);
         } else {
             return super.setOption(option, value);
         }
