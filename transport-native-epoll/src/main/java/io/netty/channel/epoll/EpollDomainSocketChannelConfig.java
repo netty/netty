@@ -187,7 +187,6 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
         return this;
     }
 
-    @Override
     public int getSendBufferSize() {
         try {
             return ((EpollDomainSocketChannel) channel).socket.getSendBufferSize();
@@ -196,7 +195,6 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
         }
     }
 
-    @Override
     public EpollDomainSocketChannelConfig setSendBufferSize(int sendBufferSize) {
         try {
             ((EpollDomainSocketChannel) channel).socket.setSendBufferSize(sendBufferSize);
@@ -206,7 +204,6 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
         }
     }
 
-    @Override
     public int getReceiveBufferSize() {
         try {
             return ((EpollDomainSocketChannel) channel).socket.getReceiveBufferSize();
@@ -215,7 +212,6 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
         }
     }
 
-    @Override
     public EpollDomainSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((EpollDomainSocketChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
