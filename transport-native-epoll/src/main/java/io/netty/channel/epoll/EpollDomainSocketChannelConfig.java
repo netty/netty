@@ -24,9 +24,12 @@ import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.DomainSocketChannelConfig;
 import io.netty.channel.unix.DomainSocketReadMode;
 
+import java.io.IOException;
 import java.util.Map;
 
 import static io.netty.channel.ChannelOption.ALLOW_HALF_CLOSURE;
+import static io.netty.channel.ChannelOption.SO_RCVBUF;
+import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
 public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
@@ -40,7 +43,7 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), DOMAIN_SOCKET_READ_MODE, ALLOW_HALF_CLOSURE);
+        return getOptions(super.getOptions(), DOMAIN_SOCKET_READ_MODE, ALLOW_HALF_CLOSURE, SO_SNDBUF, SO_RCVBUF);
     }
 
     @SuppressWarnings("unchecked")
@@ -51,6 +54,12 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
         }
         if (option == ALLOW_HALF_CLOSURE) {
             return (T) Boolean.valueOf(isAllowHalfClosure());
+        }
+        if (option == SO_SNDBUF) {
+            return (T) Integer.valueOf(getSendBufferSize());
+        }
+        if (option == SO_RCVBUF) {
+            return (T) Integer.valueOf(getReceiveBufferSize());
         }
         return super.getOption(option);
     }
@@ -63,6 +72,10 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
             setReadMode((DomainSocketReadMode) value);
         } else if (option == ALLOW_HALF_CLOSURE) {
             setAllowHalfClosure((Boolean) value);
+        } else if (option == SO_SNDBUF) {
+            setSendBufferSize((Integer) value);
+        } else if (option == SO_RCVBUF) {
+            setReceiveBufferSize((Integer) value);
         } else {
             return super.setOption(option, value);
         }
@@ -172,5 +185,39 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
     public EpollDomainSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
         this.allowHalfClosure = allowHalfClosure;
         return this;
+    }
+
+    public int getSendBufferSize() {
+        try {
+            return ((EpollDomainSocketChannel) channel).socket.getSendBufferSize();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public EpollDomainSocketChannelConfig setSendBufferSize(int sendBufferSize) {
+        try {
+            ((EpollDomainSocketChannel) channel).socket.setSendBufferSize(sendBufferSize);
+            return this;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public int getReceiveBufferSize() {
+        try {
+            return ((EpollDomainSocketChannel) channel).socket.getReceiveBufferSize();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public EpollDomainSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+        try {
+            ((EpollDomainSocketChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
+            return this;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
