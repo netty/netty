@@ -197,9 +197,8 @@ static void netty_epoll_native_timerFdSetTime(JNIEnv* env, jclass clazz, jint ti
     }
 }
 
-static jint netty_epoll_native_epollWaitNoTimeout(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jboolean immediatePoll) {
+static jint netty_epoll_native_epollWait(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timeout) {
     struct epoll_event *ev = (struct epoll_event*) (intptr_t) address;
-    const int timeout = immediatePoll ? 0 : -1;
     int result, err;
 
     do {
@@ -213,47 +212,23 @@ static jint netty_epoll_native_epollWaitNoTimeout(JNIEnv* env, jclass clazz, jin
 
 // This method is deprecated!
 static jint netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timerFd, jint tvSec, jint tvNsec) {
-    struct epoll_event *ev = (struct epoll_event*) (intptr_t) address;
-    int result, err;
-
     if (tvSec == 0 && tvNsec == 0) {
         // Zeros = poll (aka return immediately).
-        do {
-            result = epoll_wait(efd, ev, len, 0);
-            if (result >= 0) {
-                return result;
-            }
-        } while((err = errno) == EINTR);
-    } else {
-        // only reschedule the timer if there is a newer event.
-        // -1 is a special value used by EpollEventLoop.
-        if (tvSec != ((jint) -1) && tvNsec != ((jint) -1)) {
-            struct itimerspec ts;
-            memset(&ts.it_interval, 0, sizeof(struct timespec));
-            ts.it_value.tv_sec = tvSec;
-            ts.it_value.tv_nsec = tvNsec;
-            if (timerfd_settime(timerFd, 0, &ts, NULL) < 0) {
-                netty_unix_errors_throwChannelExceptionErrorNo(env, "timerfd_settime() failed: ", errno);
-                return -1;
-            }
-        }
-        do {
-            result = epoll_wait(efd, ev, len, -1);
-            if (result > 0) {
-                // Detect timeout, and preserve the epoll_wait API.
-                if (result == 1 && ev[0].data.fd == timerFd) {
-                    // We assume that timerFD is in ET mode. So we must consume this event to ensure we are notified
-                    // of future timer events because ET mode only notifies a single time until the event is consumed.
-                    uint64_t timerFireCount;
-                    // We don't care what the result is. We just want to consume the wakeup event and reset ET.
-                    result = read(timerFd, &timerFireCount, sizeof(uint64_t));
-                    return 0;
-                }
-                return result;
-            }
-        } while((err = errno) == EINTR);
+    	return netty_epoll_native_epollWait(env, clazz, efd, address, len, 0);
     }
-    return -err;
+    // only reschedule the timer if there is a newer event.
+    // -1 is a special value used by EpollEventLoop.
+    if (tvSec != ((jint) -1) && tvNsec != ((jint) -1)) {
+    	struct itimerspec ts;
+    	memset(&ts.it_interval, 0, sizeof(struct timespec));
+    	ts.it_value.tv_sec = tvSec;
+    	ts.it_value.tv_nsec = tvNsec;
+    	if (timerfd_settime(timerFd, 0, &ts, NULL) < 0) {
+    		netty_unix_errors_throwChannelExceptionErrorNo(env, "timerfd_settime() failed: ", errno);
+    		return -1;
+    	}
+    }
+    return netty_epoll_native_epollWait(env, clazz, efd, address, len, -1);
 }
 
 static inline void cpu_relax() {
@@ -524,7 +499,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "timerFdSetTime", "(III)V", (void *) netty_epoll_native_timerFdSetTime },
   { "epollCreate", "()I", (void *) netty_epoll_native_epollCreate },
   { "epollWait0", "(IJIIII)I", (void *) netty_epoll_native_epollWait0 }, // This method is deprecated!
-  { "epollWaitNoTimeout", "(IJIZ)I", (void *) netty_epoll_native_epollWaitNoTimeout },
+  { "epollWait", "(IJII)I", (void *) netty_epoll_native_epollWait },
   { "epollBusyWait0", "(IJI)I", (void *) netty_epoll_native_epollBusyWait0 },
   { "epollCtlAdd0", "(III)I", (void *) netty_epoll_native_epollCtlAdd0 },
   { "epollCtlMod0", "(III)I", (void *) netty_epoll_native_epollCtlMod0 },

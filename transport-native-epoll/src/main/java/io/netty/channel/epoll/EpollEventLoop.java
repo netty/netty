@@ -305,7 +305,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     private int epollWaitNow() throws IOException {
-        return Native.epollWait(epollFd, events, timerFd, 0, 0);
+        return Native.epollWait(epollFd, events, true);
     }
 
     private int epollBusyWait() throws IOException {
@@ -314,7 +314,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
 
     private int epollWaitTimeboxed() throws IOException {
         // Wait with 1 second "safeguard" timeout
-        return Native.epollWait(epollFd, events, timerFd, 1, 0);
+        return Native.epollWait(epollFd, events, 1000);
     }
 
     @Override

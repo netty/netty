@@ -107,7 +107,14 @@ public final class Native {
     }
 
     static int epollWait(FileDescriptor epollFd, EpollEventArray events, boolean immediatePoll) throws IOException {
-        int ready = epollWaitNoTimeout(epollFd.intValue(), events.memoryAddress(), events.length(), immediatePoll);
+        return epollWait(epollFd, events, immediatePoll ? 0 : -1);
+    }
+
+    /**
+     * This uses epoll's own timeout and does not reset/re-arm any timerfd
+     */
+    static int epollWait(FileDescriptor epollFd, EpollEventArray events, int timeoutMillis) throws IOException {
+        int ready = epollWait(epollFd.intValue(), events.memoryAddress(), events.length(), timeoutMillis);
         if (ready < 0) {
             throw newIOException("epoll_wait", ready);
         }
@@ -128,7 +135,7 @@ public final class Native {
     }
 
     private static native int epollWait0(int efd, long address, int len, int timerFd, int timeoutSec, int timeoutNs);
-    private static native int epollWaitNoTimeout(int efd, long address, int len, boolean immediatePoll);
+    private static native int epollWait(int efd, long address, int len, int timeout);
     private static native int epollBusyWait0(int efd, long address, int len);
 
     public static void epollCtlAdd(int efd, final int fd, final int flags) throws IOException {
