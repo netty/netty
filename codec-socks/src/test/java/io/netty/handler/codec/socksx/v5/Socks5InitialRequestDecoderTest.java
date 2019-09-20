@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2019 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -20,19 +20,19 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
 import org.junit.Test;
 
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class Socks5InitialRequestDecoderTest {
     @Test
     public void testUnpackingCausesDecodeFail() {
         EmbeddedChannel e = new EmbeddedChannel(new Socks5InitialRequestDecoder());
-        e.writeInbound(Unpooled.wrappedBuffer(new byte[]{5, 2, 0}));
-        e.writeInbound(Unpooled.wrappedBuffer(new byte[]{1}));
+        assertFalse(e.writeInbound(Unpooled.wrappedBuffer(new byte[]{5, 2, 0})));
+        assertTrue(e.writeInbound(Unpooled.wrappedBuffer(new byte[]{1})));
         Object o = e.readInbound();
 
         assertTrue(o instanceof DefaultSocks5InitialRequest);
         DefaultSocks5InitialRequest req = (DefaultSocks5InitialRequest) o;
         assertSame(req.decoderResult(), DecoderResult.SUCCESS);
+        assertFalse(e.finish());
     }
 }
