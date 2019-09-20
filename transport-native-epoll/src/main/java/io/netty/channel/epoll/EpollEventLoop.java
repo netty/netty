@@ -341,6 +341,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
                             }
                             // We timed out so assume that we missed the write event due to an
                             // abnormally failed syscall (the write itself or a prior epoll_wait)
+                            logger.warn("Missed eventfd write (not seen after > 1 second)");
                             pendingWakeup = false;
                             if (hasTasks()) {
                                 break;
@@ -348,9 +349,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
                             // fall-through
                         }
 
-                        // Ordered store is sufficient here since the only access outside this
-                        // thread is a getAndSet in the wakeup() method
-                        wakenUp.lazySet(0);
+                        wakenUp.set(0);
                         try {
                             if (!hasTasks()) {
                                 strategy = epollWait();
