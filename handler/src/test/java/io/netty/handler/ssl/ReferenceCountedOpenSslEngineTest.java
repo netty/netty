@@ -72,7 +72,9 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
 
     @Override
     protected SslContext wrapContext(SslContext context) {
-        ((ReferenceCountedOpenSslContext) context).setUseTasks(useTasks);
+        if (context instanceof ReferenceCountedOpenSslContext) {
+            ((ReferenceCountedOpenSslContext) context).setUseTasks(useTasks);
+        }
         return context;
     }
 }
