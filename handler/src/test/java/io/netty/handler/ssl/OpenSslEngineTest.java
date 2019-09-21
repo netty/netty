@@ -36,6 +36,7 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLParameters;
 import java.nio.ByteBuffer;
@@ -61,6 +62,7 @@ import static java.lang.Integer.MAX_VALUE;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -1131,6 +1133,19 @@ public class OpenSslEngineTest extends SSLEngineTest {
         }
     }
 
+    private static void runTasksIfNeeded(SSLEngine engine) {
+        if (engine.getHandshakeStatus() == HandshakeStatus.NEED_TASK) {
+            for (;;) {
+                Runnable task = engine.getDelegatedTask();
+                if (task == null) {
+                    assertNotEquals(HandshakeStatus.NEED_TASK, engine.getHandshakeStatus());
+                    break;
+                }
+                task.run();
+            }
+        }
+    }
+
     @Test
     public void testExtractMasterkeyWorksCorrectly() throws Exception {
         SelfSignedCertificate cert = new SelfSignedCertificate();
@@ -1199,17 +1214,23 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 cTOs.flip();
                 sTOc.flip();
 
+                runTasksIfNeeded(clientEngine);
+                runTasksIfNeeded(serverEngine);
+
                 clientEngine.unwrap(sTOc, clientIn);
                 serverEngine.unwrap(cTOs, serverIn);
+
+                runTasksIfNeeded(clientEngine);
+                runTasksIfNeeded(serverEngine);
 
                 // check when the application data has fully been consumed and sent
                 // for both the client and server
                 if ((clientOut.limit() == serverIn.position()) &&
                         (serverOut.limit() == clientIn.position())) {
-                    byte[] serverRandom = SSL.getServerRandom(((OpenSslEngine) serverEngine).sslPointer());
-                    byte[] clientRandom = SSL.getClientRandom(((OpenSslEngine) clientEngine).sslPointer());
-                    byte[] serverMasterKey = SSL.getMasterKey(((OpenSslEngine) serverEngine).sslPointer());
-                    byte[] clientMasterKey = SSL.getMasterKey(((OpenSslEngine) clientEngine).sslPointer());
+                    byte[] serverRandom = SSL.getServerRandom(unwrapEngine(serverEngine).sslPointer());
+                    byte[] clientRandom = SSL.getClientRandom(unwrapEngine(clientEngine).sslPointer());
+                    byte[] serverMasterKey = SSL.getMasterKey(unwrapEngine(serverEngine).sslPointer());
+                    byte[] clientMasterKey = SSL.getMasterKey(unwrapEngine(clientEngine).sslPointer());
 
                     asserted = true;
                     assertArrayEquals(serverMasterKey, clientMasterKey);
@@ -1318,7 +1339,9 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Override
     protected SslContext wrapContext(SslContext context) {
-        ((OpenSslContext) context).setUseTasks(useTasks);
+        if (context instanceof OpenSslContext) {
+            ((OpenSslContext) context).setUseTasks(useTasks);
+        }
         return context;
     }
 }
