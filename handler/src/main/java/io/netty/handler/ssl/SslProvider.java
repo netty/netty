@@ -35,5 +35,10 @@ public enum SslProvider {
      * OpenSSL-based implementation which does not have finalizers and instead implements {@link ReferenceCounted}.
      */
     @UnstableApi
-    OPENSSL_REFCNT
+    OPENSSL_REFCNT,
+    /**
+     * OpenSSL-based implementation which mixes {@link ReferenceCounted} engines with finalizer-based contexts.
+     */
+    @UnstableApi
+    OPENSSL_MIXED
 }

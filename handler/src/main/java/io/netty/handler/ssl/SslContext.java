@@ -475,6 +475,14 @@ public abstract class SslContext {
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
                     clientAuth, protocols, startTls, enableOcsp, keyStoreType);
+
+        case OPENSSL_MIXED:
+            verifyNullSslContextProvider(provider, sslContextProvider);
+            return new MixedOpenSslServerContext(
+                trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
+                keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
+                clientAuth, protocols, startTls, enableOcsp, keyStoreType);
+
         default:
             throw new Error(provider.toString());
         }
@@ -831,6 +839,14 @@ public abstract class SslContext {
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
                         enableOcsp, keyStoreType);
+
+            case OPENSSL_MIXED:
+                verifyNullSslContextProvider(provider, sslContextProvider);
+                return new MixedOpenSslClientContext(
+                    trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
+                    keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
+                    enableOcsp, keyStoreType);
+
             default:
                 throw new Error(provider.toString());
         }
