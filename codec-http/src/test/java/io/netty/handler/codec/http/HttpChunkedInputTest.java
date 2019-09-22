@@ -80,6 +80,11 @@ public class HttpChunkedInputTest {
     }
 
     @Test
+    public void testChunkedFileWithBiggerChunkSize() throws IOException {
+        check(new HttpChunkedInput(new ChunkedFile(TMP, 8192 * 2)));
+    }
+
+    @Test
     public void testChunkedNioFile() throws IOException {
         check(new HttpChunkedInput(new ChunkedNioFile(TMP)));
     }

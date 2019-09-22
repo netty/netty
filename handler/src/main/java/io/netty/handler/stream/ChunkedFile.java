@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -144,6 +145,26 @@ public class ChunkedFile implements ChunkedInput<ByteBuf> {
         return readChunk(ctx.alloc());
     }
 
+    // RandomAccessFile uses stack-allocated char* for len <= 8192,
+    // malloc/free otherwise: will try to batch reads by this size
+    private static final int BUF_SIZE = 8192;
+
+    private static int readFullyInChunks(RandomAccessFile raf, byte[] b, int off, int len, int chunkSize)
+            throws IOException {
+        int remaining = len;
+        int offset = off;
+        while (remaining > 0) {
+            final int size = Math.min(chunkSize, remaining);
+            final int read = raf.read(b, offset, size);
+            if (read < 0) {
+                throw new EOFException();
+            }
+            offset += read;
+            remaining -= read;
+        }
+        return len - remaining;
+    }
+
     @Override
     public ByteBuf readChunk(ByteBufAllocator allocator) throws Exception {
         long offset = this.offset;
@@ -152,12 +173,15 @@ public class ChunkedFile implements ChunkedInput<ByteBuf> {
         }
 
         int chunkSize = (int) Math.min(this.chunkSize, endOffset - offset);
-        // Check if the buffer is backed by an byte array. If so we can optimize it a bit an safe a copy
 
         ByteBuf buf = allocator.heapBuffer(chunkSize);
         boolean release = true;
         try {
-            file.readFully(buf.array(), buf.arrayOffset(), chunkSize);
+            if (chunkSize <= BUF_SIZE) {
+                file.readFully(buf.array(), buf.arrayOffset(), chunkSize);
+            } else {
+                readFullyInChunks(file, buf.array(), buf.arrayOffset(), chunkSize, BUF_SIZE);
+            }
             buf.writerIndex(chunkSize);
             this.offset = offset + chunkSize;
             release = false;
