@@ -312,7 +312,7 @@ void netty_kqueue_bsdsocket_JNI_OnUnLoad(JNIEnv* env) {
         peerCredentialsClass = NULL;
     }
     if (stringClass != NULL) {
-         (*env)->DeleteGlobalRef(env, stringClass);
+        (*env)->DeleteGlobalRef(env, stringClass);
         stringClass = NULL;
     }
 }
