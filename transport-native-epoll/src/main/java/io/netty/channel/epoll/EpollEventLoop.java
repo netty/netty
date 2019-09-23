@@ -36,7 +36,7 @@ import java.io.IOException;
 import java.util.BitSet;
 import java.util.Queue;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.Math.min;
 
@@ -45,8 +45,6 @@ import static java.lang.Math.min;
  */
 class EpollEventLoop extends SingleThreadEventLoop {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollEventLoop.class);
-    private static final AtomicIntegerFieldUpdater<EpollEventLoop> WAKEN_UP_UPDATER =
-            AtomicIntegerFieldUpdater.newUpdater(EpollEventLoop.class, "wakenUp");
 
     static {
         // Ensure JNI is initialized by the time this class is loaded by this time!
@@ -76,8 +74,8 @@ class EpollEventLoop extends SingleThreadEventLoop {
             return epollWaitNow();
         }
     };
-    @SuppressWarnings("unused") // AtomicIntegerFieldUpdater
-    private volatile int wakenUp;
+    private final AtomicInteger wakenUp = new AtomicInteger(1);
+    private boolean pendingWakeup;
     private volatile int ioRatio = 50;
 
     // See http://man7.org/linux/man-pages/man2/timerfd_create.2.html.
@@ -180,7 +178,7 @@ class EpollEventLoop extends SingleThreadEventLoop {
 
     @Override
     protected void wakeup(boolean inEventLoop) {
-        if (!inEventLoop && WAKEN_UP_UPDATER.getAndSet(this, 1) == 0) {
+        if (!inEventLoop && wakenUp.getAndSet(1) == 0) {
             // write to the evfd which will then wake-up epoll_wait(...)
             Native.eventFdWrite(eventFd.intValue(), 1L);
         }
@@ -307,11 +305,16 @@ class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     private int epollWaitNow() throws IOException {
-        return Native.epollWait(epollFd, events, timerFd, 0, 0);
+        return Native.epollWait(epollFd, events, true);
     }
 
     private int epollBusyWait() throws IOException {
         return Native.epollBusyWait(epollFd, events);
+    }
+
+    private int epollWaitTimeboxed() throws IOException {
+        // Wait with 1 second "safeguard" timeout
+        return Native.epollWait(epollFd, events, 1000);
     }
 
     @Override
@@ -329,11 +332,34 @@ class EpollEventLoop extends SingleThreadEventLoop {
                         break;
 
                     case SelectStrategy.SELECT:
-                        if (wakenUp == 1) {
-                            wakenUp = 0;
+                        if (pendingWakeup) {
+                            // We are going to be immediately woken so no need to reset wakenUp
+                            // or check for timerfd adjustment.
+                            strategy = epollWaitTimeboxed();
+                            if (strategy != 0) {
+                                break;
+                            }
+                            // We timed out so assume that we missed the write event due to an
+                            // abnormally failed syscall (the write itself or a prior epoll_wait)
+                            logger.warn("Missed eventfd write (not seen after > 1 second)");
+                            pendingWakeup = false;
+                            if (hasTasks()) {
+                                break;
+                            }
+                            // fall-through
                         }
-                        if (!hasTasks()) {
-                            strategy = epollWait();
+
+                        wakenUp.set(0);
+                        try {
+                            if (!hasTasks()) {
+                                strategy = epollWait();
+                            }
+                        } finally {
+                            // Try get() first to avoid much more expensive CAS in the case we
+                            // were woken via the wakeup() method (submitted task)
+                            if (wakenUp.get() == 1 || wakenUp.getAndSet(1) == 1) {
+                                pendingWakeup = true;
+                            }
                         }
                         // fallthrough
                     default:
@@ -417,7 +443,9 @@ class EpollEventLoop extends SingleThreadEventLoop {
     private void processReady(EpollEventArray events, int ready) {
         for (int i = 0; i < ready; i ++) {
             final int fd = events.fd(i);
-            if (fd == eventFd.intValue() || fd == timerFd.intValue()) {
+            if (fd == eventFd.intValue()) {
+                pendingWakeup = false;
+            } else if (fd == timerFd.intValue()) {
                 // Just ignore as we use ET mode for the eventfd and timerfd.
                 //
                 // See also https://stackoverflow.com/a/12492308/1074097
@@ -479,10 +507,23 @@ class EpollEventLoop extends SingleThreadEventLoop {
     @Override
     protected void cleanup() {
         try {
-            try {
-                epollFd.close();
-            } catch (IOException e) {
-                logger.warn("Failed to close the epoll fd.", e);
+            // Ensure any in-flight wakeup writes have been performed prior to closing eventFd.
+            while (pendingWakeup) {
+                try {
+                    int count = epollWaitTimeboxed();
+                    if (count == 0) {
+                        // We timed-out so assume that the write we're expecting isn't coming
+                        break;
+                    }
+                    for (int i = 0; i < count; i++) {
+                        if (events.fd(i) == eventFd.intValue()) {
+                            pendingWakeup = false;
+                            break;
+                        }
+                    }
+                } catch (IOException ignore) {
+                    // ignore
+                }
             }
             try {
                 eventFd.close();
@@ -493,6 +534,12 @@ class EpollEventLoop extends SingleThreadEventLoop {
                 timerFd.close();
             } catch (IOException e) {
                 logger.warn("Failed to close the timer fd.", e);
+            }
+
+            try {
+                epollFd.close();
+            } catch (IOException e) {
+                logger.warn("Failed to close the epoll fd.", e);
             }
         } finally {
             // release native memory
