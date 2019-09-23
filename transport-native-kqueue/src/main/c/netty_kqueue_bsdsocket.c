@@ -33,7 +33,7 @@
 #include "netty_unix_util.h"
 
 // Those are initialized in the init(...) method and cached for performance reasons
-static jclass stringCls = NULL;
+static jclass stringClass = NULL;
 static jclass peerCredentialsClass = NULL;
 static jfieldID fileChannelFieldId = NULL;
 static jfieldID transferredFieldId = NULL;
@@ -108,7 +108,7 @@ static jobjectArray netty_kqueue_bsdsocket_getAcceptFilter(JNIEnv* env, jclass c
         netty_unix_errors_throwChannelExceptionErrorNo(env, "getsockopt() failed: ", errno);
         return NULL;
     }
-    jobjectArray resultArray = (*env)->NewObjectArray(env, 2, stringCls, NULL);
+    jobjectArray resultArray = (*env)->NewObjectArray(env, 2, stringClass, NULL);
     (*env)->SetObjectArrayElement(env, resultArray, 0, (*env)->NewStringUTF(env, &af.af_name[0]));
     (*env)->SetObjectArrayElement(env, resultArray, 1, (*env)->NewStringUTF(env, &af.af_arg[0]));
     return resultArray;
@@ -272,11 +272,16 @@ jint netty_kqueue_bsdsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
         netty_unix_errors_throwRuntimeException(env, "failed to get field ID: FileDescriptor.fd");
         return JNI_ERR;
     }
-    stringCls = (*env)->FindClass(env, "java/lang/String");
+    jclass stringCls = (*env)->FindClass(env, "java/lang/String");
     if (stringCls == NULL) {
         // pending exception...
         return JNI_ERR;
     }
+    if ((stringClass = (*env)->NewGlobalRef(env, stringCls)) == NULL) {
+         // out-of-memory!
+        netty_unix_errors_throwOutOfMemoryError(env);
+        return JNI_ERR;
+    } 
 
     nettyClassName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/unix/PeerCredentials");
     jclass localPeerCredsClass = (*env)->FindClass(env, nettyClassName);
@@ -305,5 +310,9 @@ void netty_kqueue_bsdsocket_JNI_OnUnLoad(JNIEnv* env) {
     if (peerCredentialsClass != NULL) {
         (*env)->DeleteGlobalRef(env, peerCredentialsClass);
         peerCredentialsClass = NULL;
+    }
+    if (stringClass != NULL) {
+        (*env)->DeleteGlobalRef(env, stringClass);
+        stringClass = NULL;
     }
 }
