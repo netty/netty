@@ -25,6 +25,7 @@ import io.netty.channel.FileRegion;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 
 /**
@@ -100,9 +101,8 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
                     "chunkSize: " + chunkSize +
                     " (expected: a positive integer)");
         }
-
-        if (offset != 0) {
-            in.position(offset);
+        if (!in.isOpen()) {
+            throw new ClosedChannelException();
         }
         this.in = in;
         this.chunkSize = chunkSize;
@@ -160,7 +160,7 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
         try {
             int readBytes = 0;
             for (;;) {
-                int localReadBytes = buffer.writeBytes(in, chunkSize - readBytes);
+                int localReadBytes = buffer.writeBytes(in, offset + readBytes, chunkSize - readBytes);
                 if (localReadBytes < 0) {
                     break;
                 }

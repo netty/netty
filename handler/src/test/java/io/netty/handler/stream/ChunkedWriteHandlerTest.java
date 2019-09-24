@@ -26,13 +26,17 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.channels.Channels;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.FileChannel;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -100,6 +104,41 @@ public class ChunkedWriteHandlerTest {
         check(new ChunkedNioFile(TMP));
 
         check(new ChunkedNioFile(TMP), new ChunkedNioFile(TMP), new ChunkedNioFile(TMP));
+    }
+
+    @Test
+    public void testChunkedNioFileLeftPositionUnchanged() throws IOException {
+        FileChannel in = null;
+        final long expectedPosition = 10;
+        try {
+            in = new RandomAccessFile(TMP, "r").getChannel();
+            in.position(expectedPosition);
+            check(new ChunkedNioFile(in) {
+                @Override
+                public void close() throws Exception {
+                    //no op
+                }
+            });
+            Assert.assertTrue(in.isOpen());
+            Assert.assertEquals(expectedPosition, in.position());
+        } finally {
+            if (in != null) {
+                in.close();
+            }
+        }
+    }
+
+    @Test(expected = ClosedChannelException.class)
+    public void testChunkedNioFileFailOnClosedFileChannel() throws IOException {
+        final FileChannel in = new RandomAccessFile(TMP, "r").getChannel();
+        in.close();
+        check(new ChunkedNioFile(in) {
+            @Override
+            public void close() throws Exception {
+                //no op
+            }
+        });
+        Assert.fail();
     }
 
     @Test
