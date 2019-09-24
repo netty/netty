@@ -579,6 +579,10 @@ public class SslHandlerTest {
             assertTrue(evt instanceof SslHandshakeCompletionEvent);
             assertThat(evt.cause(), is(instanceOf(SSLException.class)));
 
+            evt = (SslCompletionEvent) events.take();
+            assertTrue(evt instanceof SslCloseCompletionEvent);
+            assertThat(evt.cause(), is(instanceOf(ClosedChannelException.class)));
+
             ChannelFuture future = (ChannelFuture) events.take();
             assertThat(future.cause(), is(instanceOf(SSLException.class)));
 
@@ -588,9 +592,6 @@ public class SslHandlerTest {
             clientChannel = null;
 
             latch2.await();
-            evt = (SslCompletionEvent) events.take();
-            assertTrue(evt instanceof SslCloseCompletionEvent);
-            assertThat(evt.cause(), is(instanceOf(ClosedChannelException.class)));
             assertTrue(events.isEmpty());
         } finally {
             if (serverChannel != null) {

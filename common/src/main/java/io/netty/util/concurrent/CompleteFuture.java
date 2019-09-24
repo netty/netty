@@ -51,20 +51,24 @@ public abstract class CompleteFuture<V> implements Future<V> {
     @Override
     public Future<V> addListener(GenericFutureListener<? extends Future<? super V>> listener) {
         requireNonNull(listener, "listener");
-        DefaultPromise.notifyListener(executor(), this, listener);
+        DefaultPromise.safeExecute(executor(), () -> DefaultPromise.notifyListener0(this, listener));
         return this;
     }
 
     @Override
     public Future<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
         requireNonNull(listeners, "listeners");
-        for (GenericFutureListener<? extends Future<? super V>> l: listeners) {
+        DefaultPromise.safeExecute(executor(), () -> notifyListeners(listeners));
+        return this;
+    }
+
+    private void notifyListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
+        for (GenericFutureListener<? extends Future<? super V>> l : listeners) {
             if (l == null) {
                 break;
             }
-            DefaultPromise.notifyListener(executor(), this, l);
+            DefaultPromise.notifyListener0(this, l);
         }
-        return this;
     }
 
     @Override
