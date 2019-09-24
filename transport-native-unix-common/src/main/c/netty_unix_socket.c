@@ -85,7 +85,9 @@ static jobject createDatagramSocketAddress(JNIEnv* env, const struct sockaddr_st
     int scopeId;
     int ipLength = netty_unix_socket_ipAddressLength(addr);
     jbyteArray addressBytes = (*env)->NewByteArray(env, ipLength);
-
+    if (addressBytes == NULL) {
+        return NULL;
+    }
     if (addr->ss_family == AF_INET) {
         struct sockaddr_in* s = (struct sockaddr_in*) addr;
         port = ntohs(s->sin_port);
@@ -174,7 +176,9 @@ static void initInetSocketAddressArray(JNIEnv* env, const struct sockaddr_storag
 static jbyteArray createInetSocketAddressArray(JNIEnv* env, const struct sockaddr_storage* addr) {
     jsize len = addressLength(addr);
     jbyteArray bArray = (*env)->NewByteArray(env, len);
-
+    if (bArray == NULL) {
+        return NULL;
+    }
     initInetSocketAddressArray(env, addr, bArray, 0, len);
     return bArray;
 }
@@ -1009,128 +1013,87 @@ static jint dynamicMethodsTableSize() {
 }
 
 static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
-    JNINativeMethod* dynamicMethods = malloc(sizeof(JNINativeMethod) * dynamicMethodsTableSize());
+    char* dynamicTypeName = NULL;
+    size_t size = sizeof(JNINativeMethod) * dynamicMethodsTableSize();
+    JNINativeMethod* dynamicMethods = malloc(size);
+    if (dynamicMethods == NULL) {
+        return NULL;
+    }
+    memset(dynamicMethods, 0, size);
     memcpy(dynamicMethods, fixed_method_table, sizeof(fixed_method_table));
-    char* dynamicTypeName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/unix/DatagramSocketAddress;");
+
     JNINativeMethod* dynamicMethod = &dynamicMethods[fixed_method_table_size];
+    NETTY_PREPEND(packagePrefix, "io/netty/channel/unix/DatagramSocketAddress;", dynamicTypeName, error);
+    NETTY_PREPEND("(ILjava/nio/ByteBuffer;II)L", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "recvFrom";
-    dynamicMethod->signature = netty_unix_util_prepend("(ILjava/nio/ByteBuffer;II)L", dynamicTypeName);
     dynamicMethod->fnPtr = (void *) netty_unix_socket_recvFrom;
-    free(dynamicTypeName);
+    netty_unix_util_free_dynamic_name(&dynamicTypeName);
 
     ++dynamicMethod;
-    dynamicTypeName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/unix/DatagramSocketAddress;");
+    NETTY_PREPEND(packagePrefix, "io/netty/channel/unix/DatagramSocketAddress;", dynamicTypeName, error);
+    NETTY_PREPEND("(IJII)L", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "recvFromAddress";
-    dynamicMethod->signature = netty_unix_util_prepend("(IJII)L", dynamicTypeName);
     dynamicMethod->fnPtr = (void *) netty_unix_socket_recvFromAddress;
-    free(dynamicTypeName);
+    netty_unix_util_free_dynamic_name(&dynamicTypeName);
 
     return dynamicMethods;
+error:
+    free(dynamicTypeName);
+    netty_unix_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
+    return NULL;
 }
 
-static void freeDynamicMethodsTable(JNINativeMethod* dynamicMethods) {
-    jint fullMethodTableSize = dynamicMethodsTableSize();
-    jint i = fixed_method_table_size;
-    for (; i < fullMethodTableSize; ++i) {
-        free(dynamicMethods[i].signature);
-    }
-    free(dynamicMethods);
-}
 // JNI Method Registration Table End
 
 jint netty_unix_socket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
+    int ret = JNI_ERR;
+    char* nettyClassName = NULL;
+    void* mem = NULL;
     JNINativeMethod* dynamicMethods = createDynamicMethodsTable(packagePrefix);
+    if (dynamicMethods == NULL) {
+        goto done;
+    }
     if (netty_unix_util_register_natives(env,
             packagePrefix,
             "io/netty/channel/unix/Socket",
             dynamicMethods,
             dynamicMethodsTableSize()) != 0) {
-        freeDynamicMethodsTable(dynamicMethods);
-        return JNI_ERR;
+        goto done;
     }
-    freeDynamicMethodsTable(dynamicMethods);
-    dynamicMethods = NULL;
-    char* nettyClassName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/unix/DatagramSocketAddress");
-    jclass localDatagramSocketAddressClass = (*env)->FindClass(env, nettyClassName);
-    if (localDatagramSocketAddressClass == NULL) {
-        free(nettyClassName);
-        nettyClassName = NULL;
-        // pending exception...
-        return JNI_ERR;
-    }
-    datagramSocketAddressClass = (jclass) (*env)->NewGlobalRef(env, localDatagramSocketAddressClass);
-    if (datagramSocketAddressClass == NULL) {
-        free(nettyClassName);
-        nettyClassName = NULL;
-        // out-of-memory!
-        netty_unix_errors_throwOutOfMemoryError(env);
-        return JNI_ERR;
-    }
+  
+    NETTY_PREPEND(packagePrefix, "io/netty/channel/unix/DatagramSocketAddress", nettyClassName, done);
+    NETTY_LOAD_CLASS(env, datagramSocketAddressClass, nettyClassName, done);
 
     // Respect shading...
     char parameters[1024] = {0};
     snprintf(parameters, sizeof(parameters), "([BIIIL%s;)V", nettyClassName);
+    netty_unix_util_free_dynamic_name(&nettyClassName);
+    NETTY_GET_METHOD(env, datagramSocketAddressClass, datagramSocketAddrMethodId, "<init>", parameters, done);
 
-    datagramSocketAddrMethodId = (*env)->GetMethodID(env, datagramSocketAddressClass, "<init>", parameters);
-    if (datagramSocketAddrMethodId == NULL) {
-        char msg[1024] = {0};
-        snprintf(msg, sizeof(msg), "failed to get method ID: %s.<init>(byte[], int, int, int, %s)", nettyClassName, nettyClassName);
-        free(nettyClassName);
-        nettyClassName = NULL;
-        netty_unix_errors_throwRuntimeException(env, msg);
-        return JNI_ERR;
-    }
+    NETTY_LOAD_CLASS(env, inetSocketAddressClass, "java/net/InetSocketAddress", done);
+    NETTY_GET_METHOD(env, inetSocketAddressClass, inetSocketAddrMethodId, "<init>", "(Ljava/lang/String;I)V", done);
 
-    free(nettyClassName);
-    nettyClassName = NULL;
-
-    jclass localInetSocketAddressClass = (*env)->FindClass(env, "java/net/InetSocketAddress");
-    if (localInetSocketAddressClass == NULL) {
-        // pending exception...
-        return JNI_ERR;
-    }
-    inetSocketAddressClass = (jclass) (*env)->NewGlobalRef(env, localInetSocketAddressClass);
-    if (inetSocketAddressClass == NULL) {
-        // out-of-memory!
-        netty_unix_errors_throwOutOfMemoryError(env);
-        return JNI_ERR;
-    }
-    inetSocketAddrMethodId = (*env)->GetMethodID(env, inetSocketAddressClass, "<init>", "(Ljava/lang/String;I)V");
-    if (inetSocketAddrMethodId == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get method ID: InetSocketAddress.<init>(String, int)");
-        return JNI_ERR;
+    if ((mem = malloc(1)) == NULL) {
+        goto done;
     }
 
-    void* mem = malloc(1);
-    if (mem == NULL) {
-        netty_unix_errors_throwOutOfMemoryError(env);
-        return JNI_ERR;
-    }
     jobject directBuffer = (*env)->NewDirectByteBuffer(env, mem, 1);
     if (directBuffer == NULL) {
-        free(mem);
-
-        netty_unix_errors_throwOutOfMemoryError(env);
-        return JNI_ERR;
+        goto done;
     }
     if ((*env)->GetDirectBufferAddress(env, directBuffer) == NULL) {
-        free(mem);
-
-        netty_unix_errors_throwRuntimeException(env, "failed to get direct buffer address");
-        return JNI_ERR;
+        goto done;
     }
-    free(mem);
 
-    return NETTY_JNI_VERSION;
+    ret = NETTY_JNI_VERSION;
+done:
+    netty_unix_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
+    free(nettyClassName);
+    free(mem);
+    return ret;
 }
 
 void netty_unix_socket_JNI_OnUnLoad(JNIEnv* env) {
-    if (datagramSocketAddressClass != NULL) {
-        (*env)->DeleteGlobalRef(env, datagramSocketAddressClass);
-        datagramSocketAddressClass = NULL;
-    }
-    if (inetSocketAddressClass != NULL) {
-        (*env)->DeleteGlobalRef(env, inetSocketAddressClass);
-        inetSocketAddressClass = NULL;
-    }
+    NETTY_UNLOAD_CLASS(env, datagramSocketAddressClass);
+    NETTY_UNLOAD_CLASS(env, inetSocketAddressClass);
 }
