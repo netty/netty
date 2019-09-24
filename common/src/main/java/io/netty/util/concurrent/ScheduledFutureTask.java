@@ -23,11 +23,9 @@ import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 @SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
 final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFuture<V>, PriorityQueueNode {
-    private static final AtomicLong nextTaskId = new AtomicLong();
     private static final long START_TIME = System.nanoTime();
 
     static long nanoTime() {
@@ -44,7 +42,9 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         return START_TIME;
     }
 
-    private final long id = nextTaskId.getAndIncrement();
+    // set once when added to priority queue
+    private long id;
+
     private long deadlineNanos;
     /* 0 - no repeat, >0 - repeat at fixed rate, <0 - repeat with fixed delay */
     private final long periodNanos;
@@ -77,6 +77,11 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         super(executor, callable);
         deadlineNanos = nanoTime;
         periodNanos = 0;
+    }
+
+    ScheduledFutureTask<V> setId(long id) {
+        this.id = id;
+        return this;
     }
 
     @Override
@@ -182,9 +187,7 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         StringBuilder buf = super.toStringBuilder();
         buf.setCharAt(buf.length() - 1, ',');
 
-        return buf.append(" id: ")
-                  .append(id)
-                  .append(", deadline: ")
+        return buf.append(" deadline: ")
                   .append(deadlineNanos)
                   .append(", period: ")
                   .append(periodNanos)
