@@ -39,6 +39,8 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     PriorityQueue<ScheduledFutureTask<?>> scheduledTaskQueue;
 
+    long nextTaskId;
+
     protected AbstractScheduledEventExecutor() {
     }
 
@@ -241,12 +243,12 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     private <V> ScheduledFuture<V> schedule(final ScheduledFutureTask<V> task) {
         if (inEventLoop()) {
-            scheduledTaskQueue().add(task);
+            scheduledTaskQueue().add(task.setId(nextTaskId++));
         } else {
             executeScheduledRunnable(new Runnable() {
                 @Override
                 public void run() {
-                    scheduledTaskQueue().add(task);
+                    scheduledTaskQueue().add(task.setId(nextTaskId++));
                 }
             }, true, task.deadlineNanos());
         }
