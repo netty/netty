@@ -208,7 +208,7 @@
                   <tasks>
                     <exec executable="sh" outputproperty="ldd_version">
                       <arg value="-c" />
-                      <arg value="ldd --version | head -1" />
+                      <arg value="ldd --version | tail | head -1" />
                     </exec>
                     <exec executable="uname" outputproperty="uname_os_version">
                       <arg value="-r" />
