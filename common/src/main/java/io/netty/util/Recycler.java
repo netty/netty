@@ -511,6 +511,10 @@ public abstract class Recycler<T> {
                     return null;
                 }
                 size = this.size;
+                if (size <= 0) {
+                    // double check, avoid races
+                    return null;
+                }
             }
             size --;
             DefaultHandle ret = elements[size];
