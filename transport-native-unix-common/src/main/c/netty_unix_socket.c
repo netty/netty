@@ -540,6 +540,7 @@ static jint netty_unix_socket_disconnect(JNIEnv* env, jclass clazz, jint fd, jbo
 static jint netty_unix_socket_accept(JNIEnv* env, jclass clazz, jint fd, jbyteArray acceptedAddress) {
     jint socketFd;
     jsize len;
+    jbyte len_b;
     int err;
     struct sockaddr_storage addr;
     socklen_t address_len = sizeof(addr);
@@ -564,9 +565,10 @@ static jint netty_unix_socket_accept(JNIEnv* env, jclass clazz, jint fd, jbyteAr
     }
 
     len = addressLength(&addr);
+    len_b = (jbyte) len;
 
     // Fill in remote address details
-    (*env)->SetByteArrayRegion(env, acceptedAddress, 0, 4, (jbyte*) &len);
+    (*env)->SetByteArrayRegion(env, acceptedAddress, 0, 1, (jbyte*) &len_b);
     initInetSocketAddressArray(env, &addr, acceptedAddress, 1, len);
 
     if (accept4)  {
