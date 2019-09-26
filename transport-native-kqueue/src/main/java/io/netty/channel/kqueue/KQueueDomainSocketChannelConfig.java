@@ -172,6 +172,7 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
         return mode;
     }
 
+    @Override
     public int getSendBufferSize() {
         try {
             return ((KQueueDomainSocketChannel) channel).socket.getSendBufferSize();
@@ -180,6 +181,7 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
         }
     }
 
+    @Override
     public KQueueDomainSocketChannelConfig setSendBufferSize(int sendBufferSize) {
         try {
             ((KQueueDomainSocketChannel) channel).socket.setSendBufferSize(sendBufferSize);
@@ -189,6 +191,7 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
         }
     }
 
+    @Override
     public int getReceiveBufferSize() {
         try {
             return ((KQueueDomainSocketChannel) channel).socket.getReceiveBufferSize();
@@ -197,6 +200,7 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
         }
     }
 
+    @Override
     public KQueueDomainSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((KQueueDomainSocketChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
