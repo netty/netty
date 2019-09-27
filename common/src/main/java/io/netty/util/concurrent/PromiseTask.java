@@ -45,7 +45,29 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
         }
     }
 
-    protected final Callable<V> task;
+    private static final Callable<?> COMPLETED = new SentinelCallable<Object>("COMPLETED");
+    private static final Callable<?> CANCELLED = new SentinelCallable<Object>("CANCELLED");
+    private static final Callable<?> FAILED = new SentinelCallable<Object>("FAILED");
+
+    private static class SentinelCallable<T> implements Callable<T> {
+        private final String name;
+
+        SentinelCallable(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public T call() {
+            return null;
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+
+    protected Callable<V> task;
 
     PromiseTask(EventExecutor executor, Runnable runnable, V result) {
         this(executor, toCallable(runnable, result));
@@ -78,6 +100,18 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    private boolean clearTaskAfterCompletion(boolean done, Callable<?> result) {
+        if (done) {
+            // The only time where it might be possible for the sentinel task
+            // to be called is in the case of a periodic ScheduledFutureTask,
+            // in which case it's a benign race with cancellation and the (null)
+            // return value is not used.
+            task = (Callable<V>) result;
+        }
+        return done;
+    }
+
     @Override
     public final Promise<V> setFailure(Throwable cause) {
         throw new IllegalStateException();
@@ -85,6 +119,7 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
 
     protected final Promise<V> setFailureInternal(Throwable cause) {
         super.setFailure(cause);
+        clearTaskAfterCompletion(true, FAILED);
         return this;
     }
 
@@ -94,7 +129,7 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     protected final boolean tryFailureInternal(Throwable cause) {
-        return super.tryFailure(cause);
+        return clearTaskAfterCompletion(super.tryFailure(cause), FAILED);
     }
 
     @Override
@@ -104,6 +139,7 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
 
     protected final Promise<V> setSuccessInternal(V result) {
         super.setSuccess(result);
+        clearTaskAfterCompletion(true, COMPLETED);
         return this;
     }
 
@@ -113,7 +149,7 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     protected final boolean trySuccessInternal(V result) {
-        return super.trySuccess(result);
+        return clearTaskAfterCompletion(super.trySuccess(result), COMPLETED);
     }
 
     @Override
@@ -123,6 +159,11 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
 
     protected final boolean setUncancellableInternal() {
         return super.setUncancellable();
+    }
+
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+        return clearTaskAfterCompletion(super.cancel(mayInterruptIfRunning), CANCELLED);
     }
 
     @Override
