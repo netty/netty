@@ -558,6 +558,7 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
     int linuxsocketOnLoadCalled = 0;
     char* nettyClassName = NULL;
     jclass nativeDatagramPacketCls = NULL;
+    JNINativeMethod* dynamicMethods = NULL;
 
     // We must register the statically referenced methods first!
     if (netty_unix_util_register_natives(env,
@@ -568,7 +569,7 @@ static jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix
         goto done;
     }
     // Register the methods which are not referenced by static member variables
-    JNINativeMethod* dynamicMethods = createDynamicMethodsTable(packagePrefix);
+    dynamicMethods = createDynamicMethodsTable(packagePrefix);
     if (dynamicMethods == NULL) {
         goto done;
     }
