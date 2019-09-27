@@ -55,6 +55,26 @@ public class AdaptiveRecvByteBufAllocatorTest {
     }
 
     @Test
+    public void memoryAllocationIntervalsTest() {
+        computingNext(512, 512);
+        computingNext(8192, 1110);
+        computingNext(8192, 1200);
+        computingNext(4096, 1300);
+        computingNext(4096, 1500);
+        computingNext(2048, 1700);
+        computingNext(2048, 1550);
+        computingNext(2048, 2000);
+        computingNext(2048, 1900);
+    }
+
+    private void computingNext(long expectedSize, int actualReadBytes) {
+        assertEquals(expectedSize, handle.guess());
+        handle.reset(config);
+        handle.lastBytesRead(actualReadBytes);
+        handle.readComplete();
+    }
+
+    @Test
     public void lastPartialReadDoesNotRampDown() {
         allocReadExpected(handle, alloc, 512);
         // Simulate there is just 1 byte remaining which is unread. However the total bytes in the current read cycle
