@@ -122,7 +122,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
         }
 
         private void record(int actualReadBytes) {
-            if (actualReadBytes <= SIZE_TABLE[max(0, index - INDEX_DECREMENT - 1)]) {
+            if (actualReadBytes <= SIZE_TABLE[max(0, index - INDEX_DECREMENT)]) {
                 if (decreaseNow) {
                     index = max(index - INDEX_DECREMENT, minIndex);
                     nextReceiveBufferSize = SIZE_TABLE[index];
