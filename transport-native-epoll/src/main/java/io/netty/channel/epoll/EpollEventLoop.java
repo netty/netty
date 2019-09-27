@@ -425,12 +425,6 @@ class EpollEventLoop extends SingleThreadEventLoop {
     }
 
     private void closeAll() {
-        try {
-            epollWaitNow();
-        } catch (IOException ignore) {
-            // ignore on close
-        }
-
         // Using the intermediate collection to prevent ConcurrentModificationException.
         // In the `close()` method, the channel is deleted from `channels` map.
         AbstractEpollChannel[] localChannels = channels.values().toArray(new AbstractEpollChannel[0]);
