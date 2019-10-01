@@ -741,15 +741,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         outboundBuffer.failFlushed(cause, notify);
                         outboundBuffer.close(closeCause);
                     }
-                }
-                if (inFlush0) {
-                    invokeLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            fireChannelInactiveAndDeregister(wasActive);
-                        }
-                    });
-                } else {
                     fireChannelInactiveAndDeregister(wasActive);
                 }
             }
