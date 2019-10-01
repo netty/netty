@@ -51,32 +51,43 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
 
     private int queueIndex = INDEX_NOT_IN_QUEUE;
 
-    ScheduledFutureTask(
-            AbstractScheduledEventExecutor executor,
-            Runnable runnable, V result, long nanoTime) {
+    ScheduledFutureTask(AbstractScheduledEventExecutor executor,
+            Runnable runnable, long nanoTime) {
 
-        this(executor, toCallable(runnable, result), nanoTime);
+        super(executor, runnable);
+        deadlineNanos = nanoTime;
+        periodNanos = 0;
     }
 
-    ScheduledFutureTask(
-            AbstractScheduledEventExecutor executor,
+    ScheduledFutureTask(AbstractScheduledEventExecutor executor,
+            Runnable runnable, long nanoTime, long period) {
+
+        super(executor, runnable);
+        deadlineNanos = nanoTime;
+        periodNanos = validatePeriod(period);
+    }
+
+    ScheduledFutureTask(AbstractScheduledEventExecutor executor,
             Callable<V> callable, long nanoTime, long period) {
 
         super(executor, callable);
-        if (period == 0) {
-            throw new IllegalArgumentException("period: 0 (expected: != 0)");
-        }
         deadlineNanos = nanoTime;
-        periodNanos = period;
+        periodNanos = validatePeriod(period);
     }
 
-    ScheduledFutureTask(
-            AbstractScheduledEventExecutor executor,
+    ScheduledFutureTask(AbstractScheduledEventExecutor executor,
             Callable<V> callable, long nanoTime) {
 
         super(executor, callable);
         deadlineNanos = nanoTime;
         periodNanos = 0;
+    }
+
+    private static long validatePeriod(long period) {
+        if (period == 0) {
+            throw new IllegalArgumentException("period: 0 (expected: != 0)");
+        }
+        return period;
     }
 
     ScheduledFutureTask<V> setId(long id) {
@@ -136,13 +147,13 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         try {
             if (periodNanos == 0) {
                 if (setUncancellableInternal()) {
-                    V result = task.call();
+                    V result = runTask();
                     setSuccessInternal(result);
                 }
             } else {
                 // check if is done as it may was cancelled
                 if (!isCancelled()) {
-                    task.call();
+                    runTask();
                     if (!executor().isShutdown()) {
                         if (periodNanos > 0) {
                             deadlineNanos += periodNanos;

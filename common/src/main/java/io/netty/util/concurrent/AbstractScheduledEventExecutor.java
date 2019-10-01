@@ -19,10 +19,11 @@ import io.netty.util.internal.DefaultPriorityQueue;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PriorityQueue;
 
+import static io.netty.util.concurrent.ScheduledFutureTask.deadlineNanos;
+
 import java.util.Comparator;
 import java.util.Queue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -169,7 +170,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         validateScheduled0(delay, unit);
 
         return schedule(new ScheduledFutureTask<Void>(
-                this, command, null, ScheduledFutureTask.deadlineNanos(unit.toNanos(delay))));
+                this, command, deadlineNanos(unit.toNanos(delay))));
     }
 
     @Override
@@ -181,8 +182,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
         validateScheduled0(delay, unit);
 
-        return schedule(new ScheduledFutureTask<V>(
-                this, callable, ScheduledFutureTask.deadlineNanos(unit.toNanos(delay))));
+        return schedule(new ScheduledFutureTask<V>(this, callable, deadlineNanos(unit.toNanos(delay))));
     }
 
     @Override
@@ -201,8 +201,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         validateScheduled0(period, unit);
 
         return schedule(new ScheduledFutureTask<Void>(
-                this, Executors.<Void>callable(command, null),
-                ScheduledFutureTask.deadlineNanos(unit.toNanos(initialDelay)), unit.toNanos(period)));
+                this, command, deadlineNanos(unit.toNanos(initialDelay)), unit.toNanos(period)));
     }
 
     @Override
@@ -222,8 +221,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         validateScheduled0(delay, unit);
 
         return schedule(new ScheduledFutureTask<Void>(
-                this, Executors.<Void>callable(command, null),
-                ScheduledFutureTask.deadlineNanos(unit.toNanos(initialDelay)), -unit.toNanos(delay)));
+                this, command, deadlineNanos(unit.toNanos(initialDelay)), -unit.toNanos(delay)));
     }
 
     @SuppressWarnings("deprecation")
