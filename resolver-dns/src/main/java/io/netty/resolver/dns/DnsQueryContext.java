@@ -181,30 +181,22 @@ abstract class DnsQueryContext implements FutureListener<AddressedEnvelope<DnsRe
         }
     }
 
+    // Takes ownership of passed envelope
     void finish(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope) {
         final DnsResponse res = envelope.content();
         if (res.count(DnsSection.QUESTION) != 1) {
             logger.warn("Received a DNS response with invalid number of questions: {}", envelope);
-            return;
-        }
-
-        if (!question().equals(res.recordAt(DnsSection.QUESTION))) {
+        } else if (!question().equals(res.recordAt(DnsSection.QUESTION))) {
             logger.warn("Received a mismatching DNS response: {}", envelope);
-            return;
+        } else if (setSuccess(envelope)) {
+            return; // Ownership transferred, don't release
         }
-
-        setSuccess(envelope);
+        envelope.release();
     }
 
-    private void setSuccess(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope) {
-        Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise = this.promise;
-        @SuppressWarnings("unchecked")
-        AddressedEnvelope<DnsResponse, InetSocketAddress> castResponse =
-                (AddressedEnvelope<DnsResponse, InetSocketAddress>) envelope.retain();
-        if (!promise.trySuccess(castResponse)) {
-            // We failed to notify the promise as it was failed before, thus we need to release the envelope
-            envelope.release();
-        }
+    @SuppressWarnings("unchecked")
+    private boolean setSuccess(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope) {
+        return promise.trySuccess((AddressedEnvelope<DnsResponse, InetSocketAddress>) envelope);
     }
 
     private void setFailure(String message, Throwable cause) {
