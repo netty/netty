@@ -75,7 +75,7 @@ public abstract class AbstractEventLoopTest {
         b.bind(0).sync().channel();
 
         Future<?> f = loop.shutdownGracefully(0, 1, TimeUnit.MINUTES);
-        assertTrue(loop.awaitTermination(2, TimeUnit.SECONDS));
+        assertTrue(loop.awaitTermination(600, TimeUnit.MILLISECONDS));
         assertTrue(f.syncUninterruptibly().isSuccess());
         assertTrue(loop.isShutdown());
         assertTrue(loop.isTerminated());
