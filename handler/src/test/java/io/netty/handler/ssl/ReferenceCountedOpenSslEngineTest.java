@@ -15,11 +15,14 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
 import javax.net.ssl.SSLEngine;
+
+import static junit.framework.TestCase.*;
 
 public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
 
@@ -76,5 +79,24 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
             ((ReferenceCountedOpenSslContext) context).setUseTasks(useTasks);
         }
         return context;
+    }
+
+    @Test
+    public void parentContextIsRetainedByChildEngines() throws Exception {
+        SslContext clientSslCtx = SslContextBuilder.forClient()
+            .trustManager(InsecureTrustManagerFactory.INSTANCE)
+            .sslProvider(sslClientProvider())
+            .protocols(protocols())
+            .ciphers(ciphers())
+            .build();
+
+        SSLEngine engine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        assertEquals(ReferenceCountUtil.refCnt(clientSslCtx), 2);
+
+        cleanupClientSslContext(clientSslCtx);
+        assertEquals(ReferenceCountUtil.refCnt(clientSslCtx), 1);
+
+        cleanupClientSslEngine(engine);
+        assertEquals(ReferenceCountUtil.refCnt(clientSslCtx), 0);
     }
 }
