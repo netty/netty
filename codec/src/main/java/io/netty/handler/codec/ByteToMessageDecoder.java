@@ -29,6 +29,7 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.StringUtil;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -148,6 +149,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
     ByteBuf cumulation;
     private Cumulator cumulator = MERGE_CUMULATOR;
     private boolean singleDecode;
+    private boolean decodeWasNull;
     private boolean first;
 
     /**
@@ -292,8 +294,18 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
                 }
 
                 int size = out.size();
-                firedChannelRead |= out.insertSinceRecycled();
-                fireChannelRead(ctx, out, size);
+                if (size == 0) {
+                    decodeWasNull = true;
+                } else if (size == 1) {
+                    ctx.fireChannelRead(out.get(0));
+                } else {
+                    ArrayList<Object> ret = new ArrayList<Object>(size);
+                    for (int i = 0; i < size; i++) {
+                        ret.add(out.get(i));
+                    }
+                    ctx.fireChannelRead(ret);
+                }
+
                 out.recycle();
             }
         } else {
@@ -327,8 +339,11 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         numReads = 0;
         discardSomeReadBytes();
-        if (!firedChannelRead && !ctx.channel().config().isAutoRead()) {
-            ctx.read();
+        if (decodeWasNull) {
+            decodeWasNull = false;
+            if (!ctx.channel().config().isAutoRead()) {
+                ctx.read();
+            }
         }
         firedChannelRead = false;
         ctx.fireChannelReadComplete();
