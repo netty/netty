@@ -442,7 +442,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
     }
 
     protected void wakeup(boolean inEventLoop) {
-        if (!inEventLoop || state == ST_SHUTTING_DOWN) {
+        if (!inEventLoop) {
             // Use offer as we actually only need this to unblock the thread and if offer fails we do not care as there
             // is already something in the queue.
             taskQueue.offer(WAKEUP_TASK);
@@ -551,7 +551,10 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
         }
 
         if (wakeup) {
-            wakeup(inEventLoop);
+            taskQueue.offer(WAKEUP_TASK);
+            if (!addTaskWakesUp) {
+                wakeup(inEventLoop);
+            }
         }
 
         return terminationFuture();
@@ -603,7 +606,10 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
         }
 
         if (wakeup) {
-            wakeup(inEventLoop);
+            taskQueue.offer(WAKEUP_TASK);
+            if (!addTaskWakesUp) {
+                wakeup(inEventLoop);
+            }
         }
     }
 
@@ -652,7 +658,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
             if (gracefulShutdownQuietPeriod == 0) {
                 return true;
             }
-            wakeup(true);
+            taskQueue.offer(WAKEUP_TASK);
             return false;
         }
 
@@ -665,7 +671,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
         if (nanoTime - lastExecutionTime <= gracefulShutdownQuietPeriod) {
             // Check if any tasks were added to the queue every 100ms.
             // TODO: Change the behavior of takeTask() so that it returns on timeout.
-            wakeup(true);
+            taskQueue.offer(WAKEUP_TASK);
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {

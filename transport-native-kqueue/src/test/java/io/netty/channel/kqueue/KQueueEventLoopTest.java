@@ -17,7 +17,10 @@ package io.netty.channel.kqueue;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.ServerChannel;
+import io.netty.testsuite.transport.AbstractSingleThreadEventLoopTest;
 import io.netty.util.concurrent.Future;
 import org.junit.Test;
 
@@ -26,11 +29,11 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class KQueueEventLoopTest {
+public class KQueueEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
     @Test
     public void testScheduleBigDelayNotOverflow() {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, KQueueHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, newIoHandlerFactory());
 
         final EventLoop el = group.next();
         Future<?> future = el.schedule(() -> {
@@ -40,5 +43,15 @@ public class KQueueEventLoopTest {
         assertFalse(future.awaitUninterruptibly(1000));
         assertTrue(future.cancel(true));
         group.shutdownGracefully();
+    }
+
+    @Override
+    protected IoHandlerFactory newIoHandlerFactory() {
+        return KQueueHandler.newFactory();
+    }
+
+    @Override
+    protected Class<? extends ServerChannel> serverChannelClass() {
+        return KQueueServerSocketChannel.class;
     }
 }
