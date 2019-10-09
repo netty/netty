@@ -1268,15 +1268,16 @@ public class DnsNameResolver extends InetNameResolver {
                                         (InetSocketAddress) ctx.channel().localAddress(),
                                         response));
                             } else {
+                                response.release();
+                                tcpCtx.tryFailure("Received TCP response with unexpected ID", null, false);
                                 logger.warn("{} Received a DNS response with an unexpected ID: {}",
                                         channel, queryId);
-                                response.release();
                             }
                         }
 
                         @Override
                         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                            if (logger.isDebugEnabled()) {
+                            if (tcpCtx.tryFailure("TCP fallback error", cause, false) && logger.isDebugEnabled()) {
                                 logger.debug("{} Error during processing response: TCP [{}: {}]",
                                         ctx.channel(), queryId,
                                         ctx.channel().remoteAddress(), cause);
