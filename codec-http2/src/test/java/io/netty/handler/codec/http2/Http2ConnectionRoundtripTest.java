@@ -453,14 +453,7 @@ public class Http2ConnectionRoundtripTest {
         final CountDownLatch serverWriteHeadersLatch = new CountDownLatch(1);
         final AtomicReference<Throwable> serverWriteHeadersCauseRef = new AtomicReference<>();
 
-        final Http2Headers headers = dummyHeaders();
         final int streamId = 3;
-        runInChannel(clientChannel, () -> {
-            http2Client.encoder().writeHeaders(ctx(), streamId, headers, CONNECTION_STREAM_ID,
-                    DEFAULT_PRIORITY_WEIGHT, false, 0, false, newPromise());
-            http2Client.encoder().writeRstStream(ctx(), streamId, Http2Error.CANCEL.code(), newPromise());
-            http2Client.flush(ctx());
-        });
 
         doAnswer((Answer<Void>) invocationOnMock -> {
             if (streamId == (Integer) invocationOnMock.getArgument(1)) {
@@ -468,6 +461,14 @@ public class Http2ConnectionRoundtripTest {
             }
             return null;
         }).when(serverListener).onRstStreamRead(any(ChannelHandlerContext.class), eq(streamId), anyLong());
+
+        final Http2Headers headers = dummyHeaders();
+        runInChannel(clientChannel, () -> {
+            http2Client.encoder().writeHeaders(ctx(), streamId, headers, CONNECTION_STREAM_ID,
+                    DEFAULT_PRIORITY_WEIGHT, false, 0, false, newPromise());
+            http2Client.encoder().writeRstStream(ctx(), streamId, Http2Error.CANCEL.code(), newPromise());
+            http2Client.flush(ctx());
+        });
 
         assertTrue(serverSettingsAckLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
         assertTrue(serverGotRstLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
