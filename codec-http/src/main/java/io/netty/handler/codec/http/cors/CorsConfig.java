@@ -219,7 +219,7 @@ public final class CorsConfig {
      *
      * CORS headers are set after a request is processed. This may not always be desired
      * and this setting will check that the Origin is valid and if it is not valid no
-     * further processing will take place, and a error will be returned to the calling client.
+     * further processing will take place, and an error will be returned to the calling client.
      *
      * @return {@code true} if a CORS request should short-circuit upon receiving an invalid Origin header.
      */

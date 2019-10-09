@@ -2297,7 +2297,7 @@ public abstract class SSLEngineTest {
             assertTrue(client.isOutboundDone());
             assertTrue(client.isInboundDone());
 
-            // Ensure that calling wrap or unwrap again will not produce a SSLException
+            // Ensure that calling wrap or unwrap again will not produce an SSLException
             encryptedServerToClient.clear();
             plainServerOut.clear();
 
