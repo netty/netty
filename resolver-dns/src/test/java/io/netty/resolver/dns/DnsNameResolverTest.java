@@ -2898,7 +2898,7 @@ public class DnsNameResolverTest {
             } else {
                 assertTrue(envelope.content().isTruncated());
             }
-            envelope.release();
+            assertTrue(envelope.release());
         } finally {
             dnsServer2.stop();
             if (resolver != null) {
