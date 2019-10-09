@@ -497,7 +497,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
             ByteBuffer empty = allocateBuffer(0);
             ByteBuffer dst = allocateBuffer(clientEngine.getSession().getPacketBufferSize());
-            // Limit to something that is guaranteed to be too small to hold a SSL Record.
+            // Limit to something that is guaranteed to be too small to hold an SSL Record.
             dst.limit(1);
 
             // As we called closeOutbound() before this should produce a BUFFER_OVERFLOW.

@@ -36,14 +36,14 @@ public class Http2FrameCodecBuilder extends
     }
 
     /**
-     * Creates a builder for a HTTP/2 client.
+     * Creates a builder for an HTTP/2 client.
      */
     public static Http2FrameCodecBuilder forClient() {
         return new Http2FrameCodecBuilder(false);
     }
 
     /**
-     * Creates a builder for a HTTP/2 server.
+     * Creates a builder for an HTTP/2 server.
      */
     public static Http2FrameCodecBuilder forServer() {
         return new Http2FrameCodecBuilder(true);

@@ -26,7 +26,7 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
 /**
- * A HTTP/2 Server that responds to requests with a Hello World. Once started, you can test the
+ * An HTTP/2 Server that responds to requests with a Hello World. Once started, you can test the
  * server with the example client.
  */
 public final class Http2Server {

@@ -446,7 +446,7 @@ public class HttpResponseDecoderTest {
                 amount = headerLength -  a;
             }
 
-            // if header is done it should produce a HttpRequest
+            // if header is done it should produce an HttpRequest
             boolean headerDone = a + amount == headerLength;
             assertEquals(headerDone, ch.writeInbound(Unpooled.copiedBuffer(content, a, amount)));
             a += amount;

@@ -145,7 +145,7 @@ public class HttpRequestDecoderTest {
                 amount = headerLength -  a;
             }
 
-            // if header is done it should produce a HttpRequest
+            // if header is done it should produce an HttpRequest
             channel.writeInbound(Unpooled.copiedBuffer(content, a, amount));
             a += amount;
         }

@@ -281,7 +281,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
             // Check if the buffer is readable first as we use the readable byte count
             // to create the HttpChunk. This is needed as otherwise we may end up with
-            // create a HttpChunk instance that contains an empty buffer and so is
+            // create an HttpChunk instance that contains an empty buffer and so is
             // handled like it is the last HttpChunk.
             //
             // See https://github.com/netty/netty/issues/433
