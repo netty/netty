@@ -23,6 +23,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
+import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.IntSupplier;
@@ -42,6 +43,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.Queue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
@@ -269,7 +271,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
 
     @Ignore
     @Test
-    public void testChannelsRegistered()  {
+    public void testChannelsRegistered() throws Exception {
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         final NioEventLoop loop = (NioEventLoop) group.next();
 
@@ -277,17 +279,27 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             final Channel ch1 = new NioServerSocketChannel();
             final Channel ch2 = new NioServerSocketChannel();
 
-            assertEquals(0, loop.registeredChannels());
+            assertEquals(0, registeredChannels(loop));
 
             assertTrue(loop.register(ch1).syncUninterruptibly().isSuccess());
             assertTrue(loop.register(ch2).syncUninterruptibly().isSuccess());
-            assertEquals(2, loop.registeredChannels());
+            assertEquals(2, registeredChannels(loop));
 
             assertTrue(ch1.deregister().syncUninterruptibly().isSuccess());
-            assertEquals(1, loop.registeredChannels());
+            assertEquals(1, registeredChannels(loop));
         } finally {
             group.shutdownGracefully();
         }
+    }
+
+    // Only reliable if run from event loop
+    private static int registeredChannels(final SingleThreadEventLoop loop) throws Exception {
+        return loop.submit(new Callable<Integer>() {
+            @Override
+            public Integer call() {
+                return loop.registeredChannels();
+            }
+        }).get(1, TimeUnit.SECONDS);
     }
 
     @Test

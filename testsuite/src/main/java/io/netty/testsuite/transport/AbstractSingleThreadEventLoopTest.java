@@ -20,6 +20,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -42,7 +43,7 @@ import io.netty.util.concurrent.Future;
 public abstract class AbstractSingleThreadEventLoopTest {
 
     @Test
-    public void testChannelsRegistered()  {
+    public void testChannelsRegistered() throws Exception {
         EventLoopGroup group = newEventLoopGroup();
         final SingleThreadEventLoop loop = (SingleThreadEventLoop) group.next();
 
@@ -50,26 +51,36 @@ public abstract class AbstractSingleThreadEventLoopTest {
             final Channel ch1 = newChannel();
             final Channel ch2 = newChannel();
 
-            int rc = loop.registeredChannels();
+            int rc = registeredChannels(loop);
             boolean channelCountSupported = rc != -1;
 
             if (channelCountSupported) {
-                assertEquals(0, loop.registeredChannels());
+                assertEquals(0, registeredChannels(loop));
             }
 
             assertTrue(loop.register(ch1).syncUninterruptibly().isSuccess());
             assertTrue(loop.register(ch2).syncUninterruptibly().isSuccess());
             if (channelCountSupported) {
-                assertEquals(2, loop.registeredChannels());
+                assertEquals(2, registeredChannels(loop));
             }
 
             assertTrue(ch1.deregister().syncUninterruptibly().isSuccess());
             if (channelCountSupported) {
-                assertEquals(1, loop.registeredChannels());
+                assertEquals(1, registeredChannels(loop));
             }
         } finally {
             group.shutdownGracefully();
         }
+    }
+
+    // Only reliable if run from event loop
+    private static int registeredChannels(final SingleThreadEventLoop loop) throws Exception {
+        return loop.submit(new Callable<Integer>() {
+            @Override
+            public Integer call() {
+                return loop.registeredChannels();
+            }
+        }).get(1, TimeUnit.SECONDS);
     }
 
     @Test
