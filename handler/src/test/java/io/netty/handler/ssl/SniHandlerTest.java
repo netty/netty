@@ -464,6 +464,7 @@ public class SniHandlerTest {
 
                             boolean success = false;
                             try {
+                                assertEquals(1, ((ReferenceCountedOpenSslContext) sslContext).refCnt());
                                 // The SniHandler's replaceHandler() method allows us to implement custom behavior.
                                 // As an example, we want to release() the SslContext upon channelInactive() or rather
                                 // when the SslHandler closes it's SslEngine. If you take a close look at SslHandler
@@ -471,6 +472,7 @@ public class SniHandlerTest {
 
                                 SSLEngine sslEngine = sslContext.newEngine(ctx.alloc());
                                 try {
+                                    assertEquals(2, ((ReferenceCountedOpenSslContext) sslContext).refCnt());
                                     SslHandler customSslHandler = new CustomSslHandler(sslContext, sslEngine) {
                                         @Override
                                         public void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
@@ -517,8 +519,9 @@ public class SniHandlerTest {
                     cc.writeAndFlush(Unpooled.wrappedBuffer("Hello, World!".getBytes()))
                             .syncUninterruptibly();
 
-                    // Notice how the server's SslContext refCnt is 1
-                    assertEquals(1, ((ReferenceCounted) sslServerContext).refCnt());
+                    // Notice how the server's SslContext refCnt is 2 as it is incremented when the SSLEngine is created
+                    // and only decremented once it is destroyed.
+                    assertEquals(2, ((ReferenceCounted) sslServerContext).refCnt());
 
                     // The client disconnects
                     cc.close().syncUninterruptibly();

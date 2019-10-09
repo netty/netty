@@ -328,10 +328,11 @@ public class SslHandlerTest {
                 .sslProvider(SslProvider.OPENSSL)
                 .build();
             try {
+                assertEquals(1, ((ReferenceCounted) sslContext).refCnt());
                 SSLEngine sslEngine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
                 EmbeddedChannel ch = new EmbeddedChannel(new SslHandler(sslEngine));
 
-                assertEquals(1, ((ReferenceCounted) sslContext).refCnt());
+                assertEquals(2, ((ReferenceCounted) sslContext).refCnt());
                 assertEquals(1, ((ReferenceCounted) sslEngine).refCnt());
 
                 assertTrue(ch.finishAndReleaseAll());
