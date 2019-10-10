@@ -331,8 +331,6 @@ public final class Base64 {
     private static final class Decoder implements ByteProcessor {
         private final byte[] b4 = new byte[4];
         private int b4Posn;
-        private byte sbiCrop;
-        private byte sbiDecode;
         private byte[] decodabet;
         private int outBuffPosn;
         private ByteBuf dest;
@@ -353,26 +351,24 @@ public final class Base64 {
 
         @Override
         public boolean process(byte value) throws Exception {
-            sbiCrop = (byte) (value & 0x7f); // Only the low seven bits
-            sbiDecode = decodabet[sbiCrop];
+            if (value > 0) {
+                byte sbiDecode = decodabet[value];
+                if (sbiDecode >= WHITE_SPACE_ENC) { // White space, Equals sign or better
+                    if (sbiDecode >= EQUALS_SIGN_ENC) { // Equals sign or better
+                        b4[b4Posn ++] = value;
+                        if (b4Posn > 3) { // Quartet built
+                            outBuffPosn += decode4to3(b4, dest, outBuffPosn, decodabet);
+                            b4Posn = 0;
 
-            if (sbiDecode >= WHITE_SPACE_ENC) { // White space, Equals sign or better
-                if (sbiDecode >= EQUALS_SIGN_ENC) { // Equals sign or better
-                    b4[b4Posn ++] = sbiCrop;
-                    if (b4Posn > 3) { // Quartet built
-                        outBuffPosn += decode4to3(b4, dest, outBuffPosn, decodabet);
-                        b4Posn = 0;
-
-                        // If that was the equals sign, break out of 'for' loop
-                        if (sbiCrop == EQUALS_SIGN) {
-                            return false;
+                            // If that was the equals sign, break out of 'for' loop
+                            return value != EQUALS_SIGN;
                         }
                     }
+                    return true;
                 }
-                return true;
             }
             throw new IllegalArgumentException(
-                    "invalid bad Base64 input character: " + (short) (value & 0xFF) + " (decimal)");
+                    "invalid Base64 input character: " + (short) (value & 0xFF) + " (decimal)");
         }
 
         private static int decode4to3(byte[] src, ByteBuf dest, int destOffset, byte[] decodabet) {
