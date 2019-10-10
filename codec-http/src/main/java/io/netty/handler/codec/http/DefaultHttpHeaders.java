@@ -80,7 +80,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     /**
      * <b>Warning!</b> Setting <code>validate</code> to <code>false</code> will mean that Netty won't
-     * validate that the user supplied header values are malicious.
+     * validate & protect against user-supplied header values that are malicious.
      * This can leave your server implementation vulnerable to
      * <a href="https://cwe.mitre.org/data/definitions/113.html">
      *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
