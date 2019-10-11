@@ -27,9 +27,11 @@ import java.util.function.BiFunction;
 
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+@SuppressJava6Requirement(reason = "Usage guarded by java version check")
 final class Java9SslUtils {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Java9SslUtils.class);
     private static final Method SET_APPLICATION_PROTOCOLS;

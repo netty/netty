@@ -22,6 +22,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
 
 import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
@@ -320,12 +322,26 @@ public class JdkZlibEncoder extends ZlibEncoder {
         return ctx.writeAndFlush(footer, promise);
     }
 
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     private void deflate(ByteBuf out) {
+        if (PlatformDependent.javaVersion() < 7) {
+            deflateJdk6(out);
+        }
         int numBytes;
         do {
             int writerIndex = out.writerIndex();
             numBytes = deflater.deflate(
                     out.array(), out.arrayOffset() + writerIndex, out.writableBytes(), Deflater.SYNC_FLUSH);
+            out.writerIndex(writerIndex + numBytes);
+        } while (numBytes > 0);
+    }
+
+    private void deflateJdk6(ByteBuf out) {
+        int numBytes;
+        do {
+            int writerIndex = out.writerIndex();
+            numBytes = deflater.deflate(
+                    out.array(), out.arrayOffset() + writerIndex, out.writableBytes());
             out.writerIndex(writerIndex + numBytes);
         } while (numBytes > 0);
     }

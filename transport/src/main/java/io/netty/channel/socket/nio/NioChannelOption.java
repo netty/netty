@@ -17,6 +17,7 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
+import io.netty.util.internal.SuppressJava6Requirement;
 
 import java.io.IOException;
 import java.nio.channels.Channel;
@@ -29,6 +30,7 @@ import java.util.Set;
  * Provides {@link ChannelOption} over a given {@link java.net.SocketOption} which is then passed through the underlying
  * {@link java.nio.channels.NetworkChannel}.
  */
+@SuppressJava6Requirement(reason = "Usage explicit by the user")
 public final class NioChannelOption<T> extends ChannelOption<T> {
 
     private final java.net.SocketOption<T> option;
@@ -53,6 +55,7 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
     // See https://github.com/netty/netty/issues/8166
 
     // Internal helper methods to remove code duplication between Nio*Channel implementations.
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     static <T> boolean setOption(Channel jdkChannel, NioChannelOption<T> option, T value) {
         java.nio.channels.NetworkChannel channel = (java.nio.channels.NetworkChannel) jdkChannel;
         if (!channel.supportedOptions().contains(option.option)) {
@@ -71,6 +74,7 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
         }
     }
 
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     static <T> T getOption(Channel jdkChannel, NioChannelOption<T> option) {
         java.nio.channels.NetworkChannel channel = (java.nio.channels.NetworkChannel) jdkChannel;
 
@@ -89,6 +93,7 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
         }
     }
 
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     @SuppressWarnings("unchecked")
     static ChannelOption[] getOptions(Channel jdkChannel) {
         java.nio.channels.NetworkChannel channel = (java.nio.channels.NetworkChannel) jdkChannel;

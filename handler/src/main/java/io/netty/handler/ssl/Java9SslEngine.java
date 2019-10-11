@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SuppressJava6Requirement;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -30,6 +31,7 @@ import static io.netty.handler.ssl.SslUtils.toSSLHandshakeException;
 import static io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import static io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 
+@SuppressJava6Requirement(reason = "Usage guarded by java version check")
 final class Java9SslEngine extends JdkSslEngine {
     private final ProtocolSelectionListener selectionListener;
     private final AlpnSelector alpnSelector;
