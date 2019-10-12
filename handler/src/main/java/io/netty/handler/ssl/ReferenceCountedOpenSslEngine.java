@@ -154,7 +154,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     private HandshakeState handshakeState = HandshakeState.NOT_STARTED;
     private boolean receivedShutdown;
-    private boolean destroyed;
+    private volatile boolean destroyed;
     private volatile String applicationProtocol;
     private volatile boolean needTask;
 
