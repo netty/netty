@@ -356,8 +356,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 calculateMaxWrapOverhead();
             } catch (Throwable cause) {
                 // Call shutdown so we are sure we correctly release all native memory and also guard against the
-                // case when shutdown() will be called by the finalizer again. If we would call SSL.free(...) directly
-                // the finalizer may end up calling it again as we would miss to update the DESTROYED_UPDATER.
+                // case when shutdown() will be called by the finalizer again. 
                 shutdown();
 
                 PlatformDependent.throwException(cause);
