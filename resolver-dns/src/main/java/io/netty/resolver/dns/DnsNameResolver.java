@@ -1222,12 +1222,7 @@ public class DnsNameResolver extends InetNameResolver {
             bs.option(ChannelOption.SO_REUSEADDR, true)
             .group(executor())
             .channelFactory(socketChannelFactory)
-            .handler(new ChannelInitializer<Channel>() {
-                @Override
-                protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(TCP_ENCODER);
-                }
-            });
+            .handler(TCP_ENCODER);
             bs.connect(res.sender()).addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) {
