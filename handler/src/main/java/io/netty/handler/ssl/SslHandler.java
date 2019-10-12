@@ -2186,7 +2186,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (engineType.wantsDirectBuffer) {
                     first = allocator.directBuffer(composite.readableBytes());
                 } else {
-                    first = allocator.buffer(composite.readableBytes());
+                    first = allocator.heapBuffer(composite.readableBytes());
                 }
                 try {
                     first.writeBytes(composite);
