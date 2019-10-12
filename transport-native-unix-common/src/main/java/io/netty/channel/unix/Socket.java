@@ -113,29 +113,10 @@ public class Socket extends FileDescriptor {
     }
 
     public final int sendTo(ByteBuffer buf, int pos, int limit, InetAddress addr, int port) throws IOException {
-        // just duplicate the toNativeInetAddress code here to minimize object creation as this method is expected
-        // to be called frequently
-        byte[] address;
-        int scopeId;
-        if (addr instanceof Inet6Address) {
-            address = addr.getAddress();
-            scopeId = ((Inet6Address) addr).getScopeId();
-        } else {
-            // convert to ipv4 mapped ipv6 address;
-            scopeId = 0;
-            address = ipv4MappedIpv6Address(addr.getAddress());
-        }
-        int res = sendTo(fd, useIpv6(addr), buf, pos, limit, address, scopeId, port);
-        if (res >= 0) {
-            return res;
-        }
-        if (res == ERROR_ECONNREFUSED_NEGATIVE) {
-            throw new PortUnreachableException("sendTo failed");
-        }
-        return ioResult("sendTo", res);
+        return sendTo(buf, pos, limit, addr, port, false);
     }
 
-    public final int sendToAddress(long memoryAddress, int pos, int limit, InetAddress addr, int port)
+    public final int sendTo(ByteBuffer buf, int pos, int limit, InetAddress addr, int port, boolean fastOpen)
             throws IOException {
         // just duplicate the toNativeInetAddress code here to minimize object creation as this method is expected
         // to be called frequently
@@ -149,17 +130,23 @@ public class Socket extends FileDescriptor {
             scopeId = 0;
             address = ipv4MappedIpv6Address(addr.getAddress());
         }
-        int res = sendToAddress(fd, useIpv6(addr), memoryAddress, pos, limit, address, scopeId, port);
+        int res = sendTo(fd, useIpv6(addr), buf, pos, limit, address, scopeId, port, fastOpen);
         if (res >= 0) {
             return res;
         }
         if (res == ERROR_ECONNREFUSED_NEGATIVE) {
-            throw new PortUnreachableException("sendToAddress failed");
+            throw new PortUnreachableException("sendTo failed");
         }
-        return ioResult("sendToAddress", res);
+        return ioResult("sendTo", res);
     }
 
-    public final int sendToAddresses(long memoryAddress, int length, InetAddress addr, int port) throws IOException {
+    public final int sendToAddress(long memoryAddress, int pos, int limit, InetAddress addr, int port)
+            throws IOException {
+        return sendToAddress(memoryAddress, pos, limit, addr, port, false);
+    }
+
+    public final int sendToAddress(long memoryAddress, int pos, int limit, InetAddress addr, int port,
+                                   boolean fastOpen) throws IOException {
         // just duplicate the toNativeInetAddress code here to minimize object creation as this method is expected
         // to be called frequently
         byte[] address;
@@ -172,7 +159,35 @@ public class Socket extends FileDescriptor {
             scopeId = 0;
             address = ipv4MappedIpv6Address(addr.getAddress());
         }
-        int res = sendToAddresses(fd, useIpv6(addr), memoryAddress, length, address, scopeId, port);
+        int res = sendToAddress(fd, useIpv6(addr), memoryAddress, pos, limit, address, scopeId, port, fastOpen);
+        if (res >= 0) {
+            return res;
+        }
+        if (res == ERROR_ECONNREFUSED_NEGATIVE) {
+            throw new PortUnreachableException("sendToAddress failed");
+        }
+        return ioResult("sendToAddress", res);
+    }
+
+    public final int sendToAddresses(long memoryAddress, int length, InetAddress addr, int port) throws IOException {
+        return sendToAddresses(memoryAddress, length, addr, port, false);
+    }
+
+    public final int sendToAddresses(long memoryAddress, int length, InetAddress addr, int port, boolean fastOpen)
+            throws IOException {
+        // just duplicate the toNativeInetAddress code here to minimize object creation as this method is expected
+        // to be called frequently
+        byte[] address;
+        int scopeId;
+        if (addr instanceof Inet6Address) {
+            address = addr.getAddress();
+            scopeId = ((Inet6Address) addr).getScopeId();
+        } else {
+            // convert to ipv4 mapped ipv6 address;
+            scopeId = 0;
+            address = ipv4MappedIpv6Address(addr.getAddress());
+        }
+        int res = sendToAddresses(fd, useIpv6(addr), memoryAddress, length, address, scopeId, port, fastOpen);
         if (res >= 0) {
             return res;
         }
@@ -467,16 +482,23 @@ public class Socket extends FileDescriptor {
     private static native byte[] localAddress(int fd);
 
     private static native int sendTo(
-            int fd, boolean ipv6, ByteBuffer buf, int pos, int limit, byte[] address, int scopeId, int port);
+            int fd, boolean ipv6, ByteBuffer buf, int pos, int limit, byte[] address, int scopeId, int port,
+            boolean fastOpen);
+
     private static native int sendToAddress(
-            int fd, boolean ipv6, long memoryAddress, int pos, int limit, byte[] address, int scopeId, int port);
+            int fd, boolean ipv6, long memoryAddress, int pos, int limit, byte[] address, int scopeId, int port,
+            boolean fastOpen);
+
     private static native int sendToAddresses(
-            int fd, boolean ipv6, long memoryAddress, int length, byte[] address, int scopeId, int port);
+            int fd, boolean ipv6, long memoryAddress, int length, byte[] address, int scopeId, int port,
+            boolean fastOpen);
 
     private static native DatagramSocketAddress recvFrom(
             int fd, ByteBuffer buf, int pos, int limit) throws IOException;
+
     private static native DatagramSocketAddress recvFromAddress(
             int fd, long memoryAddress, int pos, int limit) throws IOException;
+
     private static native int recvFd(int fd);
     private static native int sendFd(int socketFd, int fd);
 

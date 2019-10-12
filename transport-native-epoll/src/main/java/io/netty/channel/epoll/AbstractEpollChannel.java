@@ -730,7 +730,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         return connected;
     }
 
-    private boolean doConnect0(SocketAddress remote) throws Exception {
+    boolean doConnect0(SocketAddress remote) throws Exception {
         boolean success = false;
         try {
             boolean connected = socket.connect(remote);

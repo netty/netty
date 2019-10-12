@@ -249,7 +249,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      *     no data was accepted</li>
      * </ul>
      */
-    private int writeBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
+    int writeBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
         int readableBytes = buf.readableBytes();
         if (readableBytes == 0) {
             in.remove();

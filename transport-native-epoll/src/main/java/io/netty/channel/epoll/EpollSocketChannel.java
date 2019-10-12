@@ -15,21 +15,27 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.unix.IovArray;
 import io.netty.util.concurrent.GlobalEventExecutor;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
 import static io.netty.channel.epoll.LinuxSocket.newSocketStream;
+import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 
 /**
  * {@link SocketChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
@@ -40,6 +46,7 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     private final EpollSocketChannelConfig config;
 
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
+    private boolean pendingFastOpenWrite;
 
     public EpollSocketChannel() {
         super(newSocketStream(), false);
@@ -109,6 +116,53 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     @Override
     protected AbstractEpollUnsafe newUnsafe() {
         return new EpollSocketChannelUnsafe();
+    }
+
+    @Override
+    boolean doConnect0(SocketAddress remote) throws Exception {
+        if (Native.IS_SUPPORTING_TCP_FASTOPEN && config.isTcpFastOpenConnect()) {
+            pendingFastOpenWrite = true;
+            return true;
+        }
+        return super.doConnect0(remote);
+    }
+
+    private long doWriteBytesFastOpen(ByteBuf data) throws Exception {
+        final long writtenBytes;
+        if (data.hasMemoryAddress()) {
+            long memoryAddress = data.memoryAddress();
+            writtenBytes = socket.sendToAddress(memoryAddress, data.readerIndex(), data.writerIndex(),
+                                                remoteAddress().getAddress(), remoteAddress().getPort(), true);
+        } else if (data.nioBufferCount() > 1) {
+            IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
+            array.add(data, data.readerIndex(), data.readableBytes());
+            int cnt = array.count();
+            assert cnt != 0;
+
+            writtenBytes = socket.sendToAddresses(array.memoryAddress(0), cnt, remoteAddress().getAddress(),
+                                                  remoteAddress().getPort(), true);
+        } else {
+            ByteBuffer nioData = data.internalNioBuffer(data.readerIndex(), data.readableBytes());
+            writtenBytes = socket.sendTo(nioData, nioData.position(), nioData.limit(), remoteAddress().getAddress(),
+                                         remoteAddress().getPort(), true);
+        }
+
+        return writtenBytes;
+    }
+
+    @Override
+    int writeBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
+        if (buf.isReadable() && pendingFastOpenWrite) {
+            long localFlushedAmount = doWriteBytesFastOpen(buf);
+            if (localFlushedAmount > 0) {
+                pendingFastOpenWrite = false;
+                in.removeBytes(localFlushedAmount);
+                return 1;
+            }
+            return WRITE_STATUS_SNDBUF_FULL;
+        }
+
+        return super.writeBytes(in, buf);
     }
 
     private final class EpollSocketChannelUnsafe extends EpollStreamUnsafe {

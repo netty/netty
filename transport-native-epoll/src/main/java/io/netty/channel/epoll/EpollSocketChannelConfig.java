@@ -39,6 +39,7 @@ import static io.netty.channel.ChannelOption.TCP_NODELAY;
 
 public final class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChannelConfig {
     private volatile boolean allowHalfClosure;
+    private volatile boolean tcpFastopen;
 
     /**
      * Creates a new instance.
@@ -551,29 +552,21 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
     }
 
     /**
-     * Set the {@code TCP_FASTOPEN_CONNECT} option on the socket. Requires Linux kernel 4.11 or later.
-     * See
-     * <a href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=19f6d3f3">this commit</a>
-     * for more details.
+     * Enables client TCP fast open. {@code TCP_FASTOPEN_CONNECT} normally
+     * requires Linux kernel 4.11 or later, so instead we use the traditional fast open
+     * client socket mechanics. See this
+     * <a href="https://lwn.net/Articles/508865/">LWN article</a> for more info.
      */
     public EpollSocketChannelConfig setTcpFastOpenConnect(boolean fastOpenConnect) {
-        try {
-            ((EpollSocketChannel) channel).socket.setTcpFastOpenConnect(fastOpenConnect);
-            return this;
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        tcpFastopen = fastOpenConnect;
+        return this;
     }
 
     /**
-     * Returns {@code true} if {@code TCP_FASTOPEN_CONNECT} is enabled, {@code false} otherwise.
+     * Returns {@code true} if TCP fast open is enabled, {@code false} otherwise.
      */
     public boolean isTcpFastOpenConnect() {
-        try {
-            return ((EpollSocketChannel) channel).socket.isTcpFastOpenConnect();
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        return tcpFastopen;
     }
 
     @Override
