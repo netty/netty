@@ -1,0 +1,44 @@
+/*
+ * Copyright 2014 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package io.netty.channel.epoll;
+
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.testsuite.transport.TestsuitePermutation;
+import io.netty.testsuite.transport.socket.SocketEchoTest;
+
+import java.util.Collections;
+import java.util.List;
+
+public class EpollSocketFastOpenEchoTest extends SocketEchoTest {
+
+    @Override
+    protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
+        if (!EpollSocketTestPermutation.INSTANCE.isServerFastOpen()) {
+            return Collections.emptyList();
+        }
+
+        return EpollSocketTestPermutation.INSTANCE.socket();
+    }
+
+    @Override
+    protected void configure(ServerBootstrap bootstrap, Bootstrap bootstrap2, ByteBufAllocator allocator) {
+        bootstrap.option(EpollChannelOption.TCP_FASTOPEN, 5);
+        bootstrap2.option(EpollChannelOption.TCP_FASTOPEN_CONNECT, true);
+        super.configure(bootstrap, bootstrap2, allocator);
+    }
+}

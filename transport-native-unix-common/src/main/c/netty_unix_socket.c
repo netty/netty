@@ -982,9 +982,9 @@ static const JNINativeMethod fixed_method_table[] = {
   { "newSocketDgramFd", "(Z)I", (void *) netty_unix_socket_newSocketDgramFd },
   { "newSocketStreamFd", "(Z)I", (void *) netty_unix_socket_newSocketStreamFd },
   { "newSocketDomainFd", "()I", (void *) netty_unix_socket_newSocketDomainFd },
-  { "sendTo", "(IZLjava/nio/ByteBuffer;II[BII)I", (void *) netty_unix_socket_sendTo },
-  { "sendToAddress", "(IZJII[BII)I", (void *) netty_unix_socket_sendToAddress },
-  { "sendToAddresses", "(IZJI[BII)I", (void *) netty_unix_socket_sendToAddresses },
+  { "sendTo", "(IZLjava/nio/ByteBuffer;II[BIIZ)I", (void *) netty_unix_socket_sendTo },
+  { "sendToAddress", "(IZJII[BIIZ)I", (void *) netty_unix_socket_sendToAddress },
+  { "sendToAddresses", "(IZJI[BIIZ)I", (void *) netty_unix_socket_sendToAddresses },
   // "recvFrom" has a dynamic signature
   // "recvFromAddress" has a dynamic signature
   { "recvFd", "(I)I", (void *) netty_unix_socket_recvFd },
