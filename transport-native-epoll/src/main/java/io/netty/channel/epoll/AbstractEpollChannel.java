@@ -36,6 +36,7 @@ import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
@@ -375,6 +376,39 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             }
         }
         return WRITE_STATUS_SNDBUF_FULL;
+    }
+
+    protected final long doWriteOrSendBytes(ByteBuf data, InetSocketAddress remoteAddress, boolean fastOpen)
+            throws IOException {
+        if (data.hasMemoryAddress()) {
+            long memoryAddress = data.memoryAddress();
+            if (remoteAddress == null) {
+                return socket.writeAddress(memoryAddress, data.readerIndex(), data.writerIndex());
+            } else {
+                return socket.sendToAddress(memoryAddress, data.readerIndex(), data.writerIndex(),
+                        remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
+            }
+        } else if (data.nioBufferCount() > 1) {
+            IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
+            array.add(data, data.readerIndex(), data.readableBytes());
+            int cnt = array.count();
+            assert cnt != 0;
+
+            if (remoteAddress == null) {
+                return socket.writevAddresses(array.memoryAddress(0), cnt);
+            } else {
+                return socket.sendToAddresses(array.memoryAddress(0), cnt,
+                        remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
+            }
+        } else  {
+            ByteBuffer nioData = data.internalNioBuffer(data.readerIndex(), data.readableBytes());
+            if (remoteAddress == null) {
+                return socket.write(nioData, nioData.position(), nioData.limit());
+            } else {
+                return socket.sendTo(nioData, nioData.position(), nioData.limit(),
+                        remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
+            }
+        }
     }
 
     protected abstract class AbstractEpollUnsafe extends AbstractUnsafe {

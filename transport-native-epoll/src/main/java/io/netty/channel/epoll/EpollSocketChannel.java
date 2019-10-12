@@ -127,33 +127,10 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
         return super.doConnect0(remote);
     }
 
-    private long doWriteBytesFastOpen(ByteBuf data) throws Exception {
-        final long writtenBytes;
-        if (data.hasMemoryAddress()) {
-            long memoryAddress = data.memoryAddress();
-            writtenBytes = socket.sendToAddress(memoryAddress, data.readerIndex(), data.writerIndex(),
-                                                remoteAddress().getAddress(), remoteAddress().getPort(), true);
-        } else if (data.nioBufferCount() > 1) {
-            IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
-            array.add(data, data.readerIndex(), data.readableBytes());
-            int cnt = array.count();
-            assert cnt != 0;
-
-            writtenBytes = socket.sendToAddresses(array.memoryAddress(0), cnt, remoteAddress().getAddress(),
-                                                  remoteAddress().getPort(), true);
-        } else {
-            ByteBuffer nioData = data.internalNioBuffer(data.readerIndex(), data.readableBytes());
-            writtenBytes = socket.sendTo(nioData, nioData.position(), nioData.limit(), remoteAddress().getAddress(),
-                                         remoteAddress().getPort(), true);
-        }
-
-        return writtenBytes;
-    }
-
     @Override
     int writeBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
         if (buf.isReadable() && pendingFastOpenWrite) {
-            long localFlushedAmount = doWriteBytesFastOpen(buf);
+            long localFlushedAmount = doWriteOrSendBytes(buf, remoteAddress(), true);
             if (localFlushedAmount > 0) {
                 pendingFastOpenWrite = false;
                 in.removeBytes(localFlushedAmount);

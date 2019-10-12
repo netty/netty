@@ -367,38 +367,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             return true;
         }
 
-        final long writtenBytes;
-        if (data.hasMemoryAddress()) {
-            long memoryAddress = data.memoryAddress();
-            if (remoteAddress == null) {
-                writtenBytes = socket.writeAddress(memoryAddress, data.readerIndex(), data.writerIndex());
-            } else {
-                writtenBytes = socket.sendToAddress(memoryAddress, data.readerIndex(), data.writerIndex(),
-                        remoteAddress.getAddress(), remoteAddress.getPort());
-            }
-        } else if (data.nioBufferCount() > 1) {
-            IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
-            array.add(data, data.readerIndex(), data.readableBytes());
-            int cnt = array.count();
-            assert cnt != 0;
-
-            if (remoteAddress == null) {
-                writtenBytes = socket.writevAddresses(array.memoryAddress(0), cnt);
-            } else {
-                writtenBytes = socket.sendToAddresses(array.memoryAddress(0), cnt,
-                        remoteAddress.getAddress(), remoteAddress.getPort());
-            }
-        } else  {
-            ByteBuffer nioData = data.internalNioBuffer(data.readerIndex(), data.readableBytes());
-            if (remoteAddress == null) {
-                writtenBytes = socket.write(nioData, nioData.position(), nioData.limit());
-            } else {
-                writtenBytes = socket.sendTo(nioData, nioData.position(), nioData.limit(),
-                        remoteAddress.getAddress(), remoteAddress.getPort());
-            }
-        }
-
-        return writtenBytes > 0;
+        return doWriteOrSendBytes(data, remoteAddress, false) > 0;
     }
 
     @Override
