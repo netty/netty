@@ -2183,7 +2183,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         protected ByteBuf composeFirst(ByteBufAllocator allocator, ByteBuf first) {
             if (first instanceof CompositeByteBuf) {
                 CompositeByteBuf composite = (CompositeByteBuf) first;
-                first = allocator.directBuffer(composite.readableBytes());
+                if (engineType.wantsDirectBuffer) {
+                    first = allocator.directBuffer(composite.readableBytes());
+                } else {
+                    first = allocator.heapBuffer(composite.readableBytes());
+                }
                 try {
                     first.writeBytes(composite);
                 } catch (Throwable cause) {
