@@ -378,6 +378,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         return WRITE_STATUS_SNDBUF_FULL;
     }
 
+    /**
+     * Write bytes to the socket. Used for datagram and TCP client fast open writes.
+     */
     protected final long doWriteOrSendBytes(ByteBuf data, InetSocketAddress remoteAddress, boolean fastOpen)
             throws IOException {
         if (data.hasMemoryAddress()) {
