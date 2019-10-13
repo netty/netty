@@ -1639,7 +1639,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     // We need more data so lets try to unwrap first and then call decode again which will feed us
                     // with buffered data (if there is any).
                     case NEED_UNWRAP:
-                        unwrapNonAppData(ctx);
+                        try {
+                            unwrapNonAppData(ctx);
+                        } catch (SSLException e) {
+                            handleUnwrapThrowable(ctx, e);
+                            return;
+                        }
                         tryDecodeAgain();
                         break;
 
@@ -2178,7 +2183,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         protected ByteBuf composeFirst(ByteBufAllocator allocator, ByteBuf first) {
             if (first instanceof CompositeByteBuf) {
                 CompositeByteBuf composite = (CompositeByteBuf) first;
-                first = allocator.directBuffer(composite.readableBytes());
+                if (engineType.wantsDirectBuffer) {
+                    first = allocator.directBuffer(composite.readableBytes());
+                } else {
+                    first = allocator.heapBuffer(composite.readableBytes());
+                }
                 try {
                     first.writeBytes(composite);
                 } catch (Throwable cause) {

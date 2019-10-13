@@ -202,7 +202,7 @@ public abstract class WebSocketServerHandshaker {
         ChannelHandlerContext ctx = p.context(HttpRequestDecoder.class);
         final String encoderName;
         if (ctx == null) {
-            // this means the user use a HttpServerCodec
+            // this means the user use an HttpServerCodec
             ctx = p.context(HttpServerCodec.class);
             if (ctx == null) {
                 promise.setFailure(
@@ -276,7 +276,7 @@ public abstract class WebSocketServerHandshaker {
         ChannelPipeline p = channel.pipeline();
         ChannelHandlerContext ctx = p.context(HttpRequestDecoder.class);
         if (ctx == null) {
-            // this means the user use a HttpServerCodec
+            // this means the user use an HttpServerCodec
             ctx = p.context(HttpServerCodec.class);
             if (ctx == null) {
                 promise.setFailure(

@@ -29,12 +29,17 @@ static const uint64_t NETTY_BILLION = 1000000000L;
 #endif /* NETTY_USE_MACH_INSTEAD_OF_CLOCK */
 
 char* netty_unix_util_prepend(const char* prefix, const char* str) {
+    char* result = NULL;
     if (prefix == NULL) {
-        char* result = (char*) malloc(sizeof(char) * (strlen(str) + 1));
+        if ((result = (char*) malloc(sizeof(char) * (strlen(str) + 1))) == NULL) {
+            return NULL;
+        }
         strcpy(result, str);
         return result;
     }
-    char* result = (char*) malloc(sizeof(char) * (strlen(prefix) + strlen(str) + 1));
+    if ((result = (char*) malloc(sizeof(char) * (strlen(prefix) + strlen(str) + 1))) == NULL) {
+        return NULL;
+    }
     strcpy(result, prefix);
     strcat(result, str);
     return result;
@@ -82,7 +87,10 @@ char* netty_unix_util_parse_package_prefix(const char* libraryPathName, const ch
     // packagePrefix length is > 0
     // Make a copy so we can modify the value without impacting libraryPathName.
     size_t packagePrefixLen = packageNameEnd - packagePrefix;
-    packagePrefix = strndup(packagePrefix, packagePrefixLen);
+    if ((packagePrefix = strndup(packagePrefix, packagePrefixLen)) == NULL) {
+        *status = JNI_ERR;
+        return NULL;
+    }
     // Make sure the packagePrefix is in the correct format for the JNI functions it will be used with.
     char* temp = packagePrefix;
     packageNameEnd = packagePrefix + packagePrefixLen;
@@ -95,7 +103,9 @@ char* netty_unix_util_parse_package_prefix(const char* libraryPathName, const ch
     // Make sure packagePrefix is terminated with the '/' JNI package separator.
     if(*(--temp) != '/') {
         temp = packagePrefix;
-        packagePrefix = netty_unix_util_prepend(packagePrefix, "/");
+        if ((packagePrefix = netty_unix_util_prepend(packagePrefix, "/")) == NULL) {
+            *status = JNI_ERR;
+        }
         free(temp);
     }
     return packagePrefix;
@@ -185,13 +195,34 @@ jboolean netty_unix_util_initialize_wait_clock(clockid_t* clockId) {
 }
 
 jint netty_unix_util_register_natives(JNIEnv* env, const char* packagePrefix, const char* className, const JNINativeMethod* methods, jint numMethods) {
-    char* nettyClassName = netty_unix_util_prepend(packagePrefix, className);
+    char* nettyClassName = NULL;
+    int ret = JNI_ERR;
+    NETTY_PREPEND(packagePrefix, className, nettyClassName, done);
+   
     jclass nativeCls = (*env)->FindClass(env, nettyClassName);
-    free(nettyClassName);
-    nettyClassName = NULL;
     if (nativeCls == NULL) {
-        return JNI_ERR;
+        goto done;
     }
 
-    return (*env)->RegisterNatives(env, nativeCls, methods, numMethods);
+    ret = (*env)->RegisterNatives(env, nativeCls, methods, numMethods);
+done:
+    free(nettyClassName);
+    return ret;
+}
+
+void netty_unix_util_free_dynamic_methods_table(JNINativeMethod* dynamicMethods, jint fixedMethodTableSize, jint fullMethodTableSize) {
+    if (dynamicMethods != NULL) {
+        jint i = fixedMethodTableSize;
+        for (; i < fullMethodTableSize; ++i) {
+            free(dynamicMethods[i].signature);
+        }
+        free(dynamicMethods);
+    }
+}
+
+void netty_unix_util_free_dynamic_name(char** dynamicName) {
+    if (dynamicName != NULL && *dynamicName != NULL) {
+        free(*dynamicName);
+        *dynamicName = NULL;
+    }
 }

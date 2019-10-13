@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.40.Final-SNAPSHOT</version>
+    <version>4.1.43.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite-shading</artifactId>
@@ -66,6 +66,17 @@
     </dependency>
   </dependencies>
   <profiles>
+    <profile>
+      <id>skipTests</id>
+      <activation>
+        <property>
+          <name>skipTests</name>
+        </property>
+      </activation>
+      <properties>
+        <skipShadingTestsuite>true</skipShadingTestsuite>
+      </properties>
+    </profile>
     <profile>
       <id>windows</id>
       <activation>
@@ -193,6 +204,7 @@
                   <goal>run</goal>
                 </goals>
                 <configuration>
+                  <skip>${skipShadingTestsuite}</skip>
                   <target>
                     <unzip dest="${classesShadedDir}/">
                       <fileset dir="${project.build.directory}/">
@@ -222,6 +234,7 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-failsafe-plugin</artifactId>
             <configuration>
+              <skip>${skipShadingTestsuite}</skip>
               <systemPropertyVariables>
                 <shadingPrefix>${shadingPrefix}</shadingPrefix>
                 <shadingPrefix2>${shadingPrefix2}</shadingPrefix2>
@@ -337,6 +350,7 @@
                   <goal>run</goal>
                 </goals>
                 <configuration>
+                  <skip>${skipShadingTestsuite}</skip>
                   <target>
                     <unzip dest="${classesShadedDir}/">
                       <fileset dir="${project.build.directory}/">
@@ -366,6 +380,7 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-failsafe-plugin</artifactId>
             <configuration>
+              <skip>${skipShadingTestsuite}</skip>
               <systemPropertyVariables>
                 <shadingPrefix>${shadingPrefix}</shadingPrefix>
                 <shadingPrefix2>${shadingPrefix2}</shadingPrefix2>

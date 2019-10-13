@@ -254,7 +254,7 @@ public abstract class WebSocketClientHandshaker {
             HttpClientCodec codec = pipeline.get(HttpClientCodec.class);
             if (codec == null) {
                promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
-                       "a HttpResponseDecoder or HttpClientCodec"));
+                       "an HttpResponseDecoder or HttpClientCodec"));
                return promise;
             }
         }
@@ -272,7 +272,7 @@ public abstract class WebSocketClientHandshaker {
                     }
                     if (ctx == null) {
                         promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
-                                "a HttpRequestEncoder or HttpClientCodec"));
+                                "an HttpRequestEncoder or HttpClientCodec"));
                         return;
                     }
                     p.addAfter(ctx.name(), "ws-encoder", newWebSocketEncoder());
@@ -350,7 +350,7 @@ public abstract class WebSocketClientHandshaker {
             ctx = p.context(HttpClientCodec.class);
             if (ctx == null) {
                 throw new IllegalStateException("ChannelPipeline does not contain " +
-                        "a HttpRequestEncoder or HttpClientCodec");
+                        "an HttpRequestEncoder or HttpClientCodec");
             }
             final HttpClientCodec codec =  (HttpClientCodec) ctx.handler();
             // Remove the encoder part of the codec as the user may start writing frames after this method returns.
@@ -429,7 +429,7 @@ public abstract class WebSocketClientHandshaker {
                 ctx = p.context(HttpClientCodec.class);
                 if (ctx == null) {
                     return promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
-                            "a HttpResponseDecoder or HttpClientCodec"));
+                            "an HttpResponseDecoder or HttpClientCodec"));
                 }
             }
             // Add aggregator and ensure we feed the HttpResponse so it is aggregated. A limit of 8192 should be more

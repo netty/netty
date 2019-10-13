@@ -18,6 +18,7 @@ package io.netty.channel.epoll;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.testsuite.transport.AbstractSingleThreadEventLoopTest;
@@ -47,6 +48,11 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
     @Override
     protected ServerSocketChannel newChannel() {
         return new EpollServerSocketChannel();
+    }
+
+    @Override
+    protected Class<? extends ServerChannel> serverChannelClass() {
+        return EpollServerSocketChannel.class;
     }
 
     @Test

@@ -517,7 +517,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             // Multiply by 2 to give some extra space in case the OS can process write data faster than we can provide.
             int newSendBufferSize = getSendBufferSize() << 1;
             if (newSendBufferSize > 0) {
-                setMaxBytesPerGatheringWrite(getSendBufferSize() << 1);
+                setMaxBytesPerGatheringWrite(newSendBufferSize);
             }
         }
 

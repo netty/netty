@@ -142,9 +142,9 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             }
             responseContent.append("\r\n\r\n");
 
-            // if GET Method: should not try to create a HttpPostRequestDecoder
+            // if GET Method: should not try to create an HttpPostRequestDecoder
             if (HttpMethod.GET.equals(request.method())) {
-                // GET Method: should not try to create a HttpPostRequestDecoder
+                // GET Method: should not try to create an HttpPostRequestDecoder
                 // So stop here
                 responseContent.append("\r\n\r\nEND OF GET CONTENT\r\n");
                 // Not now: LastHttpContent will be sent writeResponse(ctx.channel());

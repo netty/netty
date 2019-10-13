@@ -198,6 +198,11 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
     }
 
+    void resetCachedAddresses() {
+        local = socket.localAddress();
+        remote = socket.remoteAddress();
+    }
+
     @Override
     protected void doDisconnect() throws Exception {
         doClose();

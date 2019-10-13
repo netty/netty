@@ -27,7 +27,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
- * A HTTP server showing how to use the HTTP multipart package for file uploads and decoding post data.
+ * An HTTP server showing how to use the HTTP multipart package for file uploads and decoding post data.
  */
 public final class HttpUploadServer {
 

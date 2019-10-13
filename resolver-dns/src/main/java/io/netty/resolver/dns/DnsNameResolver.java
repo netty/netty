@@ -1336,7 +1336,7 @@ public class DnsNameResolver extends InetNameResolver {
         }
     }
 
-    private final class AddressedEnvelopeAdapter implements AddressedEnvelope<DnsResponse, InetSocketAddress> {
+    private static final class AddressedEnvelopeAdapter implements AddressedEnvelope<DnsResponse, InetSocketAddress> {
         private final InetSocketAddress sender;
         private final InetSocketAddress recipient;
         private final DnsResponse response;

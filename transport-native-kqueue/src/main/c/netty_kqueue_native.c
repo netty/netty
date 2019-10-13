@@ -388,10 +388,8 @@ static jint JNI_OnLoad_netty_transport_native_kqueue0(JavaVM* vm, void* reserved
 #endif /* NETTY_BUILD_STATIC */
     jint ret = netty_kqueue_native_JNI_OnLoad(env, packagePrefix);
 
-    if (packagePrefix != NULL) {
-      free(packagePrefix);
-      packagePrefix = NULL;
-    }
+    // It's safe to call free(...) with a NULL argument as well.
+    free(packagePrefix);
 
     return ret;
 }

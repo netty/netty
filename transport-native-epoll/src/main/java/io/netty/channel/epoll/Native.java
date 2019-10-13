@@ -21,7 +21,6 @@ import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -45,7 +44,6 @@ import static io.netty.channel.unix.Errors.newIOException;
  * <p><strong>Internal usage only!</strong>
  * <p>Static members which call JNI methods must be defined in {@link NativeStaticallyReferencedJniMethods}.
  */
-@UnstableApi
 public final class Native {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
 
@@ -100,6 +98,15 @@ public final class Native {
     @Deprecated
     public static int epollWait(FileDescriptor epollFd, EpollEventArray events, FileDescriptor timerFd,
                                 int timeoutSec, int timeoutNs) throws IOException {
+        if (timeoutSec == 0 && timeoutNs == 0) {
+            // Zero timeout => poll (aka return immediately)
+            return epollWait(epollFd, events, 0);
+        }
+        if (timeoutSec == Integer.MAX_VALUE) {
+            // Max timeout => wait indefinitely: disarm timerfd first
+            timeoutSec = 0;
+            timeoutNs = 0;
+        }
         int ready = epollWait0(epollFd.intValue(), events.memoryAddress(), events.length(), timerFd.intValue(),
                                timeoutSec, timeoutNs);
         if (ready < 0) {
@@ -112,8 +119,11 @@ public final class Native {
         return epollWait(epollFd, events, immediatePoll ? 0 : -1);
     }
 
-    static int epollWait(FileDescriptor epollFd, EpollEventArray events, int timeout) throws IOException {
-        int ready = epollWait(epollFd.intValue(), events.memoryAddress(), events.length(), timeout);
+    /**
+     * This uses epoll's own timeout and does not reset/re-arm any timerfd
+     */
+    static int epollWait(FileDescriptor epollFd, EpollEventArray events, int timeoutMillis) throws IOException {
+        int ready = epollWait(epollFd.intValue(), events.memoryAddress(), events.length(), timeoutMillis);
         if (ready < 0) {
             throw newIOException("epoll_wait", ready);
         }
