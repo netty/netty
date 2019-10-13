@@ -45,7 +45,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.locks.Lock;
 
 import javax.crypto.spec.SecretKeySpec;
@@ -124,9 +123,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      */
     private static final int MAX_RECORD_SIZE = SSL.SSL_MAX_RECORD_LENGTH;
 
-    private static final AtomicIntegerFieldUpdater<ReferenceCountedOpenSslEngine> DESTROYED_UPDATER =
-            AtomicIntegerFieldUpdater.newUpdater(ReferenceCountedOpenSslEngine.class, "destroyed");
-
     private static final SSLEngineResult NEED_UNWRAP_OK = new SSLEngineResult(OK, NEED_UNWRAP, 0, 0);
     private static final SSLEngineResult NEED_UNWRAP_CLOSED = new SSLEngineResult(CLOSED, NEED_UNWRAP, 0, 0);
     private static final SSLEngineResult NEED_WRAP_OK = new SSLEngineResult(OK, NEED_WRAP, 0, 0);
@@ -158,7 +154,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     private HandshakeState handshakeState = HandshakeState.NOT_STARTED;
     private boolean receivedShutdown;
-    private volatile int destroyed;
+    private volatile boolean destroyed;
     private volatile String applicationProtocol;
     private volatile boolean needTask;
 
@@ -360,8 +356,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 calculateMaxWrapOverhead();
             } catch (Throwable cause) {
                 // Call shutdown so we are sure we correctly release all native memory and also guard against the
-                // case when shutdown() will be called by the finalizer again. If we would call SSL.free(...) directly
-                // the finalizer may end up calling it again as we would miss to update the DESTROYED_UPDATER.
+                // case when shutdown() will be called by the finalizer again.
                 shutdown();
 
                 PlatformDependent.throwException(cause);
@@ -511,7 +506,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      * Destroys this engine.
      */
     public final synchronized void shutdown() {
-        if (DESTROYED_UPDATER.compareAndSet(this, 0, 1)) {
+        if (!destroyed) {
+            destroyed = true;
             engineMap.remove(ssl);
             SSL.freeSSL(ssl);
             ssl = networkBIO = 0;
@@ -2025,7 +2021,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     }
 
     private boolean isDestroyed() {
-        return destroyed != 0;
+        return destroyed;
     }
 
     final boolean checkSniHostnameMatch(byte[] hostname) {
