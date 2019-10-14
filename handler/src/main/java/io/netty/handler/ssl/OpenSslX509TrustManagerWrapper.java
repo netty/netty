@@ -17,6 +17,7 @@ package io.netty.handler.ssl;
 
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -39,6 +40,7 @@ import java.security.cert.X509Certificate;
  * This is really a "hack" until there is an official API as requested on the in
  * <a href="https://bugs.openjdk.java.net/projects/JDK/issues/JDK-8210843">JDK-8210843</a>.
  */
+@SuppressJava6Requirement(reason = "Usage guarded by java version check")
 final class OpenSslX509TrustManagerWrapper {
     private static final InternalLogger LOGGER = InternalLoggerFactory
             .getInstance(OpenSslX509TrustManagerWrapper.class);
@@ -163,6 +165,7 @@ final class OpenSslX509TrustManagerWrapper {
             this.tmOffset = tmOffset;
         }
 
+        @SuppressJava6Requirement(reason = "Usage guarded by java version check")
         @Override
         public X509TrustManager wrapIfNeeded(X509TrustManager manager) {
             if (!(manager instanceof X509ExtendedTrustManager)) {

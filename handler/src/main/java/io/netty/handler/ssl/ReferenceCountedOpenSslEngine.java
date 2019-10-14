@@ -28,6 +28,7 @@ import io.netty.util.ResourceLeakTracker;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -1952,6 +1953,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return false;
     }
 
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     @Override
     public final synchronized SSLParameters getSSLParameters() {
         SSLParameters sslParameters = super.getSSLParameters();
@@ -1975,6 +1977,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return sslParameters;
     }
 
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     @Override
     public final synchronized void setSSLParameters(SSLParameters sslParameters) {
         int version = PlatformDependent.javaVersion();

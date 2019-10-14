@@ -29,6 +29,7 @@ import io.netty.util.ResourceLeakTracker;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -637,6 +638,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
     }
 
+    @SuppressJava6Requirement(reason = "Guarded by java version check")
     static boolean useExtendedTrustManager(X509TrustManager trustManager) {
         return PlatformDependent.javaVersion() >= 7 && trustManager instanceof X509ExtendedTrustManager;
     }
@@ -715,35 +717,41 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     return CertificateVerifier.X509_V_ERR_CERT_NOT_YET_VALID;
                 }
                 if (PlatformDependent.javaVersion() >= 7) {
-                    if (cause instanceof CertificateRevokedException) {
-                        return CertificateVerifier.X509_V_ERR_CERT_REVOKED;
-                    }
-
-                    // The X509TrustManagerImpl uses a Validator which wraps a CertPathValidatorException into
-                    // an CertificateException. So we need to handle the wrapped CertPathValidatorException to be
-                    // able to send the correct alert.
-                    Throwable wrapped = cause.getCause();
-                    while (wrapped != null) {
-                        if (wrapped instanceof CertPathValidatorException) {
-                            CertPathValidatorException ex = (CertPathValidatorException) wrapped;
-                            CertPathValidatorException.Reason reason = ex.getReason();
-                            if (reason == CertPathValidatorException.BasicReason.EXPIRED) {
-                                return CertificateVerifier.X509_V_ERR_CERT_HAS_EXPIRED;
-                            }
-                            if (reason == CertPathValidatorException.BasicReason.NOT_YET_VALID) {
-                                return CertificateVerifier.X509_V_ERR_CERT_NOT_YET_VALID;
-                            }
-                            if (reason == CertPathValidatorException.BasicReason.REVOKED) {
-                                return CertificateVerifier.X509_V_ERR_CERT_REVOKED;
-                            }
-                        }
-                        wrapped = wrapped.getCause();
-                    }
+                    return translateToError(cause);
                 }
 
                 // Could not detect a specific error code to use, so fallback to a default code.
                 return CertificateVerifier.X509_V_ERR_UNSPECIFIED;
             }
+        }
+
+        @SuppressJava6Requirement(reason = "Usage guarded by java version check")
+        private static int translateToError(Throwable cause) {
+            if (cause instanceof CertificateRevokedException) {
+                return CertificateVerifier.X509_V_ERR_CERT_REVOKED;
+            }
+
+            // The X509TrustManagerImpl uses a Validator which wraps a CertPathValidatorException into
+            // an CertificateException. So we need to handle the wrapped CertPathValidatorException to be
+            // able to send the correct alert.
+            Throwable wrapped = cause.getCause();
+            while (wrapped != null) {
+                if (wrapped instanceof CertPathValidatorException) {
+                    CertPathValidatorException ex = (CertPathValidatorException) wrapped;
+                    CertPathValidatorException.Reason reason = ex.getReason();
+                    if (reason == CertPathValidatorException.BasicReason.EXPIRED) {
+                        return CertificateVerifier.X509_V_ERR_CERT_HAS_EXPIRED;
+                    }
+                    if (reason == CertPathValidatorException.BasicReason.NOT_YET_VALID) {
+                        return CertificateVerifier.X509_V_ERR_CERT_NOT_YET_VALID;
+                    }
+                    if (reason == CertPathValidatorException.BasicReason.REVOKED) {
+                        return CertificateVerifier.X509_V_ERR_CERT_REVOKED;
+                    }
+                }
+                wrapped = wrapped.getCause();
+            }
+            return CertificateVerifier.X509_V_ERR_UNSPECIFIED;
         }
 
         abstract void verify(ReferenceCountedOpenSslEngine engine, X509Certificate[] peerCerts,
