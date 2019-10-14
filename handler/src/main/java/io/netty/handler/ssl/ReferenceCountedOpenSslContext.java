@@ -726,7 +726,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
 
         @SuppressJava6Requirement(reason = "Usage guarded by java version check")
-        private int translateToError(Throwable cause) {
+        private static int translateToError(Throwable cause) {
             if (cause instanceof CertificateRevokedException) {
                 return CertificateVerifier.X509_V_ERR_CERT_REVOKED;
             }
