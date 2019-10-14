@@ -803,19 +803,6 @@
             <ignore>sun.misc.Unsafe</ignore>
             <ignore>sun.misc.Cleaner</ignore>
             <ignore>sun.nio.ch.DirectBuffer</ignore>
-
-            <!-- Self-signed certificate generation -->
-            <ignore>sun.security.x509.AlgorithmId</ignore>
-            <ignore>sun.security.x509.CertificateAlgorithmId</ignore>
-            <ignore>sun.security.x509.CertificateIssuerName</ignore>
-            <ignore>sun.security.x509.CertificateSerialNumber</ignore>
-            <ignore>sun.security.x509.CertificateSubjectName</ignore>
-            <ignore>sun.security.x509.CertificateValidity</ignore>
-            <ignore>sun.security.x509.CertificateVersion</ignore>
-            <ignore>sun.security.x509.CertificateX509Key</ignore>
-            <ignore>sun.security.x509.X500Name</ignore>
-            <ignore>sun.security.x509.X509CertInfo</ignore>
-            <ignore>sun.security.x509.X509CertImpl</ignore>
           </ignores>
           <annotations>
             <annotation>io.netty.util.internal.SuppressJava6Requirement</annotation>
