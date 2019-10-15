@@ -32,6 +32,8 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -205,6 +207,13 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 }
             });
         }
+    }
+
+    /**
+     * Retrieve the number of streams currently in the process of being initialized.
+     */
+    int numInitializingStreams() {
+        return frameStreamToInitializeMap.size();
     }
 
     @Override
@@ -411,8 +420,24 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             // We should not re-use ids.
             assert old == null;
 
+            ChannelPromise writeHeadersPromise = ctx.newPromise();
+
+            // Clean up the stream being initialized if writing the headers fails.
+            writeHeadersPromise.addListener(new GenericFutureListener<Future<Void>>() {
+                @Override
+                public void operationComplete(Future<Void> operationFuture) {
+                    if (!operationFuture.isSuccess()) {
+                        frameStreamToInitializeMap.remove(streamId);
+                        promise.setFailure(operationFuture.cause());
+                    } else {
+                        promise.setSuccess(operationFuture.getNow());
+                    }
+                }
+            });
+
             encoder().writeHeaders(ctx, streamId, headersFrame.headers(), headersFrame.padding(),
-                    headersFrame.isEndStream(), promise);
+                    headersFrame.isEndStream(), writeHeadersPromise);
+
             if (!promise.isDone()) {
                 numBufferedStreams++;
                 promise.addListener(bufferedStreamsListener);
@@ -431,15 +456,14 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     }
 
     private final class ConnectionListener extends Http2ConnectionAdapter {
-
         @Override
         public void onStreamAdded(Http2Stream stream) {
             DefaultHttp2FrameStream frameStream = frameStreamToInitializeMap.remove(stream.id());
 
-             if (frameStream != null) {
-                 frameStream.setStreamAndProperty(streamKey, stream);
-             }
-         }
+            if (frameStream != null) {
+                frameStream.setStreamAndProperty(streamKey, stream);
+            }
+        }
 
         @Override
         public void onStreamActive(Http2Stream stream) {
