@@ -130,43 +130,33 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
 
     @Override
     public Attribute createAttribute(HttpRequest request, String name) {
+        Attribute attribute;
         if (useDisk) {
-            Attribute attribute = new DiskAttribute(name, charset);
-            attribute.setMaxSize(maxSize);
-            List<HttpData> list = getList(request);
-            list.add(attribute);
-            return attribute;
+            attribute = new DiskAttribute(name, charset);
+        } else if (checkSize) {
+            attribute = new MixedAttribute(name, minSize, charset);
+        } else {
+            attribute = new MemoryAttribute(name);
         }
-        if (checkSize) {
-            Attribute attribute = new MixedAttribute(name, minSize, charset);
-            attribute.setMaxSize(maxSize);
-            List<HttpData> list = getList(request);
-            list.add(attribute);
-            return attribute;
-        }
-        MemoryAttribute attribute = new MemoryAttribute(name);
         attribute.setMaxSize(maxSize);
+        List<HttpData> list = getList(request);
+        list.add(attribute);
         return attribute;
     }
 
     @Override
     public Attribute createAttribute(HttpRequest request, String name, long definedSize) {
+        Attribute attribute;
         if (useDisk) {
-            Attribute attribute = new DiskAttribute(name, definedSize, charset);
-            attribute.setMaxSize(maxSize);
-            List<HttpData> list = getList(request);
-            list.add(attribute);
-            return attribute;
+            attribute = new DiskAttribute(name, definedSize, charset);
+        } else if (checkSize) {
+            attribute = new MixedAttribute(name, definedSize, minSize, charset);
+        } else {
+            attribute = new MemoryAttribute(name, definedSize);
         }
-        if (checkSize) {
-            Attribute attribute = new MixedAttribute(name, definedSize, minSize, charset);
-            attribute.setMaxSize(maxSize);
-            List<HttpData> list = getList(request);
-            list.add(attribute);
-            return attribute;
-        }
-        MemoryAttribute attribute = new MemoryAttribute(name, definedSize);
         attribute.setMaxSize(maxSize);
+        List<HttpData> list = getList(request);
+        list.add(attribute);
         return attribute;
     }
 
@@ -183,65 +173,49 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
 
     @Override
     public Attribute createAttribute(HttpRequest request, String name, String value) {
+        Attribute attribute;
         if (useDisk) {
-            Attribute attribute;
             try {
                 attribute = new DiskAttribute(name, value, charset);
-                attribute.setMaxSize(maxSize);
             } catch (IOException e) {
                 // revert to Mixed mode
                 attribute = new MixedAttribute(name, value, minSize, charset);
-                attribute.setMaxSize(maxSize);
             }
-            checkHttpDataSize(attribute);
-            List<HttpData> list = getList(request);
-            list.add(attribute);
-            return attribute;
+        } else if (checkSize) {
+            attribute = new MixedAttribute(name, value, minSize, charset);
+        } else {
+            try {
+                attribute = new MemoryAttribute(name, value, charset);
+            } catch (IOException e) {
+                throw new IllegalArgumentException(e);
+            }
         }
-        if (checkSize) {
-            Attribute attribute = new MixedAttribute(name, value, minSize, charset);
-            attribute.setMaxSize(maxSize);
-            checkHttpDataSize(attribute);
-            List<HttpData> list = getList(request);
-            list.add(attribute);
-            return attribute;
-        }
-        try {
-            MemoryAttribute attribute = new MemoryAttribute(name, value, charset);
-            attribute.setMaxSize(maxSize);
-            checkHttpDataSize(attribute);
-            return attribute;
-        } catch (IOException e) {
-            throw new IllegalArgumentException(e);
-        }
+        attribute.setMaxSize(maxSize);
+        checkHttpDataSize(attribute);
+        List<HttpData> list = getList(request);
+        list.add(attribute);
+        return attribute;
     }
 
     @Override
     public FileUpload createFileUpload(HttpRequest request, String name, String filename,
             String contentType, String contentTransferEncoding, Charset charset,
             long size) {
+        FileUpload fileUpload;
         if (useDisk) {
-            FileUpload fileUpload = new DiskFileUpload(name, filename, contentType,
+            fileUpload = new DiskFileUpload(name, filename, contentType,
                     contentTransferEncoding, charset, size);
-            fileUpload.setMaxSize(maxSize);
-            checkHttpDataSize(fileUpload);
-            List<HttpData> list = getList(request);
-            list.add(fileUpload);
-            return fileUpload;
-        }
-        if (checkSize) {
-            FileUpload fileUpload = new MixedFileUpload(name, filename, contentType,
+        } else if (checkSize) {
+            fileUpload = new MixedFileUpload(name, filename, contentType,
                     contentTransferEncoding, charset, size, minSize);
-            fileUpload.setMaxSize(maxSize);
-            checkHttpDataSize(fileUpload);
-            List<HttpData> list = getList(request);
-            list.add(fileUpload);
-            return fileUpload;
+        } else {
+            fileUpload = new MemoryFileUpload(name, filename, contentType,
+                    contentTransferEncoding, charset, size);
         }
-        MemoryFileUpload fileUpload = new MemoryFileUpload(name, filename, contentType,
-                contentTransferEncoding, charset, size);
         fileUpload.setMaxSize(maxSize);
         checkHttpDataSize(fileUpload);
+        List<HttpData> list = getList(request);
+        list.add(fileUpload);
         return fileUpload;
     }
 

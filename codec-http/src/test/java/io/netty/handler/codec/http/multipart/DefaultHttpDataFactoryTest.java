@@ -146,4 +146,42 @@ public class DefaultHttpDataFactoryTest {
         assertEquals(0, attribute2.refCnt());
         assertEquals(0, file2.refCnt());
     }
+
+    @Test
+    public void testMemoryUploadsAndAttributesAreCleanedUp() throws Exception {
+        DefaultHttpDataFactory factory = new DefaultHttpDataFactory(false);
+        Attribute attribute1 = factory.createAttribute(req1, "attribute1");
+        Attribute attribute2 = factory.createAttribute(req1, "attribute2", 5L);
+        Attribute attribute3 = factory.createAttribute(req1, "attribute3", "value");
+        attribute1.setContent(Unpooled.copiedBuffer("value", UTF_8));
+        attribute2.setContent(Unpooled.copiedBuffer("value", UTF_8));
+        FileUpload file1 = factory.createFileUpload(
+                req1, "file1", "file1.txt",
+                DEFAULT_TEXT_CONTENT_TYPE, IDENTITY.toString(), UTF_8, 123
+        );
+        file1.setContent(Unpooled.copiedBuffer("file1 content", UTF_8));
+
+        // Assert that they are not deleted
+        assertNotNull(attribute1.getByteBuf());
+        assertNotNull(attribute2.getByteBuf());
+        assertNotNull(attribute3.getByteBuf());
+        assertNotNull(file1.getByteBuf());
+        assertEquals(1, attribute1.refCnt());
+        assertEquals(1, attribute2.refCnt());
+        assertEquals(1, attribute3.refCnt());
+        assertEquals(1, file1.refCnt());
+
+        // Clean up by req1
+        factory.cleanRequestHttpData(req1);
+
+        // Assert that data belonging to req1 has been cleaned up
+        assertNull(attribute1.getByteBuf());
+        assertNull(attribute2.getByteBuf());
+        assertNull(attribute3.getByteBuf());
+        assertNull(file1.getByteBuf());
+        assertEquals(0, attribute1.refCnt());
+        assertEquals(0, attribute2.refCnt());
+        assertEquals(0, attribute3.refCnt());
+        assertEquals(0, file1.refCnt());
+    }
 }
