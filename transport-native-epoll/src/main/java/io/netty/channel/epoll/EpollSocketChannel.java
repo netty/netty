@@ -126,18 +126,19 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
 
     @Override
     int writeBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
-        if (buf.isReadable() && pendingFastOpenWrite) {
+        if (pendingFastOpenWrite && buf.isReadable()) {
             pendingFastOpenWrite = false;
             long localFlushedAmount = doWriteOrSendBytes(buf, remoteAddress(), true);
             if (localFlushedAmount > 0) {
+                // We had a cookie and our fast-open proceeded. Remove written data
+                // then continue with normal TCP operation.
                 in.removeBytes(localFlushedAmount);
                 return 1;
             }
             // If no cookie is present, the write fails with EINPROGRESS and this call basically
-            // becomes a normal connect. All writes will be sent normally afterwards.
+            // becomes a normal async connect. All writes will be sent normally afterwards.
             return 0;
         }
-
         return super.writeBytes(in, buf);
     }
 
