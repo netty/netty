@@ -39,6 +39,11 @@
 #define SO_REUSEPORT 15
 #endif /* SO_REUSEPORT */
 
+// MSG_FASTOPEN is defined in linux 3.6. We define this here so older kernels can compile.
+#ifndef MSG_FASTOPEN
+#define MSG_FASTOPEN 0x20000000
+#endif
+
 static jclass datagramSocketAddressClass = NULL;
 static jmethodID datagramSocketAddrMethodId = NULL;
 static jmethodID inetSocketAddrMethodId = NULL;
