@@ -105,7 +105,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     private static final AtomicIntegerFieldUpdater<AbstractHttp2StreamChannel> UNWRITABLE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(AbstractHttp2StreamChannel.class, "unwritable");
 
-    private static final ChannelFutureListener WINDOW_UPDATE_FRAME_LISTENER = new ChannelFutureListener() {
+    private final ChannelFutureListener windowUpdateFrameListener = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) {
             Throwable cause = future.cause();
@@ -115,9 +115,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                         || cause instanceof Http2Exception.StreamException) {
                     cause = cause.getCause();
                 }
-                Channel channel = future.channel();
-                channel.pipeline().fireExceptionCaught(cause);
-                channel.unsafe().close(channel.unsafe().voidPromise());
+
+                // Notify the child-channel.
+                pipeline().fireExceptionCaught(cause);
+                unsafe().close(unsafe().voidPromise());
             }
         }
     };
@@ -838,7 +839,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                         // Add a listener which will notify and teardown the stream
                         // when a window update fails.
                         // See https://github.com/netty/netty/issues/9663
-                        .addListener(WINDOW_UPDATE_FRAME_LISTENER);
+                        .addListener(windowUpdateFrameListener);
                 writeDoneAndNoFlush = true;
             }
         }
