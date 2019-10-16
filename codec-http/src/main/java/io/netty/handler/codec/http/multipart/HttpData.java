@@ -115,23 +115,22 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
     long definedLength();
 
     /**
-     * Deletes the underlying storage for a file item, including deleting any
-     * associated temporary disk file.
+     * Deletes the content of the HttpData.
      */
     void delete();
 
     /**
-     * Returns the contents of the file item as an array of bytes.
+     * Returns the contents of the HttpData as an array of bytes.
      *
-     * @return the contents of the file item as an array of bytes.
+     * @return the contents of the HttpData as an array of bytes.
      * @throws IOException
      */
     byte[] get() throws IOException;
 
     /**
-     * Returns the content of the file item as a ByteBuf
+     * Returns the content of the HttpData as a ByteBuf
      *
-     * @return the content of the file item as a ByteBuf
+     * @return the content of the HttpData as a ByteBuf
      * @throws IOException
      */
     ByteBuf getByteBuf() throws IOException;
@@ -148,22 +147,22 @@ public interface HttpData extends InterfaceHttpData, ByteBufHolder {
     ByteBuf getChunk(int length) throws IOException;
 
     /**
-     * Returns the contents of the file item as a String, using the default
+     * Returns the contents of the HttpData as a String, using the default
      * character encoding.
      *
-     * @return the contents of the file item as a String, using the default
+     * @return the contents of the HttpData as a String, using the default
      *         character encoding.
      * @throws IOException
      */
     String getString() throws IOException;
 
     /**
-     * Returns the contents of the file item as a String, using the specified
+     * Returns the contents of the HttpData as a String, using the specified
      * charset.
      *
      * @param encoding
      *            the charset to use
-     * @return the contents of the file item as a String, using the specified
+     * @return the contents of the HttpData as a String, using the specified
      *         charset.
      * @throws IOException
      */

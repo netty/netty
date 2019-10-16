@@ -137,12 +137,12 @@ public interface InterfaceHttpPostRequestDecoder {
     void destroy();
 
     /**
-     * Clean all HttpDatas (on Disk) for the current request.
+     * Clean all {@link HttpData}s for the current request.
      */
     void cleanFiles();
 
     /**
-     * Remove the given FileUpload from the list of FileUploads to clean
+     * Remove the given FileUpload from the list of {@link HttpData}s to clean
      */
     void removeHttpDataFromClean(InterfaceHttpData data);
 }

@@ -664,7 +664,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
     }
 
     /**
-     * Remove the given FileUpload from the list of FileUploads to clean
+     * Remove the given FileUpload from the list of {@link HttpData}s to clean
      */
     @Override
     public void removeHttpDataFromClean(InterfaceHttpData data) {

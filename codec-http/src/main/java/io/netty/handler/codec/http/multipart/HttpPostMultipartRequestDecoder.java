@@ -943,7 +943,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     }
 
     /**
-     * Clean all HttpDatas (on Disk) for the current request.
+     * Clean all {@link HttpData}s for the current request.
      */
     @Override
     public void cleanFiles() {
@@ -953,7 +953,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     }
 
     /**
-     * Remove the given FileUpload from the list of FileUploads to clean
+     * Remove the given FileUpload from the list of {@link HttpData}s to clean
      */
     @Override
     public void removeHttpDataFromClean(InterfaceHttpData data) {

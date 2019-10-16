@@ -68,14 +68,14 @@ public interface HttpDataFactory {
     void removeHttpDataFromClean(HttpRequest request, InterfaceHttpData data);
 
     /**
-     * Remove all InterfaceHttpData from virtual File storage from clean list for the request
+     * Clean up all attributes and file uploads for the given request
      *
      * @param request associated request
      */
     void cleanRequestHttpData(HttpRequest request);
 
     /**
-     * Remove all InterfaceHttpData from virtual File storage from clean list for all requests
+     * Clean up all attributes and file uploads for all requests
      */
     void cleanAllHttpData();
 
