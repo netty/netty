@@ -379,7 +379,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     /**
-     * Write bytes to the socket. Used for datagram and TCP client fast open writes.
+     * Write bytes to the socket, with or without a remote address.
+     * Used for datagram and TCP client fast open writes.
      */
     protected final long doWriteOrSendBytes(ByteBuf data, InetSocketAddress remoteAddress, boolean fastOpen)
             throws IOException {

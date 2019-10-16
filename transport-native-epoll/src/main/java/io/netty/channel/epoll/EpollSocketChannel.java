@@ -33,7 +33,6 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 
 import static io.netty.channel.epoll.LinuxSocket.newSocketStream;
-import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 
 /**
  * {@link SocketChannel} implementation that uses linux EPOLL Edge-Triggered Mode for
@@ -128,13 +127,15 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     @Override
     int writeBytes(ChannelOutboundBuffer in, ByteBuf buf) throws Exception {
         if (buf.isReadable() && pendingFastOpenWrite) {
+            pendingFastOpenWrite = false;
             long localFlushedAmount = doWriteOrSendBytes(buf, remoteAddress(), true);
             if (localFlushedAmount > 0) {
-                pendingFastOpenWrite = false;
                 in.removeBytes(localFlushedAmount);
                 return 1;
             }
-            return WRITE_STATUS_SNDBUF_FULL;
+            // If no cookie is present, the write fails with EINPROGRESS and this call basically
+            // becomes a normal connect. All writes will be sent normally afterwards.
+            return 0;
         }
 
         return super.writeBytes(in, buf);
