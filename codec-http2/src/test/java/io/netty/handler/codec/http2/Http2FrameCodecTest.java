@@ -689,7 +689,7 @@ public class Http2FrameCodecTest {
         assertTrue(stream2HeaderPromise.isDone());
 
         assertEquals(0, frameCodec.numInitializingStreams());
-        channel.finishAndReleaseAll();
+        assertFalse(channel.finishAndReleaseAll());
     }
 
     @Test
