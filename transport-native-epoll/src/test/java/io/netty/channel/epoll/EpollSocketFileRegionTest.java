@@ -26,6 +26,7 @@ public class EpollSocketFileRegionTest extends SocketFileRegionTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
-        return EpollSocketTestPermutation.INSTANCE.socket();
+        //TODO: this should be able to use fastopen....
+        return EpollSocketTestPermutation.INSTANCE.statefulSocket();
     }
 }

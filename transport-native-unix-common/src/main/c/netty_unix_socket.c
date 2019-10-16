@@ -320,7 +320,9 @@ static jint _sendTo(JNIEnv* env, jint fd, jboolean ipv6, void* buffer, jint pos,
        // keep on writing if it was interrupted
     } while (res == -1 && ((err = errno) == EINTR));
 
-    if (res < 0) {
+    if (res == -1 && err == EINPROGRESS && fastOpen == JNI_TRUE) {
+        return 0;
+    } else if (res < 0) {
         return -err;
     }
     return (jint) res;
@@ -646,7 +648,9 @@ static jint netty_unix_socket_sendToAddresses(JNIEnv* env, jclass clazz, jint fd
        // keep on writing if it was interrupted
     } while (res == -1 && ((err = errno) == EINTR));
 
-    if (res < 0) {
+    if (res == -1 && err == EINPROGRESS && fastOpen == JNI_TRUE) {
+        return 0;
+    } else if (res < 0) {
         return -err;
     }
     return (jint) res;

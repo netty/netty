@@ -65,6 +65,16 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
         return list;
     }
 
+    public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> statefulSocket() {
+
+        List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> list =
+                combo(serverSocket(), clientSocket(false));
+
+        list.remove(list.size() - 1); // Exclude NIO x NIO test
+
+        return list;
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public List<BootstrapFactory<ServerBootstrap>> serverSocket() {
@@ -76,7 +86,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                                             .channel(EpollServerSocketChannel.class);
             }
         });
-        if (isServerFastOpen()) {
+        if (isFastOpen()) {
             toReturn.add(new BootstrapFactory<ServerBootstrap>() {
                 @Override
                 public ServerBootstrap newInstance() {
@@ -98,23 +108,40 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
         return toReturn;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public List<BootstrapFactory<Bootstrap>> clientSocket() {
-        return Arrays.asList(
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollSocketChannel.class);
-                    }
-                },
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class);
-                    }
+        return clientSocket(true);
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<BootstrapFactory<Bootstrap>> clientSocket(boolean allowStateless) {
+        List<BootstrapFactory<Bootstrap>> toReturn = new ArrayList<BootstrapFactory<Bootstrap>>();
+
+        toReturn.add(new BootstrapFactory<Bootstrap>() {
+            @Override
+            public Bootstrap newInstance() {
+                return new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollSocketChannel.class);
+            }
+        });
+
+        if (isFastOpen() && allowStateless) {
+            toReturn.add(new BootstrapFactory<Bootstrap>() {
+                @Override
+                public Bootstrap newInstance() {
+                    return new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollSocketChannel.class)
+                                          .option(EpollChannelOption.TCP_FASTOPEN_CONNECT, true);
                 }
-        );
+            });
+        }
+
+        toReturn.add(new BootstrapFactory<Bootstrap>() {
+            @Override
+            public Bootstrap newInstance() {
+                return new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class);
+            }
+        });
+
+        return toReturn;
     }
 
     @Override
@@ -226,7 +253,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
         );
     }
 
-    public boolean isServerFastOpen() {
+    public boolean isFastOpen() {
         return AccessController.doPrivileged(new PrivilegedAction<Integer>() {
             @Override
             public Integer run() {
