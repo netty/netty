@@ -495,10 +495,8 @@ public class Socket extends FileDescriptor {
 
     private static native DatagramSocketAddress recvFrom(
             int fd, ByteBuffer buf, int pos, int limit) throws IOException;
-
     private static native DatagramSocketAddress recvFromAddress(
             int fd, long memoryAddress, int pos, int limit) throws IOException;
-
     private static native int recvFd(int fd);
     private static native int sendFd(int socketFd, int fd);
 
