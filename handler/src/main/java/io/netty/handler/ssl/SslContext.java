@@ -24,7 +24,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
-import io.netty.util.AttributeMap;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.internal.EmptyArrays;
 
@@ -86,7 +85,7 @@ import java.util.concurrent.Executor;
  * ...
  * </pre>
  */
-public abstract class SslContext {
+public abstract class SslContext extends DefaultAttributeMap {
     static final String ALIAS = "key";
 
     static final CertificateFactory X509_CERT_FACTORY;
@@ -98,7 +97,6 @@ public abstract class SslContext {
         }
     }
 
-    private final AttributeMap attributeMap = new DefaultAttributeMap();
     private final boolean startTls;
 
     /**
@@ -870,13 +868,6 @@ public abstract class SslContext {
      */
     public final boolean isServer() {
         return !isClient();
-    }
-
-    /**
-     * Returns the {@link AttributeMap} that is tied to this {@link SslContext} instance.
-     */
-    public final AttributeMap attributeMap() {
-        return attributeMap;
     }
 
     /**
