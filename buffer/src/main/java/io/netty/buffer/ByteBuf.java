@@ -2060,11 +2060,14 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
 
     /**
      * Locates the first occurrence of the specified {@code value} in this
-     * buffer.  The search takes place from the specified {@code fromIndex}
-     * (inclusive)  to the specified {@code toIndex} (exclusive).
+     * buffer. The search takes place from the specified {@code fromIndex}
+     * (inclusive) to the specified {@code toIndex} (exclusive).
      * <p>
      * If {@code fromIndex} is greater than {@code toIndex}, the search is
-     * performed in a reversed order.
+     * performed in a reversed order from {@code fromIndex} (exclusive)
+     * down to {@code toIndex} (inclusive).
+     * <p>
+     * Note that the lower index is always included and higher always excluded.
      * <p>
      * This method does not modify {@code readerIndex} or {@code writerIndex} of
      * this buffer.
