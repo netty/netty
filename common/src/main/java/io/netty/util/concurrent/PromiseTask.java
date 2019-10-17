@@ -20,10 +20,6 @@ import java.util.concurrent.RunnableFuture;
 
 class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
 
-    static <T> Callable<T> toCallable(Runnable runnable, T result) {
-        return new RunnableAdapter<T>(runnable, result);
-    }
-
     private static final class RunnableAdapter<T> implements Callable<T> {
         final Runnable task;
         final T result;
@@ -45,21 +41,19 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
         }
     }
 
-    private static final Callable<?> COMPLETED = new SentinelCallable<Object>("COMPLETED");
-    private static final Callable<?> CANCELLED = new SentinelCallable<Object>("CANCELLED");
-    private static final Callable<?> FAILED = new SentinelCallable<Object>("FAILED");
+    private static final Runnable COMPLETED = new SentinelRunnable("COMPLETED");
+    private static final Runnable CANCELLED = new SentinelRunnable("CANCELLED");
+    private static final Runnable FAILED = new SentinelRunnable("FAILED");
 
-    private static class SentinelCallable<T> implements Callable<T> {
+    private static class SentinelRunnable implements Runnable {
         private final String name;
 
-        SentinelCallable(String name) {
+        SentinelRunnable(String name) {
             this.name = name;
         }
 
         @Override
-        public T call() {
-            return null;
-        }
+        public void run() { } // no-op
 
         @Override
         public String toString() {
@@ -67,10 +61,17 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
         }
     }
 
-    protected Callable<V> task;
+    // Strictly of type Callable<V> or Runnable
+    private Object task;
 
     PromiseTask(EventExecutor executor, Runnable runnable, V result) {
-        this(executor, toCallable(runnable, result));
+        super(executor);
+        task = result == null ? runnable : new RunnableAdapter<V>(runnable, result);
+    }
+
+    PromiseTask(EventExecutor executor, Runnable runnable) {
+        super(executor);
+        task = runnable;
     }
 
     PromiseTask(EventExecutor executor, Callable<V> callable) {
@@ -88,11 +89,21 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
         return this == obj;
     }
 
+    @SuppressWarnings("unchecked")
+    final V runTask() throws Exception {
+        final Object task = this.task;
+        if (task instanceof Callable) {
+            return ((Callable<V>) task).call();
+        }
+        ((Runnable) task).run();
+        return null;
+    }
+
     @Override
     public void run() {
         try {
             if (setUncancellableInternal()) {
-                V result = task.call();
+                V result = runTask();
                 setSuccessInternal(result);
             }
         } catch (Throwable e) {
@@ -100,14 +111,13 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private boolean clearTaskAfterCompletion(boolean done, Callable<?> result) {
+    private boolean clearTaskAfterCompletion(boolean done, Runnable result) {
         if (done) {
             // The only time where it might be possible for the sentinel task
             // to be called is in the case of a periodic ScheduledFutureTask,
             // in which case it's a benign race with cancellation and the (null)
             // return value is not used.
-            task = (Callable<V>) result;
+            task = result;
         }
         return done;
     }
