@@ -199,6 +199,15 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         }
     }
 
+    /**
+     * Retrieve the number of streams currently in the process of being initialized.
+     *
+     * This is package-private for testing only.
+     */
+    int numInitializingStreams() {
+        return frameStreamToInitializeMap.size();
+    }
+
     @Override
     public final void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
@@ -403,8 +412,16 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             // We should not re-use ids.
             assert old == null;
 
+            // Clean up the stream being initialized if writing the headers fails.
+            promise.addListener(channelFuture -> {
+                if (!channelFuture.isSuccess()) {
+                    frameStreamToInitializeMap.remove(streamId);
+                }
+            });
+
             encoder().writeHeaders(ctx, streamId, headersFrame.headers(), headersFrame.padding(),
                     headersFrame.isEndStream(), promise);
+
             if (!promise.isDone()) {
                 numBufferedStreams++;
                 promise.addListener(bufferedStreamsListener);
@@ -423,15 +440,14 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     }
 
     private final class ConnectionListener extends Http2ConnectionAdapter {
-
         @Override
         public void onStreamAdded(Http2Stream stream) {
             DefaultHttp2FrameStream frameStream = frameStreamToInitializeMap.remove(stream.id());
 
-             if (frameStream != null) {
-                 frameStream.setStreamAndProperty(streamKey, stream);
-             }
-         }
+            if (frameStream != null) {
+                frameStream.setStreamAndProperty(streamKey, stream);
+            }
+        }
 
         @Override
         public void onStreamActive(Http2Stream stream) {
