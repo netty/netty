@@ -554,7 +554,7 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
     /**
      * Enables client TCP fast open. {@code TCP_FASTOPEN_CONNECT} normally
      * requires Linux kernel 4.11 or later, so instead we use the traditional fast open
-     * client socket mechanics. See this
+     * client socket mechanics that work with kernel 3.6 and later. See this
      * <a href="https://lwn.net/Articles/508865/">LWN article</a> for more info.
      */
     public EpollSocketChannelConfig setTcpFastOpenConnect(boolean fastOpenConnect) {
