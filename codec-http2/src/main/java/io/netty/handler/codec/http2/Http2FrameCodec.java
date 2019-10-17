@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPromise;
@@ -31,6 +30,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -158,7 +158,6 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     private int numBufferedStreams;
     private final IntObjectMap<DefaultHttp2FrameStream> frameStreamToInitializeMap =
             new IntObjectHashMap<DefaultHttp2FrameStream>(8);
-    private final ChannelFutureListener bufferedStreamsListener = future -> numBufferedStreams--;
 
     Http2FrameCodec(Http2ConnectionEncoder encoder, Http2ConnectionDecoder decoder, Http2Settings initialSettings,
                     boolean decoupleCloseAndGoAway) {
@@ -412,20 +411,27 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             // We should not re-use ids.
             assert old == null;
 
-            // Clean up the stream being initialized if writing the headers fails.
-            promise.addListener(channelFuture -> {
-                if (!channelFuture.isSuccess()) {
-                    frameStreamToInitializeMap.remove(streamId);
-                }
-            });
-
             encoder().writeHeaders(ctx, streamId, headersFrame.headers(), headersFrame.padding(),
                     headersFrame.isEndStream(), promise);
 
             if (!promise.isDone()) {
                 numBufferedStreams++;
-                promise.addListener(bufferedStreamsListener);
+                // Clean up the stream being initialized if writing the headers fails and also
+                // decrement the number of buffered streams.
+                promise.addListener(channelFuture -> {
+                    numBufferedStreams--;
+
+                    handleHeaderFuture(channelFuture, streamId);
+                });
+            } else {
+                handleHeaderFuture(promise, streamId);
             }
+        }
+    }
+
+    private void handleHeaderFuture(Future<?> channelFuture, int streamId) {
+        if (!channelFuture.isSuccess()) {
+            frameStreamToInitializeMap.remove(streamId);
         }
     }
 
