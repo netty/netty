@@ -18,9 +18,16 @@ package io.netty.util.concurrent;
 import org.junit.Assert;
 import org.junit.Test;
 
+import io.netty.util.concurrent.AbstractEventExecutor.LazyRunnable;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -122,7 +129,7 @@ public class SingleThreadEventExecutorTest {
 
     private static void testInvokeInEventLoop(final boolean any, final boolean timeout) {
         final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(null,
-                Executors.defaultThreadFactory(), false) {
+                Executors.defaultThreadFactory(), true) {
             @Override
             protected void run() {
                 while (!confirmShutdown()) {
@@ -169,5 +176,77 @@ public class SingleThreadEventExecutorTest {
         } finally {
             executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
         }
+    }
+
+    static class LatchTask extends CountDownLatch implements Runnable {
+        LatchTask() {
+            super(1);
+        }
+
+        @Override
+        public void run() {
+            countDown();
+        }
+    }
+
+    static class LazyLatchTask extends LatchTask implements LazyRunnable { }
+
+    @Test
+    public void testLazyExecution() throws Exception {
+        final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(null,
+                Executors.defaultThreadFactory(), false) {
+            @Override
+            protected void run() {
+                while (!confirmShutdown()) {
+                    try {
+                        synchronized (this) {
+                            if (!hasTasks()) {
+                                wait();
+                            }
+                        }
+                        runAllTasks();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        Assert.fail(e.toString());
+                    }
+                }
+            }
+
+            @Override
+            protected void wakeup(boolean inEventLoop) {
+                if (!inEventLoop) {
+                    synchronized (this) {
+                        notifyAll();
+                    }
+                }
+            }
+        };
+
+        // Ensure event loop is started
+        LatchTask latch0 = new LatchTask();
+        executor.execute(latch0);
+        assertTrue(latch0.await(100, TimeUnit.MILLISECONDS));
+        // Pause to ensure it enters waiting state
+        Thread.sleep(100L);
+
+        // Submit task via lazyExecute
+        LatchTask latch1 = new LatchTask();
+        executor.lazyExecute(latch1);
+        // Sumbit lazy task via regular execute
+        LatchTask latch2 = new LazyLatchTask();
+        executor.execute(latch2);
+
+        // Neither should run yet
+        assertFalse(latch1.await(100, TimeUnit.MILLISECONDS));
+        assertFalse(latch2.await(100, TimeUnit.MILLISECONDS));
+
+        // Submit regular task via regular execute
+        LatchTask latch3 = new LatchTask();
+        executor.execute(latch3);
+
+        // Should flush latch1 and latch2 and then run latch3 immediately
+        assertTrue(latch3.await(100, TimeUnit.MILLISECONDS));
+        assertEquals(0, latch1.getCount());
+        assertEquals(0, latch2.getCount());
     }
 }

@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.SingleThreadEventLoop.LazyRunnable;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.Recycler;
@@ -1104,7 +1105,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         }
     }
 
-    static final class WriteTask extends AbstractWriteTask implements AbstractEventExecutor.LazyRunnable {
+    static final class WriteTask extends AbstractWriteTask implements LazyRunnable {
 
         private static final Recycler<WriteTask> RECYCLER = new Recycler<WriteTask>() {
             @Override

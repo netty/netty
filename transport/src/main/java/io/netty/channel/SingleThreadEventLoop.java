@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
@@ -159,4 +160,9 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     public int registeredChannels() {
         return -1;
     }
+
+    /**
+     * Marker interface for {@link Runnable} that will not trigger a {@link #wakeup(boolean)} in all cases.
+     */
+    interface LazyRunnable extends AbstractEventExecutor.LazyRunnable { }
 }

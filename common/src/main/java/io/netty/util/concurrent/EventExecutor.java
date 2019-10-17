@@ -69,10 +69,4 @@ public interface EventExecutor extends EventExecutorGroup {
      * every call of blocking methods will just return without blocking.
      */
     <V> Future<V> newFailedFuture(Throwable cause);
-
-    /**
-     * Marker interface for {@link Runnable} to indicate that it should be queued for execution
-     * but does not need to run immediately.
-     */
-    public interface LazyRunnable extends Runnable { }
 }
