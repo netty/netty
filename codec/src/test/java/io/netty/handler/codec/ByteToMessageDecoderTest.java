@@ -401,9 +401,9 @@ public class ByteToMessageDecoderTest {
     }
 
     @Test
-    public void testDisorder(){
+    public void testDisorder() {
         ByteToMessageDecoder decoder = new ByteToMessageDecoder() {
-            int count = 0;
+            int count;
 
             //read 4 byte then remove this decoder
             @Override
@@ -416,12 +416,12 @@ public class ByteToMessageDecoderTest {
         };
         EmbeddedChannel channel = new EmbeddedChannel(decoder);
         assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(new byte[]{1, 2, 3, 4, 5})));
-        assertEquals((byte)1, (byte) channel.readInbound());
-        assertEquals((byte)2, (byte) channel.readInbound());
-        assertEquals((byte)3, (byte) channel.readInbound());
-        assertEquals((byte)4, (byte) channel.readInbound());
+        assertEquals((byte) 1, (byte) channel.readInbound());
+        assertEquals((byte) 2, (byte) channel.readInbound());
+        assertEquals((byte) 3, (byte) channel.readInbound());
+        assertEquals((byte) 4, (byte) channel.readInbound());
         ByteBuf buffer5 = channel.readInbound();
-        assertEquals((byte)5, buffer5.readByte());
+        assertEquals((byte) 5, buffer5.readByte());
         assertTrue(buffer5.release());
         assertFalse(channel.finish());
     }
