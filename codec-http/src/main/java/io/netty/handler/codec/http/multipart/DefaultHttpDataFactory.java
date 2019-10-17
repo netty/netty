@@ -130,7 +130,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
 
     @Override
     public Attribute createAttribute(HttpRequest request, String name) {
-        Attribute attribute;
+        final Attribute attribute;
         if (useDisk) {
             attribute = new DiskAttribute(name, charset);
         } else if (checkSize) {
@@ -146,7 +146,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
 
     @Override
     public Attribute createAttribute(HttpRequest request, String name, long definedSize) {
-        Attribute attribute;
+        final Attribute attribute;
         if (useDisk) {
             attribute = new DiskAttribute(name, definedSize, charset);
         } else if (checkSize) {
@@ -201,7 +201,7 @@ public class DefaultHttpDataFactory implements HttpDataFactory {
     public FileUpload createFileUpload(HttpRequest request, String name, String filename,
             String contentType, String contentTransferEncoding, Charset charset,
             long size) {
-        FileUpload fileUpload;
+        final FileUpload fileUpload;
         if (useDisk) {
             fileUpload = new DiskFileUpload(name, filename, contentType,
                     contentTransferEncoding, charset, size);
