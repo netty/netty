@@ -227,10 +227,6 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
                .set(HttpHeaderNames.SEC_WEBSOCKET_KEY, key)
                .set(HttpHeaderNames.HOST, websocketHostValue(wsURL));
 
-        if (!headers.contains(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN)) {
-            headers.set(HttpHeaderNames.SEC_WEBSOCKET_ORIGIN, websocketOriginValue(wsURL));
-        }
-
         String expectedSubprotocol = expectedSubprotocol();
         if (expectedSubprotocol != null && !expectedSubprotocol.isEmpty()) {
             headers.set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
