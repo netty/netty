@@ -422,6 +422,7 @@ public class ByteToMessageDecoderTest {
         assertEquals((byte) 4,  channel.readInbound());
         ByteBuf buffer5 = channel.readInbound();
         assertEquals((byte) 5, buffer5.readByte());
+        assertFalse(buffer5.isReadable());
         assertTrue(buffer5.release());
         assertFalse(channel.finish());
     }
