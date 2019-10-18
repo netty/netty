@@ -189,7 +189,6 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
      * Upgrade: websocket
      * Connection: Upgrade
      * Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
-     * Sec-WebSocket-Origin: http://example.com
      * Sec-WebSocket-Protocol: chat, superchat
      * Sec-WebSocket-Version: 8
      * </pre>
