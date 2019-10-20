@@ -100,7 +100,6 @@ public class HttpPostRequestDecoderTest {
             // Validate data has been parsed correctly as it was passed into request.
             assertEquals("Invalid decoded data [data=" + data.replaceAll("\r", "\\\\r") + ", upload=" + upload + ']',
                 data, upload.getString(CharsetUtil.UTF_8));
-            upload.release();
             decoder.destroy();
         }
     }
@@ -271,7 +270,6 @@ public class HttpPostRequestDecoderTest {
         Attribute aAttr = (Attribute) aDecodedData;
         assertEquals(aData, aAttr.getValue());
 
-        aDecodedData.release();
         aDecoder.destroy();
     }
 
