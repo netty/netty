@@ -164,6 +164,19 @@ public class UnixResolverDnsServerAddressStreamProviderTest {
         assertEquals(Collections.singletonList("squarecorp.local"), domains);
     }
 
+    @Test
+    public void ignoreInvalidEntries() throws Exception {
+        File f = buildFile("domain netty.local\n" +
+                "nameserver nil\n" +
+                "nameserver 127.0.0.3\n");
+        UnixResolverDnsServerAddressStreamProvider p =
+                new UnixResolverDnsServerAddressStreamProvider(f, null);
+
+        DnsServerAddressStream stream = p.nameServerAddressStream("somehost");
+        assertEquals(1, stream.size());
+        assertHostNameEquals("127.0.0.3", stream.next());
+    }
+
     private File buildFile(String contents) throws IOException {
         File f = folder.newFile();
         OutputStream out = new FileOutputStream(f);
