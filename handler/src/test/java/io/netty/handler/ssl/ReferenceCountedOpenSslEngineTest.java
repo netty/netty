@@ -15,16 +15,20 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 
 import javax.net.ssl.SSLEngine;
 
+import static junit.framework.TestCase.*;
+
 public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
 
-    public ReferenceCountedOpenSslEngineTest(BufferType type, ProtocolCipherCombo combo, boolean delegate) {
-        super(type, combo, delegate);
+    public ReferenceCountedOpenSslEngineTest(BufferType type, ProtocolCipherCombo combo, boolean delegate,
+                                             boolean useTasks) {
+        super(type, combo, delegate, useTasks);
     }
 
     @Override
@@ -59,13 +63,40 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
 
     @Test(expected = NullPointerException.class)
     public void testNotLeakOnException() throws Exception {
-        clientSslCtx = SslContextBuilder.forClient()
+        clientSslCtx = wrapContext(SslContextBuilder.forClient()
                                         .trustManager(InsecureTrustManagerFactory.INSTANCE)
                                         .sslProvider(sslClientProvider())
                                         .protocols(protocols())
                                         .ciphers(ciphers())
-                                        .build();
+                                        .build());
 
         clientSslCtx.newEngine(null);
+    }
+
+    @Override
+    protected SslContext wrapContext(SslContext context) {
+        if (context instanceof ReferenceCountedOpenSslContext) {
+            ((ReferenceCountedOpenSslContext) context).setUseTasks(useTasks);
+        }
+        return context;
+    }
+
+    @Test
+    public void parentContextIsRetainedByChildEngines() throws Exception {
+        SslContext clientSslCtx = SslContextBuilder.forClient()
+            .trustManager(InsecureTrustManagerFactory.INSTANCE)
+            .sslProvider(sslClientProvider())
+            .protocols(protocols())
+            .ciphers(ciphers())
+            .build();
+
+        SSLEngine engine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        assertEquals(ReferenceCountUtil.refCnt(clientSslCtx), 2);
+
+        cleanupClientSslContext(clientSslCtx);
+        assertEquals(ReferenceCountUtil.refCnt(clientSslCtx), 1);
+
+        cleanupClientSslEngine(engine);
+        assertEquals(ReferenceCountUtil.refCnt(clientSslCtx), 0);
     }
 }

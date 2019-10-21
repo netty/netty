@@ -145,7 +145,7 @@ public class HttpRequestDecoderTest {
                 amount = headerLength -  a;
             }
 
-            // if header is done it should produce a HttpRequest
+            // if header is done it should produce an HttpRequest
             channel.writeInbound(Unpooled.copiedBuffer(content, a, amount));
             a += amount;
         }
@@ -318,6 +318,20 @@ public class HttpRequestDecoderTest {
         HttpRequest request = channel.readInbound();
         assertTrue(request.decoderResult().isFailure());
         assertTrue(request.decoderResult().cause() instanceof TooLongFrameException);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testWhitespace() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        String requestStr = "GET /some/path HTTP/1.1\r\n" +
+                "Transfer-Encoding : chunked\r\n" +
+                "Host: netty.io\n\r\n";
+
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isFailure());
+        assertTrue(request.decoderResult().cause() instanceof IllegalArgumentException);
         assertFalse(channel.finish());
     }
 }

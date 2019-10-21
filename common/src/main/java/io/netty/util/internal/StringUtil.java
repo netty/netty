@@ -17,6 +17,7 @@ package io.netty.util.internal;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import static io.netty.util.internal.ObjectUtil.*;
@@ -598,6 +599,36 @@ public final class StringUtil {
     }
 
     /**
+     * Returns a char sequence that contains all {@code elements} joined by a given separator.
+     *
+     * @param separator for each element
+     * @param elements to join together
+     *
+     * @return a char sequence joined by a given separator.
+     */
+    public static CharSequence join(CharSequence separator, Iterable<? extends CharSequence> elements) {
+        ObjectUtil.checkNotNull(separator, "separator");
+        ObjectUtil.checkNotNull(elements, "elements");
+
+        Iterator<? extends CharSequence> iterator = elements.iterator();
+        if (!iterator.hasNext()) {
+            return EMPTY_STRING;
+        }
+
+        CharSequence firstElement = iterator.next();
+        if (!iterator.hasNext()) {
+            return firstElement;
+        }
+
+        StringBuilder builder = new StringBuilder(firstElement);
+        do {
+            builder.append(separator).append(iterator.next());
+        } while (iterator.hasNext());
+
+        return builder;
+    }
+
+    /**
      * @return {@code length} if no OWS is found.
      */
     private static int indexOfFirstNonOwsChar(CharSequence value, int length) {
@@ -622,4 +653,5 @@ public final class StringUtil {
     private static boolean isOws(char c) {
         return c == SPACE || c == TAB;
     }
+
 }

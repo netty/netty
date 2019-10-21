@@ -1021,7 +1021,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
      * window, without having to create a new {@link WriteBufferWaterMark} object whenever the flow control window
      * changes.
      */
-    private final class Http2StreamChannelConfig extends DefaultChannelConfig {
+    private static final class Http2StreamChannelConfig extends DefaultChannelConfig {
         Http2StreamChannelConfig(Channel channel) {
             super(channel);
         }

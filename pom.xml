@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.40.Final-SNAPSHOT</version>
+  <version>4.1.43.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -68,6 +68,21 @@
   </developers>
 
   <profiles>
+    <profile>
+      <id>not_x86_64</id>
+      <activation>
+        <property>
+          <name>os.detected.arch</name>
+          <value>!x86_64</value>
+        </property>
+      </activation>
+      <properties>
+        <!-- Use no classifier as we only support x86_64 atm-->
+        <tcnative.classifier />
+        <skipShadingTestsuite>true</skipShadingTestsuite>
+      </properties>
+    </profile>
+
     <!-- Detect if we use GraalVM and if so enable the native image testsuite -->
     <profile>
       <id>graal</id>
@@ -300,7 +315,7 @@
     <!-- keep in sync with PlatformDependent#ALLOWED_LINUX_OS_CLASSIFIERS -->
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
-    <tcnative.version>2.0.25.Final</tcnative.version>
+    <tcnative.version>2.0.26.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -320,6 +335,7 @@
     <graalvm.version>19.0.0</graalvm.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
+    <skipShadingTestsuite>false</skipShadingTestsuite>
   </properties>
 
   <modules>
@@ -624,7 +640,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-compress</artifactId>
-        <version>1.18</version>
+        <version>1.19</version>
         <scope>test</scope>
       </dependency>
 
@@ -752,10 +768,10 @@
                 </requireMavenVersion>
                 <requireProperty>
                   <regexMessage>
-                    x86_64/AARCH64 JDK must be used.
+		     x86_64/AARCH64/PPCLE64/s390x_64 JDK must be used.
                   </regexMessage>
                   <property>os.detected.arch</property>
-                  <regex>^(x86_64|aarch_64)$</regex>
+                  <regex>^(x86_64|aarch_64|ppcle_64|s390_64)$</regex>
                 </requireProperty>
               </rules>
             </configuration>
@@ -803,78 +819,7 @@
             <version>1.1</version>
           </signature>
           <ignores>
-            <ignore>sun.misc.Unsafe</ignore>
-            <ignore>sun.misc.Cleaner</ignore>
-            <ignore>sun.nio.ch.DirectBuffer</ignore>
-
-            <ignore>java.util.zip.Deflater</ignore>
-
-            <!-- Used for NIO -->
-            <ignore>java.nio.channels.DatagramChannel</ignore>
-            <ignore>java.nio.channels.MembershipKey</ignore>
-            <ignore>java.nio.channels.ServerSocketChannel</ignore>
-            <ignore>java.nio.channels.SocketChannel</ignore>
-            <ignore>java.net.StandardProtocolFamily</ignore>
-            <ignore>java.nio.channels.spi.SelectorProvider</ignore>
-            <ignore>java.net.SocketOption</ignore>
-            <ignore>java.net.StandardSocketOptions</ignore>
-            <ignore>java.nio.channels.NetworkChannel</ignore>
-
-            <!-- Self-signed certificate generation -->
-            <ignore>sun.security.x509.AlgorithmId</ignore>
-            <ignore>sun.security.x509.CertificateAlgorithmId</ignore>
-            <ignore>sun.security.x509.CertificateIssuerName</ignore>
-            <ignore>sun.security.x509.CertificateSerialNumber</ignore>
-            <ignore>sun.security.x509.CertificateSubjectName</ignore>
-            <ignore>sun.security.x509.CertificateValidity</ignore>
-            <ignore>sun.security.x509.CertificateVersion</ignore>
-            <ignore>sun.security.x509.CertificateX509Key</ignore>
-            <ignore>sun.security.x509.X500Name</ignore>
-            <ignore>sun.security.x509.X509CertInfo</ignore>
-            <ignore>sun.security.x509.X509CertImpl</ignore>
-
-            <!-- SSLSession implementation -->
-            <ignore>javax.net.ssl.SSLEngine</ignore>
-            <ignore>javax.net.ssl.ExtendedSSLSession</ignore>
-            <ignore>javax.net.ssl.X509ExtendedTrustManager</ignore>
-            <ignore>javax.net.ssl.SSLParameters</ignore>
-            <ignore>javax.net.ssl.SNIServerName</ignore>
-            <ignore>javax.net.ssl.SNIHostName</ignore>
-            <ignore>javax.net.ssl.SNIMatcher</ignore>
-            <ignore>java.security.AlgorithmConstraints</ignore>
-            <ignore>java.security.cert.CertificateRevokedException</ignore>
-            <ignore>java.security.cert.CertPathValidatorException</ignore>
-            <ignore>java.security.cert.CertPathValidatorException$Reason</ignore>
-            <ignore>java.security.cert.CertPathValidatorException$BasicReason</ignore>
-
-            <ignore>java.util.concurrent.ConcurrentLinkedDeque</ignore>
-            <ignore>java.util.concurrent.ThreadLocalRandom</ignore>
-
-            <!-- Compression -->
-            <ignore>java.util.zip.CRC32</ignore>
-            <ignore>java.util.zip.Adler32</ignore>
-
-            <!-- NioDatagramChannel implementation -->
-            <ignore>java.net.ProtocolFamily</ignore>
-
-            <!-- JDK 9 -->
             <ignore>java.nio.ByteBuffer</ignore>
-            <ignore>java.nio.CharBuffer</ignore>
-
-            <!-- JDK 8 -->
-            <ignore>java.util.concurrent.atomic.LongAdder</ignore>
-            <ignore>java.util.function.BiFunction</ignore>
-            <ignore>java.security.cert.X509Certificate</ignore>
-
-            <!-- Resolver -->
-            <ignore>java.net.InetAddress</ignore>
-
-            <!-- NoexecVolumeDetector -->
-            <ignore>java.nio.file.attribute.PosixFilePermission</ignore>
-            <ignore>java.nio.file.Files</ignore>
-            <ignore>java.nio.file.LinkOption</ignore>
-            <ignore>java.nio.file.Path</ignore>
-            <ignore>java.io.File</ignore>
           </ignores>
           <annotations>
             <annotation>io.netty.util.internal.SuppressJava6Requirement</annotation>

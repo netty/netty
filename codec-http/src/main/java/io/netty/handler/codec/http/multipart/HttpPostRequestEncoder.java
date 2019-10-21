@@ -867,7 +867,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
 
     /**
      *
-     * @return the next ByteBuf to send as a HttpChunk and modifying currentBuffer accordingly
+     * @return the next ByteBuf to send as an HttpChunk and modifying currentBuffer accordingly
      */
     private ByteBuf fillByteBuf() {
         int length = currentBuffer.readableBytes();

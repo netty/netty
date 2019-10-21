@@ -71,6 +71,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -2759,6 +2760,25 @@ public class DnsNameResolverTest {
         testTruncated0(true, true);
     }
 
+    private static DnsMessageModifier modifierFrom(DnsMessage message) {
+        DnsMessageModifier modifier = new DnsMessageModifier();
+        modifier.setAcceptNonAuthenticatedData(message.isAcceptNonAuthenticatedData());
+        modifier.setAdditionalRecords(message.getAdditionalRecords());
+        modifier.setAnswerRecords(message.getAnswerRecords());
+        modifier.setAuthoritativeAnswer(message.isAuthoritativeAnswer());
+        modifier.setAuthorityRecords(message.getAuthorityRecords());
+        modifier.setMessageType(message.getMessageType());
+        modifier.setOpCode(message.getOpCode());
+        modifier.setQuestionRecords(message.getQuestionRecords());
+        modifier.setRecursionAvailable(message.isRecursionAvailable());
+        modifier.setRecursionDesired(message.isRecursionDesired());
+        modifier.setReserved(message.isReserved());
+        modifier.setResponseCode(message.getResponseCode());
+        modifier.setTransactionId(message.getTransactionId());
+        modifier.setTruncated(message.isTruncated());
+        return modifier;
+    }
+
     private static void testTruncated0(boolean tcpFallback, final boolean truncatedBecauseOfMtu) throws IOException {
         final String host = "somehost.netty.io";
         final String txt = "this is a txt record";
@@ -2784,20 +2804,7 @@ public class DnsNameResolverTest {
 
                 if (!truncatedBecauseOfMtu) {
                     // Create a copy of the message but set the truncated flag.
-                    DnsMessageModifier modifier = new DnsMessageModifier();
-                    modifier.setAcceptNonAuthenticatedData(message.isAcceptNonAuthenticatedData());
-                    modifier.setAdditionalRecords(message.getAdditionalRecords());
-                    modifier.setAnswerRecords(message.getAnswerRecords());
-                    modifier.setAuthoritativeAnswer(message.isAuthoritativeAnswer());
-                    modifier.setAuthorityRecords(message.getAuthorityRecords());
-                    modifier.setMessageType(message.getMessageType());
-                    modifier.setOpCode(message.getOpCode());
-                    modifier.setQuestionRecords(message.getQuestionRecords());
-                    modifier.setRecursionAvailable(message.isRecursionAvailable());
-                    modifier.setRecursionDesired(message.isRecursionDesired());
-                    modifier.setReserved(message.isReserved());
-                    modifier.setResponseCode(message.getResponseCode());
-                    modifier.setTransactionId(message.getTransactionId());
+                    DnsMessageModifier modifier = modifierFrom(message);
                     modifier.setTruncated(true);
                     return modifier.getDnsMessage();
                 }
@@ -2842,8 +2849,15 @@ public class DnsNameResolverTest {
                 // If we are configured to use TCP as a fallback lets replay the dns message over TCP
                 Socket socket = serverSocket.accept();
 
+                InputStream in = socket.getInputStream();
+                assertTrue((in.read() << 8 | (in.read() & 0xff)) > 2); // skip length field
+                int txnId = in.read() << 8 | (in.read() & 0xff);
+
                 IoBuffer ioBuffer = IoBuffer.allocate(1024);
-                new DnsMessageEncoder().encode(ioBuffer, messageRef.get());
+                // Must replace the transactionId with the one from the TCP request
+                DnsMessageModifier modifier = modifierFrom(messageRef.get());
+                modifier.setTransactionId(txnId);
+                new DnsMessageEncoder().encode(ioBuffer, modifier.getDnsMessage());
                 ioBuffer.flip();
 
                 ByteBuffer lenBuffer = ByteBuffer.allocate(2);
@@ -2884,7 +2898,7 @@ public class DnsNameResolverTest {
             } else {
                 assertTrue(envelope.content().isTruncated());
             }
-            envelope.release();
+            assertTrue(envelope.release());
         } finally {
             dnsServer2.stop();
             if (resolver != null) {

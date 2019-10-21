@@ -16,6 +16,7 @@
 
 package io.netty.handler.ssl.util;
 
+import io.netty.util.internal.SuppressJava6Requirement;
 import sun.security.x509.AlgorithmId;
 import sun.security.x509.CertificateAlgorithmId;
 import sun.security.x509.CertificateIssuerName;
@@ -42,6 +43,7 @@ import static io.netty.handler.ssl.util.SelfSignedCertificate.*;
  */
 final class OpenJdkSelfSignedCertGenerator {
 
+    @SuppressJava6Requirement(reason = "Usage guarded by dependency check")
     static String[] generate(String fqdn, KeyPair keypair, SecureRandom random, Date notBefore, Date notAfter)
             throws Exception {
         PrivateKey key = keypair.getPrivate();

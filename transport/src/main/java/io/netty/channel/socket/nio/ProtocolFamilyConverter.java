@@ -16,6 +16,7 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.util.internal.SuppressJava6Requirement;
 
 import java.net.ProtocolFamily;
 import java.net.StandardProtocolFamily;
@@ -32,6 +33,7 @@ final class ProtocolFamilyConverter {
     /**
      * Convert the {@link InternetProtocolFamily}. This MUST only be called on jdk version >= 7.
      */
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     public static ProtocolFamily convert(InternetProtocolFamily family) {
         switch (family) {
         case IPv4:

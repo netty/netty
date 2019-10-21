@@ -36,14 +36,14 @@ public class Http2FrameCodecBuilder extends
     }
 
     /**
-     * Creates a builder for a HTTP/2 client.
+     * Creates a builder for an HTTP/2 client.
      */
     public static Http2FrameCodecBuilder forClient() {
         return new Http2FrameCodecBuilder(false);
     }
 
     /**
-     * Creates a builder for a HTTP/2 server.
+     * Creates a builder for an HTTP/2 server.
      */
     public static Http2FrameCodecBuilder forServer() {
         return new Http2FrameCodecBuilder(true);
@@ -189,8 +189,8 @@ public class Http2FrameCodecBuilder extends
             DefaultHttp2Connection connection = new DefaultHttp2Connection(isServer(), maxReservedStreams());
             Long maxHeaderListSize = initialSettings().maxHeaderListSize();
             Http2FrameReader frameReader = new DefaultHttp2FrameReader(maxHeaderListSize == null ?
-                    new DefaultHttp2HeadersDecoder(true) :
-                    new DefaultHttp2HeadersDecoder(true, maxHeaderListSize));
+                    new DefaultHttp2HeadersDecoder(isValidateHeaders()) :
+                    new DefaultHttp2HeadersDecoder(isValidateHeaders(), maxHeaderListSize));
 
             if (frameLogger() != null) {
                 frameWriter = new Http2OutboundFrameLogger(frameWriter, frameLogger());

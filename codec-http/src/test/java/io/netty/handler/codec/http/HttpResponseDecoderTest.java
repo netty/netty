@@ -446,7 +446,7 @@ public class HttpResponseDecoderTest {
                 amount = headerLength -  a;
             }
 
-            // if header is done it should produce a HttpRequest
+            // if header is done it should produce an HttpRequest
             boolean headerDone = a + amount == headerLength;
             assertEquals(headerDone, ch.writeInbound(Unpooled.copiedBuffer(content, a, amount)));
             a += amount;
@@ -710,6 +710,21 @@ public class HttpResponseDecoderTest {
         assertEquals(0, lastContent.content().readableBytes());
         lastContent.release();
 
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testWhitespace() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        String requestStr = "HTTP/1.1 200 OK\r\n" +
+                "Transfer-Encoding : chunked\r\n" +
+                "Host: netty.io\n\r\n";
+
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpResponse response = channel.readInbound();
+        assertFalse(response.decoderResult().isFailure());
+        assertEquals(HttpHeaderValues.CHUNKED.toString(), response.headers().get(HttpHeaderNames.TRANSFER_ENCODING));
+        assertEquals("netty.io", response.headers().get(HttpHeaderNames.HOST));
         assertFalse(channel.finish());
     }
 }

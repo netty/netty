@@ -37,7 +37,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  * many events as they like for any given input. A channel's auto reading configuration doesn't usually
  * apply in these scenarios. This is causing problems in downstream {@link ChannelHandler}s that would
  * like to hold subsequent events while they're processing one event. It's a common problem with the
- * {@code HttpObjectDecoder} that will very often fire a {@code HttpRequest} that is immediately followed
+ * {@code HttpObjectDecoder} that will very often fire an {@code HttpRequest} that is immediately followed
  * by a {@code LastHttpContent} event.
  *
  * <pre>{@code

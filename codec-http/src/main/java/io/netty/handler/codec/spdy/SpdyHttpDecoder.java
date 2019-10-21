@@ -193,7 +193,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                 // SYN_STREAM frames initiated by the client are HTTP requests
 
                 // If a client sends a request with a truncated header block, the server must
-                // reply with a HTTP 431 REQUEST HEADER FIELDS TOO LARGE reply.
+                // reply with an HTTP 431 REQUEST HEADER FIELDS TOO LARGE reply.
                 if (spdySynStreamFrame.isTruncated()) {
                     SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamId);
                     spdySynReplyFrame.setLast(true);
@@ -218,7 +218,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
                     }
                 } catch (Throwable t) {
                     // If a client sends a SYN_STREAM without all of the getMethod, url (host and path),
-                    // scheme, and version headers the server must reply with a HTTP 400 BAD REQUEST reply.
+                    // scheme, and version headers the server must reply with an HTTP 400 BAD REQUEST reply.
                     // Also sends HTTP 400 BAD REQUEST reply if header name/value pairs are invalid
                     SpdySynReplyFrame spdySynReplyFrame = new DefaultSpdySynReplyFrame(streamId);
                     spdySynReplyFrame.setLast(true);

@@ -57,7 +57,7 @@ public class Http2MultiplexCodecBuilder
     }
 
     /**
-     * Creates a builder for a HTTP/2 client.
+     * Creates a builder for an HTTP/2 client.
      *
      * @param childHandler the handler added to channels for remotely-created streams. It must be
      *     {@link ChannelHandler.Sharable}.
@@ -67,7 +67,7 @@ public class Http2MultiplexCodecBuilder
     }
 
     /**
-     * Creates a builder for a HTTP/2 server.
+     * Creates a builder for an HTTP/2 server.
      *
      * @param childHandler the handler added to channels for remotely-created streams. It must be
      *     {@link ChannelHandler.Sharable}.
@@ -215,8 +215,8 @@ public class Http2MultiplexCodecBuilder
             DefaultHttp2Connection connection = new DefaultHttp2Connection(isServer(), maxReservedStreams());
             Long maxHeaderListSize = initialSettings().maxHeaderListSize();
             Http2FrameReader frameReader = new DefaultHttp2FrameReader(maxHeaderListSize == null ?
-                    new DefaultHttp2HeadersDecoder(true) :
-                    new DefaultHttp2HeadersDecoder(true, maxHeaderListSize));
+                    new DefaultHttp2HeadersDecoder(isValidateHeaders()) :
+                    new DefaultHttp2HeadersDecoder(isValidateHeaders(), maxHeaderListSize));
 
             if (frameLogger() != null) {
                 frameWriter = new Http2OutboundFrameLogger(frameWriter, frameLogger());

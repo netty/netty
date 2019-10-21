@@ -399,4 +399,31 @@ public class ByteToMessageDecoderTest {
         }
         assertFalse(channel.finish());
     }
+
+    @Test
+    public void testDisorder() {
+        ByteToMessageDecoder decoder = new ByteToMessageDecoder() {
+            int count;
+
+            //read 4 byte then remove this decoder
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+                out.add(in.readByte());
+                if (++count >= 4) {
+                    ctx.pipeline().remove(this);
+                }
+            }
+        };
+        EmbeddedChannel channel = new EmbeddedChannel(decoder);
+        assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(new byte[]{1, 2, 3, 4, 5})));
+        assertEquals((byte) 1,  channel.readInbound());
+        assertEquals((byte) 2,  channel.readInbound());
+        assertEquals((byte) 3,  channel.readInbound());
+        assertEquals((byte) 4,  channel.readInbound());
+        ByteBuf buffer5 = channel.readInbound();
+        assertEquals((byte) 5, buffer5.readByte());
+        assertFalse(buffer5.isReadable());
+        assertTrue(buffer5.release());
+        assertFalse(channel.finish());
+    }
 }

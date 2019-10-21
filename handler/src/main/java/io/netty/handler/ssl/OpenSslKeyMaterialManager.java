@@ -15,8 +15,6 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.internal.tcnative.SSL;
-
 import javax.net.ssl.SSLException;
 import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509KeyManager;
@@ -66,15 +64,19 @@ final class OpenSslKeyMaterialManager {
     }
 
     void setKeyMaterialServerSide(ReferenceCountedOpenSslEngine engine) throws SSLException {
-        long ssl = engine.sslPointer();
-        String[] authMethods = SSL.authenticationMethods(ssl);
+        String[] authMethods = engine.authMethods();
+        if (authMethods.length == 0) {
+            return;
+        }
         Set<String> aliases = new HashSet<String>(authMethods.length);
         for (String authMethod : authMethods) {
             String type = KEY_TYPES.get(authMethod);
             if (type != null) {
                 String alias = chooseServerAlias(engine, type);
                 if (alias != null && aliases.add(alias)) {
-                    setKeyMaterial(engine, alias);
+                    if (!setKeyMaterial(engine, alias)) {
+                        return;
+                    }
                 }
             }
         }
@@ -91,13 +93,11 @@ final class OpenSslKeyMaterialManager {
         }
     }
 
-    private void setKeyMaterial(ReferenceCountedOpenSslEngine engine, String alias) throws SSLException {
+    private boolean setKeyMaterial(ReferenceCountedOpenSslEngine engine, String alias) throws SSLException {
         OpenSslKeyMaterial keyMaterial = null;
         try {
             keyMaterial = provider.chooseKeyMaterial(engine.alloc, alias);
-            if (keyMaterial != null) {
-                engine.setKeyMaterial(keyMaterial);
-            }
+            return keyMaterial == null || engine.setKeyMaterial(keyMaterial);
         } catch (SSLException e) {
             throw e;
         } catch (Exception e) {

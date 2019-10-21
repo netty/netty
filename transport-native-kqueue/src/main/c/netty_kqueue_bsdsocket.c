@@ -33,7 +33,7 @@
 #include "netty_unix_util.h"
 
 // Those are initialized in the init(...) method and cached for performance reasons
-static jclass stringCls = NULL;
+static jclass stringClass = NULL;
 static jclass peerCredentialsClass = NULL;
 static jfieldID fileChannelFieldId = NULL;
 static jfieldID transferredFieldId = NULL;
@@ -108,9 +108,20 @@ static jobjectArray netty_kqueue_bsdsocket_getAcceptFilter(JNIEnv* env, jclass c
         netty_unix_errors_throwChannelExceptionErrorNo(env, "getsockopt() failed: ", errno);
         return NULL;
     }
-    jobjectArray resultArray = (*env)->NewObjectArray(env, 2, stringCls, NULL);
-    (*env)->SetObjectArrayElement(env, resultArray, 0, (*env)->NewStringUTF(env, &af.af_name[0]));
-    (*env)->SetObjectArrayElement(env, resultArray, 1, (*env)->NewStringUTF(env, &af.af_arg[0]));
+    jobjectArray resultArray = (*env)->NewObjectArray(env, 2, stringClass, NULL);
+    if (resultArray == NULL) {
+        return NULL;
+    }
+    jstring name = (*env)->NewStringUTF(env, &af.af_name[0]);
+    if (name == NULL) {
+        return NULL;
+    }
+    jstring arg = (*env)->NewStringUTF(env, &af.af_arg[0]);
+    if (arg == NULL) {
+        return NULL;
+    }
+    (*env)->SetObjectArrayElement(env, resultArray, 0, name);
+    (*env)->SetObjectArrayElement(env, resultArray, 1, arg);
     return resultArray;
 #else // No know replacement on MacOS
     // Don't throw here because this is used when getting a list of all options.
@@ -151,11 +162,15 @@ static jobject netty_kqueue_bsdsocket_getPeerCredentials(JNIEnv *env, jclass cla
     }
     jintArray gids = NULL;
     if (credentials.cr_ngroups > 1) {
-        gids = (*env)->NewIntArray(env, credentials.cr_ngroups);
+        if ((gids = (*env)->NewIntArray(env, credentials.cr_ngroups)) == NULL) {
+            return NULL;
+        }
         (*env)->SetIntArrayRegion(env, gids, 0, credentials.cr_ngroups, (jint*) credentials.cr_groups);
     } else {
         // It has been observed on MacOS that cr_ngroups may not be set, but the cr_gid field is set.
-        gids = (*env)->NewIntArray(env, 1);
+        if ((gids = (*env)->NewIntArray(env, 1)) == NULL) {
+            return NULL;
+        }
         (*env)->SetIntArrayRegion(env, gids, 0, 1, (jint*) &credentials.cr_gid);
     }
 
@@ -189,121 +204,87 @@ static jint dynamicMethodsTableSize() {
 }
 
 static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
-    JNINativeMethod* dynamicMethods = malloc(sizeof(JNINativeMethod) * dynamicMethodsTableSize());
+    char* dynamicTypeName = NULL;
+    size_t size = sizeof(JNINativeMethod) * dynamicMethodsTableSize();
+    JNINativeMethod* dynamicMethods = malloc(size);
+    if (dynamicMethods == NULL) {
+        return NULL;
+    }
+    memset(dynamicMethods, 0, size);
     memcpy(dynamicMethods, fixed_method_table, sizeof(fixed_method_table));
-    char* dynamicTypeName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/DefaultFileRegion;JJJ)J");
+
     JNINativeMethod* dynamicMethod = &dynamicMethods[fixed_method_table_size];
+    NETTY_PREPEND(packagePrefix, "io/netty/channel/DefaultFileRegion;JJJ)J", dynamicTypeName, error);
+    NETTY_PREPEND("(IL", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "sendFile";
-    dynamicMethod->signature = netty_unix_util_prepend("(IL", dynamicTypeName);
     dynamicMethod->fnPtr = (void *) netty_kqueue_bsdsocket_sendFile;
-    free(dynamicTypeName);
+    netty_unix_util_free_dynamic_name(&dynamicTypeName);
 
     ++dynamicMethod;
-    dynamicTypeName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/unix/PeerCredentials;");
+    NETTY_PREPEND(packagePrefix, "io/netty/channel/unix/PeerCredentials;", dynamicTypeName, error);
+    NETTY_PREPEND("(I)L", dynamicTypeName,  dynamicMethod->signature, error);
     dynamicMethod->name = "getPeerCredentials";
-    dynamicMethod->signature = netty_unix_util_prepend("(I)L", dynamicTypeName);
     dynamicMethod->fnPtr = (void *) netty_kqueue_bsdsocket_getPeerCredentials;
-    free(dynamicTypeName);
+    netty_unix_util_free_dynamic_name(&dynamicTypeName);
 
     return dynamicMethods;
+error:
+    free(dynamicTypeName);
+    netty_unix_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
+    return NULL;
 }
 
-static void freeDynamicMethodsTable(JNINativeMethod* dynamicMethods) {
-    jint fullMethodTableSize = dynamicMethodsTableSize();
-    jint i = fixed_method_table_size;
-    for (; i < fullMethodTableSize; ++i) {
-        free(dynamicMethods[i].signature);
-    }
-    free(dynamicMethods);
-}
 // JNI Method Registration Table End
 
 jint netty_kqueue_bsdsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
+    int ret = JNI_ERR;
+    char* nettyClassName = NULL;
+    jclass fileRegionCls = NULL;
+    jclass fileChannelCls = NULL;
+    jclass fileDescriptorCls = NULL;
     // Register the methods which are not referenced by static member variables
     JNINativeMethod* dynamicMethods = createDynamicMethodsTable(packagePrefix);
+    if (dynamicMethods == NULL) {
+        goto done;
+    }
     if (netty_unix_util_register_natives(env,
             packagePrefix,
             "io/netty/channel/kqueue/BsdSocket",
             dynamicMethods,
             dynamicMethodsTableSize()) != 0) {
-        freeDynamicMethodsTable(dynamicMethods);
-        return JNI_ERR;
+        goto done;
     }
-    freeDynamicMethodsTable(dynamicMethods);
-    dynamicMethods = NULL;
 
     // Initialize this module
-    char* nettyClassName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/DefaultFileRegion");
-    jclass fileRegionCls = (*env)->FindClass(env, nettyClassName);
+    NETTY_PREPEND(packagePrefix, "io/netty/channel/DefaultFileRegion", nettyClassName, done);
+    NETTY_FIND_CLASS(env, fileRegionCls, nettyClassName, done);
+    netty_unix_util_free_dynamic_name(&nettyClassName);
+
+    NETTY_GET_FIELD(env, fileRegionCls, fileChannelFieldId, "file", "Ljava/nio/channels/FileChannel;", done);
+    NETTY_GET_FIELD(env, fileRegionCls, transferredFieldId, "transferred", "J", done);
+
+    NETTY_FIND_CLASS(env, fileChannelCls, "sun/nio/ch/FileChannelImpl", done);
+    NETTY_GET_FIELD(env, fileChannelCls, fileDescriptorFieldId, "fd", "Ljava/io/FileDescriptor;", done);
+
+    NETTY_FIND_CLASS(env, fileDescriptorCls, "java/io/FileDescriptor", done);
+    NETTY_GET_FIELD(env, fileDescriptorCls, fdFieldId, "fd", "I", done);
+  
+    NETTY_LOAD_CLASS(env, stringClass, "java/lang/String", done);
+
+    NETTY_PREPEND(packagePrefix, "io/netty/channel/unix/PeerCredentials", nettyClassName, done);
+    NETTY_LOAD_CLASS(env, peerCredentialsClass, nettyClassName, done);
+    netty_unix_util_free_dynamic_name(&nettyClassName);
+  
+    NETTY_GET_METHOD(env, peerCredentialsClass, peerCredentialsMethodId, "<init>", "(II[I)V", done);
+    ret = NETTY_JNI_VERSION;
+done:
+    netty_unix_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
     free(nettyClassName);
-    nettyClassName = NULL;
-    if (fileRegionCls == NULL) {
-        return JNI_ERR;
-    }
-    fileChannelFieldId = (*env)->GetFieldID(env, fileRegionCls, "file", "Ljava/nio/channels/FileChannel;");
-    if (fileChannelFieldId == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: DefaultFileRegion.file");
-        return JNI_ERR;
-    }
-    transferredFieldId = (*env)->GetFieldID(env, fileRegionCls, "transferred", "J");
-    if (transferredFieldId == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: DefaultFileRegion.transferred");
-        return JNI_ERR;
-    }
 
-    jclass fileChannelCls = (*env)->FindClass(env, "sun/nio/ch/FileChannelImpl");
-    if (fileChannelCls == NULL) {
-        // pending exception...
-        return JNI_ERR;
-    }
-    fileDescriptorFieldId = (*env)->GetFieldID(env, fileChannelCls, "fd", "Ljava/io/FileDescriptor;");
-    if (fileDescriptorFieldId == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: FileChannelImpl.fd");
-        return JNI_ERR;
-    }
-
-    jclass fileDescriptorCls = (*env)->FindClass(env, "java/io/FileDescriptor");
-    if (fileDescriptorCls == NULL) {
-        // pending exception...
-        return JNI_ERR;
-    }
-    fdFieldId = (*env)->GetFieldID(env, fileDescriptorCls, "fd", "I");
-    if (fdFieldId == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get field ID: FileDescriptor.fd");
-        return JNI_ERR;
-    }
-    stringCls = (*env)->FindClass(env, "java/lang/String");
-    if (stringCls == NULL) {
-        // pending exception...
-        return JNI_ERR;
-    }
-
-    nettyClassName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/unix/PeerCredentials");
-    jclass localPeerCredsClass = (*env)->FindClass(env, nettyClassName);
-    free(nettyClassName);
-    nettyClassName = NULL;
-    if (localPeerCredsClass == NULL) {
-        // pending exception...
-        return JNI_ERR;
-    }
-    peerCredentialsClass = (jclass) (*env)->NewGlobalRef(env, localPeerCredsClass);
-    if (peerCredentialsClass == NULL) {
-        // out-of-memory!
-        netty_unix_errors_throwOutOfMemoryError(env);
-        return JNI_ERR;
-    }
-    peerCredentialsMethodId = (*env)->GetMethodID(env, peerCredentialsClass, "<init>", "(II[I)V");
-    if (peerCredentialsMethodId == NULL) {
-        netty_unix_errors_throwRuntimeException(env, "failed to get method ID: PeerCredentials.<init>(int, int, int[])");
-        return JNI_ERR;
-    }
-
-    return NETTY_JNI_VERSION;
+    return ret;
 }
 
 void netty_kqueue_bsdsocket_JNI_OnUnLoad(JNIEnv* env) {
-    if (peerCredentialsClass != NULL) {
-        (*env)->DeleteGlobalRef(env, peerCredentialsClass);
-        peerCredentialsClass = NULL;
-    }
+    NETTY_UNLOAD_CLASS(env, peerCredentialsClass);
+    NETTY_UNLOAD_CLASS(env, stringClass);
 }

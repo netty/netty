@@ -50,7 +50,6 @@ import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.InetNameResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.NetUtil;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.Future;
@@ -1199,129 +1198,107 @@ public class DnsNameResolver extends InetNameResolver {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
-            try {
-                final DatagramDnsResponse res = (DatagramDnsResponse) msg;
-                final int queryId = res.id();
+            final DatagramDnsResponse res = (DatagramDnsResponse) msg;
+            final int queryId = res.id();
 
-                if (logger.isDebugEnabled()) {
-                    logger.debug("{} RECEIVED: UDP [{}: {}], {}", ch, queryId, res.sender(), res);
-                }
+            if (logger.isDebugEnabled()) {
+                logger.debug("{} RECEIVED: UDP [{}: {}], {}", ch, queryId, res.sender(), res);
+            }
 
-                final DnsQueryContext qCtx = queryContextManager.get(res.sender(), queryId);
-                if (qCtx == null) {
-                    logger.warn("{} Received a DNS response with an unknown ID: {}", ch, queryId);
-                    return;
-                }
+            final DnsQueryContext qCtx = queryContextManager.get(res.sender(), queryId);
+            if (qCtx == null) {
+                logger.warn("{} Received a DNS response with an unknown ID: {}", ch, queryId);
+                res.release();
+                return;
+            }
 
-                // Check if the response was truncated and if we can fallback to TCP to retry.
-                if (res.isTruncated() && socketChannelFactory != null) {
-                    // Let's retain as we may need it later on.
-                    res.retain();
+            // Check if the response was truncated and if we can fallback to TCP to retry.
+            if (!res.isTruncated() || socketChannelFactory == null) {
+                qCtx.finish(res);
+                return;
+            }
 
-                    Bootstrap bs = new Bootstrap();
-                    bs.option(ChannelOption.SO_REUSEADDR, true)
-                            .group(executor())
-                            .channelFactory(socketChannelFactory)
-                            .handler(new ChannelInitializer<Channel>() {
-                                @Override
-                                protected void initChannel(Channel ch) {
-                                    ch.pipeline().addLast(TCP_ENCODER);
-                                    ch.pipeline().addLast(new TcpDnsResponseDecoder());
-                                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
-                                        private boolean finish;
+            Bootstrap bs = new Bootstrap();
+            bs.option(ChannelOption.SO_REUSEADDR, true)
+            .group(executor())
+            .channelFactory(socketChannelFactory)
+            .handler(TCP_ENCODER);
+            bs.connect(res.sender()).addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) {
+                    if (!future.isSuccess()) {
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("{} Unable to fallback to TCP [{}]", queryId, future.cause());
+                        }
 
-                                        @Override
-                                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                                            try {
-                                                Channel channel = ctx.channel();
-                                                DnsResponse response = (DnsResponse) msg;
-                                                int queryId = response.id();
+                        // TCP fallback failed, just use the truncated response.
+                        qCtx.finish(res);
+                        return;
+                    }
+                    final Channel channel = future.channel();
 
-                                                if (logger.isDebugEnabled()) {
-                                                    logger.debug("{} RECEIVED: TCP [{}: {}], {}", channel, queryId,
-                                                            channel.remoteAddress(), response);
-                                                }
+                    Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise =
+                            channel.eventLoop().newPromise();
+                    final TcpDnsQueryContext tcpCtx = new TcpDnsQueryContext(DnsNameResolver.this, channel,
+                            (InetSocketAddress) channel.remoteAddress(), qCtx.question(),
+                            EMPTY_ADDITIONALS, promise);
 
-                                                DnsQueryContext tcpCtx = queryContextManager.get(res.sender(), queryId);
-                                                if (tcpCtx == null) {
-                                                    logger.warn("{} Received a DNS response with an unknown ID: {}",
-                                                            channel, queryId);
-                                                    qCtx.finish(res);
-                                                    return;
-                                                }
-
-                                                // Release the original response as we will use the response that we
-                                                // received via TCP fallback.
-                                                res.release();
-
-                                                tcpCtx.finish(new AddressedEnvelopeAdapter(
-                                                        (InetSocketAddress) ctx.channel().remoteAddress(),
-                                                        (InetSocketAddress) ctx.channel().localAddress(),
-                                                        response));
-
-                                                finish = true;
-                                            } finally {
-                                                ReferenceCountUtil.release(msg);
-                                            }
-                                        }
-
-                                        @Override
-                                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                                            if (!finish) {
-                                                if (logger.isDebugEnabled()) {
-                                                    logger.debug("{} Error during processing response: TCP [{}: {}]",
-                                                            ctx.channel(), queryId,
-                                                            ctx.channel().remoteAddress(), cause);
-                                                }
-                                                // TCP fallback failed, just use the truncated response as
-                                                qCtx.finish(res);
-                                            }
-                                        }
-                                    });
-                                }
-                            });
-                    bs.connect(res.sender()).addListener(new ChannelFutureListener() {
+                    channel.pipeline().addLast(new TcpDnsResponseDecoder());
+                    channel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void operationComplete(ChannelFuture future) {
-                            if (future.isSuccess()) {
-                                final Channel channel = future.channel();
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            Channel channel = ctx.channel();
+                            DnsResponse response = (DnsResponse) msg;
+                            int queryId = response.id();
 
-                                Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise =
-                                        channel.eventLoop().newPromise();
-                                new TcpDnsQueryContext(DnsNameResolver.this, channel,
-                                        (InetSocketAddress) channel.remoteAddress(), qCtx.question(),
-                                        EMPTY_ADDITIONALS, promise).query(true, future.channel().newPromise());
-                                promise.addListener(
-                                        new FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>() {
-                                    @Override
-                                    public void operationComplete(
-                                            Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future) {
-                                        channel.close();
+                            if (logger.isDebugEnabled()) {
+                                logger.debug("{} RECEIVED: TCP [{}: {}], {}", channel, queryId,
+                                        channel.remoteAddress(), response);
+                            }
 
-                                        if (future.isSuccess()) {
-                                            qCtx.finish(future.getNow());
-                                        } else {
-                                            // TCP fallback failed, just use the truncated response.
-                                            qCtx.finish(res);
-                                        }
-                                    }
-                                });
+                            DnsQueryContext foundCtx = queryContextManager.get(res.sender(), queryId);
+                            if (foundCtx == tcpCtx) {
+                                tcpCtx.finish(new AddressedEnvelopeAdapter(
+                                        (InetSocketAddress) ctx.channel().remoteAddress(),
+                                        (InetSocketAddress) ctx.channel().localAddress(),
+                                        response));
                             } else {
-                                if (logger.isDebugEnabled()) {
-                                    logger.debug("{} Unable to fallback to TCP [{}]", queryId, future.cause());
-                                }
+                                response.release();
+                                tcpCtx.tryFailure("Received TCP response with unexpected ID", null, false);
+                                logger.warn("{} Received a DNS response with an unexpected ID: {}",
+                                        channel, queryId);
+                            }
+                        }
 
+                        @Override
+                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                            if (tcpCtx.tryFailure("TCP fallback error", cause, false) && logger.isDebugEnabled()) {
+                                logger.debug("{} Error during processing response: TCP [{}: {}]",
+                                        ctx.channel(), queryId,
+                                        ctx.channel().remoteAddress(), cause);
+                            }
+                        }
+                    });
+
+                    promise.addListener(
+                            new FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>() {
+                        @Override
+                        public void operationComplete(
+                                Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future) {
+                            channel.close();
+
+                            if (future.isSuccess()) {
+                                qCtx.finish(future.getNow());
+                                res.release();
+                            } else {
                                 // TCP fallback failed, just use the truncated response.
                                 qCtx.finish(res);
                             }
                         }
                     });
-                } else {
-                    qCtx.finish(res);
+                    tcpCtx.query(true, future.channel().newPromise());
                 }
-            } finally {
-                ReferenceCountUtil.safeRelease(msg);
-            }
+            });
         }
 
         @Override
@@ -1336,7 +1313,7 @@ public class DnsNameResolver extends InetNameResolver {
         }
     }
 
-    private final class AddressedEnvelopeAdapter implements AddressedEnvelope<DnsResponse, InetSocketAddress> {
+    private static final class AddressedEnvelopeAdapter implements AddressedEnvelope<DnsResponse, InetSocketAddress> {
         private final InetSocketAddress sender;
         private final InetSocketAddress recipient;
         private final DnsResponse response;

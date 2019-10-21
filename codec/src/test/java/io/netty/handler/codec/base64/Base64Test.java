@@ -29,7 +29,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class Base64Test {
 
@@ -94,7 +94,7 @@ public class Base64Test {
                 "8i96YWK0VxcCMQC7pf6Wk3RhUU2Sg6S9e6CiirFLDyzLkaWxuCnXcOwTvuXTHUQSeUCp2Q6ygS5q\n" +
                 "Kyc=";
 
-        ByteBuf src =  Unpooled.wrappedBuffer(certFromString(cert).getEncoded());
+        ByteBuf src = Unpooled.wrappedBuffer(certFromString(cert).getEncoded());
         ByteBuf expectedEncoded = copiedBuffer(expected, CharsetUtil.US_ASCII);
         testEncode(src, expectedEncoded);
     }
@@ -168,5 +168,21 @@ public class Base64Test {
     @Test
     public void testOverflowDecodedBufferSize() {
         assertEquals(1610612736, Base64.decodedBufferSize(Integer.MAX_VALUE));
+    }
+
+    @Test
+    public void decodingFailsOnInvalidInputByte() {
+        char[] invalidChars = {'\u007F', '\u0080', '\u00BD', '\u00FF'};
+        for (char invalidChar : invalidChars) {
+            ByteBuf buf = copiedBuffer("eHh4" + invalidChar, CharsetUtil.ISO_8859_1);
+            try {
+                Base64.decode(buf);
+                fail("Invalid character in not detected: " + invalidChar);
+            } catch (IllegalArgumentException ignored) {
+                // as expected
+            } finally {
+                assertTrue(buf.release());
+            }
+        }
     }
 }

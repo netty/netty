@@ -647,7 +647,7 @@ public abstract class WebSocketClientHandshaker {
             encoder = pipeline.get(HttpClientCodec.class);
             if (encoder == null) {
                 throw new IllegalStateException("ChannelPipeline does not contain " +
-                    "a " + HttpClientCodec.class.getSimpleName() + " or " +
+                    "an " + HttpClientCodec.class.getSimpleName() + " or " +
                     HttpClientCodec.class.getSimpleName());
             }
         }
@@ -690,7 +690,7 @@ public abstract class WebSocketClientHandshaker {
             decoder = pipeline.get(HttpClientCodec.class);
             if (decoder == null) {
                 throw new IllegalStateException("ChannelPipeline does not contain " +
-                    "a " + HttpResponseDecoder.class.getSimpleName() + " or " +
+                    "an " + HttpResponseDecoder.class.getSimpleName() + " or " +
                     HttpClientCodec.class.getSimpleName());
             }
         }
