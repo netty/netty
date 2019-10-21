@@ -499,6 +499,8 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
             boolean removePending = decodeState == STATE_HANDLER_REMOVED_PENDING;
             decodeState = STATE_INIT;
             if (removePending) {
+                fireChannelRead(ctx, out, out.size());
+                out.clear();
                 handlerRemoved(ctx);
             }
         }
