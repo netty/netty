@@ -145,12 +145,13 @@ public class WebSocketServerProtocolHandlerTest {
 
     @Test
     public void testCreateUTF8Validator() {
-        WebSocketDecoderConfig config = WebSocketDecoderConfig.newBuilder()
+        WebSocketServerProtocolConfig config = WebSocketServerProtocolConfig.newBuilder()
+                .websocketPath("/test")
                 .withUTF8Validator(true)
                 .build();
 
         EmbeddedChannel ch = new EmbeddedChannel(
-                new WebSocketServerProtocolHandler("/test", null, false, false, 1000L, config),
+                new WebSocketServerProtocolHandler(config),
                 new HttpRequestDecoder(),
                 new HttpResponseEncoder(),
                 new MockOutboundHandler());
@@ -165,12 +166,13 @@ public class WebSocketServerProtocolHandlerTest {
 
     @Test
     public void testDoNotCreateUTF8Validator() {
-        WebSocketDecoderConfig config = WebSocketDecoderConfig.newBuilder()
+        WebSocketServerProtocolConfig config = WebSocketServerProtocolConfig.newBuilder()
+                .websocketPath("/test")
                 .withUTF8Validator(false)
                 .build();
 
         EmbeddedChannel ch = new EmbeddedChannel(
-                new WebSocketServerProtocolHandler("/test", null, false, false, 1000L, config),
+                new WebSocketServerProtocolHandler(config),
                 new HttpRequestDecoder(),
                 new HttpResponseEncoder(),
                 new MockOutboundHandler());
@@ -211,7 +213,7 @@ public class WebSocketServerProtocolHandlerTest {
 
     private EmbeddedChannel createChannel(ChannelHandler handler) {
         return new EmbeddedChannel(
-                new WebSocketServerProtocolHandler("/test", null, false),
+                new WebSocketServerProtocolHandler("/test"),
                 new HttpRequestDecoder(),
                 new HttpResponseEncoder(),
                 new MockOutboundHandler(),
