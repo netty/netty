@@ -81,7 +81,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             try {
                 final ByteBuf buffer;
                 if (cumulation.writerIndex() > cumulation.maxCapacity() - in.readableBytes()
-                    || cumulation.refCnt() > 1 || cumulation.isReadOnly()) {
+                        || cumulation.refCnt() > 1 || cumulation.isReadOnly()) {
                     // Expand cumulation (by replace it) when either there is not more room in the buffer
                     // or if the refCnt is greater then 1 which may happen when the user use slice().retain() or
                     // duplicate().retain() or if its read-only.
@@ -505,6 +505,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             boolean removePending = decodeState == STATE_HANDLER_REMOVED_PENDING;
             decodeState = STATE_INIT;
             if (removePending) {
+                fireChannelRead(ctx, out, out.size());
+                out.clear();
                 handlerRemoved(ctx);
             }
         }
