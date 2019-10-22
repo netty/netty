@@ -301,9 +301,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             @Override
             ByteBuf allocateWrapBuffer(SslHandler handler, ByteBufAllocator allocator,
                                        int pendingBytes, int numComponents) {
-                // As for the JDK SSLEngine we always need to allocate buffers of the size of 16kb
-                // (even if the amount of data to encrypt is very small) lets use heap buffers to reduce
-                // the native memory usage.
+                // As for the JDK SSLEngine we always need to allocate buffers of the size required by the SSLEngine
+                // (normally ~16KB). This is required even if the amount of data to encrypt is very small. Use heap
+                // buffers to reduce the native memory usage.
+                //
                 // Beside this the JDK SSLEngine also (as of today) will do an extra heap to direct buffer copy
                 // if a direct buffer is used as its internals operate on byte[].
                 return allocator.heapBuffer(handler.engine.getSession().getPacketBufferSize());
