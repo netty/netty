@@ -15,6 +15,7 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -173,7 +174,8 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
      * This is equivalent to submitting a {@link EventExecutor.LazyRunnable} to
      * {@link #execute(Runnable)} but for an arbitrary {@link Runnable}.
      */
-    protected void lazyExecute(Runnable task) {
+    @UnstableApi
+    public void lazyExecute(Runnable task) {
         execute(task);
     }
 
@@ -181,5 +183,6 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
      * Marker interface for {@link Runnable} to indicate that it should be queued for execution
      * but does not need to run immediately.
      */
-    protected interface LazyRunnable extends Runnable { }
+    @UnstableApi
+    public interface LazyRunnable extends Runnable { }
 }
