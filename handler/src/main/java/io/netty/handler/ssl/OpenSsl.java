@@ -432,7 +432,10 @@ public final class OpenSsl {
     /**
      * Returns {@code true} if the used version of openssl supports
      * <a href="https://tools.ietf.org/html/rfc7301">ALPN</a>.
+     *
+     * @deprecated use {@link SslProvider#isAlpnSupported(SslProvider)} with {@link SslProvider#OPENSSL}.
      */
+    @Deprecated
     public static boolean isAlpnSupported() {
         return version() >= 0x10002000L;
     }
