@@ -345,7 +345,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         /**
          * {@code true} if and only if {@link SSLEngine} expects a direct buffer and so if a heap buffer
-         * is given need an extra memory copy.
+         * is given will make an extra memory copy.
          */
         final boolean wantsDirectBuffer;
 
