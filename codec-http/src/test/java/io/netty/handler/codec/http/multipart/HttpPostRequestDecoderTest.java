@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
@@ -733,5 +734,18 @@ public class HttpPostRequestDecoderTest {
         } finally {
             assertTrue(request.release());
         }
+    }
+
+    @Test
+    public void testMultipartFormDataContentType() {
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        assertFalse(HttpPostRequestDecoder.isMultipart(request));
+
+        String multipartDataValue = HttpHeaderValues.MULTIPART_FORM_DATA + ";" + "boundary=gc0p4Jq0M2Yt08jU534c0p";
+        request.headers().set(HttpHeaderNames.CONTENT_TYPE, ";" + multipartDataValue);
+        assertFalse(HttpPostRequestDecoder.isMultipart(request));
+
+        request.headers().set(HttpHeaderNames.CONTENT_TYPE, multipartDataValue);
+        assertTrue(HttpPostRequestDecoder.isMultipart(request));
     }
 }
