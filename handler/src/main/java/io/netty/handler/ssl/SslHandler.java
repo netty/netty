@@ -209,14 +209,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
 
             @Override
-            int getPacketBufferSize(SslHandler handler) {
-                return ((ReferenceCountedOpenSslEngine) handler.engine).maxEncryptedPacketLength0();
-            }
-
-            @Override
-            int calculateWrapBufferCapacity(SslHandler handler, int pendingBytes, int numComponents) {
-                return ((ReferenceCountedOpenSslEngine) handler.engine).calculateMaxLengthForWrap(pendingBytes,
-                                                                                                  numComponents);
+            ByteBuf allocateWrapBuffer(SslHandler handler, ByteBufAllocator allocator,
+                                       int pendingBytes, int numComponents) {
+                return allocator.directBuffer(((ReferenceCountedOpenSslEngine) handler.engine)
+                        .calculateMaxLengthForWrap(pendingBytes, numComponents));
             }
 
             @Override
@@ -258,8 +254,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
 
             @Override
-            int calculateWrapBufferCapacity(SslHandler handler, int pendingBytes, int numComponents) {
-                return ((ConscryptAlpnSslEngine) handler.engine).calculateOutNetBufSize(pendingBytes, numComponents);
+            ByteBuf allocateWrapBuffer(SslHandler handler, ByteBufAllocator allocator,
+                                       int pendingBytes, int numComponents) {
+                return allocator.directBuffer(
+                        ((ConscryptAlpnSslEngine) handler.engine).calculateOutNetBufSize(pendingBytes, numComponents));
             }
 
             @Override
@@ -301,8 +299,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
 
             @Override
-            int calculateWrapBufferCapacity(SslHandler handler, int pendingBytes, int numComponents) {
-                return handler.engine.getSession().getPacketBufferSize();
+            ByteBuf allocateWrapBuffer(SslHandler handler, ByteBufAllocator allocator,
+                                       int pendingBytes, int numComponents) {
+                // As for the JDK SSLEngine we always need to allocate buffers of the size required by the SSLEngine
+                // (normally ~16KB). This is required even if the amount of data to encrypt is very small. Use heap
+                // buffers to reduce the native memory usage.
+                //
+                // Beside this the JDK SSLEngine also (as of today) will do an extra heap to direct buffer copy
+                // if a direct buffer is used as its internals operate on byte[].
+                return allocator.heapBuffer(handler.engine.getSession().getPacketBufferSize());
             }
 
             @Override
@@ -326,23 +331,21 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             this.cumulator = cumulator;
         }
 
-        int getPacketBufferSize(SslHandler handler) {
-            return handler.engine.getSession().getPacketBufferSize();
-        }
-
         abstract SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int readerIndex, int len, ByteBuf out)
                 throws SSLException;
-
-        abstract int calculateWrapBufferCapacity(SslHandler handler, int pendingBytes, int numComponents);
 
         abstract int calculatePendingData(SslHandler handler, int guess);
 
         abstract boolean jdkCompatibilityMode(SSLEngine engine);
 
+        abstract ByteBuf allocateWrapBuffer(SslHandler handler, ByteBufAllocator allocator,
+                                            int pendingBytes, int numComponents);
+
         // BEGIN Platform-dependent flags
 
         /**
-         * {@code true} if and only if {@link SSLEngine} expects a direct buffer.
+         * {@code true} if and only if {@link SSLEngine} expects a direct buffer and so if a heap buffer
+         * is given will make an extra memory copy.
          */
         final boolean wantsDirectBuffer;
 
@@ -2149,7 +2152,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * the specified amount of pending bytes.
      */
     private ByteBuf allocateOutNetBuf(ChannelHandlerContext ctx, int pendingBytes, int numComponents) {
-        return allocate(ctx, engineType.calculateWrapBufferCapacity(this, pendingBytes, numComponents));
+        return engineType.allocateWrapBuffer(this, ctx.alloc(), pendingBytes, numComponents);
     }
 
     /**
