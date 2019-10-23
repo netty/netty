@@ -153,9 +153,13 @@ public class FlowControlHandler implements ChannelHandler {
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-        // Don't relay completion events from upstream as they
-        // make no sense in this context. See dequeue() where
-        // a new set of completion events is being produced.
+        if (isQueueEmpty()) {
+            ctx.fireChannelReadComplete();
+        } else {
+            // Don't relay completion events from upstream as they
+            // make no sense in this context. See dequeue() where
+            // a new set of completion events is being produced.
+        }
     }
 
     /**
