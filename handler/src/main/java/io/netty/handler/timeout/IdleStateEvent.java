@@ -19,6 +19,8 @@ import static java.util.Objects.requireNonNull;
 
 import io.netty.channel.Channel;
 
+import io.netty.util.internal.StringUtil;
+
 /**
  * A user event triggered by {@link IdleStateHandler} when a {@link Channel} is idle.
  */
@@ -32,6 +34,7 @@ public class IdleStateEvent {
 
     private final IdleState state;
     private final boolean first;
+    private String strVal;
 
     /**
      * Constructor for sub-classes.
@@ -56,5 +59,13 @@ public class IdleStateEvent {
      */
     public boolean isFirst() {
         return first;
+    }
+
+    @Override
+    public String toString() {
+        if (strVal == null) {
+            strVal = StringUtil.simpleClassName(this) + "(" + state + (first ? ", first" : "") + ')';
+        }
+        return strVal;
     }
 }
