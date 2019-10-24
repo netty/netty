@@ -65,6 +65,16 @@ final class HpackUtil {
         return ConstantTimeUtils.equalsConstantTime(s1, s2);
     }
 
+    /**
+     * Compare two {@link CharSequence}s.
+     * @param s1 the first value.
+     * @param s2 the second value.
+     * @return {@code false} if not equal. {@code true} if equal.
+     */
+    static boolean equalsVariableTime(CharSequence s1, CharSequence s2) {
+        return AsciiString.contentEquals(s1, s2);
+    }
+
     // Section 6.2. Literal Header Field Representation
     enum IndexType {
         INCREMENTAL, // Section 6.2.1. Literal Header Field with Incremental Indexing
