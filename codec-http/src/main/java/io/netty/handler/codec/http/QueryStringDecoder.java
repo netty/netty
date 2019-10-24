@@ -69,6 +69,7 @@ public class QueryStringDecoder {
     private final Charset charset;
     private final String uri;
     private final int maxParams;
+    private final boolean semicolonIsNormalChar;
     private int pathEndIdx;
     private String path;
     private Map<String, List<String>> params;
@@ -110,9 +111,19 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(String uri, Charset charset, boolean hasPath, int maxParams) {
+        this(uri, charset, hasPath, maxParams, false);
+    }
+
+    /**
+     * Creates a new decoder that decodes the specified URI encoded in the
+     * specified charset.
+     */
+    public QueryStringDecoder(String uri, Charset charset, boolean hasPath,
+                              int maxParams, boolean semicolonIsNormalChar) {
         this.uri = requireNonNull(uri, "uri");
         this.charset = requireNonNull(charset, "charset");
         this.maxParams = checkPositive(maxParams, "maxParams");
+        this.semicolonIsNormalChar = semicolonIsNormalChar;
 
         // `-1` means that path end index will be initialized lazily
         pathEndIdx = hasPath ? -1 : 0;
@@ -139,6 +150,14 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(URI uri, Charset charset, int maxParams) {
+        this(uri, charset, maxParams, false);
+    }
+
+    /**
+     * Creates a new decoder that decodes the specified URI encoded in the
+     * specified charset.
+     */
+    public QueryStringDecoder(URI uri, Charset charset, int maxParams, boolean semicolonIsNormalChar) {
         String rawPath = uri.getRawPath();
         if (rawPath == null) {
             rawPath = EMPTY_STRING;
@@ -148,6 +167,7 @@ public class QueryStringDecoder {
         this.uri = rawQuery == null? rawPath : rawPath + '?' + rawQuery;
         this.charset = requireNonNull(charset, "charset");
         this.maxParams = checkPositive(maxParams, "maxParams");
+        this.semicolonIsNormalChar = semicolonIsNormalChar;
         pathEndIdx = rawPath.length();
     }
 
@@ -178,7 +198,7 @@ public class QueryStringDecoder {
      */
     public Map<String, List<String>> parameters() {
         if (params == null) {
-            params = decodeParams(uri, pathEndIdx(), charset, maxParams);
+            params = decodeParams(uri, pathEndIdx(), charset, maxParams, semicolonIsNormalChar);
         }
         return params;
     }
@@ -205,7 +225,8 @@ public class QueryStringDecoder {
         return pathEndIdx;
     }
 
-    private static Map<String, List<String>> decodeParams(String s, int from, Charset charset, int paramsLimit) {
+    private static Map<String, List<String>> decodeParams(String s, int from, Charset charset, int paramsLimit,
+                                                          boolean semicolonIsNormalChar) {
         int len = s.length();
         if (from >= len) {
             return Collections.emptyMap();
@@ -227,8 +248,12 @@ public class QueryStringDecoder {
                     valueStart = i + 1;
                 }
                 break;
-            case '&':
             case ';':
+                if (semicolonIsNormalChar) {
+                    continue;
+                }
+                // fall-through
+            case '&':
                 if (addParam(s, nameStart, valueStart, i, params, charset)) {
                     paramsLimit--;
                     if (paramsLimit == 0) {
