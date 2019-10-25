@@ -15,9 +15,10 @@
  */
 package io.netty.channel;
 
-import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.PromiseCombiner;
+import io.netty.util.internal.ObjectPool;
+import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -291,20 +292,20 @@ public final class PendingWriteQueue {
      * Holds all meta-data and construct the linked-list structure.
      */
     static final class PendingWrite {
-        private static final Recycler<PendingWrite> RECYCLER = new Recycler<PendingWrite>() {
+        private static final ObjectPool<PendingWrite> RECYCLER = ObjectPool.newPool(new ObjectCreator<PendingWrite>() {
             @Override
-            protected PendingWrite newObject(Handle<PendingWrite> handle) {
+            public PendingWrite newObject(ObjectPool.Handle<PendingWrite> handle) {
                 return new PendingWrite(handle);
             }
-        };
+        });
 
-        private final Recycler.Handle<PendingWrite> handle;
+        private final ObjectPool.Handle<PendingWrite> handle;
         private PendingWrite next;
         private long size;
         private ChannelPromise promise;
         private Object msg;
 
-        private PendingWrite(Recycler.Handle<PendingWrite> handle) {
+        private PendingWrite(ObjectPool.Handle<PendingWrite> handle) {
             this.handle = handle;
         }
 

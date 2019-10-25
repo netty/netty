@@ -18,11 +18,13 @@ package io.netty.channel;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
-import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.OrderedEventExecutor;
+import io.netty.util.internal.ObjectPool;
+import io.netty.util.internal.ObjectPool.Handle;
+import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.ObjectUtil;
@@ -1041,15 +1043,15 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         private static final int WRITE_TASK_OVERHEAD =
                 SystemPropertyUtil.getInt("io.netty.transport.writeTaskSizeOverhead", 48);
 
-        private final Recycler.Handle<AbstractWriteTask> handle;
+        private final Handle<AbstractWriteTask> handle;
         private AbstractChannelHandlerContext ctx;
         private Object msg;
         private ChannelPromise promise;
         private int size;
 
         @SuppressWarnings("unchecked")
-        private AbstractWriteTask(Recycler.Handle<? extends AbstractWriteTask> handle) {
-            this.handle = (Recycler.Handle<AbstractWriteTask>) handle;
+        private AbstractWriteTask(Handle<? extends AbstractWriteTask> handle) {
+            this.handle = (Handle<AbstractWriteTask>) handle;
         }
 
         protected static void init(AbstractWriteTask task, AbstractChannelHandlerContext ctx,
@@ -1105,12 +1107,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     static final class WriteTask extends AbstractWriteTask implements SingleThreadEventLoop.NonWakeupRunnable {
 
-        private static final Recycler<WriteTask> RECYCLER = new Recycler<WriteTask>() {
+        private static final ObjectPool<WriteTask> RECYCLER = ObjectPool.newPool(new ObjectCreator<WriteTask>() {
             @Override
-            protected WriteTask newObject(Handle<WriteTask> handle) {
+            public WriteTask newObject(Handle<WriteTask> handle) {
                 return new WriteTask(handle);
             }
-        };
+        });
 
         static WriteTask newInstance(
                 AbstractChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
@@ -1119,19 +1121,20 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             return task;
         }
 
-        private WriteTask(Recycler.Handle<WriteTask> handle) {
+        private WriteTask(Handle<WriteTask> handle) {
             super(handle);
         }
     }
 
     static final class WriteAndFlushTask extends AbstractWriteTask {
 
-        private static final Recycler<WriteAndFlushTask> RECYCLER = new Recycler<WriteAndFlushTask>() {
+        private static final ObjectPool<WriteAndFlushTask> RECYCLER = ObjectPool.newPool(
+                new ObjectCreator<WriteAndFlushTask>() {
             @Override
-            protected WriteAndFlushTask newObject(Handle<WriteAndFlushTask> handle) {
+            public WriteAndFlushTask newObject(Handle<WriteAndFlushTask> handle) {
                 return new WriteAndFlushTask(handle);
             }
-        };
+        });
 
         static WriteAndFlushTask newInstance(
                 AbstractChannelHandlerContext ctx, Object msg,  ChannelPromise promise) {
@@ -1140,7 +1143,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             return task;
         }
 
-        private WriteAndFlushTask(Recycler.Handle<WriteAndFlushTask> handle) {
+        private WriteAndFlushTask(Handle<WriteAndFlushTask> handle) {
             super(handle);
         }
 

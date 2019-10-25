@@ -17,8 +17,9 @@
 package io.netty.buffer;
 
 import io.netty.util.ByteProcessor;
-import io.netty.util.Recycler;
-import io.netty.util.Recycler.Handle;
+import io.netty.util.internal.ObjectPool;
+import io.netty.util.internal.ObjectPool.Handle;
+import io.netty.util.internal.ObjectPool.ObjectCreator;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,12 +33,13 @@ import static io.netty.buffer.AbstractUnpooledSlicedByteBuf.checkSliceOutOfBound
 
 final class PooledSlicedByteBuf extends AbstractPooledDerivedByteBuf {
 
-    private static final Recycler<PooledSlicedByteBuf> RECYCLER = new Recycler<PooledSlicedByteBuf>() {
+    private static final ObjectPool<PooledSlicedByteBuf> RECYCLER = ObjectPool.newPool(
+            new ObjectCreator<PooledSlicedByteBuf>() {
         @Override
-        protected PooledSlicedByteBuf newObject(Handle<PooledSlicedByteBuf> handle) {
+        public PooledSlicedByteBuf newObject(Handle<PooledSlicedByteBuf> handle) {
             return new PooledSlicedByteBuf(handle);
         }
-    };
+    });
 
     static PooledSlicedByteBuf newInstance(AbstractByteBuf unwrapped, ByteBuf wrapped,
                                            int index, int length) {
