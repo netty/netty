@@ -571,6 +571,9 @@ public class HashedWheelTimer implements Timer {
                 // See https://github.com/netty/netty/issues/356
                 if (PlatformDependent.isWindows()) {
                     sleepTimeMs = sleepTimeMs / 10 * 10;
+                    if (sleepTimeMs == 0) {
+                        sleepTimeMs = 1;
+                    }
                 }
 
                 try {
