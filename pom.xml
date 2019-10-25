@@ -375,6 +375,7 @@
     <module>testsuite-osgi</module>
     <module>testsuite-shading</module>
     <module>testsuite-native-image</module>
+    <module>transport-blockhound-tests</module>
     <module>microbench</module>
     <module>bom</module>
   </modules>
@@ -673,6 +674,13 @@
         <artifactId>log4j-core</artifactId>
         <version>${log4j2.version}</version>
         <scope>test</scope>
+      </dependency>
+
+      <!-- BlockHound integration -->
+      <dependency>
+        <groupId>io.projectreactor.tools</groupId>
+        <artifactId>blockhound</artifactId>
+        <version>1.0.1.RELEASE</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

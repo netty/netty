@@ -79,6 +79,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>io.projectreactor.tools</groupId>
+      <artifactId>blockhound</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
     </dependency>
