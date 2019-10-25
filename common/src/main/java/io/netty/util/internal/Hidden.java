@@ -35,7 +35,6 @@ class Hidden {
      * and SHOULD NOT be considered a public API.
      */
     @UnstableApi
-    @SuppressJava6Requirement(reason = "BlockHound is Java 8+, but this class is only loaded by it's SPI")
     public static final class NettyBlockHoundIntegration implements BlockHoundIntegration {
 
         @Override
@@ -77,11 +76,6 @@ class Hidden {
                     };
                 }
             });
-        }
-
-        @Override
-        public int compareTo(BlockHoundIntegration o) {
-            return 0;
         }
     }
 }
