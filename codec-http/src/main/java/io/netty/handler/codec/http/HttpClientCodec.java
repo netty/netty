@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * @see HttpServerCodec
  */
-public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResponseDecoder, HttpRequestEncoder>
+public class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResponseDecoder, HttpRequestEncoder>
         implements HttpClientUpgradeHandler.SourceCodec {
 
     /** A queue that is used for correlating a request and a response. */
@@ -223,8 +223,8 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
         @Override
         protected boolean isContentAlwaysEmpty(HttpMessage msg) {
             final int statusCode = ((HttpResponse) msg).status().code();
-            if (statusCode == 100 || statusCode == 101) {
-                // 100-continue and 101 switching protocols response should be excluded from paired comparison.
+            if (statusCode >= 100 && statusCode < 200) {
+                // An informational response should be excluded from paired comparison.
                 // Just delegate to super method which has all the needed handling.
                 return super.isContentAlwaysEmpty(msg);
             }
