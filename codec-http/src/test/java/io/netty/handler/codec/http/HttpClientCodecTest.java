@@ -350,8 +350,6 @@ public class HttpClientCodecTest {
         content.release();
 
         assertThat(ch.finish(), is(false));
-
-        assertThat(ch.readInbound(), is(nullValue()));
     }
 
     @Test
