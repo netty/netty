@@ -17,6 +17,7 @@
 package io.netty.util;
 
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -121,7 +122,10 @@ public abstract class Recycler<T> {
             // Let us remove the WeakOrderQueue from the WeakHashMap directly if its safe to remove some overhead
             if (value.threadRef.get() == Thread.currentThread()) {
                if (DELAYED_RECYCLED.isSet()) {
-                   DELAYED_RECYCLED.get().remove(value);
+                   WeakOrderQueue queue = DELAYED_RECYCLED.get().remove(value);
+                   if (queue != null) {
+                       queue.destroy();
+                   }
                }
             }
         }
@@ -231,7 +235,14 @@ public abstract class Recycler<T> {
         protected Map<Stack<?>, WeakOrderQueue> initialValue() {
             return new WeakHashMap<Stack<?>, WeakOrderQueue>();
         }
-    };
+
+                @Override
+                protected void onRemoval(Map<Stack<?>, WeakOrderQueue> value) throws Exception {
+                    for (WeakOrderQueue queue: value.values()) {
+                        queue.destroy();
+                    }
+                }
+            };
 
     // a queue that makes only moderate guarantees about visibility: items are seen in the correct order,
     // but we aren't absolutely guaranteed to ever see anything at all, thereby keeping the queue cheap to maintain
@@ -250,13 +261,9 @@ public abstract class Recycler<T> {
 
         // This act as a place holder for the head Link but also will reclaim space once finalized.
         // Its important this does not hold any reference to either Stack or WeakOrderQueue.
-        static final class Head {
-            private final AtomicInteger availableSharedCapacity;
-
-            Link link;
-
-            Head(AtomicInteger availableSharedCapacity) {
-                this.availableSharedCapacity = availableSharedCapacity;
+        static final class FinalizableHead extends Head {
+            FinalizableHead(AtomicInteger availableSharedCapacity) {
+                super(availableSharedCapacity);
             }
 
             /// TODO: In the future when we move to Java9+ we should use java.lang.ref.Cleaner.
@@ -265,15 +272,31 @@ public abstract class Recycler<T> {
                 try {
                     super.finalize();
                 } finally {
-                    Link head = link;
-                    link = null;
-                    while (head != null) {
-                        reclaimSpace(LINK_CAPACITY);
-                        Link next = head.next;
-                        // Unlink to help GC and guard against GC nepotism.
-                        head.next = null;
-                        head = next;
-                    }
+                    destroy();
+                }
+            }
+        }
+
+        // This act as a place holder for the head Link but also will reclaim space once destroyed.
+        // Its important this does not hold any reference to either Stack or WeakOrderQueue.
+        static class Head {
+            private final AtomicInteger availableSharedCapacity;
+
+            Link link;
+
+            Head(AtomicInteger availableSharedCapacity) {
+                this.availableSharedCapacity = availableSharedCapacity;
+            }
+
+            void destroy() {
+                Link head = link;
+                link = null;
+                while (head != null) {
+                    reclaimSpace(LINK_CAPACITY);
+                    Link next = head.next;
+                    // Unlink to help GC and guard against GC nepotism.
+                    head.next = null;
+                    head = next;
                 }
             }
 
@@ -316,12 +339,25 @@ public abstract class Recycler<T> {
         private WeakOrderQueue(Stack<?> stack, Thread thread) {
             tail = new Link();
 
-            // Its important that we not store the Stack itself in the WeakOrderQueue as the Stack also is used in
-            // the WeakHashMap as key. So just store the enclosed AtomicInteger which should allow to have the
-            // Stack itself GCed.
-            head = new Head(stack.availableSharedCapacity);
+            if (thread instanceof FastThreadLocalThread) {
+                head = new Head(stack.availableSharedCapacity);
+            } else {
+                // Its important that we not store the Stack itself in the WeakOrderQueue as the Stack also is used in
+                // the WeakHashMap as key. So just store the enclosed AtomicInteger which should allow to have the
+                // Stack itself GCed.
+                head = new FinalizableHead(stack.availableSharedCapacity);
+            }
             head.link = tail;
             owner = new WeakReference<Thread>(thread);
+        }
+
+        public void destroy() {
+            head.destroy();
+            WeakOrderQueue next = this.next;
+            if (next != null) {
+                this.next = null;
+                next.destroy();
+            }
         }
 
         static WeakOrderQueue newQueue(Stack<?> stack, Thread thread) {
