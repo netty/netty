@@ -53,7 +53,7 @@ final class Http2HeadersValidator {
             final AsciiString header = connectionSpecificHeaders.get(i);
             if (headers.contains(header)) {
                 throw streamError(streamId, PROTOCOL_ERROR,
-                                  "Connection-speficic headers like [%s] must not be used with HTTP/2.", header);
+                                  "Connection-specific headers like [%s] must not be used with HTTP/2.", header);
             }
         }
 
