@@ -16,8 +16,7 @@
 
 package io.netty.buffer;
 
-import io.netty.util.Recycler;
-import io.netty.util.Recycler.Handle;
+import io.netty.util.internal.ObjectPool.Handle;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -29,7 +28,7 @@ import java.nio.channels.ScatteringByteChannel;
 
 abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
-    private final Recycler.Handle<PooledByteBuf<T>> recyclerHandle;
+    private final Handle<PooledByteBuf<T>> recyclerHandle;
 
     protected PoolChunk<T> chunk;
     protected long handle;
@@ -42,7 +41,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     private ByteBufAllocator allocator;
 
     @SuppressWarnings("unchecked")
-    protected PooledByteBuf(Recycler.Handle<? extends PooledByteBuf<T>> recyclerHandle, int maxCapacity) {
+    protected PooledByteBuf(Handle<? extends PooledByteBuf<T>> recyclerHandle, int maxCapacity) {
         super(maxCapacity);
         this.recyclerHandle = (Handle<PooledByteBuf<T>>) recyclerHandle;
     }
