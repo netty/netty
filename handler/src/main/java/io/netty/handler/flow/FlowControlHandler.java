@@ -24,9 +24,10 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.MessageToByteEncoder;
-import io.netty.util.Recycler;
-import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ObjectPool;
+import io.netty.util.internal.ObjectPool.Handle;
+import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -217,12 +218,13 @@ public class FlowControlHandler extends ChannelDuplexHandler {
          */
         private static final int DEFAULT_NUM_ELEMENTS = 2;
 
-        private static final Recycler<RecyclableArrayDeque> RECYCLER = new Recycler<RecyclableArrayDeque>() {
+        private static final ObjectPool<RecyclableArrayDeque> RECYCLER = ObjectPool.newPool(
+                new ObjectCreator<RecyclableArrayDeque>() {
             @Override
-            protected RecyclableArrayDeque newObject(Handle<RecyclableArrayDeque> handle) {
+            public RecyclableArrayDeque newObject(Handle<RecyclableArrayDeque> handle) {
                 return new RecyclableArrayDeque(DEFAULT_NUM_ELEMENTS, handle);
             }
-        };
+        });
 
         public static RecyclableArrayDeque newInstance() {
             return RECYCLER.get();

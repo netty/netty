@@ -19,11 +19,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.util.Recycler;
-import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.internal.ObjectPool;
+import io.netty.util.internal.ObjectPool.Handle;
+import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -798,12 +799,12 @@ public final class ChannelOutboundBuffer {
     }
 
     static final class Entry {
-        private static final Recycler<Entry> RECYCLER = new Recycler<Entry>() {
+        private static final ObjectPool<Entry> RECYCLER = ObjectPool.newPool(new ObjectCreator<Entry>() {
             @Override
-            protected Entry newObject(Handle<Entry> handle) {
+            public Entry newObject(Handle<Entry> handle) {
                 return new Entry(handle);
             }
-        };
+        });
 
         private final Handle<Entry> handle;
         Entry next;
