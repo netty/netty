@@ -576,46 +576,6 @@ public class HpackDecoderTest {
     }
 
     @Test
-    public void requestPseudoHeaderInResponse() throws Exception {
-        ByteBuf in = Unpooled.buffer(200);
-        try {
-            HpackEncoder hpackEncoder = new HpackEncoder(true);
-
-            Http2Headers toEncode = new DefaultHttp2Headers();
-            toEncode.add(":status", "200");
-            toEncode.add(":method", "GET");
-            hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
-
-            Http2Headers decoded = new DefaultHttp2Headers();
-
-            expectedException.expect(Http2Exception.StreamException.class);
-            hpackDecoder.decode(1, in, decoded, true);
-        } finally {
-            in.release();
-        }
-    }
-
-    @Test
-    public void responsePseudoHeaderInRequest() throws Exception {
-        ByteBuf in = Unpooled.buffer(200);
-        try {
-            HpackEncoder hpackEncoder = new HpackEncoder(true);
-
-            Http2Headers toEncode = new DefaultHttp2Headers();
-            toEncode.add(":method", "GET");
-            toEncode.add(":status", "200");
-            hpackEncoder.encodeHeaders(1, in, toEncode, NEVER_SENSITIVE);
-
-            Http2Headers decoded = new DefaultHttp2Headers();
-
-            expectedException.expect(Http2Exception.StreamException.class);
-            hpackDecoder.decode(1, in, decoded, true);
-        } finally {
-            in.release();
-        }
-    }
-
-    @Test
     public void pseudoHeaderAfterRegularHeader() throws Exception {
         ByteBuf in = Unpooled.buffer(200);
         try {
@@ -644,7 +604,7 @@ public class HpackDecoderTest {
 
             Http2Headers toEncode = new DefaultHttp2Headers();
             toEncode.add(":method", "GET");
-            toEncode.add(":status", "200");
+            toEncode.add(":unknownpseudoheader", "200");
             toEncode.add("foo", "bar");
             hpackEncoder.encodeHeaders(1, in1, toEncode, NEVER_SENSITIVE);
 
@@ -664,7 +624,7 @@ public class HpackDecoderTest {
 
             assertEquals(3, decoded.size());
             assertEquals("GET", decoded.method().toString());
-            assertEquals("200", decoded.status().toString());
+            assertEquals("200", decoded.get(":unknownpseudoheader").toString());
             assertEquals("bar", decoded.get("foo").toString());
         } finally {
             in1.release();
