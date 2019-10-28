@@ -123,6 +123,14 @@
           <scope>compile</scope>
           <optional>true</optional>
         </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-resolver-dns-native-macos</artifactId>
+          <version>${project.version}</version>
+          <classifier>osx-x86_64</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
       </dependencies>
     </profile>
     <profile>
@@ -140,6 +148,14 @@
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-kqueue</artifactId>
+          <version>${project.version}</version>
+          <classifier>osx-x86_64</classifier>
+          <scope>compile</scope>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-resolver-dns-native-macos</artifactId>
           <version>${project.version}</version>
           <classifier>osx-x86_64</classifier>
           <scope>compile</scope>

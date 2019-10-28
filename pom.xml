@@ -357,6 +357,7 @@
     <module>codec-xml</module>
     <module>resolver</module>
     <module>resolver-dns</module>
+    <module>resolver-dns-native-macos</module>
     <module>tarball</module>
     <module>transport</module>
     <module>transport-native-unix-common-tests</module>
@@ -732,6 +733,7 @@
         <version>0.13.1</version>
         <configuration>
           <parameter>
+            <ignoreMissingOldVersion>true</ignoreMissingOldVersion>
             <breakBuildOnBinaryIncompatibleModifications>true</breakBuildOnBinaryIncompatibleModifications>
             <breakBuildOnSourceIncompatibleModifications>true</breakBuildOnSourceIncompatibleModifications>
             <oldVersionPattern>\d+\.\d+\.\d+\.Final</oldVersionPattern>
