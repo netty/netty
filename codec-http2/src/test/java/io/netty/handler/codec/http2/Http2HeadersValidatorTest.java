@@ -39,7 +39,7 @@ public class Http2HeadersValidatorTest {
     @Test
     public void validateConnectionSpecificHeadersShouldThrowIfConnectionHeaderPresent() throws Http2Exception {
         expectedException.expect(StreamException.class);
-        expectedException.expectMessage("Connection-speficic headers like [connection] must not be used with HTTP");
+        expectedException.expectMessage("Connection-specific headers like [connection] must not be used with HTTP");
 
         final Http2Headers headers = newHttp2HeadersWithRequestPseudoHeaders();
         headers.add(CONNECTION, "keep-alive");
