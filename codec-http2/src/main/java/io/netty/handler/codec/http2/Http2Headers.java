@@ -136,7 +136,7 @@ public interface Http2Headers extends Headers<CharSequence, CharSequence, Http2H
     Iterator<CharSequence> valueIterator(CharSequence name);
 
     /**
-     * Sets the {@link PseudoHeaderName#METHOD} header or {@code null} if there is no such header
+     * Sets the {@link PseudoHeaderName#METHOD} header
      */
     Http2Headers method(CharSequence value);
 
