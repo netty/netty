@@ -35,6 +35,7 @@ import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
+import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
@@ -347,6 +348,48 @@ public class HttpClientCodecTest {
         HttpContent content = ch.readInbound();
         // HTTP 102 is not allowed to have content.
         assertThat(content.content().readableBytes(), is(0));
+        content.release();
+
+        assertThat(ch.finish(), is(false));
+    }
+
+    @Test
+    public void testInformationalResponseKeepsPairsInSync() {
+        byte[] data = ("HTTP/1.1 102 Processing\r\n" +
+                "Status-URI: Status-URI:http://status.com; 404\r\n" +
+                "\r\n").getBytes();
+        byte[] data2 = ("HTTP/1.1 200 OK\r\n" +
+                "Content-Length: 8\r\n" +
+                "\r\n" +
+                "12345678").getBytes();
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpClientCodec());
+        assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, "/")));
+        ByteBuf buffer = ch.readOutbound();
+        buffer.release();
+        assertNull(ch.readOutbound());
+        assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(data)));
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.PROCESSING));
+        HttpContent content = ch.readInbound();
+        // HTTP 102 is not allowed to have content.
+        assertThat(content.content().readableBytes(), is(0));
+        assertThat(content, CoreMatchers.<HttpContent>instanceOf(LastHttpContent.class));
+        content.release();
+
+        assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/")));
+        buffer = ch.readOutbound();
+        buffer.release();
+        assertNull(ch.readOutbound());
+        assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(data2)));
+
+        res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
+        content = ch.readInbound();
+        // HTTP 200 has content.
+        assertThat(content.content().readableBytes(), is(8));
+        assertThat(content, CoreMatchers.<HttpContent>instanceOf(LastHttpContent.class));
         content.release();
 
         assertThat(ch.finish(), is(false));
