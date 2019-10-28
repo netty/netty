@@ -21,6 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -162,10 +163,11 @@ public final class SelfSignedCertificate {
                 paths = BouncyCastleSelfSignedCertGenerator.generate(fqdn, keypair, random, notBefore, notAfter);
             } catch (Throwable t2) {
                 logger.debug("Failed to generate a self-signed X.509 certificate using Bouncy Castle:", t2);
-                throw new CertificateException(
+                final CertificateException certificateException = new CertificateException(
                         "No provider succeeded to generate a self-signed certificate. " +
                                 "See debug log for the root cause.", t2);
-                // TODO: consider using Java 7 addSuppressed to append t
+                ThrowableUtil.addSuppressed(certificateException, t);
+                throw certificateException;
             }
         }
 
