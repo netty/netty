@@ -622,6 +622,10 @@ public abstract class Recycler<T> {
         }
 
         private void pushLater(DefaultHandle<?> item, Thread thread) {
+            if (maxDelayedQueues == 0) {
+                // We don't support recycling across threads and should just drop the item on the floor.
+                return;
+            }
             // we don't want to have a ref to the queue as the value in our weak map
             // so we null it out; to ensure there are no races with restoring it later
             // we impose a memory ordering here (no-op on x86)
