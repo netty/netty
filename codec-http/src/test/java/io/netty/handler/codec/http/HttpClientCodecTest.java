@@ -333,6 +333,26 @@ public class HttpClientCodecTest {
     }
 
     @Test
+    public void testWebDavResponse() {
+        byte[] data = ("HTTP/1.1 102 Processing\r\n" +
+                       "Status-URI: Status-URI:http://status.com; 404\r\n" +
+                       "\r\n" +
+                       "1234567812345678").getBytes();
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpClientCodec());
+        assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(data)));
+
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.PROCESSING));
+        HttpContent content = ch.readInbound();
+        // HTTP 102 is not allowed to have content.
+        assertThat(content.content().readableBytes(), is(0));
+        content.release();
+
+        assertThat(ch.finish(), is(false));
+    }
+
+    @Test
     public void testMultipleResponses() {
         String response = "HTTP/1.1 200 OK\r\n" +
                 "Content-Length: 0\r\n\r\n";
