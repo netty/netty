@@ -53,7 +53,6 @@ import java.util.List;
 @Sharable
 public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
 
-    // TODO Use CharsetEncoder instead.
     private final Charset charset;
 
     /**
