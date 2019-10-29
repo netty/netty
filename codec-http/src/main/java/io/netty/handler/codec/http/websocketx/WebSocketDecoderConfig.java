@@ -22,6 +22,9 @@ import io.netty.util.internal.ObjectUtil;
  */
 public final class WebSocketDecoderConfig {
 
+    static final WebSocketDecoderConfig DEFAULT =
+        new WebSocketDecoderConfig(65536, true, false, false, true, true);
+
     private final int maxFramePayloadLength;
     private final boolean expectMaskedFrames;
     private final boolean allowMaskMismatch;
@@ -102,20 +105,16 @@ public final class WebSocketDecoderConfig {
     }
 
     public static Builder newBuilder() {
-        return new Builder();
+        return new Builder(DEFAULT);
     }
 
     public static final class Builder {
-        private int maxFramePayloadLength = 65536;
-        private boolean expectMaskedFrames = true;
+        private int maxFramePayloadLength;
+        private boolean expectMaskedFrames;
         private boolean allowMaskMismatch;
         private boolean allowExtensions;
-        private boolean closeOnProtocolViolation = true;
-        private boolean withUTF8Validator = true;
-
-        private Builder() {
-            /* No-op */
-        }
+        private boolean closeOnProtocolViolation;
+        private boolean withUTF8Validator;
 
         private Builder(WebSocketDecoderConfig decoderConfig) {
             ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");

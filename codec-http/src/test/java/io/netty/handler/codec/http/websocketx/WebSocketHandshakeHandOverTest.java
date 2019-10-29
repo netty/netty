@@ -271,12 +271,25 @@ public class WebSocketHandshakeHandOverTest {
     }
 
     private static EmbeddedChannel createClientChannel(ChannelHandler handler) throws Exception {
+        return createClientChannel(handler, WebSocketClientProtocolConfig.newBuilder()
+            .webSocketUri("ws://localhost:1234/test")
+            .subprotocol("test-proto-2")
+            .build());
+    }
+
+    private static EmbeddedChannel createClientChannel(ChannelHandler handler, long timeoutMillis) throws Exception {
+        return createClientChannel(handler, WebSocketClientProtocolConfig.newBuilder()
+            .webSocketUri("ws://localhost:1234/test")
+            .subprotocol("test-proto-2")
+            .handshakeTimeoutMillis(timeoutMillis)
+            .build());
+    }
+
+    private static EmbeddedChannel createClientChannel(ChannelHandler handler, WebSocketClientProtocolConfig config) {
         return new EmbeddedChannel(
                 new HttpClientCodec(),
                 new HttpObjectAggregator(8192),
-                new WebSocketClientProtocolHandler(new URI("ws://localhost:1234/test"),
-                                                   WebSocketVersion.V13, "test-proto-2",
-                                                   false, null, 65536),
+                new WebSocketClientProtocolHandler(config),
                 handler);
     }
 
@@ -304,16 +317,6 @@ public class WebSocketHandshakeHandOverTest {
                 new HttpServerCodec(),
                 new HttpObjectAggregator(8192),
                 webSocketHandler,
-                handler);
-    }
-
-    private static EmbeddedChannel createClientChannel(ChannelHandler handler, long timeoutMillis) throws Exception {
-        return new EmbeddedChannel(
-                new HttpClientCodec(),
-                new HttpObjectAggregator(8192),
-                new WebSocketClientProtocolHandler(new URI("ws://localhost:1234/test"),
-                                                   WebSocketVersion.V13, "test-proto-2",
-                                                   false, null, 65536, timeoutMillis),
                 handler);
     }
 }
