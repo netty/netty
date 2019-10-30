@@ -595,6 +595,7 @@ public abstract class Recycler<T> {
                 // should drop - drop the possibly youngest object
                 return;
             }
+
             Thread currentThread = Thread.currentThread();
             if (threadRef.get() == currentThread) {
                 // The current Thread is the thread that belongs to the Stack, we can try to push the object now.
