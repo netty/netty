@@ -255,20 +255,23 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             decodeState = STATE_HANDLER_REMOVED_PENDING;
             return;
         }
-        ByteBuf buf = cumulation;
-        if (buf != null) {
-            // Directly set this to null so we are sure we not access it in any other method here anymore.
-            cumulation = null;
-            int readable = buf.readableBytes();
-            if (readable > 0) {
-                ctx.fireChannelRead(buf);
-                ctx.fireChannelReadComplete();
-            } else {
-                buf.release();
+        try {
+            ByteBuf buf = cumulation;
+            if (buf != null) {
+                // Directly set this to null so we are sure we not access it in any other method here anymore.
+                cumulation = null;
+                int readable = buf.readableBytes();
+                if (readable > 0) {
+                    ctx.fireChannelRead(buf);
+                    ctx.fireChannelReadComplete();
+                } else {
+                    buf.release();
+                }
             }
+            handlerRemoved0(ctx);
+        } finally {
+            decodeState = STATE_REMOVED;
         }
-        handlerRemoved0(ctx);
-        decodeState = STATE_REMOVED;
     }
 
     /**
