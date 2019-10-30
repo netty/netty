@@ -518,12 +518,16 @@ public abstract class Recycler<T> {
             size --;
             DefaultHandle ret = elements[size];
             elements[size] = null;
+            // As we already set the element[size] to null we also need to store the updated size before we do
+            // any validation. Otherwise we may see a null value when later try to pop again without a new element
+            // added before.
+            this.size = size;
+
             if (ret.lastRecycledId != ret.recycleId) {
                 throw new IllegalStateException("recycled multiple times");
             }
             ret.recycleId = 0;
             ret.lastRecycledId = 0;
-            this.size = size;
             return ret;
         }
 
