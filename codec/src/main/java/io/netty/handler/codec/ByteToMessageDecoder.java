@@ -80,9 +80,13 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     public static final Cumulator MERGE_CUMULATOR = new Cumulator() {
         @Override
         public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
+            int discardable = cumulation.readerIndex();
+            if (cumulation.writerIndex() == discardable && !(in instanceof CompositeByteBuf)) {
+                cumulation.release();
+                return in;
+            }
             try {
                 int required = in.readableBytes();
-                int discardable = cumulation.readerIndex();
                 // If discardable == 0 then we allow the buffer resize itself internally (equivalent to explicit
                 // allocation + copy but cheaper)
                 int remaining = discardable > 0 ? cumulation.maxFastWritableBytes() : cumulation.maxWritableBytes();
@@ -118,6 +122,10 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     public static final Cumulator COMPOSITE_CUMULATOR = new Cumulator() {
         @Override
         public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
+            if (!cumulation.isReadable()) {
+                cumulation.release();
+                return in;
+            }
             CompositeByteBuf composite = null;
             try {
                 if (cumulation instanceof CompositeByteBuf && cumulation.refCnt() == 1) {
@@ -284,12 +292,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         if (msg instanceof ByteBuf) {
             CodecOutputList out = CodecOutputList.newInstance();
             try {
-                ByteBuf data = (ByteBuf) msg;
-                if (cumulation == null) {
-                    cumulation = data;
-                } else {
-                    cumulation = cumulator.cumulate(ctx.alloc(), cumulation, data);
-                }
+                cumulation = cumulator.cumulate(ctx.alloc(),
+                        cumulation != null ? cumulation : Unpooled.EMPTY_BUFFER, (ByteBuf) msg);
                 callDecode(ctx, cumulation, out);
             } catch (DecoderException e) {
                 throw e;

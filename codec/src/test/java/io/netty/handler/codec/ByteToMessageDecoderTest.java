@@ -317,7 +317,7 @@ public class ByteToMessageDecoderTest {
             public ByteBuf writeBytes(ByteBuf src) {
                 throw error;
             }
-        };
+        }.writeZero(1);
         ByteBuf in = Unpooled.buffer().writeZero(12);
         try {
             ByteToMessageDecoder.MERGE_CUMULATOR.cumulate(UnpooledByteBufAllocator.DEFAULT, cumulation, in);
@@ -341,7 +341,7 @@ public class ByteToMessageDecoderTest {
             public CompositeByteBuf addFlattenedComponents(boolean increaseWriterIndex, ByteBuf buffer) {
                 throw error;
             }
-        };
+        }.writeZero(1);
         ByteBuf in = Unpooled.buffer().writeZero(12);
         try {
             ByteToMessageDecoder.COMPOSITE_CUMULATOR.cumulate(UnpooledByteBufAllocator.DEFAULT, cumulation, in);
