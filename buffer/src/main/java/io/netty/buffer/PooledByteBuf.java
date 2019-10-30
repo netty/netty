@@ -215,6 +215,11 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public final boolean isContiguous() {
+        return true;
+    }
+
+    @Override
     public final int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
         return out.write(duplicateInternalNioBuffer(index, length));
     }
