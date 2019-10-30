@@ -591,6 +591,10 @@ public abstract class Recycler<T> {
         }
 
         void push(DefaultHandle<?> item) {
+            if (dropHandle(item)) {
+                // should drop - drop the possibly youngest object
+                return;
+            }
             Thread currentThread = Thread.currentThread();
             if (threadRef.get() == currentThread) {
                 // The current Thread is the thread that belongs to the Stack, we can try to push the object now.
@@ -610,8 +614,8 @@ public abstract class Recycler<T> {
             item.recycleId = item.lastRecycledId = OWN_THREAD_ID;
 
             int size = this.size;
-            if (size >= maxCapacity || dropHandle(item)) {
-                // Hit the maximum capacity or should drop - drop the possibly youngest object.
+            if (size >= maxCapacity) {
+                // Hit the maximum capacity.
                 return;
             }
             if (size == elements.length) {
