@@ -173,6 +173,8 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
      *
      * This is equivalent to submitting a {@link EventExecutor.LazyRunnable} to
      * {@link #execute(Runnable)} but for an arbitrary {@link Runnable}.
+     *
+     * The default implementation just delegates to {@link #execute(Runnable)}.
      */
     @UnstableApi
     public void lazyExecute(Runnable task) {
