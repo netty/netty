@@ -38,6 +38,11 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
                 }
             };
 
+   static final Runnable WAKEUP_TASK = new Runnable() {
+       @Override
+       public void run() { } // Do nothing
+    };
+
     PriorityQueue<ScheduledFutureTask<?>> scheduledTaskQueue;
 
     long nextTaskId;
@@ -243,12 +248,22 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         if (inEventLoop()) {
             scheduledTaskQueue().add(task.setId(nextTaskId++));
         } else {
-            executeScheduledRunnable(new Runnable() {
+            final long deadlineNanos = task.deadlineNanos();
+            final Runnable addToQueue = new Runnable() {
                 @Override
                 public void run() {
                     scheduledTaskQueue().add(task.setId(nextTaskId++));
                 }
-            }, true, task.deadlineNanos());
+            };
+            if (beforeScheduledTaskSubmitted(deadlineNanos)) {
+                execute(addToQueue);
+            } else {
+                lazyExecute(addToQueue);
+                // Second hook after scheduling to facilitate race-avoidance
+                if (afterScheduledTaskSubmitted(deadlineNanos)) {
+                    execute(WAKEUP_TASK);
+                }
+            }
         }
 
         return task;
@@ -258,27 +273,39 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         if (inEventLoop()) {
             scheduledTaskQueue().removeTyped(task);
         } else {
-            executeScheduledRunnable(new Runnable() {
+            lazyExecute(new Runnable() {
                 @Override
                 public void run() {
                     scheduledTaskQueue().removeTyped(task);
                 }
-            }, false, task.deadlineNanos());
+            });
         }
     }
 
     /**
-     * Execute a {@link Runnable} from outside the event loop thread that is responsible for adding or removing
-     * a scheduled action. Note that schedule events which occur on the event loop thread do not interact with this
-     * method.
-     * @param runnable The {@link Runnable} to execute which will add or remove a scheduled action
-     * @param isAddition {@code true} if the {@link Runnable} will add an action, {@code false} if it will remove an
-     *                   action
-     * @param deadlineNanos the deadline in nanos of the scheduled task that will be added or removed.
+     * Called from arbitrary non-{@link EventExecutor} threads prior to scheduled task submission.
+     * Returns {@code true} if the {@link EventExecutor} thread should be woken immediately to
+     * process the scheduled task (if not already awake).
+     * <p>
+     * If {@code false} is returned, {@link #afterScheduledTaskSubmitted(long)} will be called with
+     * the same value <i>after</i> the scheduled task is enqueued, providing another opportunity
+     * to wake the {@link EventExecutor} thread if required.
+     *
+     * @param deadlineNanos deadline of the to-be-scheduled task
+     *     relative to {@link AbstractScheduledEventExecutor#nanoTime()}
+     * @return {@code true} if the {@link EventExecutor} thread should be woken, {@code false} otherwise
      */
-    void executeScheduledRunnable(Runnable runnable,
-                                            @SuppressWarnings("unused") boolean isAddition,
-                                            @SuppressWarnings("unused") long deadlineNanos) {
-        execute(runnable);
+    protected boolean beforeScheduledTaskSubmitted(long deadlineNanos) {
+        return true;
+    }
+
+    /**
+     * See {@link #beforeScheduledTaskSubmitted(long)}. Called only after that method returns false.
+     *
+     * @param deadlineNanos relative to {@link AbstractScheduledEventExecutor#nanoTime()}
+     * @return  {@code true} if the {@link EventExecutor} thread should be woken, {@code false} otherwise
+     */
+    protected boolean afterScheduledTaskSubmitted(long deadlineNanos) {
+        return true;
     }
 }
