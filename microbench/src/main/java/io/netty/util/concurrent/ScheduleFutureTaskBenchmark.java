@@ -90,8 +90,9 @@ public class ScheduleFutureTaskBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     @Threads(1)
     public Future<?> scheduleLotsOutsideLoop(final ThreadState threadState) {
+        final AbstractScheduledEventExecutor eventLoop = threadState.eventLoop;
         for (int i = 1; i <= threadState.num; i++) {
-            threadState.eventLoop.schedule(NO_OP, i, TimeUnit.HOURS);
+            eventLoop.schedule(NO_OP, i, TimeUnit.HOURS);
         }
         return null;
     }
@@ -99,8 +100,9 @@ public class ScheduleFutureTaskBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     @Threads(1)
     public Future<?> scheduleCancelLotsOutsideLoop(final ThreadState threadState) {
+        final AbstractScheduledEventExecutor eventLoop = threadState.eventLoop;
         for (int i = 1; i <= threadState.num; i++) {
-            threadState.eventLoop.schedule(NO_OP, i, TimeUnit.HOURS).cancel(false);
+            eventLoop.schedule(NO_OP, i, TimeUnit.HOURS).cancel(false);
         }
         return null;
     }
