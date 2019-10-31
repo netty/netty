@@ -248,7 +248,6 @@ public abstract class Recycler<T> {
             Link next;
         }
 
-        // This act as a place holder for the head Link but also will reclaim space once finalized.
         // Its important this does not hold any reference to either Stack or WeakOrderQueue.
         static final class Head {
             private final AtomicInteger availableSharedCapacity;
@@ -259,21 +258,22 @@ public abstract class Recycler<T> {
                 this.availableSharedCapacity = availableSharedCapacity;
             }
 
-            /// TODO: In the future when we move to Java9+ we should use java.lang.ref.Cleaner.
-            @Override
-            protected void finalize() throws Throwable {
-                try {
-                    super.finalize();
-                } finally {
-                    Link head = link;
-                    link = null;
-                    while (head != null) {
-                        reclaimSpace(LINK_CAPACITY);
-                        Link next = head.next;
-                        // Unlink to help GC and guard against GC nepotism.
-                        head.next = null;
-                        head = next;
-                    }
+            /**
+             * Reclaim all used space and also unlink the nodes to prevent GC nepotism.
+             */
+            void reclaimAllSpaceAndUnlink() {
+                Link head = link;
+                link = null;
+                int reclaimSpace = 0;
+                while (head != null) {
+                    reclaimSpace += LINK_CAPACITY;
+                    Link next = head.next;
+                    // Unlink to help GC and guard against GC nepotism.
+                    head.next = null;
+                    head = next;
+                }
+                if (reclaimSpace != 0) {
+                    reclaimSpace(reclaimSpace);
                 }
             }
 
@@ -345,6 +345,11 @@ public abstract class Recycler<T> {
             // We allocated a Link so reserve the space
             return Head.reserveSpace(stack.availableSharedCapacity, LINK_CAPACITY)
                     ? newQueue(stack, thread) : null;
+        }
+
+        void reclaimAllSpaceAndUnlink() {
+            head.reclaimAllSpaceAndUnlink();
+            this.next = null;
         }
 
         void add(DefaultHandle<?> handle) {
@@ -578,6 +583,8 @@ public abstract class Recycler<T> {
                     }
 
                     if (prev != null) {
+                        // Ensure we reclaim all space before dropping the WeakOrderQueue to be GC'ed.
+                        cursor.reclaimAllSpaceAndUnlink();
                         prev.setNext(next);
                     }
                 } else {
