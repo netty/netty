@@ -174,6 +174,7 @@ public class RecyclerTest {
 
         final HandledObject o = recycler.get();
         final HandledObject o2 = recycler.get();
+
         final Thread thread = new Thread() {
             @Override
             public void run() {
@@ -184,8 +185,9 @@ public class RecyclerTest {
         thread.start();
         thread.join();
 
-        assertSame(recycler.get(), o);
-        assertNotSame(recycler.get(), o2);
+        // As we use a ratioMask of 2 we should see o2 as the first object that could recycled from a different thread.
+        assertSame(recycler.get(), o2);
+        assertNotSame(recycler.get(), o);
     }
 
     @Test
