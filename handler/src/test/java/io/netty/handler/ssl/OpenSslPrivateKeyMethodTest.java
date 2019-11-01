@@ -240,7 +240,7 @@ public class OpenSslPrivateKeyMethodTest {
                             }
 
                             @Override
-                            public void channelRead0(ChannelHandlerContext ctx, Object msg) {
+                            public void messageReceived(ChannelHandlerContext ctx, Object msg) {
                                 if (serverPromise.trySuccess(null)) {
                                     ctx.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {'P', 'O', 'N', 'G'}));
                                 }
@@ -276,7 +276,7 @@ public class OpenSslPrivateKeyMethodTest {
                                 }
 
                                 @Override
-                                public void channelRead0(ChannelHandlerContext ctx, Object msg) {
+                                public void messageReceived(ChannelHandlerContext ctx, Object msg) {
                                     clientPromise.trySuccess(null);
                                     ctx.close();
                                 }

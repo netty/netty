@@ -630,7 +630,8 @@ public class SslHandlerTest {
                             ch.pipeline().addLast(new SimpleChannelInboundHandler<ByteBuf>() {
                                 private int readBytes;
                                 @Override
-                                protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+                                protected void messageReceived(ChannelHandlerContext ctx,
+                                        ByteBuf msg) throws Exception {
                                     readBytes += msg.readableBytes();
                                     if (readBytes >= expectedBytes) {
                                         serverReceiveLatch.countDown();

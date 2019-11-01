@@ -190,7 +190,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         final CountDownLatch latch = new CountDownLatch(1);
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, ByteBuf buf) throws Exception {
+        public void messageReceived(ChannelHandlerContext ctx, ByteBuf buf) throws Exception {
             assertEquals('a', buf.readByte());
             assertFalse(buf.isReadable());
             latch.countDown();
@@ -214,7 +214,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         final AtomicReference<Throwable> exception = new AtomicReference<>();
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+        protected void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
             // discard
         }
 

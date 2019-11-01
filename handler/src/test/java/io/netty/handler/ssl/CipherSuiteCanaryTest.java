@@ -174,7 +174,7 @@ public class CipherSuiteCanaryTest {
                             }
 
                             @Override
-                            public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                            public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                                 if (serverPromise.trySuccess(null)) {
                                     ctx.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {'P', 'O', 'N', 'G'}));
                                 }
@@ -210,7 +210,7 @@ public class CipherSuiteCanaryTest {
                                 }
 
                                 @Override
-                                public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                                     clientPromise.trySuccess(null);
                                     ctx.close();
                                 }

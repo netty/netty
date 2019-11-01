@@ -40,11 +40,11 @@ import java.util.concurrent.TimeUnit;
 public final class Http1RequestHandler extends Http2RequestHandler {
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
+    protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
         if (HttpUtil.is100ContinueExpected(request)) {
             ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, Unpooled.EMPTY_BUFFER));
         }
-        super.channelRead0(ctx, request);
+        super.messageReceived(ctx, request);
     }
 
     @Override

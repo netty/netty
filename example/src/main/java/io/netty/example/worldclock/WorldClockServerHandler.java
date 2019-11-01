@@ -32,7 +32,7 @@ import static java.util.Calendar.*;
 public class WorldClockServerHandler extends SimpleChannelInboundHandler<Locations> {
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, Locations locations) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, Locations locations) throws Exception {
         long currentTime = System.currentTimeMillis();
 
         LocalTimes.Builder builder = LocalTimes.newBuilder();

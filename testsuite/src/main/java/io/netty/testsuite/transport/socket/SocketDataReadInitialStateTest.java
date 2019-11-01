@@ -71,7 +71,7 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
                     serverConnectedChannelRef.set(ch);
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<ByteBuf>() {
                         @Override
-                        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
+                        protected void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) {
                             ctx.writeAndFlush(msg.retainedDuplicate());
                             serverReadLatch.countDown();
                         }
@@ -85,7 +85,7 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<Object>() {
                         @Override
-                        protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
+                        protected void messageReceived(ChannelHandlerContext ctx, Object msg) {
                             clientReadLatch.countDown();
                         }
                     });
@@ -147,7 +147,7 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<ByteBuf>() {
                         @Override
-                        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
+                        protected void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) {
                             ctx.writeAndFlush(msg.retainedDuplicate());
                             serverReadLatch.countDown();
                         }
@@ -160,7 +160,7 @@ public class SocketDataReadInitialStateTest extends AbstractSocketTest {
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<Object>() {
                         @Override
-                        protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
+                        protected void messageReceived(ChannelHandlerContext ctx, Object msg) {
                             clientReadLatch.countDown();
                         }
                     });

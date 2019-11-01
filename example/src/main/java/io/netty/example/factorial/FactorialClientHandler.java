@@ -62,7 +62,7 @@ public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteg
     }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, final BigInteger msg) {
+    public void messageReceived(ChannelHandlerContext ctx, final BigInteger msg) {
         receivedMessages ++;
         if (receivedMessages == FactorialClient.COUNT) {
             // Offer the answer after closing the connection.
