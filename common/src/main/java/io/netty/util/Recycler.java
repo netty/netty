@@ -106,14 +106,14 @@ public abstract class Recycler<T> {
 
     private final int maxCapacityPerThread;
     private final int maxSharedCapacityFactor;
-    private final int ratioMask;
+    private final int interval;
     private final int maxDelayedQueuesPerThread;
 
     private final FastThreadLocal<Stack<T>> threadLocal = new FastThreadLocal<Stack<T>>() {
         @Override
         protected Stack<T> initialValue() {
             return new Stack<T>(Recycler.this, Thread.currentThread(), maxCapacityPerThread, maxSharedCapacityFactor,
-                    ratioMask, maxDelayedQueuesPerThread);
+                    interval, maxDelayedQueuesPerThread);
         }
 
         @Override
@@ -141,7 +141,7 @@ public abstract class Recycler<T> {
 
     protected Recycler(int maxCapacityPerThread, int maxSharedCapacityFactor,
                        int ratio, int maxDelayedQueuesPerThread) {
-        ratioMask = safeFindNextPositivePowerOfTwo(ratio) - 1;
+        interval = safeFindNextPositivePowerOfTwo(ratio);
         if (maxCapacityPerThread <= 0) {
             this.maxCapacityPerThread = 0;
             this.maxSharedCapacityFactor = 1;
@@ -306,13 +306,13 @@ public abstract class Recycler<T> {
         // pointer to another queue of delayed items for the same stack
         private WeakOrderQueue next;
         private final int id = ID_GENERATOR.getAndIncrement();
-        private final int ratioMask;
+        private final int interval;
         private int handleRecycleCount;
 
         private WeakOrderQueue() {
             super(null);
             head = new Head(null);
-            ratioMask = 0;
+            interval = 0;
         }
 
         private WeakOrderQueue(Stack<?> stack, Thread thread) {
@@ -324,7 +324,8 @@ public abstract class Recycler<T> {
             // Stack itself GCed.
             head = new Head(stack.availableSharedCapacity);
             head.link = tail;
-            ratioMask = stack.ratioMask;
+            interval = stack.interval;
+            handleRecycleCount = interval; // Start at interval so the first one will be recycled.
         }
 
         private static WeakOrderQueue newQueue(Stack<?> stack, Thread thread) {
@@ -365,10 +366,12 @@ public abstract class Recycler<T> {
             // While we also enforce the recycling ratio one we transfer objects from the WeakOrderQueue to the Stack
             // we better should enforce it as well early. Missing to do so may let the WeakOrderQueue grow very fast
             // without control if the Stack
-            if ((++handleRecycleCount & ratioMask) != 0) {
+            if (handleRecycleCount < interval) {
+                handleRecycleCount++;
                 // Drop the item to prevent recycling to aggressive.
                 return;
             }
+            handleRecycleCount = 0;
 
             Link tail = this.tail;
             int writeIndex;
@@ -483,21 +486,22 @@ public abstract class Recycler<T> {
         private final int maxDelayedQueues;
 
         private final int maxCapacity;
-        private final int ratioMask;
+        private final int interval;
         DefaultHandle<?>[] elements;
         int size;
-        private int handleRecycleCount = -1; // Start with -1 so the first one will be recycled.
+        private int handleRecycleCount;
         private WeakOrderQueue cursor, prev;
         private volatile WeakOrderQueue head;
 
         Stack(Recycler<T> parent, Thread thread, int maxCapacity, int maxSharedCapacityFactor,
-              int ratioMask, int maxDelayedQueues) {
+              int interval, int maxDelayedQueues) {
             this.parent = parent;
             threadRef = new WeakReference<Thread>(thread);
             this.maxCapacity = maxCapacity;
             availableSharedCapacity = new AtomicInteger(max(maxCapacity / maxSharedCapacityFactor, LINK_CAPACITY));
             elements = new DefaultHandle[min(INITIAL_CAPACITY, maxCapacity)];
-            this.ratioMask = ratioMask;
+            this.interval = interval;
+            handleRecycleCount = interval; // Start at interval so the first one will be recycled.
             this.maxDelayedQueues = maxDelayedQueues;
         }
 
@@ -680,10 +684,12 @@ public abstract class Recycler<T> {
 
         boolean dropHandle(DefaultHandle<?> handle) {
             if (!handle.hasBeenRecycled) {
-                if ((++handleRecycleCount & ratioMask) != 0) {
+                if (handleRecycleCount < interval) {
+                    handleRecycleCount++;
                     // Drop the object.
                     return true;
                 }
+                handleRecycleCount = 0;
                 handle.hasBeenRecycled = true;
             }
             return false;
