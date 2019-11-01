@@ -16,8 +16,6 @@
 package io.netty.handler.codec.stomp;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.AsciiString;
@@ -80,8 +78,7 @@ public class StompSubframeEncoderTest {
 
         ByteBuf headers = channel.readOutbound();
         ByteBuf content = channel.readOutbound();
-        ByteBuf fullFrame = new CompositeByteBuf(ByteBufAllocator.DEFAULT, false, 2)
-                .addComponent(true, headers).addComponent(true, content);
+        ByteBuf fullFrame = Unpooled.wrappedBuffer(headers, content);
         assertEquals(SEND_FRAME_UTF8, fullFrame.toString(CharsetUtil.UTF_8));
         assertTrue(fullFrame.release());
     }

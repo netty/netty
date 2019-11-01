@@ -89,7 +89,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         checkPositive(maxChunkSize, "maxChunkSize");
         this.maxChunkSize = maxChunkSize;
         commandParser = new Utf8LineParser(new AppendableCharSequence(16), maxLineLength);
-        headerParser = new HeaderParser(new AppendableCharSequence(123), maxLineLength, validateHeaders);
+        headerParser = new HeaderParser(new AppendableCharSequence(128), maxLineLength, validateHeaders);
     }
 
     @Override
@@ -243,7 +243,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         lastContent = null;
     }
 
-    static class Utf8LineParser implements ByteProcessor {
+    private static class Utf8LineParser implements ByteProcessor {
 
         private final AppendableCharSequence charSeq;
         private final int maxLineLength;
@@ -287,17 +287,24 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
                 throw new TooLongFrameException("An STOMP line is larger than " + maxLineLength + " bytes.");
             }
 
+            // 1 byte   -   0xxxxxxx                    -  7 bits
+            // 2 byte   -   110xxxxx 10xxxxxx           -  11 bits
+            // 3 byte   -   1110xxxx 10xxxxxx 10xxxxxx  -  16 bits
             if (nextRead) {
                 interim |= (nextByte & 0x3F) << 6;
                 nextRead = false;
-            } else if (interim != 0) {
+            } else if (interim != 0) { // flush 2 or 3 byte
                 charSeq.append((char) (interim | (nextByte & 0x3F)));
                 interim = 0;
-            } else if (nextByte >= 0) {
+            } else if (nextByte >= 0) { // INITIAL BRANCH
+                // The first 128 characters (US-ASCII) need one byte.
                 charSeq.append((char) nextByte);
             } else if ((nextByte & 0xE0) == 0xC0) {
+                // The next 1920 characters need two bytes and we can define
+                // a first byte by mask 110xxxxx.
                 interim = (char) ((nextByte & 0x1F) << 6);
             } else {
+                // The rest of characters need three bytes.
                 interim = (char) ((nextByte & 0x0F) << 12);
                 nextRead = true;
             }
@@ -308,7 +315,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
         protected void reset() {
             charSeq.reset();
             lineLength = 0;
-            interim = '\u0000';
+            interim = 0;
             nextRead = false;
         }
     }
