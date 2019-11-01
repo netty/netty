@@ -303,10 +303,13 @@ public abstract class Recycler<T> {
         // pointer to another queue of delayed items for the same stack
         private WeakOrderQueue next;
         private final int id = ID_GENERATOR.getAndIncrement();
+        private final int ratioMask;
+        private int handleRecycleCount;
 
         private WeakOrderQueue() {
             super(null);
             head = new Head(null);
+            ratioMask = 0;
         }
 
         private WeakOrderQueue(Stack<?> stack, Thread thread) {
@@ -318,6 +321,7 @@ public abstract class Recycler<T> {
             // Stack itself GCed.
             head = new Head(stack.availableSharedCapacity);
             head.link = tail;
+            ratioMask = stack.ratioMask;
         }
 
         private static WeakOrderQueue newQueue(Stack<?> stack, Thread thread) {
@@ -354,6 +358,14 @@ public abstract class Recycler<T> {
 
         void add(DefaultHandle<?> handle) {
             handle.lastRecycledId = id;
+
+            // While we also enforce the recycling ratio one we transfer objects from the WeakOrderQueue to the Stack
+            // we better should enforce it as well early. Missing to do so may let the WeakOrderQueue grow very fast
+            // without control if the Stack
+            if ((++handleRecycleCount & ratioMask) != 0) {
+                // Drop the item to prevent recycling to aggressive.
+                return;
+            }
 
             Link tail = this.tail;
             int writeIndex;
@@ -637,6 +649,7 @@ public abstract class Recycler<T> {
                 // We don't support recycling across threads and should just drop the item on the floor.
                 return;
             }
+
             // we don't want to have a ref to the queue as the value in our weak map
             // so we null it out; to ensure there are no races with restoring it later
             // we impose a memory ordering here (no-op on x86)
