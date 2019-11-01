@@ -16,10 +16,13 @@
 package io.netty.util.internal;
 
 import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.internal.Hidden.NettyBlockHoundIntegration;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import reactor.blockhound.BlockHound;
+import reactor.blockhound.integration.BlockHoundIntegration;
 
+import java.util.ServiceLoader;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
@@ -33,6 +36,17 @@ public class NettyBlockHoundIntegrationTest {
     @BeforeClass
     public static void setUpClass() {
         BlockHound.install();
+    }
+
+    @Test
+    public void testServiceLoader() {
+        for (BlockHoundIntegration integration : ServiceLoader.load(BlockHoundIntegration.class)) {
+            if (integration instanceof NettyBlockHoundIntegration) {
+                return;
+            }
+        }
+
+        fail("NettyBlockHoundIntegration cannot be loaded with ServiceLoader");
     }
 
     @Test
