@@ -185,9 +185,8 @@ public class RecyclerTest {
         thread.start();
         thread.join();
 
-        // As we use a ratioMask of 2 we should see o2 as the first object that could recycled from a different thread.
-        assertSame(recycler.get(), o2);
-        assertNotSame(recycler.get(), o);
+        assertSame(recycler.get(), o);
+        assertNotSame(recycler.get(), o2);
     }
 
     @Test
