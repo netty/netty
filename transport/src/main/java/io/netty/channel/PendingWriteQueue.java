@@ -259,6 +259,18 @@ public final class PendingWriteQueue {
         return write.msg;
     }
 
+    /**
+     * Return the current {@link ChannelPromise} or {@code null} if empty.
+     */
+    public ChannelPromise currentPromise() {
+        assert ctx.executor().inEventLoop();
+        PendingWrite write = head;
+        if (write == null) {
+            return null;
+        }
+        return write.promise;
+    }
+
     private void recycle(PendingWrite write, boolean update) {
         final PendingWrite next = write.next;
         final long writeSize = write.size;

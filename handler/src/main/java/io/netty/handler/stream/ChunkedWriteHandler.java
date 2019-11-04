@@ -26,6 +26,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.PendingWriteQueue;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -68,11 +69,10 @@ import java.util.Queue;
 public class ChunkedWriteHandler extends ChannelDuplexHandler {
 
     private static final InternalLogger logger =
-        InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
+            InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
 
-    private final Queue<PendingWrite> queue = new ArrayDeque<PendingWrite>();
+    private PendingWriteQueue queue;
     private volatile ChannelHandlerContext ctx;
-    private PendingWrite currentWrite;
 
     public ChunkedWriteHandler() {
     }
@@ -125,7 +125,10 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        queue.add(new PendingWrite(msg, promise));
+        if (queue == null) {
+            queue = new PendingWriteQueue(ctx);
+        }
+        queue.add(msg, promise);
     }
 
     @Override
@@ -149,19 +152,16 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
     }
 
     private void discard(Throwable cause) {
+        final PendingWriteQueue queue = this.queue;
+        if (queue == null) {
+            return;
+        }
         for (;;) {
-            PendingWrite currentWrite = this.currentWrite;
+            final Object message = queue.current();
 
-            if (this.currentWrite == null) {
-                currentWrite = queue.poll();
-            } else {
-                this.currentWrite = null;
-            }
-
-            if (currentWrite == null) {
+            if (message == null) {
                 break;
             }
-            Object message = currentWrite.msg;
             if (message instanceof ChunkedInput) {
                 ChunkedInput<?> in = (ChunkedInput<?>) message;
                 boolean endOfInput;
@@ -172,7 +172,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                     closeInput(in);
                 } catch (Exception e) {
                     closeInput(in);
-                    currentWrite.fail(e);
+                    queue.removeAndFail(e);
                     if (logger.isWarnEnabled()) {
                         logger.warn(ChunkedInput.class.getSimpleName() + " failed", e);
                     }
@@ -183,15 +183,15 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                     if (cause == null) {
                         cause = new ClosedChannelException();
                     }
-                    currentWrite.fail(cause);
+                    queue.removeAndFail(cause);
                 } else {
-                    currentWrite.success(inputLength);
+                    success(queue.remove(), inputLength);
                 }
             } else {
                 if (cause == null) {
                     cause = new ClosedChannelException();
                 }
-                currentWrite.fail(cause);
+                queue.removeAndFail(cause);
             }
         }
     }
@@ -202,19 +202,19 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
             discard(null);
             return;
         }
-
+        final PendingWriteQueue queue = this.queue;
         boolean requiresFlush = true;
         ByteBufAllocator allocator = ctx.alloc();
-        while (channel.isWritable()) {
-            if (currentWrite == null) {
-                currentWrite = queue.poll();
-            }
+        while (queue != null) {
+            final Object pendingMessage = queue.current();
 
-            if (currentWrite == null) {
+            if (pendingMessage == null) {
                 break;
             }
 
-            if (currentWrite.promise.isDone()) {
+            final ChannelPromise currentPromise = queue.currentPromise();
+
+            if (currentPromise.isDone()) {
                 // This might happen e.g. in the case when a write operation
                 // failed, but there're still unconsumed chunks left.
                 // Most chunked input sources would stop generating chunks
@@ -224,12 +224,9 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                 // as this had to be done already by someone who resolved the
                 // promise (using ChunkedInput.close method).
                 // See https://github.com/netty/netty/issues/8700.
-                this.currentWrite = null;
+                queue.remove();
                 continue;
             }
-
-            final PendingWrite currentWrite = this.currentWrite;
-            final Object pendingMessage = currentWrite.msg;
 
             if (pendingMessage instanceof ChunkedInput) {
                 final ChunkedInput<?> chunks = (ChunkedInput<?>) pendingMessage;
@@ -247,14 +244,12 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                         suspend = false;
                     }
                 } catch (final Throwable t) {
-                    this.currentWrite = null;
-
                     if (message != null) {
                         ReferenceCountUtil.release(message);
                     }
 
                     closeInput(chunks);
-                    currentWrite.fail(t);
+                    queue.removeAndFail(t);
                     break;
                 }
 
@@ -264,17 +259,16 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                     // more chunks arrive. Nothing to write or notify.
                     break;
                 }
-
                 if (message == null) {
                     // If message is null write an empty ByteBuf.
                     // See https://github.com/netty/netty/issues/1671
                     message = Unpooled.EMPTY_BUFFER;
                 }
-
+                if (endOfInput) {
+                    queue.remove();
+                }
                 ChannelFuture f = ctx.write(message);
                 if (endOfInput) {
-                    this.currentWrite = null;
-
                     // Register a listener which will close the input once the write is complete.
                     // This is needed because the Chunk may have some resource bound that can not
                     // be closed before its not written.
@@ -285,14 +279,14 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                         public void operationComplete(ChannelFuture future) throws Exception {
                             if (!future.isSuccess()) {
                                 closeInput(chunks);
-                                currentWrite.fail(future.cause());
+                                currentPromise.tryFailure(future.cause());
                             } else {
                                 // read state of the input in local variables before closing it
                                 long inputProgress = chunks.progress();
                                 long inputLength = chunks.length();
                                 closeInput(chunks);
-                                currentWrite.progress(inputProgress, inputLength);
-                                currentWrite.success(inputLength);
+                                progress(currentPromise, inputProgress, inputLength);
+                                success(currentPromise, inputLength);
                             }
                         }
                     });
@@ -302,9 +296,9 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                         public void operationComplete(ChannelFuture future) throws Exception {
                             if (!future.isSuccess()) {
                                 closeInput(chunks);
-                                currentWrite.fail(future.cause());
+                                currentPromise.tryFailure(future.cause());
                             } else {
-                                currentWrite.progress(chunks.progress(), chunks.length());
+                                progress(currentPromise, chunks.progress(), chunks.length());
                             }
                         }
                     });
@@ -314,9 +308,9 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                         public void operationComplete(ChannelFuture future) throws Exception {
                             if (!future.isSuccess()) {
                                 closeInput(chunks);
-                                currentWrite.fail(future.cause());
+                                currentPromise.tryFailure(future.cause());
                             } else {
-                                currentWrite.progress(chunks.progress(), chunks.length());
+                                progress(currentPromise, chunks.progress(), chunks.length());
                                 if (channel.isWritable()) {
                                     resumeTransfer();
                                 }
@@ -328,8 +322,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                 ctx.flush();
                 requiresFlush = false;
             } else {
-                this.currentWrite = null;
-                ctx.write(pendingMessage, currentWrite.promise);
+                queue.removeAndWrite();
                 requiresFlush = true;
             }
 
@@ -354,33 +347,19 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
         }
     }
 
-    private static final class PendingWrite {
-        final Object msg;
-        final ChannelPromise promise;
-
-        PendingWrite(Object msg, ChannelPromise promise) {
-            this.msg = msg;
-            this.promise = promise;
+    private static void success(ChannelPromise promise, long total) {
+        if (promise.isDone()) {
+            // No need to notify the progress or fulfill the promise because it's done already.
+            return;
         }
+        progress(promise, total, total);
+        promise.trySuccess();
+    }
 
-        void fail(Throwable cause) {
-            ReferenceCountUtil.release(msg);
-            promise.tryFailure(cause);
-        }
-
-        void success(long total) {
-            if (promise.isDone()) {
-                // No need to notify the progress or fulfill the promise because it's done already.
-                return;
-            }
-            progress(total, total);
-            promise.trySuccess();
-        }
-
-        void progress(long progress, long total) {
-            if (promise instanceof ChannelProgressivePromise) {
-                ((ChannelProgressivePromise) promise).tryProgress(progress, total);
-            }
+    private static void progress(ChannelPromise promise, long progress, long total) {
+        if (promise instanceof ChannelProgressivePromise) {
+            ((ChannelProgressivePromise) promise).tryProgress(progress, total);
         }
     }
+
 }
