@@ -149,7 +149,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
     ByteBuf cumulation;
     private Cumulator cumulator = MERGE_CUMULATOR;
     private boolean singleDecode;
-    private boolean decodeWasNull;
+    private boolean batchDecode;
     private boolean first;
 
     /**
@@ -192,6 +192,26 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
      */
     public boolean isSingleDecode() {
         return singleDecode;
+    }
+
+    /**
+     * If set then many messages are decoded on each {@link #channelRead(ChannelHandlerContext, Object)}
+     * call. This may be useful if you need to reduce pipeline execution times while increasing throughput.
+     *
+     * Default is {@code false} as this has performance impacts.
+     */
+    public void setBatchDecode(boolean batchDecode) {
+        this.batchDecode = batchDecode;
+    }
+
+    /**
+     * If {@code true} then many messages are decoded on each
+     * {@link #channelRead(ChannelHandlerContext, Object)} call.
+     *
+     * Default is {@code false} as this has performance impacts.
+     */
+    public boolean isBatchDecode() {
+        return batchDecode;
     }
 
     /**
@@ -292,18 +312,12 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
                 }
 
                 int size = out.size();
-                if (size == 0) {
-                    decodeWasNull = true;
-                } else if (size == 1) {
-                    ctx.fireChannelRead(out.get(0));
+                firedChannelRead |= out.insertSinceRecycled();
+                if(isBatchDecode()) {
+                    batchFireChannelRead(ctx, out, size);
                 } else {
-                    ArrayList<Object> ret = new ArrayList<Object>(size);
-                    for (int i = 0; i < size; i++) {
-                        ret.add(out.get(i));
-                    }
-                    ctx.fireChannelRead(ret);
+                    fireChannelRead(ctx, out, size);
                 }
-
                 out.recycle();
             }
         } else {
@@ -333,15 +347,27 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
         }
     }
 
+    /**
+     * Get {@code numElements} out of the {@link CodecOutputList} and batch forward these through the pipeline.
+     */
+    static void batchFireChannelRead(ChannelHandlerContext ctx, CodecOutputList msgs, int numElements) {
+        if (numElements == 1) {
+            ctx.fireChannelRead(msgs.get(0));
+        } else {
+            ArrayList<Object> ret = new ArrayList<>(numElements);
+            for (int i = 0; i < numElements; i++) {
+                ret.add(msgs.get(i));
+            }
+            ctx.fireChannelRead(ret);
+        }
+    }
+
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         numReads = 0;
         discardSomeReadBytes();
-        if (decodeWasNull) {
-            decodeWasNull = false;
-            if (!ctx.channel().config().isAutoRead()) {
-                ctx.read();
-            }
+        if (!firedChannelRead && !ctx.channel().config().isAutoRead()) {
+            ctx.read();
         }
         firedChannelRead = false;
         ctx.fireChannelReadComplete();
