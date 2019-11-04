@@ -27,6 +27,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.StringUtil;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -152,6 +153,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     ByteBuf cumulation;
     private Cumulator cumulator = MERGE_CUMULATOR;
     private boolean singleDecode;
+    private boolean batchDecode;
     private boolean first;
 
     /**
@@ -194,6 +196,26 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      */
     public boolean isSingleDecode() {
         return singleDecode;
+    }
+
+    /**
+     * If set then many messages are decoded on each {@link #channelRead(ChannelHandlerContext, Object)}
+     * call. This may be useful if you need to reduce pipeline execution times while increasing throughput.
+     *
+     * Default is {@code false} as this has performance impacts.
+     */
+    public void setBatchDecode(boolean batchDecode) {
+        this.batchDecode = batchDecode;
+    }
+
+    /**
+     * If {@code true} then many messages are decoded on each
+     * {@link #channelRead(ChannelHandlerContext, Object)} call.
+     *
+     * Default is {@code false} as this has performance impacts.
+     */
+    public boolean isBatchDecode() {
+        return batchDecode;
     }
 
     /**
@@ -297,7 +319,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
                 int size = out.size();
                 firedChannelRead |= out.insertSinceRecycled();
-                fireChannelRead(ctx, out, size);
+                if(isBatchDecode()) {
+                    batchFireChannelRead(ctx, out, size);
+                } else {
+                    fireChannelRead(ctx, out, size);
+                }
                 out.recycle();
             }
         } else {
@@ -324,6 +350,21 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     static void fireChannelRead(ChannelHandlerContext ctx, CodecOutputList msgs, int numElements) {
         for (int i = 0; i < numElements; i ++) {
             ctx.fireChannelRead(msgs.getUnsafe(i));
+        }
+    }
+
+    /**
+     * Get {@code numElements} out of the {@link CodecOutputList} and batch forward these through the pipeline.
+     */
+    static void batchFireChannelRead(ChannelHandlerContext ctx, CodecOutputList msgs, int numElements) {
+        if (numElements == 1) {
+            ctx.fireChannelRead(msgs.get(0));
+        } else {
+            ArrayList<Object> ret = new ArrayList<Object>(numElements);
+            for (int i = 0; i < numElements; i++) {
+                ret.add(msgs.get(i));
+            }
+            ctx.fireChannelRead(ret);
         }
     }
 
