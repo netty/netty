@@ -272,28 +272,35 @@ public abstract class Recycler<T> {
                     head.next = null;
                     head = next;
                 }
-                if (reclaimSpace != 0) {
+                if (reclaimSpace > 0) {
                     reclaimSpace(reclaimSpace);
                 }
             }
 
-            void reclaimSpace(int space) {
-                assert space >= 0;
+            private void reclaimSpace(int space) {
                 availableSharedCapacity.addAndGet(space);
             }
 
-            boolean reserveSpace(int space) {
-                return reserveSpace(availableSharedCapacity, space);
+            void relink(Link link) {
+                reclaimSpace(LINK_CAPACITY);
+                this.link = link;
             }
 
-            static boolean reserveSpace(AtomicInteger availableSharedCapacity, int space) {
-                assert space >= 0;
+            /**
+             * Creates a new {@link} and returns it if we can reserve enough space for it, otherwise it
+             * returns {@code null}.
+             */
+            Link newLink() {
+                return reserveSpaceForLink(availableSharedCapacity) ? new Link() : null;
+            }
+
+            static boolean reserveSpaceForLink(AtomicInteger availableSharedCapacity) {
                 for (;;) {
                     int available = availableSharedCapacity.get();
-                    if (available < space) {
+                    if (available < LINK_CAPACITY) {
                         return false;
                     }
-                    if (availableSharedCapacity.compareAndSet(available, available - space)) {
+                    if (availableSharedCapacity.compareAndSet(available, available - LINK_CAPACITY)) {
                         return true;
                     }
                 }
@@ -328,7 +335,11 @@ public abstract class Recycler<T> {
             handleRecycleCount = interval; // Start at interval so the first one will be recycled.
         }
 
-        private static WeakOrderQueue newQueue(Stack<?> stack, Thread thread) {
+        static WeakOrderQueue newQueue(Stack<?> stack, Thread thread) {
+            // We allocated a Link so reserve the space
+            if (!Head.reserveSpaceForLink(stack.availableSharedCapacity)) {
+                return null;
+            }
             final WeakOrderQueue queue = new WeakOrderQueue(stack, thread);
             // Done outside of the constructor to ensure WeakOrderQueue.this does not escape the constructor and so
             // may be accessed while its still constructed.
@@ -344,15 +355,6 @@ public abstract class Recycler<T> {
         void setNext(WeakOrderQueue next) {
             assert next != this;
             this.next = next;
-        }
-
-        /**
-         * Allocate a new {@link WeakOrderQueue} or return {@code null} if not possible.
-         */
-        static WeakOrderQueue allocate(Stack<?> stack, Thread thread) {
-            // We allocated a Link so reserve the space
-            return Head.reserveSpace(stack.availableSharedCapacity, LINK_CAPACITY)
-                    ? newQueue(stack, thread) : null;
         }
 
         void reclaimAllSpaceAndUnlink() {
@@ -376,12 +378,13 @@ public abstract class Recycler<T> {
             Link tail = this.tail;
             int writeIndex;
             if ((writeIndex = tail.get()) == LINK_CAPACITY) {
-                if (!head.reserveSpace(LINK_CAPACITY)) {
+                Link link = head.newLink();
+                if (link == null) {
                     // Drop it.
                     return;
                 }
                 // We allocate a Link so reserve the space
-                this.tail = tail = tail.next = new Link();
+                this.tail = tail = tail.next = link;
 
                 writeIndex = tail.get();
             }
@@ -408,8 +411,8 @@ public abstract class Recycler<T> {
                 if (head.next == null) {
                     return false;
                 }
-                this.head.link = head = head.next;
-                this.head.reclaimSpace(LINK_CAPACITY);
+                head = head.next;
+                this.head.relink(head);
             }
 
             final int srcStart = head.readIndex;
@@ -450,8 +453,7 @@ public abstract class Recycler<T> {
 
                 if (srcEnd == LINK_CAPACITY && head.next != null) {
                     // Add capacity back as the Link is GCed.
-                    this.head.reclaimSpace(LINK_CAPACITY);
-                    this.head.link = head.next;
+                    this.head.relink(head.next);
                 }
 
                 head.readIndex = srcEnd;
@@ -669,7 +671,7 @@ public abstract class Recycler<T> {
                     return;
                 }
                 // Check if we already reached the maximum number of delayed queues and if we can allocate at all.
-                if ((queue = WeakOrderQueue.allocate(this, thread)) == null) {
+                if ((queue = newWeakOrderQueue(thread)) == null) {
                     // drop object
                     return;
                 }
@@ -680,6 +682,13 @@ public abstract class Recycler<T> {
             }
 
             queue.add(item);
+        }
+
+        /**
+         * Allocate a new {@link WeakOrderQueue} or return {@code null} if not possible.
+         */
+        private WeakOrderQueue newWeakOrderQueue(Thread thread) {
+            return WeakOrderQueue.newQueue(this, thread);
         }
 
         boolean dropHandle(DefaultHandle<?> handle) {
