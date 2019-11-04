@@ -111,7 +111,6 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
     }
 
     @Override
-
     public CharSequence protocol() {
         return HTTP_UPGRADE_PROTOCOL_NAME;
     }
