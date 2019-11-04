@@ -36,7 +36,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static java.util.Objects.requireNonNull;
 
 /**
- * A HTTP2 frame listener that will decompress data frames according to the {@code content-encoding} header for each
+ * An HTTP2 frame listener that will decompress data frames according to the {@code content-encoding} header for each
  * stream. The decompression provided by this class will be applied to the data for the entire stream.
  */
 @UnstableApi

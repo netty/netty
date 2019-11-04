@@ -393,13 +393,8 @@ final class HpackDecoder {
                 throw streamError(streamId, PROTOCOL_ERROR, "Invalid HTTP/2 pseudo-header '%s' encountered.", name);
             }
 
-            final HeaderType currentHeaderType = pseudoHeader.isRequestOnly() ?
+            return pseudoHeader.isRequestOnly() ?
                     HeaderType.REQUEST_PSEUDO_HEADER : HeaderType.RESPONSE_PSEUDO_HEADER;
-            if (previousHeaderType != null && currentHeaderType != previousHeaderType) {
-                throw streamError(streamId, PROTOCOL_ERROR, "Mix of request and response pseudo-headers.");
-            }
-
-            return currentHeaderType;
         }
 
         return HeaderType.REGULAR_HEADER;

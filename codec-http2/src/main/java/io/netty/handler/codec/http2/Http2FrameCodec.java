@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPromise;
@@ -31,6 +30,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -44,8 +44,8 @@ import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
  * <p><em>This API is very immature.</em> The Http2Connection-based API is currently preferred over this API.
  * This API is targeted to eventually replace or reduce the need for the {@link Http2ConnectionHandler} API.
  *
- * <p>A HTTP/2 handler that maps HTTP/2 frames to {@link Http2Frame} objects and vice versa. For every incoming HTTP/2
- * frame, a {@link Http2Frame} object is created and propagated via {@link #channelRead}. Outbound {@link Http2Frame}
+ * <p>An HTTP/2 handler that maps HTTP/2 frames to {@link Http2Frame} objects and vice versa. For every incoming HTTP/2
+ * frame, an {@link Http2Frame} object is created and propagated via {@link #channelRead}. Outbound {@link Http2Frame}
  * objects received via {@link #write} are converted to the HTTP/2 wire format. HTTP/2 frames specific to a stream
  * implement the {@link Http2StreamFrame} interface. The {@link Http2FrameCodec} is instantiated using the
  * {@link Http2FrameCodecBuilder}. It's recommended for channel handlers to inherit from the
@@ -78,7 +78,7 @@ import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
  *
  * <h3>New inbound Streams</h3>
  *
- * The first frame of a HTTP/2 stream must be a {@link Http2HeadersFrame}, which will have a {@link Http2FrameStream}
+ * The first frame of an HTTP/2 stream must be an {@link Http2HeadersFrame}, which will have an {@link Http2FrameStream}
  * object attached.
  *
  * <h3>New outbound Streams</h3>
@@ -158,7 +158,6 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     private int numBufferedStreams;
     private final IntObjectMap<DefaultHttp2FrameStream> frameStreamToInitializeMap =
             new IntObjectHashMap<DefaultHttp2FrameStream>(8);
-    private final ChannelFutureListener bufferedStreamsListener = future -> numBufferedStreams--;
 
     Http2FrameCodec(Http2ConnectionEncoder encoder, Http2ConnectionDecoder decoder, Http2Settings initialSettings,
                     boolean decoupleCloseAndGoAway) {
@@ -197,6 +196,15 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 }
             });
         }
+    }
+
+    /**
+     * Retrieve the number of streams currently in the process of being initialized.
+     *
+     * This is package-private for testing only.
+     */
+    int numInitializingStreams() {
+        return frameStreamToInitializeMap.size();
     }
 
     @Override
@@ -405,10 +413,25 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
             encoder().writeHeaders(ctx, streamId, headersFrame.headers(), headersFrame.padding(),
                     headersFrame.isEndStream(), promise);
+
             if (!promise.isDone()) {
                 numBufferedStreams++;
-                promise.addListener(bufferedStreamsListener);
+                // Clean up the stream being initialized if writing the headers fails and also
+                // decrement the number of buffered streams.
+                promise.addListener(channelFuture -> {
+                    numBufferedStreams--;
+
+                    handleHeaderFuture(channelFuture, streamId);
+                });
+            } else {
+                handleHeaderFuture(promise, streamId);
             }
+        }
+    }
+
+    private void handleHeaderFuture(Future<?> channelFuture, int streamId) {
+        if (!channelFuture.isSuccess()) {
+            frameStreamToInitializeMap.remove(streamId);
         }
     }
 
@@ -423,15 +446,14 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     }
 
     private final class ConnectionListener extends Http2ConnectionAdapter {
-
         @Override
         public void onStreamAdded(Http2Stream stream) {
             DefaultHttp2FrameStream frameStream = frameStreamToInitializeMap.remove(stream.id());
 
-             if (frameStream != null) {
-                 frameStream.setStreamAndProperty(streamKey, stream);
-             }
-         }
+            if (frameStream != null) {
+                frameStream.setStreamAndProperty(streamKey, stream);
+            }
+        }
 
         @Override
         public void onStreamActive(Http2Stream stream) {

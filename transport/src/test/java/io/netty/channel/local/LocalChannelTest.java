@@ -198,7 +198,7 @@ public class LocalChannelTest {
                 .channel(LocalServerChannel.class)
                 .childHandler(new SimpleChannelInboundHandler<Object>() {
                     @Override
-                    protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                         ctx.close();
                         latch.countDown();
                     }
@@ -213,7 +213,7 @@ public class LocalChannelTest {
                     .channel(LocalChannel.class)
                     .handler(new SimpleChannelInboundHandler<Object>() {
                         @Override
-                        protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                             // discard
                         }
                     });
@@ -867,7 +867,7 @@ public class LocalChannelTest {
                     }
 
                     @Override
-                    public void channelRead0(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+                    public void messageReceived(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
                         // Just drop the buffer
                     }
                 });
@@ -880,7 +880,7 @@ public class LocalChannelTest {
                         ch.pipeline().addLast(new SimpleChannelInboundHandler<ByteBuf>() {
 
                             @Override
-                            public void channelRead0(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+                            public void messageReceived(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
                                 while (buffer.isReadable()) {
                                     // Fill the ChannelOutboundBuffer with multiple buffers
                                     ctx.write(buffer.readRetainedSlice(1));

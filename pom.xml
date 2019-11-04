@@ -352,6 +352,7 @@
     <module>codec-xml</module>
     <module>resolver</module>
     <module>resolver-dns</module>
+    <module>resolver-dns-native-macos</module>
     <module>tarball</module>
     <module>transport</module>
     <module>transport-native-unix-common-tests</module>
@@ -368,6 +369,7 @@
     <module>testsuite-osgi</module>
     <module>testsuite-shading</module>
     <module>testsuite-native-image</module>
+    <module>transport-blockhound-tests</module>
     <module>microbench</module>
     <module>bom</module>
   </modules>
@@ -621,7 +623,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-compress</artifactId>
-        <version>1.18</version>
+        <version>1.19</version>
         <scope>test</scope>
       </dependency>
 
@@ -654,6 +656,13 @@
         <artifactId>log4j-core</artifactId>
         <version>${log4j2.version}</version>
         <scope>test</scope>
+      </dependency>
+
+      <!-- BlockHound integration -->
+      <dependency>
+        <groupId>io.projectreactor.tools</groupId>
+        <artifactId>blockhound</artifactId>
+        <version>1.0.1.RELEASE</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -705,6 +714,7 @@
         <version>0.13.1</version>
         <configuration>
           <parameter>
+            <ignoreMissingOldVersion>true</ignoreMissingOldVersion>
             <breakBuildOnBinaryIncompatibleModifications>true</breakBuildOnBinaryIncompatibleModifications>
             <breakBuildOnSourceIncompatibleModifications>true</breakBuildOnSourceIncompatibleModifications>
             <oldVersionPattern>\d+\.\d+\.\d+\.Final</oldVersionPattern>
@@ -803,19 +813,6 @@
             <ignore>sun.misc.Unsafe</ignore>
             <ignore>sun.misc.Cleaner</ignore>
             <ignore>sun.nio.ch.DirectBuffer</ignore>
-
-            <!-- Self-signed certificate generation -->
-            <ignore>sun.security.x509.AlgorithmId</ignore>
-            <ignore>sun.security.x509.CertificateAlgorithmId</ignore>
-            <ignore>sun.security.x509.CertificateIssuerName</ignore>
-            <ignore>sun.security.x509.CertificateSerialNumber</ignore>
-            <ignore>sun.security.x509.CertificateSubjectName</ignore>
-            <ignore>sun.security.x509.CertificateValidity</ignore>
-            <ignore>sun.security.x509.CertificateVersion</ignore>
-            <ignore>sun.security.x509.CertificateX509Key</ignore>
-            <ignore>sun.security.x509.X500Name</ignore>
-            <ignore>sun.security.x509.X509CertInfo</ignore>
-            <ignore>sun.security.x509.X509CertImpl</ignore>
           </ignores>
           <annotations>
             <annotation>io.netty.util.internal.SuppressJava6Requirement</annotation>

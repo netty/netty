@@ -31,6 +31,7 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.handler.codec.http2.HpackUtil.equalsVariableTime;
 import static java.util.Objects.requireNonNull;
 
 class HpackHeaderField {
@@ -57,23 +58,8 @@ class HpackHeaderField {
         return name.length() + value.length() + HEADER_ENTRY_OVERHEAD;
     }
 
-    @Override
-    public final int hashCode() {
-        // TODO(nmittler): Netty's build rules require this. Probably need a better implementation.
-        return super.hashCode();
-    }
-
-    @Override
-    public final boolean equals(Object obj) {
-        if (obj == this) {
-            return true;
-        }
-        if (!(obj instanceof HpackHeaderField)) {
-            return false;
-        }
-        HpackHeaderField other = (HpackHeaderField) obj;
-        // To avoid short circuit behavior a bitwise operator is used instead of a boolean operator.
-        return (HpackUtil.equalsConstantTime(name, other.name) & HpackUtil.equalsConstantTime(value, other.value)) != 0;
+    public final boolean equalsForTest(HpackHeaderField other) {
+        return equalsVariableTime(name, other.name) && equalsVariableTime(value, other.value);
     }
 
     @Override

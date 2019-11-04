@@ -190,7 +190,7 @@ public abstract class DetectPeerCloseWithoutReadTest {
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
+        protected void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) {
             bytesRead.addAndGet(msg.readableBytes());
 
             if (extraReadRequested) {

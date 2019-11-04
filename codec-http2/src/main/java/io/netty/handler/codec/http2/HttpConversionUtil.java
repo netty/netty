@@ -122,28 +122,28 @@ public final class HttpConversionUtil {
      */
     public enum ExtensionHeaderNames {
         /**
-         * HTTP extension header which will identify the stream id from the HTTP/2 event(s) responsible for generating a
-         * {@code HttpObject}
+         * HTTP extension header which will identify the stream id from the HTTP/2 event(s) responsible for
+         * generating an {@code HttpObject}
          * <p>
          * {@code "x-http2-stream-id"}
          */
         STREAM_ID("x-http2-stream-id"),
         /**
          * HTTP extension header which will identify the scheme pseudo header from the HTTP/2 event(s) responsible for
-         * generating a {@code HttpObject}
+         * generating an {@code HttpObject}
          * <p>
          * {@code "x-http2-scheme"}
          */
         SCHEME("x-http2-scheme"),
         /**
          * HTTP extension header which will identify the path pseudo header from the HTTP/2 event(s) responsible for
-         * generating a {@code HttpObject}
+         * generating an {@code HttpObject}
          * <p>
          * {@code "x-http2-path"}
          */
         PATH("x-http2-path"),
         /**
-         * HTTP extension header which will identify the stream id used to create this stream in a HTTP/2 push promise
+         * HTTP extension header which will identify the stream id used to create this stream in an HTTP/2 push promise
          * frame
          * <p>
          * {@code "x-http2-stream-promise-id"}
@@ -158,7 +158,7 @@ public final class HttpConversionUtil {
         STREAM_DEPENDENCY_ID("x-http2-stream-dependency-id"),
         /**
          * HTTP extension header which will identify the weight (if non-default and the priority is not on the default
-         * stream) of the associated HTTP/2 stream responsible responsible for generating a {@code HttpObject}
+         * stream) of the associated HTTP/2 stream responsible responsible for generating an {@code HttpObject}
          * <p>
          * {@code "x-http2-stream-weight"}
          */
@@ -391,9 +391,14 @@ public final class HttpConversionUtil {
         if (in instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) in;
             URI requestTargetUri = URI.create(request.uri());
-            out.path(toHttp2Path(requestTargetUri));
             out.method(request.method().asciiName());
-            setHttp2Scheme(inHeaders, requestTargetUri, out);
+
+            // According to the spec https://tools.ietf.org/html/rfc7540#section-8.3 scheme and path
+            // should be omitted for CONNECT method
+            if (request.method() != HttpMethod.CONNECT) {
+                setHttp2Scheme(inHeaders, requestTargetUri, out);
+                out.path(toHttp2Path(requestTargetUri));
+            }
 
             if (!isOriginForm(requestTargetUri) && !isAsteriskForm(requestTargetUri)) {
                 // Attempt to take from HOST header before taking from the request-line
@@ -519,7 +524,7 @@ public final class HttpConversionUtil {
     }
 
     /**
-     * Generate a HTTP/2 {code :path} from a URI in accordance with
+     * Generate an HTTP/2 {code :path} from a URI in accordance with
      * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
      */
     private static AsciiString toHttp2Path(URI uri) {

@@ -33,7 +33,7 @@ public class FileServerHandler extends SimpleChannelInboundHandler<String> {
     }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+    public void messageReceived(ChannelHandlerContext ctx, String msg) throws Exception {
         RandomAccessFile raf = null;
         long length = -1;
         try {

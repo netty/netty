@@ -247,9 +247,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
             numReads = 0;
             int readable = buf.readableBytes();
             if (readable > 0) {
-                ByteBuf bytes = buf.readBytes(readable);
-                buf.release();
-                ctx.fireChannelRead(bytes);
+                ctx.fireChannelRead(buf);
                 ctx.fireChannelReadComplete();
             } else {
                 buf.release();
@@ -516,6 +514,8 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
             boolean removePending = decodeState == STATE_HANDLER_REMOVED_PENDING;
             decodeState = STATE_INIT;
             if (removePending) {
+                fireChannelRead(ctx, out, out.size());
+                out.clear();
                 handlerRemoved(ctx);
             }
         }

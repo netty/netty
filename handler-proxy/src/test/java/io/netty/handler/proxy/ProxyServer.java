@@ -158,7 +158,7 @@ abstract class ProxyServer {
         private Channel backend;
 
         @Override
-        protected final void channelRead0(final ChannelHandlerContext ctx, Object msg) throws Exception {
+        protected final void messageReceived(final ChannelHandlerContext ctx, Object msg) throws Exception {
             if (finished) {
                 received.add(ReferenceCountUtil.retain(msg));
                 flush();
@@ -265,7 +265,7 @@ abstract class ProxyServer {
         private boolean finished;
 
         @Override
-        protected final void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+        protected final void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (finished) {
                 String str = ((ByteBuf) msg).toString(CharsetUtil.US_ASCII);
                 if ("A\n".equals(str)) {
