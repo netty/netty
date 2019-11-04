@@ -126,21 +126,21 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     protected final Runnable pollScheduledTask(long nanoTime) {
         assert inEventLoop();
 
-        Queue<ScheduledFutureTask<?>> scheduledTaskQueue = this.scheduledTaskQueue;
-        ScheduledFutureTask<?> scheduledTask = scheduledTaskQueue == null ? null : scheduledTaskQueue.peek();
+        ScheduledFutureTask<?> scheduledTask = peekScheduledTask();
         if (scheduledTask == null || scheduledTask.deadlineNanos() - nanoTime > 0) {
             return null;
         }
         scheduledTaskQueue.remove();
+        scheduledTask.setConsumed();
         return scheduledTask;
     }
 
     /**
-     * Return the nanoseconds when the next scheduled task is ready to be run or {@code -1} if no task is scheduled.
+     * Return the nanoseconds until the next scheduled task is ready to be run or {@code -1} if no task is scheduled.
      */
     protected final long nextScheduledTaskNano() {
         ScheduledFutureTask<?> scheduledTask = peekScheduledTask();
-        return scheduledTask != null ? Math.max(0, scheduledTask.deadlineNanos() - nanoTime()) : -1;
+        return scheduledTask != null ? scheduledTask.delayNanos() : -1;
     }
 
     /**
@@ -244,21 +244,21 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         // NOOP
     }
 
+    final void scheduleFromEventLoop(final ScheduledFutureTask<?> task) {
+        // nextTaskId a long and so there is no chance it will overflow back to 0
+        scheduledTaskQueue().add(task.setId(++nextTaskId));
+    }
+
     private <V> ScheduledFuture<V> schedule(final ScheduledFutureTask<V> task) {
         if (inEventLoop()) {
-            scheduledTaskQueue().add(task.setId(nextTaskId++));
+            scheduleFromEventLoop(task);
         } else {
             final long deadlineNanos = task.deadlineNanos();
-            final Runnable addToQueue = new Runnable() {
-                @Override
-                public void run() {
-                    scheduledTaskQueue().add(task.setId(nextTaskId++));
-                }
-            };
+            // task will add itself to scheduled task queue when run if not expired
             if (beforeScheduledTaskSubmitted(deadlineNanos)) {
-                execute(addToQueue);
+                execute(task);
             } else {
-                lazyExecute(addToQueue);
+                lazyExecute(task);
                 // Second hook after scheduling to facilitate race-avoidance
                 if (afterScheduledTaskSubmitted(deadlineNanos)) {
                     execute(WAKEUP_TASK);
@@ -270,15 +270,12 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     }
 
     final void removeScheduled(final ScheduledFutureTask<?> task) {
+        assert task.isCancelled();
         if (inEventLoop()) {
             scheduledTaskQueue().removeTyped(task);
         } else {
-            lazyExecute(new Runnable() {
-                @Override
-                public void run() {
-                    scheduledTaskQueue().removeTyped(task);
-                }
-            });
+            // task will remove itself from scheduled task queue when it runs
+            lazyExecute(task);
         }
     }
 

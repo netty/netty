@@ -19,7 +19,6 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.DefaultPriorityQueue;
 import io.netty.util.internal.PriorityQueueNode;
 
-import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
@@ -91,7 +90,9 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     }
 
     ScheduledFutureTask<V> setId(long id) {
-        this.id = id;
+        if (this.id == 0L) {
+            this.id = id;
+        }
         return this;
     }
 
@@ -104,16 +105,26 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         return deadlineNanos;
     }
 
+    void setConsumed() {
+        // Optimization to avoid checking system clock again
+        // after deadline has passed and task has been dequeued
+        if (periodNanos == 0) {
+            assert nanoTime() > deadlineNanos;
+            deadlineNanos = 0L;
+        }
+    }
+
     public long delayNanos() {
         return deadlineToDelayNanos(deadlineNanos());
     }
 
     static long deadlineToDelayNanos(long deadlineNanos) {
-        return Math.max(0, deadlineNanos - nanoTime());
+        return deadlineNanos == 0L ? 0L : Math.max(0L, deadlineNanos - nanoTime());
     }
 
     public long delayNanos(long currentTimeNanos) {
-        return Math.max(0, deadlineNanos() - (currentTimeNanos - START_TIME));
+        return deadlineNanos == 0L ? 0L
+                : Math.max(0L, deadlineNanos() - (currentTimeNanos - START_TIME));
     }
 
     @Override
@@ -145,6 +156,15 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     public void run() {
         assert executor().inEventLoop();
         try {
+            if (delayNanos() > 0L) {
+                // Not yet expired, need to add or remove from queue
+                if (isCancelled()) {
+                    scheduledExecutor().scheduledTaskQueue().removeTyped(this);
+                } else {
+                    scheduledExecutor().scheduleFromEventLoop(this);
+                }
+                return;
+            }
             if (periodNanos == 0) {
                 if (setUncancellableInternal()) {
                     V result = runTask();
@@ -161,11 +181,7 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
                             deadlineNanos = nanoTime() - periodNanos;
                         }
                         if (!isCancelled()) {
-                            // scheduledTaskQueue can never be null as we lazy init it before submit the task!
-                            Queue<ScheduledFutureTask<?>> scheduledTaskQueue =
-                                    ((AbstractScheduledEventExecutor) executor()).scheduledTaskQueue;
-                            assert scheduledTaskQueue != null;
-                            scheduledTaskQueue.add(this);
+                            scheduledExecutor().scheduledTaskQueue().add(this);
                         }
                     }
                 }
@@ -173,6 +189,10 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         } catch (Throwable cause) {
             setFailureInternal(cause);
         }
+    }
+
+    private AbstractScheduledEventExecutor scheduledExecutor() {
+        return (AbstractScheduledEventExecutor) executor();
     }
 
     /**
@@ -184,7 +204,7 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     public boolean cancel(boolean mayInterruptIfRunning) {
         boolean canceled = super.cancel(mayInterruptIfRunning);
         if (canceled) {
-            ((AbstractScheduledEventExecutor) executor()).removeScheduled(this);
+            scheduledExecutor().removeScheduled(this);
         }
         return canceled;
     }

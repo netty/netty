@@ -29,11 +29,11 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 
-import io.netty.channel.DefaultEventLoop;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 
-@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 10, time = 1, timeUnit = TimeUnit.SECONDS)
+@Warmup(iterations = 5, time = 3, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 10, time = 3, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Benchmark)
 public class ScheduleFutureTaskBenchmark extends AbstractMicrobenchmark {
 
@@ -54,7 +54,7 @@ public class ScheduleFutureTaskBenchmark extends AbstractMicrobenchmark {
 
         @Setup(Level.Trial)
         public void reset() {
-            eventLoop = new DefaultEventLoop();
+            eventLoop = (AbstractScheduledEventExecutor) new NioEventLoopGroup(1).next();
         }
 
         @Setup(Level.Invocation)
@@ -69,7 +69,8 @@ public class ScheduleFutureTaskBenchmark extends AbstractMicrobenchmark {
 
         @TearDown(Level.Trial)
         public void shutdown() {
-            eventLoop.shutdownGracefully().awaitUninterruptibly();
+            clear();
+            eventLoop.parent().shutdownGracefully().awaitUninterruptibly();
         }
     }
 
@@ -84,5 +85,25 @@ public class ScheduleFutureTaskBenchmark extends AbstractMicrobenchmark {
                 }
             }
         }).syncUninterruptibly();
+    }
+
+    @Benchmark
+    @Threads(1)
+    public Future<?> scheduleLotsOutsideLoop(final ThreadState threadState) {
+        final AbstractScheduledEventExecutor eventLoop = threadState.eventLoop;
+        for (int i = 1; i <= threadState.num; i++) {
+            eventLoop.schedule(NO_OP, i, TimeUnit.HOURS);
+        }
+        return null;
+    }
+
+    @Benchmark
+    @Threads(1)
+    public Future<?> scheduleCancelLotsOutsideLoop(final ThreadState threadState) {
+        final AbstractScheduledEventExecutor eventLoop = threadState.eventLoop;
+        for (int i = 1; i <= threadState.num; i++) {
+            eventLoop.schedule(NO_OP, i, TimeUnit.HOURS).cancel(false);
+        }
+        return null;
     }
 }
