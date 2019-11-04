@@ -16,7 +16,6 @@
 package io.netty.channel.sctp;
 
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
-import static java.util.Objects.requireNonNull;
 
 import com.sun.nio.sctp.SctpServerChannel;
 import com.sun.nio.sctp.SctpStandardSocketOptions;
@@ -46,7 +45,9 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     public DefaultSctpServerChannelConfig(
             io.netty.channel.sctp.SctpServerChannel channel, SctpServerChannel javaChannel) {
         super(channel);
-        requireNonNull(javaChannel, "javaChannel");
+        if (javaChannel == null) {
+            throw new NullPointerException("javaChannel");
+        }
         this.javaChannel = javaChannel;
     }
 

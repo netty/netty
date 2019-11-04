@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.util.internal.PlatformDependent;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -24,7 +25,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
-import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -35,7 +35,7 @@ public class DefaultFileRegionTest {
     private static final byte[] data = new byte[1048576 * 10];
 
     static {
-       ThreadLocalRandom.current().nextBytes(data);
+        PlatformDependent.threadLocalRandom().nextBytes(data);
     }
 
     private static File newFile() throws IOException {
@@ -61,24 +61,28 @@ public class DefaultFileRegionTest {
     @Test
     public void testCreateFromFileChannel() throws IOException  {
         File file = newFile();
-
-        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r")) {
+        RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
+        try {
             testFileRegion(new DefaultFileRegion(randomAccessFile.getChannel(), 0, data.length));
         } finally {
+            randomAccessFile.close();
             file.delete();
         }
     }
 
     private static void testFileRegion(FileRegion region) throws IOException  {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        WritableByteChannel channel = Channels.newChannel(outputStream);
 
-        try (WritableByteChannel channel = Channels.newChannel(outputStream)) {
+        try {
             assertEquals(data.length, region.count());
             assertEquals(0, region.transferred());
             assertEquals(data.length, region.transferTo(channel, 0));
             assertEquals(data.length, region.count());
             assertEquals(data.length, region.transferred());
             assertArrayEquals(data, outputStream.toByteArray());
+        } finally {
+            channel.close();
         }
     }
 
@@ -86,9 +90,10 @@ public class DefaultFileRegionTest {
     public void testTruncated() throws IOException  {
         File file = newFile();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        WritableByteChannel channel = Channels.newChannel(outputStream);
+        RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
 
-        try (WritableByteChannel channel = Channels.newChannel(outputStream);
-             RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw")) {
+        try {
             FileRegion region = new DefaultFileRegion(randomAccessFile.getChannel(), 0, data.length);
 
             randomAccessFile.getChannel().truncate(data.length - 1024);
@@ -106,6 +111,9 @@ public class DefaultFileRegionTest {
                 // expected
             }
         } finally {
+            channel.close();
+
+            randomAccessFile.close();
             file.delete();
         }
     }

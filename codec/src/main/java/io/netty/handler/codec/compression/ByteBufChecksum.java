@@ -15,10 +15,10 @@
  */
 package io.netty.handler.codec.compression;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ByteProcessor;
+import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
@@ -43,23 +43,29 @@ abstract class ByteBufChecksum implements Checksum {
         CRC32_UPDATE_METHOD = updateByteBuffer(new CRC32());
     }
 
-    private final ByteProcessor updateProcessor = value -> {
-        update(value);
-        return true;
+    private final ByteProcessor updateProcessor = new ByteProcessor() {
+        @Override
+        public boolean process(byte value) throws Exception {
+            update(value);
+            return true;
+        }
     };
 
     private static Method updateByteBuffer(Checksum checksum) {
-        try {
-            Method method = checksum.getClass().getDeclaredMethod("update", ByteBuffer.class);
-            method.invoke(checksum, ByteBuffer.allocate(1));
-            return method;
-        } catch (Throwable ignore) {
-            return null;
+        if (PlatformDependent.javaVersion() >= 8) {
+            try {
+                Method method = checksum.getClass().getDeclaredMethod("update", ByteBuffer.class);
+                method.invoke(checksum, ByteBuffer.allocate(1));
+                return method;
+            } catch (Throwable ignore) {
+                return null;
+            }
         }
+        return null;
     }
 
     static ByteBufChecksum wrapChecksum(Checksum checksum) {
-        requireNonNull(checksum, "checksum");
+        ObjectUtil.checkNotNull(checksum, "checksum");
         if (checksum instanceof ByteBufChecksum) {
             return (ByteBufChecksum) checksum;
         }

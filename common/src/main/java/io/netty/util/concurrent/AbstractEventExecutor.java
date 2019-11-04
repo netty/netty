@@ -15,6 +15,7 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -24,7 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
+import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -36,7 +37,21 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     static final long DEFAULT_SHUTDOWN_QUIET_PERIOD = 2;
     static final long DEFAULT_SHUTDOWN_TIMEOUT = 15;
 
-    private final Collection<EventExecutor> selfCollection = Collections.singleton(this);
+    private final EventExecutorGroup parent;
+    private final Collection<EventExecutor> selfCollection = Collections.<EventExecutor>singleton(this);
+
+    protected AbstractEventExecutor() {
+        this(null);
+    }
+
+    protected AbstractEventExecutor(EventExecutorGroup parent) {
+        this.parent = parent;
+    }
+
+    @Override
+    public EventExecutorGroup parent() {
+        return parent;
+    }
 
     @Override
     public EventExecutor next() {
@@ -44,17 +59,17 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     }
 
     @Override
-    public final boolean inEventLoop() {
+    public boolean inEventLoop() {
         return inEventLoop(Thread.currentThread());
     }
 
     @Override
-    public final Iterator<EventExecutor> iterator() {
+    public Iterator<EventExecutor> iterator() {
         return selfCollection.iterator();
     }
 
     @Override
-    public final Future<?> shutdownGracefully() {
+    public Future<?> shutdownGracefully() {
         return shutdownGracefully(DEFAULT_SHUTDOWN_QUIET_PERIOD, DEFAULT_SHUTDOWN_TIMEOUT, TimeUnit.SECONDS);
     }
 
@@ -77,53 +92,74 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
 
     @Override
     public <V> Promise<V> newPromise() {
-        return new DefaultPromise<>(this);
+        return new DefaultPromise<V>(this);
     }
 
     @Override
     public <V> ProgressivePromise<V> newProgressivePromise() {
-        return new DefaultProgressivePromise<>(this);
+        return new DefaultProgressivePromise<V>(this);
     }
 
     @Override
     public <V> Future<V> newSucceededFuture(V result) {
-        return new SucceededFuture<>(this, result);
+        return new SucceededFuture<V>(this, result);
     }
 
     @Override
     public <V> Future<V> newFailedFuture(Throwable cause) {
-        return new FailedFuture<>(this, cause);
+        return new FailedFuture<V>(this, cause);
     }
 
     @Override
-    public final Future<?> submit(Runnable task) {
+    public Future<?> submit(Runnable task) {
         return (Future<?>) super.submit(task);
     }
 
     @Override
-    public final <T> Future<T> submit(Runnable task, T result) {
+    public <T> Future<T> submit(Runnable task, T result) {
         return (Future<T>) super.submit(task, result);
     }
 
     @Override
-    public final <T> Future<T> submit(Callable<T> task) {
+    public <T> Future<T> submit(Callable<T> task) {
         return (Future<T>) super.submit(task);
     }
 
     @Override
-    protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
-        return newRunnableFuture(this.newPromise(), runnable, value);
+    protected final <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
+        return new PromiseTask<T>(this, runnable, value);
     }
 
     @Override
-    protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
-        return newRunnableFuture(this.newPromise(), callable);
+    protected final <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
+        return new PromiseTask<T>(this, callable);
+    }
+
+    @Override
+    public ScheduledFuture<?> schedule(Runnable command, long delay,
+                                       TimeUnit unit) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+        throw new UnsupportedOperationException();
     }
 
     /**
      * Try to execute the given {@link Runnable} and just log if it throws a {@link Throwable}.
      */
-    static void safeExecute(Runnable task) {
+    protected static void safeExecute(Runnable task) {
         try {
             task.run();
         } catch (Throwable t) {
@@ -132,23 +168,23 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     }
 
     /**
-     * Returns a new {@link RunnableFuture} build on top of the given {@link Promise} and {@link Callable}.
+     * Like {@link #execute(Runnable)} but does not guarantee the task will be run until either
+     * a non-lazy task is executed or the executor is shut down.
      *
-     * This can be used if you want to override {@link #newTaskFor(Callable)} and return a different
-     * {@link RunnableFuture}.
+     * This is equivalent to submitting a {@link EventExecutor.LazyRunnable} to
+     * {@link #execute(Runnable)} but for an arbitrary {@link Runnable}.
+     *
+     * The default implementation just delegates to {@link #execute(Runnable)}.
      */
-    private static <V> RunnableFuture<V> newRunnableFuture(Promise<V> promise, Callable<V> task) {
-        return new RunnableFutureAdapter<>(promise, task);
+    @UnstableApi
+    public void lazyExecute(Runnable task) {
+        execute(task);
     }
 
     /**
-     * Returns a new {@link RunnableFuture} build on top of the given {@link Promise} and {@link Runnable} and
-     * {@code value}.
-     *
-     * This can be used if you want to override {@link #newTaskFor(Runnable, V)} and return a different
-     * {@link RunnableFuture}.
+     * Marker interface for {@link Runnable} to indicate that it should be queued for execution
+     * but does not need to run immediately.
      */
-    private static <V> RunnableFuture<V> newRunnableFuture(Promise<V> promise, Runnable task, V value) {
-        return new RunnableFutureAdapter<>(promise, Executors.callable(task, value));
-    }
+    @UnstableApi
+    public interface LazyRunnable extends Runnable { }
 }

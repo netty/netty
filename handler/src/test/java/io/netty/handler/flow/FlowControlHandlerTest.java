@@ -21,15 +21,16 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.MultithreadEventLoopGroup;
-import io.netty.channel.nio.NioHandler;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -56,7 +57,7 @@ public class FlowControlHandlerTest {
 
     @BeforeClass
     public static void init() {
-        GROUP = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        GROUP = new NioEventLoopGroup();
     }
 
     @AfterClass
@@ -98,7 +99,7 @@ public class FlowControlHandlerTest {
         bootstrap.group(GROUP)
             .channel(NioSocketChannel.class)
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
-            .handler(new ChannelHandler() {
+            .handler(new ChannelInboundHandlerAdapter() {
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
                     fail("In this test the client is never receiving a message from the server.");
@@ -123,7 +124,7 @@ public class FlowControlHandlerTest {
     public void testAutoReadingOn() throws Exception {
         final CountDownLatch latch = new CountDownLatch(3);
 
-        ChannelHandler handler = new ChannelHandler() {
+        ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 ReferenceCountUtil.release(msg);
@@ -162,10 +163,10 @@ public class FlowControlHandlerTest {
      */
     @Test
     public void testAutoReadingOff() throws Exception {
-        final Exchanger<Channel> peerRef = new Exchanger<>();
+        final Exchanger<Channel> peerRef = new Exchanger<Channel>();
         final CountDownLatch latch = new CountDownLatch(3);
 
-        ChannelHandler handler = new ChannelHandler() {
+        ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 peerRef.exchange(ctx.channel(), 1L, SECONDS);
@@ -211,7 +212,7 @@ public class FlowControlHandlerTest {
     public void testFlowAutoReadOn() throws Exception {
         final CountDownLatch latch = new CountDownLatch(3);
 
-        ChannelHandler handler = new ChannelHandler() {
+        ChannelInboundHandlerAdapter handler = new ChannelDuplexHandler() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 latch.countDown();
@@ -241,14 +242,14 @@ public class FlowControlHandlerTest {
      */
     @Test
     public void testFlowToggleAutoRead() throws Exception {
-        final Exchanger<Channel> peerRef = new Exchanger<>();
+        final Exchanger<Channel> peerRef = new Exchanger<Channel>();
         final CountDownLatch msgRcvLatch1 = new CountDownLatch(1);
         final CountDownLatch msgRcvLatch2 = new CountDownLatch(1);
         final CountDownLatch msgRcvLatch3 = new CountDownLatch(1);
         final CountDownLatch setAutoReadLatch1 = new CountDownLatch(1);
         final CountDownLatch setAutoReadLatch2 = new CountDownLatch(1);
 
-        ChannelHandler handler = new ChannelHandler() {
+        ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
             private int msgRcvCount;
             private int expectedMsgCount;
             @Override
@@ -323,12 +324,12 @@ public class FlowControlHandlerTest {
      */
     @Test
     public void testFlowAutoReadOff() throws Exception {
-        final Exchanger<Channel> peerRef = new Exchanger<>();
+        final Exchanger<Channel> peerRef = new Exchanger<Channel>();
         final CountDownLatch msgRcvLatch1 = new CountDownLatch(1);
         final CountDownLatch msgRcvLatch2 = new CountDownLatch(2);
         final CountDownLatch msgRcvLatch3 = new CountDownLatch(3);
 
-        ChannelHandler handler = new ChannelHandler() {
+        ChannelInboundHandlerAdapter handler = new ChannelDuplexHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 ctx.fireChannelActive();
@@ -377,7 +378,7 @@ public class FlowControlHandlerTest {
         final Exchanger<Channel> peerRef = new Exchanger<Channel>();
         final CountDownLatch latch = new CountDownLatch(3);
         final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
-        ChannelHandler handler = new ChannelHandler() {
+        ChannelInboundHandlerAdapter handler = new ChannelDuplexHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 ctx.fireChannelActive();
@@ -429,7 +430,7 @@ public class FlowControlHandlerTest {
         final EmbeddedChannel channel = new EmbeddedChannel(false, false,
             new FlowControlHandler(),
             new IdleStateHandler(delayMillis, 0, 0, MILLISECONDS),
-            new ChannelHandler() {
+            new ChannelInboundHandlerAdapter() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) {
                     ctx.fireChannelActive();

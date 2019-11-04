@@ -16,7 +16,6 @@
 package io.netty.buffer;
 
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
-import static java.util.Objects.requireNonNull;
 
 import io.netty.util.internal.PlatformDependent;
 
@@ -52,7 +51,9 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
      */
     public UnpooledDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
         super(maxCapacity);
-        requireNonNull(alloc, "alloc");
+        if (alloc == null) {
+            throw new NullPointerException("alloc");
+        }
         checkPositiveOrZero(initialCapacity, "initialCapacity");
         checkPositiveOrZero(maxCapacity, "maxCapacity");
         if (initialCapacity > maxCapacity) {
@@ -76,8 +77,12 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     UnpooledDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer,
             int maxCapacity, boolean doFree, boolean slice) {
         super(maxCapacity);
-        requireNonNull(alloc, "alloc");
-        requireNonNull(initialBuffer, "initialBuffer");
+        if (alloc == null) {
+            throw new NullPointerException("alloc");
+        }
+        if (initialBuffer == null) {
+            throw new NullPointerException("initialBuffer");
+        }
         if (!initialBuffer.isDirect()) {
             throw new IllegalArgumentException("initialBuffer is not a direct buffer.");
         }

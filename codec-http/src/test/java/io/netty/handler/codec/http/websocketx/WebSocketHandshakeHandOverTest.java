@@ -34,7 +34,6 @@ import org.junit.Test;
 
 import java.net.URI;
 import java.util.List;
-import java.util.concurrent.CompletionException;
 
 import static org.junit.Assert.*;
 
@@ -88,7 +87,7 @@ public class WebSocketHandshakeHandOverTest {
                 }
             }
             @Override
-            protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+            protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
             }
         });
 
@@ -100,7 +99,7 @@ public class WebSocketHandshakeHandOverTest {
                 }
             }
             @Override
-            protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+            protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
                 if (msg instanceof TextWebSocketFrame) {
                     clientReceivedMessage = true;
                 }
@@ -122,7 +121,7 @@ public class WebSocketHandshakeHandOverTest {
     }
 
     @Test(expected = WebSocketHandshakeException.class)
-    public void testClientHandshakeTimeout() throws Throwable {
+    public void testClientHandshakeTimeout() throws Exception {
         EmbeddedChannel serverChannel = createServerChannel(new SimpleChannelInboundHandler<Object>() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
@@ -136,7 +135,7 @@ public class WebSocketHandshakeHandOverTest {
             }
 
             @Override
-            protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+            protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
             }
         });
 
@@ -151,7 +150,7 @@ public class WebSocketHandshakeHandOverTest {
             }
 
             @Override
-            protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+            protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
                 if (msg instanceof TextWebSocketFrame) {
                     clientReceivedMessage = true;
                 }
@@ -176,8 +175,6 @@ public class WebSocketHandshakeHandOverTest {
         // Should throw WebSocketHandshakeException
         try {
             handshakeHandler.getHandshakeFuture().syncUninterruptibly();
-        } catch (CompletionException e) {
-            throw e.getCause();
         } finally {
             serverChannel.finishAndReleaseAll();
         }
@@ -193,7 +190,7 @@ public class WebSocketHandshakeHandOverTest {
                 new CloseNoOpServerProtocolHandler("/test"),
                 new SimpleChannelInboundHandler<Object>() {
                     @Override
-                    protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
                     }
                 });
 
@@ -211,7 +208,7 @@ public class WebSocketHandshakeHandOverTest {
                 }
             }
             @Override
-            protected void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+            protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
             }
         });
 

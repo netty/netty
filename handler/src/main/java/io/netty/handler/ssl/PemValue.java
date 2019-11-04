@@ -15,12 +15,11 @@
  */
 package io.netty.handler.ssl;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * A PEM encoded value.
@@ -36,7 +35,7 @@ class PemValue extends AbstractReferenceCounted implements PemEncoded {
     private final boolean sensitive;
 
     PemValue(ByteBuf content, boolean sensitive) {
-        this.content = requireNonNull(content, "content");
+        this.content = ObjectUtil.checkNotNull(content, "content");
         this.sensitive = sensitive;
     }
 

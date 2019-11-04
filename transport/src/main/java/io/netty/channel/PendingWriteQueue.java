@@ -15,8 +15,6 @@
  */
 package io.netty.channel;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.ObjectPool;
@@ -94,8 +92,12 @@ public final class PendingWriteQueue {
      */
     public void add(Object msg, ChannelPromise promise) {
         assert ctx.executor().inEventLoop();
-        requireNonNull(msg, "msg");
-        requireNonNull(promise, "promise");
+        if (msg == null) {
+            throw new NullPointerException("msg");
+        }
+        if (promise == null) {
+            throw new NullPointerException("promise");
+        }
         // It is possible for writes to be triggered from removeAndFailAll(). To preserve ordering,
         // we should add them to the queue and let removeAndFailAll() fail them later.
         int messageSize = size(msg);
@@ -163,7 +165,9 @@ public final class PendingWriteQueue {
      */
     public void removeAndFailAll(Throwable cause) {
         assert ctx.executor().inEventLoop();
-        requireNonNull(cause, "cause");
+        if (cause == null) {
+            throw new NullPointerException("cause");
+        }
         // It is possible for some of the failed promises to trigger more writes. The new writes
         // will "revive" the queue, so we need to clean them up until the queue is empty.
         for (PendingWrite write = head; write != null; write = head) {
@@ -188,7 +192,9 @@ public final class PendingWriteQueue {
      */
     public void removeAndFail(Throwable cause) {
         assert ctx.executor().inEventLoop();
-        requireNonNull(cause, "cause");
+        if (cause == null) {
+            throw new NullPointerException("cause");
+        }
         PendingWrite write = head;
 
         if (write == null) {

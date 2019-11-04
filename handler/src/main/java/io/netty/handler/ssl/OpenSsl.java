@@ -57,6 +57,7 @@ public final class OpenSsl {
     private static final Set<String> AVAILABLE_OPENSSL_CIPHER_SUITES;
     private static final Set<String> AVAILABLE_JAVA_CIPHER_SUITES;
     private static final boolean SUPPORTS_KEYMANAGER_FACTORY;
+    private static final boolean USE_KEYMANAGER_FACTORY;
     private static final boolean SUPPORTS_OCSP;
     private static final boolean TLSV13_SUPPORTED;
     private static final boolean IS_BORINGSSL;
@@ -169,8 +170,8 @@ public final class OpenSsl {
         if (cause == null) {
             logger.debug("netty-tcnative using native library: {}", SSL.versionString());
 
-            final List<String> defaultCiphers = new ArrayList<>();
-            final Set<String> availableOpenSslCipherSuites = new LinkedHashSet<>(128);
+            final List<String> defaultCiphers = new ArrayList<String>();
+            final Set<String> availableOpenSslCipherSuites = new LinkedHashSet<String>(128);
             boolean supportsKeyManagerFactory = false;
             boolean useKeyManagerFactory = false;
             boolean tlsv13Supported = false;
@@ -246,6 +247,29 @@ public final class OpenSsl {
 
                             SSL.setKeyMaterial(ssl, cert, key);
                             supportsKeyManagerFactory = true;
+                            try {
+                                boolean propertySet = SystemPropertyUtil.contains(
+                                        "io.netty.handler.ssl.openssl.useKeyManagerFactory");
+                                if (!IS_BORINGSSL) {
+                                    useKeyManagerFactory = SystemPropertyUtil.getBoolean(
+                                            "io.netty.handler.ssl.openssl.useKeyManagerFactory", true);
+
+                                    if (propertySet) {
+                                        logger.info("System property " +
+                                                "'io.netty.handler.ssl.openssl.useKeyManagerFactory'" +
+                                                " is deprecated and so will be ignored in the future");
+                                    }
+                                } else {
+                                    useKeyManagerFactory = true;
+                                    if (propertySet) {
+                                        logger.info("System property " +
+                                                "'io.netty.handler.ssl.openssl.useKeyManagerFactory'" +
+                                                " is deprecated and will be ignored when using BoringSSL");
+                                    }
+                                }
+                            } catch (Throwable ignore) {
+                                logger.debug("Failed to get useKeyManagerFactory system property.");
+                            }
                         } catch (Error ignore) {
                             logger.debug("KeyManagerFactory not supported.");
                         } finally {
@@ -273,7 +297,7 @@ public final class OpenSsl {
                 logger.warn("Failed to get the list of available OpenSSL cipher suites.", e);
             }
             AVAILABLE_OPENSSL_CIPHER_SUITES = Collections.unmodifiableSet(availableOpenSslCipherSuites);
-            final Set<String> availableJavaCipherSuites = new LinkedHashSet<>(
+            final Set<String> availableJavaCipherSuites = new LinkedHashSet<String>(
                     AVAILABLE_OPENSSL_CIPHER_SUITES.size() * 2);
             for (String cipher: AVAILABLE_OPENSSL_CIPHER_SUITES) {
                 // Included converted but also openssl cipher name
@@ -294,15 +318,16 @@ public final class OpenSsl {
 
             AVAILABLE_JAVA_CIPHER_SUITES = Collections.unmodifiableSet(availableJavaCipherSuites);
 
-            final Set<String> availableCipherSuites = new LinkedHashSet<>(
+            final Set<String> availableCipherSuites = new LinkedHashSet<String>(
                     AVAILABLE_OPENSSL_CIPHER_SUITES.size() + AVAILABLE_JAVA_CIPHER_SUITES.size());
             availableCipherSuites.addAll(AVAILABLE_OPENSSL_CIPHER_SUITES);
             availableCipherSuites.addAll(AVAILABLE_JAVA_CIPHER_SUITES);
 
             AVAILABLE_CIPHER_SUITES = availableCipherSuites;
             SUPPORTS_KEYMANAGER_FACTORY = supportsKeyManagerFactory;
+            USE_KEYMANAGER_FACTORY = useKeyManagerFactory;
 
-            Set<String> protocols = new LinkedHashSet<>(6);
+            Set<String> protocols = new LinkedHashSet<String>(6);
             // Seems like there is no way to explicitly disable SSLv2Hello in openssl so it is always enabled
             protocols.add(PROTOCOL_SSL_V2_HELLO);
             if (doesSupportProtocol(SSL.SSL_PROTOCOL_SSLV2, SSL.SSL_OP_NO_SSLv2)) {
@@ -342,6 +367,7 @@ public final class OpenSsl {
             AVAILABLE_JAVA_CIPHER_SUITES = Collections.emptySet();
             AVAILABLE_CIPHER_SUITES = Collections.emptySet();
             SUPPORTS_KEYMANAGER_FACTORY = false;
+            USE_KEYMANAGER_FACTORY = false;
             SUPPORTED_PROTOCOLS_SET = Collections.emptySet();
             SUPPORTS_OCSP = false;
             TLSV13_SUPPORTED = false;
@@ -514,6 +540,10 @@ public final class OpenSsl {
         return isAvailable();
     }
 
+    static boolean useKeyManagerFactory() {
+        return USE_KEYMANAGER_FACTORY;
+    }
+
     static long memoryAddress(ByteBuf buf) {
         assert buf.isDirect();
         return buf.hasMemoryAddress() ? buf.memoryAddress() : Buffer.address(buf.nioBuffer());
@@ -525,7 +555,7 @@ public final class OpenSsl {
         String os = PlatformDependent.normalizedOs();
         String arch = PlatformDependent.normalizedArch();
 
-        Set<String> libNames = new LinkedHashSet<>(5);
+        Set<String> libNames = new LinkedHashSet<String>(5);
         String staticLibName = "netty_tcnative";
 
         // First, try loading the platform-specific library. Platform-specific

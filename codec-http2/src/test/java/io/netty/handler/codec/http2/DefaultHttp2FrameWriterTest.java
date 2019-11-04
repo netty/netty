@@ -78,13 +78,16 @@ public class DefaultHttp2FrameWriterTest {
 
         promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
 
-        Answer<Object> answer = var1 -> {
-            Object msg = var1.getArgument(0);
-            if (msg instanceof ByteBuf) {
-                outbound.writeBytes((ByteBuf) msg);
+        Answer<Object> answer = new Answer<Object>() {
+            @Override
+            public Object answer(InvocationOnMock var1) throws Throwable {
+                Object msg = var1.getArgument(0);
+                if (msg instanceof ByteBuf) {
+                    outbound.writeBytes((ByteBuf) msg);
+                }
+                ReferenceCountUtil.release(msg);
+                return future;
             }
-            ReferenceCountUtil.release(msg);
-            return future;
         };
         when(ctx.write(any())).then(answer);
         when(ctx.write(any(), any(ChannelPromise.class))).then(answer);

@@ -17,7 +17,7 @@
 package io.netty.example.http2.helloworld.multiplex.server;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
+import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodecFactory;
 import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
 import io.netty.handler.codec.http2.Http2CodecUtil;
@@ -42,13 +43,16 @@ import io.netty.util.ReferenceCountUtil;
  */
 public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
 
-    private static final UpgradeCodecFactory upgradeCodecFactory = protocol -> {
-        if (AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME, protocol)) {
-            return new Http2ServerUpgradeCodec(
-                    Http2FrameCodecBuilder.forServer().build(),
-                    new Http2MultiplexHandler(new HelloWorldHttp2Handler()));
-        } else {
-            return null;
+    private static final UpgradeCodecFactory upgradeCodecFactory = new UpgradeCodecFactory() {
+        @Override
+        public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
+            if (AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME, protocol)) {
+                return new Http2ServerUpgradeCodec(
+                        Http2FrameCodecBuilder.forServer().build(),
+                        new Http2MultiplexHandler(new HelloWorldHttp2Handler()));
+            } else {
+                return null;
+            }
         }
     };
 
@@ -94,7 +98,7 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
         p.addLast(new HttpServerUpgradeHandler(sourceCodec, upgradeCodecFactory));
         p.addLast(new SimpleChannelInboundHandler<HttpMessage>() {
             @Override
-            protected void messageReceived(ChannelHandlerContext ctx, HttpMessage msg) throws Exception {
+            protected void channelRead0(ChannelHandlerContext ctx, HttpMessage msg) throws Exception {
                 // If this handler is hit then no upgrade has been attempted and the client is just talking HTTP.
                 System.err.println("Directly talking: " + msg.protocolVersion() + " (no upgrade was attempted)");
                 ChannelPipeline pipeline = ctx.pipeline();
@@ -110,7 +114,7 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
     /**
      * Class that logs any User Events triggered on this channel.
      */
-    private static class UserEventLogger implements ChannelInboundHandler {
+    private static class UserEventLogger extends ChannelInboundHandlerAdapter {
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
             System.out.println("User Event Triggered: " + evt);

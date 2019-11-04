@@ -15,14 +15,19 @@
  */
 package io.netty.util.concurrent;
 
-import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
+
+import io.netty.util.concurrent.AbstractEventExecutor.LazyRunnable;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,7 +41,7 @@ public class SingleThreadEventExecutorTest {
     public void testWrappedExecutorIsShutdown() {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
 
-        SingleThreadEventExecutor executor = new SingleThreadEventExecutor(executorService) {
+        SingleThreadEventExecutor executor = new SingleThreadEventExecutor(null, executorService, false) {
             @Override
             protected void run() {
                 while (!confirmShutdown()) {
@@ -54,17 +59,19 @@ public class SingleThreadEventExecutorTest {
         try {
             executor.shutdownGracefully().syncUninterruptibly();
             Assert.fail();
-        } catch (CompletionException expected) {
+        } catch (RejectedExecutionException expected) {
             // expected
-            Assert.assertThat(expected.getCause(), CoreMatchers.instanceOf(RejectedExecutionException.class));
         }
         Assert.assertTrue(executor.isShutdown());
     }
 
     private static void executeShouldFail(Executor executor) {
         try {
-            executor.execute(() -> {
-                // Noop.
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    // Noop.
+                }
             });
             Assert.fail();
         } catch (RejectedExecutionException expected) {
@@ -75,7 +82,8 @@ public class SingleThreadEventExecutorTest {
     @Test
     public void testThreadProperties() {
         final AtomicReference<Thread> threadRef = new AtomicReference<Thread>();
-        SingleThreadEventExecutor executor = new SingleThreadEventExecutor(new DefaultThreadFactory("test")) {
+        SingleThreadEventExecutor executor = new SingleThreadEventExecutor(
+                null, new DefaultThreadFactory("test"), false) {
             @Override
             protected void run() {
                 threadRef.set(Thread.currentThread());
@@ -100,43 +108,28 @@ public class SingleThreadEventExecutorTest {
     }
 
     @Test(expected = RejectedExecutionException.class, timeout = 3000)
-    public void testInvokeAnyInEventLoop() throws Throwable {
-        try {
-            testInvokeInEventLoop(true, false);
-        } catch (CompletionException e) {
-            throw e.getCause();
-        }
+    public void testInvokeAnyInEventLoop() {
+        testInvokeInEventLoop(true, false);
     }
 
     @Test(expected = RejectedExecutionException.class, timeout = 3000)
-    public void testInvokeAnyInEventLoopWithTimeout() throws Throwable {
-        try {
-            testInvokeInEventLoop(true, true);
-        } catch (CompletionException e) {
-            throw e.getCause();
-        }
+    public void testInvokeAnyInEventLoopWithTimeout() {
+        testInvokeInEventLoop(true, true);
     }
 
     @Test(expected = RejectedExecutionException.class, timeout = 3000)
-    public void testInvokeAllInEventLoop() throws Throwable {
-        try {
-            testInvokeInEventLoop(false, false);
-        } catch (CompletionException e) {
-            throw e.getCause();
-        }
+    public void testInvokeAllInEventLoop() {
+        testInvokeInEventLoop(false, false);
     }
 
     @Test(expected = RejectedExecutionException.class, timeout = 3000)
-    public void testInvokeAllInEventLoopWithTimeout() throws Throwable {
-        try {
-            testInvokeInEventLoop(false, true);
-        } catch (CompletionException e) {
-            throw e.getCause();
-        }
+    public void testInvokeAllInEventLoopWithTimeout() {
+        testInvokeInEventLoop(false, true);
     }
 
     private static void testInvokeInEventLoop(final boolean any, final boolean timeout) {
-        final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(Executors.defaultThreadFactory()) {
+        final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(null,
+                Executors.defaultThreadFactory(), true) {
             @Override
             protected void run() {
                 while (!confirmShutdown()) {
@@ -149,33 +142,111 @@ public class SingleThreadEventExecutorTest {
         };
         try {
             final Promise<Void> promise = executor.newPromise();
-            executor.execute(() -> {
-                try {
-                    Set<Callable<Boolean>> set = Collections.singleton(() -> {
-                        promise.setFailure(new AssertionError("Should never execute the Callable"));
-                        return Boolean.TRUE;
-                    });
-                    if (any) {
-                        if (timeout) {
-                            executor.invokeAny(set, 10, TimeUnit.SECONDS);
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Set<Callable<Boolean>> set = Collections.<Callable<Boolean>>singleton(new Callable<Boolean>() {
+                            @Override
+                            public Boolean call() throws Exception {
+                                promise.setFailure(new AssertionError("Should never execute the Callable"));
+                                return Boolean.TRUE;
+                            }
+                        });
+                        if (any) {
+                            if (timeout) {
+                                executor.invokeAny(set, 10, TimeUnit.SECONDS);
+                            } else {
+                                executor.invokeAny(set);
+                            }
                         } else {
-                            executor.invokeAny(set);
+                            if (timeout) {
+                                executor.invokeAll(set, 10, TimeUnit.SECONDS);
+                            } else {
+                                executor.invokeAll(set);
+                            }
                         }
-                    } else {
-                        if (timeout) {
-                            executor.invokeAll(set, 10, TimeUnit.SECONDS);
-                        } else {
-                            executor.invokeAll(set);
-                        }
+                        promise.setFailure(new AssertionError("Should never reach here"));
+                    } catch (Throwable cause) {
+                        promise.setFailure(cause);
                     }
-                    promise.setFailure(new AssertionError("Should never reach here"));
-                } catch (Throwable cause) {
-                    promise.setFailure(cause);
                 }
             });
             promise.syncUninterruptibly();
         } finally {
             executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
         }
+    }
+
+    static class LatchTask extends CountDownLatch implements Runnable {
+        LatchTask() {
+            super(1);
+        }
+
+        @Override
+        public void run() {
+            countDown();
+        }
+    }
+
+    static class LazyLatchTask extends LatchTask implements LazyRunnable { }
+
+    @Test
+    public void testLazyExecution() throws Exception {
+        final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(null,
+                Executors.defaultThreadFactory(), false) {
+            @Override
+            protected void run() {
+                while (!confirmShutdown()) {
+                    try {
+                        synchronized (this) {
+                            if (!hasTasks()) {
+                                wait();
+                            }
+                        }
+                        runAllTasks();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        Assert.fail(e.toString());
+                    }
+                }
+            }
+
+            @Override
+            protected void wakeup(boolean inEventLoop) {
+                if (!inEventLoop) {
+                    synchronized (this) {
+                        notifyAll();
+                    }
+                }
+            }
+        };
+
+        // Ensure event loop is started
+        LatchTask latch0 = new LatchTask();
+        executor.execute(latch0);
+        assertTrue(latch0.await(100, TimeUnit.MILLISECONDS));
+        // Pause to ensure it enters waiting state
+        Thread.sleep(100L);
+
+        // Submit task via lazyExecute
+        LatchTask latch1 = new LatchTask();
+        executor.lazyExecute(latch1);
+        // Sumbit lazy task via regular execute
+        LatchTask latch2 = new LazyLatchTask();
+        executor.execute(latch2);
+
+        // Neither should run yet
+        assertFalse(latch1.await(100, TimeUnit.MILLISECONDS));
+        assertFalse(latch2.await(100, TimeUnit.MILLISECONDS));
+
+        // Submit regular task via regular execute
+        LatchTask latch3 = new LatchTask();
+        executor.execute(latch3);
+
+        // Should flush latch1 and latch2 and then run latch3 immediately
+        assertTrue(latch3.await(100, TimeUnit.MILLISECONDS));
+        assertEquals(0, latch1.getCount());
+        assertEquals(0, latch2.getCount());
     }
 }

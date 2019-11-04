@@ -15,8 +15,6 @@
  */
 package io.netty.channel.embedded;
 
-import static java.util.Objects.requireNonNull;
-
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
@@ -40,6 +38,7 @@ import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
@@ -61,7 +60,13 @@ public class EmbeddedChannel extends AbstractChannel {
     private static final ChannelMetadata METADATA_NO_DISCONNECT = new ChannelMetadata(false);
     private static final ChannelMetadata METADATA_DISCONNECT = new ChannelMetadata(true);
 
-    private final ChannelFutureListener recordExceptionListener = this::recordException;
+    private final EmbeddedEventLoop loop = new EmbeddedEventLoop();
+    private final ChannelFutureListener recordExceptionListener = new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            recordException(future);
+        }
+    };
 
     private final ChannelMetadata metadata;
     private final ChannelConfig config;
@@ -174,7 +179,7 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public EmbeddedChannel(Channel parent, ChannelId channelId, boolean register, boolean hasDisconnect,
                            final ChannelHandler... handlers) {
-        super(parent, new EmbeddedEventLoop(), channelId);
+        super(parent, channelId);
         metadata = metadata(hasDisconnect);
         config = new DefaultChannelConfig(this);
         setup(register, handlers);
@@ -192,9 +197,9 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public EmbeddedChannel(ChannelId channelId, boolean hasDisconnect, final ChannelConfig config,
                            final ChannelHandler... handlers) {
-        super(null, new EmbeddedEventLoop(), channelId);
+        super(null, channelId);
         metadata = metadata(hasDisconnect);
-        this.config = requireNonNull(config, "config");
+        this.config = ObjectUtil.checkNotNull(config, "config");
         setup(true, handlers);
     }
 
@@ -203,7 +208,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     private void setup(boolean register, final ChannelHandler... handlers) {
-        requireNonNull(handlers, "handlers");
+        ObjectUtil.checkNotNull(handlers, "handlers");
         ChannelPipeline p = pipeline();
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
@@ -218,25 +223,21 @@ public class EmbeddedChannel extends AbstractChannel {
             }
         });
         if (register) {
-            ChannelFuture future = register();
+            ChannelFuture future = loop.register(this);
             assert future.isDone();
         }
     }
 
-    @Override
-    public ChannelFuture register() {
-        return register(newPromise());
-    }
-
-    @Override
-    public ChannelFuture register(ChannelPromise promise) {
-        ChannelFuture future = super.register(promise);
+    /**
+     * Register this {@code Channel} on its {@link EventLoop}.
+     */
+    public void register() throws Exception {
+        ChannelFuture future = loop.register(this);
         assert future.isDone();
         Throwable cause = future.cause();
         if (cause != null) {
             PlatformDependent.throwException(cause);
         }
-        return future;
     }
 
     @Override
@@ -269,7 +270,7 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public Queue<Object> inboundMessages() {
         if (inboundMessages == null) {
-            inboundMessages = new ArrayDeque<>();
+            inboundMessages = new ArrayDeque<Object>();
         }
         return inboundMessages;
     }
@@ -287,7 +288,7 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public Queue<Object> outboundMessages() {
         if (outboundMessages == null) {
-            outboundMessages = new ArrayDeque<>();
+            outboundMessages = new ArrayDeque<Object>();
         }
         return outboundMessages;
     }
@@ -382,7 +383,6 @@ public class EmbeddedChannel extends AbstractChannel {
     private ChannelFuture flushInbound(boolean recordException, ChannelPromise promise) {
       if (checkOpen(recordException)) {
           pipeline().fireChannelReadComplete();
-          readIfIsAutoRead();
           runPendingTasks();
       }
 
@@ -546,7 +546,7 @@ public class EmbeddedChannel extends AbstractChannel {
         runPendingTasks();
         if (cancel) {
             // Cancel all scheduled tasks that are left.
-            ((EmbeddedEventLoop) eventLoop()).cancelScheduled();
+            loop.cancelScheduledTasks();
         }
     }
 
@@ -592,14 +592,17 @@ public class EmbeddedChannel extends AbstractChannel {
      * for this {@link Channel}
      */
     public void runPendingTasks() {
-        EmbeddedEventLoop embeddedEventLoop = (EmbeddedEventLoop) eventLoop();
         try {
-            embeddedEventLoop.runTasks();
+            loop.runTasks();
         } catch (Exception e) {
             recordException(e);
         }
 
-        runScheduledPendingTasks();
+        try {
+            loop.runScheduledTasks();
+        } catch (Exception e) {
+            recordException(e);
+        }
     }
 
     /**
@@ -608,16 +611,11 @@ public class EmbeddedChannel extends AbstractChannel {
      * {@code -1}.
      */
     public long runScheduledPendingTasks() {
-        EmbeddedEventLoop embeddedEventLoop = (EmbeddedEventLoop) eventLoop();
-
         try {
-            return embeddedEventLoop.runScheduledTasks();
+            return loop.runScheduledTasks();
         } catch (Exception e) {
             recordException(e);
-            return embeddedEventLoop.nextScheduledTask();
-        } finally {
-            // A scheduled task may put something on the taskQueue so lets run it.
-            embeddedEventLoop.runTasks();
+            return loop.nextScheduledTask();
         }
     }
 
@@ -687,6 +685,11 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
+    protected boolean isCompatible(EventLoop loop) {
+        return loop instanceof EmbeddedEventLoop;
+    }
+
+    @Override
     protected SocketAddress localAddress0() {
         return isActive()? LOCAL_ADDRESS : null;
     }
@@ -696,7 +699,8 @@ public class EmbeddedChannel extends AbstractChannel {
         return isActive()? REMOTE_ADDRESS : null;
     }
 
-    void setActive() {
+    @Override
+    protected void doRegister() throws Exception {
         state = State.ACTIVE;
     }
 
@@ -783,8 +787,8 @@ public class EmbeddedChannel extends AbstractChannel {
             }
 
             @Override
-            public void register(ChannelPromise promise) {
-                EmbeddedUnsafe.this.register(promise);
+            public void register(EventLoop eventLoop, ChannelPromise promise) {
+                EmbeddedUnsafe.this.register(eventLoop, promise);
                 runPendingTasks();
             }
 

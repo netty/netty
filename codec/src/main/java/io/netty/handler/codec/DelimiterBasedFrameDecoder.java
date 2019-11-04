@@ -16,7 +16,6 @@
 package io.netty.handler.codec;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
-import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -167,7 +166,9 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
     public DelimiterBasedFrameDecoder(
             int maxFrameLength, boolean stripDelimiter, boolean failFast, ByteBuf... delimiters) {
         validateMaxFrameLength(maxFrameLength);
-        requireNonNull(delimiters, "delimiters");
+        if (delimiters == null) {
+            throw new NullPointerException("delimiters");
+        }
         if (delimiters.length == 0) {
             throw new IllegalArgumentException("empty delimiters");
         }
@@ -338,7 +339,9 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
     }
 
     private static void validateDelimiter(ByteBuf delimiter) {
-        requireNonNull(delimiter, "delimiter");
+        if (delimiter == null) {
+            throw new NullPointerException("delimiter");
+        }
         if (!delimiter.isReadable()) {
             throw new IllegalArgumentException("empty delimiter");
         }

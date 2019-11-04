@@ -27,9 +27,9 @@ import java.util.List;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static java.util.Objects.requireNonNull;
 import static io.netty.util.AsciiString.containsAllContentEqualsIgnoreCase;
 import static io.netty.util.AsciiString.containsContentEqualsIgnoreCase;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.COMMA;
 
 /**
@@ -201,8 +201,8 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
             SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory, int maxContentLength) {
         super(maxContentLength);
 
-        this.sourceCodec = requireNonNull(sourceCodec, "sourceCodec");
-        this.upgradeCodecFactory = requireNonNull(upgradeCodecFactory, "upgradeCodecFactory");
+        this.sourceCodec = checkNotNull(sourceCodec, "sourceCodec");
+        this.upgradeCodecFactory = checkNotNull(upgradeCodecFactory, "upgradeCodecFactory");
     }
 
     @Override
@@ -366,7 +366,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      */
     private static List<CharSequence> splitHeader(CharSequence header) {
         final StringBuilder builder = new StringBuilder(header.length());
-        final List<CharSequence> protocols = new ArrayList<>(4);
+        final List<CharSequence> protocols = new ArrayList<CharSequence>(4);
         for (int i = 0; i < header.length(); ++i) {
             char c = header.charAt(i);
             if (Character.isWhitespace(c)) {

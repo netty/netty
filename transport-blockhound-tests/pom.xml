@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2019 The Netty Project
+  ~ Copyright 2013 The Netty Project
   ~
   ~ The Netty Project licenses this file to you under the Apache License,
   ~ version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,49 +17,38 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
+  
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>5.0.0.Final-SNAPSHOT</version>
+    <version>4.1.44.Final-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-transport-blockhound-tests</artifactId>
+  <artifactId>netty-transport-rxtx</artifactId>
   <packaging>jar</packaging>
-  <description>
-    Tests for the BlockHound integration.
-  </description>
 
-  <name>Netty/Transport/BlockHound/Tests</name>
-
-  <profiles>
-    <profile>
-      <id>java13</id>
-      <activation>
-        <jdk>13</jdk>
-      </activation>
-      <properties>
-        <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods</argLine.common>
-      </properties>
-    </profile>
-  </profiles>
+  <name>Netty/Transport/RXTX</name>
 
   <properties>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
-    <skipJapicmp>true</skipJapicmp>
+    <javaModuleName>io.netty.transport.rxtx</javaModuleName>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
+      <artifactId>netty-buffer</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
       <artifactId>netty-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
-
+    <!-- FIXME find/make osgi bundle -->
     <dependency>
-      <groupId>io.projectreactor.tools</groupId>
-      <artifactId>blockhound</artifactId>
-      <scope>test</scope>
+      <groupId>org.rxtx</groupId>
+      <artifactId>rxtx</artifactId>
     </dependency>
   </dependencies>
 </project>
+

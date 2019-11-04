@@ -16,7 +16,6 @@
 package io.netty.channel;
 
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
-import static java.util.Objects.requireNonNull;
 
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.IllegalReferenceCountException;
@@ -52,7 +51,9 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
      * @param count     the number of bytes to transfer
      */
     public DefaultFileRegion(FileChannel file, long position, long count) {
-        requireNonNull(file, "file");
+        if (file == null) {
+            throw new NullPointerException("file");
+        }
         checkPositiveOrZero(position, "position");
         checkPositiveOrZero(count, "count");
         this.file = file;
@@ -70,7 +71,9 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
      * @param count     the number of bytes to transfer
      */
     public DefaultFileRegion(File f, long position, long count) {
-        requireNonNull(f, "f");
+        if (f == null) {
+            throw new NullPointerException("f");
+        }
         checkPositiveOrZero(position, "position");
         checkPositiveOrZero(count, "count");
         this.position = position;

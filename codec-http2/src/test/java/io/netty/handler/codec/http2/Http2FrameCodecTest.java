@@ -18,8 +18,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
@@ -53,7 +53,6 @@ import java.net.InetSocketAddress;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
@@ -223,22 +222,10 @@ public class Http2FrameCodecTest {
         Http2FrameCodec codec = new Http2FrameCodec(enc, dec, new Http2Settings(), false);
         EmbeddedChannel em = new EmbeddedChannel(codec);
 
-        AtomicReference<Http2Exception> errorRef = new AtomicReference<>();
-        em.eventLoop().execute(() -> {
-            try {
-                // We call #consumeBytes on a stream id which has not been seen yet to emulate the case
-                // where a stream is deregistered which in reality can happen in response to a RST.
-                assertFalse(codec.consumeBytes(1, 1));
-            } catch (Http2Exception e) {
-                errorRef.set(e);
-            }
-        });
-
+        // We call #consumeBytes on a stream id which has not been seen yet to emulate the case
+        // where a stream is deregistered which in reality can happen in response to a RST.
+        assertFalse(codec.consumeBytes(1, 1));
         assertTrue(em.finishAndReleaseAll());
-        Http2Exception exception = errorRef.get();
-        if (exception != null) {
-            throw exception;
-        }
     }
 
     @Test
@@ -529,23 +516,9 @@ public class Http2FrameCodecTest {
         int initialWindowSizeBefore = localFlow.initialWindowSize();
         Http2Stream connectionStream = connection.connectionStream();
         int connectionWindowSizeBefore = localFlow.windowSize(connectionStream);
-
-        AtomicReference<Http2Exception> errorRef = new AtomicReference<>();
-        channel.eventLoop().execute(() -> {
-            try {
-                // We only replenish the flow control window after the amount consumed drops below the following
-                // threshold. We make the threshold very "high" so that window updates will be sent when the delta is
-                // relatively small.
-                ((DefaultHttp2LocalFlowController) localFlow).windowUpdateRatio(connectionStream, .999f);
-            } catch (Http2Exception e) {
-                errorRef.set(e);
-            }
-        });
-
-        Http2Exception exception = errorRef.get();
-        if (exception != null) {
-            throw exception;
-        }
+        // We only replenish the flow control window after the amount consumed drops below the following threshold.
+        // We make the threshold very "high" so that window updates will be sent when the delta is relatively small.
+        ((DefaultHttp2LocalFlowController) localFlow).windowUpdateRatio(connectionStream, .999f);
 
         int windowUpdate = 1024;
 
@@ -600,15 +573,18 @@ public class Http2FrameCodecTest {
         assertNotNull(stream);
         assertFalse(isStreamIdValid(stream.id()));
 
-        final Promise<Void> listenerExecuted = new DefaultPromise<>(GlobalEventExecutor.INSTANCE);
+        final Promise<Void> listenerExecuted = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
 
         channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), false).stream(stream))
-               .addListener((ChannelFutureListener) future -> {
-                   assertTrue(future.isSuccess());
-                   assertTrue(isStreamIdValid(stream.id()));
-                   listenerExecuted.setSuccess(null);
-               }
-               );
+               .addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        assertTrue(future.isSuccess());
+                        assertTrue(isStreamIdValid(stream.id()));
+                        listenerExecuted.setSuccess(null);
+                    }
+                }
+        );
         ByteBuf data = Unpooled.buffer().writeZero(100);
         ChannelFuture f = channel.writeAndFlush(new DefaultHttp2DataFrame(data).stream(stream));
         assertTrue(f.isSuccess());
@@ -793,26 +769,18 @@ public class Http2FrameCodecTest {
         @SuppressWarnings("unused")
         Http2FrameStream idleStream = frameCodec.newStream();
 
-        final Set<Http2FrameStream> activeStreams = new HashSet<>();
-        final AtomicReference<Http2Exception> errorRef = new AtomicReference<>();
-        channel.eventLoop().execute(() -> {
-            try {
-                frameCodec.forEachActiveStream(stream -> {
-                    activeStreams.add(stream);
-                    return true;
-                });
-            } catch (Http2Exception e) {
-                errorRef.set(e);
+        final Set<Http2FrameStream> activeStreams = new HashSet<Http2FrameStream>();
+        frameCodec.forEachActiveStream(new Http2FrameStreamVisitor() {
+            @Override
+            public boolean visit(Http2FrameStream stream) {
+                activeStreams.add(stream);
+                return true;
             }
         });
-        Http2Exception exception = errorRef.get();
-        if (exception != null) {
-            throw exception;
-        }
 
         assertEquals(2, activeStreams.size());
 
-        Set<Http2FrameStream> expectedStreams = new HashSet<>();
+        Set<Http2FrameStream> expectedStreams = new HashSet<Http2FrameStream>();
         expectedStreams.add(activeInbond);
         expectedStreams.add(activeOutbound);
         assertEquals(expectedStreams, activeStreams);
@@ -849,10 +817,13 @@ public class Http2FrameCodecTest {
 
         final AtomicBoolean listenerExecuted = new AtomicBoolean();
         channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2))
-                .addListener((ChannelFutureListener) future -> {
-                    assertTrue(future.isSuccess());
-                    assertEquals(State.OPEN, stream2.state());
-                    listenerExecuted.set(true);
+                .addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        assertTrue(future.isSuccess());
+                        assertEquals(State.OPEN, stream2.state());
+                        listenerExecuted.set(true);
+                    }
                 });
 
         assertTrue(listenerExecuted.get());
@@ -876,19 +847,22 @@ public class Http2FrameCodecTest {
 
     @Test
     public void upgradeWithoutFlowControlling() throws Exception {
-        channel.pipeline().addAfter(frameCodec.ctx.name(), null, new ChannelHandler() {
+        channel.pipeline().addAfter(frameCodec.ctx.name(), null, new ChannelInboundHandlerAdapter() {
             @Override
             public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
                 if (msg instanceof Http2DataFrame) {
                     // Simulate consuming the frame and update the flow-controller.
                     Http2DataFrame data = (Http2DataFrame) msg;
                     ctx.writeAndFlush(new DefaultHttp2WindowUpdateFrame(data.initialFlowControlledBytes())
-                            .stream(data.stream())).addListener((ChannelFutureListener) future -> {
-                                Throwable cause = future.cause();
-                                if (cause != null) {
-                                    ctx.fireExceptionCaught(cause);
-                                }
-                            });
+                            .stream(data.stream())).addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            Throwable cause = future.cause();
+                            if (cause != null) {
+                                ctx.fireExceptionCaught(cause);
+                            }
+                        }
+                    });
                 }
                 ReferenceCountUtil.release(msg);
             }

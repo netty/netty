@@ -16,24 +16,21 @@
 package io.netty.handler.codec;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
-import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.StringUtil;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
- * {@link ChannelInboundHandler} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an
+ * {@link ChannelInboundHandlerAdapter} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an
  * other Message type.
  *
  * For example here is an implementation which reads all readable bytes from
@@ -73,33 +70,36 @@ import java.util.List;
  * is not released or added to the <tt>out</tt> {@link List}. Use derived buffers like {@link ByteBuf#readSlice(int)}
  * to avoid leaking memory.
  */
-public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter implements ChannelInboundHandler {
+public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter {
 
     /**
      * Cumulate {@link ByteBuf}s by merge them into one {@link ByteBuf}'s, using memory copies.
      */
-    public static final Cumulator MERGE_CUMULATOR = (alloc, cumulation, in) -> {
-        try {
-            final ByteBuf buffer;
-            if (cumulation.writerIndex() > cumulation.maxCapacity() - in.readableBytes()
-                || cumulation.refCnt() > 1 || cumulation.isReadOnly()) {
-                // Expand cumulation (by replace it) when either there is not more room in the buffer
-                // or if the refCnt is greater then 1 which may happen when the user use slice().retain() or
-                // duplicate().retain() or if its read-only.
-                //
-                // See:
-                // - https://github.com/netty/netty/issues/2327
-                // - https://github.com/netty/netty/issues/1764
-                buffer = expandCumulation(alloc, cumulation, in.readableBytes());
-            } else {
-                buffer = cumulation;
+    public static final Cumulator MERGE_CUMULATOR = new Cumulator() {
+        @Override
+        public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
+            try {
+                final ByteBuf buffer;
+                if (cumulation.writerIndex() > cumulation.maxCapacity() - in.readableBytes()
+                        || cumulation.refCnt() > 1 || cumulation.isReadOnly()) {
+                    // Expand cumulation (by replace it) when either there is not more room in the buffer
+                    // or if the refCnt is greater then 1 which may happen when the user use slice().retain() or
+                    // duplicate().retain() or if its read-only.
+                    //
+                    // See:
+                    // - https://github.com/netty/netty/issues/2327
+                    // - https://github.com/netty/netty/issues/1764
+                    buffer = expandCumulation(alloc, cumulation, in.readableBytes());
+                } else {
+                    buffer = cumulation;
+                }
+                buffer.writeBytes(in);
+                return buffer;
+            } finally {
+                // We must release in in all cases as otherwise it may produce a leak if writeBytes(...) throw
+                // for whatever release (for example because of OutOfMemoryError)
+                in.release();
             }
-            buffer.writeBytes(in);
-            return buffer;
-        } finally {
-            // We must release in in all cases as otherwise it may produce a leak if writeBytes(...) throw
-            // for whatever release (for example because of OutOfMemoryError)
-            in.release();
         }
     };
 
@@ -108,36 +108,39 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
      * Be aware that {@link CompositeByteBuf} use a more complex indexing implementation so depending on your use-case
      * and the decoder implementation this may be slower then just use the {@link #MERGE_CUMULATOR}.
      */
-    public static final Cumulator COMPOSITE_CUMULATOR = (alloc, cumulation, in) -> {
-        ByteBuf buffer;
-        try {
-            if (cumulation.refCnt() > 1) {
-                // Expand cumulation (by replace it) when the refCnt is greater then 1 which may happen when the
-                // user use slice().retain() or duplicate().retain().
-                //
-                // See:
-                // - https://github.com/netty/netty/issues/2327
-                // - https://github.com/netty/netty/issues/1764
-                buffer = expandCumulation(alloc, cumulation, in.readableBytes());
-                buffer.writeBytes(in);
-            } else {
-                CompositeByteBuf composite;
-                if (cumulation instanceof CompositeByteBuf) {
-                    composite = (CompositeByteBuf) cumulation;
+    public static final Cumulator COMPOSITE_CUMULATOR = new Cumulator() {
+        @Override
+        public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
+            ByteBuf buffer;
+            try {
+                if (cumulation.refCnt() > 1) {
+                    // Expand cumulation (by replace it) when the refCnt is greater then 1 which may happen when the
+                    // user use slice().retain() or duplicate().retain().
+                    //
+                    // See:
+                    // - https://github.com/netty/netty/issues/2327
+                    // - https://github.com/netty/netty/issues/1764
+                    buffer = expandCumulation(alloc, cumulation, in.readableBytes());
+                    buffer.writeBytes(in);
                 } else {
-                    composite = alloc.compositeBuffer(Integer.MAX_VALUE);
-                    composite.addComponent(true, cumulation);
+                    CompositeByteBuf composite;
+                    if (cumulation instanceof CompositeByteBuf) {
+                        composite = (CompositeByteBuf) cumulation;
+                    } else {
+                        composite = alloc.compositeBuffer(Integer.MAX_VALUE);
+                        composite.addComponent(true, cumulation);
+                    }
+                    composite.addComponent(true, in);
+                    in = null;
+                    buffer = composite;
                 }
-                composite.addComponent(true, in);
-                in = null;
-                buffer = composite;
-            }
-            return buffer;
-        } finally {
-            if (in != null) {
-                // We must release if the ownership was not transferred as otherwise it may produce a leak if
-                // writeBytes(...) throw for whatever release (for example because of OutOfMemoryError).
-                in.release();
+                return buffer;
+            } finally {
+                if (in != null) {
+                    // We must release if the ownership was not transferred as otherwise it may produce a leak if
+                    // writeBytes(...) throw for whatever release (for example because of OutOfMemoryError).
+                    in.release();
+                }
             }
         }
     };
@@ -149,7 +152,6 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
     ByteBuf cumulation;
     private Cumulator cumulator = MERGE_CUMULATOR;
     private boolean singleDecode;
-    private boolean batchDecode;
     private boolean first;
 
     /**
@@ -195,30 +197,12 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
     }
 
     /**
-     * If set then many messages are decoded on each {@link #channelRead(ChannelHandlerContext, Object)}
-     * call. This may be useful if you need to reduce pipeline execution times while increasing throughput.
-     *
-     * Default is {@code false} as this has performance impacts.
-     */
-    public void setBatchDecode(boolean batchDecode) {
-        this.batchDecode = batchDecode;
-    }
-
-    /**
-     * If {@code true} then many messages are decoded on each
-     * {@link #channelRead(ChannelHandlerContext, Object)} call.
-     *
-     * Default is {@code false} as this has performance impacts.
-     */
-    public boolean isBatchDecode() {
-        return batchDecode;
-    }
-
-    /**
      * Set the {@link Cumulator} to use for cumulate the received {@link ByteBuf}s.
      */
     public void setCumulator(Cumulator cumulator) {
-        requireNonNull(cumulator, "cumulator");
+        if (cumulator == null) {
+            throw new NullPointerException("cumulator");
+        }
         this.cumulator = cumulator;
     }
 
@@ -313,11 +297,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
 
                 int size = out.size();
                 firedChannelRead |= out.insertSinceRecycled();
-                if(isBatchDecode()) {
-                    batchFireChannelRead(ctx, out, size);
-                } else {
-                    fireChannelRead(ctx, out, size);
-                }
+                fireChannelRead(ctx, out, size);
                 out.recycle();
             }
         } else {
@@ -344,21 +324,6 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
     static void fireChannelRead(ChannelHandlerContext ctx, CodecOutputList msgs, int numElements) {
         for (int i = 0; i < numElements; i ++) {
             ctx.fireChannelRead(msgs.getUnsafe(i));
-        }
-    }
-
-    /**
-     * Get {@code numElements} out of the {@link CodecOutputList} and batch forward these through the pipeline.
-     */
-    static void batchFireChannelRead(ChannelHandlerContext ctx, CodecOutputList msgs, int numElements) {
-        if (numElements == 1) {
-            ctx.fireChannelRead(msgs.get(0));
-        } else {
-            ArrayList<Object> ret = new ArrayList<>(numElements);
-            for (int i = 0; i < numElements; i++) {
-                ret.add(msgs.get(i));
-            }
-            ctx.fireChannelRead(ret);
         }
     }
 
@@ -399,7 +364,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
             // when the input has been shutdown.
             channelInputClosed(ctx, false);
         }
-        ctx.fireUserEventTriggered(evt);
+        super.userEventTriggered(ctx, evt);
     }
 
     private void channelInputClosed(ChannelHandlerContext ctx, boolean callChannelInactive) throws Exception {

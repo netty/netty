@@ -176,8 +176,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                 } else {
                     streamChannel = new Http2MultiplexCodecStreamChannel(stream, inboundStreamHandler);
                 }
-
-                ChannelFuture future = streamChannel.register();
+                ChannelFuture future = ctx.channel().eventLoop().register(streamChannel);
                 if (future.isDone()) {
                     Http2MultiplexHandler.registerDone(future);
                 } else {
@@ -215,14 +214,17 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
     private void onHttp2GoAwayFrame(ChannelHandlerContext ctx, final Http2GoAwayFrame goAwayFrame) {
         try {
-            forEachActiveStream(stream -> {
-                final int streamId = stream.id();
-                AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel)
-                        ((DefaultHttp2FrameStream) stream).attachment;
-                if (streamId > goAwayFrame.lastStreamId() && connection().local().isValidStreamId(streamId)) {
-                    channel.pipeline().fireUserEventTriggered(goAwayFrame.retainedDuplicate());
+            forEachActiveStream(new Http2FrameStreamVisitor() {
+                @Override
+                public boolean visit(Http2FrameStream stream) {
+                    final int streamId = stream.id();
+                    AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel)
+                            ((DefaultHttp2FrameStream) stream).attachment;
+                    if (streamId > goAwayFrame.lastStreamId() && connection().local().isValidStreamId(streamId)) {
+                        channel.pipeline().fireUserEventTriggered(goAwayFrame.retainedDuplicate());
+                    }
+                    return true;
                 }
-                return true;
             });
         } catch (Http2Exception e) {
             ctx.fireExceptionCaught(e);

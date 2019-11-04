@@ -35,8 +35,8 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.indexOfNonWhiteSpace;
-import static java.util.Objects.requireNonNull;
 
 /**
  * Able to parse files such as <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a> and
@@ -91,7 +91,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
      * @throws IOException If an error occurs while parsing the input files.
      */
     public UnixResolverDnsServerAddressStreamProvider(File etcResolvConf, File... etcResolverFiles) throws IOException {
-        Map<String, DnsServerAddresses> etcResolvConfMap = parse(requireNonNull(etcResolvConf, "etcResolvConf"));
+        Map<String, DnsServerAddresses> etcResolvConfMap = parse(checkNotNull(etcResolvConf, "etcResolvConf"));
         final boolean useEtcResolverFiles = etcResolverFiles != null && etcResolverFiles.length != 0;
         domainToNameServerStreamMap = useEtcResolverFiles ? parse(etcResolverFiles) : etcResolvConfMap;
 
@@ -152,7 +152,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
 
     private static Map<String, DnsServerAddresses> parse(File... etcResolverFiles) throws IOException {
         Map<String, DnsServerAddresses> domainToNameServerStreamMap =
-                new HashMap<>(etcResolverFiles.length << 1);
+                new HashMap<String, DnsServerAddresses>(etcResolverFiles.length << 1);
         for (File etcResolverFile : etcResolverFiles) {
             if (!etcResolverFile.isFile()) {
                 continue;
@@ -161,7 +161,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
             BufferedReader br = null;
             try {
                 br = new BufferedReader(fr);
-                List<InetSocketAddress> addresses = new ArrayList<>(2);
+                List<InetSocketAddress> addresses = new ArrayList<InetSocketAddress>(2);
                 String domainName = etcResolverFile.getName();
                 int port = DNS_PORT;
                 String line;
@@ -178,7 +178,6 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                                 throw new IllegalArgumentException("error parsing label " + NAMESERVER_ROW_LABEL +
                                         " in file " + etcResolverFile + ". value: " + line);
                             }
-
                             String maybeIP = line.substring(i);
                             // There may be a port appended onto the IP address so we attempt to extract it.
                             if (!NetUtil.isValidIpV4Address(maybeIP) && !NetUtil.isValidIpV6Address(maybeIP)) {
@@ -201,7 +200,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                             if (!addresses.isEmpty()) {
                                 putIfAbsent(domainToNameServerStreamMap, domainName, addresses);
                             }
-                            addresses = new ArrayList<>(2);
+                            addresses = new ArrayList<InetSocketAddress>(2);
                         } else if (line.startsWith(PORT_ROW_LABEL)) {
                             int i = indexOfNonWhiteSpace(line, PORT_ROW_LABEL.length());
                             if (i < 0) {
@@ -313,7 +312,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
      */
     static List<String> parseEtcResolverSearchDomains(File etcResolvConf) throws IOException {
         String localDomain = null;
-        List<String> searchDomains = new ArrayList<>();
+        List<String> searchDomains = new ArrayList<String>();
 
         FileReader fr = new FileReader(etcResolvConf);
         BufferedReader br = null;

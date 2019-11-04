@@ -15,29 +15,28 @@
  */
 package io.netty.bootstrap;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.NameResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * A {@link Bootstrap} that makes it easy to bootstrap a {@link Channel} to use
@@ -46,7 +45,7 @@ import java.net.SocketAddress;
  * <p>The {@link #bind()} methods are useful in combination with connectionless transports such as datagram (UDP).
  * For regular TCP connections, please use the provided {@link #connect()} methods.</p>
  */
-public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFactory<? extends Channel>> {
+public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Bootstrap.class);
 
@@ -58,7 +57,6 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
     private volatile AddressResolverGroup<SocketAddress> resolver =
             (AddressResolverGroup<SocketAddress>) DEFAULT_RESOLVER;
     private volatile SocketAddress remoteAddress;
-    volatile ChannelFactory<? extends Channel> channelFactory;
 
     public Bootstrap() { }
 
@@ -66,7 +64,6 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
         super(bootstrap);
         resolver = bootstrap.resolver;
         remoteAddress = bootstrap.remoteAddress;
-        channelFactory = bootstrap.channelFactory;
     }
 
     /**
@@ -75,7 +72,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
      * @param resolver the {@link NameResolver} for this {@code Bootstrap}; may be {@code null}, in which case a default
      *                 resolver will be used
      *
-     * @see DefaultAddressResolverGroup
+     * @see io.netty.resolver.DefaultAddressResolverGroup
      */
     @SuppressWarnings("unchecked")
     public Bootstrap resolver(AddressResolverGroup<?> resolver) {
@@ -105,33 +102,6 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
      */
     public Bootstrap remoteAddress(InetAddress inetHost, int inetPort) {
         remoteAddress = new InetSocketAddress(inetHost, inetPort);
-        return this;
-    }
-
-    /**
-     * The {@link Class} which is used to create {@link Channel} instances from.
-     * You either use this or {@link #channelFactory(ChannelFactory)} if your
-     * {@link Channel} implementation has no no-args constructor.
-     */
-    public Bootstrap channel(Class<? extends Channel> channelClass) {
-        requireNonNull(channelClass, "channelClass");
-        return channelFactory(new ReflectiveChannelFactory<Channel>(channelClass));
-    }
-
-    /**
-     * {@link ChannelFactory} which is used to create {@link Channel} instances from
-     * when calling {@link #bind()}. This method is usually only used if {@link #channel(Class)}
-     * is not working for you because of some more complex needs. If your {@link Channel} implementation
-     * has a no-args constructor, its highly recommend to just use {@link #channel(Class)} to
-     * simplify your code.
-     */
-    public Bootstrap channelFactory(ChannelFactory<? extends Channel> channelFactory) {
-        requireNonNull(channelFactory, "channelFactory");
-        if (this.channelFactory != null) {
-            throw new IllegalStateException("channelFactory set already");
-        }
-
-        this.channelFactory = channelFactory;
         return this;
     }
 
@@ -166,8 +136,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
      * Connect a {@link Channel} to the remote peer.
      */
     public ChannelFuture connect(SocketAddress remoteAddress) {
-        requireNonNull(remoteAddress, "remoteAddress");
-
+        ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
         validate();
         return doResolveAndConnect(remoteAddress, config.localAddress());
     }
@@ -176,7 +145,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
      * Connect a {@link Channel} to the remote peer.
      */
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        requireNonNull(remoteAddress, "remoteAddress");
+        ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
         validate();
         return doResolveAndConnect(remoteAddress, localAddress);
     }
@@ -195,17 +164,23 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
             return doResolveAndConnect0(channel, remoteAddress, localAddress, channel.newPromise());
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
-            final ChannelPromise promise = channel.newPromise();
-            regFuture.addListener((ChannelFutureListener) future -> {
-                // Directly obtain the cause and do a null check so we only need one volatile read in case of a
-                // failure.
-                Throwable cause = future.cause();
-                if (cause != null) {
-                    // Registration on the EventLoop failed so fail the ChannelPromise directly to not cause an
-                    // IllegalStateException once we try to access the EventLoop of the Channel.
-                    promise.setFailure(cause);
-                } else {
-                    doResolveAndConnect0(channel, remoteAddress, localAddress, promise);
+            final PendingRegistrationPromise promise = new PendingRegistrationPromise(channel);
+            regFuture.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    // Directly obtain the cause and do a null check so we only need one volatile read in case of a
+                    // failure.
+                    Throwable cause = future.cause();
+                    if (cause != null) {
+                        // Registration on the EventLoop failed so fail the ChannelPromise directly to not cause an
+                        // IllegalStateException once we try to access the EventLoop of the Channel.
+                        promise.setFailure(cause);
+                    } else {
+                        // Registration was successful, so set the correct executor to use.
+                        // See https://github.com/netty/netty/issues/2586
+                        promise.registered();
+                        doResolveAndConnect0(channel, remoteAddress, localAddress, promise);
+                    }
                 }
             });
             return promise;
@@ -241,12 +216,15 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
             }
 
             // Wait until the name resolution is finished.
-            resolveFuture.addListener((FutureListener<SocketAddress>) future -> {
-                if (future.cause() != null) {
-                    channel.close();
-                    promise.setFailure(future.cause());
-                } else {
-                    doConnect(future.getNow(), localAddress, promise);
+            resolveFuture.addListener(new FutureListener<SocketAddress>() {
+                @Override
+                public void operationComplete(Future<SocketAddress> future) throws Exception {
+                    if (future.cause() != null) {
+                        channel.close();
+                        promise.setFailure(future.cause());
+                    } else {
+                        doConnect(future.getNow(), localAddress, promise);
+                    }
                 }
             });
         } catch (Throwable cause) {
@@ -261,31 +239,27 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
         // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
         final Channel channel = connectPromise.channel();
-        channel.eventLoop().execute(() -> {
-            if (localAddress == null) {
-                channel.connect(remoteAddress, connectPromise);
-            } else {
-                channel.connect(remoteAddress, localAddress, connectPromise);
+        channel.eventLoop().execute(new Runnable() {
+            @Override
+            public void run() {
+                if (localAddress == null) {
+                    channel.connect(remoteAddress, connectPromise);
+                } else {
+                    channel.connect(remoteAddress, localAddress, connectPromise);
+                }
+                connectPromise.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
             }
-            connectPromise.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
         });
     }
 
     @Override
-    ChannelFuture init(Channel channel) {
-        ChannelPromise promise = channel.newPromise();
+    @SuppressWarnings("unchecked")
+    void init(Channel channel) {
         ChannelPipeline p = channel.pipeline();
         p.addLast(config.handler());
 
         setChannelOptions(channel, options0().entrySet().toArray(newOptionArray(0)), logger);
         setAttributes(channel, attrs0().entrySet().toArray(newAttrArray(0)));
-
-        return promise.setSuccess();
-    }
-
-    @Override
-    Channel newChannel(EventLoop eventLoop) throws Exception {
-        return channelFactory.newChannel(eventLoop);
     }
 
     @Override
@@ -293,9 +267,6 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
         super.validate();
         if (config.handler() == null) {
             throw new IllegalStateException("handler not set");
-        }
-        if (config.channelFactory() == null) {
-            throw new IllegalStateException("channelFactory not set");
         }
         return this;
     }

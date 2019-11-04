@@ -17,6 +17,8 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPromise;
@@ -30,7 +32,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.concurrent.Future;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -185,14 +186,16 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
      */
     final void forEachActiveStream(final Http2FrameStreamVisitor streamVisitor) throws Http2Exception {
         assert ctx.executor().inEventLoop();
-
         if (connection().numActiveStreams() > 0) {
-            connection().forEachActiveStream(stream -> {
-                try {
-                    return streamVisitor.visit((Http2FrameStream) stream.getProperty(streamKey));
-                } catch (Throwable cause) {
-                    onError(ctx, false, cause);
-                    return false;
+            connection().forEachActiveStream(new Http2StreamVisitor() {
+                @Override
+                public boolean visit(Http2Stream stream) {
+                    try {
+                        return streamVisitor.visit((Http2FrameStream) stream.getProperty(streamKey));
+                    } catch (Throwable cause) {
+                        onError(ctx, false, cause);
+                        return false;
+                    }
                 }
             });
         }
@@ -418,10 +421,13 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 numBufferedStreams++;
                 // Clean up the stream being initialized if writing the headers fails and also
                 // decrement the number of buffered streams.
-                promise.addListener(channelFuture -> {
-                    numBufferedStreams--;
+                promise.addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture channelFuture) {
+                        numBufferedStreams--;
 
-                    handleHeaderFuture(channelFuture, streamId);
+                        handleHeaderFuture(channelFuture, streamId);
+                    }
                 });
             } else {
                 handleHeaderFuture(promise, streamId);
@@ -429,7 +435,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         }
     }
 
-    private void handleHeaderFuture(Future<?> channelFuture, int streamId) {
+    private void handleHeaderFuture(ChannelFuture channelFuture, int streamId) {
         if (!channelFuture.isSuccess()) {
             frameStreamToInitializeMap.remove(streamId);
         }

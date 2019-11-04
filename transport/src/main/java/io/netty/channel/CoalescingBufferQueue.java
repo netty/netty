@@ -14,12 +14,11 @@
  */
 package io.netty.channel;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * A FIFO queue of bytes where producers add bytes by repeatedly adding {@link ByteBuf} and consumers take bytes in
@@ -46,7 +45,7 @@ public final class CoalescingBufferQueue extends AbstractCoalescingBufferQueue {
 
     public CoalescingBufferQueue(Channel channel, int initSize, boolean updateWritability) {
         super(updateWritability ? channel : null, initSize);
-        this.channel = requireNonNull(channel, "channel");
+        this.channel = ObjectUtil.checkNotNull(channel, "channel");
     }
 
     /**

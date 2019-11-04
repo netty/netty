@@ -52,8 +52,8 @@ import java.util.concurrent.Executor;
 import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.FileDescriptor.pipe;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
-import static java.util.Objects.requireNonNull;
 
 public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel implements DuplexChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
@@ -61,10 +61,14 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
                     StringUtil.simpleClassName(DefaultFileRegion.class) + ')';
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractEpollStreamChannel.class);
-    private final Runnable flushTask = () -> {
-        // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
-        // meantime.
-        ((AbstractEpollUnsafe) unsafe()).flush0();
+
+    private final Runnable flushTask = new Runnable() {
+        @Override
+        public void run() {
+            // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
+            // meantime.
+            ((AbstractEpollUnsafe) unsafe()).flush0();
+        }
     };
 
     // Lazy init these if we need to splice(...)
@@ -74,32 +78,32 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     private WritableByteChannel byteChannel;
 
-    protected AbstractEpollStreamChannel(Channel parent, EventLoop eventLoop, int fd) {
-        this(parent, eventLoop, new LinuxSocket(fd));
+    protected AbstractEpollStreamChannel(Channel parent, int fd) {
+        this(parent, new LinuxSocket(fd));
     }
 
-    protected AbstractEpollStreamChannel(EventLoop eventLoop, int fd) {
-        this(eventLoop, new LinuxSocket(fd));
+    protected AbstractEpollStreamChannel(int fd) {
+        this(new LinuxSocket(fd));
     }
 
-    AbstractEpollStreamChannel(EventLoop eventLoop, LinuxSocket fd) {
-        this(eventLoop, fd, isSoErrorZero(fd));
+    AbstractEpollStreamChannel(LinuxSocket fd) {
+        this(fd, isSoErrorZero(fd));
     }
 
-    AbstractEpollStreamChannel(Channel parent, EventLoop eventLoop, LinuxSocket fd) {
-        super(parent, eventLoop, fd, true);
+    AbstractEpollStreamChannel(Channel parent, LinuxSocket fd) {
+        super(parent, fd, true);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
     }
 
-    AbstractEpollStreamChannel(Channel parent, EventLoop eventLoop, LinuxSocket fd, SocketAddress remote) {
-        super(parent, eventLoop, fd, remote);
+    AbstractEpollStreamChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
+        super(parent, fd, remote);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
     }
 
-    protected AbstractEpollStreamChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
-        super(null, eventLoop, fd, active);
+    protected AbstractEpollStreamChannel(LinuxSocket fd, boolean active) {
+        super(null, fd, active);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
     }
@@ -156,7 +160,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 || config().getEpollMode() != EpollMode.LEVEL_TRIGGERED) {
             throw new IllegalStateException("spliceTo() supported only when using " + EpollMode.LEVEL_TRIGGERED);
         }
-        requireNonNull(promise, "promise");
+        checkNotNull(promise, "promise");
         if (!isOpen()) {
             promise.tryFailure(new ClosedChannelException());
         } else {
@@ -205,7 +209,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         if (config().getEpollMode() != EpollMode.LEVEL_TRIGGERED) {
             throw new IllegalStateException("spliceTo() supported only when using " + EpollMode.LEVEL_TRIGGERED);
         }
-        requireNonNull(promise, "promise");
+        checkNotNull(promise, "promise");
         if (!isOpen()) {
             promise.tryFailure(new ClosedChannelException());
         } else {
@@ -220,8 +224,13 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             // Seems like the Channel was closed in the meantime try to fail the promise to prevent any
             // cases where a future may not be notified otherwise.
             if (promise.tryFailure(new ClosedChannelException())) {
-                // Call this via the EventLoop as it is a MPSC queue.
-                eventLoop().execute(this::clearSpliceQueue);
+                eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        // Call this via the EventLoop as it is a MPSC queue.
+                        clearSpliceQueue();
+                    }
+                });
             }
         }
     }
@@ -492,7 +501,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      */
     private int doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
         final long maxBytesPerGatheringWrite = config().getMaxBytesPerGatheringWrite();
-        IovArray array = registration().cleanIovArray();
+        IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
         array.maxBytes(maxBytesPerGatheringWrite);
         in.forEachFlushedMessage(array);
 
@@ -561,7 +570,12 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         if (loop.inEventLoop()) {
             ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
         } else {
-            loop.execute(() -> ((AbstractUnsafe) unsafe()).shutdownOutput(promise));
+            loop.execute(new Runnable() {
+                @Override
+                public void run() {
+                    ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
+                }
+            });
         }
 
         return promise;
@@ -576,13 +590,23 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     public ChannelFuture shutdownInput(final ChannelPromise promise) {
         Executor closeExecutor = ((EpollStreamUnsafe) unsafe()).prepareToClose();
         if (closeExecutor != null) {
-            closeExecutor.execute(() -> shutdownInput0(promise));
+            closeExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    shutdownInput0(promise);
+                }
+            });
         } else {
             EventLoop loop = eventLoop();
             if (loop.inEventLoop()) {
                 shutdownInput0(promise);
             } else {
-                loop.execute(() -> shutdownInput0(promise));
+                loop.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        shutdownInput0(promise);
+                    }
+                });
             }
         }
         return promise;
@@ -599,8 +623,12 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         if (shutdownOutputFuture.isDone()) {
             shutdownOutputDone(shutdownOutputFuture, promise);
         } else {
-            shutdownOutputFuture.addListener((ChannelFutureListener) shutdownOutputFuture1 ->
-                    shutdownOutputDone(shutdownOutputFuture1, promise));
+            shutdownOutputFuture.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(final ChannelFuture shutdownOutputFuture) throws Exception {
+                    shutdownOutputDone(shutdownOutputFuture, promise);
+                }
+            });
         }
         return promise;
     }
@@ -610,8 +638,12 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         if (shutdownInputFuture.isDone()) {
             shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
         } else {
-            shutdownInputFuture.addListener((ChannelFutureListener) shutdownInputFuture1 ->
-                    shutdownDone(shutdownOutputFuture, shutdownInputFuture1, promise));
+            shutdownInputFuture.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture shutdownInputFuture) throws Exception {
+                    shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
+                }
+            });
         }
     }
 
@@ -696,8 +728,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             pipeline.fireExceptionCaught(cause);
             if (close || cause instanceof IOException) {
                 shutdownInput(false);
-            } else {
-                readIfIsAutoRead();
             }
         }
 
@@ -783,8 +813,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
                 if (close) {
                     shutdownInput(false);
-                } else {
-                    readIfIsAutoRead();
                 }
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, close, allocHandle);

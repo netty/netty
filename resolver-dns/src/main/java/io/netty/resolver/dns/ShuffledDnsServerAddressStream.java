@@ -16,10 +16,11 @@
 
 package io.netty.resolver.dns;
 
+import io.netty.util.internal.PlatformDependent;
+
 import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 final class ShuffledDnsServerAddressStream implements DnsServerAddressStream {
 
@@ -43,7 +44,7 @@ final class ShuffledDnsServerAddressStream implements DnsServerAddressStream {
     }
 
     private void shuffle() {
-        Collections.shuffle(addresses, ThreadLocalRandom.current());
+        Collections.shuffle(addresses, PlatformDependent.threadLocalRandom());
     }
 
     @Override

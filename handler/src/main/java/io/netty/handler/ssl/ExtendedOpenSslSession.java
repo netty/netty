@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.util.internal.SuppressJava6Requirement;
+
 import javax.net.ssl.ExtendedSSLSession;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLPeerUnverifiedException;
@@ -29,6 +31,7 @@ import java.util.List;
  * Delegates all operations to a wrapped {@link OpenSslSession} except the methods defined by {@link ExtendedSSLSession}
  * itself.
  */
+@SuppressJava6Requirement(reason = "Usage guarded by java version check")
 abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements OpenSslSession {
 
     // TODO: use OpenSSL API to actually fetch the real data but for now just do what Conscrypt does:

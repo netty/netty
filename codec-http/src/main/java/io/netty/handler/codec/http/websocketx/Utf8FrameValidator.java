@@ -19,13 +19,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.CorruptedFrameException;
 
 /**
  *
  */
-public class Utf8FrameValidator implements ChannelInboundHandler {
+public class Utf8FrameValidator extends ChannelInboundHandlerAdapter {
 
     private int fragmentedFramesCount;
     private Utf8Validator utf8Validator;
@@ -74,7 +74,7 @@ public class Utf8FrameValidator implements ChannelInboundHandler {
             }
         }
 
-        ctx.fireChannelRead(msg);
+        super.channelRead(ctx, msg);
     }
 
     private void checkUTF8String(ByteBuf buffer) {
@@ -89,6 +89,6 @@ public class Utf8FrameValidator implements ChannelInboundHandler {
         if (cause instanceof CorruptedFrameException && ctx.channel().isOpen()) {
             ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
         }
-        ctx.fireExceptionCaught(cause);
+        super.exceptionCaught(ctx, cause);
     }
 }

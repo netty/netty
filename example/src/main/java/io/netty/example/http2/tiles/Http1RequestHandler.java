@@ -40,27 +40,30 @@ import java.util.concurrent.TimeUnit;
 public final class Http1RequestHandler extends Http2RequestHandler {
 
     @Override
-    protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
         if (HttpUtil.is100ContinueExpected(request)) {
             ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, Unpooled.EMPTY_BUFFER));
         }
-        super.messageReceived(ctx, request);
+        super.channelRead0(ctx, request);
     }
 
     @Override
     protected void sendResponse(final ChannelHandlerContext ctx, String streamId, int latency,
             final FullHttpResponse response, final FullHttpRequest request) {
         HttpUtil.setContentLength(response, response.content().readableBytes());
-        ctx.executor().schedule(() -> {
-            if (isKeepAlive(request)) {
-                if (request.protocolVersion().equals(HTTP_1_0)) {
-                    response.headers().set(CONNECTION, KEEP_ALIVE);
+        ctx.executor().schedule(new Runnable() {
+            @Override
+            public void run() {
+                if (isKeepAlive(request)) {
+                    if (request.protocolVersion().equals(HTTP_1_0)) {
+                        response.headers().set(CONNECTION, KEEP_ALIVE);
+                    }
+                    ctx.writeAndFlush(response);
+                } else {
+                    // Tell the client we're going to close the connection.
+                    response.headers().set(CONNECTION, CLOSE);
+                    ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
                 }
-                ctx.writeAndFlush(response);
-            } else {
-                // Tell the client we're going to close the connection.
-                response.headers().set(CONNECTION, CLOSE);
-                ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
             }
         }, latency, TimeUnit.MILLISECONDS);
     }

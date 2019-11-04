@@ -16,6 +16,8 @@
 package io.netty.testsuite.transport.socket;
 
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 
@@ -26,9 +28,13 @@ import java.nio.channels.spi.SelectorProvider;
 
 public class DatagramUnicastIPv6Test extends DatagramUnicastTest {
 
+    @SuppressJava6Requirement(reason = "Guarded by java version check")
     @BeforeClass
     public static void assumeIpv6Supported() {
         try {
+            if (PlatformDependent.javaVersion() < 7) {
+                throw new UnsupportedOperationException();
+            }
             Channel channel = SelectorProvider.provider().openDatagramChannel(StandardProtocolFamily.INET6);
             channel.close();
         } catch (UnsupportedOperationException e) {

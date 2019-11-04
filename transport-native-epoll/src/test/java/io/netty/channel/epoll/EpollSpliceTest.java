@@ -22,10 +22,9 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.NetUtil;
@@ -55,7 +54,7 @@ public class EpollSpliceTest {
         final EchoHandler sh = new EchoHandler();
         final EchoHandler ch = new EchoHandler();
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        EventLoopGroup group = new EpollEventLoopGroup(1);
         ServerBootstrap bs = new ServerBootstrap();
         bs.channel(EpollServerSocketChannel.class);
         bs.group(group).childHandler(sh);
@@ -64,7 +63,7 @@ public class EpollSpliceTest {
         ServerBootstrap bs2 = new ServerBootstrap();
         bs2.channel(EpollServerSocketChannel.class);
         bs2.childOption(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED);
-        bs2.group(group).childHandler(new ChannelHandler() {
+        bs2.group(group).childHandler(new ChannelInboundHandlerAdapter() {
             @Override
             public void channelActive(final ChannelHandlerContext ctx) throws Exception {
                 ctx.channel().config().setAutoRead(false);
@@ -72,7 +71,7 @@ public class EpollSpliceTest {
                 bs.option(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED);
 
                 bs.channel(EpollSocketChannel.class);
-                bs.group(ctx.channel().eventLoop()).handler(new ChannelHandler() {
+                bs.group(ctx.channel().eventLoop()).handler(new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelActive(ChannelHandlerContext context) throws Exception {
                         final EpollSocketChannel ch = (EpollSocketChannel) ctx.channel();
@@ -81,9 +80,12 @@ public class EpollSpliceTest {
                         // the data transfer only in kernel space!
 
                         // Integer.MAX_VALUE will splice infinitly.
-                        ch.spliceTo(ch2, Integer.MAX_VALUE).addListener((ChannelFutureListener) future -> {
-                            if (!future.isSuccess()) {
-                                future.channel().close();
+                        ch.spliceTo(ch2, Integer.MAX_VALUE).addListener(new ChannelFutureListener() {
+                            @Override
+                            public void operationComplete(ChannelFuture future) throws Exception {
+                                if (!future.isSuccess()) {
+                                    future.channel().close();
+                                }
                             }
                         });
                         // Trigger multiple splices to see if partial splicing works as well.
@@ -105,11 +107,19 @@ public class EpollSpliceTest {
                         context.close();
                     }
                 });
-                bs.connect(sc.localAddress()).addListener((ChannelFutureListener) future -> {
-                    if (!future.isSuccess()) {
-                        ctx.close();
-                    } else {
-                        future.channel().closeFuture().addListener((ChannelFutureListener) future1 -> ctx.close());
+                bs.connect(sc.localAddress()).addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        if (!future.isSuccess()) {
+                            ctx.close();
+                        } else {
+                            future.channel().closeFuture().addListener(new ChannelFutureListener() {
+                                @Override
+                                public void operationComplete(ChannelFuture future) throws Exception {
+                                    ctx.close();
+                                }
+                            });
+                        }
                     }
                 });
             }
@@ -181,7 +191,7 @@ public class EpollSpliceTest {
 
     @Test(timeout = 10000)
     public void spliceToFile() throws Throwable {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        EventLoopGroup group = new EpollEventLoopGroup(1);
         File file = File.createTempFile("netty-splice", null);
         file.deleteOnExit();
 
@@ -195,7 +205,7 @@ public class EpollSpliceTest {
         Bootstrap cb = new Bootstrap();
         cb.group(group);
         cb.channel(EpollSocketChannel.class);
-        cb.handler(new ChannelHandler() { });
+        cb.handler(new ChannelInboundHandlerAdapter());
         Channel cc = cb.connect(sc.localAddress()).syncUninterruptibly().channel();
 
         for (int i = 0; i < data.length;) {
@@ -237,7 +247,7 @@ public class EpollSpliceTest {
 
     private static class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
         volatile Channel channel;
-        final AtomicReference<Throwable> exception = new AtomicReference<>();
+        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
 
         @Override
@@ -247,7 +257,7 @@ public class EpollSpliceTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 
@@ -278,12 +288,12 @@ public class EpollSpliceTest {
         }
     }
 
-    private static class SpliceHandler implements ChannelHandler {
+    private static class SpliceHandler extends ChannelInboundHandlerAdapter {
         private final File file;
 
         volatile ChannelFuture future;
         volatile ChannelFuture future2;
-        final AtomicReference<Throwable> exception = new AtomicReference<>();
+        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
 
         SpliceHandler(File file) {
             this.file = file;

@@ -467,6 +467,7 @@ public final class NativeLibraryLoader {
 
     private static final class NoexecVolumeDetector {
 
+        @SuppressJava6Requirement(reason = "Usage guarded by java version check")
         private static boolean canExecuteExecutable(File file) throws IOException {
             // If we can already execute, there is nothing to do.
             if (file.canExecute()) {

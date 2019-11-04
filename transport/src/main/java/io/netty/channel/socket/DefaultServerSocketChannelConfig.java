@@ -32,7 +32,6 @@ import static io.netty.channel.ChannelOption.SO_BACKLOG;
 import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
-import static java.util.Objects.requireNonNull;
 
 /**
  * The default {@link ServerSocketChannelConfig} implementation.
@@ -48,7 +47,9 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
      */
     public DefaultServerSocketChannelConfig(ServerSocketChannel channel, ServerSocket javaSocket) {
         super(channel);
-        requireNonNull(javaSocket, "javaSocket");
+        if (javaSocket == null) {
+            throw new NullPointerException("javaSocket");
+        }
         this.javaSocket = javaSocket;
     }
 

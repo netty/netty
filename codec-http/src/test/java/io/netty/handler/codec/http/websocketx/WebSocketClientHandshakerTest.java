@@ -32,7 +32,6 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.util.CharsetUtil;
-
 import org.junit.Test;
 
 import java.net.URI;
@@ -294,7 +293,7 @@ public abstract class WebSocketClientHandshakerTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpObjectAggregator(Integer.MAX_VALUE),
                 new SimpleChannelInboundHandler<FullHttpResponse>() {
                     @Override
-                    protected void messageReceived(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
+                    protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
                         handshaker.finishHandshake(ctx.channel(), msg);
                         ctx.pipeline().remove(this);
                     }

@@ -20,12 +20,14 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.internal.PlatformDependent;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 
@@ -35,7 +37,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.WritableByteChannel;
 import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -46,7 +47,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
     static final byte[] data = new byte[1048576 * 10];
 
     static {
-        ThreadLocalRandom.current().nextBytes(data);
+        PlatformDependent.threadLocalRandom().nextBytes(data);
     }
 
     @Test
@@ -109,11 +110,11 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
         sb.childHandler(new SimpleChannelInboundHandler<ByteBuf>() {
             @Override
-            protected void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) {
+            protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) {
                 // Just drop the message.
             }
         });
-        cb.handler(new ChannelHandler() { });
+        cb.handler(new ChannelInboundHandlerAdapter());
 
         Channel sc = sb.bind().sync().channel();
         Channel cc = cb.connect(sc.localAddress()).sync().channel();
@@ -138,7 +139,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         file.deleteOnExit();
 
         final FileOutputStream out = new FileOutputStream(file);
-        final Random random = ThreadLocalRandom.current();
+        final Random random = PlatformDependent.threadLocalRandom();
 
         // Prepend random data which will not be transferred, so that we can test non-zero start offset
         final int startOffset = random.nextInt(8192);
@@ -156,9 +157,9 @@ public class SocketFileRegionTest extends AbstractSocketTest {
 
         out.close();
 
-        ChannelHandler ch = new SimpleChannelInboundHandler<Object>() {
+        ChannelInboundHandler ch = new SimpleChannelInboundHandler<Object>() {
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
+            public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
             }
 
             @Override
@@ -235,7 +236,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
     private static class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
         private final boolean autoRead;
         volatile Channel channel;
-        final AtomicReference<Throwable> exception = new AtomicReference<>();
+        final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         volatile int counter;
 
         TestHandler(boolean autoRead) {
@@ -252,7 +253,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
             byte[] actual = new byte[in.readableBytes()];
             in.readBytes(actual);
 

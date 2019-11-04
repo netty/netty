@@ -16,9 +16,9 @@
 
 package io.netty.handler.ssl.util;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
 
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.TrustManager;
@@ -73,7 +73,9 @@ public abstract class SimpleTrustManagerFactory extends TrustManagerFactory {
         CURRENT_SPI.get().init(this);
         CURRENT_SPI.remove();
 
-        requireNonNull(name, "name");
+        if (name == null) {
+            throw new NullPointerException("name");
+        }
     }
 
     /**
@@ -134,15 +136,22 @@ public abstract class SimpleTrustManagerFactory extends TrustManagerFactory {
             TrustManager[] trustManagers = this.trustManagers;
             if (trustManagers == null) {
                 trustManagers = parent.engineGetTrustManagers();
-                for (int i = 0; i < trustManagers.length; i++) {
-                    final TrustManager tm = trustManagers[i];
-                    if (tm instanceof X509TrustManager && !(tm instanceof X509ExtendedTrustManager)) {
-                        trustManagers[i] = new X509TrustManagerWrapper((X509TrustManager) tm);
-                    }
+                if (PlatformDependent.javaVersion() >= 7) {
+                    wrapIfNeeded(trustManagers);
                 }
                 this.trustManagers = trustManagers;
             }
             return trustManagers.clone();
+        }
+
+        @SuppressJava6Requirement(reason = "Usage guarded by java version check")
+        private static void wrapIfNeeded(TrustManager[] trustManagers) {
+            for (int i = 0; i < trustManagers.length; i++) {
+                final TrustManager tm = trustManagers[i];
+                if (tm instanceof X509TrustManager && !(tm instanceof X509ExtendedTrustManager)) {
+                    trustManagers[i] = new X509TrustManagerWrapper((X509TrustManager) tm);
+                }
+            }
         }
     }
 }

@@ -15,8 +15,8 @@
  */
 package io.netty.handler.address;
 
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
@@ -36,7 +36,7 @@ public class DynamicAddressConnectHandlerTest {
     @Test
     public void testReplaceAddresses() {
 
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
                                 SocketAddress localAddress, ChannelPromise promise) {

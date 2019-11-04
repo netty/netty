@@ -24,7 +24,6 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
-import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
@@ -45,7 +44,6 @@ import java.net.SocketException;
 import java.nio.ByteBuffer;
 
 import static io.netty.channel.kqueue.BsdSocket.newSocketDgram;
-import static java.util.Objects.requireNonNull;
 
 @UnstableApi
 public final class KQueueDatagramChannel extends AbstractKQueueChannel implements DatagramChannel {
@@ -60,17 +58,17 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     private volatile boolean connected;
     private final KQueueDatagramChannelConfig config;
 
-    public KQueueDatagramChannel(EventLoop eventLoop) {
-        super(null, eventLoop, newSocketDgram(), false);
+    public KQueueDatagramChannel() {
+        super(null, newSocketDgram(), false);
         config = new KQueueDatagramChannelConfig(this);
     }
 
-    public KQueueDatagramChannel(EventLoop eventLoop, int fd) {
-        this(eventLoop, new BsdSocket(fd), true);
+    public KQueueDatagramChannel(int fd) {
+        this(new BsdSocket(fd), true);
     }
 
-    KQueueDatagramChannel(EventLoop eventLoop, BsdSocket socket, boolean active) {
-        super(null, eventLoop, socket, active);
+    KQueueDatagramChannel(BsdSocket socket, boolean active) {
+        super(null, socket, active);
         config = new KQueueDatagramChannelConfig(this);
     }
 
@@ -141,8 +139,14 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     public ChannelFuture joinGroup(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
             final InetAddress source, final ChannelPromise promise) {
-        requireNonNull(multicastAddress, "multicastAddress");
-        requireNonNull(networkInterface, "networkInterface");
+
+        if (multicastAddress == null) {
+            throw new NullPointerException("multicastAddress");
+        }
+
+        if (networkInterface == null) {
+            throw new NullPointerException("networkInterface");
+        }
 
         promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
         return promise;
@@ -187,8 +191,12 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     public ChannelFuture leaveGroup(
             final InetAddress multicastAddress, final NetworkInterface networkInterface, final InetAddress source,
             final ChannelPromise promise) {
-        requireNonNull(multicastAddress, "multicastAddress");
-        requireNonNull(networkInterface, "networkInterface");
+        if (multicastAddress == null) {
+            throw new NullPointerException("multicastAddress");
+        }
+        if (networkInterface == null) {
+            throw new NullPointerException("networkInterface");
+        }
 
         promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
 
@@ -206,9 +214,16 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     public ChannelFuture block(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
             final InetAddress sourceToBlock, final ChannelPromise promise) {
-        requireNonNull(multicastAddress, "multicastAddress");
-        requireNonNull(sourceToBlock, "sourceToBlock");
-        requireNonNull(networkInterface, "networkInterface");
+        if (multicastAddress == null) {
+            throw new NullPointerException("multicastAddress");
+        }
+        if (sourceToBlock == null) {
+            throw new NullPointerException("sourceToBlock");
+        }
+
+        if (networkInterface == null) {
+            throw new NullPointerException("networkInterface");
+        }
         promise.setFailure(new UnsupportedOperationException("Multicast not supported"));
         return promise;
     }
@@ -307,7 +322,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
                         remoteAddress.getAddress(), remoteAddress.getPort());
             }
         } else if (data.nioBufferCount() > 1) {
-            IovArray array = registration().cleanArray();
+            IovArray array = ((KQueueEventLoop) eventLoop()).cleanArray();
             array.add(data, data.readerIndex(), data.readableBytes());
             int cnt = array.count();
             assert cnt != 0;
@@ -353,7 +368,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
 
                 ByteBuf content = (ByteBuf) e.content();
                 return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
-                        new DefaultAddressedEnvelope<>(
+                        new DefaultAddressedEnvelope<ByteBuf, InetSocketAddress>(
                                 newDirectBuffer(e, content), (InetSocketAddress) e.recipient()) : e;
             }
         }
@@ -481,8 +496,6 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
 
                 if (exception != null) {
                     pipeline.fireExceptionCaught(exception);
-                } else {
-                    readIfIsAutoRead();
                 }
             } finally {
                 readReadyFinally(config);

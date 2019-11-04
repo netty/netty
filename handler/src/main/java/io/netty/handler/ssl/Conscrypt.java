@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.util.internal.PlatformDependent;
+
 import javax.net.ssl.SSLEngine;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -54,7 +56,7 @@ final class Conscrypt {
      * Indicates whether or not conscrypt is available on the current system.
      */
     static boolean isAvailable() {
-        return CAN_INSTANCE_PROVIDER && IS_CONSCRYPT_SSLENGINE != null;
+        return CAN_INSTANCE_PROVIDER && IS_CONSCRYPT_SSLENGINE != null && PlatformDependent.javaVersion() >= 8;
     }
 
     static boolean isEngineSupported(SSLEngine engine) {

@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -67,7 +68,7 @@ public class Http2ServerUpgradeCodecTest {
 
         ServerChannel parent = Mockito.mock(ServerChannel.class);
         EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
-                new ChannelHandler() { });
+                new ChannelInboundHandlerAdapter());
         ChannelHandlerContext ctx = channel.pipeline().firstContext();
         Http2ServerUpgradeCodec codec;
         if (multiplexer == null) {
@@ -75,11 +76,8 @@ public class Http2ServerUpgradeCodecTest {
         } else {
             codec = new Http2ServerUpgradeCodec((Http2FrameCodec) handler, multiplexer);
         }
-        channel.eventLoop().execute(() -> {
-            assertTrue(codec.prepareUpgradeResponse(ctx, request, new DefaultHttpHeaders()));
-            codec.upgradeTo(ctx, request);
-        });
-
+        assertTrue(codec.prepareUpgradeResponse(ctx, request, new DefaultHttpHeaders()));
+        codec.upgradeTo(ctx, request);
         // Flush the channel to ensure we write out all buffered data
         channel.flush();
 
@@ -105,5 +103,5 @@ public class Http2ServerUpgradeCodecTest {
     }
 
     @ChannelHandler.Sharable
-    private static final class HttpInboundHandler implements ChannelHandler { }
+    private static final class HttpInboundHandler extends ChannelInboundHandlerAdapter { }
 }

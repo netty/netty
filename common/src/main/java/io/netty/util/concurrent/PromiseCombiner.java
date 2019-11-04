@@ -15,8 +15,7 @@
  */
 package io.netty.util.concurrent;
 
-import static java.util.Objects.requireNonNull;
-
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * <p>A promise combiner monitors the outcome of a number of discrete futures, then notifies a final, aggregate promise
@@ -44,7 +43,12 @@ public final class PromiseCombiner {
             if (executor.inEventLoop()) {
                 operationComplete0(future);
             } else {
-                executor.execute(() -> operationComplete0(future));
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        operationComplete0(future);
+                    }
+                });
             }
         }
 
@@ -77,7 +81,7 @@ public final class PromiseCombiner {
      * @param executor the {@link EventExecutor} to use for notifications.
      */
     public PromiseCombiner(EventExecutor executor) {
-        this.executor = requireNonNull(executor, "executor");
+        this.executor = ObjectUtil.checkNotNull(executor, "executor");
     }
 
     /**
@@ -145,7 +149,7 @@ public final class PromiseCombiner {
      * @param aggregatePromise the promise to notify when all combined futures have finished
      */
     public void finish(Promise<Void> aggregatePromise) {
-        requireNonNull(aggregatePromise, "aggregatePromise");
+        ObjectUtil.checkNotNull(aggregatePromise, "aggregatePromise");
         checkInEventLoop();
         if (this.aggregatePromise != null) {
             throw new IllegalStateException("Already finished");

@@ -19,6 +19,7 @@ import static io.netty.resolver.dns.DnsAddressDecoder.decodeAddress;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Collections;
 import java.util.List;
 
 import io.netty.channel.EventLoop;
@@ -58,7 +59,7 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
 
     @Override
     List<InetAddress> filterResults(List<InetAddress> unfiltered) {
-        unfiltered.sort(PreferredAddressTypeComparator.comparator(parent.preferredAddressType()));
+        Collections.sort(unfiltered, PreferredAddressTypeComparator.comparator(parent.preferredAddressType()));
         return unfiltered;
     }
 

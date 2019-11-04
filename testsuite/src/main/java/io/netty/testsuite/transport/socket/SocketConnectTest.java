@@ -19,8 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.Test;
@@ -43,14 +43,14 @@ public class SocketConnectTest extends AbstractSocketTest {
         Channel clientChannel = null;
         try {
             final Promise<InetSocketAddress> localAddressPromise = ImmediateEventExecutor.INSTANCE.newPromise();
-            serverChannel = sb.childHandler(new ChannelHandler() {
+            serverChannel = sb.childHandler(new ChannelInboundHandlerAdapter() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             localAddressPromise.setSuccess((InetSocketAddress) ctx.channel().localAddress());
                         }
                     }).bind().syncUninterruptibly().channel();
 
-            clientChannel = cb.handler(new ChannelHandler() { }).register().syncUninterruptibly().channel();
+            clientChannel = cb.handler(new ChannelInboundHandlerAdapter()).register().syncUninterruptibly().channel();
 
             assertNull(clientChannel.localAddress());
             assertNull(clientChannel.remoteAddress());
@@ -76,15 +76,15 @@ public class SocketConnectTest extends AbstractSocketTest {
     }
 
     public void testChannelEventsFiredWhenClosedDirectly(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        final BlockingQueue<Integer> events = new LinkedBlockingQueue<>();
+        final BlockingQueue<Integer> events = new LinkedBlockingQueue<Integer>();
 
         Channel sc = null;
         Channel cc = null;
         try {
-            sb.childHandler(new ChannelHandler() { });
+            sb.childHandler(new ChannelInboundHandlerAdapter());
             sc = sb.bind().syncUninterruptibly().channel();
 
-            cb.handler(new ChannelHandler() {
+            cb.handler(new ChannelInboundHandlerAdapter() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) throws Exception {
                     events.add(0);

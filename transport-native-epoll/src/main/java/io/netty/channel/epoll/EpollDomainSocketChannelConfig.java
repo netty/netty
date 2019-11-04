@@ -15,8 +15,6 @@
  */
 package io.netty.channel.epoll;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
@@ -162,7 +160,9 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
 
     @Override
     public EpollDomainSocketChannelConfig setReadMode(DomainSocketReadMode mode) {
-        requireNonNull(mode, "mode");
+        if (mode == null) {
+            throw new NullPointerException("mode");
+        }
         this.mode = mode;
         return this;
     }
@@ -187,7 +187,6 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
         return this;
     }
 
-    @Override
     public int getSendBufferSize() {
         try {
             return ((EpollDomainSocketChannel) channel).socket.getSendBufferSize();
@@ -196,7 +195,6 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
         }
     }
 
-    @Override
     public EpollDomainSocketChannelConfig setSendBufferSize(int sendBufferSize) {
         try {
             ((EpollDomainSocketChannel) channel).socket.setSendBufferSize(sendBufferSize);
@@ -206,7 +204,6 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
         }
     }
 
-    @Override
     public int getReceiveBufferSize() {
         try {
             return ((EpollDomainSocketChannel) channel).socket.getReceiveBufferSize();
@@ -215,7 +212,6 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
         }
     }
 
-    @Override
     public EpollDomainSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((EpollDomainSocketChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);

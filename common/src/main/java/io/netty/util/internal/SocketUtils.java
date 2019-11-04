@@ -78,6 +78,7 @@ public final class SocketUtils {
         }
     }
 
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     public static void bind(final SocketChannel socketChannel, final SocketAddress address) throws IOException {
         try {
             AccessController.doPrivileged((PrivilegedExceptionAction<Void>) () -> {
@@ -98,6 +99,7 @@ public final class SocketUtils {
         }
     }
 
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     public static void bind(final DatagramChannel networkChannel, final SocketAddress address) throws IOException {
         try {
             AccessController.doPrivileged((PrivilegedExceptionAction<Void>) () -> {
@@ -140,6 +142,7 @@ public final class SocketUtils {
         return AccessController.doPrivileged((PrivilegedAction<Enumeration<InetAddress>>) intf::getInetAddresses);
     }
 
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     public static InetAddress loopbackAddress() {
         return AccessController.doPrivileged((PrivilegedAction<InetAddress>) InetAddress::getLoopbackAddress);
     }

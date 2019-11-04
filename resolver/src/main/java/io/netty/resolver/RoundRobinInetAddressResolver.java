@@ -99,4 +99,9 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
     public void close() {
         nameResolver.close();
     }
+
+    @Override
+    public void close() {
+        nameResolver.close();
+    }
 }

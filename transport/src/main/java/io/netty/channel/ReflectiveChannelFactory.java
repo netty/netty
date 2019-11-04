@@ -16,8 +16,7 @@
 
 package io.netty.channel;
 
-import static java.util.Objects.requireNonNull;
-
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.lang.reflect.Constructor;
@@ -30,19 +29,19 @@ public class ReflectiveChannelFactory<T extends Channel> implements ChannelFacto
     private final Constructor<? extends T> constructor;
 
     public ReflectiveChannelFactory(Class<? extends T> clazz) {
-        requireNonNull(clazz, "clazz");
+        ObjectUtil.checkNotNull(clazz, "clazz");
         try {
-            this.constructor = clazz.getConstructor(EventLoop.class);
+            this.constructor = clazz.getConstructor();
         } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException("Class " + StringUtil.simpleClassName(clazz) +
-                    " does not have a public constructor that takes an EventLoop instance", e);
+                    " does not have a public non-arg constructor", e);
         }
     }
 
     @Override
-    public T newChannel(EventLoop eventLoop) throws Exception {
+    public T newChannel() {
         try {
-            return constructor.newInstance(eventLoop);
+            return constructor.newInstance();
         } catch (Throwable t) {
             throw new ChannelException("Unable to create Channel from class " + constructor.getDeclaringClass(), t);
         }

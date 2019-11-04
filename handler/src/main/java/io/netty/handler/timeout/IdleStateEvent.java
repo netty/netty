@@ -15,10 +15,8 @@
  */
 package io.netty.handler.timeout;
 
-import static java.util.Objects.requireNonNull;
-
 import io.netty.channel.Channel;
-
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -48,7 +46,7 @@ public class IdleStateEvent {
      * @param first {@code true} if its the first idle event for the {@link IdleStateEvent}.
      */
     protected IdleStateEvent(IdleState state, boolean first) {
-        this.state = requireNonNull(state, "state");
+        this.state = ObjectUtil.checkNotNull(state, "state");
         this.first = first;
     }
 

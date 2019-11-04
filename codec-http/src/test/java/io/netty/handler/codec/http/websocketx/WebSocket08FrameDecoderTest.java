@@ -38,11 +38,11 @@ public class WebSocket08FrameDecoderTest {
 
     @Test
     public void supportIanaStatusCodes() throws Exception {
-        Set<Integer> forbiddenIanaCodes = new HashSet<>();
+        Set<Integer> forbiddenIanaCodes = new HashSet<Integer>();
         forbiddenIanaCodes.add(1004);
         forbiddenIanaCodes.add(1005);
         forbiddenIanaCodes.add(1006);
-        Set<Integer> validIanaCodes = new HashSet<>();
+        Set<Integer> validIanaCodes = new HashSet<Integer>();
         for (int i = 1000; i < 1015; i++) {
             validIanaCodes.add(i);
         }

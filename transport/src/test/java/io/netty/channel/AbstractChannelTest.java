@@ -22,6 +22,8 @@ import java.nio.channels.ClosedChannelException;
 
 import io.netty.util.NetUtil;
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -33,13 +35,12 @@ public class AbstractChannelTest {
         EventLoop eventLoop = mock(EventLoop.class);
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
-        when(eventLoop.unsafe()).thenReturn(mock(EventLoop.Unsafe.class));
 
-        TestChannel channel = new TestChannel(eventLoop);
-        ChannelHandler handler = mock(ChannelHandler.class);
+        TestChannel channel = new TestChannel();
+        ChannelInboundHandler handler = mock(ChannelInboundHandler.class);
         channel.pipeline().addLast(handler);
 
-        registerChannel(channel);
+        registerChannel(eventLoop, channel);
 
         verify(handler).handlerAdded(any(ChannelHandlerContext.class));
         verify(handler).channelRegistered(any(ChannelHandlerContext.class));
@@ -51,22 +52,24 @@ public class AbstractChannelTest {
         final EventLoop eventLoop = mock(EventLoop.class);
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
-        when(eventLoop.unsafe()).thenReturn(mock(EventLoop.Unsafe.class));
 
-        doAnswer(invocationOnMock -> {
-            ((Runnable) invocationOnMock.getArgument(0)).run();
-            return null;
+        doAnswer(new Answer() {
+            @Override
+            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+                ((Runnable) invocationOnMock.getArgument(0)).run();
+                return null;
+            }
         }).when(eventLoop).execute(any(Runnable.class));
 
-        final TestChannel channel = new TestChannel(eventLoop);
-        ChannelHandler handler = mock(ChannelHandler.class);
+        final TestChannel channel = new TestChannel();
+        ChannelInboundHandler handler = mock(ChannelInboundHandler.class);
 
         channel.pipeline().addLast(handler);
 
-        registerChannel(channel);
+        registerChannel(eventLoop, channel);
         channel.unsafe().deregister(new DefaultChannelPromise(channel));
 
-        registerChannel(channel);
+        registerChannel(eventLoop, channel);
 
         verify(handler).handlerAdded(any(ChannelHandlerContext.class));
 
@@ -78,8 +81,7 @@ public class AbstractChannelTest {
 
     @Test
     public void ensureDefaultChannelId() {
-        final EventLoop eventLoop = mock(EventLoop.class);
-        TestChannel channel = new TestChannel(eventLoop);
+        TestChannel channel = new TestChannel();
         final ChannelId channelId = channel.id();
         assertTrue(channelId instanceof DefaultChannelId);
     }
@@ -87,17 +89,7 @@ public class AbstractChannelTest {
     @Test
     public void testClosedChannelExceptionCarryIOException() throws Exception {
         final IOException ioException = new IOException();
-        final EventLoop eventLoop = mock(EventLoop.class);
-        // This allows us to have a single-threaded test
-        when(eventLoop.inEventLoop()).thenReturn(true);
-        when(eventLoop.unsafe()).thenReturn(mock(EventLoop.Unsafe.class));
-
-        doAnswer(invocationOnMock -> {
-            ((Runnable) invocationOnMock.getArgument(0)).run();
-            return null;
-        }).when(eventLoop).execute(any(Runnable.class));
-
-        final Channel channel = new TestChannel(eventLoop) {
+        final Channel channel = new TestChannel() {
             private boolean open = true;
             private boolean active;
 
@@ -135,8 +127,9 @@ public class AbstractChannelTest {
             }
         };
 
+        EventLoop loop = new DefaultEventLoop();
         try {
-            registerChannel(channel);
+            registerChannel(loop, channel);
             channel.connect(new InetSocketAddress(NetUtil.LOCALHOST, 8888)).sync();
             assertSame(ioException, channel.writeAndFlush("").await().cause());
 
@@ -145,6 +138,7 @@ public class AbstractChannelTest {
             assertClosedChannelException(channel.bind(new InetSocketAddress(NetUtil.LOCALHOST, 8888)), ioException);
         } finally {
             channel.close();
+            loop.shutdownGracefully();
         }
     }
 
@@ -155,9 +149,9 @@ public class AbstractChannelTest {
         assertSame(expected, cause.getCause());
     }
 
-    private static void registerChannel(Channel channel) throws Exception {
+    private static void registerChannel(EventLoop eventLoop, Channel channel) throws Exception {
         DefaultChannelPromise future = new DefaultChannelPromise(channel);
-        channel.register(future);
+        channel.unsafe().register(eventLoop, future);
         future.sync(); // Cause any exceptions to be thrown
     }
 
@@ -166,8 +160,8 @@ public class AbstractChannelTest {
 
         private final ChannelConfig config = new DefaultChannelConfig(this);
 
-        TestChannel(EventLoop eventLoop) {
-            super(null, eventLoop);
+        TestChannel() {
+            super(null);
         }
 
         @Override
@@ -198,6 +192,11 @@ public class AbstractChannelTest {
                     promise.setFailure(new UnsupportedOperationException());
                 }
             };
+        }
+
+        @Override
+        protected boolean isCompatible(EventLoop loop) {
+            return true;
         }
 
         @Override

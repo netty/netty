@@ -33,6 +33,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * The {@link PlatformDependent} operations which requires access to {@code sun.misc.*}.
  */
+@SuppressJava6Requirement(reason = "Unsafe access is guarded")
 final class PlatformDependent0 {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent0.class);

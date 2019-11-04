@@ -25,12 +25,11 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -98,7 +97,7 @@ public class OpenSslPrivateKeyMethodTest {
         assumeCipherAvailable(SslProvider.OPENSSL);
         assumeCipherAvailable(SslProvider.JDK);
 
-        GROUP = new MultithreadEventLoopGroup(LocalHandler.newFactory());
+        GROUP = new DefaultEventLoopGroup();
         CERT = new SelfSignedCertificate();
         EXECUTOR = Executors.newCachedThreadPool(new ThreadFactory() {
             @Override
@@ -240,7 +239,7 @@ public class OpenSslPrivateKeyMethodTest {
                             }
 
                             @Override
-                            public void messageReceived(ChannelHandlerContext ctx, Object msg) {
+                            public void channelRead0(ChannelHandlerContext ctx, Object msg) {
                                 if (serverPromise.trySuccess(null)) {
                                     ctx.writeAndFlush(Unpooled.wrappedBuffer(new byte[] {'P', 'O', 'N', 'G'}));
                                 }
@@ -276,7 +275,7 @@ public class OpenSslPrivateKeyMethodTest {
                                 }
 
                                 @Override
-                                public void messageReceived(ChannelHandlerContext ctx, Object msg) {
+                                public void channelRead0(ChannelHandlerContext ctx, Object msg) {
                                     clientPromise.trySuccess(null);
                                     ctx.close();
                                 }

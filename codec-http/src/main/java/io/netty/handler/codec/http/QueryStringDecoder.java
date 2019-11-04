@@ -31,9 +31,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.*;
 import static io.netty.util.internal.StringUtil.*;
-import static java.util.Objects.requireNonNull;
 
 /**
  * Splits an HTTP query string into a path string and key-value parameter pairs.
@@ -120,8 +119,8 @@ public class QueryStringDecoder {
      */
     public QueryStringDecoder(String uri, Charset charset, boolean hasPath,
                               int maxParams, boolean semicolonIsNormalChar) {
-        this.uri = requireNonNull(uri, "uri");
-        this.charset = requireNonNull(charset, "charset");
+        this.uri = checkNotNull(uri, "uri");
+        this.charset = checkNotNull(charset, "charset");
         this.maxParams = checkPositive(maxParams, "maxParams");
         this.semicolonIsNormalChar = semicolonIsNormalChar;
 
@@ -165,7 +164,7 @@ public class QueryStringDecoder {
         String rawQuery = uri.getRawQuery();
         // Also take care of cut of things like "http://localhost"
         this.uri = rawQuery == null? rawPath : rawPath + '?' + rawQuery;
-        this.charset = requireNonNull(charset, "charset");
+        this.charset = checkNotNull(charset, "charset");
         this.maxParams = checkPositive(maxParams, "maxParams");
         this.semicolonIsNormalChar = semicolonIsNormalChar;
         pathEndIdx = rawPath.length();
@@ -234,7 +233,7 @@ public class QueryStringDecoder {
         if (s.charAt(from) == '?') {
             from++;
         }
-        Map<String, List<String>> params = new LinkedHashMap<>();
+        Map<String, List<String>> params = new LinkedHashMap<String, List<String>>();
         int nameStart = from;
         int valueStart = -1;
         int i;
@@ -284,7 +283,7 @@ public class QueryStringDecoder {
         String value = decodeComponent(s, valueStart, valueEnd, charset, false);
         List<String> values = params.get(name);
         if (values == null) {
-            values = new ArrayList<>(1);  // Often there's only 1 value.
+            values = new ArrayList<String>(1);  // Often there's only 1 value.
             params.put(name, values);
         }
         values.add(value);

@@ -19,7 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.CorruptedFrameException;
 
 import java.net.SocketAddress;
-import java.util.Objects;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 abstract class DnsResponseDecoder<A extends SocketAddress> {
 
@@ -29,7 +30,7 @@ abstract class DnsResponseDecoder<A extends SocketAddress> {
      * Creates a new decoder with the specified {@code recordDecoder}.
      */
     DnsResponseDecoder(DnsRecordDecoder recordDecoder) {
-        this.recordDecoder = Objects.requireNonNull(recordDecoder, "recordDecoder");
+        this.recordDecoder = checkNotNull(recordDecoder, "recordDecoder");
     }
 
     final DnsResponse decode(A sender, A recipient, ByteBuf buffer) throws Exception {

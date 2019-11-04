@@ -19,7 +19,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.util.internal.UnstableApi;
 
-import static java.util.Objects.requireNonNull;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * A builder for {@link Http2MultiplexCodec}.
@@ -37,7 +37,7 @@ public class Http2MultiplexCodecBuilder
 
     Http2MultiplexCodecBuilder(boolean server, ChannelHandler childHandler) {
         server(server);
-        this.childHandler = checkSharable(requireNonNull(childHandler, "childHandler"));
+        this.childHandler = checkSharable(checkNotNull(childHandler, "childHandler"));
         // For backwards compatibility we should disable to timeout by default at this layer.
         gracefulShutdownTimeoutMillis(0);
     }
@@ -52,7 +52,7 @@ public class Http2MultiplexCodecBuilder
 
     // For testing only.
     Http2MultiplexCodecBuilder frameWriter(Http2FrameWriter frameWriter) {
-        this.frameWriter = requireNonNull(frameWriter, "frameWriter");
+        this.frameWriter = checkNotNull(frameWriter, "frameWriter");
         return this;
     }
 

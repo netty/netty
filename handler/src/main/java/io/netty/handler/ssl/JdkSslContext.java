@@ -50,7 +50,7 @@ import javax.net.ssl.SSLSessionContext;
 import static io.netty.handler.ssl.SslUtils.DEFAULT_CIPHER_SUITES;
 import static io.netty.handler.ssl.SslUtils.addIfSupported;
 import static io.netty.handler.ssl.SslUtils.useFallbackCiphersIfDefaultIsEmpty;
-import static java.util.Objects.requireNonNull;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * An {@link SslContext} which uses JDK's SSL/TLS implementation.
@@ -84,11 +84,11 @@ public class JdkSslContext extends SslContext {
         SUPPORTED_CIPHERS = Collections.unmodifiableSet(supportedCiphers(engine));
         DEFAULT_CIPHERS = Collections.unmodifiableList(defaultCiphers(engine, SUPPORTED_CIPHERS));
 
-        List<String> ciphersNonTLSv13 = new ArrayList<>(DEFAULT_CIPHERS);
+        List<String> ciphersNonTLSv13 = new ArrayList<String>(DEFAULT_CIPHERS);
         ciphersNonTLSv13.removeAll(Arrays.asList(SslUtils.DEFAULT_TLSV13_CIPHER_SUITES));
         DEFAULT_CIPHERS_NON_TLSV13 = Collections.unmodifiableList(ciphersNonTLSv13);
 
-        Set<String> suppertedCiphersNonTLSv13 = new LinkedHashSet<>(SUPPORTED_CIPHERS);
+        Set<String> suppertedCiphersNonTLSv13 = new LinkedHashSet<String>(SUPPORTED_CIPHERS);
         suppertedCiphersNonTLSv13.removeAll(Arrays.asList(SslUtils.DEFAULT_TLSV13_CIPHER_SUITES));
         SUPPORTED_CIPHERS_NON_TLSV13 = Collections.unmodifiableSet(suppertedCiphersNonTLSv13);
 
@@ -101,9 +101,9 @@ public class JdkSslContext extends SslContext {
     private static String[] defaultProtocols(SSLContext context, SSLEngine engine) {
         // Choose the sensible default list of protocols that respects JDK flags, eg. jdk.tls.client.protocols
         final String[] supportedProtocols = context.getDefaultSSLParameters().getProtocols();
-        Set<String> supportedProtocolsSet = new HashSet<>(supportedProtocols.length);
+        Set<String> supportedProtocolsSet = new HashSet<String>(supportedProtocols.length);
         Collections.addAll(supportedProtocolsSet, supportedProtocols);
-        List<String> protocols = new ArrayList<>();
+        List<String> protocols = new ArrayList<String>();
         addIfSupported(
                 supportedProtocolsSet, protocols,
                 // Do not include TLSv1.3 for now by default.
@@ -118,7 +118,7 @@ public class JdkSslContext extends SslContext {
     private static Set<String> supportedCiphers(SSLEngine engine) {
         // Choose the sensible default list of cipher suites.
         final String[] supportedCiphers = engine.getSupportedCipherSuites();
-        Set<String> supportedCiphersSet = new LinkedHashSet<>(supportedCiphers.length);
+        Set<String> supportedCiphersSet = new LinkedHashSet<String>(supportedCiphers.length);
         for (int i = 0; i < supportedCiphers.length; ++i) {
             String supportedCipher = supportedCiphers[i];
             supportedCiphersSet.add(supportedCipher);
@@ -145,7 +145,7 @@ public class JdkSslContext extends SslContext {
     }
 
     private static List<String> defaultCiphers(SSLEngine engine, Set<String> supportedCiphers) {
-        List<String> ciphers = new ArrayList<>();
+        List<String> ciphers = new ArrayList<String>();
         addIfSupported(supportedCiphers, ciphers, DEFAULT_CIPHER_SUITES);
         useFallbackCiphersIfDefaultIsEmpty(ciphers, engine.getEnabledCipherSuites());
         return ciphers;
@@ -238,9 +238,9 @@ public class JdkSslContext extends SslContext {
     JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                   JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth, String[] protocols, boolean startTls) {
         super(startTls);
-        this.apn = requireNonNull(apn, "apn");
-        this.clientAuth = requireNonNull(clientAuth, "clientAuth");
-        this.sslContext = requireNonNull(sslContext, "sslContext");
+        this.apn = checkNotNull(apn, "apn");
+        this.clientAuth = checkNotNull(clientAuth, "clientAuth");
+        this.sslContext = checkNotNull(sslContext, "sslContext");
 
         final List<String> defaultCiphers;
         final Set<String> supportedCiphers;
@@ -279,7 +279,7 @@ public class JdkSslContext extends SslContext {
             }
         }
 
-        cipherSuites = requireNonNull(cipherFilter, "cipherFilter").filterCipherSuites(
+        cipherSuites = checkNotNull(cipherFilter, "cipherFilter").filterCipherSuites(
                 ciphers, defaultCiphers, supportedCiphers);
 
         unmodifiableCipherSuites = Collections.unmodifiableList(Arrays.asList(cipherSuites));

@@ -16,9 +16,9 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Assert;
 import org.junit.Test;
@@ -31,13 +31,13 @@ public class HttpContentDecompressorTest {
     @Test
     public void testInvokeReadWhenNotProduceMessage() {
         final AtomicInteger readCalled = new AtomicInteger();
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandler() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
             @Override
             public void read(ChannelHandlerContext ctx) {
                 readCalled.incrementAndGet();
                 ctx.read();
             }
-        }, new HttpContentDecompressor(), new ChannelHandler() {
+        }, new HttpContentDecompressor(), new ChannelInboundHandlerAdapter() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 ctx.fireChannelRead(msg);

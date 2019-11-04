@@ -39,20 +39,24 @@ import java.nio.charset.Charset;
 
 import static io.netty.util.internal.MathUtil.isOutOfBounds;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
-import static java.util.Objects.requireNonNull;
 
 /**
  * A skeletal implementation of a buffer.
  */
 public abstract class AbstractByteBuf extends ByteBuf {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractByteBuf.class);
+    private static final String LEGACY_PROP_CHECK_ACCESSIBLE = "io.netty.buffer.bytebuf.checkAccessible";
     private static final String PROP_CHECK_ACCESSIBLE = "io.netty.buffer.checkAccessible";
     static final boolean checkAccessible; // accessed from CompositeByteBuf
     private static final String PROP_CHECK_BOUNDS = "io.netty.buffer.checkBounds";
     private static final boolean checkBounds;
 
     static {
-        checkAccessible = SystemPropertyUtil.getBoolean(PROP_CHECK_ACCESSIBLE, true);
+        if (SystemPropertyUtil.contains(PROP_CHECK_ACCESSIBLE)) {
+            checkAccessible = SystemPropertyUtil.getBoolean(PROP_CHECK_ACCESSIBLE, true);
+        } else {
+            checkAccessible = SystemPropertyUtil.getBoolean(LEGACY_PROP_CHECK_ACCESSIBLE, true);
+        }
         checkBounds = SystemPropertyUtil.getBoolean(PROP_CHECK_BOUNDS, true);
         if (logger.isDebugEnabled()) {
             logger.debug("-D{}: {}", PROP_CHECK_ACCESSIBLE, checkAccessible);
@@ -65,6 +69,8 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     int readerIndex;
     int writerIndex;
+    private int markedReaderIndex;
+    private int markedWriterIndex;
     private int maxCapacity;
 
     protected AbstractByteBuf(int maxCapacity) {
@@ -182,6 +188,30 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf markReaderIndex() {
+        markedReaderIndex = readerIndex;
+        return this;
+    }
+
+    @Override
+    public ByteBuf resetReaderIndex() {
+        readerIndex(markedReaderIndex);
+        return this;
+    }
+
+    @Override
+    public ByteBuf markWriterIndex() {
+        markedWriterIndex = writerIndex;
+        return this;
+    }
+
+    @Override
+    public ByteBuf resetWriterIndex() {
+        writerIndex(markedWriterIndex);
+        return this;
+    }
+
+    @Override
     public ByteBuf discardReadBytes() {
         ensureAccessible();
         if (readerIndex == 0) {
@@ -191,8 +221,10 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (readerIndex != writerIndex) {
             setBytes(0, this, readerIndex, writerIndex - readerIndex);
             writerIndex -= readerIndex;
+            adjustMarkers(readerIndex);
             readerIndex = 0;
         } else {
+            adjustMarkers(readerIndex);
             writerIndex = readerIndex = 0;
         }
         return this;
@@ -206,6 +238,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
 
         if (readerIndex == writerIndex) {
+            adjustMarkers(readerIndex);
             writerIndex = readerIndex = 0;
             return this;
         }
@@ -213,9 +246,26 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (readerIndex >= capacity() >>> 1) {
             setBytes(0, this, readerIndex, writerIndex - readerIndex);
             writerIndex -= readerIndex;
+            adjustMarkers(readerIndex);
             readerIndex = 0;
         }
         return this;
+    }
+
+    protected final void adjustMarkers(int decrement) {
+        int markedReaderIndex = this.markedReaderIndex;
+        if (markedReaderIndex <= decrement) {
+            this.markedReaderIndex = 0;
+            int markedWriterIndex = this.markedWriterIndex;
+            if (markedWriterIndex <= decrement) {
+                this.markedWriterIndex = 0;
+            } else {
+                this.markedWriterIndex = markedWriterIndex - decrement;
+            }
+        } else {
+            this.markedReaderIndex = markedReaderIndex - decrement;
+            markedWriterIndex -= decrement;
+        }
     }
 
     // Called after a capacity reduction
@@ -300,7 +350,9 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (endianness == order()) {
             return this;
         }
-        requireNonNull(endianness, "endianness");
+        if (endianness == null) {
+            throw new NullPointerException("endianness");
+        }
         return newSwappedByteBuf();
     }
 
@@ -608,7 +660,9 @@ public abstract class AbstractByteBuf extends ByteBuf {
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int length) {
         checkIndex(index, length);
-        requireNonNull(src, "src");
+        if (src == null) {
+            throw new NullPointerException("src");
+        }
         if (checkBounds) {
             checkReadableBounds(src, length);
         }
@@ -1458,5 +1512,9 @@ public abstract class AbstractByteBuf extends ByteBuf {
     final void setIndex0(int readerIndex, int writerIndex) {
         this.readerIndex = readerIndex;
         this.writerIndex = writerIndex;
+    }
+
+    final void discardMarks() {
+        markedReaderIndex = markedWriterIndex = 0;
     }
 }

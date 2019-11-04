@@ -18,6 +18,7 @@ import org.junit.Test;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 import static org.junit.Assert.assertEquals;
@@ -28,14 +29,14 @@ import static org.junit.Assert.assertTrue;
 public abstract class Http2MultiplexClientUpgradeTest<C extends Http2FrameCodec> {
 
     @ChannelHandler.Sharable
-    static final class NoopHandler implements ChannelHandler {
+    static final class NoopHandler extends ChannelInboundHandlerAdapter {
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
             ctx.channel().close();
         }
     }
 
-    private static final class UpgradeHandler implements ChannelHandler {
+    private static final class UpgradeHandler extends ChannelInboundHandlerAdapter {
         Http2Stream.State stateOnActive;
         int streamId;
         boolean channelInactiveCalled;
@@ -45,13 +46,13 @@ public abstract class Http2MultiplexClientUpgradeTest<C extends Http2FrameCodec>
             Http2StreamChannel ch = (Http2StreamChannel) ctx.channel();
             stateOnActive = ch.stream().state();
             streamId = ch.stream().id();
-            ctx.fireChannelActive();
+            super.channelActive(ctx);
         }
 
         @Override
         public void channelInactive(ChannelHandlerContext ctx) throws Exception {
             channelInactiveCalled = true;
-            ctx.fireChannelInactive();
+            super.channelInactive(ctx);
         }
     }
 

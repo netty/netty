@@ -22,7 +22,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.NetUtil;
@@ -79,14 +79,14 @@ public class EpollReuseAddrTest {
         testMultipleBindDatagramChannelWithoutReusePortFails0(createBootstrap());
     }
 
-    private static void testMultipleBindDatagramChannelWithoutReusePortFails0(AbstractBootstrap<?, ?, ?> bootstrap) {
+    private static void testMultipleBindDatagramChannelWithoutReusePortFails0(AbstractBootstrap<?, ?> bootstrap) {
         bootstrap.handler(new LoggingHandler(LogLevel.ERROR));
         ChannelFuture future = bootstrap.bind().syncUninterruptibly();
         try {
             bootstrap.bind(future.channel().localAddress()).syncUninterruptibly();
             Assert.fail();
         } catch (Exception e) {
-            Assert.assertTrue(e.getCause() instanceof IOException);
+            Assert.assertTrue(e instanceof IOException);
         }
         future.channel().close().syncUninterruptibly();
     }
@@ -140,18 +140,21 @@ public class EpollReuseAddrTest {
         // on both sockets.
         int count = 16;
         final CountDownLatch latch = new CountDownLatch(count);
-        Runnable r = () -> {
-            try {
-                DatagramSocket socket = new DatagramSocket();
-                while (!received1.get() || !received2.get()) {
-                    socket.send(new DatagramPacket(
-                            bytes, 0, bytes.length, address1.getAddress(), address1.getPort()));
+        Runnable r = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    DatagramSocket socket = new DatagramSocket();
+                    while (!received1.get() || !received2.get()) {
+                        socket.send(new DatagramPacket(
+                                bytes, 0, bytes.length, address1.getAddress(), address1.getPort()));
+                    }
+                    socket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-                socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
+                latch.countDown();
             }
-            latch.countDown();
         };
 
         ExecutorService executor = Executors.newFixedThreadPool(count);
@@ -202,7 +205,7 @@ public class EpollReuseAddrTest {
     }
 
     @ChannelHandler.Sharable
-    private static class ServerSocketTestHandler implements ChannelInboundHandler {
+    private static class ServerSocketTestHandler extends ChannelInboundHandlerAdapter {
         private final AtomicBoolean accepted;
 
         ServerSocketTestHandler(AtomicBoolean accepted) {
@@ -217,7 +220,7 @@ public class EpollReuseAddrTest {
     }
 
     @ChannelHandler.Sharable
-    private static class DatagramSocketTestHandler implements ChannelInboundHandler {
+    private static class DatagramSocketTestHandler extends ChannelInboundHandlerAdapter {
         private final AtomicBoolean received;
 
         DatagramSocketTestHandler(AtomicBoolean received) {

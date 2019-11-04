@@ -84,6 +84,7 @@ public final class Native {
     public static native void eventFdWrite(int fd, long value);
     public static native void eventFdRead(int fd);
     static native void timerFdRead(int fd);
+    static native void timerFdSetTime(int fd, int sec, int nsec) throws IOException;
 
     public static FileDescriptor newEpollCreate() {
         return new FileDescriptor(epollCreate());
@@ -97,6 +98,15 @@ public final class Native {
     @Deprecated
     public static int epollWait(FileDescriptor epollFd, EpollEventArray events, FileDescriptor timerFd,
                                 int timeoutSec, int timeoutNs) throws IOException {
+        if (timeoutSec == 0 && timeoutNs == 0) {
+            // Zero timeout => poll (aka return immediately)
+            return epollWait(epollFd, events, 0);
+        }
+        if (timeoutSec == Integer.MAX_VALUE) {
+            // Max timeout => wait indefinitely: disarm timerfd first
+            timeoutSec = 0;
+            timeoutNs = 0;
+        }
         int ready = epollWait0(epollFd.intValue(), events.memoryAddress(), events.length(), timerFd.intValue(),
                                timeoutSec, timeoutNs);
         if (ready < 0) {

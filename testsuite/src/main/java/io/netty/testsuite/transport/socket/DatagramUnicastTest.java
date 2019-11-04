@@ -159,7 +159,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         try {
             cb.handler(new SimpleChannelInboundHandler<Object>() {
                 @Override
-                public void messageReceived(ChannelHandlerContext ctx, Object msgs) throws Exception {
+                public void channelRead0(ChannelHandlerContext ctx, Object msgs) throws Exception {
                     // Nothing will be sent.
                 }
             });
@@ -236,7 +236,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
         final AtomicReference<Throwable> clientErrorRef = new AtomicReference<Throwable>();
         cb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {
             @Override
-            public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+            public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
                 try {
                     ByteBuf buf = msg.content();
                     assertEquals(bytes.length, buf.readableBytes());
@@ -345,7 +345,7 @@ public class DatagramUnicastTest extends AbstractDatagramTest {
             protected void initChannel(Channel ch) throws Exception {
                 ch.pipeline().addLast(new SimpleChannelInboundHandler<DatagramPacket>() {
                     @Override
-                    public void messageReceived(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+                    public void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
                         try {
                             if (sender == null) {
                                 assertNotNull(msg.sender());

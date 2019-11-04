@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import static java.util.Objects.requireNonNull;
-
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.Charset;
@@ -321,7 +319,7 @@ public final class HttpUtil {
             if (encodings.isEmpty()) {
                 return;
             }
-            List<CharSequence> values = new ArrayList<>(encodings);
+            List<CharSequence> values = new ArrayList<CharSequence>(encodings);
             Iterator<CharSequence> valuesIt = values.iterator();
             while (valuesIt.hasNext()) {
                 CharSequence value = valuesIt.next();
@@ -394,15 +392,14 @@ public final class HttpUtil {
             if (charsetCharSequence != null) {
                 try {
                     return Charset.forName(charsetCharSequence.toString());
-                } catch (UnsupportedCharsetException | IllegalCharsetNameException ignored) {
-                    return defaultCharset;
+                } catch (IllegalCharsetNameException ignored) {
+                    // just return the default charset
+                } catch (UnsupportedCharsetException ignored) {
+                    // just return the default charset
                 }
-            } else {
-                return defaultCharset;
             }
-        } else {
-            return defaultCharset;
         }
+        return defaultCharset;
     }
 
     /**
@@ -451,7 +448,9 @@ public final class HttpUtil {
      * @throws NullPointerException in case if {@code contentTypeValue == null}
      */
     public static CharSequence getCharsetAsSequence(CharSequence contentTypeValue) {
-        requireNonNull(contentTypeValue, "contentTypeValue");
+        if (contentTypeValue == null) {
+            throw new NullPointerException("contentTypeValue");
+        }
 
         int indexOfCharset = AsciiString.indexOfIgnoreCaseAscii(contentTypeValue, CHARSET_EQUALS, 0);
         if (indexOfCharset == AsciiString.INDEX_NOT_FOUND) {
@@ -505,7 +504,9 @@ public final class HttpUtil {
      * @throws NullPointerException in case if {@code contentTypeValue == null}
      */
     public static CharSequence getMimeType(CharSequence contentTypeValue) {
-        requireNonNull(contentTypeValue, "contentTypeValue");
+        if (contentTypeValue == null) {
+            throw new NullPointerException("contentTypeValue");
+        }
 
         int indexOfSemicolon = AsciiString.indexOfIgnoreCaseAscii(contentTypeValue, SEMICOLON, 0);
         if (indexOfSemicolon != AsciiString.INDEX_NOT_FOUND) {
