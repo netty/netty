@@ -47,6 +47,13 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
         return buffer.slice(offset, length);
     }
 
+    @Test
+    public void testIsContiguous() {
+        ByteBuf buf = newBuffer(4);
+        assertEquals(buf.unwrap().isContiguous(), buf.isContiguous());
+        buf.release();
+    }
+
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullInConstructor() {
         new SlicedByteBuf(null, 0, 0);

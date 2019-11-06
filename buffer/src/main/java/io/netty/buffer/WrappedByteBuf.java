@@ -53,6 +53,11 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public boolean isContiguous() {
+        return buf.isContiguous();
+    }
+
+    @Override
     public final long memoryAddress() {
         return buf.memoryAddress();
     }

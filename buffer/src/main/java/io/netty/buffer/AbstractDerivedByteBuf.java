@@ -117,4 +117,9 @@ public abstract class AbstractDerivedByteBuf extends AbstractByteBuf {
     public ByteBuffer nioBuffer(int index, int length) {
         return unwrap().nioBuffer(index, length);
     }
+
+    @Override
+    public boolean isContiguous() {
+        return unwrap().isContiguous();
+    }
 }

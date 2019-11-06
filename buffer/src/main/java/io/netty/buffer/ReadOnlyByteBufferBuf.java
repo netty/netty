@@ -455,6 +455,11 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public final boolean isContiguous() {
+        return true;
+    }
+
+    @Override
     public boolean hasArray() {
         return buffer.hasArray();
     }

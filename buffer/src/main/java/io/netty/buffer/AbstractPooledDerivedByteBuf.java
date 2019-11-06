@@ -124,6 +124,11 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
     }
 
     @Override
+    public boolean isContiguous() {
+        return unwrap().isContiguous();
+    }
+
+    @Override
     public final int nioBufferCount() {
         return unwrap().nioBufferCount();
     }

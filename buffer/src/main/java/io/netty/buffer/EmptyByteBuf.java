@@ -963,6 +963,11 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public boolean isContiguous() {
+        return true;
+    }
+
+    @Override
     public String toString(Charset charset) {
         return "";
     }

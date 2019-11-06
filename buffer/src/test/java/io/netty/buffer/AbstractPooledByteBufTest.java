@@ -118,4 +118,11 @@ public abstract class AbstractPooledByteBufTest extends AbstractByteBufTest {
         assertEquals(buffer.writableBytes(), buffer.maxFastWritableBytes());
         buffer.release();
     }
+
+    @Test
+    public void testIsContiguous() {
+        ByteBuf buf = newBuffer(4);
+        assertTrue(buf.isContiguous());
+        buf.release();
+    }
 }

@@ -2384,6 +2384,19 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract long memoryAddress();
 
     /**
+     * Returns {@code true} if this {@link ByteBuf} implementation is backed by a single memory region.
+     * Composite buffer implementations must return false even if they currently hold &le; 1 components.
+     * For buffers that return {@code true}, it's guaranteed that a successful call to {@link #discardReadBytes()}
+     * will increase the value of {@link #maxFastWritableBytes()} by the current {@code readerIndex}.
+     * <p>
+     * This method will return {@code false} by default, and a {@code false} return value does not necessarily
+     * mean that the implementation is composite or that it is <i>not</i> backed by a single memory region.
+     */
+    public boolean isContiguous() {
+        return false;
+    }
+
+    /**
      * Decodes this buffer's readable bytes into a string with the specified
      * character set name.  This method is identical to
      * {@code buf.toString(buf.readerIndex(), buf.readableBytes(), charsetName)}.
