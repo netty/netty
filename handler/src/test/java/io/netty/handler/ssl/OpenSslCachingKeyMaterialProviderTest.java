@@ -33,7 +33,7 @@ public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialPro
     @Override
     protected OpenSslKeyMaterialProvider newMaterialProvider(KeyManagerFactory factory, String password) {
         return new OpenSslCachingKeyMaterialProvider(ReferenceCountedOpenSslContext.chooseX509KeyManager(
-                factory.getKeyManagers()), password);
+                factory.getKeyManagers()), password, Integer.MAX_VALUE);
     }
 
     @Override
