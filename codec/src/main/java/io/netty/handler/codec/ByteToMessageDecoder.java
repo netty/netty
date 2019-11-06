@@ -81,7 +81,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         @Override
         public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
             int discardable = cumulation.readerIndex();
-            if (cumulation.writerIndex() == discardable && !(in instanceof CompositeByteBuf)) {
+            if (cumulation.writerIndex() == discardable && in.isContiguous()) {
+                // If cumulation is empty and input buffer is contiguous, use it directly
                 cumulation.release();
                 return in;
             }
