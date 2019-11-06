@@ -18,11 +18,13 @@ package io.netty.handler.codec.stomp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import static io.netty.handler.codec.stomp.StompTestConstants.*;
 import static org.junit.Assert.*;
 
 public class StompSubframeEncoderTest {
@@ -63,4 +65,22 @@ public class StompSubframeEncoderTest {
         assertEquals(StompTestConstants.CONNECT_FRAME, content);
         aggregatedBuffer.release();
     }
+
+    @Test
+    public void testUtf8FrameEncoding() {
+        StompFrame frame = new DefaultStompFrame(StompCommand.SEND,
+                                                 Unpooled.wrappedBuffer("body".getBytes(CharsetUtil.UTF_8)));
+        StompHeaders incoming = frame.headers();
+        incoming.set(StompHeaders.DESTINATION, "/queue/№11±♛нетти♕");
+        incoming.set(StompHeaders.CONTENT_TYPE, AsciiString.of("text/plain"));
+
+        channel.writeOutbound(frame);
+
+        ByteBuf headers = channel.readOutbound();
+        ByteBuf content = channel.readOutbound();
+        ByteBuf fullFrame = Unpooled.wrappedBuffer(headers, content);
+        assertEquals(SEND_FRAME_UTF8, fullFrame.toString(CharsetUtil.UTF_8));
+        assertTrue(fullFrame.release());
+    }
+
 }
