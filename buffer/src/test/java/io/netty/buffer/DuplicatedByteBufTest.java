@@ -33,6 +33,13 @@ public class DuplicatedByteBufTest extends AbstractByteBufTest {
         return buffer;
     }
 
+    @Test
+    public void testIsContiguous() {
+        ByteBuf buf = newBuffer(4);
+        assertEquals(buf.unwrap().isContiguous(), buf.isContiguous());
+        buf.release();
+    }
+
     @Test(expected = NullPointerException.class)
     public void shouldNotAllowNullInConstructor() {
         new DuplicatedByteBuf(null);

@@ -957,6 +957,11 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public boolean isContiguous() {
+        return buf.isContiguous();
+    }
+
+    @Override
     public long memoryAddress() {
         return buf.memoryAddress();
     }

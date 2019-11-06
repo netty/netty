@@ -109,6 +109,13 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         return false;
     }
 
+    @Test
+    public void testIsContiguous() {
+        ByteBuf buf = newBuffer(4);
+        assertFalse(buf.isContiguous());
+        buf.release();
+    }
+
     /**
      * Tests the "getBufferFor" method
      */

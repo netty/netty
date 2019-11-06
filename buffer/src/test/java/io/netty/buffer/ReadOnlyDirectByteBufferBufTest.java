@@ -37,6 +37,13 @@ public class ReadOnlyDirectByteBufferBufTest {
         return ByteBuffer.allocateDirect(size);
     }
 
+    @Test
+    public void testIsContiguous() {
+        ByteBuf buf = buffer(allocate(4).asReadOnlyBuffer());
+        Assert.assertTrue(buf.isContiguous());
+        buf.release();
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void testConstructWithWritable() {
         buffer(allocate(1));

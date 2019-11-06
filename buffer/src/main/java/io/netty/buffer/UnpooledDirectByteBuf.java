@@ -596,6 +596,11 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public final boolean isContiguous() {
+        return true;
+    }
+
+    @Override
     public ByteBuf copy(int index, int length) {
         ensureAccessible();
         ByteBuffer src;

@@ -19,6 +19,8 @@ import static org.junit.Assert.*;
 
 import java.nio.ByteOrder;
 
+import org.junit.Test;
+
 /**
  * Tests big-endian direct channel buffers
  */
@@ -34,5 +36,12 @@ public class BigEndianDirectByteBufTest extends AbstractByteBufTest {
 
     protected ByteBuf newDirectBuffer(int length, int maxCapacity) {
         return new UnpooledDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, length, maxCapacity);
+    }
+
+    @Test
+    public void testIsContiguous() {
+        ByteBuf buf = newBuffer(4);
+        assertTrue(buf.isContiguous());
+        buf.release();
     }
 }
