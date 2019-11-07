@@ -21,6 +21,7 @@ import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.KeyManagerFactorySpi;
 import javax.net.ssl.ManagerFactoryParameters;
+import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509KeyManager;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyStore;
@@ -67,7 +68,13 @@ public final class OpenSslCachingX509KeyManagerFactory extends KeyManagerFactory
         this.maxCachedEntries = ObjectUtil.checkPositive(maxCachedEntries, "maxCachedEntries");
     }
 
-    OpenSslCachingKeyMaterialProvider newProvider(String password) {
+    OpenSslKeyMaterialProvider newProvider(String password) {
+        X509KeyManager keyManager = ReferenceCountedOpenSslContext.chooseX509KeyManager(getKeyManagers());
+        if ("sun.security.ssl.X509KeyManagerImpl".equals(keyManager.getClass().getName())) {
+            // Don't do caching if X509KeyManagerImpl is used as the returned aliases are not stable and will change
+            // between invocations.
+            return new OpenSslKeyMaterialProvider(keyManager, password);
+        }
         return new OpenSslCachingKeyMaterialProvider(
                 ReferenceCountedOpenSslContext.chooseX509KeyManager(getKeyManagers()), password, maxCachedEntries);
     }
