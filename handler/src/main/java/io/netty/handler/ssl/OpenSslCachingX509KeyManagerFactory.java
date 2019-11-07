@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.util.internal.ObjectUtil;
+
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.KeyManagerFactorySpi;
@@ -37,7 +39,13 @@ import java.security.cert.X509Certificate;
  */
 public final class OpenSslCachingX509KeyManagerFactory extends KeyManagerFactory {
 
+    private final int maxCachedEntries;
+
     public OpenSslCachingX509KeyManagerFactory(final KeyManagerFactory factory) {
+        this(factory, 1024);
+    }
+
+    public OpenSslCachingX509KeyManagerFactory(final KeyManagerFactory factory, int maxCachedEntries) {
         super(new KeyManagerFactorySpi() {
             @Override
             protected void engineInit(KeyStore keyStore, char[] chars)
@@ -56,5 +64,11 @@ public final class OpenSslCachingX509KeyManagerFactory extends KeyManagerFactory
                 return factory.getKeyManagers();
             }
         }, factory.getProvider(), factory.getAlgorithm());
+        this.maxCachedEntries = ObjectUtil.checkPositive(maxCachedEntries, "maxCachedEntries");
+    }
+
+    OpenSslCachingKeyMaterialProvider newProvider(String password) {
+        return new OpenSslCachingKeyMaterialProvider(
+                ReferenceCountedOpenSslContext.chooseX509KeyManager(getKeyManagers()), password, maxCachedEntries);
     }
 }

@@ -28,10 +28,13 @@ import java.util.concurrent.ConcurrentMap;
  */
 final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider {
 
+    private final int maxCachedEntries;
+    private volatile boolean full;
     private final ConcurrentMap<String, OpenSslKeyMaterial> cache = new ConcurrentHashMap<String, OpenSslKeyMaterial>();
 
-    OpenSslCachingKeyMaterialProvider(X509KeyManager keyManager, String password) {
+    OpenSslCachingKeyMaterialProvider(X509KeyManager keyManager, String password, int maxCachedEntries) {
         super(keyManager, password);
+        this.maxCachedEntries = maxCachedEntries;
     }
 
     @Override
@@ -44,6 +47,14 @@ final class OpenSslCachingKeyMaterialProvider extends OpenSslKeyMaterialProvider
                 return null;
             }
 
+            if (full) {
+                return material;
+            }
+            if (cache.size() > maxCachedEntries) {
+                full = true;
+                // Do not cache...
+                return material;
+            }
             OpenSslKeyMaterial old = cache.putIfAbsent(alias, material);
             if (old != null) {
                 material.release();
