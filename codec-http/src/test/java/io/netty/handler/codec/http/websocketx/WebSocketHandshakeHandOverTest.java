@@ -49,7 +49,11 @@ public class WebSocketHandshakeHandOverTest {
 
     private final class CloseNoOpServerProtocolHandler extends WebSocketServerProtocolHandler {
         CloseNoOpServerProtocolHandler(String websocketPath) {
-            super(websocketPath, null, false);
+            super(WebSocketServerProtocolConfig.newBuilder()
+                .websocketPath(websocketPath)
+                .allowExtensions(false)
+                .sendCloseFrame(null)
+                .build());
         }
 
         @Override
