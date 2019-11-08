@@ -402,7 +402,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             buf.trimIndicesToCapacity(newCapacity);
             bytesToCopy = newCapacity;
         }
-        memoryCopy(oldMemory, oldOffset, buf.memory, buf.offset, bytesToCopy);
+        memoryCopy(oldMemory, oldOffset, buf, bytesToCopy);
         if (freeOldMemory) {
             free(oldChunk, oldNioBuffer, oldHandle, oldMaxLength, buf.cache);
         }
@@ -569,7 +569,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     protected abstract PoolChunk<T> newChunk(int pageSize, int maxOrder, int pageShifts, int chunkSize);
     protected abstract PoolChunk<T> newUnpooledChunk(int capacity);
     protected abstract PooledByteBuf<T> newByteBuf(int maxCapacity);
-    protected abstract void memoryCopy(T src, int srcOffset, T dst, int dstOffset, int length);
+    protected abstract void memoryCopy(T src, int srcOffset, PooledByteBuf<T> dst, int length);
     protected abstract void destroyChunk(PoolChunk<T> chunk);
 
     @Override
@@ -692,12 +692,12 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         }
 
         @Override
-        protected void memoryCopy(byte[] src, int srcOffset, byte[] dst, int dstOffset, int length) {
+        protected void memoryCopy(byte[] src, int srcOffset, PooledByteBuf<byte[]> dst, int length) {
             if (length == 0) {
                 return;
             }
 
-            System.arraycopy(src, srcOffset, dst, dstOffset, length);
+            System.arraycopy(src, srcOffset, dst.memory, dst.offset, length);
         }
     }
 
@@ -777,7 +777,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         }
 
         @Override
-        protected void memoryCopy(ByteBuffer src, int srcOffset, ByteBuffer dst, int dstOffset, int length) {
+        protected void memoryCopy(ByteBuffer src, int srcOffset, PooledByteBuf<ByteBuffer> dstBuf, int length) {
             if (length == 0) {
                 return;
             }
@@ -785,13 +785,13 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             if (HAS_UNSAFE) {
                 PlatformDependent.copyMemory(
                         PlatformDependent.directBufferAddress(src) + srcOffset,
-                        PlatformDependent.directBufferAddress(dst) + dstOffset, length);
+                        PlatformDependent.directBufferAddress(dstBuf.memory) + dstBuf.offset, length);
             } else {
                 // We must duplicate the NIO buffers because they may be accessed by other Netty buffers.
                 src = src.duplicate();
-                dst = dst.duplicate();
+                ByteBuffer dst = dstBuf.internalNioBuffer();
                 src.position(srcOffset).limit(srcOffset + length);
-                dst.position(dstOffset);
+                dst.position(dstBuf.offset);
                 dst.put(src);
             }
         }
