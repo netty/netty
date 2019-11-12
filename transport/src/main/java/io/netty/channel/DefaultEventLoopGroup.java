@@ -40,6 +40,15 @@ public class DefaultEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     /**
+     * Create a new instance with the default number of threads and the given {@link ThreadFactory}.
+     *
+     * @param threadFactory     the {@link ThreadFactory} or {@code null} to use the default
+     */
+    public DefaultEventLoopGroup(ThreadFactory threadFactory) {
+        this(0, threadFactory);
+    }
+
+    /**
      * Create a new instance
      *
      * @param nThreads          the number of threads to use
