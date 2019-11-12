@@ -1033,6 +1033,12 @@
               <goal>jar-no-fork</goal>
             </goals>
           </execution>
+          <execution>
+            <id>attach-test-sources</id>
+            <goals>
+              <goal>test-jar-no-fork</goal>
+            </goals>
+          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -1234,6 +1240,11 @@
                   <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
                 </archive>
               </configuration>
+            </execution>
+            <execution>
+              <goals>
+                <goal>test-jar</goal>
+              </goals>
             </execution>
           </executions>
         </plugin>
