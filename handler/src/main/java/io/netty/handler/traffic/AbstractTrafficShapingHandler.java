@@ -68,7 +68,7 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
     static final long DEFAULT_MAX_SIZE = 4 * 1024 * 1024L;
 
     /**
-     * Default minimal time to wait
+     * Default minimal time to wait: 10ms
      */
     static final long MINIMAL_WAIT = 10;
 
