@@ -42,8 +42,7 @@ import static io.netty.util.internal.ObjectUtil.*;
  */
 public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
     private final WebSocketClientHandshaker handshaker;
-    private final boolean handleCloseFrames;
-    private final long handshakeTimeoutMillis;
+    private final WebSocketClientProtocolConfig clientConfig;
 
     /**
      * Returns the used handshaker
@@ -92,8 +91,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
             clientConfig.forceCloseTimeoutMillis(),
             clientConfig.absoluteUpgradeUrl()
         );
-        this.handleCloseFrames = clientConfig.handleCloseFrames();
-        this.handshakeTimeoutMillis = clientConfig.handshakeTimeoutMillis();
+        this.clientConfig = clientConfig;
     }
 
     /**
@@ -327,8 +325,10 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
                                           boolean dropPongFrames, long handshakeTimeoutMillis) {
         super(dropPongFrames);
         this.handshaker = handshaker;
-        this.handleCloseFrames = handleCloseFrames;
-        this.handshakeTimeoutMillis = checkPositive(handshakeTimeoutMillis, "handshakeTimeoutMillis");
+        this.clientConfig = WebSocketClientProtocolConfig.newBuilder()
+            .handleCloseFrames(handleCloseFrames)
+            .handshakeTimeoutMillis(handshakeTimeoutMillis)
+            .build();
     }
 
     /**
@@ -358,7 +358,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, List<Object> out) throws Exception {
-        if (handleCloseFrames && frame instanceof CloseWebSocketFrame) {
+        if (clientConfig.handleCloseFrames() && frame instanceof CloseWebSocketFrame) {
             ctx.close();
             return;
         }
@@ -371,12 +371,16 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
         if (cp.get(WebSocketClientProtocolHandshakeHandler.class) == null) {
             // Add the WebSocketClientProtocolHandshakeHandler before this one.
             ctx.pipeline().addBefore(ctx.name(), WebSocketClientProtocolHandshakeHandler.class.getName(),
-                                     new WebSocketClientProtocolHandshakeHandler(handshaker, handshakeTimeoutMillis));
+                new WebSocketClientProtocolHandshakeHandler(handshaker, clientConfig.handshakeTimeoutMillis()));
         }
         if (cp.get(Utf8FrameValidator.class) == null) {
             // Add the UFT8 checking before this one.
             ctx.pipeline().addBefore(ctx.name(), Utf8FrameValidator.class.getName(),
                     new Utf8FrameValidator());
+        }
+        if (clientConfig.sendCloseFrame() != null) {
+            cp.addBefore(ctx.name(), WebSocketCloseFrameHandler.class.getName(),
+                new WebSocketCloseFrameHandler(clientConfig.sendCloseFrame(), clientConfig.forceCloseTimeoutMillis()));
         }
     }
 }
