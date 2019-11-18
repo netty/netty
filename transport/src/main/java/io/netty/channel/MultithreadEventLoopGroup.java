@@ -108,6 +108,35 @@ public class MultithreadEventLoopGroup extends MultithreadEventExecutorGroup imp
     /**
      * Create a new instance.
      *
+     * @param executor          the {@link Executor} to use, or {@code null} if the default should be used.
+     * @param ioHandlerFactory  the {@link IoHandlerFactory} to use for creating new
+     *                          {@link IoHandler} instances that will handle the IO for the
+     *                          {@link EventLoop}.
+     */
+    public MultithreadEventLoopGroup(Executor executor,
+                                     IoHandlerFactory ioHandlerFactory) {
+        this(0, executor, ioHandlerFactory,
+                SingleThreadEventLoop.DEFAULT_MAX_PENDING_TASKS, RejectedExecutionHandlers.reject(),
+                SingleThreadEventLoop.DEFAULT_MAX_TASKS_PER_RUN);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param threadFactory     the {@link ThreadFactory} to use, or {@code null} if the default should be used.
+     * @param ioHandlerFactory  the {@link IoHandlerFactory} to use for creating new
+     *                          {@link IoHandler} instances that will handle the IO for the
+     *                          {@link EventLoop}.
+     */
+    public MultithreadEventLoopGroup(ThreadFactory threadFactory,
+                                     IoHandlerFactory ioHandlerFactory) {
+        this(0, threadFactory, ioHandlerFactory,
+                SingleThreadEventLoop.DEFAULT_MAX_PENDING_TASKS, RejectedExecutionHandlers.reject());
+    }
+
+    /**
+     * Create a new instance.
+     *
      * @param nThreads          the number of threads that will be used by this instance.
      * @param executor          the {@link Executor} to use, or {@code null} if the default should be used.
      * @param ioHandlerFactory  the {@link IoHandlerFactory} to use for creating new
