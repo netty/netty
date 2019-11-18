@@ -53,6 +53,14 @@ public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     /**
+     * Create a new instance using the default number of threads and the given {@link ThreadFactory}.
+     */
+    @SuppressWarnings("deprecation")
+    public EpollEventLoopGroup(ThreadFactory threadFactory) {
+        this(0, threadFactory, 0);
+    }
+
+    /**
      * Create a new instance using the specified number of threads and the default {@link ThreadFactory}.
      */
     @SuppressWarnings("deprecation")
