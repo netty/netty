@@ -20,6 +20,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.ObjectUtil;
 
@@ -61,6 +62,7 @@ final class WebSocketCloseFrameHandler extends ChannelOutboundHandlerAdapter {
     @Override
     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (closeSent != null) {
+            ReferenceCountUtil.release(msg);
             promise.setFailure(new ClosedChannelException());
             return;
         }
