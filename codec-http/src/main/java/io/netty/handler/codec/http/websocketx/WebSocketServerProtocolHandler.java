@@ -229,6 +229,10 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
             cp.addBefore(ctx.name(), Utf8FrameValidator.class.getName(),
                     new Utf8FrameValidator());
         }
+        if (serverConfig.sendCloseFrame() != null) {
+            cp.addBefore(ctx.name(), WebSocketCloseFrameHandler.class.getName(),
+                new WebSocketCloseFrameHandler(serverConfig.sendCloseFrame(), serverConfig.forceCloseTimeoutMillis()));
+        }
     }
 
     @Override
