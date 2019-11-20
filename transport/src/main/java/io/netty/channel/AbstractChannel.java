@@ -333,6 +333,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected abstract AbstractUnsafe newUnsafe();
 
+    @Override
+    public long pendingWriteBytes() {
+        ChannelOutboundBuffer buf = unsafe.outboundBuffer();
+        if (buf != null) {
+            return buf.totalPendingWriteBytes();
+        }
+        return -1;
+    }
+
     /**
      * Returns the ID of this channel.
      */

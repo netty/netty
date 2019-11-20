@@ -187,6 +187,11 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      */
     ByteBufAllocator alloc();
 
+    /**
+     * Return the {@link ChannelOutboundBuffer#totalPendingWriteBytes()} of this channel.
+     */
+    long pendingWriteBytes();
+
     @Override
     Channel read();
 
