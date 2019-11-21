@@ -32,16 +32,12 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.channel.ChannelHandlerMask.*;
 
 final class DefaultChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelHandlerContext.class);
-
-    private static final AtomicIntegerFieldUpdater<DefaultChannelHandlerContext> HANDLER_STATE_UPDATER =
-            AtomicIntegerFieldUpdater.newUpdater(DefaultChannelHandlerContext.class, "handlerState");
 
     /**
      * Neither {@link ChannelHandler#handlerAdded(ChannelHandlerContext)}
@@ -70,7 +66,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     DefaultChannelHandlerContext next;
     DefaultChannelHandlerContext prev;
-    private volatile int handlerState = INIT;
+    private int handlerState = INIT;
 
     // Keeps track of processing different events
     private short outboundOperations;
@@ -1100,7 +1096,11 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         // Ensure we never update when the handlerState is REMOVE_COMPLETE already.
         // oldState is usually ADD_PENDING but can also be REMOVE_COMPLETE when an EventExecutor is used that is not
         // exposing ordering guarantees.
-        return HANDLER_STATE_UPDATER.getAndSet(this, ADD_COMPLETE) != REMOVE_COMPLETE;
+        if (handlerState != REMOVE_COMPLETE) {
+            handlerState = ADD_COMPLETE;
+            return true;
+        }
+        return false;
     }
 
     void callHandlerAdded() throws Exception {
