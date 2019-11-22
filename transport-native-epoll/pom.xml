@@ -34,6 +34,7 @@
     <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>
     <unix.common.lib.unpacked.dir>${unix.common.lib.dir}/META-INF/native/lib</unix.common.lib.unpacked.dir>
     <unix.common.include.unpacked.dir>${unix.common.lib.dir}/META-INF/native/include</unix.common.include.unpacked.dir>
+    <jni.compiler.args.cflags>CFLAGS=-O3 -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
     <jni.compiler.args.ldflags>LDFLAGS=-L${unix.common.lib.unpacked.dir} -Wl,--no-as-needed -lrt -Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive</jni.compiler.args.ldflags>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <skipTests>true</skipTests>
@@ -188,102 +189,6 @@
                     <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
                   </archive>
                   <classifier>${jni.classifier}</classifier>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-
-          <plugin>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <executions>
-              <execution>
-                <!-- Phase must be before regex-glibc-sendmmsg and regex-linux-sendmmsg -->
-                <phase>validate</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <id>ant-get-systeminfo</id>
-                <configuration>
-                  <exportAntProperties>true</exportAntProperties>
-                  <tasks>
-                    <exec executable="sh" outputproperty="ldd_version">
-                      <arg value="-c" />
-                      <arg value="ldd --version | tail | head -1" />
-                    </exec>
-                    <exec executable="uname" outputproperty="uname_os_version">
-                      <arg value="-r" />
-                    </exec>
-                  </tasks>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>build-helper-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <!-- Phase must be before regex-combined-sendmmsg -->
-                <phase>initialize</phase>
-                <id>regex-glibc-sendmmsg</id>
-                <goals>
-                  <goal>regex-property</goal>
-                </goals>
-                <configuration>
-                  <name>glibc.sendmmsg.support</name>
-                  <value>${ldd_version}</value>
-                  <!-- Version must be >= 2.14 - set to IO_NETTY_SENDMSSG_NOT_FOUND if this version is not satisfied -->
-                  <regex>^((?!^[^)]+\)\s+(0*2\.1[4-9]|0*2\.[2-9][0-9]+|0*[3-9][0-9]*|0*[1-9]+[0-9]+).*).)*$</regex>
-                  <replacement>IO_NETTY_SENDMSSG_NOT_FOUND</replacement>
-                  <failIfNoMatch>false</failIfNoMatch>
-                </configuration>
-              </execution>
-              <execution>
-                <!-- Phase must be before regex-combined-sendmmsg -->
-                <phase>initialize</phase>
-                <id>regex-linux-sendmmsg</id>
-                <goals>
-                  <goal>regex-property</goal>
-                </goals>
-                <configuration>
-                  <name>linux.sendmmsg.support</name>
-                  <value>${uname_os_version}</value>
-                  <!-- Version must be >= 3 - set to IO_NETTY_SENDMSSG_NOT_FOUND if this version is not satisfied -->
-                  <regex>^((?!^[0-9]*[3-9]\.?.*).)*$</regex>
-                  <replacement>IO_NETTY_SENDMSSG_NOT_FOUND</replacement>
-                  <failIfNoMatch>false</failIfNoMatch>
-                </configuration>
-              </execution>
-              <execution>
-                <!-- Phase must be before regex-unset-if-needed-sendmmsg -->
-                <phase>generate-sources</phase>
-                <id>regex-combined-sendmmsg</id>
-                <goals>
-                  <goal>regex-property</goal>
-                </goals>
-                <configuration>
-                  <name>jni.compiler.args.cflags</name>
-                  <value>${linux.sendmmsg.support}${glibc.sendmmsg.support}</value>
-                  <!-- If glibc and linux kernel are both not sufficient...then define the CFLAGS -->
-                  <regex>.*IO_NETTY_SENDMSSG_NOT_FOUND.*</regex>
-                  <replacement>CFLAGS=-O3 -DIO_NETTY_SENDMMSG_NOT_FOUND -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</replacement>
-                  <failIfNoMatch>false</failIfNoMatch>
-                </configuration>
-              </execution>
-              <execution>
-                <!-- Phase must be before build-native-lib -->
-                <phase>generate-sources</phase>
-                <id>regex-unset-if-needed-sendmmsg</id>
-                <goals>
-                  <goal>regex-property</goal>
-                </goals>
-                <configuration>
-                  <name>jni.compiler.args.cflags</name>
-                  <value>${jni.compiler.args.cflags}</value>
-                  <!-- If glibc and linux kernel are both not sufficient...then define the CFLAGS -->
-                  <regex>^((?!CFLAGS=).)*$</regex>
-                  <replacement>CFLAGS=-O3 -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</replacement>
-                  <failIfNoMatch>false</failIfNoMatch>
                 </configuration>
               </execution>
             </executions>

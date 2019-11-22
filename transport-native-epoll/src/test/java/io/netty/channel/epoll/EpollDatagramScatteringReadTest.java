@@ -26,6 +26,8 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractDatagramTest;
 import io.netty.util.internal.PlatformDependent;
+import org.junit.Assume;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
@@ -42,6 +44,11 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
+
+    @BeforeClass
+    public static void assumeRecvmmsgSupported() {
+        Assume.assumeTrue(Native.IS_SUPPORTING_RECVMMSG);
+    }
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
