@@ -32,6 +32,7 @@ import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epolle
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollin;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollout;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollrdhup;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingRecvmmsg;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingSendmmsg;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingTcpFastopen;
 import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.kernelVersion;
@@ -67,6 +68,8 @@ public final class Native {
     public static final int EPOLLERR = epollerr();
 
     public static final boolean IS_SUPPORTING_SENDMMSG = isSupportingSendmmsg();
+    static final boolean IS_SUPPORTING_RECVMMSG = isSupportingRecvmmsg();
+
     public static final boolean IS_SUPPORTING_TCP_FASTOPEN = isSupportingTcpFastopen();
     public static final int TCP_MD5SIG_MAXKEYLEN = tcpMd5SigMaxKeyLen();
     public static final String KERNEL_VERSION = kernelVersion();
