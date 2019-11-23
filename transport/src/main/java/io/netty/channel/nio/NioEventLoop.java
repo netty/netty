@@ -466,11 +466,9 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                                 strategy = select(curDeadlineNanos);
                             }
                         } finally {
-                            // Try get() first to avoid much more expensive CAS in the case we
-                            // were woken via the wakeup() method (submitted task)
-                            if (nextWakeupNanos.get() != AWAKE) {
-                                nextWakeupNanos.getAndSet(AWAKE);
-                            }
+                            // This update is just to help block unnecessary selector wakeups
+                            // so use of lazySet is ok (no race condition)
+                            nextWakeupNanos.lazySet(AWAKE);
                         }
                         // fall through
                     default:
