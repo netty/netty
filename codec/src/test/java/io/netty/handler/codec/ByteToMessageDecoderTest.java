@@ -32,10 +32,12 @@ import org.junit.Test;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -504,5 +506,84 @@ public class ByteToMessageDecoderTest {
         assertFalse(buffer5.isReadable());
         assertTrue(buffer5.release());
         assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testDiscardSomeReadBytesDoesNotAlterIndexesOfPreviouslyFiredByteBuf() {
+        ByteBufAllocator allocator = UnpooledByteBufAllocator.DEFAULT;
+        testDiscardSomeReadBytesDoesNotAlterIndexesOfPreviouslyFiredByteBuf(
+                fillInRainbow(allocator.heapBuffer(8, 8)),
+                fillInRainbow(allocator.heapBuffer(8, 8)));
+        testDiscardSomeReadBytesDoesNotAlterIndexesOfPreviouslyFiredByteBuf(
+                fillInRainbow(allocator.directBuffer(8, 8)),
+                fillInRainbow(allocator.directBuffer(8, 8)));
+        testDiscardSomeReadBytesDoesNotAlterIndexesOfPreviouslyFiredByteBuf(
+                fillInRainbow(allocator.heapBuffer(8, 8)),
+                fillInRainbow(allocator.directBuffer(8, 8)));
+        testDiscardSomeReadBytesDoesNotAlterIndexesOfPreviouslyFiredByteBuf(
+                fillInRainbow(allocator.directBuffer(8, 8)),
+                fillInRainbow(allocator.heapBuffer(8, 8)));
+
+        testDiscardSomeReadBytesDoesNotAlterIndexesOfPreviouslyFiredByteBuf(
+                allocator.compositeBuffer().addComponent(true, fillInRainbow(allocator.heapBuffer(8, 8))),
+                fillInRainbow(allocator.heapBuffer(8, 8)));
+        testDiscardSomeReadBytesDoesNotAlterIndexesOfPreviouslyFiredByteBuf(
+                fillInRainbow(allocator.heapBuffer(8, 8)),
+                allocator.compositeBuffer().addComponent(true, fillInRainbow(allocator.heapBuffer(8, 8))));
+        testDiscardSomeReadBytesDoesNotAlterIndexesOfPreviouslyFiredByteBuf(
+                allocator.compositeBuffer().addComponent(true, fillInRainbow(allocator.directBuffer(8, 8))),
+                fillInRainbow(allocator.heapBuffer(8, 8)));
+        testDiscardSomeReadBytesDoesNotAlterIndexesOfPreviouslyFiredByteBuf(
+                fillInRainbow(allocator.heapBuffer(8, 8)),
+                allocator.compositeBuffer().addComponent(true, fillInRainbow(allocator.directBuffer(8, 8))));
+        testDiscardSomeReadBytesDoesNotAlterIndexesOfPreviouslyFiredByteBuf(
+                allocator.compositeBuffer().addComponent(true, fillInRainbow(allocator.heapBuffer(8, 8))),
+                fillInRainbow(allocator.directBuffer(8, 8)));
+        testDiscardSomeReadBytesDoesNotAlterIndexesOfPreviouslyFiredByteBuf(
+                fillInRainbow(allocator.heapBuffer(8, 8)),
+                allocator.compositeBuffer().addComponent(true, fillInRainbow(allocator.directBuffer(8, 8))));
+    }
+
+    private static ByteBuf fillInRainbow(ByteBuf buf) {
+        for (int i = 0; i < buf.capacity(); ++i) {
+            buf.writeByte((byte) i);
+        }
+        return buf;
+    }
+
+    private static void testDiscardSomeReadBytesDoesNotAlterIndexesOfPreviouslyFiredByteBuf(ByteBuf firstBuf,
+                                                                                            ByteBuf secondBuf) {
+        final AtomicReference<ByteBuf> decodedBufRef = new AtomicReference<ByteBuf>();
+        final AtomicReference<Integer> decodedBufReaderIndexRef = new AtomicReference<Integer>();
+        final AtomicReference<Byte> decodedBufNextByteRef = new AtomicReference<Byte>();
+        EmbeddedChannel channel = new EmbeddedChannel(new ByteToMessageDecoder() {
+            private int decodeCount;
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+                if (++decodeCount == 2) {
+                    in.skipBytes((in.readableBytes() / 2) + 1);
+                    // just something in the list is enough for ByteToMessageDecoder to observe progress
+                    decodedBufRef.set(in);
+                    decodedBufReaderIndexRef.set(in.readerIndex());
+                    decodedBufNextByteRef.set(in.getByte(in.readerIndex()));
+                    out.add("noop");
+                }
+            }
+        });
+        assertFalse(channel.writeInbound(firstBuf));
+        assertTrue(channel.writeInbound(secondBuf));
+
+        // We want to verify we don't change the indexes and underlying content of a buffer we previously fired
+        // up the pipeline.
+        ByteBuf cachedByteBuf = decodedBufRef.get();
+        assertNotNull(cachedByteBuf);
+        Integer cachedReaderIndex = decodedBufReaderIndexRef.get();
+        assertNotNull(cachedReaderIndex);
+        assertEquals(cachedReaderIndex.intValue(), cachedByteBuf.readerIndex());
+        Byte cachedNextByte = decodedBufNextByteRef.get();
+        assertNotNull(cachedNextByte);
+        assertEquals(cachedNextByte.byteValue(), cachedByteBuf.getByte(cachedByteBuf.readerIndex()));
+
+        assertTrue(channel.finishAndReleaseAll());
     }
 }

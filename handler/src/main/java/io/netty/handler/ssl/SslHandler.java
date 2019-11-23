@@ -1284,7 +1284,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     private void channelReadComplete0(ChannelHandlerContext ctx) {
         // Discard bytes of the cumulation buffer if needed.
-        discardSomeReadBytes();
+        tryDiscardSomeReadBytes(ctx.alloc());
 
         flushIfNeeded(ctx);
         readIfNeeded(ctx);

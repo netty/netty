@@ -543,7 +543,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     final void channelReadComplete0(ChannelHandlerContext ctx) {
         // Discard bytes of the cumulation buffer if needed.
-        discardSomeReadBytes();
+        tryDiscardSomeReadBytes(ctx.alloc());
 
         // Ensure we never stale the HTTP/2 Channel. Flow-control is enforced by HTTP/2.
         //
