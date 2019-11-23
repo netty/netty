@@ -497,7 +497,11 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         ByteBuf byteBuf = allocHandle.allocate(allocator);
                         final boolean read;
                         int datagramSize = config().getMaxDatagramPayloadSize();
-                        int numDatagram = datagramSize == 0 ? 1 : byteBuf.writableBytes() / datagramSize;
+
+                        // Only try to use recvmmsg if its really supported by the running system.
+                        int numDatagram = Native.IS_SUPPORTING_RECVMMSG ?
+                                datagramSize == 0 ? 1 : byteBuf.writableBytes() / datagramSize :
+                                0;
 
                         try {
                             if (numDatagram <= 1) {
