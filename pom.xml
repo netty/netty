@@ -71,10 +71,9 @@
     <profile>
       <id>not_x86_64</id>
       <activation>
-        <property>
-          <name>os.detected.arch</name>
-          <value>!x86_64</value>
-        </property>
+        <os>
+          <arch>!x86_64</arch>
+        </os>
       </activation>
       <properties>
         <!-- Use no classifier as we only support x86_64 atm-->
