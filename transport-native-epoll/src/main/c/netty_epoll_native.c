@@ -36,6 +36,9 @@
 #include <inttypes.h>
 #include <link.h>
 #include <time.h>
+// Needed to be able to use syscalls directly and so not depend on newer GLIBC versions
+#include <linux/net.h>
+#include <sys/syscall.h>
 
 #include "netty_epoll_linuxsocket.h"
 #include "netty_unix_buffer.h"
@@ -54,15 +57,20 @@
 // optional
 extern int epoll_create1(int flags) __attribute__((weak));
 
-#ifdef IO_NETTY_SENDMMSG_NOT_FOUND
-extern int sendmmsg(int sockfd, struct mmsghdr* msgvec, unsigned int vlen, unsigned int flags) __attribute__((weak));
-
 #ifndef __USE_GNU
 struct mmsghdr {
     struct msghdr msg_hdr;  /* Message header */
     unsigned int  msg_len;  /* Number of bytes transmitted */
 };
 #endif
+
+// All linux syscall numbers are stable so this is safe.
+#ifndef SYS_recvmmsg
+#define SYS_recvmmsg 299
+#endif
+
+#ifndef SYS_sendmmsg
+#define SYS_sendmmsg 307
 #endif
 
 // Those are initialized in the init(...) method and cached for performance reasons
@@ -311,7 +319,8 @@ static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
     ssize_t res;
     int err;
     do {
-       res = sendmmsg(fd, msg, len, 0);
+       // We directly use the syscall to prevent depending on GLIBC 2.14.
+       res = syscall(SYS_sendmmsg, fd, msg, len, 0);
        // keep on writing if it was interrupted
     } while (res == -1 && ((err = errno) == EINTR));
 
@@ -342,8 +351,10 @@ static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
     ssize_t res;
     int err;
     do {
-       res = recvmmsg(fd, msg, len, 0, NULL);
-       // keep on reading if it was interrupted
+        // We directly use the syscall to prevent depending on GLIBC 2.12.
+        res = syscall(SYS_recvmmsg, fd, &msg, len, 0, NULL);
+
+        // keep on reading if it was interrupted
     } while (res == -1 && ((err = errno) == EINTR));
 
     if (res < 0) {
@@ -394,14 +405,22 @@ static jstring netty_epoll_native_kernelVersion(JNIEnv* env, jclass clazz) {
     netty_unix_errors_throwRuntimeExceptionErrorNo(env, "uname() failed: ", errno);
     return NULL;
 }
-
 static jboolean netty_epoll_native_isSupportingSendmmsg(JNIEnv* env, jclass clazz) {
-    // Use & to avoid warnings with -Wtautological-pointer-compare when sendmmsg is
-    // not weakly defined.
-    if (&sendmmsg != NULL) {
-        return JNI_TRUE;
+    if (syscall(SYS_sendmmsg, -1, NULL, 0, 0) == -1) {
+        if (errno == ENOSYS) {
+            return JNI_FALSE;
+        }
     }
-    return JNI_FALSE;
+    return JNI_TRUE;
+}
+
+static jboolean netty_epoll_native_isSupportingRecvmmsg(JNIEnv* env, jclass clazz) {
+    if (syscall(SYS_recvmmsg, -1, NULL, 0, 0, NULL) == -1) {
+        if (errno == ENOSYS) {
+            return JNI_FALSE;
+        }
+    }
+    return JNI_TRUE;
 }
 
 static jboolean netty_epoll_native_isSupportingTcpFastopen(JNIEnv* env, jclass clazz) {
@@ -482,6 +501,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "epollerr", "()I", (void *) netty_epoll_native_epollerr },
   { "tcpMd5SigMaxKeyLen", "()I", (void *) netty_epoll_native_tcpMd5SigMaxKeyLen },
   { "isSupportingSendmmsg", "()Z", (void *) netty_epoll_native_isSupportingSendmmsg },
+  { "isSupportingRecvmmsg", "()Z", (void *) netty_epoll_native_isSupportingRecvmmsg },
   { "isSupportingTcpFastopen", "()Z", (void *) netty_epoll_native_isSupportingTcpFastopen },
   { "kernelVersion", "()Ljava/lang/String;", (void *) netty_epoll_native_kernelVersion }
 };
