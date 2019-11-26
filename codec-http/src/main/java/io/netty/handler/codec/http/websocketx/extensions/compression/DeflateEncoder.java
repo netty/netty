@@ -158,16 +158,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
     private void cleanup() {
         if (encoder != null) {
             // Clean-up the previous encoder if not cleaned up correctly.
-            if (encoder.finish()) {
-                for (;;) {
-                    ByteBuf buf = encoder.readOutbound();
-                    if (buf == null) {
-                        break;
-                    }
-                    // Release the buffer
-                    buf.release();
-                }
-            }
+            encoder.finishAndReleaseAll();
             encoder = null;
         }
     }
