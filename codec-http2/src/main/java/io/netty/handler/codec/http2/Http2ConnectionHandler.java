@@ -784,6 +784,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             // Don't write a RST_STREAM frame if we have already written one.
             return promise.setSuccess();
         }
+        // Synchronously set the resetSent flag to prevent any subsequent calls
+        // from resulting in multiple reset frames being sent.
+        //
+        // This needs to be done before we notify the promise as the promise may have a listener attached that
+        // call resetStream(...) again.
+        stream.resetSent();
+
         final ChannelFuture future;
         // If the remote peer is not aware of the steam, then we are not allowed to send a RST_STREAM
         // https://tools.ietf.org/html/rfc7540#section-6.4.
@@ -793,11 +800,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         } else {
             future = frameWriter().writeRstStream(ctx, stream.id(), errorCode, promise);
         }
-
-        // Synchronously set the resetSent flag to prevent any subsequent calls
-        // from resulting in multiple reset frames being sent.
-        stream.resetSent();
-
         if (future.isDone()) {
             processRstStreamWriteResult(ctx, stream, future);
         } else {
