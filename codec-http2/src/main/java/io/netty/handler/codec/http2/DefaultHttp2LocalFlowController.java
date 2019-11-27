@@ -31,6 +31,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
+import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
@@ -448,7 +449,9 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
         @Override
         public boolean writeWindowUpdateIfNeeded() throws Http2Exception {
-            if (endOfStream || initialStreamWindowSize <= 0) {
+            if (endOfStream || initialStreamWindowSize <= 0 ||
+                    // If the stream is already closed there is no need to try to write a window update for it.
+                    isClosed(stream)) {
                 return false;
             }
 
