@@ -16,24 +16,22 @@
 
 package io.netty.handler.ssl.util;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-import io.netty.util.internal.SuppressJava6Requirement;
 import java.net.Socket;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.Objects;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509KeyManager;
 
-@SuppressJava6Requirement(reason = "Usage guarded by java version check")
 final class X509KeyManagerWrapper extends X509ExtendedKeyManager {
 
     private final X509KeyManager delegate;
 
     X509KeyManagerWrapper(X509KeyManager delegate) {
-        this.delegate = checkNotNull(delegate, "delegate");
+        this.delegate = Objects.requireNonNull(delegate, "delegate");
     }
 
     @Override
