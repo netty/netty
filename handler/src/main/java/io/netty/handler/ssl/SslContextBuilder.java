@@ -456,7 +456,7 @@ public final class SslContextBuilder {
      */
     public SslContextBuilder keyManager(KeyManager keyManager) {
         if (forServer) {
-            checkNotNull(keyManager, "keyManager required for servers");
+            requireNonNull(keyManager, "keyManager required for servers");
         }
         if (keyManager != null) {
             this.keyManagerFactory = new KeyManagerFactoryWrapper(keyManager);

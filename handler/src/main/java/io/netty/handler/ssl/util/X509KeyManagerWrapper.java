@@ -27,11 +27,11 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509KeyManager;
 
-@SuppressJava6Requirement(reason = "Usage guarded by java version check")
 final class X509KeyManagerWrapper extends X509ExtendedKeyManager {
 
     private final X509KeyManager delegate;
 
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     X509KeyManagerWrapper(X509KeyManager delegate) {
         this.delegate = checkNotNull(delegate, "delegate");
     }
