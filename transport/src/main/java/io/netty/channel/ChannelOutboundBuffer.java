@@ -172,7 +172,7 @@ public final class ChannelOutboundBuffer {
         }
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, size);
-        if (newWriteBufferSize > channel.config().getWriteBufferHighWaterMark()) {
+        if (newWriteBufferSize > channel.config().getWriteBufferHighWaterMark() && isWritable()) {
             setUnwritable(invokeLater);
         }
     }
@@ -191,7 +191,8 @@ public final class ChannelOutboundBuffer {
         }
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
-        if (notifyWritability && newWriteBufferSize < channel.config().getWriteBufferLowWaterMark()) {
+        if (notifyWritability && newWriteBufferSize < channel.config().getWriteBufferLowWaterMark()
+             && !this.isWritable()) {
             setWritable(invokeLater);
         }
     }

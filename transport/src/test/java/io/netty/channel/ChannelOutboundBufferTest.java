@@ -238,7 +238,12 @@ public class ChannelOutboundBufferTest {
         ch.write(buffer().writeZero(127));
         assertThat(buf.toString(), is("false "));
 
+        ch.unsafe().outboundBuffer().addFlush();
+        ch.write(buffer().writeZero(127));
+        assertThat(buf.toString(), is("false "));
+
         // Ensure going down to the low watermark makes channel writable again by flushing the first write.
+        assertThat(ch.unsafe().outboundBuffer().remove(), is(true));
         assertThat(ch.unsafe().outboundBuffer().remove(), is(true));
         assertThat(ch.unsafe().outboundBuffer().remove(), is(true));
         assertThat(ch.unsafe().outboundBuffer().totalPendingWriteBytes(),
