@@ -454,25 +454,6 @@ static jint netty_epoll_native_offsetofEpollData(JNIEnv* env, jclass clazz) {
     return offsetof(struct epoll_event, data);
 }
 
-static jint netty_epoll_native_splice0(JNIEnv* env, jclass clazz, jint fd, jlong offIn, jint fdOut, jlong offOut, jlong len) {
-    ssize_t res;
-    int err;
-    loff_t off_in = (loff_t) offIn;
-    loff_t off_out = (loff_t) offOut;
-
-    loff_t* p_off_in = off_in >= 0 ? &off_in : NULL;
-    loff_t* p_off_out = off_out >= 0 ? &off_out : NULL;
-
-    do {
-       res = splice(fd, p_off_in, fdOut, p_off_out, (size_t) len, SPLICE_F_NONBLOCK | SPLICE_F_MOVE);
-       // keep on splicing if it was interrupted
-    } while (res == -1 && ((err = errno) == EINTR));
-
-    if (res < 0) {
-        return -err;
-    }
-    return (jint) res;
-}
 
 static jint netty_epoll_native_tcpMd5SigMaxKeyLen(JNIEnv* env, jclass clazz) {
     struct tcp_md5sig md5sig;
@@ -515,8 +496,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "epollCtlDel0", "(II)I", (void *) netty_epoll_native_epollCtlDel0 },
   // "sendmmsg0" has a dynamic signature
   { "sizeofEpollEvent", "()I", (void *) netty_epoll_native_sizeofEpollEvent },
-  { "offsetofEpollData", "()I", (void *) netty_epoll_native_offsetofEpollData },
-  { "splice0", "(IJIJJ)I", (void *) netty_epoll_native_splice0 }
+  { "offsetofEpollData", "()I", (void *) netty_epoll_native_offsetofEpollData }
 };
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);
 
