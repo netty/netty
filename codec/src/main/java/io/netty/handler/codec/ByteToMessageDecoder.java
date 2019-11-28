@@ -25,14 +25,14 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.internal.StringUtil;
 
 import java.util.List;
 
 /**
- * {@link ChannelInboundHandler} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an
+ * {@link ChannelHandler} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an
  * other Message type.
  *
  * For example here is an implementation which reads all readable bytes from
@@ -72,16 +72,15 @@ import java.util.List;
  * is not released or added to the <tt>out</tt> {@link List}. Use derived buffers like {@link ByteBuf#readSlice(int)}
  * to avoid leaking memory.
  */
-public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter implements ChannelInboundHandler {
+public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
 
     /**
      * Cumulate {@link ByteBuf}s by merge them into one {@link ByteBuf}'s, using memory copies.
      */
     public static final Cumulator MERGE_CUMULATOR = (alloc, cumulation, in) -> {
         try {
-            final ByteBuf buffer;
             if (cumulation.writerIndex() > cumulation.maxCapacity() - in.readableBytes()
-                || cumulation.refCnt() > 1 || cumulation.isReadOnly()) {
+                    || cumulation.refCnt() > 1 || cumulation.isReadOnly()) {
                 // Expand cumulation (by replace it) when either there is not more room in the buffer
                 // or if the refCnt is greater then 1 which may happen when the user use slice().retain() or
                 // duplicate().retain() or if its read-only.
@@ -89,12 +88,11 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
                 // See:
                 // - https://github.com/netty/netty/issues/2327
                 // - https://github.com/netty/netty/issues/1764
-                buffer = expandCumulation(alloc, cumulation, in.readableBytes());
+                cumulation = expandCumulation(alloc, cumulation, in);
             } else {
-                buffer = cumulation;
+                cumulation.writeBytes(in);
             }
-            buffer.writeBytes(in);
-            return buffer;
+            return cumulation;
         } finally {
             // We must release in in all cases as otherwise it may produce a leak if writeBytes(...) throw
             // for whatever release (for example because of OutOfMemoryError)
@@ -117,8 +115,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
                 // See:
                 // - https://github.com/netty/netty/issues/2327
                 // - https://github.com/netty/netty/issues/1764
-                buffer = expandCumulation(alloc, cumulation, in.readableBytes());
-                buffer.writeBytes(in);
+                buffer = expandCumulation(alloc, cumulation, in);
             } else {
                 CompositeByteBuf composite;
                 if (cumulation instanceof CompositeByteBuf) {
@@ -521,12 +518,17 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter impleme
         }
     }
 
-    static ByteBuf expandCumulation(ByteBufAllocator alloc, ByteBuf cumulation, int readable) {
-        ByteBuf oldCumulation = cumulation;
-        cumulation = alloc.buffer(oldCumulation.readableBytes() + readable);
-        cumulation.writeBytes(oldCumulation);
-        oldCumulation.release();
-        return cumulation;
+    static ByteBuf expandCumulation(ByteBufAllocator alloc, ByteBuf oldCumulation, ByteBuf in) {
+        ByteBuf newCumulation = alloc.buffer(oldCumulation.readableBytes() + in.readableBytes());
+        ByteBuf toRelease = newCumulation;
+        try {
+            newCumulation.writeBytes(oldCumulation);
+            newCumulation.writeBytes(in);
+            toRelease = oldCumulation;
+            return newCumulation;
+        } finally {
+            toRelease.release();
+        }
     }
 
     /**
