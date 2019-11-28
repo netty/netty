@@ -25,9 +25,9 @@ import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.PromiseNotificationUtil;
-import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.ThrowableUtil;
+import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -67,10 +67,6 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     DefaultChannelHandlerContext next;
     DefaultChannelHandlerContext prev;
     private int handlerState = INIT;
-
-    // Keeps track of processing different events
-    private short outboundOperations;
-    private short inboundOperations;
 
     DefaultChannelHandlerContext(DefaultChannelPipeline pipeline, String name,
                                  ChannelHandler handler) {
@@ -118,54 +114,6 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         return name;
     }
 
-    private boolean isProcessInboundDirectly() {
-        assert inboundOperations >= 0;
-        return inboundOperations == 0;
-    }
-
-    private boolean isProcessOutboundDirectly() {
-        assert outboundOperations >= 0;
-        return outboundOperations == 0;
-    }
-
-    private void incrementOutboundOperations() {
-        assert outboundOperations >= 0;
-        outboundOperations++;
-    }
-
-    private void decrementOutboundOperations() {
-        assert outboundOperations > 0;
-        outboundOperations--;
-    }
-
-    private void incrementInboundOperations() {
-        assert inboundOperations >= 0;
-        inboundOperations++;
-    }
-
-    private void decrementInboundOperations() {
-        assert inboundOperations > 0;
-        inboundOperations--;
-    }
-
-    private static void executeInboundReentrance(DefaultChannelHandlerContext context, Runnable task) {
-        context.incrementInboundOperations();
-        try {
-            context.executor().execute(task);
-        } catch (Throwable cause) {
-            context.decrementInboundOperations();
-            throw cause;
-        }
-    }
-
-    private static void executeOutboundReentrance(
-            DefaultChannelHandlerContext context, Runnable task, ChannelPromise promise, Object msg) {
-        context.incrementOutboundOperations();
-        if (!safeExecute(context.executor(), task, promise, msg)) {
-            context.decrementOutboundOperations();
-        }
-    }
-
     @Override
     public ChannelHandlerContext fireChannelRegistered() {
         EventExecutor executor = executor();
@@ -178,26 +126,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeChannelRegistered() {
-        DefaultChannelHandlerContext context = findContextInbound(MASK_CHANNEL_REGISTERED);
-        if (context.isProcessInboundDirectly()) {
-            context.invokeChannelRegistered();
-        } else {
-            executeInboundReentrance(context, context::invokeChannelRegistered0);
-        }
+        findContextInbound(MASK_CHANNEL_REGISTERED).invokeChannelRegistered();
     }
 
     void invokeChannelRegistered() {
-        incrementInboundOperations();
-        invokeChannelRegistered0();
-    }
-
-    private void invokeChannelRegistered0() {
         try {
             handler().channelRegistered(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
-        } finally {
-            decrementInboundOperations();
         }
     }
 
@@ -213,26 +149,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeChannelUnregistered() {
-        DefaultChannelHandlerContext context = findContextInbound(MASK_CHANNEL_UNREGISTERED);
-        if (context.isProcessInboundDirectly()) {
-            context.invokeChannelUnregistered();
-        } else {
-            executeInboundReentrance(context, context::invokeChannelUnregistered0);
-        }
+        findContextInbound(MASK_CHANNEL_UNREGISTERED).invokeChannelUnregistered();
     }
 
     void invokeChannelUnregistered() {
-        incrementInboundOperations();
-        invokeChannelUnregistered0();
-    }
-
-    private void invokeChannelUnregistered0() {
         try {
             handler().channelUnregistered(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
-        } finally {
-            decrementInboundOperations();
         }
     }
 
@@ -248,26 +172,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeChannelActive() {
-        DefaultChannelHandlerContext context = findContextInbound(MASK_CHANNEL_ACTIVE);
-        if (context.isProcessInboundDirectly()) {
-            context.invokeChannelActive();
-        } else {
-            executeInboundReentrance(context, context::invokeChannelActive0);
-        }
+        findContextInbound(MASK_CHANNEL_ACTIVE).invokeChannelActive();
     }
 
     void invokeChannelActive() {
-        incrementInboundOperations();
-        invokeChannelActive0();
-    }
-
-    private void invokeChannelActive0() {
         try {
             handler().channelActive(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
-        } finally {
-            decrementInboundOperations();
         }
     }
 
@@ -283,26 +195,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeChannelInactive() {
-        DefaultChannelHandlerContext context = findContextInbound(MASK_CHANNEL_INACTIVE);
-        if (context.isProcessInboundDirectly()) {
-            context.invokeChannelInactive();
-        } else {
-            executeInboundReentrance(context, context::invokeChannelInactive0);
-        }
+        findContextInbound(MASK_CHANNEL_INACTIVE).invokeChannelInactive();
     }
 
     void invokeChannelInactive() {
-        incrementInboundOperations();
-        invokeChannelInactive0();
-    }
-
-    private void invokeChannelInactive0() {
         try {
             handler().channelInactive(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
-        } finally {
-            decrementInboundOperations();
         }
     }
 
@@ -326,20 +226,10 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeExceptionCaught(Throwable cause) {
-        DefaultChannelHandlerContext context = findContextInbound(MASK_EXCEPTION_CAUGHT);
-        if (context.isProcessInboundDirectly()) {
-            context.invokeExceptionCaught(cause);
-        } else {
-            executeInboundReentrance(context, () -> context.invokeExceptionCaught0(cause));
-        }
+        findContextInbound(MASK_EXCEPTION_CAUGHT).invokeExceptionCaught(cause);
     }
 
     void invokeExceptionCaught(final Throwable cause) {
-        incrementInboundOperations();
-        invokeExceptionCaught0(cause);
-    }
-
-    private void invokeExceptionCaught0(final Throwable cause) {
         try {
             handler().exceptionCaught(this, cause);
         } catch (Throwable error) {
@@ -355,8 +245,6 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
                                 "was thrown by a user handler's exceptionCaught() " +
                                 "method while handling the following exception:", error, cause);
             }
-        } finally {
-            decrementInboundOperations();
         }
     }
 
@@ -373,26 +261,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeUserEventTriggered(Object event) {
-        DefaultChannelHandlerContext context = findContextInbound(MASK_USER_EVENT_TRIGGERED);
-        if (context.isProcessInboundDirectly()) {
-            context.invokeUserEventTriggered(event);
-        } else {
-            executeInboundReentrance(context, () -> context.invokeUserEventTriggered0(event));
-        }
+        findContextInbound(MASK_USER_EVENT_TRIGGERED).invokeUserEventTriggered(event);
     }
 
     void invokeUserEventTriggered(Object event) {
-        incrementInboundOperations();
-        invokeUserEventTriggered0(event);
-    }
-
-    private void invokeUserEventTriggered0(Object event) {
         try {
             handler().userEventTriggered(this, event);
         } catch (Throwable t) {
             notifyHandlerException(t);
-        } finally {
-            decrementInboundOperations();
         }
     }
 
@@ -414,27 +290,15 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeChannelRead(Object msg) {
-        DefaultChannelHandlerContext context = findContextInbound(MASK_CHANNEL_READ);
-        if (context.isProcessInboundDirectly()) {
-            context.invokeChannelRead(msg);
-        } else {
-            executeInboundReentrance(context, () -> context.invokeChannelRead0(msg));
-        }
+        findContextInbound(MASK_CHANNEL_READ).invokeChannelRead(msg);
     }
 
     void invokeChannelRead(Object msg) {
-        incrementInboundOperations();
-        invokeChannelRead0(msg);
-    }
-
-    private void invokeChannelRead0(Object msg) {
         final Object m = pipeline.touch(requireNonNull(msg, "msg"), this);
         try {
             handler().channelRead(this, m);
         } catch (Throwable t) {
             notifyHandlerException(t);
-        } finally {
-            decrementInboundOperations();
         }
     }
 
@@ -451,26 +315,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeChannelReadComplete() {
-        DefaultChannelHandlerContext context = findContextInbound(MASK_CHANNEL_READ_COMPLETE);
-        if (context.isProcessInboundDirectly()) {
-            context.invokeChannelReadComplete();
-        } else {
-            executeInboundReentrance(context, context::invokeChannelReadComplete0);
-        }
+        findContextInbound(MASK_CHANNEL_READ_COMPLETE).invokeChannelReadComplete();
     }
 
     void invokeChannelReadComplete() {
-        incrementInboundOperations();
-        invokeChannelReadComplete0();
-    }
-
-    private void invokeChannelReadComplete0() {
         try {
             handler().channelReadComplete(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
-        } finally {
-            decrementInboundOperations();
         }
     }
 
@@ -487,26 +339,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeChannelWritabilityChanged() {
-        DefaultChannelHandlerContext context = findContextInbound(MASK_CHANNEL_WRITABILITY_CHANGED);
-        if (context.isProcessInboundDirectly()) {
-            context.invokeChannelWritabilityChanged();
-        } else {
-            executeInboundReentrance(context, context::invokeChannelWritabilityChanged0);
-        }
+        findContextInbound(MASK_CHANNEL_WRITABILITY_CHANGED).invokeChannelWritabilityChanged();
     }
 
     void invokeChannelWritabilityChanged() {
-        incrementInboundOperations();
-        invokeChannelWritabilityChanged0();
-    }
-
-    private void invokeChannelWritabilityChanged0() {
         try {
             handler().channelWritabilityChanged(this);
         } catch (Throwable t) {
             notifyHandlerException(t);
-        } finally {
-            decrementInboundOperations();
         }
     }
 
@@ -563,26 +403,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeBind(SocketAddress localAddress, ChannelPromise promise) {
-        DefaultChannelHandlerContext context = findContextOutbound(MASK_BIND);
-        if (context.isProcessOutboundDirectly()) {
-            context.invokeBind(localAddress, promise);
-        } else {
-            executeOutboundReentrance(context, () -> context.invokeBind0(localAddress, promise), promise, null);
-        }
+        findContextOutbound(MASK_BIND).invokeBind(localAddress, promise);
     }
 
     private void invokeBind(SocketAddress localAddress, ChannelPromise promise) {
-        incrementOutboundOperations();
-        invokeBind0(localAddress, promise);
-    }
-
-    private void invokeBind0(SocketAddress localAddress, ChannelPromise promise) {
         try {
             handler().bind(this, localAddress, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
-        } finally {
-            decrementOutboundOperations();
         }
     }
 
@@ -610,27 +438,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-        DefaultChannelHandlerContext context = findContextOutbound(MASK_CONNECT);
-        if (context.isProcessOutboundDirectly()) {
-            context.invokeConnect(remoteAddress, localAddress, promise);
-        } else {
-            executeOutboundReentrance(context, () -> context.invokeConnect0(remoteAddress, localAddress, promise),
-                    promise, null);
-        }
+        findContextOutbound(MASK_CONNECT).invokeConnect(remoteAddress, localAddress, promise);
     }
 
     private void invokeConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-        incrementOutboundOperations();
-        invokeConnect0(remoteAddress, localAddress, promise);
-    }
-
-    private void invokeConnect0(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
         try {
             handler().connect(this, remoteAddress, localAddress, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
-        } finally {
-            decrementOutboundOperations();
         }
     }
 
@@ -657,26 +472,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeDisconnect(ChannelPromise promise) {
-        DefaultChannelHandlerContext context = findContextOutbound(MASK_DISCONNECT);
-        if (context.isProcessOutboundDirectly()) {
-            context.invokeDisconnect(promise);
-        } else {
-            executeOutboundReentrance(context, () -> context.invokeDisconnect0(promise), promise, null);
-        }
+        findContextOutbound(MASK_DISCONNECT).invokeDisconnect(promise);
     }
 
     private void invokeDisconnect(ChannelPromise promise) {
-        incrementOutboundOperations();
-        invokeDisconnect0(promise);
-    }
-
-    private void invokeDisconnect0(ChannelPromise promise) {
         try {
             handler().disconnect(this, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
-        } finally {
-            decrementOutboundOperations();
         }
     }
 
@@ -697,26 +500,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeClose(ChannelPromise promise) {
-        DefaultChannelHandlerContext context = findContextOutbound(MASK_CLOSE);
-        if (context.isProcessOutboundDirectly()) {
-            context.invokeClose(promise);
-        } else {
-            executeOutboundReentrance(context, () -> context.invokeClose0(promise), promise, null);
-        }
+        findContextOutbound(MASK_CLOSE).invokeClose(promise);
     }
 
     private void invokeClose(ChannelPromise promise) {
-        incrementOutboundOperations();
-        invokeClose0(promise);
-    }
-
-    private void invokeClose0(ChannelPromise promise) {
         try {
             handler().close(this, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
-        } finally {
-            decrementOutboundOperations();
         }
     }
 
@@ -737,26 +528,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeRegister(ChannelPromise promise) {
-        DefaultChannelHandlerContext context = findContextOutbound(MASK_REGISTER);
-        if (context.isProcessOutboundDirectly()) {
-            context.invokeRegister(promise);
-        } else {
-            executeOutboundReentrance(context, () -> context.invokeRegister0(promise), promise, null);
-        }
+        findContextOutbound(MASK_REGISTER).invokeRegister(promise);
     }
 
     private void invokeRegister(ChannelPromise promise) {
-        incrementOutboundOperations();
-        invokeRegister0(promise);
-    }
-
-    private void invokeRegister0(ChannelPromise promise) {
         try {
             handler().register(this, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
-        } finally {
-            decrementOutboundOperations();
         }
     }
 
@@ -777,26 +556,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeDeregister(ChannelPromise promise) {
-        DefaultChannelHandlerContext context = findContextOutbound(MASK_DEREGISTER);
-        if (context.isProcessOutboundDirectly()) {
-            context.invokeDeregister(promise);
-        } else {
-            executeOutboundReentrance(context, () -> context.invokeDeregister0(promise), promise, null);
-        }
+        findContextOutbound(MASK_DEREGISTER).invokeDeregister(promise);
     }
 
     private void invokeDeregister(ChannelPromise promise) {
-        incrementOutboundOperations();
-        invokeDeregister0(promise);
-    }
-
-    private void invokeDeregister0(ChannelPromise promise) {
         try {
             handler().deregister(this, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
-        } finally {
-            decrementOutboundOperations();
         }
     }
 
@@ -813,26 +580,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeRead() {
-        DefaultChannelHandlerContext context = findContextOutbound(MASK_READ);
-        if (context.isProcessOutboundDirectly()) {
-            context.invokeRead();
-        } else {
-            executeOutboundReentrance(context, context::invokeRead0, null, null);
-        }
+        findContextOutbound(MASK_READ).invokeRead();
     }
 
     private void invokeRead() {
-        incrementOutboundOperations();
-        invokeRead0();
-    }
-
-    private void invokeRead0() {
         try {
             handler().read(this);
         } catch (Throwable t) {
             invokeExceptionCaughtFromOutbound(t);
-        } finally {
-            decrementOutboundOperations();
         }
     }
 
@@ -840,12 +595,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         if ((executionMask & MASK_EXCEPTION_CAUGHT) != 0) {
             notifyHandlerException(t);
         } else {
-            DefaultChannelHandlerContext context = findContextInbound(MASK_EXCEPTION_CAUGHT);
-            if (context.isProcessInboundDirectly()) {
-                context.invokeExceptionCaught(t);
-            } else {
-                executeInboundReentrance(context, () -> context.invokeExceptionCaught0(t));
-            }
+            findContextInbound(MASK_EXCEPTION_CAUGHT).notifyHandlerException(t);
         }
     }
 
@@ -862,18 +612,11 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void invokeWrite(Object msg, ChannelPromise promise) {
-        incrementOutboundOperations();
-        invokeWrite0(msg, promise);
-    }
-
-    private void invokeWrite0(Object msg, ChannelPromise promise) {
         final Object m = pipeline.touch(msg, this);
         try {
             handler().write(this, m, promise);
         } catch (Throwable t) {
             notifyOutboundHandlerException(t, promise);
-        } finally {
-            decrementOutboundOperations();
         }
     }
 
@@ -891,26 +634,14 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private void findAndInvokeFlush() {
-        DefaultChannelHandlerContext context = findContextOutbound(MASK_FLUSH);
-        if (context.isProcessOutboundDirectly()) {
-            context.invokeFlush();
-        } else {
-            executeOutboundReentrance(context, context::invokeFlush0, null, null);
-        }
+        findContextOutbound(MASK_FLUSH).invokeFlush();
     }
 
     private void invokeFlush() {
-        incrementOutboundOperations();
-        invokeFlush0();
-    }
-
-    private void invokeFlush0() {
         try {
             handler().flush(this);
         } catch (Throwable t) {
             invokeExceptionCaughtFromOutbound(t);
-        } finally {
-            decrementOutboundOperations();
         }
     }
 
@@ -918,6 +649,11 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
         write(msg, true, promise);
         return promise;
+    }
+
+    private void invokeWriteAndFlush(Object msg, ChannelPromise promise) {
+        invokeWrite(msg, promise);
+        invokeFlush();
     }
 
     private void write(Object msg, boolean flush, ChannelPromise promise) {
@@ -938,19 +674,9 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             final DefaultChannelHandlerContext next = findContextOutbound(flush ?
                     (MASK_WRITE | MASK_FLUSH) : MASK_WRITE);
             if (flush) {
-                if (next.isProcessOutboundDirectly()) {
-                    next.invokeWrite(msg, promise);
-                    next.invokeFlush();
-                } else {
-                    executeOutboundReentrance(next, () -> next.invokeWrite0(msg, promise), promise, msg);
-                    executeOutboundReentrance(next, next::invokeFlush0, null, null);
-                }
+                next.invokeWriteAndFlush(msg, promise);
             } else {
-                if (next.isProcessOutboundDirectly()) {
-                    next.invokeWrite(msg, promise);
-                } else {
-                    executeOutboundReentrance(next, () -> next.invokeWrite0(msg, promise), promise, msg);
-                }
+                next.invokeWrite(msg, promise);
             }
         } else {
             final AbstractWriteTask task;
@@ -989,6 +715,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             }
             return;
         }
+
         invokeExceptionCaught(cause);
     }
 
@@ -1071,7 +798,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         DefaultChannelHandlerContext ctx = this;
         do {
             ctx = ctx.next;
-        } while ((ctx.executionMask & mask) == 0 && ctx.isProcessInboundDirectly());
+        } while ((ctx.executionMask & mask) == 0);
         return ctx;
     }
 
@@ -1079,7 +806,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         DefaultChannelHandlerContext ctx = this;
         do {
             ctx = ctx.prev;
-        } while ((ctx.executionMask & mask) == 0 && ctx.isProcessOutboundDirectly());
+        } while ((ctx.executionMask & mask) == 0);
         return ctx;
     }
 
@@ -1144,9 +871,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             return true;
         } catch (Throwable cause) {
             try {
-                if (promise != null) {
-                    promise.setFailure(cause);
-                }
+                promise.setFailure(cause);
             } finally {
                 if (msg != null) {
                     ReferenceCountUtil.release(msg);

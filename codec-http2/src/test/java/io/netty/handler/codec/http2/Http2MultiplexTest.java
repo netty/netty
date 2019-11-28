@@ -417,8 +417,6 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         Http2StreamChannel childChannel = newOutboundStream(handler);
         assertTrue(childChannel.isActive());
 
-        parentChannel.runPendingTasks();
-
         childChannel.close();
         verify(frameWriter).writeRstStream(eqCodecCtx(),
                 eqStreamId(childChannel), eq(Http2Error.CANCEL.code()), anyChannelPromise());
@@ -450,7 +448,6 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
                 ctx.fireChannelActive();
             }
         });
-        parentChannel.runPendingTasks();
 
         assertFalse(childChannel.isActive());
 
@@ -528,8 +525,6 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         // Write to the child channel
         Http2Headers headers = new DefaultHttp2Headers().scheme("https").method("GET").path("/foo.txt");
         childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(headers));
-
-        parentChannel.runPendingTasks();
 
         // Read from the child channel
         frameInboundWriter.writeInboundHeaders(childChannel.stream().id(), headers, 0, false);
