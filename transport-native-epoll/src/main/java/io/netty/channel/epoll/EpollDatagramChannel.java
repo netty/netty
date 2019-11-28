@@ -684,9 +684,10 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             if (localAddress == null) {
                 localAddress = localAddress();
             }
+            int received = remoteAddress.receivedAmount();
             allocHandle.lastBytesRead(maxDatagramPacketSize <= 0 ?
-                    remoteAddress.receivedAmount() : writable);
-            byteBuf.writerIndex(byteBuf.writerIndex() + allocHandle.lastBytesRead());
+                    received : writable);
+            byteBuf.writerIndex(writerIndex + received);
             allocHandle.incMessagesRead(1);
 
             pipeline().fireChannelRead(new DatagramPacket(byteBuf, localAddress, remoteAddress));
