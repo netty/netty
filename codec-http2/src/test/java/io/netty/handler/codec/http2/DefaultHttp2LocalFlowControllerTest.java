@@ -27,6 +27,7 @@ import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -42,6 +43,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /**
  * Tests for {@link DefaultHttp2LocalFlowController}.
@@ -68,13 +71,26 @@ public class DefaultHttp2LocalFlowControllerTest {
     @Before
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
-
-        when(ctx.newPromise()).thenReturn(promise);
-        when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
-        when(ctx.executor()).thenReturn(executor);
+        setupChannelHandlerContext(false);
         when(executor.inEventLoop()).thenReturn(true);
 
         initController(false);
+    }
+
+    private void setupChannelHandlerContext(boolean allowFlush) {
+        reset(ctx);
+        when(ctx.newPromise()).thenReturn(promise);
+        if (allowFlush) {
+            when(ctx.flush()).then(new Answer<ChannelHandlerContext>() {
+                @Override
+                public ChannelHandlerContext answer(InvocationOnMock invocationOnMock) {
+                    return ctx;
+                }
+            });
+        } else {
+            when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
+        }
+        when(ctx.executor()).thenReturn(executor);
     }
 
     @Test
@@ -160,6 +176,24 @@ public class DefaultHttp2LocalFlowControllerTest {
         // stream
         verifyWindowUpdateSent(CONNECTION_STREAM_ID, dataSize);
         verifyWindowUpdateNotSent(STREAM_ID);
+    }
+
+    @Test
+    public void windowUpdateShouldBeWrittenWhenStreamIsClosedAndFlushed() throws Http2Exception {
+        int dataSize = (int) (DEFAULT_WINDOW_SIZE * DEFAULT_WINDOW_UPDATE_RATIO) + 1;
+
+        setupChannelHandlerContext(true);
+
+        receiveFlowControlledFrame(STREAM_ID, dataSize, 0, false);
+        verifyWindowUpdateNotSent(CONNECTION_STREAM_ID);
+        verifyWindowUpdateNotSent(STREAM_ID);
+
+        connection.stream(STREAM_ID).close();
+
+        verifyWindowUpdateSent(CONNECTION_STREAM_ID, dataSize);
+
+        // Verify we saw one flush.
+        verify(ctx).flush();
     }
 
     @Test
