@@ -655,12 +655,6 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
         return this;
     }
 
-    @Override
-    public EpollSocketChannelConfig setEpollMode(EpollMode mode) {
-        super.setEpollMode(mode);
-        return this;
-    }
-
     private void calculateMaxBytesPerGatheringWrite() {
         // Multiply by 2 to give some extra space in case the OS can process write data faster than we can provide.
         int newSendBufferSize = getSendBufferSize() << 1;

@@ -19,21 +19,13 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.testsuite.transport.socket.SocketConditionalWritabilityTest;
+import io.netty.testsuite.transport.socket.SocketDataReadInitialStateTest;
 
 import java.util.List;
 
-public class EpollLTSocketConditionalWritabilityTest extends SocketConditionalWritabilityTest {
+public class EpollSocketDataReadInitialStateTest extends SocketDataReadInitialStateTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return EpollSocketTestPermutation.INSTANCE.socket();
-    }
-
-    @Override
-    protected void configure(ServerBootstrap bootstrap, Bootstrap bootstrap2, ByteBufAllocator allocator) {
-        super.configure(bootstrap, bootstrap2, allocator);
-        bootstrap.option(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED)
-                .childOption(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED);
-        bootstrap2.option(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED);
     }
 }
