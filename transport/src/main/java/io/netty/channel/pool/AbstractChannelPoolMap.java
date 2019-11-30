@@ -41,7 +41,7 @@ public abstract class AbstractChannelPoolMap<K, P extends ChannelPool>
             P old = map.putIfAbsent(key, pool);
             if (old != null) {
                 // We need to destroy the newly created pool as we not use it.
-                pool.close();
+                poolCloseAsyncIfSupported(pool);
                 pool = old;
             }
         }
@@ -56,10 +56,24 @@ public abstract class AbstractChannelPoolMap<K, P extends ChannelPool>
     public final boolean remove(K key) {
         P pool =  map.remove(checkNotNull(key, "key"));
         if (pool != null) {
-            pool.close();
+            poolCloseAsyncIfSupported(pool);
             return true;
         }
         return false;
+    }
+
+    /**
+     * If the pool implementation supports asynchronous close, then use it to avoid a blocking close call in case
+     * the ChannelPoolMap operations are called from an EventLoop.
+     *
+     * @param pool the ChannelPool to be closed
+     */
+    private static void poolCloseAsyncIfSupported(ChannelPool pool) {
+        if (pool instanceof SimpleChannelPool) {
+            ((SimpleChannelPool) pool).closeAsync();
+        } else {
+            pool.close();
+        }
     }
 
     @Override

@@ -455,6 +455,7 @@ public class FixedChannelPool extends SimpleChannelPool {
      *
      * @return Future which represents completion of the close task
      */
+    @Override
     public Future<Void> closeAsync() {
         if (executor.inEventLoop()) {
             return close0();

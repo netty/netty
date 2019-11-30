@@ -31,6 +31,7 @@ import org.junit.Test;
 
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
@@ -298,5 +299,46 @@ public class SimpleChannelPoolTest {
         } finally {
             noHealthCheckOnReleasePool.close();
         }
+    }
+
+    @Test
+    public void testCloseAsync() throws Exception {
+        final LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        final EventLoopGroup group = new DefaultEventLoopGroup();
+
+        // Start server
+        final ServerBootstrap sb = new ServerBootstrap()
+                .group(group)
+                .channel(LocalServerChannel.class)
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    protected void initChannel(LocalChannel ch) throws Exception {
+                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                    }
+                });
+        final Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+
+        // Create pool, acquire and return channels
+        final Bootstrap bootstrap = new Bootstrap()
+                .channel(LocalChannel.class).group(group).remoteAddress(addr);
+        final SimpleChannelPool pool = new SimpleChannelPool(bootstrap, new CountingChannelPoolHandler());
+        Channel ch1 = pool.acquire().syncUninterruptibly().getNow();
+        Channel ch2 = pool.acquire().syncUninterruptibly().getNow();
+        pool.release(ch1);
+        pool.release(ch2);
+
+        // Assert that returned channels are open before close
+        assertTrue(ch1.isOpen());
+        assertTrue(ch2.isOpen());
+
+        // Close asynchronously with timeout
+        pool.closeAsync().get(1, TimeUnit.SECONDS);
+
+        // Assert channels were indeed closed
+        assertFalse(ch1.isOpen());
+        assertFalse(ch2.isOpen());
+
+        sc.close().sync();
+        group.shutdownGracefully();
     }
 }
