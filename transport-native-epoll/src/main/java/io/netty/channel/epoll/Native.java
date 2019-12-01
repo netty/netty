@@ -164,17 +164,6 @@ public final class Native {
     }
     private static native int epollCtlDel0(int efd, int fd);
 
-    // File-descriptor operations
-    public static int splice(int fd, long offIn, int fdOut, long offOut, long len) throws IOException {
-        int res = splice0(fd, offIn, fdOut, offOut, len);
-        if (res >= 0) {
-            return res;
-        }
-        return ioResult("splice", res);
-    }
-
-    private static native int splice0(int fd, long offIn, int fdOut, long offOut, long len);
-
     @Deprecated
     public static int sendmmsg(int fd, NativeDatagramPacketArray.NativeDatagramPacket[] msgs,
                                int offset, int len) throws IOException {
