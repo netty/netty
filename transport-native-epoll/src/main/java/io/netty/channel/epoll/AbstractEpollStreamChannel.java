@@ -289,8 +289,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 writeSpinCount -= doWriteMultiple(in);
             } else if (msgCount == 0) {
                 // Wrote all messages.
-                clearFlag(Native.EPOLLOUT);
-                // Return here so we not set the EPOLLOUT flag.
+                flushPending = false;
+                // Return here so we not set the flushPending flag.
                 return;
             } else {  // msgCount == 1
                 writeSpinCount -= doWriteSingle(in);
@@ -306,14 +306,14 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             // our write quantum. In this case we no longer want to set the EPOLLOUT flag because the socket is still
             // writable (as far as we know). We will find out next time we attempt to write if the socket is writable
             // and set the EPOLLOUT if necessary.
-            clearFlag(Native.EPOLLOUT);
+            flushPending = false;
 
             // We used our writeSpin quantum, and should try to write again later.
             eventLoop().execute(flushTask);
         } else {
             // Underlying descriptor can not accept all data currently, so set the EPOLLOUT flag to be woken up
             // when it can accept more data.
-            setFlag(Native.EPOLLOUT);
+            flushPending = true;
         }
     }
 

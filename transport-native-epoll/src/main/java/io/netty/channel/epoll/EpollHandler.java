@@ -452,7 +452,7 @@ public class EpollHandler implements IoHandler {
 
                     // Check if EPOLLRDHUP was set, this will notify us for connection-reset in which case
                     // we may close the channel directly or try to read more data depending on the state of the
-                    // Channel and als depending on the AbstractEpollChannel subtype.
+                    // Channel and also depending on the AbstractEpollChannel subtype.
                     if ((ev & Native.EPOLLRDHUP) != 0) {
                         unsafe.epollRdHupReady();
                     }

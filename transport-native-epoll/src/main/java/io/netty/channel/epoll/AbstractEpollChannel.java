@@ -69,7 +69,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
 
-    protected int flags = Native.EPOLLET | Native.EPOLLIN;
+    protected int flags = Native.EPOLLET | Native.EPOLLIN | Native.EPOLLOUT;
+    protected boolean flushPending;
     protected int activeFlags;
     boolean inputClosedSeenErrorOnRead;
     boolean epollInReadyRunnablePending;
@@ -498,7 +499,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             // Flush immediately only when there's no pending flush.
             // If there's a pending flush operation, event loop will call forceFlush() later,
             // and thus there's no need to call it now.
-            if (!isFlagSet(Native.EPOLLOUT)) {
+            if (!flushPending) {
                 super.flush0();
             }
         }
@@ -510,7 +511,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             if (connectPromise != null) {
                 // pending connect which is now complete so handle it.
                 finishConnect();
-            } else if (!socket.isOutputShutdown()) {
+            } else if (flushPending && !socket.isOutputShutdown()) {
                 // directly call super.flush0() to force a flush now
                 super.flush0();
             }
@@ -641,7 +642,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
          */
         private boolean doFinishConnect() throws IOException {
             if (socket.finishConnect()) {
-                clearFlag(Native.EPOLLOUT);
+                flushPending = false;
                 if (requestedRemoteAddress instanceof InetSocketAddress) {
                     remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
                 }
@@ -649,7 +650,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
                 return true;
             }
-            setFlag(Native.EPOLLOUT);
+            flushPending = true;
             return false;
         }
     }
@@ -705,7 +706,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         try {
             boolean connected = socket.connect(remote);
             if (!connected) {
-                setFlag(Native.EPOLLOUT);
+                flushPending = true;
             }
             success = true;
             return connected;

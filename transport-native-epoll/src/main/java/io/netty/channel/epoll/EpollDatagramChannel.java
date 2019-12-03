@@ -290,7 +290,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             Object msg = in.current();
             if (msg == null) {
                 // Wrote all messages.
-                clearFlag(Native.EPOLLOUT);
+                flushPending = false;
                 break;
             }
 
@@ -310,7 +310,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                             int send = socket.sendmmsg(packets, offset, cnt);
                             if (send == 0) {
                                 // Did not write all messages.
-                                setFlag(Native.EPOLLOUT);
+                                flushPending = true;
                                 return;
                             }
                             for (int i = 0; i < send; i++) {
@@ -334,7 +334,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                     in.remove();
                 } else {
                     // Did not write all messages.
-                    setFlag(Native.EPOLLOUT);
+                    flushPending = true;
                     break;
                 }
             } catch (IOException e) {
