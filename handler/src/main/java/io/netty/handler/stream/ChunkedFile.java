@@ -86,7 +86,7 @@ public class ChunkedFile implements ChunkedInput<ByteBuf> {
         ObjectUtil.checkNotNull(file, "file");
         ObjectUtil.checkPositiveOrZero(offset, "offset");
         ObjectUtil.checkPositiveOrZero(length, "length");
-        ObjectUtil.checkPositiveOrZero(chunkSize, "chunkSize");
+        ObjectUtil.checkPositive(chunkSize, "chunkSize");
 
         this.file = file;
         this.offset = startOffset = offset;
