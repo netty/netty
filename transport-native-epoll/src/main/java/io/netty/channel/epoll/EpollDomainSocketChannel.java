@@ -153,7 +153,6 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
             }
             final ChannelConfig config = config();
             final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
 
             final ChannelPipeline pipeline = pipeline();
             allocHandle.reset(config);

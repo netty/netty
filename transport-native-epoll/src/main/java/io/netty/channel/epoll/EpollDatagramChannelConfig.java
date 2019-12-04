@@ -399,12 +399,6 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         }
     }
 
-    @Override
-    public EpollDatagramChannelConfig setEpollMode(EpollMode mode) {
-        super.setEpollMode(mode);
-        return this;
-    }
-
     /**
      * Returns {@code true} if the SO_REUSEPORT option is set.
      */

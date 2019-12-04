@@ -39,12 +39,7 @@ public final class EpollChannelOption<T> extends UnixChannelOption<T> {
             ChannelOption.valueOf(EpollChannelOption.class, "TCP_DEFER_ACCEPT");
     public static final ChannelOption<Boolean> TCP_QUICKACK = valueOf(EpollChannelOption.class, "TCP_QUICKACK");
     public static final ChannelOption<Integer> SO_BUSY_POLL = valueOf(EpollChannelOption.class, "SO_BUSY_POLL");
-
-    public static final ChannelOption<EpollMode> EPOLL_MODE =
-            ChannelOption.valueOf(EpollChannelOption.class, "EPOLL_MODE");
-
     public static final ChannelOption<Map<InetAddress, byte[]>> TCP_MD5SIG = valueOf("TCP_MD5SIG");
-
     public static final ChannelOption<Integer> MAX_DATAGRAM_PAYLOAD_SIZE = valueOf("MAX_DATAGRAM_PAYLOAD_SIZE");
 
     @SuppressWarnings({ "unused", "deprecation" })

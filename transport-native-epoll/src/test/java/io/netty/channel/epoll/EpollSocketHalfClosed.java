@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,21 +19,13 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.testsuite.transport.socket.SocketDataReadInitialStateTest;
+import io.netty.testsuite.transport.socket.SocketHalfClosedTest;
 
 import java.util.List;
 
-public class EpollLTSocketDataReadInitialStateTest extends SocketDataReadInitialStateTest {
+public class EpollSocketHalfClosed extends SocketHalfClosedTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return EpollSocketTestPermutation.INSTANCE.socket();
-    }
-
-    @Override
-    protected void configure(ServerBootstrap bootstrap, Bootstrap bootstrap2, ByteBufAllocator allocator) {
-        super.configure(bootstrap, bootstrap2, allocator);
-        bootstrap.option(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED)
-                .childOption(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED);
-        bootstrap2.option(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED);
     }
 }

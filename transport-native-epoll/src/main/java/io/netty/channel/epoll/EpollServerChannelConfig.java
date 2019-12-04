@@ -223,10 +223,4 @@ public class EpollServerChannelConfig extends EpollChannelConfig implements Serv
         super.setMessageSizeEstimator(estimator);
         return this;
     }
-
-    @Override
-    public EpollServerChannelConfig setEpollMode(EpollMode mode) {
-        super.setEpollMode(mode);
-        return this;
-    }
 }

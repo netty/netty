@@ -26,7 +26,6 @@ class EpollRecvByteAllocatorHandle extends DelegatingHandle implements ExtendedH
     private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
             new PreferredDirectByteBufAllocator();
     private final UncheckedBooleanSupplier defaultMaybeMoreDataSupplier = this::maybeMoreDataToRead;
-    private boolean isEdgeTriggered;
     private boolean receivedRdHup;
 
     EpollRecvByteAllocatorHandle(ExtendedHandle handle) {
@@ -51,16 +50,7 @@ class EpollRecvByteAllocatorHandle extends DelegatingHandle implements ExtendedH
          *
          * It is assumed RDHUP is handled externally by checking {@link #isReceivedRdHup()}.
          */
-        return (isEdgeTriggered && lastBytesRead() > 0) ||
-               (!isEdgeTriggered && lastBytesRead() == attemptedBytesRead());
-    }
-
-    final void edgeTriggered(boolean edgeTriggered) {
-        isEdgeTriggered = edgeTriggered;
-    }
-
-    final boolean isEdgeTriggered() {
-        return isEdgeTriggered;
+        return lastBytesRead() > 0;
     }
 
     @Override
