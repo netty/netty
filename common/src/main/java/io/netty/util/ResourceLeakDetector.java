@@ -168,7 +168,8 @@ public class ResourceLeakDetector<T> {
             Collections.newSetFromMap(new ConcurrentHashMap<DefaultResourceLeak<?>, Boolean>());
 
     private final ReferenceQueue<Object> refQueue = new ReferenceQueue<Object>();
-    private final ConcurrentMap<String, Boolean> reportedLeaks = PlatformDependent.newConcurrentHashMap();
+    private final Set<String> reportedLeaks =
+            Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
     private final String resourceType;
     private final int samplingInterval;
@@ -271,7 +272,6 @@ public class ResourceLeakDetector<T> {
 
     private void clearRefQueue() {
         for (;;) {
-            @SuppressWarnings("unchecked")
             DefaultResourceLeak ref = (DefaultResourceLeak) refQueue.poll();
             if (ref == null) {
                 break;
@@ -288,7 +288,6 @@ public class ResourceLeakDetector<T> {
 
         // Detect and report previous leaks.
         for (;;) {
-            @SuppressWarnings("unchecked")
             DefaultResourceLeak ref = (DefaultResourceLeak) refQueue.poll();
             if (ref == null) {
                 break;
@@ -299,7 +298,7 @@ public class ResourceLeakDetector<T> {
             }
 
             String records = ref.toString();
-            if (reportedLeaks.putIfAbsent(records, Boolean.TRUE) == null) {
+            if (reportedLeaks.add(records)) {
                 if (records.isEmpty()) {
                     reportUntracedLeak(resourceType);
                 } else {
