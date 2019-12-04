@@ -20,7 +20,6 @@ import io.netty.util.collection.ShortObjectHashMap;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * DNS EDNS0 Option Codes (OPT).

@@ -16,8 +16,8 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.dns.rdata.DnsRDataDecoder;
 import io.netty.handler.codec.dns.rdata.DnsRDataCodecs;
+import io.netty.handler.codec.dns.rdata.DnsRDataDecoder;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.dns.util.DnsDecodeUtil.*;
@@ -99,17 +99,5 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
             return rDataDecoder.decodeRData(name, dnsClass, timeToLive, rData);
         }
         return new DefaultDnsRawRecord(name, type, dnsClass, timeToLive, rData.retain());
-    }
-
-    /**
-     * Retrieves a domain name given a buffer containing a DNS packet. If the
-     * name contains a pointer, the position of the buffer will be set to
-     * directly after the pointer's index after the name has been read.
-     *
-     * @param in the byte buffer containing the DNS packet
-     * @return the domain name for an entry
-     */
-    protected String decodeName0(ByteBuf in) {
-        return decodeDomainName(in);
     }
 }

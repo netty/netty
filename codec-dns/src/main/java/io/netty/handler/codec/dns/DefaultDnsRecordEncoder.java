@@ -16,7 +16,6 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.dns.rdata.DnsRDataCodecs;
 import io.netty.handler.codec.dns.rdata.DnsRDataEncoder;

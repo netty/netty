@@ -27,7 +27,7 @@ import io.netty.util.internal.UnstableApi;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * A skeletal implementation of {@link DnsMessage}.

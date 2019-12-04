@@ -18,7 +18,7 @@ package io.netty.handler.codec.dns;
 import io.netty.handler.codec.dns.util.DnsMessageUtil;
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * The default {@link DnsResponse} implementation.

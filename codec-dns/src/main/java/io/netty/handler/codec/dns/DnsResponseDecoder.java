@@ -20,7 +20,7 @@ import io.netty.handler.codec.CorruptedFrameException;
 
 import java.net.SocketAddress;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.*;
 
 abstract class DnsResponseDecoder<A extends SocketAddress> {
 

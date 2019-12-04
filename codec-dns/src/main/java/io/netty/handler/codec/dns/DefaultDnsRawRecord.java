@@ -20,7 +20,7 @@ import io.netty.handler.codec.dns.util.DnsMessageUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * The default {@code DnsRawRecord} implementation.

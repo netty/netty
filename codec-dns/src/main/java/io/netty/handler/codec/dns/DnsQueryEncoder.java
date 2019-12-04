@@ -17,7 +17,7 @@ package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.*;
 
 final class DnsQueryEncoder {
 
