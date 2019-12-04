@@ -33,7 +33,7 @@ public class ChannelGroupException extends ChannelException implements Iterable<
     private final Collection<Map.Entry<Channel, Throwable>> failed;
 
     public ChannelGroupException(Collection<Map.Entry<Channel, Throwable>> causes) {
-        ObjectUtil.checkNonEmpty(causes, "cause");
+        ObjectUtil.checkNonEmpty(causes, "causes");
         failed = Collections.unmodifiableCollection(causes);
     }
 
