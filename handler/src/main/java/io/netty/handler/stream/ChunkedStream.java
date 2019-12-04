@@ -57,11 +57,7 @@ public class ChunkedStream implements ChunkedInput<ByteBuf> {
      */
     public ChunkedStream(InputStream in, int chunkSize) {
         ObjectUtil.checkNotNull(in, "in");
-        if (chunkSize <= 0) {
-            throw new IllegalArgumentException(
-                    "chunkSize: " + chunkSize +
-                    " (expected: a positive integer)");
-        }
+        ObjectUtil.checkPositive(chunkSize, "chunkSize");
 
         if (in instanceof PushbackInputStream) {
             this.in = (PushbackInputStream) in;
