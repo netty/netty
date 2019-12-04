@@ -18,6 +18,7 @@ package io.netty.handler.stream;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.internal.ObjectUtil;
 
 import java.io.InputStream;
 import java.io.PushbackInputStream;
@@ -55,9 +56,7 @@ public class ChunkedStream implements ChunkedInput<ByteBuf> {
      *                  {@link #readChunk(ChannelHandlerContext)} call
      */
     public ChunkedStream(InputStream in, int chunkSize) {
-        if (in == null) {
-            throw new NullPointerException("in");
-        }
+        ObjectUtil.checkNotNull(in, "in");
         if (chunkSize <= 0) {
             throw new IllegalArgumentException(
                     "chunkSize: " + chunkSize +

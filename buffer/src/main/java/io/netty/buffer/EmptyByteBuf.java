@@ -20,6 +20,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
@@ -64,9 +65,7 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     private EmptyByteBuf(ByteBufAllocator alloc, ByteOrder order) {
-        if (alloc == null) {
-            throw new NullPointerException("alloc");
-        }
+        ObjectUtil.checkNotNull(alloc, "alloc");
 
         this.alloc = alloc;
         this.order = order;
@@ -120,9 +119,7 @@ public final class EmptyByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf order(ByteOrder endianness) {
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
+        ObjectUtil.checkNotNull(endianness, "endianness");
         if (endianness == order()) {
             return this;
         }

@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.util.internal.ObjectUtil;
+
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -88,18 +90,14 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
 
     @Override
     public HttpRequest setMethod(HttpMethod method) {
-        if (method == null) {
-            throw new NullPointerException("method");
-        }
+        ObjectUtil.checkNotNull(method, "method");
         this.method = method;
         return this;
     }
 
     @Override
     public HttpRequest setUri(String uri) {
-        if (uri == null) {
-            throw new NullPointerException("uri");
-        }
+        ObjectUtil.checkNotNull(uri, "uri");
         this.uri = uri;
         return this;
     }

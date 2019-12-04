@@ -42,6 +42,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * Decodes {@link ByteBuf}s into SPDY Frames.
@@ -91,12 +92,8 @@ public class SpdyFrameDecoder {
      * Creates a new instance with the specified parameters.
      */
     public SpdyFrameDecoder(SpdyVersion spdyVersion, SpdyFrameDecoderDelegate delegate, int maxChunkSize) {
-        if (spdyVersion == null) {
-            throw new NullPointerException("spdyVersion");
-        }
-        if (delegate == null) {
-            throw new NullPointerException("delegate");
-        }
+        ObjectUtil.checkNotNull(spdyVersion, "spdyVersion");
+        ObjectUtil.checkNotNull(delegate, "delegate");
         checkPositive(maxChunkSize, "maxChunkSize");
         this.spdyVersion = spdyVersion.getVersion();
         this.delegate = delegate;

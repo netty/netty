@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.socks;
 
+import io.netty.util.internal.ObjectUtil;
+
 /**
  * An abstract class that defines a SocksRequest, providing common properties for
  * {@link SocksInitRequest}, {@link SocksAuthRequest}, {@link SocksCmdRequest} and {@link UnknownSocksRequest}.
@@ -29,9 +31,7 @@ public abstract class SocksRequest extends SocksMessage {
 
     protected SocksRequest(SocksRequestType requestType) {
         super(SocksMessageType.REQUEST);
-        if (requestType == null) {
-            throw new NullPointerException("requestType");
-        }
+        ObjectUtil.checkNotNull(requestType, "requestType");
         this.requestType = requestType;
     }
 

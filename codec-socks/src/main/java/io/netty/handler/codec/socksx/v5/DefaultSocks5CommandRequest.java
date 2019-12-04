@@ -17,6 +17,7 @@ package io.netty.handler.codec.socksx.v5;
 
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.net.IDN;
@@ -34,15 +35,9 @@ public final class DefaultSocks5CommandRequest extends AbstractSocks5Message imp
     public DefaultSocks5CommandRequest(
             Socks5CommandType type, Socks5AddressType dstAddrType, String dstAddr, int dstPort) {
 
-        if (type == null) {
-            throw new NullPointerException("type");
-        }
-        if (dstAddrType == null) {
-            throw new NullPointerException("dstAddrType");
-        }
-        if (dstAddr == null) {
-            throw new NullPointerException("dstAddr");
-        }
+        ObjectUtil.checkNotNull(type, "type");
+        ObjectUtil.checkNotNull(dstAddrType, "dstAddrType");
+        ObjectUtil.checkNotNull(dstAddr, "dstAddr");
 
         if (dstAddrType == Socks5AddressType.IPv4) {
             if (!NetUtil.isValidIpV4Address(dstAddr)) {

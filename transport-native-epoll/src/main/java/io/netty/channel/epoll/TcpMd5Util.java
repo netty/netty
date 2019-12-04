@@ -39,9 +39,7 @@ final class TcpMd5Util {
             if (e.getKey() == null) {
                 throw new IllegalArgumentException("newKeys contains an entry with null address: " + newKeys);
             }
-            if (key == null) {
-                throw new NullPointerException("newKeys[" + e.getKey() + ']');
-            }
+            ObjectUtil.checkNotNull(key, "newKeys[" + e.getKey() + ']');
             if (key.length == 0) {
                 throw new IllegalArgumentException("newKeys[" + e.getKey() + "] has an empty key.");
             }

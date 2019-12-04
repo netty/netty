@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.List;
 import java.util.zip.CRC32;
@@ -94,9 +95,8 @@ public class JdkZlibDecoder extends ZlibDecoder {
     }
 
     private JdkZlibDecoder(ZlibWrapper wrapper, byte[] dictionary, boolean decompressConcatenated) {
-        if (wrapper == null) {
-            throw new NullPointerException("wrapper");
-        }
+        ObjectUtil.checkNotNull(wrapper, "wrapper");
+
         this.decompressConcatenated = decompressConcatenated;
         switch (wrapper) {
             case GZIP:

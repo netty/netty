@@ -23,6 +23,7 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.ObjectUtil;
 
 import java.net.ServerSocket;
 import java.net.SocketException;
@@ -47,9 +48,7 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
      */
     public DefaultServerSocketChannelConfig(ServerSocketChannel channel, ServerSocket javaSocket) {
         super(channel);
-        if (javaSocket == null) {
-            throw new NullPointerException("javaSocket");
-        }
+        ObjectUtil.checkNotNull(javaSocket, "javaSocket");
         this.javaSocket = javaSocket;
     }
 

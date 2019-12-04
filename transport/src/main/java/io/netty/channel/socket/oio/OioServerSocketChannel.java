@@ -20,6 +20,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -76,9 +77,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
      */
     public OioServerSocketChannel(ServerSocket socket) {
         super(null);
-        if (socket == null) {
-            throw new NullPointerException("socket");
-        }
+        ObjectUtil.checkNotNull(socket, "socket");
 
         boolean success = false;
         try {

@@ -18,6 +18,7 @@ package io.netty.handler.codec.stomp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * Default implementation of {@link StompFrame}.
@@ -36,11 +37,7 @@ public class DefaultStompFrame extends DefaultStompHeadersSubframe implements St
 
     DefaultStompFrame(StompCommand command, ByteBuf content, DefaultStompHeaders headers) {
         super(command, headers);
-
-        if (content == null) {
-            throw new NullPointerException("content");
-        }
-
+        ObjectUtil.checkNotNull(content, "content");
         this.content = content;
     }
 

@@ -25,6 +25,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.oio.AbstractOioMessageChannel;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
 import io.netty.channel.sctp.SctpServerChannelConfig;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -84,9 +85,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
      */
     public OioSctpServerChannel(SctpServerChannel sch) {
         super(null);
-        if (sch == null) {
-            throw new NullPointerException("sctp server channel");
-        }
+        ObjectUtil.checkNotNull(sch, "sctp server channel");
 
         this.sch = sch;
         boolean success = false;

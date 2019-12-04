@@ -16,6 +16,7 @@
 
 package io.netty.handler.codec.mqtt;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.util.ArrayList;
@@ -30,9 +31,7 @@ public class MqttSubAckPayload {
     private final List<Integer> grantedQoSLevels;
 
     public MqttSubAckPayload(int... grantedQoSLevels) {
-        if (grantedQoSLevels == null) {
-            throw new NullPointerException("grantedQoSLevels");
-        }
+        ObjectUtil.checkNotNull(grantedQoSLevels, "grantedQoSLevels");
 
         List<Integer> list = new ArrayList<Integer>(grantedQoSLevels.length);
         for (int v: grantedQoSLevels) {
@@ -42,9 +41,7 @@ public class MqttSubAckPayload {
     }
 
     public MqttSubAckPayload(Iterable<Integer> grantedQoSLevels) {
-        if (grantedQoSLevels == null) {
-            throw new NullPointerException("grantedQoSLevels");
-        }
+        ObjectUtil.checkNotNull(grantedQoSLevels, "grantedQoSLevels");
         List<Integer> list = new ArrayList<Integer>();
         for (Integer v: grantedQoSLevels) {
             if (v == null) {

@@ -18,6 +18,7 @@ package io.netty.channel.sctp;
 import com.sun.nio.sctp.MessageInfo;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * Representation of SCTP Data Chunk
@@ -61,9 +62,7 @@ public final class SctpMessage extends DefaultByteBufHolder {
      */
     public SctpMessage(MessageInfo msgInfo, ByteBuf payloadBuffer) {
         super(payloadBuffer);
-        if (msgInfo == null) {
-            throw new NullPointerException("msgInfo");
-        }
+        ObjectUtil.checkNotNull(msgInfo, "msgInfo");
         this.msgInfo = msgInfo;
         streamIdentifier = msgInfo.streamNumber();
         protocolIdentifier = msgInfo.payloadProtocolID();

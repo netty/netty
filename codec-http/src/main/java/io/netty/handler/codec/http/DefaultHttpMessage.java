@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.util.internal.ObjectUtil;
+
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -89,9 +91,7 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
 
     @Override
     public HttpMessage setProtocolVersion(HttpVersion version) {
-        if (version == null) {
-            throw new NullPointerException("version");
-        }
+        ObjectUtil.checkNotNull(version, "version");
         this.version = version;
         return this;
     }

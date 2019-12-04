@@ -22,9 +22,7 @@ public final class ReadOnlyIterator<T> implements Iterator<T> {
     private final Iterator<? extends T> iterator;
 
     public ReadOnlyIterator(Iterator<? extends T> iterator) {
-        if (iterator == null) {
-            throw new NullPointerException("iterator");
-        }
+        ObjectUtil.checkNotNull(iterator, "iterator");
         this.iterator = iterator;
     }
 

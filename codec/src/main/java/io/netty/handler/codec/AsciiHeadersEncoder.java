@@ -23,6 +23,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.ObjectUtil;
 
 public final class AsciiHeadersEncoder {
 
@@ -63,15 +64,9 @@ public final class AsciiHeadersEncoder {
     }
 
     public AsciiHeadersEncoder(ByteBuf buf, SeparatorType separatorType, NewlineType newlineType) {
-        if (buf == null) {
-            throw new NullPointerException("buf");
-        }
-        if (separatorType == null) {
-            throw new NullPointerException("separatorType");
-        }
-        if (newlineType == null) {
-            throw new NullPointerException("newlineType");
-        }
+        ObjectUtil.checkNotNull(buf, "buf");
+        ObjectUtil.checkNotNull(separatorType, "separatorType");
+        ObjectUtil.checkNotNull(newlineType, "newlineType");
 
         this.buf = buf;
         this.separatorType = separatorType;
