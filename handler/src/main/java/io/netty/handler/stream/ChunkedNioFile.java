@@ -90,7 +90,7 @@ public class ChunkedNioFile implements ChunkedInput<ByteBuf> {
         ObjectUtil.checkNotNull(in, "in");
         ObjectUtil.checkPositiveOrZero(offset, "offset");
         ObjectUtil.checkPositiveOrZero(length, "length");
-        ObjectUtil.checkPositiveOrZero(chunkSize, "chunkSize");
+        ObjectUtil.checkPositive(chunkSize, "chunkSize");
         if (!in.isOpen()) {
             throw new ClosedChannelException();
         }
