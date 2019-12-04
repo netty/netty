@@ -25,10 +25,10 @@ import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReference;
@@ -147,8 +147,8 @@ public class ResourceLeakDetector<T> {
     private final Set<DefaultResourceLeak<?>> allLeaks = ConcurrentHashMap.newKeySet();
 
     private final ReferenceQueue<Object> refQueue = new ReferenceQueue<>();
-    private final ConcurrentMap<String, Boolean> reportedLeaks = new ConcurrentHashMap<>();
-
+    private final Set<String> reportedLeaks =
+            Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final String resourceType;
     private final int samplingInterval;
 
@@ -248,7 +248,6 @@ public class ResourceLeakDetector<T> {
 
     private void clearRefQueue() {
         for (;;) {
-            @SuppressWarnings("unchecked")
             DefaultResourceLeak ref = (DefaultResourceLeak) refQueue.poll();
             if (ref == null) {
                 break;
@@ -265,7 +264,6 @@ public class ResourceLeakDetector<T> {
 
         // Detect and report previous leaks.
         for (;;) {
-            @SuppressWarnings("unchecked")
             DefaultResourceLeak ref = (DefaultResourceLeak) refQueue.poll();
             if (ref == null) {
                 break;
@@ -276,7 +274,7 @@ public class ResourceLeakDetector<T> {
             }
 
             String records = ref.toString();
-            if (reportedLeaks.putIfAbsent(records, Boolean.TRUE) == null) {
+            if (reportedLeaks.add(records)) {
                 if (records.isEmpty()) {
                     reportUntracedLeak(resourceType);
                 } else {
