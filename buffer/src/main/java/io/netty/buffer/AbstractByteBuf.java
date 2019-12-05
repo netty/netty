@@ -183,8 +183,8 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf discardReadBytes() {
-        ensureAccessible();
         if (readerIndex == 0) {
+            ensureAccessible();
             return this;
         }
 
@@ -193,6 +193,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
             writerIndex -= readerIndex;
             readerIndex = 0;
         } else {
+            ensureAccessible();
             writerIndex = readerIndex = 0;
         }
         return this;
@@ -200,21 +201,21 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf discardSomeReadBytes() {
+        if (readerIndex > 0) {
+            if (readerIndex == writerIndex) {
+                ensureAccessible();
+                writerIndex = readerIndex = 0;
+                return this;
+            }
+
+            if (readerIndex >= capacity() >>> 1) {
+                setBytes(0, this, readerIndex, writerIndex - readerIndex);
+                writerIndex -= readerIndex;
+                readerIndex = 0;
+                return this;
+            }
+        }
         ensureAccessible();
-        if (readerIndex == 0) {
-            return this;
-        }
-
-        if (readerIndex == writerIndex) {
-            writerIndex = readerIndex = 0;
-            return this;
-        }
-
-        if (readerIndex >= capacity() >>> 1) {
-            setBytes(0, this, readerIndex, writerIndex - readerIndex);
-            writerIndex -= readerIndex;
-            readerIndex = 0;
-        }
         return this;
     }
 
@@ -227,34 +228,28 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf ensureWritable(int minWritableBytes) {
-        checkPositiveOrZero(minWritableBytes, "minWritableBytes");
-        ensureWritable0(minWritableBytes);
+        ensureWritable0(checkPositiveOrZero(minWritableBytes, "minWritableBytes"));
         return this;
     }
 
     final void ensureWritable0(int minWritableBytes) {
-        ensureAccessible();
-        if (minWritableBytes <= writableBytes()) {
+        final int writerIndex = writerIndex();
+        final int targetCapacity = writerIndex + minWritableBytes;
+        if (targetCapacity <= capacity()) {
+            ensureAccessible();
             return;
         }
-        final int writerIndex = writerIndex();
-        if (checkBounds) {
-            if (minWritableBytes > maxCapacity - writerIndex) {
-                throw new IndexOutOfBoundsException(String.format(
-                        "writerIndex(%d) + minWritableBytes(%d) exceeds maxCapacity(%d): %s",
-                        writerIndex, minWritableBytes, maxCapacity, this));
-            }
+        if (checkBounds && targetCapacity > maxCapacity) {
+            ensureAccessible();
+            throw new IndexOutOfBoundsException(String.format(
+                    "writerIndex(%d) + minWritableBytes(%d) exceeds maxCapacity(%d): %s",
+                    writerIndex, minWritableBytes, maxCapacity, this));
         }
 
-        // Normalize the current capacity to the power of 2.
-        int minNewCapacity = writerIndex + minWritableBytes;
-        int newCapacity = alloc().calculateNewCapacity(minNewCapacity, maxCapacity);
-
-        int fastCapacity = writerIndex + maxFastWritableBytes();
-        // Grow by a smaller amount if it will avoid reallocation
-        if (newCapacity > fastCapacity && minNewCapacity <= fastCapacity) {
-            newCapacity = fastCapacity;
-        }
+        // Normalize the target capacity to the power of 2.
+        final int fastWritable = maxFastWritableBytes();
+        int newCapacity = fastWritable >= minWritableBytes ? writerIndex + fastWritable
+                : alloc().calculateNewCapacity(targetCapacity, maxCapacity);
 
         // Adjust to the new capacity.
         capacity(newCapacity);
@@ -280,15 +275,9 @@ public abstract class AbstractByteBuf extends ByteBuf {
             return 3;
         }
 
-        // Normalize the current capacity to the power of 2.
-        int minNewCapacity = writerIndex + minWritableBytes;
-        int newCapacity = alloc().calculateNewCapacity(minNewCapacity, maxCapacity);
-
-        int fastCapacity = writerIndex + maxFastWritableBytes();
-        // Grow by a smaller amount if it will avoid reallocation
-        if (newCapacity > fastCapacity && minNewCapacity <= fastCapacity) {
-            newCapacity = fastCapacity;
-        }
+        int fastWritable = maxFastWritableBytes();
+        int newCapacity = fastWritable >= minWritableBytes ? writerIndex + fastWritable
+                : alloc().calculateNewCapacity(writerIndex + minWritableBytes, maxCapacity);
 
         // Adjust to the new capacity.
         capacity(newCapacity);
@@ -1420,28 +1409,23 @@ public abstract class AbstractByteBuf extends ByteBuf {
      * than the specified value.
      */
     protected final void checkReadableBytes(int minimumReadableBytes) {
-        checkPositiveOrZero(minimumReadableBytes, "minimumReadableBytes");
-        checkReadableBytes0(minimumReadableBytes);
+        checkReadableBytes0(checkPositiveOrZero(minimumReadableBytes, "minimumReadableBytes"));
     }
 
     protected final void checkNewCapacity(int newCapacity) {
         ensureAccessible();
-        if (checkBounds) {
-            if (newCapacity < 0 || newCapacity > maxCapacity()) {
-                throw new IllegalArgumentException("newCapacity: " + newCapacity +
-                        " (expected: 0-" + maxCapacity() + ')');
-            }
+        if (checkBounds && (newCapacity < 0 || newCapacity > maxCapacity())) {
+            throw new IllegalArgumentException("newCapacity: " + newCapacity +
+                    " (expected: 0-" + maxCapacity() + ')');
         }
     }
 
     private void checkReadableBytes0(int minimumReadableBytes) {
         ensureAccessible();
-        if (checkBounds) {
-            if (readerIndex > writerIndex - minimumReadableBytes) {
-                throw new IndexOutOfBoundsException(String.format(
-                        "readerIndex(%d) + length(%d) exceeds writerIndex(%d): %s",
-                        readerIndex, minimumReadableBytes, writerIndex, this));
-            }
+        if (checkBounds && readerIndex > writerIndex - minimumReadableBytes) {
+            throw new IndexOutOfBoundsException(String.format(
+                    "readerIndex(%d) + length(%d) exceeds writerIndex(%d): %s",
+                    readerIndex, minimumReadableBytes, writerIndex, this));
         }
     }
 
