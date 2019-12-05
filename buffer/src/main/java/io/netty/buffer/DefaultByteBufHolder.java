@@ -28,8 +28,7 @@ public class DefaultByteBufHolder implements ByteBufHolder {
     private final ByteBuf data;
 
     public DefaultByteBufHolder(ByteBuf data) {
-        ObjectUtil.checkNotNull(data, "data");
-        this.data = data;
+        this.data = ObjectUtil.checkNotNull(data, "data");
     }
 
     @Override

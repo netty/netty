@@ -90,15 +90,13 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
 
     @Override
     public HttpRequest setMethod(HttpMethod method) {
-        ObjectUtil.checkNotNull(method, "method");
-        this.method = method;
+        this.method = ObjectUtil.checkNotNull(method, "method");
         return this;
     }
 
     @Override
     public HttpRequest setUri(String uri) {
-        ObjectUtil.checkNotNull(uri, "uri");
-        this.uri = uri;
+        this.uri = ObjectUtil.checkNotNull(uri, "uri");
         return this;
     }
 

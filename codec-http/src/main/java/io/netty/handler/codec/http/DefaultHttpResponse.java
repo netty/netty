@@ -90,8 +90,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
 
     @Override
     public HttpResponse setStatus(HttpResponseStatus status) {
-        ObjectUtil.checkNotNull(status, "status");
-        this.status = status;
+        this.status = ObjectUtil.checkNotNull(status, "status");
         return this;
     }
 

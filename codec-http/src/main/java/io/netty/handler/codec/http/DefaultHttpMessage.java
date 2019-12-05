@@ -91,8 +91,7 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
 
     @Override
     public HttpMessage setProtocolVersion(HttpVersion version) {
-        ObjectUtil.checkNotNull(version, "version");
-        this.version = version;
+        this.version = ObjectUtil.checkNotNull(version, "version");
         return this;
     }
 }

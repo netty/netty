@@ -63,8 +63,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     @Override
     public void setFilename(String filename) {
-        ObjectUtil.checkNotNull(filename, "filename");
-        this.filename = filename;
+        this.filename = ObjectUtil.checkNotNull(filename, "filename");
     }
 
     @Override
@@ -92,8 +91,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     @Override
     public void setContentType(String contentType) {
-        ObjectUtil.checkNotNull(contentType, "contentType");
-        this.contentType = contentType;
+        this.contentType = ObjectUtil.checkNotNull(contentType, "contentType");
     }
 
     @Override

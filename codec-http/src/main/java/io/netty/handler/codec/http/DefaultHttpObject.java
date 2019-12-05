@@ -40,8 +40,7 @@ public class DefaultHttpObject implements HttpObject {
 
     @Override
     public void setDecoderResult(DecoderResult decoderResult) {
-        ObjectUtil.checkNotNull(decoderResult, "decoderResult");
-        this.decoderResult = decoderResult;
+        this.decoderResult = ObjectUtil.checkNotNull(decoderResult, "decoderResult");
     }
 
     @Override

@@ -46,8 +46,7 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
      * Creates a new stream which writes data to the specified {@code buffer}.
      */
     public ByteBufOutputStream(ByteBuf buffer) {
-        ObjectUtil.checkNotNull(buffer, "buffer");
-        this.buffer = buffer;
+        this.buffer = ObjectUtil.checkNotNull(buffer, "buffer");
         startIndex = buffer.writerIndex();
     }
 

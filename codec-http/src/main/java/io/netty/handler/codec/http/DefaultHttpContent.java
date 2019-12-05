@@ -30,8 +30,7 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
      * Creates a new instance with the specified chunk content.
      */
     public DefaultHttpContent(ByteBuf content) {
-        ObjectUtil.checkNotNull(content, "content");
-        this.content = content;
+        this.content = ObjectUtil.checkNotNull(content, "content");
     }
 
     @Override

@@ -65,9 +65,7 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     private EmptyByteBuf(ByteBufAllocator alloc, ByteOrder order) {
-        ObjectUtil.checkNotNull(alloc, "alloc");
-
-        this.alloc = alloc;
+        this.alloc = ObjectUtil.checkNotNull(alloc, "alloc");
         this.order = order;
         str = StringUtil.simpleClassName(this) + (order == ByteOrder.BIG_ENDIAN? "BE" : "LE");
     }

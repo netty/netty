@@ -363,10 +363,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         private final EmbeddedChannel contentEncoder;
 
         public Result(String targetContentEncoding, EmbeddedChannel contentEncoder) {
-            ObjectUtil.checkNotNull(targetContentEncoding, "targetContentEncoding");
-            ObjectUtil.checkNotNull(contentEncoder, "contentEncoder");
-            this.targetContentEncoding = targetContentEncoding;
-            this.contentEncoder = contentEncoder;
+            this.targetContentEncoding = ObjectUtil.checkNotNull(targetContentEncoding, "targetContentEncoding");
+            this.contentEncoder = ObjectUtil.checkNotNull(contentEncoder, "contentEncoder");
         }
 
         public String targetContentEncoding() {

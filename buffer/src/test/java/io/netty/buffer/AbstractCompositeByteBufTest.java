@@ -58,8 +58,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     private final ByteOrder order;
 
     protected AbstractCompositeByteBufTest(ByteOrder order) {
-        ObjectUtil.checkNotNull(order, "order");
-        this.order = order;
+        this.order = ObjectUtil.checkNotNull(order, "order");
     }
 
     @Override

@@ -42,8 +42,7 @@ class WrappedByteBuf extends ByteBuf {
     protected final ByteBuf buf;
 
     protected WrappedByteBuf(ByteBuf buf) {
-        ObjectUtil.checkNotNull(buf, "buf");
-        this.buf = buf;
+        this.buf = ObjectUtil.checkNotNull(buf, "buf");
     }
 
     @Override

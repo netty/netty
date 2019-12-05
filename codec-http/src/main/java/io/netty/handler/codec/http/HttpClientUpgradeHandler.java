@@ -116,10 +116,8 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
     public HttpClientUpgradeHandler(SourceCodec sourceCodec, UpgradeCodec upgradeCodec,
                                     int maxContentLength) {
         super(maxContentLength);
-        ObjectUtil.checkNotNull(sourceCodec, "sourceCodec");
-        ObjectUtil.checkNotNull(upgradeCodec, "upgradeCodec");
-        this.sourceCodec = sourceCodec;
-        this.upgradeCodec = upgradeCodec;
+        this.sourceCodec = ObjectUtil.checkNotNull(sourceCodec, "sourceCodec");
+        this.upgradeCodec = ObjectUtil.checkNotNull(upgradeCodec, "upgradeCodec");
     }
 
     @Override

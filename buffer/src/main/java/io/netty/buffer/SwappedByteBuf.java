@@ -41,8 +41,7 @@ public class SwappedByteBuf extends ByteBuf {
     private final ByteOrder order;
 
     public SwappedByteBuf(ByteBuf buf) {
-        ObjectUtil.checkNotNull(buf, "buf");
-        this.buf = buf;
+        this.buf = ObjectUtil.checkNotNull(buf, "buf");
         if (buf.order() == ByteOrder.BIG_ENDIAN) {
             order = ByteOrder.LITTLE_ENDIAN;
         } else {
@@ -57,8 +56,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf order(ByteOrder endianness) {
-        ObjectUtil.checkNotNull(endianness, "endianness");
-        if (endianness == order) {
+        if (ObjectUtil.checkNotNull(endianness, "endianness") == order) {
             return this;
         }
         return buf;
