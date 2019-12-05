@@ -121,6 +121,8 @@
                 </relocation>
               </relocations>
               <minimizeJar>true</minimizeJar>
+              <createSourcesJar>true</createSourcesJar>
+              <shadeSourcesContent>true</shadeSourcesContent>
             </configuration>
           </execution>
         </executions>
