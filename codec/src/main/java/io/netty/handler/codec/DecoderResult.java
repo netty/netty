@@ -27,8 +27,7 @@ public class DecoderResult {
     public static final DecoderResult SUCCESS = new DecoderResult(SIGNAL_SUCCESS);
 
     public static DecoderResult failure(Throwable cause) {
-        ObjectUtil.checkNotNull(cause, "cause");
-        return new DecoderResult(cause);
+        return new DecoderResult(ObjectUtil.checkNotNull(cause, "cause"));
     }
 
     private final Throwable cause;

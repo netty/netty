@@ -40,11 +40,12 @@ public class DefaultAddressedEnvelope<M, A extends SocketAddress> implements Add
      * {@code sender} address.
      */
     public DefaultAddressedEnvelope(M message, A recipient, A sender) {
+        ObjectUtil.checkNotNull(message, "message");
         if (recipient == null && sender == null) {
             throw new NullPointerException("recipient and sender");
         }
 
-        this.message = ObjectUtil.checkNotNull(message, "message");
+        this.message = message;
         this.sender = sender;
         this.recipient = recipient;
     }

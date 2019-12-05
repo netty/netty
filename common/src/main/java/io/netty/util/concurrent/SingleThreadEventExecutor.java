@@ -802,11 +802,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     @Override
     public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+        ObjectUtil.checkNotNull(unit, "unit");
         if (inEventLoop()) {
             throw new IllegalStateException("cannot await termination of the current thread");
         }
 
-        threadLock.await(timeout, ObjectUtil.checkNotNull(unit, "unit"));
+        threadLock.await(timeout, unit);
 
         return isTerminated();
     }

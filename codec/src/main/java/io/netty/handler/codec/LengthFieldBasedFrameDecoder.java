@@ -302,6 +302,8 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
             ByteOrder byteOrder, int maxFrameLength, int lengthFieldOffset, int lengthFieldLength,
             int lengthAdjustment, int initialBytesToStrip, boolean failFast) {
 
+        this.byteOrder = checkNotNull(byteOrder, "byteOrder");
+
         checkPositive(maxFrameLength, "maxFrameLength");
 
         checkPositiveOrZero(lengthFieldOffset, "lengthFieldOffset");
@@ -316,12 +318,11 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
                     "lengthFieldLength (" + lengthFieldLength + ").");
         }
 
-        this.byteOrder = checkNotNull(byteOrder, "byteOrder");
         this.maxFrameLength = maxFrameLength;
         this.lengthFieldOffset = lengthFieldOffset;
         this.lengthFieldLength = lengthFieldLength;
         this.lengthAdjustment = lengthAdjustment;
-        lengthFieldEndOffset = lengthFieldOffset + lengthFieldLength;
+        this.lengthFieldEndOffset = lengthFieldOffset + lengthFieldLength;
         this.initialBytesToStrip = initialBytesToStrip;
         this.failFast = failFast;
     }

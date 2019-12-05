@@ -167,6 +167,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     @Override
     public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+        ObjectUtil.checkNotNull(command, "command");
         ObjectUtil.checkNotNull(unit, "unit");
         if (delay < 0) {
             delay = 0;
@@ -175,7 +176,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
         return schedule(new ScheduledFutureTask<Void>(
                 this,
-                ObjectUtil.checkNotNull(command, "command"),
+                command,
                 deadlineNanos(unit.toNanos(delay))));
     }
 

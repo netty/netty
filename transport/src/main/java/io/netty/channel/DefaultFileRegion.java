@@ -67,7 +67,7 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
      * @param count     the number of bytes to transfer
      */
     public DefaultFileRegion(File f, long position, long count) {
-        this.f = ObjectUtil.checkNotNull(f, "file");
+        this.f = ObjectUtil.checkNotNull(f, "f");
         this.position = checkPositiveOrZero(position, "position");
         this.count = checkPositiveOrZero(count, "count");
     }

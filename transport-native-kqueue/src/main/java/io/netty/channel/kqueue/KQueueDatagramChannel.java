@@ -245,7 +245,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        for (; ; ) {
+        for (;;) {
             Object msg = in.current();
             if (msg == null) {
                 // Wrote all messages.
