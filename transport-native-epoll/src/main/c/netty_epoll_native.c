@@ -66,12 +66,30 @@ struct mmsghdr {
 
 // All linux syscall numbers are stable so this is safe.
 #ifndef SYS_recvmmsg
+// Only support SYS_recvmmsg for __x86_64__ / __i386__ for now
+#if defined(__x86_64__)
+// See https://github.com/torvalds/linux/blob/v5.4/arch/x86/entry/syscalls/syscall_64.tbl
 #define SYS_recvmmsg 299
+#elif defined(__i386__)
+// See https://github.com/torvalds/linux/blob/v5.4/arch/x86/entry/syscalls/syscall_32.tbl
+#define SYS_recvmmsg 337
+#else
+#define SYS_recvmmsg -1
 #endif
+#endif // SYS_recvmmsg
 
 #ifndef SYS_sendmmsg
+// Only support SYS_sendmmsg for __x86_64__ / __i386__ for now
+#if defined(__x86_64__)
+// See https://github.com/torvalds/linux/blob/v5.4/arch/x86/entry/syscalls/syscall_64.tbl
 #define SYS_sendmmsg 307
+#elif defined(__i386__)
+// See https://github.com/torvalds/linux/blob/v5.4/arch/x86/entry/syscalls/syscall_32.tbl
+#define SYS_sendmmsg 345
+#else
+#define SYS_sendmmsg -1
 #endif
+#endif // SYS_sendmmsg
 
 // Those are initialized in the init(...) method and cached for performance reasons
 static jfieldID packetAddrFieldId = NULL;
@@ -406,6 +424,9 @@ static jstring netty_epoll_native_kernelVersion(JNIEnv* env, jclass clazz) {
     return NULL;
 }
 static jboolean netty_epoll_native_isSupportingSendmmsg(JNIEnv* env, jclass clazz) {
+    if (SYS_sendmmsg == -1) {
+        return JNI_FALSE;
+    }
     if (syscall(SYS_sendmmsg, -1, NULL, 0, 0) == -1) {
         if (errno == ENOSYS) {
             return JNI_FALSE;
@@ -415,6 +436,9 @@ static jboolean netty_epoll_native_isSupportingSendmmsg(JNIEnv* env, jclass claz
 }
 
 static jboolean netty_epoll_native_isSupportingRecvmmsg(JNIEnv* env, jclass clazz) {
+    if (SYS_recvmmsg == -1) {
+        return JNI_FALSE;
+    }
     if (syscall(SYS_recvmmsg, -1, NULL, 0, 0, NULL) == -1) {
         if (errno == ENOSYS) {
             return JNI_FALSE;
