@@ -42,4 +42,64 @@ public class DefaultByteBufHolderTest {
             copy.release();
         }
     }
+
+    @SuppressWarnings("SimplifiableJUnitAssertion")
+    @Test
+    public void testDifferentClassesAreNotEqual() {
+        // all objects here have EMPTY_BUFFER data but are instances of different classes
+        // so we want to check that none of them are equal to another.
+        ByteBufHolder dflt = new DefaultByteBufHolder(Unpooled.EMPTY_BUFFER);
+        ByteBufHolder other = new OtherByteBufHolder(Unpooled.EMPTY_BUFFER, 123);
+        ByteBufHolder constant1 = new DefaultByteBufHolder(Unpooled.EMPTY_BUFFER) {
+            // intentionally empty
+        };
+        ByteBufHolder constant2 = new DefaultByteBufHolder(Unpooled.EMPTY_BUFFER) {
+            // intentionally empty
+        };
+        try {
+            // not using 'assertNotEquals' to be explicit about which object we are calling .equals() on
+            assertFalse(dflt.equals(other));
+            assertFalse(dflt.equals(constant1));
+            assertFalse(constant1.equals(dflt));
+            assertFalse(constant1.equals(other));
+            assertFalse(constant1.equals(constant2));
+        } finally {
+            dflt.release();
+            other.release();
+            constant1.release();
+            constant2.release();
+        }
+    }
+
+    private static class OtherByteBufHolder extends DefaultByteBufHolder {
+
+        private final int extraField;
+
+        OtherByteBufHolder(final ByteBuf data, final int extraField) {
+            super(data);
+            this.extraField = extraField;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            if (!super.equals(o)) {
+                return false;
+            }
+            final OtherByteBufHolder that = (OtherByteBufHolder) o;
+            return extraField == that.extraField;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = super.hashCode();
+            result = 31 * result + extraField;
+            return result;
+        }
+    }
 }
