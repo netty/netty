@@ -45,9 +45,7 @@ public class Socks5ServerEncoder extends MessageToByteEncoder<Socks5Message> {
      * Creates a new instance with the specified {@link Socks5AddressEncoder}.
      */
     public Socks5ServerEncoder(Socks5AddressEncoder addressEncoder) {
-        ObjectUtil.checkNotNull(addressEncoder, "addressEncoder");
-
-        this.addressEncoder = addressEncoder;
+        this.addressEncoder = ObjectUtil.checkNotNull(addressEncoder, "addressEncoder");
     }
 
     /**

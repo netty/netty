@@ -34,15 +34,10 @@ public final class ProxyConnectionEvent {
      */
     public ProxyConnectionEvent(
             String protocol, String authScheme, SocketAddress proxyAddress, SocketAddress destinationAddress) {
-        ObjectUtil.checkNotNull(protocol, "protocol");
-        ObjectUtil.checkNotNull(authScheme, "authScheme");
-        ObjectUtil.checkNotNull(proxyAddress, "proxyAddress");
-        ObjectUtil.checkNotNull(destinationAddress, "destinationAddress");
-
-        this.protocol = protocol;
-        this.authScheme = authScheme;
-        this.proxyAddress = proxyAddress;
-        this.destinationAddress = destinationAddress;
+        this.protocol = ObjectUtil.checkNotNull(protocol, "protocol");
+        this.authScheme = ObjectUtil.checkNotNull(authScheme, "authScheme");
+        this.proxyAddress = ObjectUtil.checkNotNull(proxyAddress, "proxyAddress");
+        this.destinationAddress = ObjectUtil.checkNotNull(destinationAddress, "destinationAddress");
     }
 
     /**

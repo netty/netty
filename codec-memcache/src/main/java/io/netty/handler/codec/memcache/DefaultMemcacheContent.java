@@ -32,8 +32,7 @@ public class DefaultMemcacheContent extends AbstractMemcacheObject implements Me
      * Creates a new instance with the specified content.
      */
     public DefaultMemcacheContent(ByteBuf content) {
-        ObjectUtil.checkNotNull(content, "content");
-        this.content = content;
+        this.content = ObjectUtil.checkNotNull(content, "content");
     }
 
     @Override

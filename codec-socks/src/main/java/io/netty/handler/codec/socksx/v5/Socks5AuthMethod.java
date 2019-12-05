@@ -56,10 +56,8 @@ public class Socks5AuthMethod implements Comparable<Socks5AuthMethod> {
     }
 
     public Socks5AuthMethod(int byteValue, String name) {
-        ObjectUtil.checkNotNull(name, "name");
-
+        this.name = ObjectUtil.checkNotNull(name, "name");
         this.byteValue = (byte) byteValue;
-        this.name = name;
     }
 
     public byte byteValue() {

@@ -104,8 +104,11 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
      * Create the global TrafficCounter.
      */
     void createGlobalTrafficCounter(ScheduledExecutorService executor) {
-        ObjectUtil.checkNotNull(executor, "executor");
-        TrafficCounter tc = new TrafficCounter(this, executor, "GlobalTC", checkInterval);
+        TrafficCounter tc = new TrafficCounter(this,
+                ObjectUtil.checkNotNull(executor, "executor"),
+                "GlobalTC",
+                checkInterval);
+
         setTrafficCounter(tc);
         tc.start();
     }

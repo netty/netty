@@ -150,9 +150,7 @@ public class LengthFieldPrepender extends MessageToMessageEncoder<ByteBuf> {
                     "lengthFieldLength must be either 1, 2, 3, 4, or 8: " +
                     lengthFieldLength);
         }
-        ObjectUtil.checkNotNull(byteOrder, "byteOrder");
-
-        this.byteOrder = byteOrder;
+        this.byteOrder = ObjectUtil.checkNotNull(byteOrder, "byteOrder");
         this.lengthFieldLength = lengthFieldLength;
         this.lengthIncludesLengthFieldLength = lengthIncludesLengthFieldLength;
         this.lengthAdjustment = lengthAdjustment;

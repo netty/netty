@@ -71,9 +71,8 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
      *                handle the client endpoint of the connection.
      */
     public SpdySessionHandler(SpdyVersion version, boolean server) {
-        ObjectUtil.checkNotNull(version, "version");
+        this.minorVersion = ObjectUtil.checkNotNull(version, "version").getMinorVersion();
         this.server = server;
-        minorVersion = version.getMinorVersion();
     }
 
     public void setSessionReceiveWindowSize(int sessionReceiveWindowSize) {

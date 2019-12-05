@@ -37,8 +37,7 @@ public class DefaultStompFrame extends DefaultStompHeadersSubframe implements St
 
     DefaultStompFrame(StompCommand command, ByteBuf content, DefaultStompHeaders headers) {
         super(command, headers);
-        ObjectUtil.checkNotNull(content, "content");
-        this.content = content;
+        this.content = ObjectUtil.checkNotNull(content, "content");
     }
 
     @Override

@@ -45,8 +45,7 @@ public class DefaultSocketChannelConfig extends DefaultChannelConfig
      */
     public DefaultSocketChannelConfig(SocketChannel channel, Socket javaSocket) {
         super(channel);
-        ObjectUtil.checkNotNull(javaSocket, "javaSocket");
-        this.javaSocket = javaSocket;
+        this.javaSocket = ObjectUtil.checkNotNull(javaSocket, "javaSocket");
 
         // Enable TCP_NODELAY by default if possible.
         if (PlatformDependent.canEnableTcpNoDelayByDefault()) {

@@ -67,10 +67,8 @@ public class SpdySessionStatus implements Comparable<SpdySessionStatus> {
      * {@code statusPhrase}.
      */
     public SpdySessionStatus(int code, String statusPhrase) {
-        ObjectUtil.checkNotNull(statusPhrase, "statusPhrase");
-
+        this.statusPhrase = ObjectUtil.checkNotNull(statusPhrase, "statusPhrase");
         this.code = code;
-        this.statusPhrase = statusPhrase;
     }
 
     /**

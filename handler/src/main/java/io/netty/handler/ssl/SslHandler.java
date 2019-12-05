@@ -450,11 +450,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      *                              {@link SSLEngine#getDelegatedTask()}.
      */
     public SslHandler(SSLEngine engine, boolean startTls, Executor delegatedTaskExecutor) {
-        ObjectUtil.checkNotNull(engine, "engine");
-        ObjectUtil.checkNotNull(delegatedTaskExecutor, "delegatedTaskExecutor");
-        this.engine = engine;
+        this.engine = ObjectUtil.checkNotNull(engine, "engine");
+        this.delegatedTaskExecutor = ObjectUtil.checkNotNull(delegatedTaskExecutor, "delegatedTaskExecutor");
         engineType = SslEngineType.forEngine(engine);
-        this.delegatedTaskExecutor = delegatedTaskExecutor;
         this.startTls = startTls;
         this.jdkCompatibilityMode = engineType.jdkCompatibilityMode(engine);
         setCumulator(engineType.cumulator);

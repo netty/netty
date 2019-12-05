@@ -137,8 +137,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
      * before.
      */
     private void addTask(Runnable task) {
-        ObjectUtil.checkNotNull(task, "task");
-        taskQueue.add(task);
+        taskQueue.add(ObjectUtil.checkNotNull(task, "task"));
     }
 
     @Override
@@ -191,21 +190,17 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
      * @return {@code true} if and only if the worker thread has been terminated
      */
     public boolean awaitInactivity(long timeout, TimeUnit unit) throws InterruptedException {
-        ObjectUtil.checkNotNull(unit, "unit");
-
         final Thread thread = this.thread;
         if (thread == null) {
             throw new IllegalStateException("thread was not started");
         }
-        thread.join(unit.toMillis(timeout));
+        thread.join(ObjectUtil.checkNotNull(unit, "unit").toMillis(timeout));
         return !thread.isAlive();
     }
 
     @Override
     public void execute(Runnable task) {
-        ObjectUtil.checkNotNull(task, "task");
-
-        addTask(task);
+        addTask(ObjectUtil.checkNotNull(task, "task"));
         if (!inEventLoop()) {
             startThread();
         }

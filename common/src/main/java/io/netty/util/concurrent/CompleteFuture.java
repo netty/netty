@@ -45,15 +45,15 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
 
     @Override
     public Future<V> addListener(GenericFutureListener<? extends Future<? super V>> listener) {
-        ObjectUtil.checkNotNull(listener, "listener");
-        DefaultPromise.notifyListener(executor(), this, listener);
+        DefaultPromise.notifyListener(executor(), this, ObjectUtil.checkNotNull(listener, "listener"));
         return this;
     }
 
     @Override
     public Future<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
-        ObjectUtil.checkNotNull(listeners, "listeners");
-        for (GenericFutureListener<? extends Future<? super V>> l: listeners) {
+        for (GenericFutureListener<? extends Future<? super V>> l:
+                ObjectUtil.checkNotNull(listeners, "listeners")) {
+
             if (l == null) {
                 break;
             }

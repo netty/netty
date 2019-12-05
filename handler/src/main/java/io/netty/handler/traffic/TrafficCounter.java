@@ -251,11 +251,10 @@ public class TrafficCounter {
      *            the checkInterval in millisecond between two computations.
      */
     public TrafficCounter(ScheduledExecutorService executor, String name, long checkInterval) {
-        ObjectUtil.checkNotNull(name, "name");
 
+        this.name = ObjectUtil.checkNotNull(name, "name");
         trafficShapingHandler = null;
         this.executor = executor;
-        this.name = name;
 
         init(checkInterval);
     }
@@ -281,11 +280,10 @@ public class TrafficCounter {
         if (trafficShapingHandler == null) {
             throw new IllegalArgumentException("trafficShapingHandler");
         }
-        ObjectUtil.checkNotNull(name, "name");
 
+        this.name = ObjectUtil.checkNotNull(name, "name");
         this.trafficShapingHandler = trafficShapingHandler;
         this.executor = executor;
-        this.name = name;
 
         init(checkInterval);
     }

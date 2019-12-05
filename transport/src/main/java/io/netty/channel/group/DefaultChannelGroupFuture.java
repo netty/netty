@@ -83,10 +83,8 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
      */
     DefaultChannelGroupFuture(ChannelGroup group, Collection<ChannelFuture> futures,  EventExecutor executor) {
         super(executor);
-        ObjectUtil.checkNotNull(group, "group");
+        this.group = ObjectUtil.checkNotNull(group, "group");
         ObjectUtil.checkNotNull(futures, "futures");
-
-        this.group = group;
 
         Map<Channel, ChannelFuture> futureMap = new LinkedHashMap<Channel, ChannelFuture>();
         for (ChannelFuture f: futures) {

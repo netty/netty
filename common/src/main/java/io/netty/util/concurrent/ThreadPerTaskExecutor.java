@@ -24,8 +24,7 @@ public final class ThreadPerTaskExecutor implements Executor {
     private final ThreadFactory threadFactory;
 
     public ThreadPerTaskExecutor(ThreadFactory threadFactory) {
-        ObjectUtil.checkNotNull(threadFactory, "threadFactory");
-        this.threadFactory = threadFactory;
+        this.threadFactory = ObjectUtil.checkNotNull(threadFactory, "threadFactory");
     }
 
     @Override

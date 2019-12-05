@@ -64,9 +64,7 @@ public abstract class ObjectPool<T> {
      * that should be pooled.
      */
     public static <T> ObjectPool<T> newPool(final ObjectCreator<T> creator) {
-        ObjectUtil.checkNotNull(creator, "creator");
-
-        return new RecyclerObjectPool<T>(creator);
+        return new RecyclerObjectPool<T>(ObjectUtil.checkNotNull(creator, "creator"));
     }
 
     private static final class RecyclerObjectPool<T> extends ObjectPool<T> {

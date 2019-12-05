@@ -710,8 +710,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelHandlerContext context(String name) {
-        ObjectUtil.checkNotNull(name, "name");
-        return context0(name);
+        return context0(ObjectUtil.checkNotNull(name, "name"));
     }
 
     @Override

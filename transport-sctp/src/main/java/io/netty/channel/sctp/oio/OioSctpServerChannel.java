@@ -85,9 +85,7 @@ public class OioSctpServerChannel extends AbstractOioMessageChannel
      */
     public OioSctpServerChannel(SctpServerChannel sch) {
         super(null);
-        ObjectUtil.checkNotNull(sch, "sctp server channel");
-
-        this.sch = sch;
+        this.sch = ObjectUtil.checkNotNull(sch, "sctp server channel");
         boolean success = false;
         try {
             sch.configureBlocking(false);

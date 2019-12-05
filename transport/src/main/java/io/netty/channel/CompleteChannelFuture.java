@@ -36,8 +36,7 @@ abstract class CompleteChannelFuture extends CompleteFuture<Void> implements Cha
      */
     protected CompleteChannelFuture(Channel channel, EventExecutor executor) {
         super(executor);
-        ObjectUtil.checkNotNull(channel, "channel");
-        this.channel = channel;
+        this.channel = ObjectUtil.checkNotNull(channel, "channel");
     }
 
     @Override

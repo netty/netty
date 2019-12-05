@@ -45,8 +45,7 @@ public class PromiseAggregator<V, F extends Future<V>> implements GenericFutureL
      * @param failPending  {@code true} to fail pending promises, false to leave them unaffected
      */
     public PromiseAggregator(Promise<Void> aggregatePromise, boolean failPending) {
-        ObjectUtil.checkNotNull(aggregatePromise, "aggregatePromise");
-        this.aggregatePromise = aggregatePromise;
+        this.aggregatePromise = ObjectUtil.checkNotNull(aggregatePromise, "aggregatePromise");
         this.failPending = failPending;
     }
 

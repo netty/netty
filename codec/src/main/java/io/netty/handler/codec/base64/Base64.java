@@ -51,18 +51,15 @@ public final class Base64 {
     private static final byte EQUALS_SIGN_ENC = -1; // Indicates equals sign in encoding
 
     private static byte[] alphabet(Base64Dialect dialect) {
-        ObjectUtil.checkNotNull(dialect, "dialect");
-        return dialect.alphabet;
+        return ObjectUtil.checkNotNull(dialect, "dialect").alphabet;
     }
 
     private static byte[] decodabet(Base64Dialect dialect) {
-        ObjectUtil.checkNotNull(dialect, "dialect");
-        return dialect.decodabet;
+        return ObjectUtil.checkNotNull(dialect, "dialect").decodabet;
     }
 
     private static boolean breakLines(Base64Dialect dialect) {
-        ObjectUtil.checkNotNull(dialect, "dialect");
-        return dialect.breakLinesByDefault;
+        return ObjectUtil.checkNotNull(dialect, "dialect").breakLinesByDefault;
     }
 
     public static ByteBuf encode(ByteBuf src) {

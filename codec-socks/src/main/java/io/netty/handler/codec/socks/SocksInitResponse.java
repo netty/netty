@@ -29,8 +29,7 @@ public final class SocksInitResponse extends SocksResponse {
 
     public SocksInitResponse(SocksAuthScheme authScheme) {
         super(SocksResponseType.INIT);
-        ObjectUtil.checkNotNull(authScheme, "authScheme");
-        this.authScheme = authScheme;
+        this.authScheme = ObjectUtil.checkNotNull(authScheme, "authScheme");
     }
 
     /**

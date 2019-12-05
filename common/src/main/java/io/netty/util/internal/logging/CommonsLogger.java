@@ -58,8 +58,7 @@ class CommonsLogger extends AbstractInternalLogger {
 
     CommonsLogger(Log logger, String name) {
         super(name);
-        ObjectUtil.checkNotNull(logger, "logger");
-        this.logger = logger;
+        this.logger = ObjectUtil.checkNotNull(logger, "logger");
     }
 
     /**

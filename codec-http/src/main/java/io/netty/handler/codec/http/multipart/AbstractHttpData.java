@@ -95,8 +95,7 @@ public abstract class AbstractHttpData extends AbstractReferenceCounted implemen
 
     @Override
     public void setCharset(Charset charset) {
-        ObjectUtil.checkNotNull(charset, "charset");
-        this.charset = charset;
+        this.charset = ObjectUtil.checkNotNull(charset, "charset");
     }
 
     @Override

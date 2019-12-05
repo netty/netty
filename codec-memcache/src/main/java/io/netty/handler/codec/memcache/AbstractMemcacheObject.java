@@ -39,7 +39,6 @@ public abstract class AbstractMemcacheObject extends AbstractReferenceCounted im
 
     @Override
     public void setDecoderResult(DecoderResult result) {
-        ObjectUtil.checkNotNull(result, "DecoderResult should not be null.");
-        decoderResult = result;
+        this.decoderResult = ObjectUtil.checkNotNull(result, "DecoderResult should not be null.");
     }
 }

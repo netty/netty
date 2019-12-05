@@ -44,8 +44,7 @@ public class DefaultSctpChannelConfig extends DefaultChannelConfig implements Sc
 
     public DefaultSctpChannelConfig(io.netty.channel.sctp.SctpChannel channel, SctpChannel javaChannel) {
         super(channel);
-        ObjectUtil.checkNotNull(javaChannel, "javaChannel");
-        this.javaChannel = javaChannel;
+        this.javaChannel = ObjectUtil.checkNotNull(javaChannel, "javaChannel");
 
         // Enable TCP_NODELAY by default if possible.
         if (PlatformDependent.canEnableTcpNoDelayByDefault()) {

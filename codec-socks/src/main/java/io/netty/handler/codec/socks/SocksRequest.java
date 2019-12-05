@@ -31,8 +31,7 @@ public abstract class SocksRequest extends SocksMessage {
 
     protected SocksRequest(SocksRequestType requestType) {
         super(SocksMessageType.REQUEST);
-        ObjectUtil.checkNotNull(requestType, "requestType");
-        this.requestType = requestType;
+        this.requestType = ObjectUtil.checkNotNull(requestType, "requestType");
     }
 
     /**

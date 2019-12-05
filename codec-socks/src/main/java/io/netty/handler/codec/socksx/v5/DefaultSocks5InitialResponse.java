@@ -27,8 +27,7 @@ public class DefaultSocks5InitialResponse extends AbstractSocks5Message implemen
     private final Socks5AuthMethod authMethod;
 
     public DefaultSocks5InitialResponse(Socks5AuthMethod authMethod) {
-        ObjectUtil.checkNotNull(authMethod, "authMethod");
-        this.authMethod = authMethod;
+        this.authMethod = ObjectUtil.checkNotNull(authMethod, "authMethod");
     }
 
     @Override

@@ -36,8 +36,7 @@ final class FailedChannelFuture extends CompleteChannelFuture {
      */
     FailedChannelFuture(Channel channel, EventExecutor executor, Throwable cause) {
         super(channel, executor);
-        ObjectUtil.checkNotNull(cause, "cause");
-        this.cause = cause;
+        this.cause = ObjectUtil.checkNotNull(cause, "cause");
     }
 
     @Override

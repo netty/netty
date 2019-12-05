@@ -75,8 +75,7 @@ public abstract class InternalLoggerFactory {
      * Changes the default factory.
      */
     public static void setDefaultFactory(InternalLoggerFactory defaultFactory) {
-        ObjectUtil.checkNotNull(defaultFactory, "defaultFactory");
-        InternalLoggerFactory.defaultFactory = defaultFactory;
+        InternalLoggerFactory.defaultFactory = ObjectUtil.checkNotNull(defaultFactory, "defaultFactory");
     }
 
     /**

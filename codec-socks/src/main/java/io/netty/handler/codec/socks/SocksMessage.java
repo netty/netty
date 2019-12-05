@@ -31,8 +31,7 @@ public abstract class SocksMessage {
     private final SocksProtocolVersion protocolVersion = SocksProtocolVersion.SOCKS5;
 
     protected SocksMessage(SocksMessageType type) {
-        ObjectUtil.checkNotNull(type, "type");
-        this.type = type;
+        this.type = ObjectUtil.checkNotNull(type, "type");
     }
 
     /**

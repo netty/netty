@@ -76,10 +76,8 @@ public abstract class OioByteStreamChannel extends AbstractOioByteChannel {
         if (this.os != null) {
             throw new IllegalStateException("output was set already");
         }
-        ObjectUtil.checkNotNull(is, "is");
-        ObjectUtil.checkNotNull(os, "os");
-        this.is = is;
-        this.os = os;
+        this.is = ObjectUtil.checkNotNull(is, "is");
+        this.os = ObjectUtil.checkNotNull(os, "os");
     }
 
     @Override

@@ -79,22 +79,21 @@ public final class ThreadDeathWatcher {
      */
     public static void watch(Thread thread, Runnable task) {
         ObjectUtil.checkNotNull(thread, "thread");
-        ObjectUtil.checkNotNull(task, "task");
 
         if (!thread.isAlive()) {
             throw new IllegalArgumentException("thread must be alive.");
         }
 
-        schedule(thread, task, true);
+        schedule(thread, ObjectUtil.checkNotNull(task, "task"), true);
     }
 
     /**
      * Cancels the task scheduled via {@link #watch(Thread, Runnable)}.
      */
     public static void unwatch(Thread thread, Runnable task) {
-        ObjectUtil.checkNotNull(thread, "thread");
-        ObjectUtil.checkNotNull(task, "task");
-        schedule(thread, task, false);
+        schedule(ObjectUtil.checkNotNull(thread, "thread"),
+                ObjectUtil.checkNotNull(task, "task"),
+                false);
     }
 
     private static void schedule(Thread thread, Runnable task, boolean isWatch) {
@@ -130,11 +129,10 @@ public final class ThreadDeathWatcher {
      * @return {@code true} if and only if the watcher thread has been terminated
      */
     public static boolean awaitInactivity(long timeout, TimeUnit unit) throws InterruptedException {
-        ObjectUtil.checkNotNull(unit, "unit");
-
         Thread watcherThread = ThreadDeathWatcher.watcherThread;
         if (watcherThread != null) {
-            watcherThread.join(unit.toMillis(timeout));
+            watcherThread.join(
+                    ObjectUtil.checkNotNull(unit, "unit").toMillis(timeout));
             return !watcherThread.isAlive();
         } else {
             return true;

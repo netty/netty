@@ -38,7 +38,6 @@ import static io.netty.handler.codec.spdy.SpdyCodecUtil.getSignedInt;
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.getUnsignedInt;
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.getUnsignedMedium;
 import static io.netty.handler.codec.spdy.SpdyCodecUtil.getUnsignedShort;
-import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -92,12 +91,9 @@ public class SpdyFrameDecoder {
      * Creates a new instance with the specified parameters.
      */
     public SpdyFrameDecoder(SpdyVersion spdyVersion, SpdyFrameDecoderDelegate delegate, int maxChunkSize) {
-        ObjectUtil.checkNotNull(spdyVersion, "spdyVersion");
-        ObjectUtil.checkNotNull(delegate, "delegate");
-        checkPositive(maxChunkSize, "maxChunkSize");
-        this.spdyVersion = spdyVersion.getVersion();
-        this.delegate = delegate;
-        this.maxChunkSize = maxChunkSize;
+        this.spdyVersion = ObjectUtil.checkNotNull(spdyVersion, "spdyVersion").getVersion();
+        this.delegate = ObjectUtil.checkNotNull(delegate, "delegate");
+        this.maxChunkSize = ObjectUtil.checkPositive(maxChunkSize, "maxChunkSize");
         state = State.READ_COMMON_HEADER;
     }
 

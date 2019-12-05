@@ -38,8 +38,7 @@ public abstract class AbstractInternalLogger implements InternalLogger, Serializ
      * Creates a new instance.
      */
     protected AbstractInternalLogger(String name) {
-        ObjectUtil.checkNotNull(name, "name");
-        this.name = name;
+        this.name = ObjectUtil.checkNotNull(name, "name");
     }
 
     @Override

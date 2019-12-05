@@ -32,8 +32,7 @@ public final class SocksInitRequest extends SocksRequest {
 
     public SocksInitRequest(List<SocksAuthScheme> authSchemes) {
         super(SocksRequestType.INIT);
-        ObjectUtil.checkNotNull(authSchemes, "authSchemes");
-        this.authSchemes = authSchemes;
+        this.authSchemes = ObjectUtil.checkNotNull(authSchemes, "authSchemes");
     }
 
     /**

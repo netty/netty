@@ -69,8 +69,7 @@ public class StringDecoder extends MessageToMessageDecoder<ByteBuf> {
      * Creates a new instance with the specified character set.
      */
     public StringDecoder(Charset charset) {
-        ObjectUtil.checkNotNull(charset, "charset");
-        this.charset = charset;
+        this.charset = ObjectUtil.checkNotNull(charset, "charset");
     }
 
     @Override

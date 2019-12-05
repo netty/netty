@@ -46,8 +46,7 @@ public class DefaultSctpServerChannelConfig extends DefaultChannelConfig impleme
     public DefaultSctpServerChannelConfig(
             io.netty.channel.sctp.SctpServerChannel channel, SctpServerChannel javaChannel) {
         super(channel);
-        ObjectUtil.checkNotNull(javaChannel, "javaChannel");
-        this.javaChannel = javaChannel;
+        this.javaChannel = ObjectUtil.checkNotNull(javaChannel, "javaChannel");
     }
 
     @Override

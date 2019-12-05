@@ -46,7 +46,6 @@ public class DefaultSocks4CommandResponse extends AbstractSocks4Message implemen
      * @param dstPort the {@code DSTPORT} field of the response
      */
     public DefaultSocks4CommandResponse(Socks4CommandStatus status, String dstAddr, int dstPort) {
-        ObjectUtil.checkNotNull(status, "cmdStatus");
         if (dstAddr != null) {
             if (!NetUtil.isValidIpV4Address(dstAddr)) {
                 throw new IllegalArgumentException(
@@ -57,7 +56,7 @@ public class DefaultSocks4CommandResponse extends AbstractSocks4Message implemen
             throw new IllegalArgumentException("dstPort: " + dstPort + " (expected: 0~65535)");
         }
 
-        this.status = status;
+        this.status = ObjectUtil.checkNotNull(status, "cmdStatus");
         this.dstAddr = dstAddr;
         this.dstPort = dstPort;
     }

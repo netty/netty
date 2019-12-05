@@ -29,8 +29,7 @@ public final class DomainSocketAddress extends SocketAddress {
     private final String socketPath;
 
     public DomainSocketAddress(String socketPath) {
-        ObjectUtil.checkNotNull(socketPath, "socketPath");
-        this.socketPath = socketPath;
+        this.socketPath = ObjectUtil.checkNotNull(socketPath, "socketPath");
     }
 
     public DomainSocketAddress(File file) {

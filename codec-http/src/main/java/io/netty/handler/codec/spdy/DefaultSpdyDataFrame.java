@@ -45,8 +45,8 @@ public class DefaultSpdyDataFrame extends DefaultSpdyStreamFrame implements Spdy
      */
     public DefaultSpdyDataFrame(int streamId, ByteBuf data) {
         super(streamId);
-        ObjectUtil.checkNotNull(data, "data");
-        this.data = validate(data);
+        this.data = validate(
+                ObjectUtil.checkNotNull(data, "data"));
     }
 
     private static ByteBuf validate(ByteBuf data) {

@@ -72,11 +72,10 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     protected InboundHttp2ToHttpAdapter(Http2Connection connection, int maxContentLength,
                                         boolean validateHttpHeaders, boolean propagateSettings) {
 
-        checkNotNull(connection, "connection");
         if (maxContentLength <= 0) {
             throw new IllegalArgumentException("maxContentLength: " + maxContentLength + " (expected: > 0)");
         }
-        this.connection = connection;
+        this.connection = checkNotNull(connection, "connection");
         this.maxContentLength = maxContentLength;
         this.validateHttpHeaders = validateHttpHeaders;
         this.propagateSettings = propagateSettings;

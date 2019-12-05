@@ -198,8 +198,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * Set the {@link Cumulator} to use for cumulate the received {@link ByteBuf}s.
      */
     public void setCumulator(Cumulator cumulator) {
-        ObjectUtil.checkNotNull(cumulator, "cumulator");
-        this.cumulator = cumulator;
+        this.cumulator = ObjectUtil.checkNotNull(cumulator, "cumulator");
     }
 
     /**

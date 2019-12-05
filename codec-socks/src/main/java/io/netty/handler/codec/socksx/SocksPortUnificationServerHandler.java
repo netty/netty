@@ -54,9 +54,7 @@ public class SocksPortUnificationServerHandler extends ByteToMessageDecoder {
      * This constructor is useful when a user wants to use an alternative {@link Socks5AddressEncoder}.
      */
     public SocksPortUnificationServerHandler(Socks5ServerEncoder socks5encoder) {
-        ObjectUtil.checkNotNull(socks5encoder, "socks5encoder");
-
-        this.socks5encoder = socks5encoder;
+        this.socks5encoder = ObjectUtil.checkNotNull(socks5encoder, "socks5encoder");
     }
 
     @Override

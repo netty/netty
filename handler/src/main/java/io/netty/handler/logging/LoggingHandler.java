@@ -63,10 +63,8 @@ public class LoggingHandler extends ChannelDuplexHandler {
      * @param level the log level
      */
     public LoggingHandler(LogLevel level) {
-        ObjectUtil.checkNotNull(level, "level");
-
+        this.level = ObjectUtil.checkNotNull(level, "level");
         logger = InternalLoggerFactory.getInstance(getClass());
-        this.level = level;
         internalLevel = level.toInternalLevel();
     }
 
@@ -88,10 +86,8 @@ public class LoggingHandler extends ChannelDuplexHandler {
      */
     public LoggingHandler(Class<?> clazz, LogLevel level) {
         ObjectUtil.checkNotNull(clazz, "clazz");
-        ObjectUtil.checkNotNull(level, "level");
-
+        this.level = ObjectUtil.checkNotNull(level, "level");
         logger = InternalLoggerFactory.getInstance(clazz);
-        this.level = level;
         internalLevel = level.toInternalLevel();
     }
 
@@ -112,10 +108,9 @@ public class LoggingHandler extends ChannelDuplexHandler {
      */
     public LoggingHandler(String name, LogLevel level) {
         ObjectUtil.checkNotNull(name, "name");
-        ObjectUtil.checkNotNull(level, "level");
 
+        this.level = ObjectUtil.checkNotNull(level, "level");
         logger = InternalLoggerFactory.getInstance(name);
-        this.level = level;
         internalLevel = level.toInternalLevel();
     }
 

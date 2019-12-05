@@ -37,10 +37,8 @@ public class SpdyFrameLogger extends ChannelDuplexHandler {
     private final InternalLogLevel level;
 
     public SpdyFrameLogger(InternalLogLevel level) {
-        ObjectUtil.checkNotNull(level, "level");
-
-        logger = InternalLoggerFactory.getInstance(getClass());
-        this.level = level;
+        this.level = ObjectUtil.checkNotNull(level, "level");
+        this.logger = InternalLoggerFactory.getInstance(getClass());
     }
 
     @Override

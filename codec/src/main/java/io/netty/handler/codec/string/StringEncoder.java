@@ -65,8 +65,7 @@ public class StringEncoder extends MessageToMessageEncoder<CharSequence> {
      * Creates a new instance with the specified character set.
      */
     public StringEncoder(Charset charset) {
-        ObjectUtil.checkNotNull(charset, "charset");
-        this.charset = charset;
+        this.charset = ObjectUtil.checkNotNull(charset, "charset");
     }
 
     @Override

@@ -35,7 +35,6 @@ public final class DefaultSocks5CommandRequest extends AbstractSocks5Message imp
     public DefaultSocks5CommandRequest(
             Socks5CommandType type, Socks5AddressType dstAddrType, String dstAddr, int dstPort) {
 
-        ObjectUtil.checkNotNull(type, "type");
         ObjectUtil.checkNotNull(dstAddrType, "dstAddrType");
         ObjectUtil.checkNotNull(dstAddr, "dstAddr");
 
@@ -58,7 +57,7 @@ public final class DefaultSocks5CommandRequest extends AbstractSocks5Message imp
             throw new IllegalArgumentException("dstPort: " + dstPort + " (expected: 0~65535)");
         }
 
-        this.type = type;
+        this.type = ObjectUtil.checkNotNull(type, "type");
         this.dstAddrType = dstAddrType;
         this.dstAddr = dstAddr;
         this.dstPort = dstPort;

@@ -115,8 +115,9 @@ public class DefaultDnsCache implements DnsCache {
 
     @Override
     public boolean clear(String hostname) {
-        checkNotNull(hostname, "hostname");
-        return resolveCache.clear(appendDot(hostname));
+        return resolveCache.clear(
+                appendDot(
+                        checkNotNull(hostname, "hostname")));
     }
 
     private static boolean emptyAdditionals(DnsRecord[] additionals) {

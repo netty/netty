@@ -32,8 +32,7 @@ public class DefaultStompHeadersSubframe implements StompHeadersSubframe {
     }
 
     DefaultStompHeadersSubframe(StompCommand command, DefaultStompHeaders headers) {
-        ObjectUtil.checkNotNull(command, "command");
-        this.command = command;
+        this.command = ObjectUtil.checkNotNull(command, "command");
         this.headers = headers == null ? new DefaultStompHeaders() : headers;
     }
 

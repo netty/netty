@@ -171,8 +171,7 @@ public class FileDescriptor {
      * Open a new {@link FileDescriptor} for the given path.
      */
     public static FileDescriptor from(String path) throws IOException {
-        checkNotNull(path, "path");
-        int res = open(path);
+        int res = open(checkNotNull(path, "path"));
         if (res < 0) {
             throw newIOException("open", res);
         }

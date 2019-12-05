@@ -473,8 +473,7 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf order(ByteOrder endianness) {
-        ObjectUtil.checkNotNull(endianness, "endianness");
-        if (endianness == order()) {
+        if (ObjectUtil.checkNotNull(endianness, "endianness") == order()) {
             return this;
         }
 

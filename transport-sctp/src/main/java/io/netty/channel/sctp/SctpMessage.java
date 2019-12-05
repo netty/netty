@@ -62,11 +62,10 @@ public final class SctpMessage extends DefaultByteBufHolder {
      */
     public SctpMessage(MessageInfo msgInfo, ByteBuf payloadBuffer) {
         super(payloadBuffer);
-        ObjectUtil.checkNotNull(msgInfo, "msgInfo");
-        this.msgInfo = msgInfo;
-        streamIdentifier = msgInfo.streamNumber();
-        protocolIdentifier = msgInfo.payloadProtocolID();
-        unordered = msgInfo.isUnordered();
+        this.msgInfo = ObjectUtil.checkNotNull(msgInfo, "msgInfo");
+        this.streamIdentifier = msgInfo.streamNumber();
+        this.protocolIdentifier = msgInfo.payloadProtocolID();
+        this.unordered = msgInfo.isUnordered();
     }
 
     /**

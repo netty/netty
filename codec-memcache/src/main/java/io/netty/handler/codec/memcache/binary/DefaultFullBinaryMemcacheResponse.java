@@ -49,9 +49,7 @@ public class DefaultFullBinaryMemcacheResponse extends DefaultBinaryMemcacheResp
     public DefaultFullBinaryMemcacheResponse(ByteBuf key, ByteBuf extras,
         ByteBuf content) {
         super(key, extras);
-        ObjectUtil.checkNotNull(content, "content");
-
-        this.content = content;
+        this.content = ObjectUtil.checkNotNull(content, "content");
         setTotalBodyLength(keyLength() + extrasLength() + content.readableBytes());
     }
 

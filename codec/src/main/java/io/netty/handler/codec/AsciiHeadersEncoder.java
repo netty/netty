@@ -64,13 +64,9 @@ public final class AsciiHeadersEncoder {
     }
 
     public AsciiHeadersEncoder(ByteBuf buf, SeparatorType separatorType, NewlineType newlineType) {
-        ObjectUtil.checkNotNull(buf, "buf");
-        ObjectUtil.checkNotNull(separatorType, "separatorType");
-        ObjectUtil.checkNotNull(newlineType, "newlineType");
-
-        this.buf = buf;
-        this.separatorType = separatorType;
-        this.newlineType = newlineType;
+        this.buf = ObjectUtil.checkNotNull(buf, "buf");
+        this.separatorType = ObjectUtil.checkNotNull(separatorType, "separatorType");
+        this.newlineType = ObjectUtil.checkNotNull(newlineType, "newlineType");
     }
 
     public void encode(Entry<CharSequence, CharSequence> entry) {

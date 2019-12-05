@@ -137,8 +137,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
      *                  You may set {@code null} if you do not want to validate checksum of each block
      */
     public Lz4FrameDecoder(LZ4Factory factory, Checksum checksum) {
-        ObjectUtil.checkNotNull(factory, "factory");
-        decompressor = factory.fastDecompressor();
+        decompressor = ObjectUtil.checkNotNull(factory, "factory").fastDecompressor();
         this.checksum = checksum == null ? null : ByteBufChecksum.wrapChecksum(checksum);
     }
 

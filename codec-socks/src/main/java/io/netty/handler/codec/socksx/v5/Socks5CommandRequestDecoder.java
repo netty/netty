@@ -49,8 +49,7 @@ public class Socks5CommandRequestDecoder extends ReplayingDecoder<State> {
 
     public Socks5CommandRequestDecoder(Socks5AddressDecoder addressDecoder) {
         super(State.INIT);
-        ObjectUtil.checkNotNull(addressDecoder, "addressDecoder");
-        this.addressDecoder = addressDecoder;
+        this.addressDecoder = ObjectUtil.checkNotNull(addressDecoder, "addressDecoder");
     }
 
     @Override

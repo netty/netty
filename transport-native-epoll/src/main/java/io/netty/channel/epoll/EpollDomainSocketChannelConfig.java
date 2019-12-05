@@ -161,8 +161,7 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
 
     @Override
     public EpollDomainSocketChannelConfig setReadMode(DomainSocketReadMode mode) {
-        ObjectUtil.checkNotNull(mode, "mode");
-        this.mode = mode;
+        this.mode = ObjectUtil.checkNotNull(mode, "mode");
         return this;
     }
 

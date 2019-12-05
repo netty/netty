@@ -35,8 +35,7 @@ public final class FailedFuture<V> extends CompleteFuture<V> {
      */
     public FailedFuture(EventExecutor executor, Throwable cause) {
         super(executor);
-        ObjectUtil.checkNotNull(cause, "cause");
-        this.cause = cause;
+        this.cause = ObjectUtil.checkNotNull(cause, "cause");
     }
 
     @Override

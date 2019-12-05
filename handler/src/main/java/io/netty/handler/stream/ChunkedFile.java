@@ -83,15 +83,13 @@ public class ChunkedFile implements ChunkedInput<ByteBuf> {
      *                  {@link #readChunk(ChannelHandlerContext)} call
      */
     public ChunkedFile(RandomAccessFile file, long offset, long length, int chunkSize) throws IOException {
-        ObjectUtil.checkNotNull(file, "file");
         ObjectUtil.checkPositiveOrZero(offset, "offset");
         ObjectUtil.checkPositiveOrZero(length, "length");
-        ObjectUtil.checkPositive(chunkSize, "chunkSize");
 
-        this.file = file;
+        this.file = ObjectUtil.checkNotNull(file, "file");
+        this.chunkSize = ObjectUtil.checkPositive(chunkSize, "chunkSize");
         this.offset = startOffset = offset;
         endOffset = offset + length;
-        this.chunkSize = chunkSize;
 
         file.seek(offset);
     }

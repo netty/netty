@@ -195,8 +195,7 @@ public class DefaultChannelConfig implements ChannelConfig {
     }
 
     protected <T> void validate(ChannelOption<T> option, T value) {
-        ObjectUtil.checkNotNull(option, "option");
-        option.validate(value);
+        ObjectUtil.checkNotNull(option, "option").validate(value);
     }
 
     @Override
@@ -274,8 +273,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setAllocator(ByteBufAllocator allocator) {
-        ObjectUtil.checkNotNull(allocator, "allocator");
-        this.allocator = allocator;
+        this.allocator = ObjectUtil.checkNotNull(allocator, "allocator");
         return this;
     }
 
@@ -403,8 +401,7 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        ObjectUtil.checkNotNull(estimator, "estimator");
-        msgSizeEstimator = estimator;
+        this.msgSizeEstimator = ObjectUtil.checkNotNull(estimator, "estimator");
         return this;
     }
 

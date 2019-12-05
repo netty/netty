@@ -151,8 +151,7 @@ public class ResourceLeakDetector<T> {
      * Sets the resource leak detection level.
      */
     public static void setLevel(Level level) {
-        ObjectUtil.checkNotNull(level, "level");
-        ResourceLeakDetector.level = level;
+        ResourceLeakDetector.level = ObjectUtil.checkNotNull(level, "level");
     }
 
     /**
@@ -220,9 +219,7 @@ public class ResourceLeakDetector<T> {
      */
     @Deprecated
     public ResourceLeakDetector(String resourceType, int samplingInterval, long maxActive) {
-        ObjectUtil.checkNotNull(resourceType, "resourceType");
-
-        this.resourceType = resourceType;
+        this.resourceType = ObjectUtil.checkNotNull(resourceType, "resourceType");
         this.samplingInterval = samplingInterval;
     }
 

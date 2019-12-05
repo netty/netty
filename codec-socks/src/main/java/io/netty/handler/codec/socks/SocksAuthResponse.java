@@ -30,8 +30,7 @@ public final class SocksAuthResponse extends SocksResponse {
 
     public SocksAuthResponse(SocksAuthStatus authStatus) {
         super(SocksResponseType.AUTH);
-        ObjectUtil.checkNotNull(authStatus, "authStatus");
-        this.authStatus = authStatus;
+        this.authStatus = ObjectUtil.checkNotNull(authStatus, "authStatus");
     }
 
     /**

@@ -37,8 +37,7 @@ public class RuleBasedIpFilter extends AbstractRemoteAddressFilter<InetSocketAdd
     private final IpFilterRule[] rules;
 
     public RuleBasedIpFilter(IpFilterRule... rules) {
-        ObjectUtil.checkNotNull(rules, "rules");
-        this.rules = rules;
+        this.rules = ObjectUtil.checkNotNull(rules, "rules");
     }
 
     @Override

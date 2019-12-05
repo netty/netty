@@ -162,8 +162,7 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig i
 
     @Override
     public KQueueDomainSocketChannelConfig setReadMode(DomainSocketReadMode mode) {
-        ObjectUtil.checkNotNull(mode, "mode");
-        this.mode = mode;
+        this.mode = ObjectUtil.checkNotNull(mode, "mode");
         return this;
     }
 

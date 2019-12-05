@@ -85,9 +85,7 @@ public class HAProxyTLV extends DefaultByteBufHolder {
      */
     HAProxyTLV(final Type type, final byte typeByteValue, final ByteBuf content) {
         super(content);
-        checkNotNull(type, "type");
-
-        this.type = type;
+        this.type = checkNotNull(type, "type");
         this.typeByteValue = typeByteValue;
     }
 

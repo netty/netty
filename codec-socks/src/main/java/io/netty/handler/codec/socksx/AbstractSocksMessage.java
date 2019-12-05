@@ -33,7 +33,6 @@ public abstract class AbstractSocksMessage implements SocksMessage {
 
     @Override
     public void setDecoderResult(DecoderResult decoderResult) {
-        ObjectUtil.checkNotNull(decoderResult, "decoderResult");
-        this.decoderResult = decoderResult;
+        this.decoderResult = ObjectUtil.checkNotNull(decoderResult, "decoderResult");
     }
 }

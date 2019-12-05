@@ -51,16 +51,13 @@ public class DefaultSocks4CommandRequest extends AbstractSocks4Message implement
      * @param userId the {@code USERID} field of the request
      */
     public DefaultSocks4CommandRequest(Socks4CommandType type, String dstAddr, int dstPort, String userId) {
-        ObjectUtil.checkNotNull(type, "type");
-        ObjectUtil.checkNotNull(dstAddr, "dstAddr");
-        ObjectUtil.checkNotNull(userId, "userId");
         if (dstPort <= 0 || dstPort >= 65536) {
             throw new IllegalArgumentException("dstPort: " + dstPort + " (expected: 1~65535)");
         }
-
-        this.userId = userId;
-        this.type = type;
-        this.dstAddr = IDN.toASCII(dstAddr);
+        this.type = ObjectUtil.checkNotNull(type, "type");
+        this.dstAddr = IDN.toASCII(
+                ObjectUtil.checkNotNull(dstAddr, "dstAddr"));
+        this.userId = ObjectUtil.checkNotNull(userId, "userId");
         this.dstPort = dstPort;
     }
 

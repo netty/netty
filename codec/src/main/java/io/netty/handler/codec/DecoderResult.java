@@ -34,8 +34,7 @@ public class DecoderResult {
     private final Throwable cause;
 
     protected DecoderResult(Throwable cause) {
-        ObjectUtil.checkNotNull(cause, "cause");
-        this.cause = cause;
+        this.cause = ObjectUtil.checkNotNull(cause, "cause");
     }
 
     public boolean isFinished() {

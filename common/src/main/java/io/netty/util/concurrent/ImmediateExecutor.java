@@ -31,7 +31,6 @@ public final class ImmediateExecutor implements Executor {
 
     @Override
     public void execute(Runnable command) {
-        ObjectUtil.checkNotNull(command, "command");
-        command.run();
+        ObjectUtil.checkNotNull(command, "command").run();
     }
 }

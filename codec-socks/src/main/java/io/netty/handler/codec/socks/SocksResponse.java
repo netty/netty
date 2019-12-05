@@ -31,8 +31,7 @@ public abstract class SocksResponse extends SocksMessage {
 
     protected SocksResponse(SocksResponseType responseType) {
         super(SocksMessageType.RESPONSE);
-        ObjectUtil.checkNotNull(responseType, "responseType");
-        this.responseType = responseType;
+        this.responseType = ObjectUtil.checkNotNull(responseType, "responseType");
     }
 
     /**

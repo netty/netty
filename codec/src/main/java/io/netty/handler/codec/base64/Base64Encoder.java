@@ -55,9 +55,8 @@ public class Base64Encoder extends MessageToMessageEncoder<ByteBuf> {
     }
 
     public Base64Encoder(boolean breakLines, Base64Dialect dialect) {
-        ObjectUtil.checkNotNull(dialect, "dialect");
+        this.dialect = ObjectUtil.checkNotNull(dialect, "dialect");
         this.breakLines = breakLines;
-        this.dialect = dialect;
     }
 
     @Override

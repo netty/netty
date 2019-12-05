@@ -27,8 +27,7 @@ public class DefaultSocks5PasswordAuthResponse extends AbstractSocks5Message imp
     private final Socks5PasswordAuthStatus status;
 
     public DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus status) {
-        ObjectUtil.checkNotNull(status, "status");
-        this.status = status;
+        this.status = ObjectUtil.checkNotNull(status, "status");
     }
 
     @Override

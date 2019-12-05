@@ -141,10 +141,8 @@ public class SpdyStreamStatus implements Comparable<SpdyStreamStatus> {
                     "0 is not a valid status code for a RST_STREAM");
         }
 
-        ObjectUtil.checkNotNull(statusPhrase, "statusPhrase");
-
+        this.statusPhrase = ObjectUtil.checkNotNull(statusPhrase, "statusPhrase");
         this.code = code;
-        this.statusPhrase = statusPhrase;
     }
 
     /**

@@ -35,8 +35,7 @@ public final class SctpNotificationHandler extends AbstractNotificationHandler<O
     private final SctpChannel sctpChannel;
 
     public SctpNotificationHandler(SctpChannel sctpChannel) {
-        ObjectUtil.checkNotNull(sctpChannel, "sctpChannel");
-        this.sctpChannel = sctpChannel;
+        this.sctpChannel = ObjectUtil.checkNotNull(sctpChannel, "sctpChannel");
     }
 
     @Override

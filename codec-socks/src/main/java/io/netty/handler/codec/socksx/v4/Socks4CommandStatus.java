@@ -51,10 +51,8 @@ public class Socks4CommandStatus implements Comparable<Socks4CommandStatus> {
     }
 
     public Socks4CommandStatus(int byteValue, String name) {
-        ObjectUtil.checkNotNull(name, "name");
-
+        this.name = ObjectUtil.checkNotNull(name, "name");
         this.byteValue = (byte) byteValue;
-        this.name = name;
     }
 
     public byte byteValue() {

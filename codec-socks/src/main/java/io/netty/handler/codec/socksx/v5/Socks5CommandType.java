@@ -49,9 +49,8 @@ public class Socks5CommandType implements Comparable<Socks5CommandType> {
     }
 
     public Socks5CommandType(int byteValue, String name) {
-        ObjectUtil.checkNotNull(name, "name");
+        this.name = ObjectUtil.checkNotNull(name, "name");
         this.byteValue = (byte) byteValue;
-        this.name = name;
     }
 
     public byte byteValue() {

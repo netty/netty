@@ -137,13 +137,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                  EventLoopTaskQueueFactory queueFactory) {
         super(parent, executor, false, newTaskQueue(queueFactory), newTaskQueue(queueFactory),
                 rejectedExecutionHandler);
-        ObjectUtil.checkNotNull(selectorProvider, "selectorProvider");
-        ObjectUtil.checkNotNull(strategy, "selectStrategy");
-        provider = selectorProvider;
+        this.provider = ObjectUtil.checkNotNull(selectorProvider, "selectorProvider");
+        this.selectStrategy = ObjectUtil.checkNotNull(strategy, "selectStrategy");
         final SelectorTuple selectorTuple = openSelector();
-        selector = selectorTuple.selector;
-        unwrappedSelector = selectorTuple.unwrappedSelector;
-        selectStrategy = strategy;
+        this.selector = selectorTuple.selector;
+        this.unwrappedSelector = selectorTuple.unwrappedSelector;
     }
 
     private static Queue<Runnable> newTaskQueue(

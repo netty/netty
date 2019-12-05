@@ -53,8 +53,7 @@ public class DefaultDatagramChannelConfig extends DefaultChannelConfig implement
      */
     public DefaultDatagramChannelConfig(DatagramChannel channel, DatagramSocket javaSocket) {
         super(channel, new FixedRecvByteBufAllocator(2048));
-        ObjectUtil.checkNotNull(javaSocket, "javaSocket");
-        this.javaSocket = javaSocket;
+        this.javaSocket = ObjectUtil.checkNotNull(javaSocket, "javaSocket");
     }
 
     protected final DatagramSocket javaSocket() {

@@ -71,8 +71,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     };
 
     protected ProxyHandler(SocketAddress proxyAddress) {
-        ObjectUtil.checkNotNull(proxyAddress, "proxyAddress");
-        this.proxyAddress = proxyAddress;
+        this.proxyAddress = ObjectUtil.checkNotNull(proxyAddress, "proxyAddress");
     }
 
     /**

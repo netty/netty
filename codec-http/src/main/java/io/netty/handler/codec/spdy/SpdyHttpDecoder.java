@@ -102,10 +102,8 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
      */
     protected SpdyHttpDecoder(SpdyVersion version, int maxContentLength, Map<Integer,
             FullHttpMessage> messageMap, boolean validateHeaders) {
-        ObjectUtil.checkNotNull(version, "version");
-        checkPositive(maxContentLength, "maxContentLength");
-        spdyVersion = version.getVersion();
-        this.maxContentLength = maxContentLength;
+        spdyVersion = ObjectUtil.checkNotNull(version, "version").getVersion();
+        this.maxContentLength = checkPositive(maxContentLength, "maxContentLength");
         this.messageMap = messageMap;
         this.validateHeaders = validateHeaders;
     }
