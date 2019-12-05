@@ -995,7 +995,7 @@
 
       <plugin>
         <artifactId>maven-source-plugin</artifactId>
-        <version>3.0.1</version>
+        <version>3.2.0</version>
         <!-- Eclipse-related OSGi manifests
              See https://github.com/netty/netty/issues/3886
              More information: http://rajakannappan.blogspot.ie/2010/03/automating-eclipse-source-bundle.html -->
@@ -1013,27 +1013,16 @@
         </configuration>
 
         <executions>
-          <!--
-            ~ This workaround prevents Maven from executing the 'generate-sources' phase twice.
-            ~ See http://jira.codehaus.org/browse/MSOURCES-13
-            ~ and http://blog.peterlynch.ca/2010/05/maven-how-to-prevent-generate-sources.html
-            -->
           <execution>
             <id>attach-sources</id>
-            <phase>invalid</phase>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>attach-sources-no-fork</id>
-            <phase>package</phase>
+            <phase>prepare-package</phase>
             <goals>
               <goal>jar-no-fork</goal>
             </goals>
           </execution>
           <execution>
             <id>attach-test-sources</id>
+            <phase>prepare-package</phase>
             <goals>
               <goal>test-jar-no-fork</goal>
             </goals>
@@ -1295,7 +1284,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.1.0</version>
+          <version>3.2.1</version>
         </plugin>
 
         <!-- Workaround for the 'M2E plugin execution not covered' problem.
