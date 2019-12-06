@@ -277,8 +277,8 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
         ChannelPipeline p = channel.pipeline();
         p.addLast(config.handler());
 
-        setChannelOptions(channel, options0().entrySet().toArray(newOptionArray(0)), logger);
-        setAttributes(channel, attrs0().entrySet().toArray(newAttrArray(0)));
+        setChannelOptions(channel, options0().entrySet().toArray(EMPTY_OPTION_ARRAY), logger);
+        setAttributes(channel, attrs0().entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY));
 
         return promise.setSuccess();
     }
