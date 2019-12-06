@@ -37,7 +37,8 @@ public class SnappyFrameDecoderTest {
             0x03, 0x01, 0x00, 0x00, 0x00
         });
 
-        channel.writeInbound(in);
+        assertFalse(channel.writeInbound(in));
+        assertFalse(channel.finish());
     }
 
     @Test(expected = DecompressionException.class)
@@ -46,7 +47,8 @@ public class SnappyFrameDecoderTest {
             -0x80, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        channel.writeInbound(in);
+        assertFalse(channel.writeInbound(in));
+        assertFalse(channel.finish());
     }
 
     @Test(expected = DecompressionException.class)
@@ -55,7 +57,8 @@ public class SnappyFrameDecoderTest {
             (byte) 0xff, 0x06, 0x00, 0x00, 's', 'n', 'e', 't', 't', 'y'
         });
 
-        channel.writeInbound(in);
+        assertFalse(channel.writeInbound(in));
+        assertFalse(channel.finish());
     }
 
     @Test(expected = DecompressionException.class)
@@ -73,7 +76,8 @@ public class SnappyFrameDecoderTest {
             0x01, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        channel.writeInbound(in);
+        assertFalse(channel.writeInbound(in));
+        assertFalse(channel.finish());
     }
 
     @Test(expected = DecompressionException.class)
@@ -82,7 +86,8 @@ public class SnappyFrameDecoderTest {
             0x00, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        channel.writeInbound(in);
+        assertFalse(channel.writeInbound(in));
+        assertFalse(channel.finish());
     }
 
     @Test
@@ -92,10 +97,11 @@ public class SnappyFrameDecoderTest {
            -0x7f, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        channel.writeInbound(in);
+        assertFalse(channel.writeInbound(in));
         assertNull(channel.readInbound());
 
         assertFalse(in.isReadable());
+        assertFalse(channel.finish());
     }
 
     @Test
@@ -105,7 +111,7 @@ public class SnappyFrameDecoderTest {
             0x01, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        channel.writeInbound(in);
+        assertTrue(channel.writeInbound(in));
 
         ByteBuf expected = Unpooled.wrappedBuffer(new byte[] { 'n', 'e', 't', 't', 'y' });
         ByteBuf actual = channel.readInbound();
@@ -113,6 +119,7 @@ public class SnappyFrameDecoderTest {
 
         expected.release();
         actual.release();
+        assertFalse(channel.finish());
     }
 
     @Test
@@ -125,7 +132,7 @@ public class SnappyFrameDecoderTest {
                   0x6e, 0x65, 0x74, 0x74, 0x79 // "netty"
         });
 
-        channel.writeInbound(in);
+        assertTrue(channel.writeInbound(in));
 
         ByteBuf expected = Unpooled.wrappedBuffer(new byte[] { 'n', 'e', 't', 't', 'y' });
         ByteBuf actual = channel.readInbound();
@@ -134,6 +141,7 @@ public class SnappyFrameDecoderTest {
 
         expected.release();
         actual.release();
+        assertFalse(channel.finish());
     }
 
     // The following two tests differ in only the checksum provided for the literal
@@ -149,7 +157,8 @@ public class SnappyFrameDecoderTest {
             0x01, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        channel.writeInbound(in);
+        assertFalse(channel.writeInbound(in));
+        assertFalse(channel.finish());
     }
 
     @Test
@@ -162,6 +171,13 @@ public class SnappyFrameDecoderTest {
             0x01, 0x09, 0x00, 0x00, 0x6f, -0x68, -0x7e, -0x5e, 'n', 'e', 't', 't', 'y'
         });
 
-        channel.writeInbound(in);
+        assertTrue(channel.writeInbound(in));
+        ByteBuf expected = Unpooled.wrappedBuffer(new byte[] { 'n', 'e', 't', 't', 'y' });
+        ByteBuf actual = channel.readInbound();
+        assertEquals(expected, actual);
+
+        expected.release();
+        actual.release();
+        assertFalse(channel.finish());
     }
 }
