@@ -894,6 +894,17 @@ public class DefaultHttp2ConnectionEncoderTest {
                 eq(0), eq(false), eq(promise));
     }
 
+    @Test
+    public void headersWithPriority() {
+        writeAllFlowControlledFrames();
+        final int streamId = 6;
+        ChannelPromise promise = newPromise();
+        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 10, DEFAULT_PRIORITY_WEIGHT,
+                true, 1, false, promise);
+        verify(writer).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE), eq(10),
+                eq(DEFAULT_PRIORITY_WEIGHT), eq(true), eq(1), eq(false), eq(promise));
+    }
+
     private void writeAllFlowControlledFrames() {
         doAnswer(new Answer<Void>() {
             @Override

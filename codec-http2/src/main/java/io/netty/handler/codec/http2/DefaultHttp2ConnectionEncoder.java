@@ -168,7 +168,11 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                 weight, exclusive, padding, endOfStream, promise);
     }
 
-    private static ChannelFuture writeHeaders(Http2FrameWriter frameWriter, ChannelHandlerContext ctx, int streamId,
+    /**
+     * Write headers via {@link Http2FrameWriter}. If {@code hasPriority} is {@code false} it will ignore the
+     * {@code streamDependency}, {@code weight} and {@code exclusive} parameters.
+     */
+    private static ChannelFuture sendHeaders(Http2FrameWriter frameWriter, ChannelHandlerContext ctx, int streamId,
                                        Http2Headers headers, final boolean hasPriority,
                                        int streamDependency, final short weight,
                                        boolean exclusive, final int padding,
@@ -226,7 +230,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                 promise = promise.unvoid();
                 boolean isInformational = validateHeadersSentState(stream, headers, connection.isServer(), endOfStream);
 
-                ChannelFuture future = writeHeaders(frameWriter, ctx, streamId, headers, hasPriority, streamDependency,
+                ChannelFuture future = sendHeaders(frameWriter, ctx, streamId, headers, hasPriority, streamDependency,
                         weight, exclusive, padding, endOfStream, promise);
 
                 // Writing headers may fail during the encode state if they violate HPACK limits.
@@ -577,7 +581,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             // closeStreamLocal().
             promise.addListener(this);
 
-            ChannelFuture f = writeHeaders(frameWriter, ctx, stream.id(), headers, hasPriorty, streamDependency,
+            ChannelFuture f = sendHeaders(frameWriter, ctx, stream.id(), headers, hasPriorty, streamDependency,
                     weight, exclusive, padding, endOfStream, promise);
             // Writing headers may fail during the encode state if they violate HPACK limits.
             Throwable failureCause = f.cause();
