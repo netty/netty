@@ -43,7 +43,7 @@ public class SnappyFrameDecoderTest {
             0x03, 0x01, 0x00, 0x00, 0x00
         });
 
-        assertFalse(channel.writeInbound(in));
+        channel.writeInbound(in);
     }
 
     @Test(expected = DecompressionException.class)
@@ -52,7 +52,7 @@ public class SnappyFrameDecoderTest {
             -0x80, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        assertFalse(channel.writeInbound(in));
+        channel.writeInbound(in);
     }
 
     @Test(expected = DecompressionException.class)
@@ -61,7 +61,7 @@ public class SnappyFrameDecoderTest {
             (byte) 0xff, 0x06, 0x00, 0x00, 's', 'n', 'e', 't', 't', 'y'
         });
 
-        assertFalse(channel.writeInbound(in));
+        channel.writeInbound(in);
     }
 
     @Test(expected = DecompressionException.class)
@@ -70,7 +70,7 @@ public class SnappyFrameDecoderTest {
             -0x7f, 0x06, 0x00, 0x00, 's', 'n', 'e', 't', 't', 'y'
         });
 
-        assertFalse(channel.writeInbound(in));
+        channel.writeInbound(in);
     }
 
     @Test(expected = DecompressionException.class)
@@ -79,7 +79,7 @@ public class SnappyFrameDecoderTest {
             0x01, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        assertFalse(channel.writeInbound(in));
+        channel.writeInbound(in);
     }
 
     @Test(expected = DecompressionException.class)
@@ -88,7 +88,7 @@ public class SnappyFrameDecoderTest {
             0x00, 0x05, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
         });
 
-        assertFalse(channel.writeInbound(in));
+        channel.writeInbound(in);
     }
 
     @Test
@@ -155,9 +155,9 @@ public class SnappyFrameDecoderTest {
                     0x01, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 'n', 'e', 't', 't', 'y'
             });
 
-            assertFalse(channel.writeInbound(in));
+            channel.writeInbound(in);
         } finally {
-            assertFalse(channel.finishAndReleaseAll());
+            channel.finishAndReleaseAll();
         }
     }
 
@@ -178,9 +178,8 @@ public class SnappyFrameDecoderTest {
 
             expected.release();
             actual.release();
-            assertFalse(channel.finish());
         } finally {
-            assertFalse(channel.finishAndReleaseAll());
+            channel.finishAndReleaseAll();
         }
     }
 }
