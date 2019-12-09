@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.util.internal.ObjectUtil;
+
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -88,10 +90,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
 
     @Override
     public HttpResponse setStatus(HttpResponseStatus status) {
-        if (status == null) {
-            throw new NullPointerException("status");
-        }
-        this.status = status;
+        this.status = ObjectUtil.checkNotNull(status, "status");
         return this;
     }
 

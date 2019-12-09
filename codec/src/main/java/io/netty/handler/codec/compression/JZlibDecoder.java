@@ -19,6 +19,7 @@ import com.jcraft.jzlib.Inflater;
 import com.jcraft.jzlib.JZlib;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.List;
 
@@ -43,9 +44,7 @@ public class JZlibDecoder extends ZlibDecoder {
      * @throws DecompressionException if failed to initialize zlib
      */
     public JZlibDecoder(ZlibWrapper wrapper) {
-        if (wrapper == null) {
-            throw new NullPointerException("wrapper");
-        }
+        ObjectUtil.checkNotNull(wrapper, "wrapper");
 
         int resultCode = z.init(ZlibUtil.convertWrapperType(wrapper));
         if (resultCode != JZlib.Z_OK) {
@@ -61,11 +60,7 @@ public class JZlibDecoder extends ZlibDecoder {
      * @throws DecompressionException if failed to initialize zlib
      */
     public JZlibDecoder(byte[] dictionary) {
-        if (dictionary == null) {
-            throw new NullPointerException("dictionary");
-        }
-        this.dictionary = dictionary;
-
+        this.dictionary = ObjectUtil.checkNotNull(dictionary, "dictionary");
         int resultCode;
         resultCode = z.inflateInit(JZlib.W_ZLIB);
         if (resultCode != JZlib.Z_OK) {

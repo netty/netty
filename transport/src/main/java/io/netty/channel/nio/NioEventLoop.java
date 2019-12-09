@@ -24,6 +24,7 @@ import io.netty.channel.SelectStrategy;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.IntSupplier;
 import io.netty.util.concurrent.RejectedExecutionHandler;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReflectionUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -136,17 +137,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                  EventLoopTaskQueueFactory queueFactory) {
         super(parent, executor, false, newTaskQueue(queueFactory), newTaskQueue(queueFactory),
                 rejectedExecutionHandler);
-        if (selectorProvider == null) {
-            throw new NullPointerException("selectorProvider");
-        }
-        if (strategy == null) {
-            throw new NullPointerException("selectStrategy");
-        }
-        provider = selectorProvider;
+        this.provider = ObjectUtil.checkNotNull(selectorProvider, "selectorProvider");
+        this.selectStrategy = ObjectUtil.checkNotNull(strategy, "selectStrategy");
         final SelectorTuple selectorTuple = openSelector();
-        selector = selectorTuple.selector;
-        unwrappedSelector = selectorTuple.unwrappedSelector;
-        selectStrategy = strategy;
+        this.selector = selectorTuple.selector;
+        this.unwrappedSelector = selectorTuple.unwrappedSelector;
     }
 
     private static Queue<Runnable> newTaskQueue(
@@ -291,9 +286,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
      * be executed by this event loop when the {@link SelectableChannel} is ready.
      */
     public void register(final SelectableChannel ch, final int interestOps, final NioTask<?> task) {
-        if (ch == null) {
-            throw new NullPointerException("ch");
-        }
+        ObjectUtil.checkNotNull(ch, "ch");
         if (interestOps == 0) {
             throw new IllegalArgumentException("interestOps must be non-zero.");
         }
@@ -301,9 +294,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             throw new IllegalArgumentException(
                     "invalid interestOps: " + interestOps + "(validOps: " + ch.validOps() + ')');
         }
-        if (task == null) {
-            throw new NullPointerException("task");
-        }
+        ObjectUtil.checkNotNull(task, "task");
 
         if (isShutdown()) {
             throw new IllegalStateException("event loop shut down");

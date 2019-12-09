@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.multipart;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.handler.codec.http.HttpConstants;
+import io.netty.util.internal.ObjectUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,9 +47,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
 
     @Override
     public void setContent(ByteBuf buffer) throws IOException {
-        if (buffer == null) {
-            throw new NullPointerException("buffer");
-        }
+        ObjectUtil.checkNotNull(buffer, "buffer");
         long localsize = buffer.readableBytes();
         checkSize(localsize);
         if (definedSize > 0 && definedSize < localsize) {
@@ -65,9 +64,8 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
 
     @Override
     public void setContent(InputStream inputStream) throws IOException {
-        if (inputStream == null) {
-            throw new NullPointerException("inputStream");
-        }
+        ObjectUtil.checkNotNull(inputStream, "inputStream");
+
         ByteBuf buffer = buffer();
         byte[] bytes = new byte[4096 * 4];
         int read = inputStream.read(bytes);
@@ -114,17 +112,14 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         if (last) {
             setCompleted();
         } else {
-            if (buffer == null) {
-                throw new NullPointerException("buffer");
-            }
+            ObjectUtil.checkNotNull(buffer, "buffer");
         }
     }
 
     @Override
     public void setContent(File file) throws IOException {
-        if (file == null) {
-            throw new NullPointerException("file");
-        }
+        ObjectUtil.checkNotNull(file, "file");
+
         long newsize = file.length();
         if (newsize > Integer.MAX_VALUE) {
             throw new IllegalArgumentException("File too big to be loaded in memory");
@@ -220,9 +215,7 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
 
     @Override
     public boolean renameTo(File dest) throws IOException {
-        if (dest == null) {
-            throw new NullPointerException("dest");
-        }
+        ObjectUtil.checkNotNull(dest, "dest");
         if (byteBuf == null) {
             // empty file
             if (!dest.createNewFile()) {

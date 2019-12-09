@@ -483,9 +483,8 @@ public final class SslContextBuilder {
      * cipher suites will be used.
      */
     public SslContextBuilder ciphers(Iterable<String> ciphers, CipherSuiteFilter cipherFilter) {
-        checkNotNull(cipherFilter, "cipherFilter");
+        this.cipherFilter = checkNotNull(cipherFilter, "cipherFilter");
         this.ciphers = ciphers;
-        this.cipherFilter = cipherFilter;
         return this;
     }
 

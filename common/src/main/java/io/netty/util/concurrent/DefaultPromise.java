@@ -473,10 +473,10 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      */
     protected static void notifyListener(
             EventExecutor eventExecutor, final Future<?> future, final GenericFutureListener<?> listener) {
-        checkNotNull(eventExecutor, "eventExecutor");
-        checkNotNull(future, "future");
-        checkNotNull(listener, "listener");
-        notifyListenerWithStackOverFlowProtection(eventExecutor, future, listener);
+        notifyListenerWithStackOverFlowProtection(
+                checkNotNull(eventExecutor, "eventExecutor"),
+                checkNotNull(future, "future"),
+                checkNotNull(listener, "listener"));
     }
 
     private void notifyListeners() {

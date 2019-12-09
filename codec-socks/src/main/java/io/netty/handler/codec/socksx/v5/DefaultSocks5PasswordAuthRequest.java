@@ -16,6 +16,7 @@
 package io.netty.handler.codec.socksx.v5;
 
 import io.netty.handler.codec.DecoderResult;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -27,12 +28,8 @@ public class DefaultSocks5PasswordAuthRequest extends AbstractSocks5Message impl
     private final String password;
 
     public DefaultSocks5PasswordAuthRequest(String username, String password) {
-        if (username == null) {
-            throw new NullPointerException("username");
-        }
-        if (password == null) {
-            throw new NullPointerException("password");
-        }
+        ObjectUtil.checkNotNull(username, "username");
+        ObjectUtil.checkNotNull(password, "password");
 
         if (username.length() > 255) {
             throw new IllegalArgumentException("username: **** (expected: less than 256 chars)");

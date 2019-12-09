@@ -25,6 +25,7 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReadOnlyIterator;
 import io.netty.util.internal.ThrowableUtil;
@@ -117,13 +118,8 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
      * @param args              arguments which will passed to each {@link #newChild(Object...)} call.
      */
     protected ThreadPerChannelEventLoopGroup(int maxChannels, Executor executor, Object... args) {
-        if (maxChannels < 0) {
-            throw new IllegalArgumentException(String.format(
-                    "maxChannels: %d (expected: >= 0)", maxChannels));
-        }
-        if (executor == null) {
-            throw new NullPointerException("executor");
-        }
+        ObjectUtil.checkPositiveOrZero(maxChannels, "maxChannels");
+        ObjectUtil.checkNotNull(executor, "executor");
 
         if (args == null) {
             childArgs = EmptyArrays.EMPTY_OBJECTS;
@@ -274,9 +270,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
 
     @Override
     public ChannelFuture register(Channel channel) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
+        ObjectUtil.checkNotNull(channel, "channel");
         try {
             EventLoop l = nextChild();
             return l.register(new DefaultChannelPromise(channel, l));
@@ -298,9 +292,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
     @Deprecated
     @Override
     public ChannelFuture register(Channel channel, ChannelPromise promise) {
-        if (channel == null) {
-            throw new NullPointerException("channel");
-        }
+        ObjectUtil.checkNotNull(channel, "channel");
         try {
             return nextChild().register(channel, promise);
         } catch (Throwable t) {

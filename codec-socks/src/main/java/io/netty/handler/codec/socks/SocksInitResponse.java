@@ -16,6 +16,7 @@
 package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * An socks init response.
@@ -28,10 +29,7 @@ public final class SocksInitResponse extends SocksResponse {
 
     public SocksInitResponse(SocksAuthScheme authScheme) {
         super(SocksResponseType.INIT);
-        if (authScheme == null) {
-            throw new NullPointerException("authScheme");
-        }
-        this.authScheme = authScheme;
+        this.authScheme = ObjectUtil.checkNotNull(authScheme, "authScheme");
     }
 
     /**

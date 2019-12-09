@@ -341,9 +341,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addFirst(EventExecutorGroup executor, ChannelHandler... handlers) {
-        if (handlers == null) {
-            throw new NullPointerException("handlers");
-        }
+        ObjectUtil.checkNotNull(handlers, "handlers");
         if (handlers.length == 0 || handlers[0] == null) {
             return this;
         }
@@ -374,9 +372,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addLast(EventExecutorGroup executor, ChannelHandler... handlers) {
-        if (handlers == null) {
-            throw new NullPointerException("handlers");
-        }
+        ObjectUtil.checkNotNull(handlers, "handlers");
 
         for (ChannelHandler h: handlers) {
             if (h == null) {
@@ -714,18 +710,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelHandlerContext context(String name) {
-        if (name == null) {
-            throw new NullPointerException("name");
-        }
-
-        return context0(name);
+        return context0(ObjectUtil.checkNotNull(name, "name"));
     }
 
     @Override
     public final ChannelHandlerContext context(ChannelHandler handler) {
-        if (handler == null) {
-            throw new NullPointerException("handler");
-        }
+        ObjectUtil.checkNotNull(handler, "handler");
 
         AbstractChannelHandlerContext ctx = head.next;
         for (;;) {
@@ -744,9 +734,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelHandlerContext context(Class<? extends ChannelHandler> handlerType) {
-        if (handlerType == null) {
-            throw new NullPointerException("handlerType");
-        }
+        ObjectUtil.checkNotNull(handlerType, "handlerType");
 
         AbstractChannelHandlerContext ctx = head.next;
         for (;;) {

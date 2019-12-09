@@ -23,6 +23,7 @@ import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.DomainSocketChannelConfig;
 import io.netty.channel.unix.DomainSocketReadMode;
+import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.util.Map;
@@ -160,10 +161,7 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
 
     @Override
     public EpollDomainSocketChannelConfig setReadMode(DomainSocketReadMode mode) {
-        if (mode == null) {
-            throw new NullPointerException("mode");
-        }
-        this.mode = mode;
+        this.mode = ObjectUtil.checkNotNull(mode, "mode");
         return this;
     }
 

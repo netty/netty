@@ -18,8 +18,9 @@ package io.netty.handler.ssl.util;
 
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty.util.internal.EmptyArrays;
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import javax.net.ssl.ManagerFactoryParameters;
@@ -156,9 +157,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
      * @param fingerprints a list of SHA1 fingerprints
      */
     public FingerprintTrustManagerFactory(byte[]... fingerprints) {
-        if (fingerprints == null) {
-            throw new NullPointerException("fingerprints");
-        }
+        ObjectUtil.checkNotNull(fingerprints, "fingerprints");
 
         List<byte[]> list = new ArrayList<byte[]>(fingerprints.length);
         for (byte[] f: fingerprints) {
@@ -176,9 +175,7 @@ public final class FingerprintTrustManagerFactory extends SimpleTrustManagerFact
     }
 
     private static byte[][] toFingerprintArray(Iterable<String> fingerprints) {
-        if (fingerprints == null) {
-            throw new NullPointerException("fingerprints");
-        }
+        ObjectUtil.checkNotNull(fingerprints, "fingerprints");
 
         List<byte[]> list = new ArrayList<byte[]>();
         for (String f: fingerprints) {

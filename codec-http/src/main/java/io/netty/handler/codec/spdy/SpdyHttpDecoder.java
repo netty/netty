@@ -32,6 +32,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.spdy.SpdyHttpHeaders.Names;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.HashMap;
 import java.util.List;
@@ -101,12 +102,8 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
      */
     protected SpdyHttpDecoder(SpdyVersion version, int maxContentLength, Map<Integer,
             FullHttpMessage> messageMap, boolean validateHeaders) {
-        if (version == null) {
-            throw new NullPointerException("version");
-        }
-        checkPositive(maxContentLength, "maxContentLength");
-        spdyVersion = version.getVersion();
-        this.maxContentLength = maxContentLength;
+        spdyVersion = ObjectUtil.checkNotNull(version, "version").getVersion();
+        this.maxContentLength = checkPositive(maxContentLength, "maxContentLength");
         this.messageMap = messageMap;
         this.validateHeaders = validateHeaders;
     }

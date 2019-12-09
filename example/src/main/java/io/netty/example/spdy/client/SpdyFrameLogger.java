@@ -19,6 +19,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.spdy.SpdyFrame;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -36,12 +37,8 @@ public class SpdyFrameLogger extends ChannelDuplexHandler {
     private final InternalLogLevel level;
 
     public SpdyFrameLogger(InternalLogLevel level) {
-        if (level == null) {
-            throw new NullPointerException("level");
-        }
-
-        logger = InternalLoggerFactory.getInstance(getClass());
-        this.level = level;
+        this.level = ObjectUtil.checkNotNull(level, "level");
+        this.logger = InternalLoggerFactory.getInstance(getClass());
     }
 
     @Override

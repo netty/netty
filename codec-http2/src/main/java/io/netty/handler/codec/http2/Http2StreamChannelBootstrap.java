@@ -62,9 +62,7 @@ public final class Http2StreamChannelBootstrap {
      */
     @SuppressWarnings("unchecked")
     public <T> Http2StreamChannelBootstrap option(ChannelOption<T> option, T value) {
-        if (option == null) {
-            throw new NullPointerException("option");
-        }
+        ObjectUtil.checkNotNull(option, "option");
         if (value == null) {
             options.remove(option);
         } else {
@@ -79,9 +77,7 @@ public final class Http2StreamChannelBootstrap {
      */
     @SuppressWarnings("unchecked")
     public <T> Http2StreamChannelBootstrap attr(AttributeKey<T> key, T value) {
-        if (key == null) {
-            throw new NullPointerException("key");
-        }
+        ObjectUtil.checkNotNull(key, "key");
         if (value == null) {
             attrs.remove(key);
         } else {

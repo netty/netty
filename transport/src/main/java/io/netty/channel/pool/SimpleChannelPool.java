@@ -159,8 +159,7 @@ public class SimpleChannelPool implements ChannelPool {
 
     @Override
     public Future<Channel> acquire(final Promise<Channel> promise) {
-        checkNotNull(promise, "promise");
-        return acquireHealthyFromPoolOrNew(promise);
+        return acquireHealthyFromPoolOrNew(checkNotNull(promise, "promise"));
     }
 
     /**

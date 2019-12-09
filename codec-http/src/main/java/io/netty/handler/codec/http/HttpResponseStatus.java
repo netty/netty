@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.ObjectUtil;
 
 import static io.netty.handler.codec.http.HttpConstants.SP;
 import static io.netty.util.ByteProcessor.FIND_ASCII_SPACE;
@@ -540,10 +541,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
     private HttpResponseStatus(int code, String reasonPhrase, boolean bytes) {
         checkPositiveOrZero(code, "code");
-
-        if (reasonPhrase == null) {
-            throw new NullPointerException("reasonPhrase");
-        }
+        ObjectUtil.checkNotNull(reasonPhrase, "reasonPhrase");
 
         for (int i = 0; i < reasonPhrase.length(); i ++) {
             char c = reasonPhrase.charAt(i);

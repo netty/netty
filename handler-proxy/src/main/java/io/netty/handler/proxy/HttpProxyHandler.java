@@ -34,6 +34,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.ObjectUtil;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -86,14 +87,8 @@ public final class HttpProxyHandler extends ProxyHandler {
                             HttpHeaders headers,
                             boolean ignoreDefaultPortsInConnectHostHeader) {
         super(proxyAddress);
-        if (username == null) {
-            throw new NullPointerException("username");
-        }
-        if (password == null) {
-            throw new NullPointerException("password");
-        }
-        this.username = username;
-        this.password = password;
+        this.username = ObjectUtil.checkNotNull(username, "username");
+        this.password = ObjectUtil.checkNotNull(password, "password");
 
         ByteBuf authz = Unpooled.copiedBuffer(username + ':' + password, CharsetUtil.UTF_8);
         ByteBuf authzBase64 = Base64.encode(authz, false);

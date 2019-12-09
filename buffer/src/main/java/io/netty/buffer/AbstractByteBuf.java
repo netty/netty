@@ -21,6 +21,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -339,9 +340,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         if (endianness == order()) {
             return this;
         }
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
+        ObjectUtil.checkNotNull(endianness, "endianness");
         return newSwappedByteBuf();
     }
 
@@ -649,9 +648,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     @Override
     public ByteBuf setBytes(int index, ByteBuf src, int length) {
         checkIndex(index, length);
-        if (src == null) {
-            throw new NullPointerException("src");
-        }
+        ObjectUtil.checkNotNull(src, "src");
         if (checkBounds) {
             checkReadableBounds(src, length);
         }

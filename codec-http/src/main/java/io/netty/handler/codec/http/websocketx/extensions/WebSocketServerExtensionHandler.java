@@ -23,6 +23,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -53,9 +54,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
      *      with fallback configuration.
      */
     public WebSocketServerExtensionHandler(WebSocketServerExtensionHandshaker... extensionHandshakers) {
-        if (extensionHandshakers == null) {
-            throw new NullPointerException("extensionHandshakers");
-        }
+        ObjectUtil.checkNotNull(extensionHandshakers, "extensionHandshakers");
         if (extensionHandshakers.length == 0) {
             throw new IllegalArgumentException("extensionHandshakers must contains at least one handshaker");
         }

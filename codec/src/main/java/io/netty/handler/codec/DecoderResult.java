@@ -16,6 +16,7 @@
 package io.netty.handler.codec;
 
 import io.netty.util.Signal;
+import io.netty.util.internal.ObjectUtil;
 
 public class DecoderResult {
 
@@ -26,19 +27,13 @@ public class DecoderResult {
     public static final DecoderResult SUCCESS = new DecoderResult(SIGNAL_SUCCESS);
 
     public static DecoderResult failure(Throwable cause) {
-        if (cause == null) {
-            throw new NullPointerException("cause");
-        }
-        return new DecoderResult(cause);
+        return new DecoderResult(ObjectUtil.checkNotNull(cause, "cause"));
     }
 
     private final Throwable cause;
 
     protected DecoderResult(Throwable cause) {
-        if (cause == null) {
-            throw new NullPointerException("cause");
-        }
-        this.cause = cause;
+        this.cause = ObjectUtil.checkNotNull(cause, "cause");
     }
 
     public boolean isFinished() {

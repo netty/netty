@@ -18,6 +18,7 @@ package io.netty.handler.codec.spdy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -44,10 +45,8 @@ public class DefaultSpdyDataFrame extends DefaultSpdyStreamFrame implements Spdy
      */
     public DefaultSpdyDataFrame(int streamId, ByteBuf data) {
         super(streamId);
-        if (data == null) {
-            throw new NullPointerException("data");
-        }
-        this.data = validate(data);
+        this.data = validate(
+                ObjectUtil.checkNotNull(data, "data"));
     }
 
     private static ByteBuf validate(ByteBuf data) {

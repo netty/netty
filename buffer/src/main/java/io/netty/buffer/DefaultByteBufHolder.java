@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -27,10 +28,7 @@ public class DefaultByteBufHolder implements ByteBufHolder {
     private final ByteBuf data;
 
     public DefaultByteBufHolder(ByteBuf data) {
-        if (data == null) {
-            throw new NullPointerException("data");
-        }
-        this.data = data;
+        this.data = ObjectUtil.checkNotNull(data, "data");
     }
 
     @Override

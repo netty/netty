@@ -19,12 +19,13 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.Arrays;
 import java.util.List;
 
-import static io.netty.util.internal.ObjectUtil.*;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * A composite {@link SimpleNameResolver} that resolves a host name against a sequence of {@link NameResolver}s.
@@ -45,9 +46,7 @@ public final class CompositeNameResolver<T> extends SimpleNameResolver<T> {
         super(executor);
         checkNotNull(resolvers, "resolvers");
         for (int i = 0; i < resolvers.length; i++) {
-            if (resolvers[i] == null) {
-                throw new NullPointerException("resolvers[" + i + ']');
-            }
+            ObjectUtil.checkNotNull(resolvers[i], "resolvers[" + i + ']');
         }
         if (resolvers.length < 2) {
             throw new IllegalArgumentException("resolvers: " + Arrays.asList(resolvers) +
