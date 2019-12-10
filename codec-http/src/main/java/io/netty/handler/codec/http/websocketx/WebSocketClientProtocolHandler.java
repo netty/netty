@@ -22,9 +22,9 @@ import io.netty.handler.codec.http.HttpHeaders;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Objects;
 
 import static io.netty.handler.codec.http.websocketx.WebSocketClientProtocolConfig.DEFAULT;
-import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * This handler does all the heavy lifting for you to run a websocket client.
@@ -78,7 +78,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      *            Client protocol configuration.
      */
     public WebSocketClientProtocolHandler(WebSocketClientProtocolConfig clientConfig) {
-        super(checkNotNull(clientConfig, "clientConfig").dropPongFrames());
+        super(Objects.requireNonNull(clientConfig, "clientConfig").dropPongFrames());
         this.handshaker = WebSocketClientHandshakerFactory.newHandshaker(
             clientConfig.webSocketUri(),
             clientConfig.version(),

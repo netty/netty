@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import java.util.Objects;
 
 /**
  * WebSocket status codes specified in RFC-6455.
@@ -222,7 +222,7 @@ public final class WebSocketCloseStatus implements Comparable<WebSocketCloseStat
                 "WebSocket close status code does NOT comply with RFC-6455: " + statusCode);
         }
         this.statusCode = statusCode;
-        this.reasonText = checkNotNull(reasonText, "reasonText");
+        this.reasonText = Objects.requireNonNull(reasonText, "reasonText");
     }
 
     public int code() {

@@ -35,13 +35,13 @@ import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -112,7 +112,7 @@ public abstract class WebSocketServerHandshaker {
         } else {
             this.subprotocols = EmptyArrays.EMPTY_STRINGS;
         }
-        this.decoderConfig = ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
+        this.decoderConfig = Objects.requireNonNull(decoderConfig, "decoderConfig");
     }
 
     /**

@@ -27,6 +27,8 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 /**
  * Auto-detects the version of the Web Socket protocol in use and creates a new proper
  * {@link WebSocketServerHandshaker}.
@@ -117,7 +119,7 @@ public class WebSocketServerHandshakerFactory {
             String webSocketURL, String subprotocols, WebSocketDecoderConfig decoderConfig) {
         this.webSocketURL = webSocketURL;
         this.subprotocols = subprotocols;
-        this.decoderConfig = ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
+        this.decoderConfig = Objects.requireNonNull(decoderConfig, "decoderConfig");
     }
 
     /**

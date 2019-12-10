@@ -31,13 +31,13 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpUtil.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
-import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * Handles the HTTP handshake (the HTTP Upgrade request) for {@link WebSocketServerProtocolHandler}.
@@ -49,7 +49,7 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelInboundHandler {
     private ChannelPromise handshakePromise;
 
     WebSocketServerProtocolHandshakeHandler(WebSocketServerProtocolConfig serverConfig) {
-        this.serverConfig = checkNotNull(serverConfig, "serverConfig");
+        this.serverConfig = Objects.requireNonNull(serverConfig, "serverConfig");
     }
 
     @Override

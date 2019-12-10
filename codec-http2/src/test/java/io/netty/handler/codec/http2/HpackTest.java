@@ -41,6 +41,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Objects;
 
 @RunWith(Parameterized.class)
 public class HpackTest {
@@ -57,9 +58,7 @@ public class HpackTest {
     @Parameters(name = "{0}")
     public static Collection<Object[]> data() {
         File[] files = ResourcesUtil.getFile(HpackTest.class, TEST_DIR).listFiles();
-        if (files == null) {
-            throw new NullPointerException("files");
-        }
+        Objects.requireNonNull(files, "files");
 
         ArrayList<Object[]> data = new ArrayList<>();
         for (File file : files) {

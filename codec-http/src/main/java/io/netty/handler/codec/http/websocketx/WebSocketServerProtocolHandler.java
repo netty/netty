@@ -30,10 +30,10 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.AttributeKey;
 
 import java.util.List;
+import java.util.Objects;
 
 import static io.netty.handler.codec.http.HttpVersion.*;
 import static io.netty.handler.codec.http.websocketx.WebSocketServerProtocolConfig.DEFAULT;
-import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * This handler does all the heavy lifting for you to run a websocket server.
@@ -112,7 +112,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
      *            Server protocol configuration.
      */
     public WebSocketServerProtocolHandler(WebSocketServerProtocolConfig serverConfig) {
-        super(checkNotNull(serverConfig, "serverConfig").dropPongFrames());
+        super(Objects.requireNonNull(serverConfig, "serverConfig").dropPongFrames());
         this.serverConfig = serverConfig;
     }
 

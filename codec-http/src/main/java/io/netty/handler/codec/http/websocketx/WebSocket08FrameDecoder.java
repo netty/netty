@@ -59,12 +59,12 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteOrder;
 import java.util.List;
+import java.util.Objects;
 
 import static io.netty.buffer.ByteBufUtil.readBytes;
 
@@ -154,7 +154,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
      *            Frames decoder configuration.
      */
     public WebSocket08FrameDecoder(WebSocketDecoderConfig decoderConfig) {
-        this.config = ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
+        this.config = Objects.requireNonNull(decoderConfig, "decoderConfig");
     }
 
     @Override

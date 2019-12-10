@@ -18,6 +18,7 @@ package io.netty.util.internal;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;
 
+import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
@@ -49,8 +50,8 @@ public final class ThreadExecutorMap {
      * when called from within the {@link Runnable} during execution.
      */
     public static Executor apply(final Executor executor, final EventExecutor eventExecutor) {
-        ObjectUtil.checkNotNull(executor, "executor");
-        ObjectUtil.checkNotNull(eventExecutor, "eventExecutor");
+        Objects.requireNonNull(executor, "executor");
+        Objects.requireNonNull(eventExecutor, "eventExecutor");
         return new Executor() {
             @Override
             public void execute(final Runnable command) {
@@ -64,8 +65,8 @@ public final class ThreadExecutorMap {
      * when called from within the {@link Runnable} during execution.
      */
     public static Runnable apply(final Runnable command, final EventExecutor eventExecutor) {
-        ObjectUtil.checkNotNull(command, "command");
-        ObjectUtil.checkNotNull(eventExecutor, "eventExecutor");
+        Objects.requireNonNull(command, "command");
+        Objects.requireNonNull(eventExecutor, "eventExecutor");
         return new Runnable() {
             @Override
             public void run() {
@@ -84,8 +85,8 @@ public final class ThreadExecutorMap {
      * when called from within the {@link Runnable} during execution.
      */
     public static ThreadFactory apply(final ThreadFactory threadFactory, final EventExecutor eventExecutor) {
-        ObjectUtil.checkNotNull(threadFactory, "command");
-        ObjectUtil.checkNotNull(eventExecutor, "eventExecutor");
+        Objects.requireNonNull(threadFactory, "command");
+        Objects.requireNonNull(eventExecutor, "eventExecutor");
         return new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
