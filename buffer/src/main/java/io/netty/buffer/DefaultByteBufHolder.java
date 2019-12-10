@@ -135,13 +135,24 @@ public class DefaultByteBufHolder implements ByteBufHolder {
         return StringUtil.simpleClassName(this) + '(' + contentToString() + ')';
     }
 
+    /**
+     * This implementation of the {@code equals} operation is restricted to
+     * work only with instances of the same class. The reason for that is that
+     * Netty library already has a number of classes that extend {@link DefaultByteBufHolder} and
+     * override {@code equals} method with an additional comparison logic and we
+     * need the symmetric property of the {@code equals} operation to be preserved.
+     *
+     * @param   o   the reference object with which to compare.
+     * @return  {@code true} if this object is the same as the obj
+     *          argument; {@code false} otherwise.
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
         }
-        if (o instanceof ByteBufHolder) {
-            return data.equals(((ByteBufHolder) o).content());
+        if (o != null && getClass() == o.getClass()) {
+            return data.equals(((DefaultByteBufHolder) o).data);
         }
         return false;
     }
