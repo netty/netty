@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http.cookie;
 
+import java.util.List;
 import org.junit.Test;
 
 import java.util.Iterator;
@@ -40,6 +41,26 @@ public class ServerCookieDecoderTest {
         String c3 = "myCookie3=myValue3;";
 
         Set<Cookie> cookies = ServerCookieDecoder.STRICT.decode(c1 + c2 + c3);
+        assertEquals(3, cookies.size());
+        Iterator<Cookie> it = cookies.iterator();
+        Cookie cookie = it.next();
+        assertNotNull(cookie);
+        assertEquals("myValue", cookie.value());
+        cookie = it.next();
+        assertNotNull(cookie);
+        assertEquals("myValue2", cookie.value());
+        cookie = it.next();
+        assertNotNull(cookie);
+        assertEquals("myValue3", cookie.value());
+    }
+
+    @Test
+    public void testDecodingAllMultipleCookies() {
+        String c1 = "myCookie=myValue;";
+        String c2 = "myCookie=myValue2;";
+        String c3 = "myCookie=myValue3;";
+
+        List<Cookie> cookies = ServerCookieDecoder.STRICT.decodeAll(c1 + c2 + c3);
         assertEquals(3, cookies.size());
         Iterator<Cookie> it = cookies.iterator();
         Cookie cookie = it.next();

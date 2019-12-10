@@ -17,7 +17,10 @@ package io.netty.handler.codec.http.cookie;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -57,18 +60,39 @@ public final class ServerCookieDecoder extends CookieDecoder {
     }
 
     /**
+     * Decodes the specified Set-Cookie HTTP header value into a {@link Cookie}.  Unlike {@link #decode(String)}, this
+     * includes all cookie values present, even if they have the same name.
+     *
+     * @return the decoded {@link Cookie}
+     */
+    public List<Cookie> decodeAll(String header) {
+        List<Cookie> cookies = new ArrayList<Cookie>();
+        decode(cookies, header);
+        return Collections.unmodifiableList(cookies);
+    }
+
+    /**
      * Decodes the specified Set-Cookie HTTP header value into a {@link Cookie}.
      *
      * @return the decoded {@link Cookie}
      */
     public Set<Cookie> decode(String header) {
+        Set<Cookie> cookies = new TreeSet<Cookie>();
+        decode(cookies, header);
+        return cookies;
+    }
+
+    /**
+     * Decodes the specified Set-Cookie HTTP header value into a {@link Cookie}.
+     *
+     * @return the decoded {@link Cookie}
+     */
+    private void decode(Collection<? super Cookie> cookies, String header) {
         final int headerLen = checkNotNull(header, "header").length();
 
         if (headerLen == 0) {
-            return Collections.emptySet();
+            return;
         }
-
-        Set<Cookie> cookies = new TreeSet<Cookie>();
 
         int i = 0;
 
@@ -149,7 +173,5 @@ public final class ServerCookieDecoder extends CookieDecoder {
                 cookies.add(cookie);
             }
         }
-
-        return cookies;
     }
 }
