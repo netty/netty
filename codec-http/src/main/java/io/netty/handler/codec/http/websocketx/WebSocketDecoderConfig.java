@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.util.internal.ObjectUtil;
+import java.util.Objects;
 
 /**
  * Frames decoder configuration.
@@ -117,7 +117,7 @@ public final class WebSocketDecoderConfig {
         private boolean withUTF8Validator;
 
         private Builder(WebSocketDecoderConfig decoderConfig) {
-            ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
+            Objects.requireNonNull(decoderConfig, "decoderConfig");
             maxFramePayloadLength = decoderConfig.maxFramePayloadLength();
             expectMaskedFrames = decoderConfig.expectMaskedFrames();
             allowMaskMismatch = decoderConfig.allowMaskMismatch();

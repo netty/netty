@@ -26,8 +26,7 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensio
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
-
-import static io.netty.util.internal.ObjectUtil.*;
+import java.util.Objects;
 
 /**
  * <a href="http://tools.ietf.org/html/draft-ietf-hybi-permessage-compression-18">permessage-deflate</a>
@@ -118,7 +117,7 @@ public final class PerMessageDeflateServerExtensionHandshaker implements WebSock
         this.preferredClientWindowSize = preferredClientWindowSize;
         this.allowServerNoContext = allowServerNoContext;
         this.preferredClientNoContext = preferredClientNoContext;
-        this.extensionFilterProvider = checkNotNull(extensionFilterProvider, "extensionFilterProvider");
+        this.extensionFilterProvider = Objects.requireNonNull(extensionFilterProvider, "extensionFilterProvider");
     }
 
     @Override

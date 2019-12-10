@@ -22,9 +22,9 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ScheduledFuture;
-import io.netty.util.internal.ObjectUtil;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -36,7 +36,7 @@ final class WebSocketCloseFrameHandler extends ChannelOutboundHandlerAdapter {
     private ChannelPromise closeSent;
 
     WebSocketCloseFrameHandler(WebSocketCloseStatus closeStatus, long forceCloseTimeoutMillis) {
-        this.closeStatus = ObjectUtil.checkNotNull(closeStatus, "closeStatus");
+        this.closeStatus = Objects.requireNonNull(closeStatus, "closeStatus");
         this.forceCloseTimeoutMillis = forceCloseTimeoutMillis;
     }
 

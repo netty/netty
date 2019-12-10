@@ -27,6 +27,7 @@ import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
@@ -57,10 +58,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     private final ByteOrder order;
 
     protected AbstractCompositeByteBufTest(ByteOrder order) {
-        if (order == null) {
-            throw new NullPointerException("order");
-        }
-        this.order = order;
+        this.order = Objects.requireNonNull(order, "order");
     }
 
     @Override

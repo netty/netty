@@ -18,9 +18,9 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
-import io.netty.util.internal.ObjectUtil;
 
 import java.net.URI;
+import java.util.Objects;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 
@@ -181,7 +181,7 @@ public final class WebSocketClientProtocolConfig {
         private boolean absoluteUpgradeUrl;
 
         private Builder(WebSocketClientProtocolConfig clientConfig) {
-            ObjectUtil.checkNotNull(clientConfig, "clientConfig");
+            Objects.requireNonNull(clientConfig, "clientConfig");
 
             webSocketUri = clientConfig.webSocketUri();
             subprotocol = clientConfig.subprotocol();

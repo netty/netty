@@ -19,9 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.util.internal.ObjectUtil;
 
 import java.util.List;
+import java.util.Objects;
 
 import static io.netty.buffer.ByteBufUtil.readBytes;
 
@@ -61,7 +61,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> implements W
      *            Frames decoder configuration.
      */
     public WebSocket00FrameDecoder(WebSocketDecoderConfig decoderConfig) {
-        this.maxFrameSize = ObjectUtil.checkNotNull(decoderConfig, "decoderConfig").maxFramePayloadLength();
+        this.maxFrameSize = Objects.requireNonNull(decoderConfig, "decoderConfig").maxFramePayloadLength();
     }
 
     @Override

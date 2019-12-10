@@ -23,8 +23,7 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensio
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandshaker;
 
 import java.util.Collections;
-
-import static io.netty.util.internal.ObjectUtil.*;
+import java.util.Objects;
 
 /**
  * <a href="https://tools.ietf.org/id/draft-tyoshino-hybi-websocket-perframe-deflate-06.txt">perframe-deflate</a>
@@ -70,7 +69,7 @@ public final class DeflateFrameServerExtensionHandshaker implements WebSocketSer
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
         }
         this.compressionLevel = compressionLevel;
-        this.extensionFilterProvider = checkNotNull(extensionFilterProvider, "extensionFilterProvider");
+        this.extensionFilterProvider = Objects.requireNonNull(extensionFilterProvider, "extensionFilterProvider");
     }
 
     @Override

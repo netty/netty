@@ -17,9 +17,9 @@
 package io.netty.handler.ssl;
 
 import io.netty.handler.ssl.util.SimpleKeyManagerFactory;
-import io.netty.util.internal.ObjectUtil;
 
 import java.security.KeyStore;
+import java.util.Objects;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.ManagerFactoryParameters;
 
@@ -27,7 +27,7 @@ final class KeyManagerFactoryWrapper extends SimpleKeyManagerFactory {
     private final KeyManager km;
 
     KeyManagerFactoryWrapper(KeyManager km) {
-        this.km = ObjectUtil.checkNotNull(km, "km");
+        this.km = Objects.requireNonNull(km, "km");
     }
 
     @Override

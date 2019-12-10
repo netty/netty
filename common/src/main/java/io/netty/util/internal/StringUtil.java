@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
@@ -607,8 +608,8 @@ public final class StringUtil {
      * @return a char sequence joined by a given separator.
      */
     public static CharSequence join(CharSequence separator, Iterable<? extends CharSequence> elements) {
-        ObjectUtil.checkNotNull(separator, "separator");
-        ObjectUtil.checkNotNull(elements, "elements");
+        Objects.requireNonNull(separator, "separator");
+        Objects.requireNonNull(elements, "elements");
 
         Iterator<? extends CharSequence> iterator = elements.iterator();
         if (!iterator.hasNext()) {
