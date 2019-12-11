@@ -54,7 +54,7 @@ import static java.lang.Math.min;
 public final class ChannelOutboundBuffer {
     // Assuming a 64-bit JVM:
     //  - 16 bytes object header
-    //  - 8 reference fields
+    //  - 6 reference fields
     //  - 2 long fields
     //  - 2 int fields
     //  - 1 boolean field
