@@ -16,11 +16,11 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBufAllocator;
+
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
-
 
 import static io.netty.channel.unix.Limits.SSIZE_MAX;
 
