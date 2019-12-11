@@ -15,6 +15,10 @@
  */
 package io.netty.channel.pool;
 
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReadOnlyIterator;
 
@@ -51,6 +55,9 @@ public abstract class AbstractChannelPoolMap<K, P extends ChannelPool>
      * Remove the {@link ChannelPool} from this {@link AbstractChannelPoolMap}. Returns {@code true} if removed,
      * {@code false} otherwise.
      *
+     * If the removed pool extends {@link SimpleChannelPool} it will be closed asynchronously to avoid blocking in
+     * this method.
+     *
      * Please note that {@code null} keys are not allowed.
      */
     public final boolean remove(K key) {
@@ -63,16 +70,47 @@ public abstract class AbstractChannelPoolMap<K, P extends ChannelPool>
     }
 
     /**
+     * Remove the {@link ChannelPool} from this {@link AbstractChannelPoolMap}. Returns a future that comletes with a
+     * {@code true} result if the pool has been removed by this call, otherwise the result is {@code false}.
+     *
+     * If the removed pool extends {@link SimpleChannelPool} it will be closed asynchronously to avoid blocking in
+     * this method. The returned future will be completed once this asynchronous pool close operation completes.
+     */
+    private Future<Boolean> removeAsyncIfSupported(K key) {
+        P pool =  map.remove(checkNotNull(key, "key"));
+        if (pool != null) {
+            final Promise<Boolean> removePromise = GlobalEventExecutor.INSTANCE.newPromise();
+            poolCloseAsyncIfSupported(pool).addListener(new GenericFutureListener<Future<? super Void>>() {
+                @Override
+                public void operationComplete(Future<? super Void> future) throws Exception {
+                    if (future.isSuccess()) {
+                        removePromise.setSuccess(Boolean.TRUE);
+                    } else {
+                        removePromise.setFailure(future.cause());
+                    }
+                }
+            });
+            return removePromise;
+        }
+        return GlobalEventExecutor.INSTANCE.newSucceededFuture(Boolean.FALSE);
+    }
+
+    /**
      * If the pool implementation supports asynchronous close, then use it to avoid a blocking close call in case
      * the ChannelPoolMap operations are called from an EventLoop.
      *
      * @param pool the ChannelPool to be closed
      */
-    private static void poolCloseAsyncIfSupported(ChannelPool pool) {
+    private static Future<Void> poolCloseAsyncIfSupported(ChannelPool pool) {
         if (pool instanceof SimpleChannelPool) {
-            ((SimpleChannelPool) pool).closeAsync();
+            return ((SimpleChannelPool) pool).closeAsync();
         } else {
-            pool.close();
+            try {
+                pool.close();
+                return GlobalEventExecutor.INSTANCE.newSucceededFuture(null);
+            } catch (Exception e) {
+                return GlobalEventExecutor.INSTANCE.newFailedFuture(e);
+            }
         }
     }
 
@@ -108,7 +146,8 @@ public abstract class AbstractChannelPoolMap<K, P extends ChannelPool>
     @Override
     public final void close() {
         for (K key: map.keySet()) {
-            remove(key);
+            // Wait for remove to finish to ensure that resources are released before returning from close
+            removeAsyncIfSupported(key).syncUninterruptibly();
         }
     }
 }
