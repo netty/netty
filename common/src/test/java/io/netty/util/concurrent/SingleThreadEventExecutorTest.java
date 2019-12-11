@@ -20,14 +20,17 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class SingleThreadEventExecutorTest {
@@ -176,6 +179,81 @@ public class SingleThreadEventExecutorTest {
             promise.syncUninterruptibly();
         } finally {
             executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    @Test
+    public void testTaskAddedAfterShutdownNotAbandoned() throws Exception {
+
+        // A queue that doesn't support remove, so tasks once added cannot be rejected anymore
+        LinkedBlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<Runnable>() {
+            @Override
+            public boolean remove(Object o) {
+                throw new UnsupportedOperationException();
+            }
+        };
+
+        final Runnable dummyTask = new Runnable() {
+            @Override
+            public void run() {
+            }
+        };
+
+        final LinkedBlockingQueue<Future<?>> submittedTasks = new LinkedBlockingQueue<Future<?>>();
+        final AtomicInteger attempts = new AtomicInteger();
+        final AtomicInteger rejects = new AtomicInteger();
+
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        final SingleThreadEventExecutor executor = new SingleThreadEventExecutor(executorService, Integer.MAX_VALUE,
+                RejectedExecutionHandlers.reject()) {
+
+            @Override
+            protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
+                return taskQueue;
+            }
+
+            @Override
+            protected void run() {
+                while (!confirmShutdown()) {
+                    Runnable task = takeTask();
+                    if (task != null) {
+                        task.run();
+                    }
+                }
+            }
+
+            @Override
+            protected boolean confirmShutdown0() {
+                boolean result = super.confirmShutdown0();
+                // After shutdown is confirmed, scheduled one more task and record it
+                if (result) {
+                    attempts.incrementAndGet();
+                    try {
+                        submittedTasks.add(submit(dummyTask));
+                    } catch (RejectedExecutionException e) {
+                        // ignore, tasks are either accepted or rejected
+                        rejects.incrementAndGet();
+                    }
+                }
+                return result;
+            }
+        };
+
+        // Start the loop
+        executor.submit(dummyTask).sync();
+
+        // Shutdown without any quiet period
+        executor.shutdownGracefully(0, 100, TimeUnit.MILLISECONDS).sync();
+
+        // Ensure there are no user-tasks left.
+        Assert.assertEquals(0, executor.drainTasks());
+
+        // Verify that queue is empty and all attempts either succeeded or were rejected
+        Assert.assertTrue(taskQueue.isEmpty());
+        Assert.assertTrue(attempts.get() > 0);
+        Assert.assertEquals(attempts.get(), submittedTasks.size() + rejects.get());
+        for (Future<?> f : submittedTasks) {
+            Assert.assertTrue(f.isSuccess());
         }
     }
 }
