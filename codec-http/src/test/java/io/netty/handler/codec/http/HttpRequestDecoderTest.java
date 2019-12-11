@@ -345,7 +345,71 @@ public class HttpRequestDecoderTest {
 
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
         HttpRequest request = channel.readInbound();
-        System.err.println(request.headers().names().toString());
+        assertTrue(request.decoderResult().isFailure());
+        assertTrue(request.decoderResult().cause() instanceof IllegalArgumentException);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testMultipleContentLengthHeaders() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        String requestStr = "GET /some/path HTTP/1.1\r\n" +
+                "Content-Length: 1\r\n" +
+                "Content-Length: 0\r\n\r\n" +
+                "b";
+
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isFailure());
+        assertTrue(request.decoderResult().cause() instanceof IllegalArgumentException);
+        assertFalse(channel.finish());
+    }
+
+
+    @Test
+    public void testContentLengthHeaderWithCommaValue() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        String requestStr = "GET /some/path HTTP/1.1\r\n" +
+                "Content-Length: 1,1\r\n\r\n" +
+                "b";
+
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isFailure());
+        assertTrue(request.decoderResult().cause() instanceof IllegalArgumentException);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testMultipleContentLengthHeadersWithFolding() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        String requestStr = "POST / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Connection: close\r\n" +
+                "Content-Length: 5\r\n" +
+                "Content-Length:\r\n" +
+                "\t6\r\n\r\n" +
+                "123456";
+
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isFailure());
+        assertTrue(request.decoderResult().cause() instanceof IllegalArgumentException);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testContentLengthHeaderAndChunked() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        String requestStr = "POST / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Connection: close\r\n" +
+                "Content-Length: 5\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "0\r\n\r\n";
+
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
         assertTrue(request.decoderResult().isFailure());
         assertTrue(request.decoderResult().cause() instanceof IllegalArgumentException);
         assertFalse(channel.finish());
