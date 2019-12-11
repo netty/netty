@@ -17,19 +17,31 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
 
 import java.util.zip.Adler32;
 import java.util.zip.Checksum;
 
-import static io.netty.handler.codec.compression.FastLz.*;
+import static io.netty.handler.codec.compression.FastLz.BLOCK_TYPE_COMPRESSED;
+import static io.netty.handler.codec.compression.FastLz.BLOCK_TYPE_NON_COMPRESSED;
+import static io.netty.handler.codec.compression.FastLz.BLOCK_WITHOUT_CHECKSUM;
+import static io.netty.handler.codec.compression.FastLz.BLOCK_WITH_CHECKSUM;
+import static io.netty.handler.codec.compression.FastLz.CHECKSUM_OFFSET;
+import static io.netty.handler.codec.compression.FastLz.LEVEL_1;
+import static io.netty.handler.codec.compression.FastLz.LEVEL_2;
+import static io.netty.handler.codec.compression.FastLz.LEVEL_AUTO;
+import static io.netty.handler.codec.compression.FastLz.MAGIC_NUMBER;
+import static io.netty.handler.codec.compression.FastLz.MAX_CHUNK_LENGTH;
+import static io.netty.handler.codec.compression.FastLz.MIN_LENGTH_TO_COMPRESSION;
+import static io.netty.handler.codec.compression.FastLz.OPTIONS_OFFSET;
+import static io.netty.handler.codec.compression.FastLz.calculateOutputBufferLength;
+import static io.netty.handler.codec.compression.FastLz.compress;
 
 /**
  * Compresses a {@link ByteBuf} using the FastLZ algorithm.
  *
  * See <a href="https://github.com/netty/netty/issues/2750">FastLZ format</a>.
  */
-public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
+public class FastLzFrameEncoder extends ThresholdCompressionEncoder {
     /**
      * Compression level.
      */
@@ -45,6 +57,16 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      */
     public FastLzFrameEncoder() {
         this(LEVEL_AUTO, null);
+    }
+
+    /**
+     * Creates a FastLZ encoder without checksum calculator and with auto detection of compression level.
+     *
+     * @param maxThreshold max threshold for compression.
+     * @param minThreshold min threshold for compression.
+     */
+    public FastLzFrameEncoder(int minThreshold, int maxThreshold) {
+        this(LEVEL_AUTO, null, minThreshold, maxThreshold);
     }
 
     /**
@@ -85,7 +107,24 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      *        You may set {@code null} if you don't want to validate checksum of each block.
      */
     public FastLzFrameEncoder(int level, Checksum checksum) {
-        super(false);
+        this(level, checksum, NOT_LIMIT, NOT_LIMIT);
+    }
+
+    /**
+     * Creates a FastLZ encoder with specified compression level and checksum calculator.
+     *
+     * @param level supports only these values:
+     *        0 - Encoder will choose level automatically depending on the length of the input buffer.
+     *        1 - Level 1 is the fastest compression and generally useful for short data.
+     *        2 - Level 2 is slightly slower but it gives better compression ratio.
+     * @param checksum
+     *        the {@link Checksum} instance to use to check data for integrity.
+     *        You may set {@code null} if you don't want to validate checksum of each block.
+     * @param minThreshold min threshold for compression.
+     * @param maxThreshold max threshold for compression.
+     */
+    public FastLzFrameEncoder(int level, Checksum checksum, int minThreshold, int maxThreshold) {
+        super(false, minThreshold, maxThreshold);
         if (level != LEVEL_AUTO && level != LEVEL_1 && level != LEVEL_2) {
             throw new IllegalArgumentException(String.format(
                     "level: %d (expected: %d or %d or %d)", level, LEVEL_AUTO, LEVEL_1, LEVEL_2));
@@ -95,7 +134,7 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+    protected void doEncode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out, int readableBytes) {
         final Checksum checksum = this.checksum;
 
         for (;;) {
@@ -103,7 +142,7 @@ public class FastLzFrameEncoder extends MessageToByteEncoder<ByteBuf> {
                 return;
             }
             final int idx = in.readerIndex();
-            final int length = Math.min(in.readableBytes(), MAX_CHUNK_LENGTH);
+            final int length = Math.min(readableBytes, MAX_CHUNK_LENGTH);
 
             final int outputIdx = out.writerIndex();
             out.setMedium(outputIdx, MAGIC_NUMBER);

@@ -22,19 +22,23 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseNotifier;
-import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.concurrent.EventExecutor;
 
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.handler.codec.compression.Bzip2Constants.*;
+import static io.netty.handler.codec.compression.Bzip2Constants.BASE_BLOCK_SIZE;
+import static io.netty.handler.codec.compression.Bzip2Constants.END_OF_STREAM_MAGIC_1;
+import static io.netty.handler.codec.compression.Bzip2Constants.END_OF_STREAM_MAGIC_2;
+import static io.netty.handler.codec.compression.Bzip2Constants.MAGIC_NUMBER;
+import static io.netty.handler.codec.compression.Bzip2Constants.MAX_BLOCK_SIZE;
+import static io.netty.handler.codec.compression.Bzip2Constants.MIN_BLOCK_SIZE;
 
 /**
  * Compresses a {@link ByteBuf} using the Bzip2 algorithm.
  *
  * See <a href="http://en.wikipedia.org/wiki/Bzip2">Bzip2</a>.
  */
-public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
+public class Bzip2Encoder extends ThresholdCompressionEncoder {
     /**
      * Current state of stream.
      */
@@ -84,14 +88,28 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
         this(MAX_BLOCK_SIZE);
     }
 
+    public Bzip2Encoder(int minThreshold, int maxThreshold) {
+        this(MAX_BLOCK_SIZE, minThreshold, maxThreshold);
+    }
+
+    /**
+     * Creates a new bzip2 encoder with the specified {@code blockSizeMultiplier}.
+     */
+    public Bzip2Encoder(final int blockSizeMultiplier) {
+        this(blockSizeMultiplier, NOT_LIMIT, NOT_LIMIT);
+    }
+
     /**
      * Creates a new bzip2 encoder with the specified {@code blockSizeMultiplier}.
      * @param blockSizeMultiplier
      *        The Bzip2 block size as a multiple of 100,000 bytes (minimum {@code 1}, maximum {@code 9}).
      *        Larger block sizes require more memory for both compression and decompression,
      *        but give better compression ratios. {@code 9} will usually be the best value to use.
+     * @param maxThreshold max threshold for compression.
+     * @param minThreshold min threshold for compression.
      */
-    public Bzip2Encoder(final int blockSizeMultiplier) {
+    public Bzip2Encoder(final int blockSizeMultiplier, int minThreshold, int maxThreshold) {
+        super(true, minThreshold, maxThreshold);
         if (blockSizeMultiplier < MIN_BLOCK_SIZE || blockSizeMultiplier > MAX_BLOCK_SIZE) {
             throw new IllegalArgumentException(
                     "blockSizeMultiplier: " + blockSizeMultiplier + " (expected: 1-9)");
@@ -100,7 +118,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+    protected void doEncode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out, final int readableBytes) {
         if (finished) {
             out.writeBytes(in);
             return;
@@ -123,7 +141,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
                         return;
                     }
                     Bzip2BlockCompressor blockCompressor = this.blockCompressor;
-                    final int length = Math.min(in.readableBytes(), blockCompressor.availableSize());
+                    final int length = Math.min(readableBytes, blockCompressor.availableSize());
                     final int bytesWritten = blockCompressor.write(in, in.readerIndex(), length);
                     in.skipBytes(bytesWritten);
                     if (!blockCompressor.isFull()) {

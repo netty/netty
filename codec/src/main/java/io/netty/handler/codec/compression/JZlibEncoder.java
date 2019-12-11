@@ -51,6 +51,10 @@ public class JZlibEncoder extends ZlibEncoder {
         this(6);
     }
 
+    public JZlibEncoder(int minThreshold, int maxThreshold) {
+        this(ZlibWrapper.ZLIB, 6, 15, 8, minThreshold, maxThreshold);
+    }
+
     /**
      * Creates a new zlib encoder with the specified {@code compressionLevel},
      * default window bits ({@code 15}), default memory level ({@code 8}),
@@ -117,11 +121,46 @@ public class JZlibEncoder extends ZlibEncoder {
      * @throws CompressionException if failed to initialize zlib
      */
     public JZlibEncoder(ZlibWrapper wrapper, int compressionLevel, int windowBits, int memLevel) {
+        this(wrapper, compressionLevel, windowBits, memLevel, NOT_LIMIT, NOT_LIMIT);
+    }
+
+    /**
+     * Creates a new zlib encoder with the specified {@code compressionLevel},
+     * the specified {@code windowBits}, the specified {@code memLevel}, and
+     * the specified wrapper.
+     *
+     * @param compressionLevel
+     *        {@code 1} yields the fastest compression and {@code 9} yields the
+     *        best compression.  {@code 0} means no compression.  The default
+     *        compression level is {@code 6}.
+     * @param windowBits
+     *        The base two logarithm of the size of the history buffer.  The
+     *        value should be in the range {@code 9} to {@code 15} inclusive.
+     *        Larger values result in better compression at the expense of
+     *        memory usage.  The default value is {@code 15}.
+     * @param memLevel
+     *        How much memory should be allocated for the internal compression
+     *        state.  {@code 1} uses minimum memory and {@code 9} uses maximum
+     *        memory.  Larger values result in better and faster compression
+     *        at the expense of memory usage.  The default value is {@code 8}
+     * @param minThreshold min threshold for compression.
+     * @param maxThreshold max threshold for compression.
+     *
+     * @throws CompressionException if failed to initialize zlib
+     */
+    public JZlibEncoder(ZlibWrapper wrapper,
+                        int compressionLevel,
+                        int windowBits,
+                        int memLevel,
+                        int minThreshold,
+                        int maxThreshold) {
+
+        super(minThreshold, maxThreshold);
 
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel +
-                    " (expected: 0-9)");
+                            " (expected: 0-9)");
         }
         if (windowBits < 9 || windowBits > 15) {
             throw new IllegalArgumentException(
@@ -135,7 +174,7 @@ public class JZlibEncoder extends ZlibEncoder {
         if (wrapper == ZlibWrapper.ZLIB_OR_NONE) {
             throw new IllegalArgumentException(
                     "wrapper '" + ZlibWrapper.ZLIB_OR_NONE + "' is not " +
-                    "allowed for compression.");
+                            "allowed for compression.");
         }
 
         int resultCode = z.init(
@@ -161,6 +200,23 @@ public class JZlibEncoder extends ZlibEncoder {
      */
     public JZlibEncoder(byte[] dictionary) {
         this(6, dictionary);
+    }
+
+    /**
+     * Creates a new zlib encoder with the default compression level ({@code 6}),
+     * default window bits ({@code 15}), default memory level ({@code 8}),
+     * and the specified preset dictionary.  The wrapper is always
+     * {@link ZlibWrapper#ZLIB} because it is the only format that supports
+     * the preset dictionary.
+     *
+     * @param dictionary  the preset dictionary
+     * @param minThreshold min threshold for compression.
+     * @param maxThreshold max threshold for compression.
+     *
+     * @throws CompressionException if failed to initialize zlib
+     */
+    public JZlibEncoder(byte[] dictionary, int minThreshold, int maxThreshold) {
+        this(6, 15, 8, dictionary, minThreshold, maxThreshold);
     }
 
     /**
@@ -208,6 +264,45 @@ public class JZlibEncoder extends ZlibEncoder {
      * @throws CompressionException if failed to initialize zlib
      */
     public JZlibEncoder(int compressionLevel, int windowBits, int memLevel, byte[] dictionary) {
+        this(compressionLevel, windowBits, memLevel, dictionary, NOT_LIMIT, NOT_LIMIT);
+    }
+
+    /**
+     * Creates a new zlib encoder with the specified {@code compressionLevel},
+     * the specified {@code windowBits}, the specified {@code memLevel},
+     * and the specified preset dictionary.  The wrapper is always
+     * {@link ZlibWrapper#ZLIB} because it is the only format that supports
+     * the preset dictionary.
+     *
+     * @param compressionLevel
+     *        {@code 1} yields the fastest compression and {@code 9} yields the
+     *        best compression.  {@code 0} means no compression.  The default
+     *        compression level is {@code 6}.
+     * @param windowBits
+     *        The base two logarithm of the size of the history buffer.  The
+     *        value should be in the range {@code 9} to {@code 15} inclusive.
+     *        Larger values result in better compression at the expense of
+     *        memory usage.  The default value is {@code 15}.
+     * @param memLevel
+     *        How much memory should be allocated for the internal compression
+     *        state.  {@code 1} uses minimum memory and {@code 9} uses maximum
+     *        memory.  Larger values result in better and faster compression
+     *        at the expense of memory usage.  The default value is {@code 8}
+     * @param dictionary  the preset dictionary
+     * @param minThreshold min threshold for compression.
+     * @param maxThreshold max threshold for compression.
+     *
+     * @throws CompressionException if failed to initialize zlib
+     */
+    public JZlibEncoder(int compressionLevel,
+                        int windowBits,
+                        int memLevel,
+                        byte[] dictionary,
+                        int minThreshold,
+                        int maxThreshold) {
+
+        super(minThreshold, maxThreshold);
+
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException("compressionLevel: " + compressionLevel + " (expected: 0-9)");
         }
@@ -275,26 +370,25 @@ public class JZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+    protected void doEncode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out, int readableBytes) {
         if (finished) {
             out.writeBytes(in);
             return;
         }
 
-        int inputLength = in.readableBytes();
-        if (inputLength == 0) {
+        if (readableBytes == 0) {
             return;
         }
 
         try {
             // Configure input.
             boolean inHasArray = in.hasArray();
-            z.avail_in = inputLength;
+            z.avail_in = readableBytes;
             if (inHasArray) {
                 z.next_in = in.array();
                 z.next_in_index = in.arrayOffset() + in.readerIndex();
             } else {
-                byte[] array = new byte[inputLength];
+                byte[] array = new byte[readableBytes];
                 in.getBytes(in.readerIndex(), array);
                 z.next_in = array;
                 z.next_in_index = 0;
@@ -302,7 +396,7 @@ public class JZlibEncoder extends ZlibEncoder {
             int oldNextInIndex = z.next_in_index;
 
             // Configure output.
-            int maxOutputLength = (int) Math.ceil(inputLength * 1.001) + 12 + wrapperOverhead;
+            int maxOutputLength = (int) Math.ceil(readableBytes * 1.001) + 12 + wrapperOverhead;
             out.ensureWritable(maxOutputLength);
             z.avail_out = maxOutputLength;
             z.next_out = out.array();

@@ -57,6 +57,10 @@ public class JdkZlibEncoder extends ZlibEncoder {
         this(6);
     }
 
+    public JdkZlibEncoder(int minThreshold, int maxThreshold) {
+        this(ZlibWrapper.ZLIB, 6, minThreshold, maxThreshold);
+    }
+
     /**
      * Creates a new zlib encoder with the specified {@code compressionLevel}
      * and the default wrapper ({@link ZlibWrapper#ZLIB}).
@@ -82,6 +86,10 @@ public class JdkZlibEncoder extends ZlibEncoder {
         this(wrapper, 6);
     }
 
+    public JdkZlibEncoder(ZlibWrapper wrapper, int minThreshold, int maxThreshold) {
+        this(wrapper, 6, minThreshold, maxThreshold);
+    }
+
     /**
      * Creates a new zlib encoder with the specified {@code compressionLevel}
      * and the specified wrapper.
@@ -94,6 +102,11 @@ public class JdkZlibEncoder extends ZlibEncoder {
      * @throws CompressionException if failed to initialize zlib
      */
     public JdkZlibEncoder(ZlibWrapper wrapper, int compressionLevel) {
+        this(wrapper, compressionLevel, NOT_LIMIT, NOT_LIMIT);
+    }
+
+    public JdkZlibEncoder(ZlibWrapper wrapper, int compressionLevel, int minThreshold, int maxThreshold) {
+        super(minThreshold, maxThreshold);
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
@@ -102,7 +115,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
         if (wrapper == ZlibWrapper.ZLIB_OR_NONE) {
             throw new IllegalArgumentException(
                     "wrapper '" + ZlibWrapper.ZLIB_OR_NONE + "' is not " +
-                    "allowed for compression.");
+                            "allowed for compression.");
         }
 
         this.wrapper = wrapper;
@@ -138,6 +151,27 @@ public class JdkZlibEncoder extends ZlibEncoder {
      * @throws CompressionException if failed to initialize zlib
      */
     public JdkZlibEncoder(int compressionLevel, byte[] dictionary) {
+        this(compressionLevel, dictionary, NOT_LIMIT, NOT_LIMIT);
+    }
+
+    /**
+     * Creates a new zlib encoder with the specified {@code compressionLevel}
+     * and the specified preset dictionary.  The wrapper is always
+     * {@link ZlibWrapper#ZLIB} because it is the only format that supports
+     * the preset dictionary.
+     *
+     * @param compressionLevel
+     *        {@code 1} yields the fastest compression and {@code 9} yields the
+     *        best compression.  {@code 0} means no compression.  The default
+     *        compression level is {@code 6}.
+     * @param dictionary  the preset dictionary
+     * @param minThreshold min threshold for compression.
+     * @param maxThreshold max threshold for compression.
+     *
+     * @throws CompressionException if failed to initialize zlib
+     */
+    public JdkZlibEncoder(int compressionLevel, byte[] dictionary, int minThreshold, int maxThreshold) {
+        super(minThreshold, maxThreshold);
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
@@ -187,14 +221,13 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf uncompressed, ByteBuf out) throws Exception {
+    protected void doEncode(ChannelHandlerContext ctx, ByteBuf uncompressed, ByteBuf out, int readableBytes) {
         if (finished) {
             out.writeBytes(uncompressed);
             return;
         }
 
-        int len = uncompressed.readableBytes();
-        if (len == 0) {
+        if (readableBytes == 0) {
             return;
         }
 
@@ -205,9 +238,9 @@ public class JdkZlibEncoder extends ZlibEncoder {
             inAry = uncompressed.array();
             offset = uncompressed.arrayOffset() + uncompressed.readerIndex();
             // skip all bytes as we will consume all of them
-            uncompressed.skipBytes(len);
+            uncompressed.skipBytes(readableBytes);
         } else {
-            inAry = new byte[len];
+            inAry = new byte[readableBytes];
             uncompressed.readBytes(inAry);
             offset = 0;
         }
@@ -220,10 +253,10 @@ public class JdkZlibEncoder extends ZlibEncoder {
         }
 
         if (wrapper == ZlibWrapper.GZIP) {
-            crc.update(inAry, offset, len);
+            crc.update(inAry, offset, readableBytes);
         }
 
-        deflater.setInput(inAry, offset, len);
+        deflater.setInput(inAry, offset, readableBytes);
         for (;;) {
             deflate(out);
             if (deflater.needsInput()) {

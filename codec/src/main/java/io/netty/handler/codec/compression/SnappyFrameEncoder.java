@@ -17,16 +17,15 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
 
-import static io.netty.handler.codec.compression.Snappy.*;
+import static io.netty.handler.codec.compression.Snappy.calculateChecksum;
 
 /**
  * Compresses a {@link ByteBuf} using the Snappy framing format.
  *
  * See <a href="https://github.com/google/snappy/blob/master/framing_format.txt">Snappy framing format</a>.
  */
-public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
+public class SnappyFrameEncoder extends ThresholdCompressionEncoder {
     /**
      * The minimum amount that we'll consider actually attempting to compress.
      * This value is preamble + the minimum length our Snappy service will
@@ -45,8 +44,16 @@ public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
     private final Snappy snappy = new Snappy();
     private boolean started;
 
+    public SnappyFrameEncoder() {
+        this(NOT_LIMIT, NOT_LIMIT);
+    }
+
+    public SnappyFrameEncoder(int minThreshold, int maxThreshold) {
+        super(minThreshold, maxThreshold);
+    }
+
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+    protected void doEncode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out, final int readableBytes) {
         if (!in.isReadable()) {
             return;
         }
@@ -56,7 +63,7 @@ public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
             out.writeBytes(STREAM_START);
         }
 
-        int dataLength = in.readableBytes();
+        int dataLength = readableBytes;
         if (dataLength > MIN_COMPRESSIBLE_LENGTH) {
             for (;;) {
                 final int lengthIdx = out.writerIndex() + 1;

@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import lzma.sdk.lzma.Base;
@@ -27,7 +27,7 @@ import lzma.sdk.lzma.Encoder;
 
 import java.io.InputStream;
 
-import static lzma.sdk.lzma.Encoder.*;
+import static lzma.sdk.lzma.Encoder.EMatchFinderTypeBT4;
 
 /**
  * Compresses a {@link ByteBuf} using the LZMA algorithm.
@@ -36,7 +36,7 @@ import static lzma.sdk.lzma.Encoder.*;
  * and <a href="http://svn.python.org/projects/external/xz-5.0.5/doc/lzma-file-format.txt">LZMA format</a>
  * or documents in <a href="http://www.7-zip.org/sdk.html">LZMA SDK</a> archive.
  */
-public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
+public class LzmaFrameEncoder extends ThresholdCompressionEncoder {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(LzmaFrameEncoder.class);
 
@@ -88,6 +88,11 @@ public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
         this(MEDIUM_DICTIONARY_SIZE);
     }
 
+    public LzmaFrameEncoder(int minThreshold, int maxThreshold) {
+        this(DEFAULT_LC, DEFAULT_LP, DEFAULT_PB,
+                MEDIUM_DICTIONARY_SIZE, false, MEDIUM_FAST_BYTES, minThreshold, maxThreshold);
+    }
+
     /**
      * Creates LZMA encoder with specified {@code lc}, {@code lp}, {@code pb}
      * values and the medium dictionary size of {@value #MEDIUM_DICTIONARY_SIZE}.
@@ -135,6 +140,43 @@ public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      *        available values [{@value #MIN_FAST_BYTES}, {@value #MAX_FAST_BYTES}].
      */
     public LzmaFrameEncoder(int lc, int lp, int pb, int dictionarySize, boolean endMarkerMode, int numFastBytes) {
+        this(lc, lp, pb, dictionarySize, endMarkerMode, numFastBytes, NOT_LIMIT, NOT_LIMIT);
+    }
+
+
+    /**
+     * Creates LZMA encoder with specified settings.
+     *
+     * @param lc
+     *        the number of "literal context" bits, available values [0, 8], default value {@value #DEFAULT_LC}.
+     * @param lp
+     *        the number of "literal position" bits, available values [0, 4], default value {@value #DEFAULT_LP}.
+     * @param pb
+     *        the number of "position" bits, available values [0, 4], default value {@value #DEFAULT_PB}.
+     * @param dictionarySize
+     *        available values [0, {@link java.lang.Integer#MAX_VALUE}],
+     *        default value is {@value #MEDIUM_DICTIONARY_SIZE}.
+     * @param endMarkerMode
+     *        indicates should {@link LzmaFrameEncoder} use end of stream marker or not.
+     *        Note, that {@link LzmaFrameEncoder} always sets size of uncompressed data
+     *        in LZMA header, so EOS marker is unnecessary. But you may use it for
+     *        better portability. For full description see "LZMA Decoding modes" section
+     *        of LZMA-Specification.txt in official LZMA SDK.
+     * @param numFastBytes
+     *        available values [{@value #MIN_FAST_BYTES}, {@value #MAX_FAST_BYTES}].
+     * @param minThreshold min threshold for compression.
+     * @param maxThreshold max threshold for compression.
+     */
+    public LzmaFrameEncoder(int lc,
+                            int lp,
+                            int pb,
+                            int dictionarySize,
+                            boolean endMarkerMode,
+                            int numFastBytes,
+                            int minThreshold,
+                            int maxThreshold) {
+        super(minThreshold, maxThreshold);
+
         if (lc < 0 || lc > 8) {
             throw new IllegalArgumentException("lc: " + lc + " (expected: 0-8)");
         }
@@ -152,9 +194,9 @@ public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
                 warningLogged = true;
             }
         }
-        if (dictionarySize < 0) {
-            throw new IllegalArgumentException("dictionarySize: " + dictionarySize + " (expected: 0+)");
-        }
+
+        ObjectUtil.checkPositiveOrZero(dictionarySize, "dictionarySize");
+
         if (numFastBytes < MIN_FAST_BYTES || numFastBytes > MAX_FAST_BYTES) {
             throw new IllegalArgumentException(String.format(
                     "numFastBytes: %d (expected: %d-%d)", numFastBytes, MIN_FAST_BYTES, MAX_FAST_BYTES
@@ -173,8 +215,7 @@ public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
-        final int length = in.readableBytes();
+    protected void doEncode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out, int readableBytes) throws Exception {
         InputStream bbIn = null;
         ByteBufOutputStream bbOut = null;
         try {
@@ -182,7 +223,7 @@ public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
             bbOut = new ByteBufOutputStream(out);
             bbOut.writeByte(properties);
             bbOut.writeInt(littleEndianDictionarySize);
-            bbOut.writeLong(Long.reverseBytes(length));
+            bbOut.writeLong(Long.reverseBytes(readableBytes));
             encoder.code(bbIn, bbOut, -1, -1, null);
         } finally {
             if (bbIn != null) {

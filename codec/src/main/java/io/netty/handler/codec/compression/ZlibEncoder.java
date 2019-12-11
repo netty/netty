@@ -23,10 +23,14 @@ import io.netty.handler.codec.MessageToByteEncoder;
 /**
  * Compresses a {@link ByteBuf} using the deflate algorithm.
  */
-public abstract class ZlibEncoder extends MessageToByteEncoder<ByteBuf> {
+public abstract class ZlibEncoder extends ThresholdCompressionEncoder {
 
     protected ZlibEncoder() {
         super(false);
+    }
+
+    protected ZlibEncoder(int minThreshold, int maxThreshold) {
+        super(false, minThreshold, maxThreshold);
     }
 
     /**

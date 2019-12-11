@@ -25,7 +25,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.handler.codec.EncoderException;
-import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectUtil;
 import net.jpountz.lz4.LZ4Compressor;
@@ -66,7 +65,8 @@ import static io.netty.handler.codec.compression.Lz4Constants.TOKEN_OFFSET;
  *  *       *       *    length   *     length    *           *     *      block      *
  *  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *     * * * * * * * * * *
  */
-public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
+public class Lz4FrameEncoder extends ThresholdCompressionEncoder {
+
     static final int DEFAULT_MAX_ENCODE_SIZE = Integer.MAX_VALUE;
 
     private final int blockSize;
@@ -115,6 +115,10 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         this(false);
     }
 
+    public Lz4FrameEncoder(int minThreshold, int maxThreshold) {
+        this(LZ4Factory.fastestInstance(), false, DEFAULT_BLOCK_SIZE, new Lz4XXHash32(DEFAULT_SEED));
+    }
+
     /**
      * Creates a new LZ4 encoder with hight or fast compression, default block size (64 KB)
      * and xxhash hashing for Java, based on Yann Collet's work available at
@@ -143,31 +147,54 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         this(factory, highCompressor, blockSize, checksum, DEFAULT_MAX_ENCODE_SIZE);
     }
 
-        /**
-         * Creates a new customizable LZ4 encoder.
-         *
-         * @param factory         user customizable {@link LZ4Factory} instance
-         *                        which may be JNI bindings to the original C implementation, a pure Java implementation
-         *                        or a Java implementation that uses the {@link sun.misc.Unsafe}
-         * @param highCompressor  if {@code true} codec will use compressor which requires more memory
-         *                        and is slower but compresses more efficiently
-         * @param blockSize       the maximum number of bytes to try to compress at once,
-         *                        must be >= 64 and <= 32 M
-         * @param checksum        the {@link Checksum} instance to use to check data for integrity
-         * @param maxEncodeSize   the maximum size for an encode (compressed) buffer
-         */
+    /**
+     * Creates a new customizable LZ4 encoder.
+     *
+     * @param factory         user customizable {@link LZ4Factory} instance
+     *                        which may be JNI bindings to the original C implementation, a pure Java implementation
+     *                        or a Java implementation that uses the {@link sun.misc.Unsafe}
+     * @param highCompressor  if {@code true} codec will use compressor which requires more memory
+     *                        and is slower but compresses more efficiently
+     * @param blockSize       the maximum number of bytes to try to compress at once,
+     *                        must be >= 64 and <= 32 M
+     * @param checksum        the {@link Checksum} instance to use to check data for integrity
+     * @param maxEncodeSize   the maximum size for an encode (compressed) buffer
+     */
     public Lz4FrameEncoder(LZ4Factory factory, boolean highCompressor, int blockSize,
                            Checksum checksum, int maxEncodeSize) {
+        this(factory, highCompressor, blockSize, checksum, maxEncodeSize, NOT_LIMIT, NOT_LIMIT);
+    }
+
+    /**
+     * Creates a new customizable LZ4 encoder.
+     *
+     * @param factory         user customizable {@link LZ4Factory} instance
+     *                        which may be JNI bindings to the original C implementation, a pure Java implementation
+     *                        or a Java implementation that uses the {@link sun.misc.Unsafe}
+     * @param highCompressor  if {@code true} codec will use compressor which requires more memory
+     *                        and is slower but compresses more efficiently
+     * @param blockSize       the maximum number of bytes to try to compress at once,
+     *                        must be >= 64 and <= 32 M
+     * @param checksum        the {@link Checksum} instance to use to check data for integrity
+     * @param maxEncodeSize   the maximum size for an encode (compressed) buffer
+     * @param minThreshold    min threshold for compression.
+     * @param maxThreshold    max threshold for compression.
+     */
+    public Lz4FrameEncoder(LZ4Factory factory, boolean highCompressor, int blockSize,
+                           Checksum checksum, int maxEncodeSize, int minThreshold, int maxThreshold) {
+
+        super(minThreshold, maxThreshold);
+
         ObjectUtil.checkNotNull(factory, "factory");
         ObjectUtil.checkNotNull(checksum, "checksum");
 
-        compressor = highCompressor ? factory.highCompressor() : factory.fastCompressor();
+        this.compressor = highCompressor ? factory.highCompressor() : factory.fastCompressor();
         this.checksum = ByteBufChecksum.wrapChecksum(checksum);
 
-        compressionLevel = compressionLevel(blockSize);
+        this.compressionLevel = compressionLevel(blockSize);
         this.blockSize = blockSize;
         this.maxEncodeSize = ObjectUtil.checkPositive(maxEncodeSize, "maxEncodeSize");
-        finished = false;
+        this.finished = false;
     }
 
     /**
@@ -232,9 +259,9 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
      * more data.
      */
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
+    protected void doEncode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out, int readableBytes) {
         if (finished) {
-            if (!out.isWritable(in.readableBytes())) {
+            if (!out.isWritable(readableBytes)) {
                 // out should be EMPTY_BUFFER because we should have allocated enough space above in allocateBuffer.
                 throw new IllegalStateException("encode finished and not enough space to write remaining data");
             }
@@ -244,7 +271,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
 
         final ByteBuf buffer = this.buffer;
         int length;
-        while ((length = in.readableBytes()) > 0) {
+        while ((length = readableBytes) > 0) {
             final int nextChunkSize = Math.min(length, buffer.writableBytes());
             in.readBytes(buffer, nextChunkSize);
 

@@ -21,9 +21,8 @@ import com.ning.compress.lzf.LZFEncoder;
 import com.ning.compress.lzf.util.ChunkEncoderFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
 
-import static com.ning.compress.lzf.LZFChunk.*;
+import static com.ning.compress.lzf.LZFChunk.MAX_CHUNK_LEN;
 
 /**
  * Compresses a {@link ByteBuf} using the LZF format.
@@ -31,7 +30,7 @@ import static com.ning.compress.lzf.LZFChunk.*;
  * See original <a href="http://oldhome.schmorp.de/marc/liblzf.html">LZF package</a>
  * and <a href="https://github.com/ning/compress/wiki/LZFFormat">LZF format</a> for full description.
  */
-public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
+public class LzfEncoder extends ThresholdCompressionEncoder {
     /**
      * Minimum block size ready for compression. Blocks with length
      * less than {@link #MIN_BLOCK_TO_COMPRESS} will write as uncompressed.
@@ -56,6 +55,10 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
      */
     public LzfEncoder() {
         this(false, MAX_CHUNK_LEN);
+    }
+
+    public LzfEncoder(int minThreshold, int maxThreshold) {
+        this(false, MAX_CHUNK_LEN, minThreshold, maxThreshold);
     }
 
     /**
@@ -96,7 +99,25 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
      *        than maximum chunk size (64k), to optimize encoding hash tables.
      */
     public LzfEncoder(boolean safeInstance, int totalLength) {
-        super(false);
+        this(safeInstance, totalLength, NOT_LIMIT, NOT_LIMIT);
+    }
+
+    /**
+     * Creates a new LZF encoder with specified settings.
+     *
+     * @param safeInstance
+     *        If {@code true} encoder will use {@link ChunkEncoder} that only uses standard JDK access methods,
+     *        and should work on all Java platforms and JVMs.
+     *        Otherwise encoder will try to use highly optimized {@link ChunkEncoder} implementation that uses
+     *        Sun JDK's {@link sun.misc.Unsafe} class (which may be included by other JDK's as well).
+     * @param totalLength
+     *        Expected total length of content to compress; only matters for outgoing messages that is smaller
+     *        than maximum chunk size (64k), to optimize encoding hash tables.
+     * @param minThreshold min threshold for compression.
+     * @param maxThreshold max threshold for compression.
+     */
+    public LzfEncoder(boolean safeInstance, int totalLength, int minThreshold, int maxThreshold) {
+        super(false, minThreshold, maxThreshold);
         if (totalLength < MIN_BLOCK_TO_COMPRESS || totalLength > MAX_CHUNK_LEN) {
             throw new IllegalArgumentException("totalLength: " + totalLength +
                     " (expected: " + MIN_BLOCK_TO_COMPRESS + '-' + MAX_CHUNK_LEN + ')');
@@ -104,14 +125,13 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
 
         encoder = safeInstance ?
                 ChunkEncoderFactory.safeNonAllocatingInstance(totalLength)
-              : ChunkEncoderFactory.optimalNonAllocatingInstance(totalLength);
+                : ChunkEncoderFactory.optimalNonAllocatingInstance(totalLength);
 
         recycler = BufferRecycler.instance();
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
-        final int length = in.readableBytes();
+    protected void doEncode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out, int readableBytes) {
         final int idx = in.readerIndex();
         final byte[] input;
         final int inputPtr;
@@ -119,19 +139,19 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
             input = in.array();
             inputPtr = in.arrayOffset() + idx;
         } else {
-            input = recycler.allocInputBuffer(length);
-            in.getBytes(idx, input, 0, length);
+            input = recycler.allocInputBuffer(readableBytes);
+            in.getBytes(idx, input, 0, readableBytes);
             inputPtr = 0;
         }
 
-        final int maxOutputLength = LZFEncoder.estimateMaxWorkspaceSize(length);
+        final int maxOutputLength = LZFEncoder.estimateMaxWorkspaceSize(readableBytes);
         out.ensureWritable(maxOutputLength);
         final byte[] output = out.array();
         final int outputPtr = out.arrayOffset() + out.writerIndex();
         final int outputLength = LZFEncoder.appendEncoded(encoder,
-                        input, inputPtr, length,  output, outputPtr) - outputPtr;
+                        input, inputPtr, readableBytes,  output, outputPtr) - outputPtr;
         out.writerIndex(out.writerIndex() + outputLength);
-        in.skipBytes(length);
+        in.skipBytes(readableBytes);
 
         if (!in.hasArray()) {
             recycler.releaseInputBuffer(input);

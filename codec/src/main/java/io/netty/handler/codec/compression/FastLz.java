@@ -41,9 +41,9 @@ final class FastLz {
     static final int MAGIC_NUMBER = 'F' << 16 | 'L' << 8 | 'Z';
 
     static final byte BLOCK_TYPE_NON_COMPRESSED = 0x00;
-    static final byte     BLOCK_TYPE_COMPRESSED = 0x01;
-    static final byte    BLOCK_WITHOUT_CHECKSUM = 0x00;
-    static final byte       BLOCK_WITH_CHECKSUM = 0x10;
+    static final byte BLOCK_TYPE_COMPRESSED = 0x01;
+    static final byte BLOCK_WITHOUT_CHECKSUM = 0x00;
+    static final byte BLOCK_WITH_CHECKSUM = 0x10;
 
     static final int OPTIONS_OFFSET = 3;
     static final int CHECKSUM_OFFSET = 4;
