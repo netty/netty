@@ -132,15 +132,15 @@ public class HttpContentCompressor extends HttpContentEncoder {
     }
 
     @Override
-    protected Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception {
+    protected Result beginEncode(HttpResponse httpResponse, String acceptEncoding) throws Exception {
         if (this.contentSizeThreshold > 0) {
-            if (headers instanceof HttpContent &&
-                    ((HttpContent) headers).content().readableBytes() < contentSizeThreshold) {
+            if (httpResponse instanceof HttpContent &&
+                    ((HttpContent) httpResponse).content().readableBytes() < contentSizeThreshold) {
                 return null;
             }
         }
 
-        String contentEncoding = headers.headers().get(HttpHeaderNames.CONTENT_ENCODING);
+        String contentEncoding = httpResponse.headers().get(HttpHeaderNames.CONTENT_ENCODING);
         if (contentEncoding != null) {
             // Content-Encoding was set, either as something specific or as the IDENTITY encoding
             // Therefore, we should NOT encode here
