@@ -606,27 +606,26 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         value = null;
 
         List<String> values = headers.getAll(HttpHeaderNames.CONTENT_LENGTH);
-        int size = values.size();
-        if (size > 0) {
-            contentLength = Long.parseLong(values.get(0));
-            if (message.protocolVersion() == HttpVersion.HTTP_1_1) {
-                // Guard against multiple Content-Length headers as stated in
-                // https://tools.ietf.org/html/rfc7230#section-3.3.2:
-                //
-                // If a message is received that has multiple Content-Length header
-                //   fields with field-values consisting of the same decimal value, or a
-                //   single Content-Length header field with a field value containing a
-                //   list of identical decimal values (e.g., "Content-Length: 42, 42"),
-                //   indicating that duplicate Content-Length header fields have been
-                //   generated or combined by an upstream message processor, then the
-                //   recipient MUST either reject the message as invalid or replace the
-                //   duplicated field-values with a single valid Content-Length field
-                //   containing that decimal value prior to determining the message body
-                //   length or forwarding the message.
-                if (size > 1) {
-                    throw new IllegalArgumentException("Multiple Content-Length headers found");
-                }
+        int contentLengthValuesCount = values.size();
+
+        if (contentLengthValuesCount > 0) {
+            // Guard against multiple Content-Length headers as stated in
+            // https://tools.ietf.org/html/rfc7230#section-3.3.2:
+            //
+            // If a message is received that has multiple Content-Length header
+            //   fields with field-values consisting of the same decimal value, or a
+            //   single Content-Length header field with a field value containing a
+            //   list of identical decimal values (e.g., "Content-Length: 42, 42"),
+            //   indicating that duplicate Content-Length header fields have been
+            //   generated or combined by an upstream message processor, then the
+            //   recipient MUST either reject the message as invalid or replace the
+            //   duplicated field-values with a single valid Content-Length field
+            //   containing that decimal value prior to determining the message body
+            //   length or forwarding the message.
+            if (contentLengthValuesCount > 1 && message.protocolVersion() == HttpVersion.HTTP_1_1) {
+                throw new IllegalArgumentException("Multiple Content-Length headers found");
             }
+            contentLength = Long.parseLong(values.get(0));
         }
 
         if (isContentAlwaysEmpty(message)) {
@@ -645,9 +644,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             //
             // This is also what http_parser does:
             // https://github.com/nodejs/http-parser/blob/v2.9.2/http_parser.c#L1769
-            if (message.protocolVersion() == HttpVersion.HTTP_1_1 && size > 0) {
+            if (contentLengthValuesCount > 0 && message.protocolVersion() == HttpVersion.HTTP_1_1) {
                 throw new IllegalArgumentException(
-                        "'Content-Length: " + contentLength + "' and 'Transfer-Encoding: chunked' found");
+                        "Both 'Content-Length: " + contentLength + "' and 'Transfer-Encoding: chunked' found");
             }
 
             return State.READ_CHUNK_SIZE;
