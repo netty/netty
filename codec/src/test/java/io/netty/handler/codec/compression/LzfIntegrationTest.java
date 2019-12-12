@@ -21,7 +21,7 @@ public class LzfIntegrationTest extends AbstractIntegrationTest {
 
     @Override
     protected EmbeddedChannel createEncoder() {
-        return new EmbeddedChannel(new LzfEncoder());
+        return new EmbeddedChannel(new LzfEncoder(true));
     }
 
     @Override

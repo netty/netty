@@ -24,7 +24,7 @@ public class LzfEncoderTest extends AbstractEncoderTest {
 
     @Override
     public void initChannel() {
-        channel = new EmbeddedChannel(new LzfEncoder());
+        channel = new EmbeddedChannel(new LzfEncoder(true));
     }
 
     @Override
