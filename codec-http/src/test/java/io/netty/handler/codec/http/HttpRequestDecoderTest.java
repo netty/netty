@@ -365,7 +365,6 @@ public class HttpRequestDecoderTest {
         assertFalse(channel.finish());
     }
 
-
     @Test
     public void testContentLengthHeaderWithCommaValue() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
