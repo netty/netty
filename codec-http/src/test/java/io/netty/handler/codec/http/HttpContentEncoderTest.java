@@ -41,7 +41,7 @@ public class HttpContentEncoderTest {
 
     private static final class TestEncoder extends HttpContentEncoder {
         @Override
-        protected Result beginEncode(HttpResponse headers, String acceptEncoding) {
+        protected Result beginEncode(HttpResponse httpResponse, String acceptEncoding) {
             return new Result("test", new EmbeddedChannel(new MessageToByteEncoder<ByteBuf>() {
                 @Override
                 protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
@@ -395,7 +395,7 @@ public class HttpContentEncoderTest {
     public void testCleanupThrows() {
         HttpContentEncoder encoder = new HttpContentEncoder() {
             @Override
-            protected Result beginEncode(HttpResponse headers, String acceptEncoding) throws Exception {
+            protected Result beginEncode(HttpResponse httpResponse, String acceptEncoding) throws Exception {
                 return new Result("myencoding", new EmbeddedChannel(
                         new ChannelInboundHandlerAdapter() {
                     @Override
