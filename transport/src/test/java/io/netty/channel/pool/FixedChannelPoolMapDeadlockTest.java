@@ -66,7 +66,7 @@ public class FixedChannelPoolMapDeadlockTest {
         final CyclicBarrier arrivalBarrier = new CyclicBarrier(4);
         final CyclicBarrier releaseBarrier = new CyclicBarrier(3);
 
-        final ChannelPoolMap<String, FixedChannelPool> channelPoolMap =
+        final AbstractChannelPoolMap<String, FixedChannelPool> channelPoolMap =
                 new AbstractChannelPoolMap<String, FixedChannelPool>() {
 
             @Override
@@ -164,6 +164,11 @@ public class FixedChannelPoolMapDeadlockTest {
             // Fail the test on timeout to distinguish from other errors
             throw new AssertionError(e);
         } finally {
+            poolA1.close();
+            poolA2.close();
+            poolB1.close();
+            poolB2.close();
+            channelPoolMap.close();
             shutdown(threadA1, threadA2, threadB1, threadB2);
         }
     }
@@ -229,6 +234,9 @@ public class FixedChannelPoolMapDeadlockTest {
             // Fail the test on timeout to distinguish from other errors
             throw new AssertionError(e);
         } finally {
+            pool1.close();
+            pool2.close();
+            channelPoolMap.close();
             shutdown(thread1, thread2);
         }
     }
