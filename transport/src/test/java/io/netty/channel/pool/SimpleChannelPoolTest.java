@@ -33,15 +33,21 @@ import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static io.netty.channel.pool.ChannelPoolTestUtils.getLocalAddrId;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class SimpleChannelPoolTest {
-    private static final String LOCAL_ADDR_ID = "test.id";
-
     @Test
     public void testAcquire() throws Exception {
         EventLoopGroup group = new DefaultEventLoopGroup();
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
         cb.group(group)
@@ -85,13 +91,14 @@ public class SimpleChannelPoolTest {
         assertEquals(2, handler.releasedCount());
 
         sc.close().sync();
+        pool.close();
         group.shutdownGracefully();
     }
 
     @Test
     public void testBoundedChannelPoolSegment() throws Exception {
         EventLoopGroup group = new DefaultEventLoopGroup();
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
         cb.group(group)
@@ -143,6 +150,7 @@ public class SimpleChannelPoolTest {
         sc.close().sync();
         channel.close().sync();
         channel2.close().sync();
+        pool.close();
         group.shutdownGracefully();
     }
 
@@ -154,7 +162,7 @@ public class SimpleChannelPoolTest {
     @Test
     public void testUnhealthyChannelIsNotOffered() throws Exception {
         EventLoopGroup group = new DefaultEventLoopGroup();
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
         cb.group(group)
@@ -188,6 +196,7 @@ public class SimpleChannelPoolTest {
         assertNotSame(channel1, channel3);
         sc.close().syncUninterruptibly();
         channel3.close().syncUninterruptibly();
+        pool.close();
         group.shutdownGracefully();
     }
 
@@ -200,7 +209,7 @@ public class SimpleChannelPoolTest {
     @Test
     public void testUnhealthyChannelIsOfferedWhenNoHealthCheckRequested() throws Exception {
         EventLoopGroup group = new DefaultEventLoopGroup();
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
         cb.group(group)
@@ -231,6 +240,7 @@ public class SimpleChannelPoolTest {
         assertNotSame(channel1, channel2);
         sc.close().syncUninterruptibly();
         channel2.close().syncUninterruptibly();
+        pool.close();
         group.shutdownGracefully();
     }
 
@@ -303,7 +313,7 @@ public class SimpleChannelPoolTest {
 
     @Test
     public void testCloseAsync() throws Exception {
-        final LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        final LocalAddress addr = new LocalAddress(getLocalAddrId());
         final EventLoopGroup group = new DefaultEventLoopGroup();
 
         // Start server
@@ -339,6 +349,7 @@ public class SimpleChannelPoolTest {
         assertFalse(ch2.isOpen());
 
         sc.close().sync();
+        pool.close();
         group.shutdownGracefully();
     }
 }

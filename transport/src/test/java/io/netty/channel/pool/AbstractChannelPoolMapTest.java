@@ -31,15 +31,17 @@ import org.junit.Test;
 import java.net.ConnectException;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static io.netty.channel.pool.ChannelPoolTestUtils.getLocalAddrId;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 public class AbstractChannelPoolMapTest {
-    private static final String LOCAL_ADDR_ID = "test.id";
-
     @Test(expected = ConnectException.class)
     public void testMap() throws Exception {
         EventLoopGroup group = new LocalEventLoopGroup();
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
         final Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
         cb.group(group)
@@ -70,12 +72,13 @@ public class AbstractChannelPoolMapTest {
         assertEquals(0, poolMap.size());
 
         pool.acquire().syncUninterruptibly();
+        poolMap.close();
     }
 
     @Test
     public void testRemoveClosesChannelPool() {
         EventLoopGroup group = new LocalEventLoopGroup();
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
         final Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
         cb.group(group)
@@ -97,12 +100,13 @@ public class AbstractChannelPoolMapTest {
         // the pool should be closed eventually after remove
         pool.closeFuture.awaitUninterruptibly(1, TimeUnit.SECONDS);
         assertTrue(pool.closeFuture.isDone());
+        poolMap.close();
     }
 
     @Test
     public void testCloseClosesPoolsImmediately() {
         EventLoopGroup group = new LocalEventLoopGroup();
-        LocalAddress addr = new LocalAddress(LOCAL_ADDR_ID);
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
         final Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
         cb.group(group)
