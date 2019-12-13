@@ -91,8 +91,8 @@ public class SimpleChannelPoolTest {
         assertEquals(2, handler.releasedCount());
 
         sc.close().sync();
-        group.shutdownGracefully();
         pool.close();
+        group.shutdownGracefully();
     }
 
     @Test
