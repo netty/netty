@@ -395,20 +395,23 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract ByteBuf setIndex(int readerIndex, int writerIndex);
 
     /**
-     * Returns the number of readable bytes which is equal to
-     * {@code (this.writerIndex - this.readerIndex)}.
+     * Returns the number of readable bytes which is logically equivalent to
+     * {@code (this.writerIndex - this.readerIndex)}, but maybe overridden to accommodate
+     * specialized behavior (e.g. write only).
      */
     public abstract int readableBytes();
 
     /**
-     * Returns the number of writable bytes which is equal to
-     * {@code (this.capacity - this.writerIndex)}.
+     * Returns the number of writable bytes which is logically equivalent to
+     * {@code (this.capacity - this.writerIndex)}, but maybe overridden to accommodate
+     * specialized behavior (e.g. read only).
      */
     public abstract int writableBytes();
 
     /**
-     * Returns the maximum possible number of writable bytes, which is equal to
-     * {@code (this.maxCapacity - this.writerIndex)}.
+     * Returns the maximum possible number of writable bytes, which is logically equivalent to
+     * {@code (this.maxCapacity - this.writerIndex)}, but maybe overridden to accommodate
+     * specialized behavior (e.g. read only).
      */
     public abstract int maxWritableBytes();
 
@@ -422,9 +425,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     }
 
     /**
-     * Returns {@code true}
-     * if and only if {@code (this.writerIndex - this.readerIndex)} is greater
-     * than {@code 0}.
+     * Returns {@code true} if and only if {@link #readableBytes()} is greater than {@code 0}.
      */
     public abstract boolean isReadable();
 
@@ -434,9 +435,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
     public abstract boolean isReadable(int size);
 
     /**
-     * Returns {@code true}
-     * if and only if {@code (this.capacity - this.writerIndex)} is greater
-     * than {@code 0}.
+     * Returns {@code true} if and only if {@link #writableBytes()} is greater than {@code 0}.
      */
     public abstract boolean isWritable();
 

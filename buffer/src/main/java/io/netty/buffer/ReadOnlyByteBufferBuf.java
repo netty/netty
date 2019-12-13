@@ -71,6 +71,16 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public int writableBytes() {
+        return 0;
+    }
+
+    @Override
+    public int maxWritableBytes() {
+        return 0;
+    }
+
+    @Override
     public byte getByte(int index) {
         ensureAccessible();
         return _getByte(index);

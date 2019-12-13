@@ -76,6 +76,16 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    public int writableBytes() {
+        return 0;
+    }
+
+    @Override
+    public int maxWritableBytes() {
+        return 0;
+    }
+
+    @Override
     public ByteBuf unwrap() {
         return buffer;
     }
