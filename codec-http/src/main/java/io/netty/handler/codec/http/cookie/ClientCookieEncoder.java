@@ -109,7 +109,7 @@ public final class ClientCookieEncoder extends CookieEncoder {
             }
             // Rely on Java's sort stability to retain creation order in cases where
             // cookies have same path length.
-            return -1;
+            return 0;
         }
     };
 
