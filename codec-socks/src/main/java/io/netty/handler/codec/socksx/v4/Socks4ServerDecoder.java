@@ -25,8 +25,6 @@ import io.netty.handler.codec.socksx.v4.Socks4ServerDecoder.State;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 
-import java.util.List;
-
 /**
  * Decodes a single {@link Socks4CommandRequest} from the inbound {@link ByteBuf}s.
  * On successful decode, this decoder will forward the received data to the next handler, so that
@@ -56,7 +54,7 @@ public class Socks4ServerDecoder extends ReplayingDecoder<State> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         try {
             switch (state()) {
             case START: {
@@ -79,13 +77,13 @@ public class Socks4ServerDecoder extends ReplayingDecoder<State> {
                 if (!"0.0.0.0".equals(dstAddr) && dstAddr.startsWith("0.0.0.")) {
                     dstAddr = readString("dstAddr", in);
                 }
-                out.add(new DefaultSocks4CommandRequest(type, dstAddr, dstPort, userId));
+                ctx.fireChannelRead(new DefaultSocks4CommandRequest(type, dstAddr, dstPort, userId));
                 checkpoint(State.SUCCESS);
             }
             case SUCCESS: {
                 int readableBytes = actualReadableBytes();
                 if (readableBytes > 0) {
-                    out.add(in.readRetainedSlice(readableBytes));
+                    ctx.fireChannelRead(in.readRetainedSlice(readableBytes));
                 }
                 break;
             }
@@ -95,11 +93,11 @@ public class Socks4ServerDecoder extends ReplayingDecoder<State> {
             }
             }
         } catch (Exception e) {
-            fail(out, e);
+            fail(ctx, e);
         }
     }
 
-    private void fail(List<Object> out, Exception cause) {
+    private void fail(ChannelHandlerContext ctx, Exception cause) {
         if (!(cause instanceof DecoderException)) {
             cause = new DecoderException(cause);
         }
@@ -111,7 +109,7 @@ public class Socks4ServerDecoder extends ReplayingDecoder<State> {
                 userId != null? userId : "");
 
         m.setDecoderResult(DecoderResult.failure(cause));
-        out.add(m);
+        ctx.fireChannelRead(m);
 
         checkpoint(State.FAILURE);
     }

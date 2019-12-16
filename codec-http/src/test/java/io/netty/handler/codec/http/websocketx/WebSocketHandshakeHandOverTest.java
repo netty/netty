@@ -33,7 +33,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.URI;
-import java.util.List;
 import java.util.concurrent.CompletionException;
 
 import static org.junit.Assert.*;
@@ -58,12 +57,12 @@ public class WebSocketHandshakeHandOverTest {
         }
 
         @Override
-        protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, List<Object> out) throws Exception {
+        protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
             if (frame instanceof CloseWebSocketFrame) {
                 serverReceivedCloseHandshake = true;
                 return;
             }
-            super.decode(ctx, frame, out);
+            super.decode(ctx, frame);
         }
     }
 

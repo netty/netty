@@ -19,8 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 
-import java.util.List;
-
 import static io.netty.handler.codec.compression.Snappy.validateChecksum;
 
 /**
@@ -76,7 +74,7 @@ public class SnappyFrameDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         if (corrupted) {
             in.skipBytes(in.readableBytes());
             return;
@@ -155,7 +153,7 @@ public class SnappyFrameDecoder extends ByteToMessageDecoder {
                     } else {
                         in.skipBytes(4);
                     }
-                    out.add(in.readRetainedSlice(chunkLength - 4));
+                    ctx.fireChannelRead(in.readRetainedSlice(chunkLength - 4));
                     break;
                 case COMPRESSED_DATA:
                     if (!started) {
@@ -182,7 +180,7 @@ public class SnappyFrameDecoder extends ByteToMessageDecoder {
                         } else {
                             snappy.decode(in.readSlice(chunkLength - 4), uncompressed);
                         }
-                        out.add(uncompressed);
+                        ctx.fireChannelRead(uncompressed);
                         uncompressed = null;
                     } finally {
                         if (uncompressed != null) {

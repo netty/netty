@@ -54,7 +54,7 @@ public class OptionalSslHandlerTest {
         OptionalSslHandler handler = new OptionalSslHandler(sslContext);
         final ByteBuf payload = Unpooled.copiedBuffer("plaintext".getBytes());
         try {
-            handler.decode(context, payload, null);
+            handler.decode(context, payload);
             verify(pipeline).remove(handler);
         } finally {
             payload.release();
@@ -77,7 +77,7 @@ public class OptionalSslHandlerTest {
         };
         final ByteBuf payload = Unpooled.copiedBuffer("plaintext".getBytes());
         try {
-            handler.decode(context, payload, null);
+            handler.decode(context, payload);
             verify(pipeline).replace(handler, HANDLER_NAME, nonSslHandler);
         } finally {
             payload.release();
@@ -100,7 +100,7 @@ public class OptionalSslHandlerTest {
         };
         final ByteBuf payload = Unpooled.wrappedBuffer(new byte[] { 22, 3, 1, 0, 5 });
         try {
-            handler.decode(context, payload, null);
+            handler.decode(context, payload);
             verify(pipeline).replace(handler, SSL_HANDLER_NAME, sslHandler);
         } finally {
             payload.release();
@@ -112,7 +112,7 @@ public class OptionalSslHandlerTest {
         OptionalSslHandler handler = new OptionalSslHandler(sslContext);
         final ByteBuf payload = Unpooled.wrappedBuffer(new byte[] { 22, 3 });
         try {
-            handler.decode(context, payload, null);
+            handler.decode(context, payload);
             verifyZeroInteractions(pipeline);
         } finally {
             payload.release();

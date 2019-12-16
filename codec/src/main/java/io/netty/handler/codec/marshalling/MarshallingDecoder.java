@@ -59,8 +59,8 @@ public class MarshallingDecoder extends LengthFieldBasedFrameDecoder {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        ByteBuf frame = (ByteBuf) super.decode(ctx, in);
+    protected Object decode0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        ByteBuf frame = (ByteBuf) super.decode0(ctx, in);
         if (frame == null) {
             return null;
         }

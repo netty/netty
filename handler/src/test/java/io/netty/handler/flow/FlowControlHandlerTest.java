@@ -41,7 +41,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.net.SocketAddress;
-import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Exchanger;
@@ -484,11 +483,11 @@ public class FlowControlHandlerTest {
      */
     private static final class OneByteToThreeStringsDecoder extends ByteToMessageDecoder {
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in) {
             for (int i = 0; i < in.readableBytes(); i++) {
-                out.add("1");
-                out.add("2");
-                out.add("3");
+                ctx.fireChannelRead("1");
+                ctx.fireChannelRead("2");
+                ctx.fireChannelRead("3");
             }
             in.readerIndex(in.readableBytes());
         }

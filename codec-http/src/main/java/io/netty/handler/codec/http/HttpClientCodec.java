@@ -177,6 +177,9 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
     }
 
     private final class Decoder extends HttpResponseDecoder {
+
+        private ChannelHandlerContext context;
+
         Decoder(int maxInitialLineLength, int maxHeaderSize, boolean validateHeaders) {
             super(maxInitialLineLength, maxHeaderSize, validateHeaders);
         }
@@ -187,8 +190,24 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
         }
 
         @Override
-        protected void decode(
-                ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
+        protected void handlerAdded0(ChannelHandlerContext ctx) {
+            if (failOnMissingResponse) {
+                context = new DelegatingChannelHandlerContext(ctx) {
+                   @Override
+                   public ChannelHandlerContext fireChannelRead(Object msg) {
+                       decrement(msg);
+
+                       super.fireChannelRead(msg);
+                       return this;
+                   }
+                };
+            } else {
+                context = ctx;
+            }
+        }
+
+        @Override
+        protected void decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
             if (done) {
                 int readable = actualReadableBytes();
                 if (readable == 0) {
@@ -196,16 +215,9 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
                     // https://github.com/netty/netty/issues/1159
                     return;
                 }
-                out.add(buffer.readBytes(readable));
+                ctx.fireChannelRead(buffer.readBytes(readable));
             } else {
-                int oldSize = out.size();
-                super.decode(ctx, buffer, out);
-                if (failOnMissingResponse) {
-                    int size = out.size();
-                    for (int i = oldSize; i < size; i++) {
-                        decrement(out.get(i));
-                    }
-                }
+                super.decode(context, buffer);
             }
         }
 

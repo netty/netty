@@ -23,8 +23,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter;
 
-import java.util.List;
-
 /**
  * Per-message implementation of deflate decompressor.
  */
@@ -82,11 +80,11 @@ class PerMessageDeflateDecoder extends DeflateDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg,
-                          List<Object> out) throws Exception {
-        super.decode(ctx, msg, out);
+    protected void decode(ChannelHandlerContext ctx, WebSocketFrame msg) throws Exception {
+        boolean isFinal = msg.isFinalFragment();
+        super.decode(ctx, msg);
 
-        if (msg.isFinalFragment()) {
+        if (isFinal) {
             compressing = false;
         } else if (msg instanceof TextWebSocketFrame || msg instanceof BinaryWebSocketFrame) {
             compressing = true;

@@ -42,8 +42,8 @@ public final class SmtpResponseDecoder extends LineBasedFrameDecoder {
     }
 
     @Override
-    protected SmtpResponse decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
-        ByteBuf frame = (ByteBuf) super.decode(ctx, buffer);
+    protected SmtpResponse decode0(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+        ByteBuf frame = (ByteBuf) super.decode0(ctx, buffer);
         if (frame == null) {
             // No full line received yet.
             return null;

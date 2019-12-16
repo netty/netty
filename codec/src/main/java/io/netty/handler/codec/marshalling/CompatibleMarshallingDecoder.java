@@ -24,7 +24,6 @@ import org.jboss.marshalling.ByteInput;
 import org.jboss.marshalling.Unmarshaller;
 
 import java.io.ObjectStreamConstants;
-import java.util.List;
 
 /**
  * {@link ReplayingDecoder} which use an {@link Unmarshaller} to read the Object out of the {@link ByteBuf}.
@@ -55,7 +54,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Void> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         if (discardingTooLongFrame) {
             buffer.skipBytes(actualReadableBytes());
             checkpoint();
@@ -72,7 +71,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Void> {
             unmarshaller.start(input);
             Object obj = unmarshaller.readObject();
             unmarshaller.finish();
-            out.add(obj);
+            ctx.fireChannelRead(obj);
         } catch (LimitingByteInput.TooBigObjectException ignored) {
             discardingTooLongFrame = true;
             throw new TooLongFrameException();
@@ -80,7 +79,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Void> {
     }
 
     @Override
-    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
+    protected void decodeLast(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         switch (buffer.readableBytes()) {
         case 0:
             return;
@@ -92,7 +91,7 @@ public class CompatibleMarshallingDecoder extends ReplayingDecoder<Void> {
             }
         }
 
-        decode(ctx, buffer, out);
+        decode(ctx, buffer);
     }
 
     @Override

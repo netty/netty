@@ -79,29 +79,22 @@ public abstract class MessageToMessageDecoder<I> extends ChannelHandlerAdapter i
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        CodecOutputList out = CodecOutputList.newInstance();
         try {
             if (acceptInboundMessage(msg)) {
                 @SuppressWarnings("unchecked")
                 I cast = (I) msg;
                 try {
-                    decode(ctx, cast, out);
+                    decode(ctx, cast);
                 } finally {
                     ReferenceCountUtil.release(cast);
                 }
             } else {
-                out.add(msg);
+                ctx.fireChannelRead(msg);
             }
         } catch (DecoderException e) {
             throw e;
         } catch (Exception e) {
             throw new DecoderException(e);
-        } finally {
-            int size = out.size();
-            for (int i = 0; i < size; i ++) {
-                ctx.fireChannelRead(out.getUnsafe(i));
-            }
-            out.recycle();
         }
     }
 
@@ -111,8 +104,7 @@ public abstract class MessageToMessageDecoder<I> extends ChannelHandlerAdapter i
      *
      * @param ctx           the {@link ChannelHandlerContext} which this {@link MessageToMessageDecoder} belongs to
      * @param msg           the message to decode to an other one
-     * @param out           the {@link List} to which decoded messages should be added
      * @throws Exception    is thrown if an error occurs
      */
-    protected abstract void decode(ChannelHandlerContext ctx, I msg, List<Object> out) throws Exception;
+    protected abstract void decode(ChannelHandlerContext ctx, I msg) throws Exception;
 }

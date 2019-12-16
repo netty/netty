@@ -27,7 +27,6 @@ import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
 import java.nio.charset.Charset;
-import java.util.List;
 
 /**
  * Decodes a received {@link ByteBuf} into a {@link String}.  Please
@@ -75,7 +74,7 @@ public class StringDecoder extends MessageToMessageDecoder<ByteBuf> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
-        out.add(msg.toString(charset));
+    protected void decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        ctx.fireChannelRead(msg.toString(charset));
     }
 }

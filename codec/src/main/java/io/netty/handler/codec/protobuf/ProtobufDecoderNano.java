@@ -71,8 +71,7 @@ public class ProtobufDecoderNano extends MessageToMessageDecoder<ByteBuf> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out)
-            throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         final byte[] array;
         final int offset;
         final int length = msg.readableBytes();
@@ -84,6 +83,6 @@ public class ProtobufDecoderNano extends MessageToMessageDecoder<ByteBuf> {
             offset = 0;
         }
         MessageNano prototype = clazz.getConstructor().newInstance();
-        out.add(MessageNano.mergeFrom(prototype, array, offset, length));
+        ctx.fireChannelRead(MessageNano.mergeFrom(prototype, array, offset, length));
     }
 }

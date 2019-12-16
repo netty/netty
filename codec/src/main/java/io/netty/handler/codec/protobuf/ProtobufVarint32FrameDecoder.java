@@ -22,8 +22,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CorruptedFrameException;
 
-import java.util.List;
-
 /**
  * A decoder that splits the received {@link ByteBuf}s dynamically by the
  * value of the Google Protocol Buffers
@@ -46,7 +44,7 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
     //      (just like LengthFieldBasedFrameDecoder)
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in)
             throws Exception {
         int readerIndex = in.readerIndex();
         int preIndex = in.readerIndex();
@@ -61,7 +59,7 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
         if (in.readableBytes() < length) {
             in.readerIndex(readerIndex);
         } else {
-            out.add(in.readRetainedSlice(length));
+            ctx.fireChannelRead(in.readRetainedSlice(length));
         }
     }
 

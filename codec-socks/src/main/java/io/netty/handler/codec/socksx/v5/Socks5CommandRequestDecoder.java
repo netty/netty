@@ -26,8 +26,6 @@ import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.socksx.SocksVersion;
 import io.netty.handler.codec.socksx.v5.Socks5CommandRequestDecoder.State;
 
-import java.util.List;
-
 /**
  * Decodes a single {@link Socks5CommandRequest} from the inbound {@link ByteBuf}s.
  * On successful decode, this decoder will forward the received data to the next handler, so that
@@ -56,7 +54,7 @@ public class Socks5CommandRequestDecoder extends ReplayingDecoder<State> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         try {
             switch (state()) {
             case INIT: {
@@ -72,13 +70,13 @@ public class Socks5CommandRequestDecoder extends ReplayingDecoder<State> {
                 final String dstAddr = addressDecoder.decodeAddress(dstAddrType, in);
                 final int dstPort = in.readUnsignedShort();
 
-                out.add(new DefaultSocks5CommandRequest(type, dstAddrType, dstAddr, dstPort));
+                ctx.fireChannelRead(new DefaultSocks5CommandRequest(type, dstAddrType, dstAddr, dstPort));
                 checkpoint(State.SUCCESS);
             }
             case SUCCESS: {
                 int readableBytes = actualReadableBytes();
                 if (readableBytes > 0) {
-                    out.add(in.readRetainedSlice(readableBytes));
+                    ctx.fireChannelRead(in.readRetainedSlice(readableBytes));
                 }
                 break;
             }
@@ -88,11 +86,11 @@ public class Socks5CommandRequestDecoder extends ReplayingDecoder<State> {
             }
             }
         } catch (Exception e) {
-            fail(out, e);
+            fail(ctx, e);
         }
     }
 
-    private void fail(List<Object> out, Exception cause) {
+    private void fail(ChannelHandlerContext ctx, Exception cause) {
         if (!(cause instanceof DecoderException)) {
             cause = new DecoderException(cause);
         }
@@ -102,6 +100,6 @@ public class Socks5CommandRequestDecoder extends ReplayingDecoder<State> {
         Socks5Message m = new DefaultSocks5CommandRequest(
                 Socks5CommandType.CONNECT, Socks5AddressType.IPv4, "0.0.0.0", 1);
         m.setDecoderResult(DecoderResult.failure(cause));
-        out.add(m);
+        ctx.fireChannelRead(m);
     }
 }

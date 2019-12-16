@@ -821,7 +821,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     private Http2FrameListener decode() throws Exception {
         ArgumentCaptor<Http2FrameListener> internalListener = ArgumentCaptor.forClass(Http2FrameListener.class);
         doNothing().when(reader).readFrame(eq(ctx), any(ByteBuf.class), internalListener.capture());
-        decoder.decodeFrame(ctx, EMPTY_BUFFER, Collections.emptyList());
+        decoder.decodeFrame(ctx, EMPTY_BUFFER);
         return internalListener.getValue();
     }
 

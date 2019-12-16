@@ -25,8 +25,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.ReferenceCountUtil;
 
-import java.util.List;
-
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
@@ -205,9 +203,8 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     }
 
     @Override
-    protected void decode(final ChannelHandlerContext ctx, I msg, List<Object> out) throws Exception {
+    protected void decode(final ChannelHandlerContext ctx, I msg) throws Exception {
         assert aggregating;
-
         if (isStartMessage(msg)) {
             handlingOversizedMessage = false;
             if (currentMessage != null) {
@@ -259,8 +256,8 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
                 } else {
                     aggregated = beginAggregation(m, EMPTY_BUFFER);
                 }
-                finishAggregation0(aggregated);
-                out.add(aggregated);
+                finishAggregation(aggregated);
+                ctx.fireChannelRead(aggregated);
                 return;
             }
 
@@ -317,8 +314,9 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
                 finishAggregation0(currentMessage);
 
                 // All done
-                out.add(currentMessage);
+                O message = currentMessage;
                 currentMessage = null;
+                ctx.fireChannelRead(message);
             }
         } else {
             throw new MessageAggregationException();

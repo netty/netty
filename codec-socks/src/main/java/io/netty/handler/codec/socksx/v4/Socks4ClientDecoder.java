@@ -23,8 +23,6 @@ import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.socksx.v4.Socks4ClientDecoder.State;
 import io.netty.util.NetUtil;
 
-import java.util.List;
-
 /**
  * Decodes a single {@link Socks4CommandResponse} from the inbound {@link ByteBuf}s.
  * On successful decode, this decoder will forward the received data to the next handler, so that
@@ -45,7 +43,7 @@ public class Socks4ClientDecoder extends ReplayingDecoder<State> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         try {
             switch (state()) {
             case START: {
@@ -58,13 +56,13 @@ public class Socks4ClientDecoder extends ReplayingDecoder<State> {
                 final int dstPort = in.readUnsignedShort();
                 final String dstAddr = NetUtil.intToIpAddress(in.readInt());
 
-                out.add(new DefaultSocks4CommandResponse(status, dstAddr, dstPort));
+                ctx.fireChannelRead(new DefaultSocks4CommandResponse(status, dstAddr, dstPort));
                 checkpoint(State.SUCCESS);
             }
             case SUCCESS: {
                 int readableBytes = actualReadableBytes();
                 if (readableBytes > 0) {
-                    out.add(in.readRetainedSlice(readableBytes));
+                    ctx.fireChannelRead(in.readRetainedSlice(readableBytes));
                 }
                 break;
             }
@@ -74,18 +72,18 @@ public class Socks4ClientDecoder extends ReplayingDecoder<State> {
             }
             }
         } catch (Exception e) {
-            fail(out, e);
+            fail(ctx, e);
         }
     }
 
-    private void fail(List<Object> out, Exception cause) {
+    private void fail(ChannelHandlerContext ctx, Exception cause) {
         if (!(cause instanceof DecoderException)) {
             cause = new DecoderException(cause);
         }
 
         Socks4CommandResponse m = new DefaultSocks4CommandResponse(Socks4CommandStatus.REJECTED_OR_FAILED);
         m.setDecoderResult(DecoderResult.failure(cause));
-        out.add(m);
+        ctx.fireChannelRead(m);
 
         checkpoint(State.FAILURE);
     }

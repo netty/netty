@@ -21,8 +21,6 @@ import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.socks.SocksCmdResponseDecoder.State;
 import io.netty.util.NetUtil;
 
-import java.util.List;
-
 /**
  * Decodes {@link ByteBuf}s into {@link SocksCmdResponse}.
  * Before returning SocksResponse decoder removes itself from pipeline.
@@ -37,11 +35,11 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<State> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf) throws Exception {
         switch (state()) {
             case CHECK_PROTOCOL_VERSION: {
                 if (byteBuf.readByte() != SocksProtocolVersion.SOCKS5.byteValue()) {
-                    out.add(SocksCommonUtils.UNKNOWN_SOCKS_RESPONSE);
+                    ctx.fireChannelRead(SocksCommonUtils.UNKNOWN_SOCKS_RESPONSE);
                     break;
                 }
                 checkpoint(State.READ_CMD_HEADER);
@@ -57,14 +55,14 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<State> {
                     case IPv4: {
                         String host = NetUtil.intToIpAddress(byteBuf.readInt());
                         int port = byteBuf.readUnsignedShort();
-                        out.add(new SocksCmdResponse(cmdStatus, addressType, host, port));
+                        ctx.fireChannelRead(new SocksCmdResponse(cmdStatus, addressType, host, port));
                         break;
                     }
                     case DOMAIN: {
                         int fieldLength = byteBuf.readByte();
                         String host = SocksCommonUtils.readUsAscii(byteBuf, fieldLength);
                         int port = byteBuf.readUnsignedShort();
-                        out.add(new SocksCmdResponse(cmdStatus, addressType, host, port));
+                        ctx.fireChannelRead(new SocksCmdResponse(cmdStatus, addressType, host, port));
                         break;
                     }
                     case IPv6: {
@@ -72,11 +70,11 @@ public class SocksCmdResponseDecoder extends ReplayingDecoder<State> {
                         byteBuf.readBytes(bytes);
                         String host = SocksCommonUtils.ipv6toStr(bytes);
                         int port = byteBuf.readUnsignedShort();
-                        out.add(new SocksCmdResponse(cmdStatus, addressType, host, port));
+                        ctx.fireChannelRead(new SocksCmdResponse(cmdStatus, addressType, host, port));
                         break;
                     }
                     case UNKNOWN: {
-                        out.add(SocksCommonUtils.UNKNOWN_SOCKS_RESPONSE);
+                        ctx.fireChannelRead(SocksCommonUtils.UNKNOWN_SOCKS_RESPONSE);
                         break;
                     }
                     default: {

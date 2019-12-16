@@ -19,8 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ByteProcessor;
 
-import java.util.List;
-
 /**
  * A decoder that splits the received {@link ByteBuf}s on line endings.
  * <p>
@@ -80,10 +78,10 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    protected final void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        Object decoded = decode(ctx, in);
+    protected final void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+        Object decoded = decode0(ctx, in);
         if (decoded != null) {
-            out.add(decoded);
+            ctx.fireChannelRead(decoded);
         }
     }
 
@@ -95,7 +93,7 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
      * @return  frame           the {@link ByteBuf} which represent the frame or {@code null} if no frame could
      *                          be created.
      */
-    protected Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
+    protected Object decode0(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
         final int eol = findEndOfLine(buffer);
         if (!discarding) {
             if (eol >= 0) {

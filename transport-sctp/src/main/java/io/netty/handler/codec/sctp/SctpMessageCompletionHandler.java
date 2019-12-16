@@ -24,7 +24,6 @@ import io.netty.channel.sctp.SctpMessage;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -36,7 +35,7 @@ public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMe
     private final Map<Integer, ByteBuf> fragments = new HashMap<>();
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, SctpMessage msg, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
         final ByteBuf byteBuf = msg.content();
         final int protocolIdentifier = msg.protocolIdentifier();
         final int streamIdentifier = msg.streamIdentifier();
@@ -50,23 +49,22 @@ public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMe
 
         if (isComplete && !frag.isReadable()) {
             //data chunk is not fragmented
-            out.add(msg);
+            ctx.fireChannelRead(msg.retain());
         } else if (!isComplete && frag.isReadable()) {
             //more message to complete
-            fragments.put(streamIdentifier, Unpooled.wrappedBuffer(frag, byteBuf));
+            fragments.put(streamIdentifier, Unpooled.wrappedBuffer(frag, byteBuf.retain()));
         } else if (isComplete && frag.isReadable()) {
             //last message to complete
             SctpMessage assembledMsg = new SctpMessage(
                     protocolIdentifier,
                     streamIdentifier,
                     isUnordered,
-                    Unpooled.wrappedBuffer(frag, byteBuf));
-            out.add(assembledMsg);
+                    Unpooled.wrappedBuffer(frag, byteBuf.retain()));
+            ctx.fireChannelRead(assembledMsg);
         } else {
             //first incomplete message
-            fragments.put(streamIdentifier, byteBuf);
+            fragments.put(streamIdentifier, byteBuf.retain());
         }
-        byteBuf.retain();
     }
 
     @Override

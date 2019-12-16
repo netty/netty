@@ -206,45 +206,42 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out)
+    protected void decode(final ChannelHandlerContext ctx, HttpObject msg)
             throws Exception {
         // Determine if we're already handling an upgrade request or just starting a new one.
         handlingUpgrade |= isUpgradeRequest(msg);
         if (!handlingUpgrade) {
             // Not handling an upgrade request, just pass it to the next handler.
             ReferenceCountUtil.retain(msg);
-            out.add(msg);
+            ctx.fireChannelRead(msg);
             return;
         }
 
         FullHttpRequest fullRequest;
         if (msg instanceof FullHttpRequest) {
             fullRequest = (FullHttpRequest) msg;
-            ReferenceCountUtil.retain(msg);
-            out.add(msg);
+            tryUpgrade(ctx, fullRequest.retain());
         } else {
             // Call the base class to handle the aggregation of the full request.
-            super.decode(ctx, msg, out);
-            if (out.isEmpty()) {
-                // The full request hasn't been created yet, still awaiting more data.
-                return;
-            }
-
-            // Finished aggregating the full request, get it from the output list.
-            assert out.size() == 1;
-            handlingUpgrade = false;
-            fullRequest = (FullHttpRequest) out.get(0);
+            super.decode(new DelegatingChannelHandlerContext(ctx) {
+                @Override
+                public ChannelHandlerContext fireChannelRead(Object msg) {
+                    // Finished aggregating the full request, get it from the output list.
+                    handlingUpgrade = false;
+                    tryUpgrade(ctx, (FullHttpRequest) msg);
+                    return this;
+                }
+            }, msg);
         }
+    }
 
-        if (upgrade(ctx, fullRequest)) {
-            // The upgrade was successful, remove the message from the output list
-            // so that it's not propagated to the next handler. This request will
-            // be propagated as a user event instead.
-            out.clear();
+    private void tryUpgrade(ChannelHandlerContext ctx, FullHttpRequest request) {
+        if (!upgrade(ctx, request)) {
+
+            // The upgrade did not succeed, just allow the full request to propagate to the
+            // next handler.
+            ctx.fireChannelRead(request);
         }
-
-        // The upgrade did not succeed, just allow the full request to propagate to the
-        // next handler.
     }
 
     /**

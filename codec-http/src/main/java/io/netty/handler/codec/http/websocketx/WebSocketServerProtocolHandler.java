@@ -29,7 +29,6 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.AttributeKey;
 
-import java.util.List;
 import java.util.Objects;
 
 import static io.netty.handler.codec.http.HttpVersion.*;
@@ -235,7 +234,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
         if (serverConfig.handleCloseFrames() && frame instanceof CloseWebSocketFrame) {
             WebSocketServerHandshaker handshaker = getHandshaker(ctx.channel());
             if (handshaker != null) {
@@ -246,7 +245,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
             }
             return;
         }
-        super.decode(ctx, frame, out);
+        super.decode(ctx, frame);
     }
 
     @Override

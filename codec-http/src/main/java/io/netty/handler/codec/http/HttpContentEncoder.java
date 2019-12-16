@@ -76,7 +76,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, HttpRequest msg) throws Exception {
         CharSequence acceptEncoding;
         List<String> acceptEncodingHeaders = msg.headers().getAll(ACCEPT_ENCODING);
         switch (acceptEncodingHeaders.size()) {
@@ -100,7 +100,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
         }
 
         acceptEncodingQueue.add(acceptEncoding);
-        out.add(ReferenceCountUtil.retain(msg));
+        ctx.fireChannelRead(ReferenceCountUtil.retain(msg));
     }
 
     @Override

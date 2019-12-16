@@ -56,8 +56,8 @@ public class DatagramPacketDecoder extends MessageToMessageDecoder<DatagramPacke
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, DatagramPacket msg, List<Object> out) throws Exception {
-        decoder.decode(ctx, msg.content(), out);
+    protected void decode(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {
+        decoder.decode(ctx, msg.content());
     }
 
     @Override

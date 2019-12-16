@@ -22,8 +22,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
 
-import java.util.List;
-
 import static org.junit.Assert.*;
 
 public class ByteToMessageCodecTest {
@@ -47,9 +45,9 @@ public class ByteToMessageCodecTest {
             }
 
             @Override
-            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
                 if (in.readableBytes() >= 4) {
-                    out.add(in.readInt());
+                    ctx.fireChannelRead(in.readInt());
                 }
             }
         };
@@ -81,7 +79,7 @@ public class ByteToMessageCodecTest {
         protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) throws Exception { }
 
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception { }
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception { }
     }
 
     @ChannelHandler.Sharable
@@ -94,6 +92,6 @@ public class ByteToMessageCodecTest {
         protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) throws Exception { }
 
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception { }
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception { }
     }
 }

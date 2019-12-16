@@ -22,7 +22,6 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
-import java.util.List;
 
 /**
  * Decodes a {@link DatagramPacket} into a {@link DatagramDnsResponse}.
@@ -54,8 +53,9 @@ public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<Datagram
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, DatagramPacket packet, List<Object> out) throws Exception {
-        out.add(decodeResponse(ctx, packet));
+    protected void decode(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
+        DnsResponse response = decodeResponse(ctx, packet);
+        ctx.fireChannelRead(response);
     }
 
     protected DnsResponse decodeResponse(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {

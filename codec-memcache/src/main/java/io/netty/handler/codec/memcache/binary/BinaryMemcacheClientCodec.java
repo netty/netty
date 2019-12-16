@@ -16,12 +16,23 @@
 package io.netty.handler.codec.memcache.binary;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelProgressivePromise;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.CombinedChannelDuplexHandler;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.handler.codec.memcache.LastMemcacheContent;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.UnstableApi;
 
+import java.net.SocketAddress;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -84,24 +95,212 @@ public final class BinaryMemcacheClientCodec extends
 
     private final class Decoder extends BinaryMemcacheResponseDecoder {
 
+        private ChannelHandlerContext context;
+
         Decoder(int chunkSize) {
             super(chunkSize);
         }
 
         @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-            int oldSize = out.size();
-            super.decode(ctx, in, out);
+        protected void handlerAdded0(final ChannelHandlerContext ctx) {
+            context = new ChannelHandlerContext() {
+                @Override
+                public Channel channel() {
+                    return ctx.channel();
+                }
 
-            if (failOnMissingResponse) {
-                final int size = out.size();
-                for (int i = oldSize; i < size; i ++) {
-                    Object msg = out.get(i);
-                    if (msg instanceof LastMemcacheContent) {
+                public EventExecutor executor() {
+                    return ctx.executor();
+                }
+
+                public String name() {
+                    return ctx.name();
+                }
+
+                public ChannelHandler handler() {
+                    return ctx.handler();
+                }
+
+                public boolean isRemoved() {
+                    return ctx.isRemoved();
+                }
+
+                public ChannelHandlerContext fireChannelRegistered() {
+                    ctx.fireChannelRegistered();
+                    return this;
+                }
+
+                public ChannelHandlerContext fireChannelUnregistered() {
+                    ctx.fireChannelUnregistered();
+                    return this;
+                }
+
+                public ChannelHandlerContext fireChannelActive() {
+                    ctx.fireChannelActive();
+                    return this;
+                }
+
+                public ChannelHandlerContext fireChannelInactive() {
+                    ctx.fireChannelInactive();
+                    return this;
+                }
+
+                public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
+                    ctx.fireExceptionCaught(cause);
+                    return this;
+                }
+
+                public ChannelHandlerContext fireUserEventTriggered(Object evt) {
+                    ctx.fireUserEventTriggered(evt);
+                    return this;
+                }
+
+                public ChannelHandlerContext fireChannelRead(Object msg) {
+                    if (failOnMissingResponse && msg instanceof LastMemcacheContent) {
                         requestResponseCounter.decrementAndGet();
                     }
+                    ctx.fireChannelRead(msg);
+                    return this;
                 }
-            }
+
+                public ChannelHandlerContext fireChannelReadComplete() {
+                    ctx.fireChannelReadComplete();
+                    return this;
+                }
+
+                public ChannelHandlerContext fireChannelWritabilityChanged() {
+                    ctx.fireChannelWritabilityChanged();
+                    return this;
+                }
+
+                public ChannelHandlerContext read() {
+                    ctx.read();
+                    return this;
+                }
+
+                public ChannelHandlerContext flush() {
+                    ctx.flush();
+                    return this;
+                }
+
+                public ChannelPipeline pipeline() {
+                    return ctx.pipeline();
+                }
+
+                public ByteBufAllocator alloc() {
+                    return ctx.alloc();
+                }
+
+                @Deprecated
+                public <T> Attribute<T> attr(AttributeKey<T> key) {
+                    return ctx.attr(key);
+                }
+
+                @Deprecated
+                public <T> boolean hasAttr(AttributeKey<T> key) {
+                    return ctx.hasAttr(key);
+                }
+
+                public ChannelFuture bind(SocketAddress localAddress) {
+                    return ctx.bind(localAddress);
+                }
+
+                public ChannelFuture connect(SocketAddress remoteAddress) {
+                    return ctx.connect(remoteAddress);
+                }
+
+                public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+                    return ctx.connect(remoteAddress, localAddress);
+                }
+
+                public ChannelFuture disconnect() {
+                    return ctx.disconnect();
+                }
+
+                public ChannelFuture close() {
+                    return ctx.close();
+                }
+
+                public ChannelFuture deregister() {
+                    return ctx.deregister();
+                }
+
+                @Override
+                public ChannelFuture register() {
+                    return ctx.register();
+                }
+
+                @Override
+                public ChannelFuture register(ChannelPromise promise) {
+                    return ctx.register(promise);
+                }
+
+                public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+                    return ctx.bind(localAddress, promise);
+                }
+
+                public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+                    return ctx.connect(remoteAddress, promise);
+                }
+
+                public ChannelFuture connect(
+                        SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+                    return ctx.connect(remoteAddress, localAddress, promise);
+                }
+
+                public ChannelFuture disconnect(ChannelPromise promise) {
+                    return ctx.disconnect(promise);
+                }
+
+                public ChannelFuture close(ChannelPromise promise) {
+                    return ctx.close(promise);
+                }
+
+                public ChannelFuture deregister(ChannelPromise promise) {
+                    return ctx.deregister(promise);
+                }
+
+                public ChannelFuture write(Object msg) {
+                    return ctx.write(msg);
+                }
+
+                public ChannelFuture write(Object msg, ChannelPromise promise) {
+                    return ctx.write(msg, promise);
+                }
+
+                public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+                    return ctx.writeAndFlush(msg, promise);
+                }
+
+                public ChannelFuture writeAndFlush(Object msg) {
+                    return ctx.writeAndFlush(msg);
+                }
+
+                public ChannelPromise newPromise() {
+                    return ctx.newPromise();
+                }
+
+                public ChannelProgressivePromise newProgressivePromise() {
+                    return ctx.newProgressivePromise();
+                }
+
+                public ChannelFuture newSucceededFuture() {
+                    return ctx.newSucceededFuture();
+                }
+
+                public ChannelFuture newFailedFuture(Throwable cause) {
+                    return ctx.newFailedFuture(cause);
+                }
+
+                public ChannelPromise voidPromise() {
+                    return ctx.voidPromise();
+                }
+            };
+        }
+
+        @Override
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+            super.decode(context, in);
         }
 
         @Override

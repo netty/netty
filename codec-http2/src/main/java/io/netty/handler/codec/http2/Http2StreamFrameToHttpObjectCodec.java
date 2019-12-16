@@ -82,7 +82,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, Http2StreamFrame frame, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, Http2StreamFrame frame) throws Exception {
         if (frame instanceof Http2HeadersFrame) {
             Http2HeadersFrame headersFrame = (Http2HeadersFrame) frame;
             Http2Headers headers = headersFrame.headers();
@@ -95,7 +95,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
             // but we need to decode it as a FullHttpResponse to play nice with HttpObjectAggregator.
             if (null != status && HttpResponseStatus.CONTINUE.codeAsText().contentEquals(status)) {
                 final FullHttpMessage fullMsg = newFullMessage(id, headers, ctx.alloc());
-                out.add(fullMsg);
+                ctx.fireChannelRead(fullMsg);
                 return;
             }
 
@@ -104,24 +104,24 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
                     LastHttpContent last = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
                     HttpConversionUtil.addHttp2ToHttpHeaders(id, headers, last.trailingHeaders(),
                                                              HttpVersion.HTTP_1_1, true, true);
-                    out.add(last);
+                    ctx.fireChannelRead(last);
                 } else {
                     FullHttpMessage full = newFullMessage(id, headers, ctx.alloc());
-                    out.add(full);
+                    ctx.fireChannelRead(full);
                 }
             } else {
                 HttpMessage req = newMessage(id, headers);
                 if (!HttpUtil.isContentLengthSet(req)) {
                     req.headers().add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
                 }
-                out.add(req);
+                ctx.fireChannelRead(req);
             }
         } else if (frame instanceof Http2DataFrame) {
             Http2DataFrame dataFrame = (Http2DataFrame) frame;
             if (dataFrame.isEndStream()) {
-                out.add(new DefaultLastHttpContent(dataFrame.content().retain(), validateHeaders));
+                ctx.fireChannelRead(new DefaultLastHttpContent(dataFrame.content().retain(), validateHeaders));
             } else {
-                out.add(new DefaultHttpContent(dataFrame.content().retain()));
+                ctx.fireChannelRead(new DefaultHttpContent(dataFrame.content().retain()));
             }
         }
     }

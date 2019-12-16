@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
-import java.util.List;
 import java.util.zip.CRC32;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
@@ -128,7 +127,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         if (finished) {
             // Skip data received after finished.
             in.skipBytes(in.readableBytes());
@@ -231,7 +230,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
         } finally {
 
             if (decompressed.isReadable()) {
-                out.add(decompressed);
+                ctx.fireChannelRead(decompressed);
             } else {
                 decompressed.release();
             }

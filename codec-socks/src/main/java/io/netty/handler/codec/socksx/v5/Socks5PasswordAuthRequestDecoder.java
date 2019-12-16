@@ -24,8 +24,6 @@ import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthRequestDecoder.State;
 import io.netty.util.CharsetUtil;
 
-import java.util.List;
-
 /**
  * Decodes a single {@link Socks5PasswordAuthRequest} from the inbound {@link ByteBuf}s.
  * On successful decode, this decoder will forward the received data to the next handler, so that
@@ -45,7 +43,7 @@ public class Socks5PasswordAuthRequestDecoder extends ReplayingDecoder<State> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         try {
             switch (state()) {
             case INIT: {
@@ -60,7 +58,7 @@ public class Socks5PasswordAuthRequestDecoder extends ReplayingDecoder<State> {
                 final int totalLength = usernameLength + passwordLength + 3;
 
                 in.skipBytes(totalLength);
-                out.add(new DefaultSocks5PasswordAuthRequest(
+                ctx.fireChannelRead(new DefaultSocks5PasswordAuthRequest(
                         in.toString(startOffset + 2, usernameLength, CharsetUtil.US_ASCII),
                         in.toString(startOffset + 3 + usernameLength, passwordLength, CharsetUtil.US_ASCII)));
 
@@ -69,7 +67,7 @@ public class Socks5PasswordAuthRequestDecoder extends ReplayingDecoder<State> {
             case SUCCESS: {
                 int readableBytes = actualReadableBytes();
                 if (readableBytes > 0) {
-                    out.add(in.readRetainedSlice(readableBytes));
+                    ctx.fireChannelRead(in.readRetainedSlice(readableBytes));
                 }
                 break;
             }
@@ -79,11 +77,11 @@ public class Socks5PasswordAuthRequestDecoder extends ReplayingDecoder<State> {
             }
             }
         } catch (Exception e) {
-            fail(out, e);
+            fail(ctx, e);
         }
     }
 
-    private void fail(List<Object> out, Exception cause) {
+    private void fail(ChannelHandlerContext ctx, Exception cause) {
         if (!(cause instanceof DecoderException)) {
             cause = new DecoderException(cause);
         }
@@ -92,6 +90,6 @@ public class Socks5PasswordAuthRequestDecoder extends ReplayingDecoder<State> {
 
         Socks5Message m = new DefaultSocks5PasswordAuthRequest("", "");
         m.setDecoderResult(DecoderResult.failure(cause));
-        out.add(m);
+        ctx.fireChannelRead(m);
     }
 }

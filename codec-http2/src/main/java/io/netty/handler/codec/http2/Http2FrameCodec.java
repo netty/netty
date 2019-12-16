@@ -209,10 +209,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     }
 
     @Override
-    public final void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded0(ChannelHandlerContext ctx) throws Exception {
+        super.handlerAdded0(ctx);
         this.ctx = ctx;
-        super.handlerAdded(ctx);
-        handlerAdded0(ctx);
         // Must be after Http2ConnectionHandler does its initialization in handlerAdded above.
         // The server will not send a connection preface so we are good to send a window update.
         Http2Connection connection = connection();
@@ -235,10 +234,6 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 flush(ctx);
             }
         }
-    }
-
-    void handlerAdded0(@SuppressWarnings("unsed") ChannelHandlerContext ctx) throws Exception {
-        // sub-class can override this for extra steps that needs to be done when the handler is added.
     }
 
     /**

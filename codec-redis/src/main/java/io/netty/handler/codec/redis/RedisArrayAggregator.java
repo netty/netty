@@ -36,7 +36,7 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
     private final Deque<AggregateState> depths = new ArrayDeque<>(4);
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, RedisMessage msg, List<Object> out) throws Exception {
+    protected void decode(ChannelHandlerContext ctx, RedisMessage msg) throws Exception {
         if (msg instanceof ArrayHeaderRedisMessage) {
             msg = decodeRedisArrayHeader((ArrayHeaderRedisMessage) msg);
             if (msg == null) {
@@ -60,7 +60,7 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
             }
         }
 
-        out.add(msg);
+        ctx.fireChannelRead(msg);
     }
 
     private RedisMessage decodeRedisArrayHeader(ArrayHeaderRedisMessage header) {
