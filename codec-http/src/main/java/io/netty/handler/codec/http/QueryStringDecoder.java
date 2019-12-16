@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.net.URI;
 import java.net.URLDecoder;
@@ -354,7 +355,7 @@ public class QueryStringDecoder {
 
         // Each encoded byte takes 3 characters (e.g. "%20")
         int decodedCapacity = (toExcluded - firstEscaped) / 3;
-        byte[] buf = new byte[decodedCapacity];
+        byte[] buf = PlatformDependent.allocateUninitializedArray(decodedCapacity);
         int bufIdx;
 
         StringBuilder strBuf = new StringBuilder(len);
