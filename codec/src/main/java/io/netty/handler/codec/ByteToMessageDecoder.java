@@ -80,7 +80,7 @@ import static java.lang.Integer.MAX_VALUE;
  * annotated with {@link @Sharable}.
  * <p>
  * Some methods such as {@link ByteBuf#readBytes(int)} will cause a memory leak if the returned buffer
- * is not released or fired throught the {@link ChannelPipeline} via
+ * is not released or fired through the {@link ChannelPipeline} via
  * {@link ChannelHandlerContext#fireChannelRead(Object)}. Use derived buffers like {@link ByteBuf#readSlice(int)} to
  * avoid leaking memory.
  */
@@ -304,7 +304,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
                     discardSomeReadBytes();
                 }
 
-                firedChannelRead |= context.numFireChannelReadCalled() > 0;
+                firedChannelRead |= context.fireChannelReadCallCount() > 0;
                 context.reset();
             }
         } else {
@@ -366,7 +366,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
                 cumulation.release();
                 cumulation = null;
             }
-            if (ctx.numFireChannelReadCalled() > 0) {
+            if (ctx.fireChannelReadCallCount() > 0) {
                 ctx.reset();
                 // Something was read, call fireChannelReadComplete()
                 ctx.fireChannelReadComplete();
@@ -402,7 +402,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
             while (in.isReadable() && !ctx.isRemoved()) {
 
                 int oldInputLength = in.readableBytes();
-                int numReadCalled = ctx.numFireChannelReadCalled();
+                int numReadCalled = ctx.fireChannelReadCallCount();
                 decodeRemovalReentryProtection(ctx, in);
 
                 // Check if this handler was removed before continuing the loop.
@@ -413,7 +413,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
                     break;
                 }
 
-                if (numReadCalled == ctx.numFireChannelReadCalled()) {
+                if (numReadCalled == ctx.fireChannelReadCallCount()) {
                     if (oldInputLength == in.readableBytes()) {
                         break;
                     } else {
@@ -526,7 +526,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
             fireChannelReadCalled = 0;
         }
 
-        int numFireChannelReadCalled() {
+        int fireChannelReadCallCount() {
             return fireChannelReadCalled;
         }
 

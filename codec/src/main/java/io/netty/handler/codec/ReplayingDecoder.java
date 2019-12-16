@@ -341,7 +341,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                 S oldState = state;
                 int oldInputLength = in.readableBytes();
                 try {
-                    int oldNumRead = ctx.numFireChannelReadCalled();
+                    int oldNumRead = ctx.fireChannelReadCallCount();
                     decodeRemovalReentryProtection(ctx, replayable);
 
                     // Check if this handler was removed before continuing the loop.
@@ -352,7 +352,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                         break;
                     }
 
-                    if (oldNumRead == ctx.numFireChannelReadCalled()) {
+                    if (oldNumRead == ctx.fireChannelReadCallCount()) {
                         if (oldInputLength == in.readableBytes() && oldState == state) {
                             throw new DecoderException(
                                     StringUtil.simpleClassName(getClass()) + ".decode() must consume the inbound " +
