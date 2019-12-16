@@ -304,7 +304,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
                     discardSomeReadBytes();
                 }
 
-                firedChannelRead |= context.numFireChannelReadCalled() == 0;
+                firedChannelRead |= context.numFireChannelReadCalled() > 0;
                 context.reset();
             }
         } else {

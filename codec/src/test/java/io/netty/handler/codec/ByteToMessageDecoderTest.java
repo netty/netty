@@ -426,7 +426,6 @@ public class ByteToMessageDecoderTest {
         }
     }
 
-    @Ignore
     @Test
     public void testDoesNotOverRead() {
         class ReadInterceptingHandler extends ChannelOutboundHandlerAdapter {
