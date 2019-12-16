@@ -155,6 +155,20 @@ public class QueryStringEncoder {
     private void encodeUtf8Component(CharSequence s) {
         for (int i = 0, len = s.length(); i < len; i++) {
             char c = s.charAt(i);
+            if (!dontNeedEncoding(c)) {
+                if (i > 0) {
+                    uriBuilder.append(s, 0, i);
+                }
+                encodeUtf8ComponentSlow(s, i);
+                return;
+            }
+        }
+        uriBuilder.append(s);
+    }
+
+    private void encodeUtf8ComponentSlow(CharSequence s, int start) {
+        for (int i = start, len = s.length(); i < len; i++) {
+            char c = s.charAt(i);
             if (c < 0x80) {
                 if (dontNeedEncoding(c)) {
                     uriBuilder.append(c);
