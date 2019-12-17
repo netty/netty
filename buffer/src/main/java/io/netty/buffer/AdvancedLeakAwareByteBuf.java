@@ -21,6 +21,7 @@ import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakTracker;
 import io.netty.util.TrackedIllegalReferenceCountException;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -931,7 +932,7 @@ final class AdvancedLeakAwareByteBuf extends SimpleLeakAwareByteBuf {
         try {
             return super.retain();
         } catch (IllegalReferenceCountException e) {
-            throw new TrackedIllegalReferenceCountException(e.getMessage(), leak.accessRecord());
+            throw dealWithIllegalReferenceCountException(e);
         }
     }
 
@@ -941,7 +942,7 @@ final class AdvancedLeakAwareByteBuf extends SimpleLeakAwareByteBuf {
         try {
             return super.retain(increment);
         } catch (IllegalReferenceCountException e) {
-            throw new TrackedIllegalReferenceCountException(e.getMessage(), leak.accessRecord());
+            throw dealWithIllegalReferenceCountException(e);
         }
     }
 
@@ -951,7 +952,7 @@ final class AdvancedLeakAwareByteBuf extends SimpleLeakAwareByteBuf {
         try {
             return super.release();
         } catch (IllegalReferenceCountException e) {
-            throw new TrackedIllegalReferenceCountException(e.getMessage(), leak.accessRecord());
+            throw dealWithIllegalReferenceCountException(e);
         }
     }
 
@@ -961,8 +962,17 @@ final class AdvancedLeakAwareByteBuf extends SimpleLeakAwareByteBuf {
         try {
             return super.release(decrement);
         } catch (IllegalReferenceCountException e) {
-            throw new TrackedIllegalReferenceCountException(e.getMessage(), leak.accessRecord());
+            throw dealWithIllegalReferenceCountException(e);
         }
+    }
+
+    private IllegalReferenceCountException dealWithIllegalReferenceCountException(IllegalReferenceCountException e) {
+        String accessRecord = leak.toString();
+        if (StringUtil.isNullOrEmpty(accessRecord)) {
+            // means leak has been closed and there is no accessRecord.
+            return e;
+        }
+        return new TrackedIllegalReferenceCountException(e.getMessage(), accessRecord);
     }
 
     @Override
