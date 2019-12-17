@@ -70,7 +70,6 @@ public class DataCompressionHttp2Test {
     private static final AsciiString GET = new AsciiString("GET");
     private static final AsciiString POST = new AsciiString("POST");
     private static final AsciiString PATH = new AsciiString("/some/path");
-    private static final AsciiString SCHEME = new AsciiString("http");
 
     @Mock
     private Http2FrameListener serverListener;
@@ -145,7 +144,7 @@ public class DataCompressionHttp2Test {
     @Test
     public void justHeadersNoData() throws Exception {
         bootstrapEnv(0);
-        final Http2Headers headers = new DefaultHttp2Headers().method(GET).path(PATH).scheme(SCHEME)
+        final Http2Headers headers = new DefaultHttp2Headers().method(GET).path(PATH)
                 .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
 
         runInChannel(clientChannel, new Http2Runnable() {
@@ -166,7 +165,7 @@ public class DataCompressionHttp2Test {
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
         bootstrapEnv(data.readableBytes());
         try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH).scheme(SCHEME)
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
                     .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
 
             runInChannel(clientChannel, new Http2Runnable() {
@@ -190,7 +189,7 @@ public class DataCompressionHttp2Test {
         final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
         bootstrapEnv(data.readableBytes());
         try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH).scheme(SCHEME)
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
                     .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
 
             runInChannel(clientChannel, new Http2Runnable() {
@@ -216,7 +215,7 @@ public class DataCompressionHttp2Test {
         final ByteBuf data2 = Unpooled.copiedBuffer(text2.getBytes());
         bootstrapEnv(data1.readableBytes() + data2.readableBytes());
         try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH).scheme(SCHEME)
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
                     .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.GZIP);
 
             runInChannel(clientChannel, new Http2Runnable() {
@@ -244,7 +243,7 @@ public class DataCompressionHttp2Test {
         bootstrapEnv(BUFFER_SIZE);
         final ByteBuf data = Unpooled.wrappedBuffer(bytes);
         try {
-            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH).scheme(SCHEME)
+            final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
                     .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.DEFLATE);
 
             runInChannel(clientChannel, new Http2Runnable() {
