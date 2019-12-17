@@ -21,7 +21,6 @@ import io.netty.util.internal.PlatformDependent;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
