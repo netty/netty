@@ -42,7 +42,6 @@ import org.junit.Test;
 import java.util.concurrent.CountDownLatch;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
-import static io.netty.handler.codec.http2.Http2TestUtil.newHttp2HeadersWithRequestPseudoHeaders;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -158,8 +157,8 @@ public class Http2MultiplexCodecBuilderTest {
         assertTrue(childChannel2.isActive());
         assertFalse(isStreamIdValid(childChannel2.stream().id()));
 
-        Http2Headers headers1 = newHttp2HeadersWithRequestPseudoHeaders();
-        Http2Headers headers2 = newHttp2HeadersWithRequestPseudoHeaders();
+        Http2Headers headers1 = new DefaultHttp2Headers();
+        Http2Headers headers2 = new DefaultHttp2Headers();
         // Test that streams can be made active (headers sent) in different order than the corresponding channels
         // have been created.
         childChannel2.writeAndFlush(new DefaultHttp2HeadersFrame(headers2));
@@ -188,7 +187,7 @@ public class Http2MultiplexCodecBuilderTest {
         assertTrue(childChannel.isRegistered());
         assertTrue(childChannel.isActive());
 
-        Http2Headers headers = newHttp2HeadersWithRequestPseudoHeaders();
+        Http2Headers headers = new DefaultHttp2Headers();
         childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(headers));
         ByteBuf data = Unpooled.buffer(100).writeZero(100);
         childChannel.writeAndFlush(new DefaultHttp2DataFrame(data, true));

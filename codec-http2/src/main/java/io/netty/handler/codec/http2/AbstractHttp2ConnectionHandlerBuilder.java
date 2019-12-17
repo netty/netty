@@ -535,8 +535,8 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
             encoder = new StreamBufferingEncoder(encoder);
         }
 
-        Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
-                promisedRequestVerifier(), isAutoAckSettingsFrame(), isAutoAckPingFrame(), isValidateHeaders());
+        DefaultHttp2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
+                promisedRequestVerifier(), isAutoAckSettingsFrame(), isAutoAckPingFrame());
         return buildFromCodec(decoder, encoder);
     }
 

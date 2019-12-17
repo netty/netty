@@ -391,14 +391,9 @@ public final class HttpConversionUtil {
         if (in instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) in;
             URI requestTargetUri = URI.create(request.uri());
+            out.path(toHttp2Path(requestTargetUri));
             out.method(request.method().asciiName());
-
-            // According to the spec https://tools.ietf.org/html/rfc7540#section-8.3 scheme and path
-            // should be omitted for CONNECT method
-            if (request.method() != HttpMethod.CONNECT) {
-                setHttp2Scheme(inHeaders, requestTargetUri, out);
-                out.path(toHttp2Path(requestTargetUri));
-            }
+            setHttp2Scheme(inHeaders, requestTargetUri, out);
 
             if (!isOriginForm(requestTargetUri) && !isAsteriskForm(requestTargetUri)) {
                 // Attempt to take from HOST header before taking from the request-line
