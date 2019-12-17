@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,13 +15,16 @@
  */
 package io.netty.util;
 
-public interface ResourceLeakTracker<T> extends AccessTracker<T> {
+import io.netty.util.internal.StringUtil;
 
-    /**
-     * Close the leak so that {@link ResourceLeakTracker} does not warn about leaked resources.
-     * After this method is called a leak associated with this ResourceLeakTracker should not be reported.
-     *
-     * @return {@code true} if called first time, {@code false} if called already
-     */
-    boolean close(T trackedObject);
+/**
+ * A special {@link IllegalReferenceCountException} with the ability to track access records
+ */
+public class TrackedIllegalReferenceCountException extends IllegalReferenceCountException {
+
+    private static final long serialVersionUID = 1374377399979428484L;
+
+    public TrackedIllegalReferenceCountException(String message, String accessRecords) {
+        super(message + StringUtil.NEWLINE + accessRecords);
+    }
 }
