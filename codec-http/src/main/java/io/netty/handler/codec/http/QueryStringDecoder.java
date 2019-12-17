@@ -351,8 +351,6 @@ public class QueryStringDecoder {
             return s.substring(from, toExcluded);
         }
 
-        CharsetDecoder decoder = CharsetUtil.decoder(charset);
-
         // Each encoded byte takes 3 characters (e.g. "%20")
         int decodedCapacity = (toExcluded - firstEscaped) / 3;
         byte[] buf = PlatformDependent.allocateUninitializedArray(decodedCapacity);

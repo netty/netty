@@ -22,6 +22,7 @@ import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -31,6 +32,8 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 3)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 public class QueryStringDecoderBenchmark extends AbstractMicrobenchmark {
+
+    private static final Charset SHIFT_JIS = Charset.forName("Shift-JIS");
 
     @Benchmark
     public Map<String, List<String>> noDecoding() {
@@ -50,6 +53,14 @@ public class QueryStringDecoderBenchmark extends AbstractMicrobenchmark {
         // foo=bar&ほげ=ぼけ&cat=dog&ねこ=いぬ
         return new QueryStringDecoder("foo=bar%E3%81%BB%E3%81%92=%E3%81%BC%E3%81%91&cat=dog&" +
                                       "&%E3%81%AD%E3%81%93=%E3%81%84%E3%81%AC", false)
+                .parameters();
+    }
+
+    @Benchmark
+    public Map<String, List<String>> nonStandardDecoding() {
+        // ほげ=ぼけ&ねこ=いぬ in Shift-JIS
+        return new QueryStringDecoder("%82%D9%82%B0=%82%DA%82%AF&%82%CB%82%B1=%82%A2%82%CA",
+                                      SHIFT_JIS, false)
                 .parameters();
     }
 }
