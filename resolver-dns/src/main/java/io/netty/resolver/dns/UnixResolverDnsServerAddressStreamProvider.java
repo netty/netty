@@ -36,6 +36,8 @@ import java.util.regex.Pattern;
 
 import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
 import static io.netty.util.internal.StringUtil.indexOfNonWhiteSpace;
+import static io.netty.util.internal.StringUtil.indexOfWhiteSpace;
+
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -179,7 +181,20 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                                         " in file " + etcResolverFile + ". value: " + line);
                             }
 
-                            String maybeIP = line.substring(i);
+                            String maybeIP;
+                            int x = indexOfWhiteSpace(line, i);
+                            if (x == -1) {
+                                maybeIP = line.substring(i);
+                            } else {
+                                // ignore comments
+                                int idx = indexOfNonWhiteSpace(line, x);
+                                if (idx == -1 || line.charAt(idx) != '#') {
+                                    throw new IllegalArgumentException("error parsing label " + NAMESERVER_ROW_LABEL +
+                                            " in file " + etcResolverFile + ". value: " + line);
+                                }
+                                maybeIP = line.substring(i, x);
+                            }
+
                             // There may be a port appended onto the IP address so we attempt to extract it.
                             if (!NetUtil.isValidIpV4Address(maybeIP) && !NetUtil.isValidIpV6Address(maybeIP)) {
                                 i = maybeIP.lastIndexOf('.');
