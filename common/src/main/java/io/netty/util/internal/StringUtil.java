@@ -542,11 +542,27 @@ public final class StringUtil {
      *
      * @param seq    The string to search.
      * @param offset The offset to start searching at.
-     * @return the index of the first non-white space character or &lt;{@code 0} if none was found.
+     * @return the index of the first non-white space character or &lt;{@code -1} if none was found.
      */
     public static int indexOfNonWhiteSpace(CharSequence seq, int offset) {
         for (; offset < seq.length(); ++offset) {
             if (!Character.isWhitespace(seq.charAt(offset))) {
+                return offset;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Find the index of the first white space character in {@code s} starting at {@code offset}.
+     *
+     * @param seq    The string to search.
+     * @param offset The offset to start searching at.
+     * @return the index of the first white space character or &lt;{@code -1} if none was found.
+     */
+    public static int indexOfWhiteSpace(CharSequence seq, int offset) {
+        for (; offset < seq.length(); ++offset) {
+            if (Character.isWhitespace(seq.charAt(offset))) {
                 return offset;
             }
         }

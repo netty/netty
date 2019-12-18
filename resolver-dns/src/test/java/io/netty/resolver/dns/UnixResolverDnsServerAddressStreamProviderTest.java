@@ -188,6 +188,17 @@ public class UnixResolverDnsServerAddressStreamProviderTest {
         return f;
     }
 
+    @Test
+    public void ignoreComments() throws Exception {
+        File f = buildFile("domain linecorp.local\n" +
+                "nameserver 127.0.0.2 #somecomment\n");
+        UnixResolverDnsServerAddressStreamProvider p =
+                new UnixResolverDnsServerAddressStreamProvider(f, null);
+
+        DnsServerAddressStream stream = p.nameServerAddressStream("somehost");
+        assertHostNameEquals("127.0.0.2", stream.next());
+    }
+
     private static void assertHostNameEquals(String expectedHostname, InetSocketAddress next) {
         assertEquals("unexpected hostname: " + next, expectedHostname, next.getHostString());
     }
