@@ -932,7 +932,7 @@ final class AdvancedLeakAwareByteBuf extends SimpleLeakAwareByteBuf {
         try {
             return super.retain();
         } catch (IllegalReferenceCountException e) {
-            throw dealWithIllegalReferenceCountException(e);
+            throw handleIllegalReferenceCountException(e);
         }
     }
 
@@ -942,7 +942,7 @@ final class AdvancedLeakAwareByteBuf extends SimpleLeakAwareByteBuf {
         try {
             return super.retain(increment);
         } catch (IllegalReferenceCountException e) {
-            throw dealWithIllegalReferenceCountException(e);
+            throw handleIllegalReferenceCountException(e);
         }
     }
 
@@ -952,7 +952,7 @@ final class AdvancedLeakAwareByteBuf extends SimpleLeakAwareByteBuf {
         try {
             return super.release();
         } catch (IllegalReferenceCountException e) {
-            throw dealWithIllegalReferenceCountException(e);
+            throw handleIllegalReferenceCountException(e);
         }
     }
 
@@ -962,11 +962,11 @@ final class AdvancedLeakAwareByteBuf extends SimpleLeakAwareByteBuf {
         try {
             return super.release(decrement);
         } catch (IllegalReferenceCountException e) {
-            throw dealWithIllegalReferenceCountException(e);
+            throw handleIllegalReferenceCountException(e);
         }
     }
 
-    private IllegalReferenceCountException dealWithIllegalReferenceCountException(IllegalReferenceCountException e) {
+    private IllegalReferenceCountException handleIllegalReferenceCountException(IllegalReferenceCountException e) {
         String accessRecord = leak.toString();
         if (StringUtil.isNullOrEmpty(accessRecord)) {
             // means leak has been closed and there is no accessRecord.
