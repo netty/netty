@@ -16,15 +16,11 @@
 package io.netty.handler.codec.http;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.net.URI;
 import java.net.URLDecoder;
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CoderResult;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -32,7 +28,9 @@ import java.util.List;
 import java.util.Map;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
-import static io.netty.util.internal.StringUtil.*;
+import static io.netty.util.internal.StringUtil.EMPTY_STRING;
+import static io.netty.util.internal.StringUtil.SPACE;
+import static io.netty.util.internal.StringUtil.decodeHexByte;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -352,12 +350,10 @@ public class QueryStringDecoder {
             return s.substring(from, toExcluded);
         }
 
-        CharsetDecoder decoder = CharsetUtil.decoder(charset);
-
         // Each encoded byte takes 3 characters (e.g. "%20")
         int decodedCapacity = (toExcluded - firstEscaped) / 3;
-        ByteBuffer byteBuf = ByteBuffer.allocate(decodedCapacity);
-        CharBuffer charBuf = CharBuffer.allocate(decodedCapacity);
+        byte[] buf = PlatformDependent.allocateUninitializedArray(decodedCapacity);
+        int bufIdx;
 
         StringBuilder strBuf = new StringBuilder(len);
         strBuf.append(s, from, firstEscaped);
@@ -369,31 +365,17 @@ public class QueryStringDecoder {
                 continue;
             }
 
-            byteBuf.clear();
+            bufIdx = 0;
             do {
                 if (i + 3 > toExcluded) {
                     throw new IllegalArgumentException("unterminated escape sequence at index " + i + " of: " + s);
                 }
-                byteBuf.put(decodeHexByte(s, i + 1));
+                buf[bufIdx++] = decodeHexByte(s, i + 1);
                 i += 3;
             } while (i < toExcluded && s.charAt(i) == '%');
             i--;
 
-            byteBuf.flip();
-            charBuf.clear();
-            CoderResult result = decoder.reset().decode(byteBuf, charBuf, true);
-            try {
-                if (!result.isUnderflow()) {
-                    result.throwException();
-                }
-                result = decoder.flush(charBuf);
-                if (!result.isUnderflow()) {
-                    result.throwException();
-                }
-            } catch (CharacterCodingException ex) {
-                throw new IllegalStateException(ex);
-            }
-            strBuf.append(charBuf.flip());
+            strBuf.append(new String(buf, 0, bufIdx, charset));
         }
         return strBuf.toString();
     }
