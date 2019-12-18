@@ -83,6 +83,13 @@
       <artifactId>lzma-java</artifactId>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>com.oracle.substratevm</groupId>
+      <artifactId>svm</artifactId>
+      <version>${graalvm.version}</version>
+      <!-- Provided scope as it is only needed for compiling the SVM substitution classes -->
+      <scope>provided</scope>
+    </dependency>
 
     <dependency>
       <groupId>org.mockito</groupId>

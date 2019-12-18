@@ -91,6 +91,13 @@
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.oracle.substratevm</groupId>
+      <artifactId>svm</artifactId>
+      <version>${graalvm.version}</version>
+      <!-- Provided scope as it is only needed for compiling the SVM substitution classes -->
+      <scope>provided</scope>
+    </dependency>
 
     <dependency>
       <groupId>software.amazon.cryptools</groupId>
