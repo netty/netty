@@ -354,7 +354,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                     //
                     // See:
                     // - https://github.com/netty/netty/issues/4635
-                    if (isRemoved()) {
+                    if (ctx.isRemoved()) {
                         break;
                     }
                     outSize = 0;
@@ -369,7 +369,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                     // If it was removed, it is not safe to continue to operate on the buffer.
                     //
                     // See https://github.com/netty/netty/issues/1664
-                    if (isRemoved()) {
+                    if (ctx.isRemoved()) {
                         break;
                     }
 
@@ -391,7 +391,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                     // If it was removed, it is not safe to continue to operate on the buffer.
                     //
                     // See https://github.com/netty/netty/issues/1664
-                    if (isRemoved()) {
+                    if (ctx.isRemoved()) {
                         break;
                     }
 

@@ -150,7 +150,6 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     private static final byte STATE_INIT = 0;
     private static final byte STATE_CALLING_CHILD_DECODE = 1;
     private static final byte STATE_HANDLER_REMOVED_PENDING = 2;
-    private static final byte STATE_REMOVED = 3;
 
     ByteBuf cumulation;
     private Cumulator cumulator = MERGE_CUMULATOR;
@@ -244,24 +243,20 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             decodeState = STATE_HANDLER_REMOVED_PENDING;
             return;
         }
-        try {
-            ByteBuf buf = cumulation;
-            if (buf != null) {
-                // Directly set this to null so we are sure we not access it in any other method here anymore.
-                cumulation = null;
-                numReads = 0;
-                int readable = buf.readableBytes();
-                if (readable > 0) {
-                    ctx.fireChannelRead(buf);
-                    ctx.fireChannelReadComplete();
-                } else {
-                    buf.release();
-                }
+        ByteBuf buf = cumulation;
+        if (buf != null) {
+            // Directly set this to null so we are sure we not access it in any other method here anymore.
+            cumulation = null;
+            numReads = 0;
+            int readable = buf.readableBytes();
+            if (readable > 0) {
+                ctx.fireChannelRead(buf);
+                ctx.fireChannelReadComplete();
+            } else {
+                buf.release();
             }
-            handlerRemoved0(ctx);
-        } finally {
-            decodeState = STATE_REMOVED;
         }
+        handlerRemoved0(ctx);
     }
 
     /**
@@ -269,16 +264,6 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * events anymore.
      */
     protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception { }
-
-    /**
-     * Tells whether this handle has been removed from the {@link ChannelPipeline}.
-     * This method is useful because 1) a user can check if this handler is removed even if
-     * he or she does not have a reference to {@link ChannelHandlerContext} and 2) it is
-     * cheaper than {@link ChannelHandlerContext#isRemoved()}.
-     */
-    protected final boolean isRemoved() {
-        return decodeState >= STATE_HANDLER_REMOVED_PENDING;
-    }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -442,7 +427,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     //
                     // See:
                     // - https://github.com/netty/netty/issues/4635
-                    if (isRemoved()) {
+                    if (ctx.isRemoved()) {
                         break;
                     }
                     outSize = 0;
@@ -455,7 +440,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 // If it was removed, it is not safe to continue to operate on the buffer.
                 //
                 // See https://github.com/netty/netty/issues/1664
-                if (isRemoved()) {
+                if (ctx.isRemoved()) {
                     break;
                 }
 
@@ -513,12 +498,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             decode(ctx, in, out);
         } finally {
             boolean removePending = decodeState == STATE_HANDLER_REMOVED_PENDING;
+            decodeState = STATE_INIT;
             if (removePending) {
                 fireChannelRead(ctx, out, out.size());
                 out.clear();
-                handlerRemoved(ctx); // moves state to STATE_REMOVED
-            } else {
-                decodeState = STATE_INIT;
+                handlerRemoved(ctx);
             }
         }
     }
