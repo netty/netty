@@ -46,7 +46,7 @@ public class QueryStringEncoderBenchmark extends AbstractMicrobenchmark {
         shortAsciiFirst = shortAscii + shortUtf8;
         longAscii = repeat(shortAscii, 100);
         longUtf8 = repeat(shortUtf8, 100);
-        longAsciiFirst = longAscii + longUtf8
+        longAsciiFirst = longAscii + longUtf8;
     }
 
     @Benchmark
