@@ -19,6 +19,7 @@ import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 
@@ -29,42 +30,53 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 3)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 public class QueryStringEncoderBenchmark extends AbstractMicrobenchmark {
-    private static final String SHORT_ASCII = "foo";
-    private static final String SHORT_UTF8 = "ほげほげ";
-    private static final String SHORT_ASCII_FIRST = SHORT_ASCII + SHORT_UTF8;
+    private String shortAscii;
+    private String shortUtf8;
+    private String shortAsciiFirst;
 
-    private static final String LONG_ASCII = repeat(SHORT_ASCII, 100);
-    private static final String LONG_UTF8 = repeat(SHORT_UTF8, 100);
-    private static final String LONG_ASCII_FIRST = LONG_ASCII + LONG_UTF8;
+    private String longAscii;
+    private String longUtf8;
+    private String longAsciiFirst;
+
+    @Setup
+    public void setUp() {
+        // Avoid constant pool for strings since it's common for at least values to not be constant.
+        shortAscii = new String("foo".toCharArray());
+        shortUtf8 = new String("ほげほげ".toCharArray());
+        shortAsciiFirst = shortAscii + shortUtf8;
+        longAscii = repeat(shortAscii, 100);
+        longUtf8 = repeat(shortUtf8, 100);
+        longAsciiFirst = longAscii + longUtf8
+    }
 
     @Benchmark
     public String shortAscii() {
-        return encode(SHORT_ASCII);
+        return encode(shortAscii);
     }
 
     @Benchmark
     public String shortUtf8() {
-        return encode(SHORT_UTF8);
+        return encode(shortUtf8);
     }
 
     @Benchmark
     public String shortAsciiFirst() {
-        return encode(SHORT_ASCII_FIRST);
+        return encode(shortAsciiFirst);
     }
 
     @Benchmark
     public String longAscii() {
-        return encode(LONG_ASCII);
+        return encode(longAscii);
     }
 
     @Benchmark
     public String longUtf8() {
-        return encode(LONG_UTF8);
+        return encode(longUtf8);
     }
 
     @Benchmark
     public String longAsciiFirst() {
-        return encode(LONG_ASCII_FIRST);
+        return encode(longAsciiFirst);
     }
 
     private static String encode(String s) {

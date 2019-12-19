@@ -156,18 +156,23 @@ public class QueryStringEncoder {
         for (int i = 0, len = s.length(); i < len; i++) {
             char c = s.charAt(i);
             if (!dontNeedEncoding(c)) {
-                if (i > 0) {
-                    uriBuilder.append(s, 0, i);
-                }
-                encodeUtf8ComponentSlow(s, i);
+                encodeUtf8Component(s, i, len);
                 return;
             }
         }
         uriBuilder.append(s);
     }
 
-    private void encodeUtf8ComponentSlow(CharSequence s, int start) {
-        for (int i = start, len = s.length(); i < len; i++) {
+    private void encodeUtf8Component(CharSequence s, int encodingStart, int len) {
+        if (encodingStart > 0) {
+            // Append non-encoded characters directly first.
+            uriBuilder.append(s, 0, encodingStart);
+        }
+        encodeUtf8ComponentSlow(s, encodingStart, len);
+    }
+
+    private void encodeUtf8ComponentSlow(CharSequence s, int start, int len) {
+        for (int i = start; i < len; i++) {
             char c = s.charAt(i);
             if (c < 0x80) {
                 if (dontNeedEncoding(c)) {
