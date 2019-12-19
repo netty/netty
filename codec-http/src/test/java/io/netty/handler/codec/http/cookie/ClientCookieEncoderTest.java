@@ -51,4 +51,16 @@ public class ClientCookieEncoderTest {
     public void testRejectCookieValueWithSemicolon() {
         ClientCookieEncoder.STRICT.encode(new DefaultCookie("myCookie", "foo;bar"));
     }
+
+    @Test
+    public void testComparatorForSamePathLength() {
+        Cookie cookie = new DefaultCookie("test", "value");
+        cookie.setPath("1");
+
+        Cookie cookie2 = new DefaultCookie("test", "value");
+        cookie2.setPath("2");
+
+        assertEquals(0, ClientCookieEncoder.COOKIE_COMPARATOR.compare(cookie, cookie2));
+        assertEquals(0, ClientCookieEncoder.COOKIE_COMPARATOR.compare(cookie2, cookie));
+    }
 }
