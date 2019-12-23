@@ -324,11 +324,11 @@ public class ByteToMessageDecoderTest {
         }
 
         @Override
-        public ByteBuf writeBytes(ByteBuf src) {
+        public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
             if (--untilFailure <= 0) {
                 throw error;
             }
-            return super.writeBytes(src);
+            return super.setBytes(index, src, srcIndex, length);
         }
 
         Error writeError() {
@@ -339,6 +339,7 @@ public class ByteToMessageDecoderTest {
     @Test
     public void releaseWhenMergeCumulateThrows() {
         WriteFailingByteBuf oldCumulation = new WriteFailingByteBuf(1, 64);
+        oldCumulation.writeZero(1);
         ByteBuf in = Unpooled.buffer().writeZero(12);
 
         Throwable thrown = null;
@@ -362,7 +363,7 @@ public class ByteToMessageDecoderTest {
     }
 
     private void releaseWhenMergeCumulateThrowsInExpand(int untilFailure, boolean shouldFail) {
-        ByteBuf oldCumulation = UnpooledByteBufAllocator.DEFAULT.heapBuffer(8, 8);
+        ByteBuf oldCumulation = UnpooledByteBufAllocator.DEFAULT.heapBuffer(8, 8).writeZero(1);
         final WriteFailingByteBuf newCumulation = new WriteFailingByteBuf(untilFailure, 16);
 
         ByteBufAllocator allocator = new AbstractByteBufAllocator(false) {
@@ -414,7 +415,11 @@ public class ByteToMessageDecoderTest {
             public CompositeByteBuf addComponent(boolean increaseWriterIndex, ByteBuf buffer) {
                 throw error;
             }
-        };
+            @Override
+            public CompositeByteBuf addFlattenedComponents(boolean increaseWriterIndex, ByteBuf buffer) {
+                throw error;
+            }
+        }.writeZero(1);
         ByteBuf in = Unpooled.buffer().writeZero(12);
         try {
             ByteToMessageDecoder.COMPOSITE_CUMULATOR.cumulate(UnpooledByteBufAllocator.DEFAULT, cumulation, in);
