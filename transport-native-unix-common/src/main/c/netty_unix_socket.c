@@ -389,6 +389,9 @@ static jobject _recvFrom(JNIEnv* env, jint fd, void* buffer, jint pos, jint limi
     }
 
 #ifdef IP_RECVORIGDSTADDR
+#if !defined(SOL_IP) && defined(IPPROTO_IP)
+#define SOL_IP IPPROTO_IP
+#endif /* !SOL_IP && IPPROTO_IP */
     if (readLocalAddr) {
         for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
             if (cmsg->cmsg_level == SOL_IP && cmsg->cmsg_type == IP_RECVORIGDSTADDR) {

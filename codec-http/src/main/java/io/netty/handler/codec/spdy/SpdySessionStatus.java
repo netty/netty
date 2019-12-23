@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.spdy;
 
+import io.netty.util.internal.ObjectUtil;
+
 /**
  * The SPDY session status code and its description.
  */
@@ -65,12 +67,8 @@ public class SpdySessionStatus implements Comparable<SpdySessionStatus> {
      * {@code statusPhrase}.
      */
     public SpdySessionStatus(int code, String statusPhrase) {
-        if (statusPhrase == null) {
-            throw new NullPointerException("statusPhrase");
-        }
-
+        this.statusPhrase = ObjectUtil.checkNotNull(statusPhrase, "statusPhrase");
         this.code = code;
-        this.statusPhrase = statusPhrase;
     }
 
     /**

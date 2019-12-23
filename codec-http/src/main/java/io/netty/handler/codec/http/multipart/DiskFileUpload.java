@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.util.internal.ObjectUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -62,10 +63,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     @Override
     public void setFilename(String filename) {
-        if (filename == null) {
-            throw new NullPointerException("filename");
-        }
-        this.filename = filename;
+        this.filename = ObjectUtil.checkNotNull(filename, "filename");
     }
 
     @Override
@@ -93,10 +91,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     @Override
     public void setContentType(String contentType) {
-        if (contentType == null) {
-            throw new NullPointerException("contentType");
-        }
-        this.contentType = contentType;
+        this.contentType = ObjectUtil.checkNotNull(contentType, "contentType");
     }
 
     @Override

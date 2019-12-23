@@ -30,6 +30,7 @@ import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ByteProcessor;
 import io.netty.util.Signal;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -472,10 +473,7 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf order(ByteOrder endianness) {
-        if (endianness == null) {
-            throw new NullPointerException("endianness");
-        }
-        if (endianness == order()) {
+        if (ObjectUtil.checkNotNull(endianness, "endianness") == order()) {
             return this;
         }
 

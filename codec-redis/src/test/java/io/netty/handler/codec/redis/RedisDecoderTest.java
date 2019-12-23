@@ -306,4 +306,12 @@ public class RedisDecoderTest {
         ReferenceCountUtil.release(msg);
         ReferenceCountUtil.release(childBuf);
     }
+
+    @Test
+    public void testPredefinedMessagesNotEqual() {
+        // both EMPTY_INSTANCE and NULL_INSTANCE have EMPTY_BUFFER as their 'data',
+        // however we need to check that they are not equal between themselves.
+        assertNotEquals(FullBulkStringRedisMessage.EMPTY_INSTANCE, FullBulkStringRedisMessage.NULL_INSTANCE);
+        assertNotEquals(FullBulkStringRedisMessage.NULL_INSTANCE, FullBulkStringRedisMessage.EMPTY_INSTANCE);
+    }
 }

@@ -18,9 +18,11 @@ package io.netty.handler.ssl;
 
 import io.netty.util.internal.UnstableApi;
 
+import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
 import java.io.InputStream;
@@ -160,6 +162,15 @@ public final class SslContextBuilder {
         return new SslContextBuilder(true).keyManager(keyManagerFactory);
     }
 
+    /**
+     * Creates a builder for new server-side {@link SslContext} with {@link KeyManager}.
+     *
+     * @param KeyManager non-{@code null} KeyManager for server's private key
+     */
+    public static SslContextBuilder forServer(KeyManager keyManager) {
+        return new SslContextBuilder(true).keyManager(keyManager);
+    }
+
     private final boolean forServer;
     private SslProvider provider;
     private Provider sslContextProvider;
@@ -256,6 +267,19 @@ public final class SslContextBuilder {
     public SslContextBuilder trustManager(TrustManagerFactory trustManagerFactory) {
         trustCertCollection = null;
         this.trustManagerFactory = trustManagerFactory;
+        return this;
+    }
+
+    /**
+     * A single trusted manager for verifying the remote endpoint's certificate.
+     * This is helpful when custom implementation of {@link TrustManager} is needed.
+     * Internally, a simple wrapper of {@link TrustManagerFactory} that only produces this
+     * specified {@link TrustManager} will be created, thus all the requirements specified in
+     * {@link #trustManager(TrustManagerFactory trustManagerFactory)} also apply here.
+     */
+    public SslContextBuilder trustManager(TrustManager trustManager) {
+        this.trustManagerFactory = new TrustManagerFactoryWrapper(trustManager);
+        trustCertCollection = null;
         return this;
     }
 
@@ -424,6 +448,28 @@ public final class SslContextBuilder {
     }
 
     /**
+     * A single key manager managing the identity information of this host.
+     * This is helpful when custom implementation of {@link KeyManager} is needed.
+     * Internally, a wrapper of {@link KeyManagerFactory} that only produces this specified
+     * {@link KeyManager} will be created, thus all the requirements specified in
+     * {@link #keyManager(KeyManagerFactory keyManagerFactory)} also apply here.
+     */
+    public SslContextBuilder keyManager(KeyManager keyManager) {
+        if (forServer) {
+            checkNotNull(keyManager, "keyManager required for servers");
+        }
+        if (keyManager != null) {
+            this.keyManagerFactory = new KeyManagerFactoryWrapper(keyManager);
+        } else {
+            this.keyManagerFactory = null;
+        }
+        keyCertChain = null;
+        key = null;
+        keyPassword = null;
+        return this;
+    }
+
+    /**
      * The cipher suites to enable, in the order of preference. {@code null} to use default
      * cipher suites.
      */
@@ -437,9 +483,8 @@ public final class SslContextBuilder {
      * cipher suites will be used.
      */
     public SslContextBuilder ciphers(Iterable<String> ciphers, CipherSuiteFilter cipherFilter) {
-        checkNotNull(cipherFilter, "cipherFilter");
+        this.cipherFilter = checkNotNull(cipherFilter, "cipherFilter");
         this.ciphers = ciphers;
-        this.cipherFilter = cipherFilter;
         return this;
     }
 

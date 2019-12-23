@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.44.Final-SNAPSHOT</version>
+    <version>4.1.45.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite-http2</artifactId>
@@ -94,6 +94,15 @@
             <excludeSpec>5.1 - half closed (remote): Sends a HEADERS frame</excludeSpec>
             <excludeSpec>5.1 - closed: Sends a HEADERS frame</excludeSpec>
             <excludeSpec>5.1.1 - Sends stream identifier that is numerically smaller than previous</excludeSpec>
+            <excludeSpec>8.1.2.2 - Sends a HEADERS frame that contains the connection-specific header field</excludeSpec>
+            <excludeSpec>8.1.2.2 - Sends a HEADERS frame that contains the TE header field with any value other than "trailers"</excludeSpec>
+            <excludeSpec>8.1.2.3 - Sends a HEADERS frame with empty ":path" pseudo-header field</excludeSpec>
+            <excludeSpec>8.1.2.3 - Sends a HEADERS frame that omits ":method" pseudo-header field</excludeSpec>
+            <excludeSpec>8.1.2.3 - Sends a HEADERS frame that omits ":scheme" pseudo-header field</excludeSpec>
+            <excludeSpec>8.1.2.3 - Sends a HEADERS frame that omits ":path" pseudo-header field</excludeSpec>
+            <excludeSpec>8.1.2.3 - Sends a HEADERS frame with duplicated ":method" pseudo-header field</excludeSpec>
+            <excludeSpec>8.1.2.3 - Sends a HEADERS frame with duplicated ":method" pseudo-header field</excludeSpec>
+            <excludeSpec>8.1.2.3 - Sends a HEADERS frame with duplicated ":scheme" pseudo-header field</excludeSpec>
             <excludeSpec>8.1.2.6 - Sends a HEADERS frame with the "content-length" header field which does not equal the DATA frame payload length</excludeSpec>
             <excludeSpec>8.1.2.6 - Sends a HEADERS frame with the "content-length" header field which does not equal the sum of the multiple DATA frames payload length</excludeSpec>
           </excludeSpecs>

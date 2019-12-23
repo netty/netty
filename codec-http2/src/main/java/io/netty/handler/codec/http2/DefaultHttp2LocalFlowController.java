@@ -31,6 +31,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
+import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
@@ -109,8 +110,11 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
                     FlowState state = state(stream);
                     int unconsumedBytes = state.unconsumedBytes();
                     if (ctx != null && unconsumedBytes > 0) {
-                        connectionState().consumeBytes(unconsumedBytes);
-                        state.consumeBytes(unconsumedBytes);
+                        if (consumeAllBytes(state, unconsumedBytes)) {
+                            // As the user has no real control on when this callback is used we should better
+                            // call flush() if we produced any window update to ensure we not stale.
+                            ctx.flush();
+                        }
                     }
                 } catch (Http2Exception e) {
                     PlatformDependent.throwException(e);
@@ -186,11 +190,13 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
                 throw new UnsupportedOperationException("Returning bytes for the connection window is not supported");
             }
 
-            boolean windowUpdateSent = connectionState().consumeBytes(numBytes);
-            windowUpdateSent |= state(stream).consumeBytes(numBytes);
-            return windowUpdateSent;
+            return consumeAllBytes(state(stream), numBytes);
         }
         return false;
+    }
+
+    private boolean consumeAllBytes(FlowState state, int numBytes) throws Http2Exception {
+        return connectionState().consumeBytes(numBytes) | state.consumeBytes(numBytes);
     }
 
     @Override
@@ -448,7 +454,9 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
         @Override
         public boolean writeWindowUpdateIfNeeded() throws Http2Exception {
-            if (endOfStream || initialStreamWindowSize <= 0) {
+            if (endOfStream || initialStreamWindowSize <= 0 ||
+                    // If the stream is already closed there is no need to try to write a window update for it.
+                    isClosed(stream)) {
                 return false;
             }
 

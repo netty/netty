@@ -477,9 +477,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public ChannelFuture bind(final SocketAddress localAddress, final ChannelPromise promise) {
-        if (localAddress == null) {
-            throw new NullPointerException("localAddress");
-        }
+        ObjectUtil.checkNotNull(localAddress, "localAddress");
         if (isNotValidPromise(promise, false)) {
             // cancelled
             return promise;
@@ -520,10 +518,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     @Override
     public ChannelFuture connect(
             final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+        ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
 
-        if (remoteAddress == null) {
-            throw new NullPointerException("remoteAddress");
-        }
         if (isNotValidPromise(promise, false)) {
             // cancelled
             return promise;
@@ -874,9 +870,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     private boolean isNotValidPromise(ChannelPromise promise, boolean allowVoidPromise) {
-        if (promise == null) {
-            throw new NullPointerException("promise");
-        }
+        ObjectUtil.checkNotNull(promise, "promise");
 
         if (promise.isDone()) {
             // Check if the promise was cancelled and if so signal that the processing of the operation
@@ -1109,7 +1103,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
         private void decrementPendingOutboundBytes() {
             if (ESTIMATE_TASK_SIZE_ON_SUBMIT) {
-                ctx.pipeline.decrementPendingOutboundBytes(size >= 0 ? size : (size & Integer.MAX_VALUE));
+                ctx.pipeline.decrementPendingOutboundBytes(size & Integer.MAX_VALUE);
             }
         }
 

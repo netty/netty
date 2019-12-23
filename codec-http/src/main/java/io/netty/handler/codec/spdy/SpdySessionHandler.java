@@ -20,6 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.ThrowableUtil;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -70,11 +71,8 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
      *                handle the client endpoint of the connection.
      */
     public SpdySessionHandler(SpdyVersion version, boolean server) {
-        if (version == null) {
-            throw new NullPointerException("version");
-        }
+        this.minorVersion = ObjectUtil.checkNotNull(version, "version").getMinorVersion();
         this.server = server;
-        minorVersion = version.getMinorVersion();
     }
 
     public void setSessionReceiveWindowSize(int sessionReceiveWindowSize) {

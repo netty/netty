@@ -27,6 +27,7 @@ import java.util.List;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * Utility methods useful in the HTTP context.
@@ -448,9 +449,7 @@ public final class HttpUtil {
      * @throws NullPointerException in case if {@code contentTypeValue == null}
      */
     public static CharSequence getCharsetAsSequence(CharSequence contentTypeValue) {
-        if (contentTypeValue == null) {
-            throw new NullPointerException("contentTypeValue");
-        }
+        ObjectUtil.checkNotNull(contentTypeValue, "contentTypeValue");
 
         int indexOfCharset = AsciiString.indexOfIgnoreCaseAscii(contentTypeValue, CHARSET_EQUALS, 0);
         if (indexOfCharset == AsciiString.INDEX_NOT_FOUND) {
@@ -504,9 +503,7 @@ public final class HttpUtil {
      * @throws NullPointerException in case if {@code contentTypeValue == null}
      */
     public static CharSequence getMimeType(CharSequence contentTypeValue) {
-        if (contentTypeValue == null) {
-            throw new NullPointerException("contentTypeValue");
-        }
+        ObjectUtil.checkNotNull(contentTypeValue, "contentTypeValue");
 
         int indexOfSemicolon = AsciiString.indexOfIgnoreCaseAscii(contentTypeValue, SEMICOLON, 0);
         if (indexOfSemicolon != AsciiString.INDEX_NOT_FOUND) {

@@ -50,6 +50,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * transports such as datagram (UDP).</p>
  */
 public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Channel> implements Cloneable {
+    @SuppressWarnings("unchecked")
+    static final Map.Entry<ChannelOption<?>, Object>[] EMPTY_OPTION_ARRAY = new Map.Entry[0];
+    @SuppressWarnings("unchecked")
+    static final Map.Entry<AttributeKey<?>, Object>[] EMPTY_ATTRIBUTE_ARRAY = new Map.Entry[0];
 
     volatile EventLoopGroup group;
     @SuppressWarnings("deprecation")
@@ -422,16 +426,6 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         for (Map.Entry<ChannelOption<?>, Object> e: options) {
             setChannelOption(channel, e.getKey(), e.getValue(), logger);
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    static Map.Entry<AttributeKey<?>, Object>[] newAttrArray(int size) {
-        return new Map.Entry[size];
-    }
-
-    @SuppressWarnings("unchecked")
-    static Map.Entry<ChannelOption<?>, Object>[] newOptionArray(int size) {
-        return new Map.Entry[size];
     }
 
     @SuppressWarnings("unchecked")

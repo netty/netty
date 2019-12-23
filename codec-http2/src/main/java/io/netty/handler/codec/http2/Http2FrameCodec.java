@@ -33,6 +33,7 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.internal.UnstableApi;
+import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -529,8 +530,12 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
     private void onHttp2UnknownStreamError(@SuppressWarnings("unused") ChannelHandlerContext ctx, Throwable cause,
                                    Http2Exception.StreamException streamException) {
-        // Just log....
-        LOG.warn("Stream exception thrown for unknown stream {}.", streamException.streamId(), cause);
+        // It is normal to hit a race condition where we still receive frames for a stream that this
+        // peer has deemed closed, such as if this peer sends a RST(CANCEL) to discard the request.
+        // Since this is likely to be normal we log at DEBUG level.
+        InternalLogLevel level =
+            streamException.error() == Http2Error.STREAM_CLOSED ? InternalLogLevel.DEBUG : InternalLogLevel.WARN;
+        LOG.log(level, "Stream exception thrown for unknown stream {}.", streamException.streamId(), cause);
     }
 
     @Override

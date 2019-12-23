@@ -37,7 +37,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
 
+import io.netty.util.concurrent.Future;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -74,6 +76,7 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.ResourcesUtil;
 import io.netty.util.internal.StringUtil;
+import org.mockito.Mockito;
 
 @RunWith(Parameterized.class)
 public class SniHandlerTest {
@@ -315,7 +318,7 @@ public class SniHandlerTest {
             try {
                 // Push the handshake message.
                 ch.writeInbound(Unpooled.wrappedBuffer(message));
-                // TODO(scott): This should fail becasue the engine should reject zero length records during handshake.
+                // TODO(scott): This should fail because the engine should reject zero length records during handshake.
                 // See https://github.com/netty/netty/issues/6348.
                 // fail();
             } catch (Exception e) {
@@ -577,5 +580,80 @@ public class SniHandlerTest {
         for (SslContext ctx: contexts) {
             ReferenceCountUtil.release(ctx);
         }
+    }
+
+    @Test
+    public void testNonFragmented() throws Exception {
+        testWithFragmentSize(Integer.MAX_VALUE);
+    }
+    @Test
+    public void testFragmented() throws Exception {
+        testWithFragmentSize(50);
+    }
+
+    private void testWithFragmentSize(final int maxFragmentSize) throws Exception {
+        final String sni = "netty.io";
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
+                .sslProvider(provider)
+                .build();
+        try {
+            @SuppressWarnings("unchecked") final EmbeddedChannel server = new EmbeddedChannel(
+                    new SniHandler(Mockito.mock(DomainNameMapping.class)) {
+                @Override
+                protected Future<SslContext> lookup(final ChannelHandlerContext ctx, final String hostname) {
+                    assertEquals(sni, hostname);
+                    return ctx.executor().newSucceededFuture(context);
+                }
+            });
+
+            final List<ByteBuf> buffers = clientHelloInMultipleFragments(provider, sni, maxFragmentSize);
+            for (ByteBuf buffer : buffers) {
+                server.writeInbound(buffer);
+            }
+            assertTrue(server.finishAndReleaseAll());
+        } finally {
+            releaseAll(context);
+            cert.delete();
+        }
+    }
+
+    private static List<ByteBuf> clientHelloInMultipleFragments(
+            SslProvider provider, String hostname, int maxTlsPlaintextSize) throws SSLException {
+        final EmbeddedChannel client = new EmbeddedChannel();
+        final SslContext ctx = SslContextBuilder.forClient()
+                .sslProvider(provider)
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .build();
+        try {
+            final SslHandler sslHandler = ctx.newHandler(client.alloc(), hostname, -1);
+            client.pipeline().addLast(sslHandler);
+            final ByteBuf clientHello = client.readOutbound();
+            List<ByteBuf> buffers = split(clientHello, maxTlsPlaintextSize);
+            assertTrue(client.finishAndReleaseAll());
+            return buffers;
+        } finally {
+            releaseAll(ctx);
+        }
+    }
+
+    private static List<ByteBuf> split(ByteBuf clientHello, int maxSize) {
+        final int type = clientHello.readUnsignedByte();
+        final int version = clientHello.readUnsignedShort();
+        final int length = clientHello.readUnsignedShort();
+        assertEquals(length, clientHello.readableBytes());
+
+        final List<ByteBuf> result = new ArrayList<ByteBuf>();
+        while (clientHello.readableBytes() > 0) {
+            final int toRead = Math.min(maxSize, clientHello.readableBytes());
+            final ByteBuf bb = clientHello.alloc().buffer(SslUtils.SSL_RECORD_HEADER_LENGTH + toRead);
+            bb.writeByte(type);
+            bb.writeShort(version);
+            bb.writeShort(toRead);
+            bb.writeBytes(clientHello, toRead);
+            result.add(bb);
+        }
+        clientHello.release();
+        return result;
     }
 }

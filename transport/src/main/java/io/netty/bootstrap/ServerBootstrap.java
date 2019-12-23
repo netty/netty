@@ -76,11 +76,10 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      */
     public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
         super.group(parentGroup);
-        ObjectUtil.checkNotNull(childGroup, "childGroup");
         if (this.childGroup != null) {
             throw new IllegalStateException("childGroup set already");
         }
-        this.childGroup = childGroup;
+        this.childGroup = ObjectUtil.checkNotNull(childGroup, "childGroup");
         return this;
     }
 
@@ -123,16 +122,16 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
     @Override
     void init(Channel channel) {
-        setChannelOptions(channel, options0().entrySet().toArray(newOptionArray(0)), logger);
-        setAttributes(channel, attrs0().entrySet().toArray(newAttrArray(0)));
+        setChannelOptions(channel, options0().entrySet().toArray(EMPTY_OPTION_ARRAY), logger);
+        setAttributes(channel, attrs0().entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY));
 
         ChannelPipeline p = channel.pipeline();
 
         final EventLoopGroup currentChildGroup = childGroup;
         final ChannelHandler currentChildHandler = childHandler;
         final Entry<ChannelOption<?>, Object>[] currentChildOptions =
-                childOptions.entrySet().toArray(newOptionArray(0));
-        final Entry<AttributeKey<?>, Object>[] currentChildAttrs = childAttrs.entrySet().toArray(newAttrArray(0));
+                childOptions.entrySet().toArray(EMPTY_OPTION_ARRAY);
+        final Entry<AttributeKey<?>, Object>[] currentChildAttrs = childAttrs.entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY);
 
         p.addLast(new ChannelInitializer<Channel>() {
             @Override

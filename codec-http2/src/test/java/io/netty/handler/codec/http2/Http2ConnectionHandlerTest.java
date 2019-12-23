@@ -41,6 +41,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -49,9 +50,11 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
+import static io.netty.handler.codec.http2.Http2Error.CANCEL;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.STREAM_CLOSED;
 import static io.netty.handler.codec.http2.Http2Stream.State.CLOSED;
@@ -766,6 +769,51 @@ public class Http2ConnectionHandlerTest {
         handler.gracefulShutdownTimeoutMillis(-1);
         handler.close(ctx, promise);
         verify(executor, never()).schedule(any(Runnable.class), anyLong(), any(TimeUnit.class));
+    }
+
+    @Test
+    public void writeMultipleRstFramesForSameStream() throws Exception {
+        handler = newHandler();
+        when(stream.id()).thenReturn(STREAM_ID);
+
+        final AtomicBoolean resetSent = new AtomicBoolean();
+        when(stream.resetSent()).then(new Answer<Http2Stream>() {
+            @Override
+            public Http2Stream answer(InvocationOnMock invocationOnMock) {
+                resetSent.set(true);
+                return stream;
+            }
+        });
+        when(stream.isResetSent()).then(new Answer<Boolean>() {
+            @Override
+            public Boolean answer(InvocationOnMock invocationOnMock) {
+                return resetSent.get();
+            }
+        });
+        when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID), anyLong(), any(ChannelPromise.class)))
+                .then(new Answer<ChannelFuture>() {
+                    @Override
+                    public ChannelFuture answer(InvocationOnMock invocationOnMock) throws Throwable {
+                        ChannelPromise promise = invocationOnMock.getArgument(3);
+                        return promise.setSuccess();
+                    }
+                });
+
+        ChannelPromise promise =
+                new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+        final ChannelPromise promise2 =
+                new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+        promise.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) {
+                handler.resetStream(ctx, STREAM_ID, STREAM_CLOSED.code(), promise2);
+            }
+        });
+
+        handler.resetStream(ctx, STREAM_ID, CANCEL.code(), promise);
+        verify(frameWriter).writeRstStream(eq(ctx), eq(STREAM_ID), anyLong(), any(ChannelPromise.class));
+        assertTrue(promise.isSuccess());
+        assertTrue(promise2.isSuccess());
     }
 
     private void writeRstStreamUsingVoidPromise(int streamId) throws Exception {

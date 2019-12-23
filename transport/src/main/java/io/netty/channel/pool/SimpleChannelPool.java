@@ -24,10 +24,12 @@ import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.Deque;
+import java.util.concurrent.Callable;
 
 import static io.netty.util.internal.ObjectUtil.*;
 
@@ -157,8 +159,7 @@ public class SimpleChannelPool implements ChannelPool {
 
     @Override
     public Future<Channel> acquire(final Promise<Channel> promise) {
-        checkNotNull(promise, "promise");
-        return acquireHealthyFromPoolOrNew(promise);
+        return acquireHealthyFromPoolOrNew(checkNotNull(promise, "promise"));
     }
 
     /**
@@ -400,5 +401,21 @@ public class SimpleChannelPool implements ChannelPool {
             // Just ignore any errors that are reported back from close().
             channel.close().awaitUninterruptibly();
         }
+    }
+
+    /**
+     * Closes the pool in an async manner.
+     *
+     * @return Future which represents completion of the close task
+     */
+    public Future<Void> closeAsync() {
+        // Execute close asynchronously in case this is being invoked on an eventloop to avoid blocking
+        return GlobalEventExecutor.INSTANCE.submit(new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                close();
+                return null;
+            }
+        });
     }
 }

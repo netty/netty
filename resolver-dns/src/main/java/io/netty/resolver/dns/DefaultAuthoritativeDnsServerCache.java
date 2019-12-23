@@ -117,9 +117,7 @@ public class DefaultAuthoritativeDnsServerCache implements AuthoritativeDnsServe
 
     @Override
     public boolean clear(String hostname) {
-        checkNotNull(hostname, "hostname");
-
-        return resolveCache.clear(hostname);
+        return resolveCache.clear(checkNotNull(hostname, "hostname"));
     }
 
     @Override

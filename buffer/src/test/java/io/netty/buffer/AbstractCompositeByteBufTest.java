@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.Assume;
 import org.junit.Test;
@@ -57,10 +58,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     private final ByteOrder order;
 
     protected AbstractCompositeByteBufTest(ByteOrder order) {
-        if (order == null) {
-            throw new NullPointerException("order");
-        }
-        this.order = order;
+        this.order = ObjectUtil.checkNotNull(order, "order");
     }
 
     @Override

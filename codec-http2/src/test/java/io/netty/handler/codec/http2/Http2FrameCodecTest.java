@@ -176,7 +176,7 @@ public class Http2FrameCodecTest {
 
         channel.writeOutbound(new DefaultHttp2HeadersFrame(response, true, 27).stream(stream2));
         verify(frameWriter).writeHeaders(
-                eqFrameCodecCtx(), eq(1), eq(response), anyInt(), anyShort(), anyBoolean(),
+                eqFrameCodecCtx(), eq(1), eq(response),
                 eq(27), eq(true), anyChannelPromise());
         verify(frameWriter, never()).writeRstStream(
                 eqFrameCodecCtx(), anyInt(), anyLong(), anyChannelPromise());
@@ -205,7 +205,7 @@ public class Http2FrameCodecTest {
 
         channel.writeOutbound(new DefaultHttp2HeadersFrame(response, true, 27).stream(stream2));
         verify(frameWriter).writeHeaders(
-                eqFrameCodecCtx(), eq(1), eq(response), anyInt(), anyShort(), anyBoolean(),
+                eqFrameCodecCtx(), eq(1), eq(response),
                 eq(27), eq(true), anyChannelPromise());
         verify(frameWriter, never()).writeRstStream(
                 eqFrameCodecCtx(), anyInt(), anyLong(), anyChannelPromise());
@@ -252,8 +252,8 @@ public class Http2FrameCodecTest {
         assertNull(inboundHandler.readInbound());
 
         channel.writeOutbound(new DefaultHttp2HeadersFrame(response, false).stream(stream2));
-        verify(frameWriter).writeHeaders(eqFrameCodecCtx(), eq(1), eq(response), anyInt(),
-                                         anyShort(), anyBoolean(), eq(0), eq(false), anyChannelPromise());
+        verify(frameWriter).writeHeaders(eqFrameCodecCtx(), eq(1), eq(response),
+                eq(0), eq(false), anyChannelPromise());
 
         channel.writeOutbound(new DefaultHttp2DataFrame(bb("world"), true, 27).stream(stream2));
         ArgumentCaptor<ByteBuf> outboundData = ArgumentCaptor.forClass(ByteBuf.class);

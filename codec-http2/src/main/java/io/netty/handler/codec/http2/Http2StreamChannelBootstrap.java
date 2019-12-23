@@ -33,15 +33,19 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.channels.ClosedChannelException;
-import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @UnstableApi
 public final class Http2StreamChannelBootstrap {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2StreamChannelBootstrap.class);
+    @SuppressWarnings("unchecked")
+    private static final Map.Entry<ChannelOption<?>, Object>[] EMPTY_OPTION_ARRAY = new Map.Entry[0];
+    @SuppressWarnings("unchecked")
+    private static final Map.Entry<AttributeKey<?>, Object>[] EMPTY_ATTRIBUTE_ARRAY = new Map.Entry[0];
 
-    private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
-    private final Map<AttributeKey<?>, Object> attrs = new LinkedHashMap<AttributeKey<?>, Object>();
+    private final Map<ChannelOption<?>, Object> options = new ConcurrentHashMap<ChannelOption<?>, Object>();
+    private final Map<AttributeKey<?>, Object> attrs = new ConcurrentHashMap<AttributeKey<?>, Object>();
     private final Channel channel;
     private volatile ChannelHandler handler;
 
@@ -58,17 +62,11 @@ public final class Http2StreamChannelBootstrap {
      */
     @SuppressWarnings("unchecked")
     public <T> Http2StreamChannelBootstrap option(ChannelOption<T> option, T value) {
-        if (option == null) {
-            throw new NullPointerException("option");
-        }
+        ObjectUtil.checkNotNull(option, "option");
         if (value == null) {
-            synchronized (options) {
-                options.remove(option);
-            }
+            options.remove(option);
         } else {
-            synchronized (options) {
-                options.put(option, value);
-            }
+            options.put(option, value);
         }
         return this;
     }
@@ -79,17 +77,11 @@ public final class Http2StreamChannelBootstrap {
      */
     @SuppressWarnings("unchecked")
     public <T> Http2StreamChannelBootstrap attr(AttributeKey<T> key, T value) {
-        if (key == null) {
-            throw new NullPointerException("key");
-        }
+        ObjectUtil.checkNotNull(key, "key");
         if (value == null) {
-            synchronized (attrs) {
-                attrs.remove(key);
-            }
+            attrs.remove(key);
         } else {
-            synchronized (attrs) {
-                attrs.put(key, value);
-            }
+            attrs.put(key, value);
         }
         return this;
     }
@@ -204,41 +196,43 @@ public final class Http2StreamChannelBootstrap {
         });
     }
 
-    @SuppressWarnings("unchecked")
     private void init(Channel channel) {
         ChannelPipeline p = channel.pipeline();
         ChannelHandler handler = this.handler;
         if (handler != null) {
             p.addLast(handler);
         }
-        synchronized (options) {
-            setChannelOptions(channel, options);
-        }
-
-        synchronized (attrs) {
-            for (Map.Entry<AttributeKey<?>, Object> e: attrs.entrySet()) {
-                channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
-            }
-        }
+        setChannelOptions(channel, options.entrySet().toArray(EMPTY_OPTION_ARRAY));
+        setAttributes(channel, attrs.entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY));
     }
 
     private static void setChannelOptions(
-            Channel channel, Map<ChannelOption<?>, Object> options) {
-        for (Map.Entry<ChannelOption<?>, Object> e: options.entrySet()) {
+            Channel channel, Map.Entry<ChannelOption<?>, Object>[] options) {
+        for (Map.Entry<ChannelOption<?>, Object> e: options) {
             setChannelOption(channel, e.getKey(), e.getValue());
         }
     }
 
-    @SuppressWarnings("unchecked")
     private static void setChannelOption(
             Channel channel, ChannelOption<?> option, Object value) {
         try {
-            if (!channel.config().setOption((ChannelOption<Object>) option, value)) {
+            @SuppressWarnings("unchecked")
+            ChannelOption<Object> opt = (ChannelOption<Object>) option;
+            if (!channel.config().setOption(opt, value)) {
                 logger.warn("Unknown channel option '{}' for channel '{}'", option, channel);
             }
         } catch (Throwable t) {
             logger.warn(
                     "Failed to set channel option '{}' with value '{}' for channel '{}'", option, value, channel, t);
+        }
+    }
+
+    private static void setAttributes(
+            Channel channel, Map.Entry<AttributeKey<?>, Object>[] options) {
+        for (Map.Entry<AttributeKey<?>, Object> e: options) {
+            @SuppressWarnings("unchecked")
+            AttributeKey<Object> key = (AttributeKey<Object>) e.getKey();
+            channel.attr(key).set(e.getValue());
         }
     }
 }

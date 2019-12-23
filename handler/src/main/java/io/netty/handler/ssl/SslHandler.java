@@ -44,6 +44,7 @@ import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -449,15 +450,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      *                              {@link SSLEngine#getDelegatedTask()}.
      */
     public SslHandler(SSLEngine engine, boolean startTls, Executor delegatedTaskExecutor) {
-        if (engine == null) {
-            throw new NullPointerException("engine");
-        }
-        if (delegatedTaskExecutor == null) {
-            throw new NullPointerException("delegatedTaskExecutor");
-        }
-        this.engine = engine;
+        this.engine = ObjectUtil.checkNotNull(engine, "engine");
+        this.delegatedTaskExecutor = ObjectUtil.checkNotNull(delegatedTaskExecutor, "delegatedTaskExecutor");
         engineType = SslEngineType.forEngine(engine);
-        this.delegatedTaskExecutor = delegatedTaskExecutor;
         this.startTls = startTls;
         this.jdkCompatibilityMode = engineType.jdkCompatibilityMode(engine);
         setCumulator(engineType.cumulator);
@@ -468,10 +463,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     public void setHandshakeTimeout(long handshakeTimeout, TimeUnit unit) {
-        if (unit == null) {
-            throw new NullPointerException("unit");
-        }
-
+        ObjectUtil.checkNotNull(unit, "unit");
         setHandshakeTimeoutMillis(unit.toMillis(handshakeTimeout));
     }
 
@@ -1925,9 +1917,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Performs TLS renegotiation.
      */
     public Future<Channel> renegotiate(final Promise<Channel> promise) {
-        if (promise == null) {
-            throw new NullPointerException("promise");
-        }
+        ObjectUtil.checkNotNull(promise, "promise");
 
         ChannelHandlerContext ctx = this.ctx;
         if (ctx == null) {

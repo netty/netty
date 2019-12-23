@@ -15,6 +15,8 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.util.internal.ObjectUtil;
+
 import javax.net.ssl.SSLEngine;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,12 +33,8 @@ public final class SupportedCipherSuiteFilter implements CipherSuiteFilter {
     @Override
     public String[] filterCipherSuites(Iterable<String> ciphers, List<String> defaultCiphers,
             Set<String> supportedCiphers) {
-        if (defaultCiphers == null) {
-            throw new NullPointerException("defaultCiphers");
-        }
-        if (supportedCiphers == null) {
-            throw new NullPointerException("supportedCiphers");
-        }
+        ObjectUtil.checkNotNull(defaultCiphers, "defaultCiphers");
+        ObjectUtil.checkNotNull(supportedCiphers, "supportedCiphers");
 
         final List<String> newCiphers;
         if (ciphers == null) {

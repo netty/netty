@@ -24,6 +24,7 @@ import io.netty.util.NetUtil;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
 import io.netty.util.ResourceLeakTracker;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -76,9 +77,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
             String sourceAddress, String destinationAddress, int sourcePort, int destinationPort,
             List<HAProxyTLV> tlvs) {
 
-        if (proxiedProtocol == null) {
-            throw new NullPointerException("proxiedProtocol");
-        }
+        ObjectUtil.checkNotNull(proxiedProtocol, "proxiedProtocol");
         AddressFamily addrFamily = proxiedProtocol.addressFamily();
 
         checkAddress(sourceAddress, addrFamily);
@@ -106,9 +105,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
      * @throws HAProxyProtocolException  if any portion of the header is invalid
      */
     static HAProxyMessage decodeHeader(ByteBuf header) {
-        if (header == null) {
-            throw new NullPointerException("header");
-        }
+        ObjectUtil.checkNotNull(header, "header");
 
         if (header.readableBytes() < 16) {
             throw new HAProxyProtocolException(
@@ -401,9 +398,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
      * @throws HAProxyProtocolException  if the address is invalid
      */
     private static void checkAddress(String address, AddressFamily addrFamily) {
-        if (addrFamily == null) {
-            throw new NullPointerException("addrFamily");
-        }
+        ObjectUtil.checkNotNull(addrFamily, "addrFamily");
 
         switch (addrFamily) {
             case AF_UNSPEC:
@@ -415,9 +410,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
                 return;
         }
 
-        if (address == null) {
-            throw new NullPointerException("address");
-        }
+        ObjectUtil.checkNotNull(address, "address");
 
         switch (addrFamily) {
             case AF_IPv4:

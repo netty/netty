@@ -736,6 +736,26 @@ public class HttpPostRequestDecoderTest {
         }
     }
 
+    @Test(expected = HttpPostRequestDecoder.ErrorDataDecoderException.class)
+    public void testNotLeakDirectBufferWhenWrapIllegalArgumentException() {
+        testNotLeakWhenWrapIllegalArgumentException(Unpooled.directBuffer());
+    }
+
+    @Test(expected = HttpPostRequestDecoder.ErrorDataDecoderException.class)
+    public void testNotLeakHeapBufferWhenWrapIllegalArgumentException() {
+        testNotLeakWhenWrapIllegalArgumentException(Unpooled.buffer());
+    }
+
+    private static void testNotLeakWhenWrapIllegalArgumentException(ByteBuf buf) {
+        buf.writeCharSequence("==", CharsetUtil.US_ASCII);
+        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", buf);
+        try {
+            new HttpPostStandardRequestDecoder(request);
+        } finally {
+            assertTrue(request.release());
+        }
+    }
+
     @Test
     public void testMultipartFormDataContentType() {
         HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");

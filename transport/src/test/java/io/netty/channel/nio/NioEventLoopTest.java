@@ -269,7 +269,6 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         }
     }
 
-    @Ignore
     @Test
     public void testChannelsRegistered() throws Exception {
         NioEventLoopGroup group = new NioEventLoopGroup(1);

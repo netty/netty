@@ -19,6 +19,7 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.RecyclableArrayList;
 
 import java.io.IOException;
@@ -61,14 +62,13 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     private CompositeByteBuf(ByteBufAllocator alloc, boolean direct, int maxNumComponents, int initSize) {
         super(AbstractByteBufAllocator.DEFAULT_MAX_CAPACITY);
-        if (alloc == null) {
-            throw new NullPointerException("alloc");
-        }
+
+        this.alloc = ObjectUtil.checkNotNull(alloc, "alloc");
         if (maxNumComponents < 1) {
             throw new IllegalArgumentException(
                     "maxNumComponents: " + maxNumComponents + " (expected: >= 1)");
         }
-        this.alloc = alloc;
+
         this.direct = direct;
         this.maxNumComponents = maxNumComponents;
         components = newCompArray(initSize, maxNumComponents);
