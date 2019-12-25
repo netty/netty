@@ -25,6 +25,7 @@ import java.net.SocketAddress;
 
 /**
  * Abstract base class for {@link Channel} implementations that use Old-Blocking-IO
+ * 实现OIO的一个channel,可以实现OIO的一些共性代码
  */
 public abstract class AbstractOioChannel extends AbstractChannel {
 

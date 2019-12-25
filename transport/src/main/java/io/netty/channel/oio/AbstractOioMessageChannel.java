@@ -47,7 +47,7 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
         try {
             for (;;) {
                 // Perform a read.
-                localRead = doReadMessages(readBuf);
+                localRead = doReadMessages(readBuf);//读取信息到参数中
                 if (localRead == 0) {
                     break;
                 }
@@ -101,6 +101,8 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
 
     /**
      * Read messages into the given array and return the amount which was read.
+     * 读取信息，输出到参数数组中
+     * 返回读取的字节数量
      */
     protected abstract int doReadMessages(List<Object> msgs) throws Exception;
 }

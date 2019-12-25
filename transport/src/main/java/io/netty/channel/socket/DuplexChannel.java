@@ -23,12 +23,14 @@ import java.net.Socket;
 
 /**
  * A duplex {@link Channel} that has two sides that can be shutdown independently.
+ * 两端都可以shutdown的channel
  */
 public interface DuplexChannel extends Channel {
     /**
      * Returns {@code true} if and only if the remote peer shut down its output so that no more
      * data is received from this channel.  Note that the semantic of this method is different from
      * that of {@link Socket#shutdownInput()} and {@link Socket#isInputShutdown()}.
+     * true表示本地不会有输入被接受了,因为远程服务已经对该输出流shutdown了
      */
     boolean isInputShutdown();
 

@@ -36,7 +36,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * {@link ServerSocketChannel} which accepts new connections and create the {@link OioSocketChannel}'s for them.
- *
+ * 采用oid的方式,作为服务器端,接受新连接,并且在服务器端创建一个OioSocketChannel引用
  * This implementation use Old-Blocking-IO.
  */
 public class OioServerSocketChannel extends AbstractOioMessageChannel
@@ -55,12 +55,13 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
         }
     }
 
-    final ServerSocket socket;
+    final ServerSocket socket;//服务器端对象
     final Lock shutdownLock = new ReentrantLock();
     private final OioServerSocketChannelConfig config;
 
     /**
      * Create a new instance with an new {@link Socket}
+     * 创建一个服务端实例对象
      */
     public OioServerSocketChannel() {
         this(newServerSocket());
@@ -100,6 +101,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
         config = new DefaultOioServerSocketChannelConfig(this, socket);
     }
 
+    //服务器本地ip
     @Override
     public InetSocketAddress localAddress() {
         return (InetSocketAddress) super.localAddress();
@@ -115,6 +117,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
         return config;
     }
 
+    //服务器本地是不需要远程服务的,因此返回null
     @Override
     public InetSocketAddress remoteAddress() {
         return null;
@@ -135,16 +138,25 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
         return SocketUtils.localSocketAddress(socket);
     }
 
+    //服务器绑定ip和端口
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         socket.bind(localAddress, config.getBacklog());
     }
 
+    //关闭服务器
     @Override
     protected void doClose() throws Exception {
         socket.close();
     }
 
+    /**
+     * 读取信息,将信息转换成对象,返回到参数的list中---返回后说明已经有一个连接成功的socket了,即该类接受的信息就是连接成功的socket
+     * @param buf
+     * @return
+     * @throws Exception
+     * 返回值  -1表示服务器已经关闭了    0表示接受socket失败  1表示接受socket成功
+     */
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {
         if (socket.isClosed()) {
@@ -152,9 +164,9 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
         }
 
         try {
-            Socket s = socket.accept();
+            Socket s = socket.accept();//阻塞接受一个连接
             try {
-                buf.add(new OioSocketChannel(this, s));
+                buf.add(new OioSocketChannel(this, s));//为接受者创建一个socket客户端
                 return 1;
             } catch (Throwable t) {
                 logger.warn("Failed to create a new channel from an accepted socket.", t);
@@ -170,6 +182,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
         return 0;
     }
 
+    //服务器不需要参与写信息,写信息由服务器产生的socket来写
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
@@ -180,6 +193,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
         throw new UnsupportedOperationException();
     }
 
+    //服务器不需要去连接
     @Override
     protected void doConnect(
             SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
