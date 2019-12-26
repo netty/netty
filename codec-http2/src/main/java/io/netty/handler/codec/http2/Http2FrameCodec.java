@@ -674,7 +674,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     // TODO(buchgr): Merge Http2FrameStream and Http2Stream.
     static class DefaultHttp2FrameStream implements Http2FrameStream {
 
-        private volatile int id = -1;
+        volatile int id = -1;
         volatile Http2Stream stream;
 
         final Http2FrameStreamEvent stateChanged = Http2FrameStreamEvent.stateChanged(this);
