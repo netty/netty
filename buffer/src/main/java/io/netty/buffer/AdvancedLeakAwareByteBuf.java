@@ -972,7 +972,7 @@ final class AdvancedLeakAwareByteBuf extends SimpleLeakAwareByteBuf {
             // means leak has been closed and there is no accessRecord.
             return e;
         }
-        return new TrackedIllegalReferenceCountException(e.getMessage(), accessRecord, e);
+        return new TrackedIllegalReferenceCountException(accessRecord, e);
     }
 
     @Override

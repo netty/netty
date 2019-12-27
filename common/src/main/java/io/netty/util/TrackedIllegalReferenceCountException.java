@@ -15,8 +15,6 @@
  */
 package io.netty.util;
 
-import io.netty.util.internal.StringUtil;
-
 /**
  * A special {@link IllegalReferenceCountException} with the ability to track access records
  */
@@ -24,9 +22,7 @@ public final class TrackedIllegalReferenceCountException extends IllegalReferenc
 
     private static final long serialVersionUID = 1374377399979428484L;
 
-    public TrackedIllegalReferenceCountException(String message,
-                                                 String accessRecords,
-                                                 IllegalReferenceCountException origin) {
-        super(message + StringUtil.NEWLINE + accessRecords, origin);
+    public TrackedIllegalReferenceCountException(String message, IllegalReferenceCountException origin) {
+        super(message, origin);
     }
 }
