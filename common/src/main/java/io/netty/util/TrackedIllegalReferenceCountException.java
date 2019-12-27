@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2019 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -20,11 +20,13 @@ import io.netty.util.internal.StringUtil;
 /**
  * A special {@link IllegalReferenceCountException} with the ability to track access records
  */
-public class TrackedIllegalReferenceCountException extends IllegalReferenceCountException {
+public final class TrackedIllegalReferenceCountException extends IllegalReferenceCountException {
 
     private static final long serialVersionUID = 1374377399979428484L;
 
-    public TrackedIllegalReferenceCountException(String message, String accessRecords) {
-        super(message + StringUtil.NEWLINE + accessRecords);
+    public TrackedIllegalReferenceCountException(String message,
+                                                 String accessRecords,
+                                                 IllegalReferenceCountException origin) {
+        super(message + StringUtil.NEWLINE + accessRecords, origin);
     }
 }

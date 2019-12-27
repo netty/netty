@@ -355,21 +355,6 @@ public class ResourceLeakDetector<T> {
             }
             return false;
         }
-
-        private void clearRecord() {
-            if (headUpdater.get(this) != null) {
-                headUpdater.set(this, null);
-            }
-        }
-
-        @Override
-        protected void finalize() throws Throwable {
-            try {
-                super.finalize();
-            } finally {
-                clearRecord();
-            }
-        }
     }
 
     @SuppressWarnings("deprecation")
