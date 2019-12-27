@@ -274,8 +274,19 @@ public class ResourceLeakDetector<T> {
         }
     }
 
+    /**
+     * Whether need to report leak.
+     * When the return value is true, {@link #reportTracedLeak} and {@link #reportUntracedLeak}
+     * can work normally, otherwise, they will have no effect.
+     *
+     * @return true for report leak.
+     */
+    protected boolean needReport() {
+        return logger.isErrorEnabled();
+    }
+
     private void reportLeak() {
-        if (!logger.isErrorEnabled()) {
+        if (!needReport()) {
             clearRefQueue();
             return;
         }
