@@ -275,11 +275,10 @@ public class ResourceLeakDetector<T> {
     }
 
     /**
-     * Whether need to report leak.
-     * When the return value is true, {@link #reportTracedLeak} and {@link #reportUntracedLeak}
-     * can work normally, otherwise, they will have no effect.
+     * When the return value is {@code true}, {@link #reportTracedLeak} and {@link #reportUntracedLeak}
+     * will be called once a leak is detected, otherwise not.
      *
-     * @return true for report leak.
+     * @return {@code true} to enable leak reporting.
      */
     protected boolean needReport() {
         return logger.isErrorEnabled();
