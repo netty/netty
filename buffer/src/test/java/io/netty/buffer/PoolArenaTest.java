@@ -20,6 +20,8 @@ import io.netty.util.internal.PlatformDependent;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.junit.Assume.assumeTrue;
+
 import java.nio.ByteBuffer;
 
 public class PoolArenaTest {
@@ -46,6 +48,7 @@ public class PoolArenaTest {
 
     @Test
     public void testDirectArenaOffsetCacheLine() throws Exception {
+        assumeTrue(PlatformDependent.hasUnsafe());
         int capacity = 5;
         int alignment = 128;
 
@@ -106,5 +109,18 @@ public class PoolArenaTest {
         Assert.assertEquals(1, metric.numSmallAllocations());
         Assert.assertEquals(1, metric.numNormalDeallocations());
         Assert.assertEquals(1, metric.numNormalAllocations());
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public final void testDirectArenaMemoryCopy() {
+        PooledByteBuf<ByteBuffer> src =
+                (PooledByteBuf<ByteBuffer>) PooledByteBufAllocator.DEFAULT.directBuffer(512);
+        PooledByteBuf<ByteBuffer> dst =
+                (PooledByteBuf<ByteBuffer>) PooledByteBufAllocator.DEFAULT.directBuffer(512);
+        // This causes the internal reused ByteBuffer duplicate limit to be set to 128
+        dst.writeBytes(ByteBuffer.allocate(128));
+        // Ensure internal ByteBuffer duplicate limit is properly reset (used in memoryCopy non-Unsafe case)
+        dst.chunk.arena.memoryCopy(src.memory, 0, dst, 512);
     }
 }
