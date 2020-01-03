@@ -44,11 +44,7 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     private boolean terminated;
     private SwappedByteBuf swapped;
 
-    static final ReplayingDecoderByteBuf EMPTY_BUFFER = new ReplayingDecoderByteBuf(Unpooled.EMPTY_BUFFER);
-
-    static {
-        EMPTY_BUFFER.terminate();
-    }
+    private int targetWriterIndex = -1;
 
     ReplayingDecoderByteBuf() { }
 
@@ -56,8 +52,14 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
         setCumulation(buffer);
     }
 
+    // negative return value means unknown
+    int minRequiredBytes() {
+        return targetWriterIndex >= 0 ? targetWriterIndex - buffer.readerIndex() : -1;
+    }
+
     void setCumulation(ByteBuf buffer) {
         this.buffer = buffer;
+        this.targetWriterIndex = -1;
     }
 
     void terminate() {
@@ -1082,13 +1084,16 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     private void checkIndex(int index, int length) {
-        if (index + length > buffer.writerIndex()) {
+        int target = index + length;
+        if (target > buffer.writerIndex()) {
+            targetWriterIndex = target;
             throw REPLAY;
         }
     }
 
     private void checkReadableBytes(int readableBytes) {
         if (buffer.readableBytes() < readableBytes) {
+            targetWriterIndex = buffer.readerIndex() + readableBytes;
             throw REPLAY;
         }
     }

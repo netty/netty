@@ -36,7 +36,7 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
     private final TypeParameterMatcher outboundMsgMatcher;
     private final MessageToByteEncoder<I> encoder;
 
-    private final ByteToMessageDecoder decoder = new ByteToMessageDecoder() {
+    private final class CodecDecoder extends ByteToMessageDecoder {
         @Override
         public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
             ByteToMessageCodec.this.decode(ctx, in, out);
@@ -46,7 +46,13 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
         protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
             ByteToMessageCodec.this.decodeLast(ctx, in, out);
         }
-    };
+
+        void defaultDecodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            super.decodeLast(ctx, in, out);
+        }
+    }
+
+    private final CodecDecoder decoder = new CodecDecoder();
 
     /**
      * see {@link #ByteToMessageCodec(boolean)} with {@code true} as boolean parameter.
@@ -150,11 +156,7 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
      * @see ByteToMessageDecoder#decodeLast(ChannelHandlerContext, ByteBuf, List)
      */
     protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        if (in.isReadable()) {
-            // Only call decode() if there is something left in the buffer to decode.
-            // See https://github.com/netty/netty/issues/4386
-            decode(ctx, in, out);
-        }
+        decoder.defaultDecodeLast(ctx, in, out);
     }
 
     private final class Encoder extends MessageToByteEncoder<I> {
