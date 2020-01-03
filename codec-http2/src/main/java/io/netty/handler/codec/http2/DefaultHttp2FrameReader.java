@@ -135,6 +135,10 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         }
     }
 
+    public int requiredBytes() {
+        return readingHeaders ? FRAME_HEADER_LENGTH : payloadLength;
+    }
+
     @Override
     public void readFrame(ChannelHandlerContext ctx, ByteBuf input, Http2FrameListener listener)
             throws Http2Exception {

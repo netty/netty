@@ -195,6 +195,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     private abstract class BaseDecoder {
+        public abstract int requiredBytes();
         public abstract void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception;
         public void handlerRemoved(ChannelHandlerContext ctx) throws Exception { }
         public void channelActive(ChannelHandlerContext ctx) throws Exception { }
@@ -244,6 +245,17 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             } catch (Throwable e) {
                 onError(ctx, false, e);
             }
+        }
+
+        @Override
+        public int requiredBytes() {
+            if (clientPrefaceString != null) {
+                int remaining = clientPrefaceString.readableBytes();
+                if (remaining > 0) {
+                    return remaining;
+                }
+            }
+            return Math.max(5, decoder.requiredBytes());
         }
 
         @Override
@@ -380,6 +392,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 onError(ctx, false, e);
             }
         }
+        @Override
+        public int requiredBytes() {
+            return decoder.requiredBytes();
+        }
     }
 
     @Override
@@ -406,6 +422,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             byteDecoder = new PrefaceDecoder(ctx);
         }
         byteDecoder.channelActive(ctx);
+        setRequiredBytes(byteDecoder.requiredBytes());
         super.channelActive(ctx);
     }
 
@@ -436,6 +453,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         byteDecoder.decode(ctx, in, out);
+        setRequiredBytes(byteDecoder.requiredBytes());
     }
 
     @Override
@@ -542,9 +560,6 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     }
 
     final void channelReadComplete0(ChannelHandlerContext ctx) {
-        // Discard bytes of the cumulation buffer if needed.
-        discardSomeReadBytes();
-
         // Ensure we never stale the HTTP/2 Channel. Flow-control is enforced by HTTP/2.
         //
         // See https://tools.ietf.org/html/rfc7540#section-5.2.2

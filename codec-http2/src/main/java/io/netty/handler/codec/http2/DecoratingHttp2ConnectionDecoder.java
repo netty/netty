@@ -59,6 +59,11 @@ public class DecoratingHttp2ConnectionDecoder implements Http2ConnectionDecoder 
     }
 
     @Override
+    public int requiredBytes() {
+        return delegate.requiredBytes();
+    }
+
+    @Override
     public void decodeFrame(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Http2Exception {
         delegate.decodeFrame(ctx, in, out);
     }

@@ -333,7 +333,9 @@ public class Http2ConnectionHandlerTest {
         handler = newHandler();
 
         // Create a connection preface followed by a bunch of zeros (i.e. not a settings frame).
-        ByteBuf buf = Unpooled.buffer().writeBytes(connectionPrefaceBuf()).writeZero(10);
+        ByteBuf preface = connectionPrefaceBuf();
+        when(decoder.requiredBytes()).thenReturn(preface.readableBytes());
+        ByteBuf buf = Unpooled.buffer().writeBytes(preface).writeZero(10);
         handler.channelRead(ctx, buf);
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
         verify(frameWriter, atLeastOnce()).writeGoAway(eq(ctx), eq(0), eq(PROTOCOL_ERROR.code()),
@@ -345,7 +347,9 @@ public class Http2ConnectionHandlerTest {
     public void serverReceivingValidClientPrefaceStringShouldContinueReadingFrames() throws Exception {
         when(connection.isServer()).thenReturn(true);
         handler = newHandler();
-        ByteBuf prefacePlusSome = addSettingsHeader(Unpooled.buffer().writeBytes(connectionPrefaceBuf()));
+        ByteBuf preface = connectionPrefaceBuf();
+        when(decoder.requiredBytes()).thenReturn(preface.readableBytes());
+        ByteBuf prefacePlusSome = addSettingsHeader(Unpooled.buffer().writeBytes(preface));
         handler.channelRead(ctx, prefacePlusSome);
         verify(decoder, atLeastOnce()).decodeFrame(any(ChannelHandlerContext.class),
                 any(ByteBuf.class), ArgumentMatchers.<List<Object>>any());
@@ -367,7 +371,9 @@ public class Http2ConnectionHandlerTest {
         handler.handlerAdded(ctx);
 
         // Now verify we can continue as normal, reading connection preface plus more.
-        ByteBuf prefacePlusSome = addSettingsHeader(Unpooled.buffer().writeBytes(connectionPrefaceBuf()));
+        preface = connectionPrefaceBuf();
+        when(decoder.requiredBytes()).thenReturn(preface.readableBytes());
+        ByteBuf prefacePlusSome = addSettingsHeader(Unpooled.buffer().writeBytes(preface));
         handler.channelRead(ctx, prefacePlusSome);
         verify(decoder, atLeastOnce()).decodeFrame(eq(ctx), any(ByteBuf.class), ArgumentMatchers.<List<Object>>any());
     }

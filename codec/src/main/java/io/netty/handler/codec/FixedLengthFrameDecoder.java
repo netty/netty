@@ -50,6 +50,7 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
     public FixedLengthFrameDecoder(int frameLength) {
         checkPositive(frameLength, "frameLength");
         this.frameLength = frameLength;
+        setRequiredBytes(frameLength);
     }
 
     @Override
@@ -58,6 +59,7 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
         if (decoded != null) {
             out.add(decoded);
         }
+        setRequiredBytes(frameLength);
     }
 
     /**
@@ -69,11 +71,7 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
      *                          be created.
      */
     protected Object decode(
-            @SuppressWarnings("UnusedParameters") ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        if (in.readableBytes() < frameLength) {
-            return null;
-        } else {
-            return in.readRetainedSlice(frameLength);
-        }
+            @SuppressWarnings("UnusedParameters") ChannelHandlerContext ctx, ByteBuf in) {
+        return in.readRetainedSlice(frameLength);
     }
 }

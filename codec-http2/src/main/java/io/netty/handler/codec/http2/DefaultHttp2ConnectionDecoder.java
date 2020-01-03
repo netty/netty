@@ -170,6 +170,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     }
 
     @Override
+    public int requiredBytes() {
+        return frameReader.requiredBytes();
+    }
+
+    @Override
     public void decodeFrame(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Http2Exception {
         frameReader.readFrame(ctx, in, internalFrameListener);
     }

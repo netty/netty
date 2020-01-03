@@ -36,6 +36,11 @@ public class Http2InboundFrameLogger implements Http2FrameReader {
     }
 
     @Override
+    public int requiredBytes() {
+        return reader.requiredBytes();
+    }
+
+    @Override
     public void readFrame(ChannelHandlerContext ctx, ByteBuf input, final Http2FrameListener listener)
             throws Http2Exception {
         reader.readFrame(ctx, input, new Http2FrameListener() {

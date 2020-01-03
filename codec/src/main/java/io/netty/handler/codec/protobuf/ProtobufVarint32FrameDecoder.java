@@ -45,6 +45,10 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
     // TODO maxFrameLength + safe skip + fail-fast option
     //      (just like LengthFieldBasedFrameDecoder)
 
+    public ProtobufVarint32FrameDecoder() {
+        setRequiredBytes(1, 5);
+    }
+
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
             throws Exception {
@@ -52,6 +56,8 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
         int preIndex = in.readerIndex();
         int length = readRawVarint32(in);
         if (preIndex == in.readerIndex()) {
+            // Max _positive_ varint32 length is 5 bytes
+            setRequiredBytes(in.readableBytes() + 1, 5);
             return;
         }
         if (length < 0) {
@@ -59,9 +65,11 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
         }
 
         if (in.readableBytes() < length) {
+            setRequiredBytes((in.readerIndex() - preIndex)  + length);
             in.resetReaderIndex();
         } else {
             out.add(in.readRetainedSlice(length));
+            setRequiredBytes(1, 5);
         }
     }
 

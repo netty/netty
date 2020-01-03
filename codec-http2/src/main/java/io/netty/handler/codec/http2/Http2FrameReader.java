@@ -42,6 +42,8 @@ public interface Http2FrameReader extends Closeable {
         Http2FrameSizePolicy frameSizePolicy();
     }
 
+    int requiredBytes();
+
     /**
      * Attempts to read the next frame from the input buffer. If enough data is available to fully
      * read the frame, notifies the listener of the read frame.

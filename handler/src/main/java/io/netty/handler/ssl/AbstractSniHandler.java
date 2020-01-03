@@ -49,6 +49,10 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
     private boolean readPending;
     private ByteBuf handshakeBuffer;
 
+    public AbstractSniHandler() {
+        setRequiredBytes(SslUtils.SSL_RECORD_HEADER_LENGTH);
+    }
+
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         if (!suppressRead && !handshakeFailed) {
@@ -94,6 +98,7 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
 
                                 if (readableBytes < packetLength) {
                                     // client hello incomplete; try again to decode once more data is ready.
+                                    setRequiredBytes(readerIndex + packetLength - in.readerIndex());
                                     return;
                                 } else if (packetLength == SslUtils.SSL_RECORD_HEADER_LENGTH) {
                                     select(ctx, null);
@@ -162,6 +167,7 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder impleme
                             return;
                     }
                 }
+                setRequiredBytes(readerIndex + SslUtils.SSL_RECORD_HEADER_LENGTH - in.readerIndex());
             } catch (NotSslRecordException e) {
                 // Just rethrow as in this case we also closed the channel and this is consistent with SslHandler.
                 throw e;

@@ -456,6 +456,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         this.startTls = startTls;
         this.jdkCompatibilityMode = engineType.jdkCompatibilityMode(engine);
         setCumulator(engineType.cumulator);
+        if (jdkCompatibilityMode) {
+            setRequiredBytes(SslUtils.SSL_RECORD_HEADER_LENGTH);
+        }
     }
 
     public long getHandshakeTimeoutMillis() {
@@ -1183,12 +1186,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // If we calculated the length of the current SSL record before, use that information.
         if (packetLength > 0) {
             if (in.readableBytes() < packetLength) {
+                setRequiredBytes(packetLength);
                 return;
             }
         } else {
             // Get the packet length and wait until we get a packets worth of data to unwrap.
             final int readableBytes = in.readableBytes();
             if (readableBytes < SslUtils.SSL_RECORD_HEADER_LENGTH) {
+                setRequiredBytes(SslUtils.SSL_RECORD_HEADER_LENGTH);
                 return;
             }
             packetLength = getEncryptedPacketLength(in, in.readerIndex());
@@ -1208,6 +1213,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             if (packetLength > readableBytes) {
                 // wait until the whole packet can be read
                 this.packetLength = packetLength;
+                setRequiredBytes(packetLength);
                 return;
             }
         }
@@ -1573,6 +1579,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         private void tryDecodeAgain() {
             try {
+                // We must reset the required bytes here to force decode() to be called again
+                setRequiredBytes(1, Integer.MAX_VALUE);
                 channelRead(ctx, Unpooled.EMPTY_BUFFER);
             } catch (Throwable cause) {
                 safeExceptionCaught(cause);
