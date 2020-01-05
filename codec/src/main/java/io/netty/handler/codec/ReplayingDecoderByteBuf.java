@@ -33,13 +33,14 @@ import java.nio.charset.Charset;
 
 /**
  * Special {@link ByteBuf} implementation which is used by the {@link ReplayingDecoder}
+ * 是buffer的一个代理模式
  */
 final class ReplayingDecoderByteBuf extends ByteBuf {
 
     private static final Signal REPLAY = ReplayingDecoder.REPLAY;
 
     private ByteBuf buffer;
-    private boolean terminated;
+    private boolean terminated;//true表示终止
     private SwappedByteBuf swapped;
 
     static final ReplayingDecoderByteBuf EMPTY_BUFFER = new ReplayingDecoderByteBuf(Unpooled.EMPTY_BUFFER);
@@ -953,6 +954,7 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
         }
     }
 
+    //确保有readableBytes个字节存在
     private void checkReadableBytes(int readableBytes) {
         if (buffer.readableBytes() < readableBytes) {
             throw REPLAY;

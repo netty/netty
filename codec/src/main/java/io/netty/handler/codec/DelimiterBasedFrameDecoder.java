@@ -54,10 +54,13 @@ import java.util.List;
  * | ABC\nDEF |
  * +----------+
  * </pre>
+ * 以特殊符号作为消息结束符的TCP黏包问题
+ *
+ * 可以参考LineBasedFrameDecoder 以\r\n的方式拆分,为特殊case
  */
 public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
 
-    private final ByteBuf[] delimiters;
+    private final ByteBuf[] delimiters;//拆分的特殊字符集合
     private final int maxFrameLength;
     private final boolean stripDelimiter;
     private final boolean failFast;
@@ -188,18 +191,20 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
         this.failFast = failFast;
     }
 
-    /** Returns true if the delimiters are "\n" and "\r\n".  */
+    /** Returns true if the delimiters are "\n" and "\r\n".
+     * 参数一定是2个,即按照\r\n或者\n方式拆分。
+     **/
     private static boolean isLineBased(final ByteBuf[] delimiters) {
         if (delimiters.length != 2) {
             return false;
         }
         ByteBuf a = delimiters[0];
         ByteBuf b = delimiters[1];
-        if (a.capacity() < b.capacity()) {
+        if (a.capacity() < b.capacity()) {//谁的容量大,谁是\r\n
             a = delimiters[1];
             b = delimiters[0];
         }
-        return a.capacity() == 2 && b.capacity() == 1
+        return a.capacity() == 2 && b.capacity() == 1 //确保一个是2个字节,一个是1个字节,并且一定是\r\n或者\n
                 && a.getByte(0) == '\r' && a.getByte(1) == '\n'
                 && b.getByte(0) == '\n';
     }
@@ -232,6 +237,7 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
             return lineBasedDecoder.decode(ctx, buffer);
         }
         // Try all delimiters and choose the delimiter which yields the shortest frame.
+        //因为存在多个分隔符,因此循环所有分隔符,找到最小匹配分隔符的位置,以及分隔符是哪个
         int minFrameLength = Integer.MAX_VALUE;
         ByteBuf minDelim = null;
         for (ByteBuf delim: delimiters) {
@@ -246,7 +252,7 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
             int minDelimLength = minDelim.capacity();
             ByteBuf frame;
 
-            if (discardingTooLongFrame) {
+            if (discardingTooLongFrame) {//默认是false
                 // We've just finished discarding a very large frame.
                 // Go back to the initial state.
                 discardingTooLongFrame = false;
@@ -260,13 +266,15 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
                 return null;
             }
 
-            if (minFrameLength > maxFrameLength) {
+            //找到分隔符后,发现大小超过限制,直接就丢弃了,不需要进入丢弃模式
+            if (minFrameLength > maxFrameLength) { //是否超过了最大限制
                 // Discard read frame.
-                buffer.skipBytes(minFrameLength + minDelimLength);
-                fail(minFrameLength);
+                buffer.skipBytes(minFrameLength + minDelimLength);//直接移动指针,丢弃
+                fail(minFrameLength);//抛异常通知上游
                 return null;
             }
 
+            //按照最小分隔符进行拆分包
             if (stripDelimiter) {
                 frame = buffer.readSlice(minFrameLength);
                 buffer.skipBytes(minDelimLength);
@@ -275,20 +283,20 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
             }
 
             return frame.retain();
-        } else {
-            if (!discardingTooLongFrame) {
-                if (buffer.readableBytes() > maxFrameLength) {
+        } else {//没有找到分隔符
+            if (!discardingTooLongFrame) {//判断是否进入丢弃模式
+                if (buffer.readableBytes() > maxFrameLength) {//超过限制,丢弃模式进入
                     // Discard the content of the buffer until a delimiter is found.
                     tooLongFrameLength = buffer.readableBytes();
-                    buffer.skipBytes(buffer.readableBytes());
-                    discardingTooLongFrame = true;
+                    buffer.skipBytes(buffer.readableBytes());//跳过丢弃字符
+                    discardingTooLongFrame = true;//进入丢弃模式
                     if (failFast) {
                         fail(tooLongFrameLength);
                     }
                 }
             } else {
                 // Still discarding the buffer since a delimiter is not found.
-                tooLongFrameLength += buffer.readableBytes();
+                tooLongFrameLength += buffer.readableBytes();//继续追加丢弃模式字节
                 buffer.skipBytes(buffer.readableBytes());
             }
             return null;
@@ -311,6 +319,9 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
      * Returns the number of bytes between the readerIndex of the haystack and
      * the first needle found in the haystack.  -1 is returned if no needle is
      * found in the haystack.
+     * 查看输入流中是否有需要的拆分字符串存在,如果存在则返回该分割字符串的开始位置
+     * 参数needle 表示分割字符串
+     * 参数haystack 表示输入流内容
      */
     private static int indexOf(ByteBuf haystack, ByteBuf needle) {
         for (int i = haystack.readerIndex(); i < haystack.writerIndex(); i ++) {

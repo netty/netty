@@ -25,6 +25,7 @@ import java.nio.charset.CharsetEncoder;
  *
  * @see SocksAuthResponse
  * @see SocksAuthRequestDecoder
+ * 鉴权请求
  */
 public final class SocksAuthRequest extends SocksRequest {
     private static final CharsetEncoder asciiEncoder = CharsetUtil.encoder(CharsetUtil.US_ASCII);
@@ -33,17 +34,21 @@ public final class SocksAuthRequest extends SocksRequest {
     private final String password;
 
     public SocksAuthRequest(String username, String password) {
-        super(SocksRequestType.AUTH);
+
+        super(SocksRequestType.AUTH);//鉴权请求
+
         if (username == null) {
             throw new NullPointerException("username");
         }
         if (password == null) {
             throw new NullPointerException("username");
         }
+        //确定用户名和密码是ascii格式,比如不允许是中文
         if (!asciiEncoder.canEncode(username) || !asciiEncoder.canEncode(password)) {
             throw new IllegalArgumentException(
                     "username: " + username + " or password: **** values should be in pure ascii");
         }
+        //长度限制
         if (username.length() > 255) {
             throw new IllegalArgumentException("username: " + username + " exceeds 255 char limit");
         }
@@ -72,6 +77,7 @@ public final class SocksAuthRequest extends SocksRequest {
         return password;
     }
 
+    //将用户名和密码发送到参数中
     @Override
     public void encodeAsByteBuf(ByteBuf byteBuf) {
         byteBuf.writeByte(SUBNEGOTIATION_VERSION.byteValue());

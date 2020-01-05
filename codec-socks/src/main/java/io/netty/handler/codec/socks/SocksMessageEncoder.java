@@ -25,6 +25,7 @@ import io.netty.handler.codec.MessageToByteEncoder;
  * {@link MessageToByteEncoder} implementation.
  * Use this with {@link SocksInitRequest}, {@link SocksInitResponse}, {@link SocksAuthRequest},
  * {@link SocksAuthResponse}, {@link SocksCmdRequest} and {@link SocksCmdResponse}
+ * 对一个对象SocksMessage进行序列化,序列化成字节数组传输
  */
 @ChannelHandler.Sharable
 public class SocksMessageEncoder extends MessageToByteEncoder<SocksMessage> {

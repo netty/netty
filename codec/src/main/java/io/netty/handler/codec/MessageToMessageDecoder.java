@@ -47,6 +47,8 @@ import java.util.List;
  * Be aware that you need to call {@link ReferenceCounted#retain()} on messages that are just passed through if they
  * are of type {@link ReferenceCounted}. This is needed as the {@link MessageToMessageDecoder} will call
  * {@link ReferenceCounted#release()} on decoded messages.
+ * ByteToMessageDecoder是字节数组转换成对象---基本上对象还是字节数组,但是可以是其他对象，只是默认是字节数组而已。
+ * 而MessageToMessageDecoder是对象转换成对象---对象是I泛型决定的,输出还是一样,是字节数组,但是可以是其他对象，只是默认是字节数组而已。
  *
  */
 public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAdapter {

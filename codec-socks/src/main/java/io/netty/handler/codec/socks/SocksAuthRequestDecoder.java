@@ -46,12 +46,12 @@ public class SocksAuthRequestDecoder extends ReplayingDecoder<State> {
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) throws Exception {
         switch (state()) {
-            case CHECK_PROTOCOL_VERSION: {
-                if (byteBuf.readByte() != SocksSubnegotiationVersion.AUTH_PASSWORD.byteValue()) {
+            case CHECK_PROTOCOL_VERSION: {//初始状态是校验鉴权版本
+                if (byteBuf.readByte() != SocksSubnegotiationVersion.AUTH_PASSWORD.byteValue()) {//说明不是鉴权版本,因此设置为未知请求
                     out.add(SocksCommonUtils.UNKNOWN_SOCKS_REQUEST);
                     break;
                 }
-                checkpoint(State.READ_USERNAME);
+                checkpoint(State.READ_USERNAME);//切换读取下一个字段
             }
             case READ_USERNAME: {
                 int fieldLength = byteBuf.readByte();

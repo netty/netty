@@ -26,18 +26,20 @@ import java.util.List;
  * <p>
  * Both {@code "\n"} and {@code "\r\n"} are handled.
  * For a more general delimiter-based decoder, see {@link DelimiterBasedFrameDecoder}.
+ * 以固定的分隔符去拆分输入流中数据
+ * 即从输入中按照\r\n的方式,拆分数据,获取第一部分数据
  */
 public class LineBasedFrameDecoder extends ByteToMessageDecoder {
 
     /** Maximum length of a frame we're willing to decode.  */
-    private final int maxLength;
+    private final int maxLength;//设置最大包长度
     /** Whether or not to throw an exception as soon as we exceed maxLength. */
-    private final boolean failFast;
-    private final boolean stripDelimiter;
+    private final boolean failFast;//超出最大长度后,是否要立即抛出异常。true立刻抛出异常 false表示晚一些抛出
+    private final boolean stripDelimiter;//true表示丢弃\r\n内容  false表示保留该内容
 
     /** True if we're discarding input because we're already over maxLength.  */
-    private boolean discarding;
-    private int discardedBytes;
+    private boolean discarding;//默认false  true表示要丢弃输入内容,因为计算的输入已经超出了限制  true进入丢弃模式
+    private int discardedBytes;//丢弃的字节大小
 
     /** Last scan position. */
     private int offset;
@@ -58,7 +60,7 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
      *                   A {@link TooLongFrameException} is thrown if
      *                   the length of the frame exceeds this value.
      * @param stripDelimiter  whether the decoded frame should strip out the
-     *                        delimiter or not
+     *                        delimiter or not true表示要丢弃输入内容,因为计算的输入已经超出了限制,即拆包后,是否保留原始拆分字符串内容.默认是false,表示保留\r\n
      * @param failFast  If <tt>true</tt>, a {@link TooLongFrameException} is
      *                  thrown as soon as the decoder notices the length of the
      *                  frame will exceed <tt>maxFrameLength</tt> regardless of
@@ -73,6 +75,10 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
         this.stripDelimiter = stripDelimiter;
     }
 
+    /**
+     * 从in中读取一个对象,添加到out集合中
+     * ctx上下文,用于向上handler处理异常
+     */
     @Override
     protected final void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         Object decoded = decode(ctx, in);
@@ -90,17 +96,17 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
      *                          be created.
      */
     protected Object decode(ChannelHandlerContext ctx, ByteBuf buffer) throws Exception {
-        final int eol = findEndOfLine(buffer);
+        final int eol = findEndOfLine(buffer);//找到分隔符位置
         if (!discarding) {
             if (eol >= 0) {
                 final ByteBuf frame;
                 final int length = eol - buffer.readerIndex();
                 final int delimLength = buffer.getByte(eol) == '\r'? 2 : 1;
 
-                if (length > maxLength) {
-                    buffer.readerIndex(eol + delimLength);
+                if (length > maxLength) {//有效字符超过最大字符限制
+                    buffer.readerIndex(eol + delimLength);//重新设置新的位置--丢弃
                     fail(ctx, length);
-                    return null;
+                    return null;//返回null,表示没有解析成功---父类会break本次字节处理流程
                 }
 
                 if (stripDelimiter) {
@@ -111,34 +117,35 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
                 }
 
                 return frame.retain();
-            } else {
+            } else {//说明此时input无\r\n
                 final int length = buffer.readableBytes();
-                if (length > maxLength) {
-                    discardedBytes = length;
-                    buffer.readerIndex(buffer.writerIndex());
-                    discarding = true;
+                if (length > maxLength) {//超出限制
+                    discardedBytes = length;//丢弃的长度
+                    buffer.readerIndex(buffer.writerIndex());//重新设置下一次读取的位置
+                    discarding = true;//进入丢弃模式
                     offset = 0;
-                    if (failFast) {
+                    if (failFast) {//立刻触发异常
                         fail(ctx, "over " + discardedBytes);
                     }
                 }
                 return null;
             }
-        } else {
+        } else {//说明已经丢弃
             if (eol >= 0) {
-                final int length = discardedBytes + eol - buffer.readerIndex();
+                //length表示最终丢弃了多少个字节
+                final int length = discardedBytes + eol - buffer.readerIndex();//记录最终丢弃了多少个字节  上一次丢弃的 + 本次丢弃的
                 final int delimLength = buffer.getByte(eol) == '\r'? 2 : 1;
-                buffer.readerIndex(eol + delimLength);
-                discardedBytes = 0;
-                discarding = false;
-                if (!failFast) {
+                buffer.readerIndex(eol + delimLength);//移动到\r\n的位置,因为已经被丢弃了
+                discardedBytes = 0;//重置丢弃长度
+                discarding = false;//无丢弃模式
+                if (!failFast) {//晚一些触发异常--与上面的if (failFast) 相反.表示只能触发一次,要么是立刻触发,要么是等一会触发
                     fail(ctx, length);
                 }
             } else {
-                discardedBytes += buffer.readableBytes();
-                buffer.readerIndex(buffer.writerIndex());
+                discardedBytes += buffer.readableBytes();//累加丢弃字节数---因为依然没有找到\r\n,继续丢弃
+                buffer.readerIndex(buffer.writerIndex());//切换到当前最新写的位置
             }
-            return null;
+            return null;//已经丢弃了,肯定返回值就是null---因为到结束字节为止,都没有找到\r\n,因此继续等待读取新的字节,此时返回null,让父类触发break操作。
         }
     }
 
@@ -146,6 +153,7 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
         fail(ctx, String.valueOf(length));
     }
 
+    //向上报告异常,提示本身长度,超过了设置的长度上限
     private void fail(final ChannelHandlerContext ctx, String length) {
         ctx.fireExceptionCaught(
                 new TooLongFrameException(
@@ -155,14 +163,15 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
     /**
      * Returns the index in the buffer of the end of line found.
      * Returns -1 if no end of line was found in the buffer.
+     * 找到\r\n或者\n之前的位置
      */
     private int findEndOfLine(final ByteBuf buffer) {
         int totalLength = buffer.readableBytes();
-        int i = buffer.forEachByte(buffer.readerIndex() + offset, totalLength - offset, ByteBufProcessor.FIND_LF);
+        int i = buffer.forEachByte(buffer.readerIndex() + offset, totalLength - offset, ByteBufProcessor.FIND_LF);//FIND_LF表示找到\n字符串就结束
         if (i >= 0) {
             offset = 0;
-            if (i > 0 && buffer.getByte(i - 1) == '\r') {
-                i--;
+            if (i > 0 && buffer.getByte(i - 1) == '\r') {//说明此时匹配的是\r\n
+                i--;//倒退一步,即\r也不要了
             }
         } else {
             offset = totalLength;

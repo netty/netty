@@ -24,15 +24,15 @@ import io.netty.buffer.ByteBuf;
  * @see SocksAuthResponseDecoder
  */
 public final class SocksAuthResponse extends SocksResponse {
-    private static final SocksSubnegotiationVersion SUBNEGOTIATION_VERSION = SocksSubnegotiationVersion.AUTH_PASSWORD;
+    private static final SocksSubnegotiationVersion SUBNEGOTIATION_VERSION = SocksSubnegotiationVersion.AUTH_PASSWORD;//鉴权密码版本
     private final SocksAuthStatus authStatus;
 
     public SocksAuthResponse(SocksAuthStatus authStatus) {
-        super(SocksResponseType.AUTH);
+        super(SocksResponseType.AUTH);//鉴权
         if (authStatus == null) {
             throw new NullPointerException("authStatus");
         }
-        this.authStatus = authStatus;
+        this.authStatus = authStatus;//鉴权状态
     }
 
     /**
@@ -47,6 +47,6 @@ public final class SocksAuthResponse extends SocksResponse {
     @Override
     public void encodeAsByteBuf(ByteBuf byteBuf) {
         byteBuf.writeByte(SUBNEGOTIATION_VERSION.byteValue());
-        byteBuf.writeByte(authStatus.byteValue());
+        byteBuf.writeByte(authStatus.byteValue());//回复鉴权状态
     }
 }

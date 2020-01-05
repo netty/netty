@@ -56,6 +56,7 @@ public abstract class SocksMessage {
 
     /**
      * @deprecated Do not use; this method was intended for an internal use only.
+     * 子类实现,将需要序列化的信息存储到参数中
      */
     @Deprecated
     public abstract void encodeAsByteBuf(ByteBuf byteBuf);

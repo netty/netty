@@ -20,17 +20,17 @@ package io.netty.handler.codec;
  */
 public enum ProtocolDetectionState {
     /**
-     * Need more data to detect the protocol.
+     * Need more data to detect the protocol.需要更多的数据去检测该协议
      */
     NEEDS_MORE_DATA,
 
     /**
-     * The data was invalid.
+     * The data was invalid.无效
      */
     INVALID,
 
     /**
-     * Protocol was detected,
+     * Protocol was detected,已经被检测
      */
     DETECTED
 }

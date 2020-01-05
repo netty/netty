@@ -264,6 +264,8 @@ import java.util.List;
  * @param <S>
  *        the state type which is usually an {@link Enum}; use {@link Void} if state management is
  *        unused
+ *  重放decode
+ *  参见 io.netty.handler.codec.socks.SocksAuthRequestDecoder
  */
 public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
@@ -282,6 +284,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
     /**
      * Creates a new instance with the specified initial state.
+     * 设置初始状态
      */
     protected ReplayingDecoder(S initialState) {
         state = initialState;
@@ -289,6 +292,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
 
     /**
      * Stores the internal cumulative buffer's reader position.
+     * 存储最后一次记录的偏移量
      */
     protected void checkpoint() {
         checkpoint = internalBuffer().readerIndex();

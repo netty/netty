@@ -49,6 +49,7 @@ import java.util.List;
  *     ...
  * }
  * </pre>
+ * 将byte[]字节数组作为输入 --- 转换成ByteBuf输出到out中
  */
 @Sharable
 public class ByteArrayEncoder extends MessageToMessageEncoder<byte[]> {

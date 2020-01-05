@@ -25,10 +25,10 @@ package io.netty.handler.codec.socks;
  * @see UnknownSocksRequest
  */
 public abstract class SocksRequest extends SocksMessage {
-    private final SocksRequestType requestType;
+    private final SocksRequestType requestType;//请求是做什么,初始化、鉴权、命令
 
     protected SocksRequest(SocksRequestType requestType) {
-        super(SocksMessageType.REQUEST);
+        super(SocksMessageType.REQUEST);//表示是一个请求
         if (requestType == null) {
             throw new NullPointerException("requestType");
         }

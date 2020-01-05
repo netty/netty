@@ -35,6 +35,7 @@ import java.util.List;
  * | ABC | DEF | GHI |
  * +-----+-----+-----+
  * </pre>
+ * 以固定长度发送数据包
  */
 public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
 
@@ -71,10 +72,10 @@ public class FixedLengthFrameDecoder extends ByteToMessageDecoder {
      */
     protected Object decode(
             @SuppressWarnings("UnusedParameters") ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        if (in.readableBytes() < frameLength) {
+        if (in.readableBytes() < frameLength) {//说明长度不够,暂时不解析包内容
             return null;
         } else {
-            return in.readSlice(frameLength).retain();
+            return in.readSlice(frameLength).retain();//读取指定长度内容,组成一个包对象
         }
     }
 }

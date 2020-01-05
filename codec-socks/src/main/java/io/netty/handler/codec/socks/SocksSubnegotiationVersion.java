@@ -17,7 +17,7 @@
 package io.netty.handler.codec.socks;
 
 public enum SocksSubnegotiationVersion {
-    AUTH_PASSWORD((byte) 0x01),
+    AUTH_PASSWORD((byte) 0x01),//鉴权密码版本
     UNKNOWN((byte) 0xff);
 
     private final byte b;

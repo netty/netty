@@ -16,6 +16,7 @@
 
 package io.netty.handler.codec.socks;
 
+//鉴权状态
 public enum SocksAuthStatus {
     SUCCESS((byte) 0x00),
     FAILURE((byte) 0xff);

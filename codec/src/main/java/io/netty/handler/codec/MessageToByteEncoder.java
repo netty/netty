@@ -42,6 +42,7 @@ import io.netty.util.internal.TypeParameterMatcher;
  *         }
  *     }
  * </pre>
+ * 客户端对数据对象编码成字节数组 encode
  */
 public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdapter {
 
@@ -57,6 +58,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
 
     /**
      * see {@link #MessageToByteEncoder(Class, boolean)} with {@code true} as boolean value.
+     * 参数是I的子类--更精准
      */
     protected MessageToByteEncoder(Class<? extends I> outboundMessageType) {
         this(outboundMessageType, true);
@@ -70,7 +72,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
      *                              {@link ByteBuf}, which is backed by an byte array.
      */
     protected MessageToByteEncoder(boolean preferDirect) {
-        matcher = TypeParameterMatcher.find(this, MessageToByteEncoder.class, "I");
+        matcher = TypeParameterMatcher.find(this, MessageToByteEncoder.class, "I");//获取泛型I对应的class
         this.preferDirect = preferDirect;
     }
 
@@ -92,39 +94,40 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
      * {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      */
     public boolean acceptOutboundMessage(Object msg) throws Exception {
-        return matcher.match(msg);
+        return matcher.match(msg);//判断是否是参数I需要的类型
     }
 
+    //创建buffer  对象序列化到buffer  buffer输出
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         ByteBuf buf = null;
         try {
-            if (acceptOutboundMessage(msg)) {
+            if (acceptOutboundMessage(msg)) {//确定msg实例是I对应的实例对象
                 @SuppressWarnings("unchecked")
-                I cast = (I) msg;
-                buf = allocateBuffer(ctx, cast, preferDirect);
+                I cast = (I) msg;//因为已经确定了,因此可以强转
+                buf = allocateBuffer(ctx, cast, preferDirect);//创建一个字节数组
                 try {
-                    encode(ctx, cast, buf);
+                    encode(ctx, cast, buf);//将对象序列化到buf中
                 } finally {
-                    ReferenceCountUtil.release(cast);
+                    ReferenceCountUtil.release(cast);//释放对象,因为对象已经进入到buffer中了,没有意义在留着了
                 }
 
-                if (buf.isReadable()) {
-                    ctx.write(buf, promise);
-                } else {
-                    buf.release();
-                    ctx.write(Unpooled.EMPTY_BUFFER, promise);
+                if (buf.isReadable()) {//说明已经写入到buf了
+                    ctx.write(buf, promise);//对buf中的数据输出,即向上一层继续写入
+                } else {//说明buffer里面没有内容,即该对象没有真的字节被输出
+                    buf.release();//释放该buffer
+                    ctx.write(Unpooled.EMPTY_BUFFER, promise);//写入空的内容到上一层,逻辑可以继续走通
                 }
-                buf = null;
+                buf = null;//因为已经上一层调用完了,因此要释放此时的buffer
             } else {
-                ctx.write(msg, promise);
+                ctx.write(msg, promise);//直接向上一层传播,本层不是T对象,因此不做处理
             }
         } catch (EncoderException e) {
             throw e;
         } catch (Throwable e) {
             throw new EncoderException(e);
         } finally {
-            if (buf != null) {
+            if (buf != null) {//出现异常,则释放该buffer,避免内存溢出
                 buf.release();
             }
         }

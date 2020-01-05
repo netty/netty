@@ -67,19 +67,21 @@ import java.util.List;
  * Some methods such as {@link ByteBuf#readBytes(int)} will cause a memory leak if the returned buffer
  * is not released or added to the <tt>out</tt> {@link List}. Use derived buffers like {@link ByteBuf#readSlice(int)}
  * to avoid leaking memory.
+ * 服务端收到字节数组后,如何拆分成各个组成部分,即decode阶段
  */
 public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter {
 
     /**
      * Cumulate {@link ByteBuf}s by merge them into one {@link ByteBuf}'s, using memory copies.
+     * 内存中做merge,将in的内容添加到cumulation中
      */
     public static final Cumulator MERGE_CUMULATOR = new Cumulator() {
         @SuppressWarnings("deprecation")
         @Override
         public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
             final ByteBuf buffer;
-            if (cumulation.writerIndex() > cumulation.maxCapacity() - in.readableBytes()
-                    || cumulation.refCnt() > 1 || cumulation instanceof ReadOnlyByteBuf) {
+            if (cumulation.writerIndex() > cumulation.maxCapacity() - in.readableBytes() //说明cumulation不足存储in的内容--因此要扩容
+                    || cumulation.refCnt() > 1 || cumulation instanceof ReadOnlyByteBuf) {//说明引用多个,或者是只读的,因此要扩容
                 // Expand cumulation (by replace it) when either there is not more room in the buffer
                 // or if the refCnt is greater then 1 which may happen when the user use slice().retain() or
                 // duplicate().retain() or if its read-only.
@@ -89,7 +91,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 // - https://github.com/netty/netty/issues/1764
                 buffer = expandCumulation(alloc, cumulation, in.readableBytes());
             } else {
-                buffer = cumulation;
+                buffer = cumulation;//使用cumulation为目标buffer
             }
             buffer.writeBytes(in);
             in.release();
@@ -101,22 +103,23 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * Cumulate {@link ByteBuf}s by add them to a {@link CompositeByteBuf} and so do no memory copy whenever possible.
      * Be aware that {@link CompositeByteBuf} use a more complex indexing implementation so depending on your use-case
      * and the decoder implementation this may be slower then just use the {@link #MERGE_CUMULATOR}.
+     * 将多个buf组合到一个buf中 --- CompositeByteBuf
      */
     public static final Cumulator COMPOSITE_CUMULATOR = new Cumulator() {
         @Override
         public ByteBuf cumulate(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf in) {
             ByteBuf buffer;
-            if (cumulation.refCnt() > 1) {
+            if (cumulation.refCnt() > 1) {//因为被人引用了,所以只能在该buffer基础上进行添加
                 // Expand cumulation (by replace it) when the refCnt is greater then 1 which may happen when the user
                 // use slice().retain() or duplicate().retain().
                 //
                 // See:
                 // - https://github.com/netty/netty/issues/2327
                 // - https://github.com/netty/netty/issues/1764
-                buffer = expandCumulation(alloc, cumulation, in.readableBytes());
-                buffer.writeBytes(in);
+                buffer = expandCumulation(alloc, cumulation, in.readableBytes());//扩容
+                buffer.writeBytes(in);//merge数据
                 in.release();
-            } else {
+            } else {//说明没有被人引用
                 CompositeByteBuf composite;
                 if (cumulation instanceof CompositeByteBuf) {
                     composite = (CompositeByteBuf) cumulation;
@@ -471,6 +474,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * @param in            the {@link ByteBuf} from which to read data
      * @param out           the {@link List} to which decoded messages should be added
      * @throws Exception    is thrown if an error occurs
+     * 从流里面按照拆包的方式,拆各种包,组装到list中。
+     * 因为tcp以流的方式传入数据,因此所有数据都存储到in中，拆分后的信息存储到out这个list中
      */
     protected abstract void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception;
 
@@ -513,10 +518,11 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         }
     }
 
+    //扩容复制以前的数据到新的buf中
     static ByteBuf expandCumulation(ByteBufAllocator alloc, ByteBuf cumulation, int readable) {
         ByteBuf oldCumulation = cumulation;
-        cumulation = alloc.buffer(oldCumulation.readableBytes() + readable);
-        cumulation.writeBytes(oldCumulation);
+        cumulation = alloc.buffer(oldCumulation.readableBytes() + readable);//扩容
+        cumulation.writeBytes(oldCumulation);//扩容后--
         oldCumulation.release();
         return cumulation;
     }

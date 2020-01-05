@@ -47,13 +47,17 @@ import java.nio.ByteOrder;
  * + 0x000E | "HELLO, WORLD" |
  * +--------+----------------+
  * </pre>
+ *  客户端对数据对象编码成字节数组,将原始内容,追加头文件,头文件是字节长度。
+ *  比如HELLO, WORLD是12个字节,在前面追加2个字节,存储12
  */
 @Sharable
 public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
 
-    private final ByteOrder byteOrder;
-    private final int lengthFieldLength;
-    private final boolean lengthIncludesLengthFieldLength;
+    private final ByteOrder byteOrder;//字节排序方式
+    private final int lengthFieldLength;//存储头文件长度的字节数,1表示只能最多存储256个字节消息体长度
+    private final boolean lengthIncludesLengthFieldLength;//true表示总长度要包含头文件字节长度
+    //场景1 消息体长度+消息体内容
+    //场景2 消息体长度+消息体内容+其他消息体长度(lengthAdjustment)
     private final int lengthAdjustment;
 
     /**
@@ -157,7 +161,7 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
     @Override
     protected void encode(ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) throws Exception {
         int length = msg.readableBytes() + lengthAdjustment;
-        if (lengthIncludesLengthFieldLength) {
+        if (lengthIncludesLengthFieldLength) {//true表示总长度要包含头文件字节长度
             length += lengthFieldLength;
         }
 
@@ -166,6 +170,7 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
                     "Adjusted frame length (" + length + ") is less than zero");
         }
 
+        //存储消息长度---根据长度不同,使用不同的消息体长度
         switch (lengthFieldLength) {
         case 1:
             if (length >= 256) {
@@ -182,7 +187,7 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
             out.writeShort((short) length);
             break;
         case 3:
-            if (length >= 16777216) {
+            if (length >= 16777216) {//3个字节存储的最大长度
                 throw new IllegalArgumentException(
                         "length does not fit into a medium integer: " + length);
             }
@@ -198,6 +203,7 @@ public class LengthFieldPrepender extends MessageToByteEncoder<ByteBuf> {
             throw new Error("should not reach here");
         }
 
+        //存储消息体内容
         out.writeBytes(msg, msg.readerIndex(), msg.readableBytes());
     }
 

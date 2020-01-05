@@ -20,8 +20,8 @@ package io.netty.handler.codec.socks;
  * Type of socks request
  */
 public enum SocksRequestType {
-    INIT,
-    AUTH,
-    CMD,
+    INIT,//初始化
+    AUTH,//鉴权
+    CMD,//命令
     UNKNOWN
 }

@@ -47,6 +47,7 @@ import java.util.List;
  *     ...
  * }
  * </pre>
+ * 将ByteBuf输入 --- 转换成byte[]字节数组输出到out中
  */
 public class ByteArrayDecoder extends MessageToMessageDecoder<ByteBuf> {
     @Override

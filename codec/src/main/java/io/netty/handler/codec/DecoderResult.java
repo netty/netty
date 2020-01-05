@@ -17,10 +17,11 @@ package io.netty.handler.codec;
 
 import io.netty.util.Signal;
 
+//表示解析结果 是否成功解析  是否解析完成
 public class DecoderResult {
 
-    protected static final Signal SIGNAL_UNFINISHED = Signal.valueOf(DecoderResult.class.getName() + ".UNFINISHED");
-    protected static final Signal SIGNAL_SUCCESS = Signal.valueOf(DecoderResult.class.getName() + ".SUCCESS");
+    protected static final Signal SIGNAL_UNFINISHED = Signal.valueOf(DecoderResult.class.getName() + ".UNFINISHED");//未完成
+    protected static final Signal SIGNAL_SUCCESS = Signal.valueOf(DecoderResult.class.getName() + ".SUCCESS");//成功
 
     public static final DecoderResult UNFINISHED = new DecoderResult(SIGNAL_UNFINISHED);
     public static final DecoderResult SUCCESS = new DecoderResult(SIGNAL_SUCCESS);
@@ -41,14 +42,17 @@ public class DecoderResult {
         this.cause = cause;
     }
 
+    //非未完成 即是完成,可能是未完成是初始状态,一旦变更就表示完成了，完成的可能状态是成功或者其他error
     public boolean isFinished() {
         return cause != SIGNAL_UNFINISHED;
     }
 
+    //成功
     public boolean isSuccess() {
         return cause == SIGNAL_SUCCESS;
     }
 
+    //失败---非成功,有其他error产生,但是说明解析已经完成了
     public boolean isFailure() {
         return cause != SIGNAL_SUCCESS && cause != SIGNAL_UNFINISHED;
     }

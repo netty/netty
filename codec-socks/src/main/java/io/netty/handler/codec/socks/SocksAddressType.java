@@ -17,9 +17,9 @@
 package io.netty.handler.codec.socks;
 
 public enum SocksAddressType {
-    IPv4((byte) 0x01),
-    DOMAIN((byte) 0x03),
-    IPv6((byte) 0x04),
+    IPv4((byte) 0x01),//ip4
+    DOMAIN((byte) 0x03),//域名方式
+    IPv6((byte) 0x04),//ip6
     UNKNOWN((byte) 0xff);
 
     private final byte b;
