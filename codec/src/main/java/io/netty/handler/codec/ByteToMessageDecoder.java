@@ -774,10 +774,6 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      *     progress in the next call to {@link #decode(ChannelHandlerContext, ByteBuf, List)}
      */
     protected final void setRequiredBytes(int exact) {
-        if (exact < 1) {
-            throw new DecoderException(
-                    "setRequiredBytes called with invalid value " + exact + ", must be > 0");
-        }
         setRequiredBytes(exact, exact);
     }
 

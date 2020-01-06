@@ -57,8 +57,6 @@ public interface Http2ConnectionDecoder extends Closeable {
      */
     Http2FrameListener frameListener();
 
-    int requiredBytes();
-
     /**
      * Called by the {@link Http2ConnectionHandler} to decode the next frame from the input buffer.
      */

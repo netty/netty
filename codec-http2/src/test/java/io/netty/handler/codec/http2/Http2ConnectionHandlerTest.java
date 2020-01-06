@@ -130,7 +130,7 @@ public class Http2ConnectionHandlerTest {
     @Mock
     private Http2Stream stream;
 
-    @Mock
+    @Mock(extraInterfaces = ByteRequirer.class)
     private Http2ConnectionDecoder decoder;
 
     @Mock
@@ -334,7 +334,7 @@ public class Http2ConnectionHandlerTest {
 
         // Create a connection preface followed by a bunch of zeros (i.e. not a settings frame).
         ByteBuf preface = connectionPrefaceBuf();
-        when(decoder.requiredBytes()).thenReturn(preface.readableBytes());
+        when(((ByteRequirer) decoder).requiredBytes()).thenReturn(preface.readableBytes());
         ByteBuf buf = Unpooled.buffer().writeBytes(preface).writeZero(10);
         handler.channelRead(ctx, buf);
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
@@ -348,7 +348,7 @@ public class Http2ConnectionHandlerTest {
         when(connection.isServer()).thenReturn(true);
         handler = newHandler();
         ByteBuf preface = connectionPrefaceBuf();
-        when(decoder.requiredBytes()).thenReturn(preface.readableBytes());
+        when(((ByteRequirer) decoder).requiredBytes()).thenReturn(preface.readableBytes());
         ByteBuf prefacePlusSome = addSettingsHeader(Unpooled.buffer().writeBytes(preface));
         handler.channelRead(ctx, prefacePlusSome);
         verify(decoder, atLeastOnce()).decodeFrame(any(ChannelHandlerContext.class),
@@ -372,7 +372,7 @@ public class Http2ConnectionHandlerTest {
 
         // Now verify we can continue as normal, reading connection preface plus more.
         preface = connectionPrefaceBuf();
-        when(decoder.requiredBytes()).thenReturn(preface.readableBytes());
+        when(((ByteRequirer) decoder).requiredBytes()).thenReturn(preface.readableBytes());
         ByteBuf prefacePlusSome = addSettingsHeader(Unpooled.buffer().writeBytes(preface));
         handler.channelRead(ctx, prefacePlusSome);
         verify(decoder, atLeastOnce()).decodeFrame(eq(ctx), any(ByteBuf.class), ArgumentMatchers.<List<Object>>any());

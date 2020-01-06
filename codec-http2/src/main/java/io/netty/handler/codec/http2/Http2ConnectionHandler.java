@@ -255,7 +255,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                     return remaining;
                 }
             }
-            return Math.max(5, decoder.requiredBytes());
+            return decoder instanceof ByteRequirer ? Math.max(5, ((ByteRequirer) decoder).requiredBytes()) : -1;
         }
 
         @Override
@@ -394,7 +394,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         }
         @Override
         public int requiredBytes() {
-            return decoder.requiredBytes();
+            return decoder instanceof ByteRequirer ? ((ByteRequirer) decoder).requiredBytes() : -1;
         }
     }
 
@@ -422,7 +422,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             byteDecoder = new PrefaceDecoder(ctx);
         }
         byteDecoder.channelActive(ctx);
-        setRequiredBytes(byteDecoder.requiredBytes());
+        setRequiredBytes();
         super.channelActive(ctx);
     }
 
@@ -453,7 +453,14 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         byteDecoder.decode(ctx, in, out);
-        setRequiredBytes(byteDecoder.requiredBytes());
+        setRequiredBytes();
+    }
+
+    private void setRequiredBytes() {
+        int requiredBytes = byteDecoder.requiredBytes();
+        if (requiredBytes != -1) {
+            setRequiredBytes(requiredBytes);
+        }
     }
 
     @Override

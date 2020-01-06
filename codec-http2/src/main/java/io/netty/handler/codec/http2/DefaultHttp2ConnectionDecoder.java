@@ -48,7 +48,7 @@ import static java.lang.Math.min;
  * {@link Http2LocalFlowController}
  */
 @UnstableApi
-public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
+public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder, ByteRequirer {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultHttp2ConnectionDecoder.class);
     private Http2FrameListener internalFrameListener = new PrefaceFrameListener();
     private final Http2Connection connection;
@@ -171,7 +171,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
     @Override
     public int requiredBytes() {
-        return frameReader.requiredBytes();
+        return frameReader instanceof ByteRequirer ? ((ByteRequirer) frameReader).requiredBytes() : -1;
     }
 
     @Override
