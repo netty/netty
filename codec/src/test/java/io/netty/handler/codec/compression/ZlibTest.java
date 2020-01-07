@@ -15,7 +15,9 @@
  */
 package io.netty.handler.codec.compression;
 
+import io.netty.buffer.AbstractByteBufAllocator;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -88,8 +90,12 @@ public abstract class ZlibTest {
         rand.nextBytes(BYTES_LARGE);
     }
 
+    protected ZlibDecoder createDecoder(ZlibWrapper wrapper) {
+        return createDecoder(wrapper, 0);
+    }
+
     protected abstract ZlibEncoder createEncoder(ZlibWrapper wrapper);
-    protected abstract ZlibDecoder createDecoder(ZlibWrapper wrapper);
+    protected abstract ZlibDecoder createDecoder(ZlibWrapper wrapper, int maxAllocation);
 
     @Test
     public void testGZIP2() throws Exception {
@@ -345,6 +351,21 @@ public abstract class ZlibTest {
         testCompressLarge(ZlibWrapper.GZIP, ZlibWrapper.ZLIB_OR_NONE);
     }
 
+    @Test
+    public void testMaxAllocation() throws Exception {
+        int maxAllocation = 1024;
+        EmbeddedChannel chDecoder = new EmbeddedChannel(createDecoder(ZlibWrapper.NONE, maxAllocation));
+        TestByteBufAllocator alloc = new TestByteBufAllocator(chDecoder.alloc());
+        chDecoder.config().setAllocator(alloc);
+
+        try {
+            chDecoder.writeInbound(Unpooled.copiedBuffer(BYTES_LARGE));
+            fail("decompressed size > maxAllocation, so should have thrown exception");
+        } catch (DecompressionException e) {
+            assertEquals(maxAllocation, alloc.getMaxAllocation());
+        }
+    }
+
     private static byte[] gzip(byte[] bytes) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         GZIPOutputStream stream = new GZIPOutputStream(out);
@@ -359,5 +380,35 @@ public abstract class ZlibTest {
         stream.write(bytes);
         stream.close();
         return out.toByteArray();
+    }
+
+    private static class TestByteBufAllocator extends AbstractByteBufAllocator {
+        private ByteBufAllocator wrapped;
+        private int maxAllocation;
+
+        public TestByteBufAllocator(ByteBufAllocator wrapped) {
+            this.wrapped = wrapped;
+        }
+
+        public int getMaxAllocation() {
+            return maxAllocation;
+        }
+
+        @Override
+        public boolean isDirectBufferPooled() {
+            return wrapped.isDirectBufferPooled();
+        }
+
+        @Override
+        protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+            maxAllocation = Math.max(maxAllocation, maxCapacity);
+            return wrapped.heapBuffer(initialCapacity, maxCapacity);
+        }
+
+        @Override
+        protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+            maxAllocation = Math.max(maxAllocation, maxCapacity);
+            return wrapped.directBuffer(initialCapacity, maxCapacity);
+        }
     }
 }
