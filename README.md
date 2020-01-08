@@ -1,7 +1,7 @@
 # Netty Project
 
 Netty is an asynchronous event-driven network application framework for rapid development of maintainable high performance protocol servers & clients.
-
+| Build[![Build Status](https://dev.azure.com/raheempasha88911992/azuretraingproject/_apis/build/status/pashadocker.pashadoc?branchName=master)](https://dev.azure.com/raheempasha88911992/azuretraingproject/_build/latest?definitionId=4&branchName=master)
 ## Links
 
 * [Web Site](https://netty.io/)
