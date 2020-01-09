@@ -35,6 +35,8 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import static io.netty.util.internal.ObjectUtil.checkState;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * A {@link Bootstrap} that makes it easy to bootstrap a {@link Channel} to use
@@ -109,10 +111,8 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     public ChannelFuture connect() {
         validate();
         SocketAddress remoteAddress = this.remoteAddress;
-        if (remoteAddress == null) {
-            throw new IllegalStateException("remoteAddress not set");
-        }
 
+        checkState(remoteAddress != null, "remoteAddress not set");
         return doResolveAndConnect(remoteAddress, config.localAddress());
     }
 
@@ -134,7 +134,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
      * Connect a {@link Channel} to the remote peer.
      */
     public ChannelFuture connect(SocketAddress remoteAddress) {
-        ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
+        checkNotNull(remoteAddress, "remoteAddress");
         validate();
         return doResolveAndConnect(remoteAddress, config.localAddress());
     }
@@ -263,9 +263,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     @Override
     public Bootstrap validate() {
         super.validate();
-        if (config.handler() == null) {
-            throw new IllegalStateException("handler not set");
-        }
+        checkState(config.handler() != null, "handler not set");
         return this;
     }
 

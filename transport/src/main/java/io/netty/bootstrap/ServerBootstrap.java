@@ -36,6 +36,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import static io.netty.util.internal.ObjectUtil.checkState;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 
 /**
  * {@link Bootstrap} sub-class which allows easy bootstrap of {@link ServerChannel}
@@ -76,10 +79,8 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      */
     public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
         super.group(parentGroup);
-        if (this.childGroup != null) {
-            throw new IllegalStateException("childGroup set already");
-        }
-        this.childGroup = ObjectUtil.checkNotNull(childGroup, "childGroup");
+        checkState(this.childGroup == null, "childGroup set already");
+        this.childGroup = checkNotNull(childGroup, "childGroup");
         return this;
     }
 
@@ -89,7 +90,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      * {@link ChannelOption}.
      */
     public <T> ServerBootstrap childOption(ChannelOption<T> childOption, T value) {
-        ObjectUtil.checkNotNull(childOption, "childOption");
+        checkNotNull(childOption, "childOption");
         if (value == null) {
             childOptions.remove(childOption);
         } else {
@@ -103,7 +104,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
      * {@code null} the {@link AttributeKey} is removed
      */
     public <T> ServerBootstrap childAttr(AttributeKey<T> childKey, T value) {
-        ObjectUtil.checkNotNull(childKey, "childKey");
+        checkNotNull(childKey, "childKey");
         if (value == null) {
             childAttrs.remove(childKey);
         } else {
@@ -156,9 +157,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     @Override
     public ServerBootstrap validate() {
         super.validate();
-        if (childHandler == null) {
-            throw new IllegalStateException("childHandler not set");
-        }
+        checkState(childHandler != null, "childHandler not set");
         if (childGroup == null) {
             logger.warn("childGroup is not set. Using parentGroup instead.");
             childGroup = config.group();

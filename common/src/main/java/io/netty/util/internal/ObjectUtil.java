@@ -58,6 +58,15 @@ public final class ObjectUtil {
     }
 
     /**
+     * Checks that the given expression is false. If it is, throws {@link IllegalStateException}.
+     */
+    public static void checkState(boolean expression, String text) {
+        if (!expression) {
+            throw new IllegalStateException(text);
+        }
+    }
+
+    /**
      * Checks that the given argument is positive or zero. If it is not , throws {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
      */
