@@ -18,6 +18,8 @@ package io.netty.handler.flush;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -150,6 +152,26 @@ public class FlushConsolidationHandlerTest {
         channel.pipeline().remove(FlushConsolidationHandler.class);
         assertEquals(1, flushCount.get());
         assertEquals(1L, (long) channel.readOutbound());
+        assertNull(channel.readOutbound());
+        assertFalse(channel.finish());
+    }
+
+    /**
+     * See https://github.com/netty/netty/issues/9923
+     */
+    @Test
+    public void testResend() throws Exception {
+        final AtomicInteger flushCount = new AtomicInteger();
+        final EmbeddedChannel channel = newChannel(flushCount, true);
+        channel.writeAndFlush(1L).addListener(new GenericFutureListener<Future<? super Void>>() {
+            @Override
+            public void operationComplete(Future<? super Void> future) throws Exception {
+                channel.writeAndFlush(1L);
+            }
+        });
+        channel.flushOutbound();
+        assertEquals(1L, ((Long) channel.readOutbound()).longValue());
+        assertEquals(1L, ((Long) channel.readOutbound()).longValue());
         assertNull(channel.readOutbound());
         assertFalse(channel.finish());
     }
