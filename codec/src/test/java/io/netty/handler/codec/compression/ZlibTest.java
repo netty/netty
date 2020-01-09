@@ -386,7 +386,7 @@ public abstract class ZlibTest {
         private ByteBufAllocator wrapped;
         private int maxAllocation;
 
-        public TestByteBufAllocator(ByteBufAllocator wrapped) {
+        TestByteBufAllocator(ByteBufAllocator wrapped) {
             this.wrapped = wrapped;
         }
 
