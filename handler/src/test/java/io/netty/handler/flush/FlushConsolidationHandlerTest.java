@@ -19,6 +19,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -150,6 +152,31 @@ public class FlushConsolidationHandlerTest {
         assertEquals(1L, channel.readOutbound());
         assertNull(channel.readOutbound());
         assertFalse(channel.finish());
+    }
+
+    /**
+     * See https://github.com/netty/netty/issues/9923
+     */
+    @Test
+    public void testResend() throws Exception {
+
+        final AtomicInteger flushCount = new AtomicInteger();
+        final EmbeddedChannel channel = newChannel(flushCount, true);
+
+        channel.writeAndFlush(1L).addListener(new GenericFutureListener<Future<? super Void>>() {
+            @Override
+            public void operationComplete(Future<? super Void> future) throws Exception {
+                channel.writeAndFlush(1L);
+            }
+        });
+
+        channel.flushOutbound();
+
+        assertEquals(1L, channel.readOutbound());
+        assertEquals(1L, channel.readOutbound());
+        assertNull(channel.readOutbound());
+
+        channel.finish();
     }
 
     private static EmbeddedChannel newChannel(final AtomicInteger flushCount, boolean consolidateWhenNoReadInProgress) {
