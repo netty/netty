@@ -159,24 +159,19 @@ public class FlushConsolidationHandlerTest {
      */
     @Test
     public void testResend() throws Exception {
-
         final AtomicInteger flushCount = new AtomicInteger();
         final EmbeddedChannel channel = newChannel(flushCount, true);
-
         channel.writeAndFlush(1L).addListener(new GenericFutureListener<Future<? super Void>>() {
             @Override
             public void operationComplete(Future<? super Void> future) throws Exception {
                 channel.writeAndFlush(1L);
             }
         });
-
         channel.flushOutbound();
-
         assertEquals(1L, channel.readOutbound());
         assertEquals(1L, channel.readOutbound());
         assertNull(channel.readOutbound());
-
-        channel.finish();
+        assertFalse(channel.finish());
     }
 
     private static EmbeddedChannel newChannel(final AtomicInteger flushCount, boolean consolidateWhenNoReadInProgress) {
