@@ -96,7 +96,8 @@ public class FlushConsolidationHandler extends ChannelDuplexHandler {
      *                                        ongoing.
      */
     public FlushConsolidationHandler(int explicitFlushAfterFlushes, boolean consolidateWhenNoReadInProgress) {
-        this.explicitFlushAfterFlushes = ObjectUtil.checkPositive(explicitFlushAfterFlushes, "explicitFlushAfterFlushes");
+        this.explicitFlushAfterFlushes =
+                ObjectUtil.checkPositive(explicitFlushAfterFlushes, "explicitFlushAfterFlushes");
         this.consolidateWhenNoReadInProgress = consolidateWhenNoReadInProgress;
         this.flushTask = consolidateWhenNoReadInProgress ?
                 new Runnable() {
