@@ -344,6 +344,42 @@ public class SniHandlerTest {
         }
     }
 
+    @Test(timeout = 10000)
+    public void testMajorVersionNot3() throws Exception {
+        SslContext nettyContext = makeSslContext(provider, false);
+
+        try {
+            DomainNameMapping<SslContext> mapping = new DomainNameMappingBuilder<SslContext>(nettyContext).build();
+
+            SniHandler handler = new SniHandler(mapping);
+            EmbeddedChannel ch = new EmbeddedChannel(handler);
+
+            // invalid
+            byte[] message = {22, 2, 0, 0, 0};
+            try {
+                // Push the handshake message.
+                ch.writeInbound(Unpooled.wrappedBuffer(message));
+            } catch (Exception e) {
+                // expected
+            }
+
+            ch.close();
+
+            // When the channel is closed the SslHandler will write an empty buffer to the channel.
+            ByteBuf buf = ch.readOutbound();
+            if (buf != null) {
+                assertFalse(buf.isReadable());
+                buf.release();
+            }
+
+            assertThat(ch.finish(), is(false));
+            assertThat(handler.hostname(), nullValue());
+            assertThat(handler.sslContext(), is(nettyContext));
+        } finally {
+            releaseAll(nettyContext);
+        }
+    }
+
     @Test
     public void testSniWithApnHandler() throws Exception {
         SslContext nettyContext = makeSslContext(provider, true);
