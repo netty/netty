@@ -15,11 +15,6 @@
  */
 package io.netty.channel.embedded;
 
-import java.net.SocketAddress;
-import java.nio.channels.ClosedChannelException;
-import java.util.ArrayDeque;
-import java.util.Queue;
-
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
@@ -35,14 +30,21 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelPipeline;
+import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 /**
  * Base class for {@link Channel} implementations that are used in an embedded fashion.
@@ -263,6 +265,16 @@ public class EmbeddedChannel extends AbstractChannel {
     @Override
     public boolean isActive() {
         return state == State.ACTIVE;
+    }
+
+    @Override
+    public ChannelFuture writeAndFlush(Object msg) {
+        return super.writeAndFlush(msg, new EmbeddedPromise(this));
+    }
+
+    @Override
+    public ChannelFuture write(Object msg) {
+        return super.write(msg, new EmbeddedPromise(this));
     }
 
     /**
@@ -876,6 +888,27 @@ public class EmbeddedChannel extends AbstractChannel {
         @Override
         protected void onUnhandledInboundMessage(ChannelHandlerContext ctx, Object msg) {
             handleInboundMessage(msg);
+        }
+    }
+
+    /**
+     * This is a special promise that is used in an {@link EmbeddedChannel}
+     * to prevent throwing a {@see BlockingOperationException}
+     */
+    static final class EmbeddedPromise extends DefaultChannelPromise {
+
+        public EmbeddedPromise(Channel channel) {
+            super(channel);
+        }
+
+        public EmbeddedPromise(Channel channel, EventExecutor executor) {
+            super(channel, executor);
+        }
+
+        @Override
+        protected void checkDeadLock() {
+            // Since `EmbeddedEventLoop.inEventLoop(java.lang.Thread)` will always return true,
+            // `checkDeadLock` will always throws a `BlockingOperationException`.
         }
     }
 }

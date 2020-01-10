@@ -26,6 +26,7 @@ import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -584,6 +585,12 @@ public class EmbeddedChannelTest {
         if (!latch.await(1L, TimeUnit.SECONDS)) {
             fail("Nobody called #handleOutboundMessage() in time.");
         }
+    }
+
+    @Test
+    public void testEmbeddedPromise() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.writeAndFlush(1L).get();
     }
 
     @Test(timeout = 5000)
