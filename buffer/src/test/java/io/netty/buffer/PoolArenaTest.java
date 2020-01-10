@@ -111,13 +111,10 @@ public class PoolArenaTest {
         Assert.assertEquals(1, metric.numNormalAllocations());
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void testDirectArenaMemoryCopy() {
-        PooledByteBuf<ByteBuffer> src =
-                (PooledByteBuf<ByteBuffer>) PooledByteBufAllocator.DEFAULT.directBuffer(512);
-        PooledByteBuf<ByteBuffer> dst =
-                (PooledByteBuf<ByteBuffer>) PooledByteBufAllocator.DEFAULT.directBuffer(512);
+        PooledByteBuf<ByteBuffer> src = unwrapIfNeeded(PooledByteBufAllocator.DEFAULT.directBuffer(512));
+        PooledByteBuf<ByteBuffer> dst = unwrapIfNeeded(PooledByteBufAllocator.DEFAULT.directBuffer(512));
         // This causes the internal reused ByteBuffer duplicate limit to be set to 128
         dst.writeBytes(ByteBuffer.allocate(128));
         // Ensure internal ByteBuffer duplicate limit is properly reset (used in memoryCopy non-Unsafe case)
@@ -125,5 +122,10 @@ public class PoolArenaTest {
 
         src.release();
         dst.release();
+    }
+
+    @SuppressWarnings("unchecked")
+    private PooledByteBuf<ByteBuffer> unwrapIfNeeded(ByteBuf buf) {
+        return (PooledByteBuf<ByteBuffer>) (buf instanceof PooledByteBuf ? buf : buf.unwrap());
     }
 }
