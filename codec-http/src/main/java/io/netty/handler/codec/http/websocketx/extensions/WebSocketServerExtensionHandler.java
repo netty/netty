@@ -103,36 +103,46 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
 
     @Override
     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        if (msg instanceof HttpResponse &&
-                WebSocketExtensionUtil.isWebsocketUpgrade(((HttpResponse) msg).headers()) && validExtensions != null) {
-            HttpResponse response = (HttpResponse) msg;
-            String headerValue = response.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
+        if (msg instanceof HttpResponse && WebSocketExtensionUtil.isWebsocketUpgrade(((HttpResponse) msg).headers())) {
+            if (validExtensions != null) {
+                HttpResponse response = (HttpResponse) msg;
+                String headerValue = response.headers().getAsString(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
 
-            for (WebSocketServerExtension extension : validExtensions) {
-                WebSocketExtensionData extensionData = extension.newReponseData();
-                headerValue = WebSocketExtensionUtil.appendExtension(headerValue,
-                        extensionData.name(), extensionData.parameters());
+                for (WebSocketServerExtension extension : validExtensions) {
+                    WebSocketExtensionData extensionData = extension.newReponseData();
+                    headerValue = WebSocketExtensionUtil.appendExtension(headerValue,
+                                                                         extensionData.name(),
+                                                                         extensionData.parameters());
+                }
+
+                promise.addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        if (future.isSuccess()) {
+                            for (WebSocketServerExtension extension : validExtensions) {
+                                WebSocketExtensionDecoder decoder = extension.newExtensionDecoder();
+                                WebSocketExtensionEncoder encoder = extension.newExtensionEncoder();
+                                ctx.pipeline()
+                                   .addAfter(ctx.name(), decoder.getClass().getName(), decoder)
+                                   .addAfter(ctx.name(), encoder.getClass().getName(), encoder);
+                            }
+                        }
+                    }
+                });
+
+                if (headerValue != null) {
+                    response.headers().set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, headerValue);
+                }
             }
 
             promise.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
                     if (future.isSuccess()) {
-                        for (WebSocketServerExtension extension : validExtensions) {
-                            WebSocketExtensionDecoder decoder = extension.newExtensionDecoder();
-                            WebSocketExtensionEncoder encoder = extension.newExtensionEncoder();
-                            ctx.pipeline().addAfter(ctx.name(), decoder.getClass().getName(), decoder);
-                            ctx.pipeline().addAfter(ctx.name(), encoder.getClass().getName(), encoder);
-                        }
+                        ctx.pipeline().remove(ctx.name());
                     }
-
-                    ctx.pipeline().remove(ctx.name());
                 }
             });
-
-            if (headerValue != null) {
-                response.headers().set(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS, headerValue);
-            }
         }
 
         super.write(ctx, msg, promise);
