@@ -18,7 +18,10 @@ package io.netty.handler.codec.http;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.ThreadLocalRandom;
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.CompilerControl;
+import org.openjdk.jmh.annotations.CompilerControl.Mode;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
@@ -27,7 +30,10 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -43,17 +49,50 @@ public class DecodeHexBenchmark extends AbstractMicrobenchmark {
             "4DDeA5gDD1C6fE567E1b6gf0C40FEcDg",
     })
     private String hex;
-    private char[] hexDigits;
+    @Param({ "1", "10" })
+    private int inputs;
+    private char[][] hexDigits;
 
     @Setup
     public void init() {
-        hexDigits = hex.toCharArray();
+        final char[] hexCh = hex.toCharArray();
+        hexDigits = new char[inputs][];
+        hexDigits[0] = hexCh;
+        if (inputs > 1) {
+            final Character[] characters = new Character[hexCh.length];
+            for (int i = 0; i < hexCh.length; i++) {
+                characters[i] = Character.valueOf(hexCh[i]);
+            }
+            final Random rnd = new Random();
+            for (int i = 1; i < inputs; i++) {
+                hexDigits[i] = shuffle(characters, rnd);
+            }
+        }
+    }
+
+    private static char[] shuffle(Character[] characters, Random rnd) {
+        final ArrayList<Character> chars = new ArrayList<Character>(characters.length);
+        Collections.addAll(chars, characters);
+        Collections.shuffle(chars, rnd);
+        final char[] chs = new char[chars.size()];
+        for (int j = 0; j < chars.size(); j++) {
+            chs[j] = chars.get(j);
+        }
+        return chs;
+    }
+
+    private int nextHexDigits() {
+        // always use ThreadLocalRandom here:
+        // we want the inputs = 1 and inputs > 1 to be comparable
+        // and saving using ThreadLocalRandom have impacts!
+        return ThreadLocalRandom.current().nextInt(0, inputs);
     }
 
     @Benchmark
+    @CompilerControl(Mode.DONT_INLINE)
     public long hexDigits() {
         long v = 0;
-        final char[] hexDigits = this.hexDigits;
+        final char[] hexDigits = this.hexDigits[nextHexDigits()];
         for (int i = 0, size = hexDigits.length; i < size; i++) {
             v += StringUtil.decodeHexNibble(hexDigits[i]);
         }
@@ -61,9 +100,10 @@ public class DecodeHexBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
+    @CompilerControl(Mode.DONT_INLINE)
     public long hexDigitsWithChecks() {
         long v = 0;
-        final char[] hexDigits = this.hexDigits;
+        final char[] hexDigits = this.hexDigits[nextHexDigits()];
         for (int i = 0, size = hexDigits.length; i < size; i++) {
             v += decodeHexNibbleWithCheck(hexDigits[i]);
         }
@@ -71,9 +111,10 @@ public class DecodeHexBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
+    @CompilerControl(Mode.DONT_INLINE)
     public long hexDigitsOriginal() {
         long v = 0;
-        final char[] hexDigits = this.hexDigits;
+        final char[] hexDigits = this.hexDigits[nextHexDigits()];
         for (int i = 0, size = hexDigits.length; i < size; i++) {
             v += decodeHexNibble(hexDigits[i]);
         }
