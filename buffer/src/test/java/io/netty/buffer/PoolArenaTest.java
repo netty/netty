@@ -113,12 +113,16 @@ public class PoolArenaTest {
 
     @Test
     public void testDirectArenaMemoryCopy() {
-        PooledByteBuf<ByteBuffer> src = unwrapIfNeeded(PooledByteBufAllocator.DEFAULT.directBuffer(512));
-        PooledByteBuf<ByteBuffer> dst = unwrapIfNeeded(PooledByteBufAllocator.DEFAULT.directBuffer(512));
+        ByteBuf src = PooledByteBufAllocator.DEFAULT.directBuffer(512);
+        ByteBuf dst = PooledByteBufAllocator.DEFAULT.directBuffer(512);
+
+        PooledByteBuf<ByteBuffer> pooledSrc = unwrapIfNeeded(src);
+        PooledByteBuf<ByteBuffer> pooledDst = unwrapIfNeeded(dst);
+
         // This causes the internal reused ByteBuffer duplicate limit to be set to 128
-        dst.writeBytes(ByteBuffer.allocate(128));
+        pooledDst.writeBytes(ByteBuffer.allocate(128));
         // Ensure internal ByteBuffer duplicate limit is properly reset (used in memoryCopy non-Unsafe case)
-        dst.chunk.arena.memoryCopy(src.memory, 0, dst, 512);
+        pooledDst.chunk.arena.memoryCopy(pooledSrc.memory, 0, pooledDst, 512);
 
         src.release();
         dst.release();
