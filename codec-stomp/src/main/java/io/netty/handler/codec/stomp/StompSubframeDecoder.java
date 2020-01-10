@@ -29,8 +29,11 @@ import io.netty.util.internal.StringUtil;
 
 import java.util.List;
 
-import static io.netty.buffer.ByteBufUtil.*;
-import static io.netty.util.internal.ObjectUtil.*;
+import static io.netty.buffer.ByteBufUtil.indexOf;
+import static io.netty.buffer.ByteBufUtil.readBytes;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkState;
 
 /**
  * Decodes {@link ByteBuf}s into {@link StompHeadersSubframe}s and {@link StompContentSubframe}s.
@@ -95,84 +98,84 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         switch (state()) {
-            case SKIP_CONTROL_CHARACTERS:
-                skipControlCharacters(in);
-                checkpoint(State.READ_HEADERS);
-                // Fall through.
-            case READ_HEADERS:
-                StompCommand command = StompCommand.UNKNOWN;
-                StompHeadersSubframe frame = null;
-                try {
-                    command = readCommand(in);
+        case SKIP_CONTROL_CHARACTERS:
+            skipControlCharacters(in);
+            checkpoint(State.READ_HEADERS);
+            // Fall through.
+        case READ_HEADERS:
+            StompCommand command = StompCommand.UNKNOWN;
+            StompHeadersSubframe frame = null;
+            try {
+                command = readCommand(in);
+                frame = new DefaultStompHeadersSubframe(command);
+                checkpoint(readHeaders(in, frame.headers()));
+                out.add(frame);
+            } catch (Exception e) {
+                if (frame == null) {
                     frame = new DefaultStompHeadersSubframe(command);
-                    checkpoint(readHeaders(in, frame.headers()));
-                    out.add(frame);
-                } catch (Exception e) {
-                    if (frame == null) {
-                        frame = new DefaultStompHeadersSubframe(command);
-                    }
-                    frame.setDecoderResult(DecoderResult.failure(e));
-                    out.add(frame);
-                    checkpoint(State.BAD_FRAME);
-                    return;
                 }
-                break;
-            case BAD_FRAME:
-                in.skipBytes(actualReadableBytes());
+                frame.setDecoderResult(DecoderResult.failure(e));
+                out.add(frame);
+                checkpoint(State.BAD_FRAME);
                 return;
+            }
+            break;
+        case BAD_FRAME:
+            in.skipBytes(actualReadableBytes());
+            return;
         }
         try {
             switch (state()) {
-                case READ_CONTENT:
-                    int toRead = in.readableBytes();
-                    if (toRead == 0) {
+            case READ_CONTENT:
+                int toRead = in.readableBytes();
+                if (toRead == 0) {
+                    return;
+                }
+                if (toRead > maxChunkSize) {
+                    toRead = maxChunkSize;
+                }
+                if (contentLength >= 0) {
+                    int remainingLength = (int) (contentLength - alreadyReadChunkSize);
+                    if (toRead > remainingLength) {
+                        toRead = remainingLength;
+                    }
+                    ByteBuf chunkBuffer = readBytes(ctx.alloc(), in, toRead);
+                    if ((alreadyReadChunkSize += toRead) >= contentLength) {
+                        lastContent = new DefaultLastStompContentSubframe(chunkBuffer);
+                        checkpoint(State.FINALIZE_FRAME_READ);
+                    } else {
+                        out.add(new DefaultStompContentSubframe(chunkBuffer));
                         return;
                     }
-                    if (toRead > maxChunkSize) {
-                        toRead = maxChunkSize;
-                    }
-                    if (contentLength >= 0) {
-                        int remainingLength = (int) (contentLength - alreadyReadChunkSize);
-                        if (toRead > remainingLength) {
-                            toRead = remainingLength;
+                } else {
+                    int nulIndex = indexOf(in, in.readerIndex(), in.writerIndex(), StompConstants.NUL);
+                    if (nulIndex == in.readerIndex()) {
+                        checkpoint(State.FINALIZE_FRAME_READ);
+                    } else {
+                        if (nulIndex > 0) {
+                            toRead = nulIndex - in.readerIndex();
+                        } else {
+                            toRead = in.writerIndex() - in.readerIndex();
                         }
                         ByteBuf chunkBuffer = readBytes(ctx.alloc(), in, toRead);
-                        if ((alreadyReadChunkSize += toRead) >= contentLength) {
+                        alreadyReadChunkSize += toRead;
+                        if (nulIndex > 0) {
                             lastContent = new DefaultLastStompContentSubframe(chunkBuffer);
                             checkpoint(State.FINALIZE_FRAME_READ);
                         } else {
                             out.add(new DefaultStompContentSubframe(chunkBuffer));
                             return;
                         }
-                    } else {
-                        int nulIndex = indexOf(in, in.readerIndex(), in.writerIndex(), StompConstants.NUL);
-                        if (nulIndex == in.readerIndex()) {
-                            checkpoint(State.FINALIZE_FRAME_READ);
-                        } else {
-                            if (nulIndex > 0) {
-                                toRead = nulIndex - in.readerIndex();
-                            } else {
-                                toRead = in.writerIndex() - in.readerIndex();
-                            }
-                            ByteBuf chunkBuffer = readBytes(ctx.alloc(), in, toRead);
-                            alreadyReadChunkSize += toRead;
-                            if (nulIndex > 0) {
-                                lastContent = new DefaultLastStompContentSubframe(chunkBuffer);
-                                checkpoint(State.FINALIZE_FRAME_READ);
-                            } else {
-                                out.add(new DefaultStompContentSubframe(chunkBuffer));
-                                return;
-                            }
-                        }
                     }
-                    // Fall through.
-                case FINALIZE_FRAME_READ:
-                    skipNullCharacter(in);
-                    if (lastContent == null) {
-                        lastContent = LastStompContentSubframe.EMPTY_LAST_CONTENT;
-                    }
-                    out.add(lastContent);
-                    resetDecoder();
+                }
+                // Fall through.
+            case FINALIZE_FRAME_READ:
+                skipNullCharacter(in);
+                if (lastContent == null) {
+                    lastContent = LastStompContentSubframe.EMPTY_LAST_CONTENT;
+                }
+                out.add(lastContent);
+                resetDecoder();
             }
         } catch (Exception e) {
             StompContentSubframe errorContent = new DefaultLastStompContentSubframe(Unpooled.EMPTY_BUFFER);
@@ -196,7 +199,7 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
     }
 
     private State readHeaders(ByteBuf buffer, StompHeaders headers) {
-        for (;;) {
+        for (; ; ) {
             boolean headerRead = headerParser.parseHeader(headers, buffer);
             if (!headerRead) {
                 if (headers.contains(StompHeaders.CONTENT_LENGTH)) {
@@ -220,14 +223,12 @@ public class StompSubframeDecoder extends ReplayingDecoder<State> {
 
     private static void skipNullCharacter(ByteBuf buffer) {
         byte b = buffer.readByte();
-        if (b != StompConstants.NUL) {
-            throw new IllegalStateException("unexpected byte in buffer " + b + " while expecting NULL byte");
-        }
+        checkState(b == StompConstants.NUL, "unexpected byte in buffer " + b + " while expecting NULL byte");
     }
 
     private static void skipControlCharacters(ByteBuf buffer) {
         byte b;
-        for (;;) {
+        for (; ; ) {
             b = buffer.readByte();
             if (b != StompConstants.CR && b != StompConstants.LF) {
                 buffer.readerIndex(buffer.readerIndex() - 1);

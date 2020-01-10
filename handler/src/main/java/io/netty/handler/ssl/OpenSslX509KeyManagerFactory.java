@@ -48,15 +48,17 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
+import static io.netty.util.internal.ObjectUtil.checkState;
+
 /**
- * Special {@link KeyManagerFactory} that pre-compute the keymaterial used when {@link SslProvider#OPENSSL} or
- * {@link SslProvider#OPENSSL_REFCNT} is used and so will improve handshake times and its performance.
- *
- *
- *
- * Because the keymaterial is pre-computed any modification to the {@link KeyStore} is ignored after
- * {@link #init(KeyStore, char[])} is called.
- *
+ * Special {@link KeyManagerFactory} that pre-compute the keymaterial used when {@link SslProvider#OPENSSL} or {@link
+ * SslProvider#OPENSSL_REFCNT} is used and so will improve handshake times and its performance.
+ * <p>
+ * <p>
+ * <p>
+ * Because the keymaterial is pre-computed any modification to the {@link KeyStore} is ignored after {@link
+ * #init(KeyStore, char[])} is called.
+ * <p>
  * {@link #init(ManagerFactoryParameters)} is not supported by this implementation and so a call to it will always
  * result in an {@link InvalidAlgorithmParameterException}.
  */
@@ -96,7 +98,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
             algorithm = KeyManagerFactory.getDefaultAlgorithm();
         }
         return new OpenSslKeyManagerFactorySpi(
-                provider == null ? KeyManagerFactory.getInstance(algorithm) :
+                provider == null? KeyManagerFactory.getInstance(algorithm) :
                         KeyManagerFactory.getInstance(algorithm, provider));
     }
 
@@ -143,17 +145,13 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
         @Override
         protected KeyManager[] engineGetKeyManagers() {
             ProviderFactory providerFactory = this.providerFactory;
-            if (providerFactory == null) {
-                throw new IllegalStateException("engineInit(...) not called yet");
-            }
+            checkState(providerFactory != null, "engineInit(...) not called yet");
             return new KeyManager[] { providerFactory.keyManager };
         }
 
         OpenSslKeyMaterialProvider newProvider() {
             ProviderFactory providerFactory = this.providerFactory;
-            if (providerFactory == null) {
-                throw new IllegalStateException("engineInit(...) not called yet");
-            }
+            checkState(providerFactory != null, "engineInit(...) not called yet");
             return providerFactory.newProvider();
         }
 
@@ -170,12 +168,12 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
 
             OpenSslKeyMaterialProvider newProvider() {
                 return new OpenSslPopulatedKeyMaterialProvider(keyManager,
-                        password, aliases);
+                                                               password, aliases);
             }
 
             /**
-             * {@link OpenSslKeyMaterialProvider} implementation that pre-compute the {@link OpenSslKeyMaterial} for
-             * all aliases.
+             * {@link OpenSslKeyMaterialProvider} implementation that pre-compute the {@link OpenSslKeyMaterial} for all
+             * aliases.
              */
             private static final class OpenSslPopulatedKeyMaterialProvider extends OpenSslKeyMaterialProvider {
                 private final Map<String, Object> materialMap;
@@ -186,7 +184,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
                     materialMap = new HashMap<String, Object>();
                     boolean initComplete = false;
                     try {
-                        for (String alias: aliases) {
+                        for (String alias : aliases) {
                             if (alias != null && !materialMap.containsKey(alias)) {
                                 try {
                                     materialMap.put(alias, super.chooseKeyMaterial(
@@ -224,7 +222,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
 
                 @Override
                 void destroy() {
-                    for (Object material: materialMap.values()) {
+                    for (Object material : materialMap.values()) {
                         ReferenceCountUtil.release(material);
                     }
                     materialMap.clear();
@@ -234,8 +232,8 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
     }
 
     /**
-     * Create a new initialized {@link OpenSslX509KeyManagerFactory} which loads its {@link PrivateKey} directly from
-     * an {@code OpenSSL engine} via the
+     * Create a new initialized {@link OpenSslX509KeyManagerFactory} which loads its {@link PrivateKey} directly from an
+     * {@code OpenSSL engine} via the
      * <a href="https://www.openssl.org/docs/man1.1.0/crypto/ENGINE_load_private_key.html">ENGINE_load_private_key</a>
      * function.
      */
@@ -246,8 +244,8 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
     }
 
     /**
-     * Create a new initialized {@link OpenSslX509KeyManagerFactory} which loads its {@link PrivateKey} directly from
-     * an {@code OpenSSL engine} via the
+     * Create a new initialized {@link OpenSslX509KeyManagerFactory} which loads its {@link PrivateKey} directly from an
+     * {@code OpenSSL engine} via the
      * <a href="https://www.openssl.org/docs/man1.1.0/crypto/ENGINE_load_private_key.html">ENGINE_load_private_key</a>
      * function.
      */
@@ -257,7 +255,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
         KeyStore store = new OpenSslKeyStore(certificateChain.clone(), false);
         store.load(null, null);
         OpenSslX509KeyManagerFactory factory = new OpenSslX509KeyManagerFactory();
-        factory.init(store, password == null ? null : password.toCharArray());
+        factory.init(store, password == null? null : password.toCharArray());
         return factory;
     }
 
@@ -266,7 +264,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
      */
     public static OpenSslX509KeyManagerFactory newKeyless(File chain)
             throws CertificateException, IOException,
-            KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
+                   KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
         return newKeyless(SslContext.toX509Certificates(chain));
     }
 
@@ -275,7 +273,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
      */
     public static OpenSslX509KeyManagerFactory newKeyless(InputStream chain)
             throws CertificateException, IOException,
-            KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
+                   KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
         return newKeyless(SslContext.toX509Certificates(chain));
     }
 
@@ -285,7 +283,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
      */
     public static OpenSslX509KeyManagerFactory newKeyless(X509Certificate... certificateChain)
             throws CertificateException, IOException,
-            KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
+                   KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
         KeyStore store = new OpenSslKeyStore(certificateChain.clone(), true);
         store.load(null, null);
         OpenSslX509KeyManagerFactory factory = new OpenSslX509KeyManagerFactory();
@@ -308,7 +306,7 @@ public final class OpenSslX509KeyManagerFactory extends KeyManagerFactory {
                         } else {
                             try {
                                 privateKeyAddress = SSL.loadPrivateKeyFromEngine(
-                                        alias, password == null ? null : new String(password));
+                                        alias, password == null? null : new String(password));
                             } catch (Exception e) {
                                 UnrecoverableKeyException keyException =
                                         new UnrecoverableKeyException("Unable to load key from engine");

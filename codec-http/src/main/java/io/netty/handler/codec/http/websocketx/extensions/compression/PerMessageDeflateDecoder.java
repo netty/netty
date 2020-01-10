@@ -25,6 +25,8 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilte
 
 import java.util.List;
 
+import static io.netty.util.internal.ObjectUtil.checkState;
+
 /**
  * Per-message implementation of deflate decompressor.
  */
@@ -59,9 +61,7 @@ class PerMessageDeflateDecoder extends DeflateDecoder {
 
         WebSocketFrame wsFrame = (WebSocketFrame) msg;
         if (extensionDecoderFilter().mustSkip(wsFrame)) {
-            if (compressing) {
-                throw new IllegalStateException("Cannot skip per message deflate decoder, compression in progress");
-            }
+            checkState(!compressing, "Cannot skip per message deflate decoder, compression in progress");
             return false;
         }
 

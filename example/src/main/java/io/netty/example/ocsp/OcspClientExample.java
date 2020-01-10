@@ -57,20 +57,16 @@ import io.netty.handler.ssl.ocsp.OcspClientHandler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 
+import static io.netty.util.internal.ObjectUtil.checkState;
+
 /**
- * This is a very simple example for an HTTPS client that uses OCSP stapling.
- * The client connects to an HTTPS server that has OCSP stapling enabled and
- * then uses BC to parse and validate it.
+ * This is a very simple example for an HTTPS client that uses OCSP stapling. The client connects to an HTTPS server
+ * that has OCSP stapling enabled and then uses BC to parse and validate it.
  */
 public class OcspClientExample {
     public static void main(String[] args) throws Exception {
-        if (!OpenSsl.isAvailable()) {
-            throw new IllegalStateException("OpenSSL is not available!");
-        }
-
-        if (!OpenSsl.isOcspSupported()) {
-            throw new IllegalStateException("OCSP is not supported!");
-        }
+        checkState(OpenSsl.isAvailable(), "OpenSSL is not available!");
+        checkState(OpenSsl.isOcspSupported(), "OCSP is not supported!");
 
         // Using Wikipedia as an example. I'd rather use Netty's own website
         // but the server (Cloudflare) doesn't support OCSP stapling. A few
@@ -82,10 +78,10 @@ public class OcspClientExample {
         String host = "www.wikipedia.org";
 
         ReferenceCountedOpenSslContext context
-            = (ReferenceCountedOpenSslContext) SslContextBuilder.forClient()
-                .sslProvider(SslProvider.OPENSSL)
-                .enableOcsp(true)
-                .build();
+                = (ReferenceCountedOpenSslContext) SslContextBuilder.forClient()
+                                                                    .sslProvider(SslProvider.OPENSSL)
+                                                                    .enableOcsp(true)
+                                                                    .build();
 
         try {
             EventLoopGroup group = new NioEventLoopGroup();
@@ -99,8 +95,8 @@ public class OcspClientExample {
                         .handler(newClientHandler(context, host, promise));
 
                 Channel channel = bootstrap.connect(host, 443)
-                        .syncUninterruptibly()
-                        .channel();
+                                           .syncUninterruptibly()
+                                           .channel();
 
                 try {
                     FullHttpResponse response = promise.get();
@@ -117,14 +113,15 @@ public class OcspClientExample {
     }
 
     private static ChannelInitializer<Channel> newClientHandler(final ReferenceCountedOpenSslContext context,
-            final String host, final Promise<FullHttpResponse> promise) {
+                                                                final String host,
+                                                                final Promise<FullHttpResponse> promise) {
 
         return new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 SslHandler sslHandler = context.newHandler(ch.alloc());
                 ReferenceCountedOpenSslEngine engine
-                    = (ReferenceCountedOpenSslEngine) sslHandler.engine();
+                        = (ReferenceCountedOpenSslEngine) sslHandler.engine();
 
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast(sslHandler);
@@ -212,10 +209,7 @@ public class OcspClientExample {
         @Override
         protected boolean verify(ChannelHandlerContext ctx, ReferenceCountedOpenSslEngine engine) throws Exception {
             byte[] staple = engine.getOcspResponse();
-            if (staple == null) {
-                throw new IllegalStateException("Server didn't provide an OCSP staple!");
-            }
-
+            checkState(staple != null, "Server didn't provide an OCSP staple!");
             OCSPResp response = new OCSPResp(staple);
             if (response.getStatus() != OCSPResponseStatus.SUCCESSFUL) {
                 return false;
@@ -233,13 +227,13 @@ public class OcspClientExample {
             CertificateStatus status = first.getCertStatus();
             BigInteger ocspSerial = first.getCertID().getSerialNumber();
             String message = new StringBuilder()
-                .append("OCSP status of ").append(ctx.channel().remoteAddress())
-                .append("\n  Status: ").append(status == CertificateStatus.GOOD ? "Good" : status)
-                .append("\n  This Update: ").append(first.getThisUpdate())
-                .append("\n  Next Update: ").append(first.getNextUpdate())
-                .append("\n  Cert Serial: ").append(certSerial)
-                .append("\n  OCSP Serial: ").append(ocspSerial)
-                .toString();
+                    .append("OCSP status of ").append(ctx.channel().remoteAddress())
+                    .append("\n  Status: ").append(status == CertificateStatus.GOOD? "Good" : status)
+                    .append("\n  This Update: ").append(first.getThisUpdate())
+                    .append("\n  Next Update: ").append(first.getNextUpdate())
+                    .append("\n  Cert Serial: ").append(certSerial)
+                    .append("\n  OCSP Serial: ").append(ocspSerial)
+                    .toString();
             System.out.println(message);
 
             return status == CertificateStatus.GOOD && certSerial.equals(ocspSerial);

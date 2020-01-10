@@ -35,52 +35,52 @@ import java.util.Queue;
 
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.util.internal.ObjectUtil.checkState;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
- * An HTTP/2 handler that creates child channels for each stream. This handler must be used in combination
- * with {@link Http2FrameCodec}.
+ * An HTTP/2 handler that creates child channels for each stream. This handler must be used in combination with {@link
+ * Http2FrameCodec}.
  *
  * <p>When a new stream is created, a new {@link Channel} is created for it. Applications send and
- * receive {@link Http2StreamFrame}s on the created channel. {@link ByteBuf}s cannot be processed by the channel;
- * all writes that reach the head of the pipeline must be an instance of {@link Http2StreamFrame}. Writes that reach
- * the head of the pipeline are processed directly by this handler and cannot be intercepted.
+ * receive {@link Http2StreamFrame}s on the created channel. {@link ByteBuf}s cannot be processed by the channel; all
+ * writes that reach the head of the pipeline must be an instance of {@link Http2StreamFrame}. Writes that reach the
+ * head of the pipeline are processed directly by this handler and cannot be intercepted.
  *
  * <p>The child channel will be notified of user events that impact the stream, such as {@link
- * Http2GoAwayFrame} and {@link Http2ResetFrame}, as soon as they occur. Although {@code
- * Http2GoAwayFrame} and {@code Http2ResetFrame} signify that the remote is ignoring further
- * communication, closing of the channel is delayed until any inbound queue is drained with {@link
- * Channel#read()}, which follows the default behavior of channels in Netty. Applications are
- * free to close the channel in response to such events if they don't have use for any queued
- * messages. Any connection level events like {@link Http2SettingsFrame} and {@link Http2GoAwayFrame}
- * will be processed internally and also propagated down the pipeline for other handlers to act on.
+ * Http2GoAwayFrame} and {@link Http2ResetFrame}, as soon as they occur. Although {@code Http2GoAwayFrame} and {@code
+ * Http2ResetFrame} signify that the remote is ignoring further communication, closing of the channel is delayed until
+ * any inbound queue is drained with {@link Channel#read()}, which follows the default behavior of channels in Netty.
+ * Applications are free to close the channel in response to such events if they don't have use for any queued messages.
+ * Any connection level events like {@link Http2SettingsFrame} and {@link Http2GoAwayFrame} will be processed internally
+ * and also propagated down the pipeline for other handlers to act on.
  *
  * <p>Outbound streams are supported via the {@link Http2StreamChannelBootstrap}.
  *
  * <p>{@link ChannelConfig#setMaxMessagesPerRead(int)} and {@link ChannelConfig#setAutoRead(boolean)} are supported.
  *
  * <h3>Reference Counting</h3>
- *
- * Some {@link Http2StreamFrame}s implement the {@link ReferenceCounted} interface, as they carry
- * reference counted objects (e.g. {@link ByteBuf}s). The multiplex codec will call {@link ReferenceCounted#retain()}
- * before propagating a reference counted object through the pipeline, and thus an application handler needs to release
- * such an object after having consumed it. For more information on reference counting take a look at
- * https://netty.io/wiki/reference-counted-objects.html
+ * <p>
+ * Some {@link Http2StreamFrame}s implement the {@link ReferenceCounted} interface, as they carry reference counted
+ * objects (e.g. {@link ByteBuf}s). The multiplex codec will call {@link ReferenceCounted#retain()} before propagating a
+ * reference counted object through the pipeline, and thus an application handler needs to release such an object after
+ * having consumed it. For more information on reference counting take a look at https://netty.io/wiki/reference-counted-objects.html
  *
  * <h3>Channel Events</h3>
- *
- * A child channel becomes active as soon as it is registered to an {@link EventLoop}. Therefore, an active channel
- * does not map to an active HTTP/2 stream immediately. Only once a {@link Http2HeadersFrame} has been successfully sent
- * or received, does the channel map to an active HTTP/2 stream. In case it is not possible to open a new HTTP/2 stream
- * (i.e. due to the maximum number of active streams being exceeded), the child channel receives an exception
- * indicating the cause and is closed immediately thereafter.
+ * <p>
+ * A child channel becomes active as soon as it is registered to an {@link EventLoop}. Therefore, an active channel does
+ * not map to an active HTTP/2 stream immediately. Only once a {@link Http2HeadersFrame} has been successfully sent or
+ * received, does the channel map to an active HTTP/2 stream. In case it is not possible to open a new HTTP/2 stream
+ * (i.e. due to the maximum number of active streams being exceeded), the child channel receives an exception indicating
+ * the cause and is closed immediately thereafter.
  *
  * <h3>Writability and Flow Control</h3>
- *
+ * <p>
  * A child channel observes outbound/remote flow control via the channel's writability. A channel only becomes writable
  * when it maps to an active HTTP/2 stream . A child channel does not know about the connection-level flow control
  * window. {@link ChannelHandler}s are free to ignore the channel's writability, in which case the excessive writes will
- * be buffered by the parent channel. It's important to note that only {@link Http2DataFrame}s are subject to
- * HTTP/2 flow control.
+ * be buffered by the parent channel. It's important to note that only {@link Http2DataFrame}s are subject to HTTP/2
+ * flow control.
  */
 @UnstableApi
 public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
@@ -96,8 +96,8 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
     private final ChannelHandler upgradeStreamHandler;
     private final Queue<AbstractHttp2StreamChannel> readCompletePendingQueue =
             new MaxCapacityQueue<AbstractHttp2StreamChannel>(new ArrayDeque<AbstractHttp2StreamChannel>(8),
-                    // Choose 100 which is what is used most of the times as default.
-                    Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS);
+                                                             // Choose 100 which is what is used most of the times as default.
+                                                             Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS);
 
     private boolean parentReadInProgress;
     private int idCount;
@@ -108,8 +108,8 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
     /**
      * Creates a new instance
      *
-     * @param inboundStreamHandler the {@link ChannelHandler} that will be added to the {@link ChannelPipeline} of
-     *                             the {@link Channel}s created for new inbound streams.
+     * @param inboundStreamHandler the {@link ChannelHandler} that will be added to the {@link ChannelPipeline} of the
+     * {@link Channel}s created for new inbound streams.
      */
     public Http2MultiplexHandler(ChannelHandler inboundStreamHandler) {
         this(inboundStreamHandler, null);
@@ -118,13 +118,13 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
     /**
      * Creates a new instance
      *
-     * @param inboundStreamHandler the {@link ChannelHandler} that will be added to the {@link ChannelPipeline} of
-     *                             the {@link Channel}s created for new inbound streams.
+     * @param inboundStreamHandler the {@link ChannelHandler} that will be added to the {@link ChannelPipeline} of the
+     * {@link Channel}s created for new inbound streams.
      * @param upgradeStreamHandler the {@link ChannelHandler} that will be added to the {@link ChannelPipeline} of the
-     *                             upgraded {@link Channel}.
+     * upgraded {@link Channel}.
      */
     public Http2MultiplexHandler(ChannelHandler inboundStreamHandler, ChannelHandler upgradeStreamHandler) {
-        this.inboundStreamHandler = ObjectUtil.checkNotNull(inboundStreamHandler, "inboundStreamHandler");
+        this.inboundStreamHandler = checkNotNull(inboundStreamHandler, "inboundStreamHandler");
         this.upgradeStreamHandler = upgradeStreamHandler;
     }
 
@@ -144,9 +144,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
     @Override
     protected void handlerAdded0(ChannelHandlerContext ctx) {
-        if (ctx.executor() != ctx.channel().eventLoop()) {
-            throw new IllegalStateException("EventExecutor must be EventLoop of Channel");
-        }
+        checkState(ctx.executor() == ctx.channel().eventLoop(), "EventExecutor must be EventLoop of Channel");
         this.ctx = ctx;
     }
 
@@ -209,48 +207,48 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             DefaultHttp2FrameStream stream = (DefaultHttp2FrameStream) event.stream();
             if (event.type() == Http2FrameStreamEvent.Type.State) {
                 switch (stream.state()) {
-                    case HALF_CLOSED_LOCAL:
-                        if (stream.id() != Http2CodecUtil.HTTP_UPGRADE_STREAM_ID) {
-                            // Ignore everything which was not caused by an upgrade
-                            break;
-                        }
-                        // fall-through
-                    case HALF_CLOSED_REMOTE:
-                        // fall-through
-                    case OPEN:
-                        if (stream.attachment != null) {
-                            // ignore if child channel was already created.
-                            break;
-                        }
-                        final AbstractHttp2StreamChannel ch;
-                        // We need to handle upgrades special when on the client side.
-                        if (stream.id() == Http2CodecUtil.HTTP_UPGRADE_STREAM_ID && !isServer(ctx)) {
-                            // We must have an upgrade handler or else we can't handle the stream
-                            if (upgradeStreamHandler == null) {
-                                throw connectionError(INTERNAL_ERROR,
-                                        "Client is misconfigured for upgrade requests");
-                            }
-                            ch = new Http2MultiplexHandlerStreamChannel(stream, upgradeStreamHandler);
-                            ch.closeOutbound();
-                        } else {
-                            ch = new Http2MultiplexHandlerStreamChannel(stream, inboundStreamHandler);
-                        }
-                        ChannelFuture future = ctx.channel().eventLoop().register(ch);
-                        if (future.isDone()) {
-                            registerDone(future);
-                        } else {
-                            future.addListener(CHILD_CHANNEL_REGISTRATION_LISTENER);
-                        }
+                case HALF_CLOSED_LOCAL:
+                    if (stream.id() != Http2CodecUtil.HTTP_UPGRADE_STREAM_ID) {
+                        // Ignore everything which was not caused by an upgrade
                         break;
-                    case CLOSED:
-                        AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel) stream.attachment;
-                        if (channel != null) {
-                            channel.streamClosed();
+                    }
+                    // fall-through
+                case HALF_CLOSED_REMOTE:
+                    // fall-through
+                case OPEN:
+                    if (stream.attachment != null) {
+                        // ignore if child channel was already created.
+                        break;
+                    }
+                    final AbstractHttp2StreamChannel ch;
+                    // We need to handle upgrades special when on the client side.
+                    if (stream.id() == Http2CodecUtil.HTTP_UPGRADE_STREAM_ID && !isServer(ctx)) {
+                        // We must have an upgrade handler or else we can't handle the stream
+                        if (upgradeStreamHandler == null) {
+                            throw connectionError(INTERNAL_ERROR,
+                                                  "Client is misconfigured for upgrade requests");
                         }
-                        break;
-                    default:
-                        // ignore for now
-                        break;
+                        ch = new Http2MultiplexHandlerStreamChannel(stream, upgradeStreamHandler);
+                        ch.closeOutbound();
+                    } else {
+                        ch = new Http2MultiplexHandlerStreamChannel(stream, inboundStreamHandler);
+                    }
+                    ChannelFuture future = ctx.channel().eventLoop().register(ch);
+                    if (future.isDone()) {
+                        registerDone(future);
+                    } else {
+                        future.addListener(CHILD_CHANNEL_REGISTRATION_LISTENER);
+                    }
+                    break;
+                case CLOSED:
+                    AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel) stream.attachment;
+                    if (channel != null) {
+                        channel.streamClosed();
+                    }
+                    break;
+                default:
+                    // ignore for now
+                    break;
                 }
             }
             return;
@@ -325,7 +323,8 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                 do {
                     childChannel.fireChildReadComplete();
                     childChannel = readCompletePendingQueue.poll();
-                } while (childChannel != null);
+                }
+                while (childChannel != null);
             } finally {
                 parentReadInProgress = false;
                 readCompletePendingQueue.clear();

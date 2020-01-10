@@ -41,6 +41,7 @@ import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.unix.UnixChannelOption.SO_REUSEPORT;
+import static io.netty.util.internal.ObjectUtil.checkState;
 
 @UnstableApi
 public final class KQueueDatagramChannelConfig extends KQueueChannelConfig implements DatagramChannelConfig {
@@ -136,9 +137,7 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
     }
 
     private void setActiveOnOpen(boolean activeOnOpen) {
-        if (channel.isRegistered()) {
-            throw new IllegalStateException("Can only changed before channel was registered");
-        }
+        checkState(!channel.isRegistered(), "Can only changed before channel was registered");
         this.activeOnOpen = activeOnOpen;
     }
 
@@ -158,9 +157,9 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
     }
 
     /**
-     * Set the SO_REUSEPORT option on the underlying Channel. This will allow to bind multiple
-     * {@link KQueueSocketChannel}s to the same port and so accept connections with multiple threads.
-     *
+     * Set the SO_REUSEPORT option on the underlying Channel. This will allow to bind multiple {@link
+     * KQueueSocketChannel}s to the same port and so accept connections with multiple threads.
+     * <p>
      * Be aware this method needs be called before {@link KQueueDatagramChannel#bind(java.net.SocketAddress)} to have
      * any affect.
      */

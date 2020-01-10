@@ -22,11 +22,13 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
+import static io.netty.util.internal.ObjectUtil.checkState;
+
 /**
  * A {@link ChannelDuplexHandler} providing additional functionality for HTTP/2. Specifically it allows to:
  * <ul>
- *     <li>Create new outbound streams using {@link #newStream()}.</li>
- *     <li>Iterate over all active streams using {@link #forEachActiveStream(Http2FrameStreamVisitor)}.</li>
+ * <li>Create new outbound streams using {@link #newStream()}.</li>
+ * <li>Iterate over all active streams using {@link #forEachActiveStream(Http2FrameStreamVisitor)}.</li>
  * </ul>
  *
  * <p>The {@link Http2FrameCodec} is required to be part of the {@link ChannelPipeline} before this handler is added,
@@ -67,10 +69,8 @@ public abstract class Http2ChannelDuplexHandler extends ChannelDuplexHandler {
      */
     public final Http2FrameStream newStream() {
         Http2FrameCodec codec = frameCodec;
-        if (codec == null) {
-            throw new IllegalStateException(StringUtil.simpleClassName(Http2FrameCodec.class) + " not found." +
-                    " Has the handler been added to a pipeline?");
-        }
+        checkState(codec != null, StringUtil.simpleClassName(Http2FrameCodec.class) + " not found." +
+                                  " Has the handler been added to a pipeline?");
         return codec.newStream();
     }
 
@@ -85,10 +85,8 @@ public abstract class Http2ChannelDuplexHandler extends ChannelDuplexHandler {
 
     private static Http2FrameCodec requireHttp2FrameCodec(ChannelHandlerContext ctx) {
         ChannelHandlerContext frameCodecCtx = ctx.pipeline().context(Http2FrameCodec.class);
-        if (frameCodecCtx == null) {
-            throw new IllegalArgumentException(Http2FrameCodec.class.getSimpleName()
-                                               + " was not found in the channel pipeline.");
-        }
+        checkState(frameCodecCtx != null, Http2FrameCodec.class.getSimpleName()
+                                          + " was not found in the channel pipeline.");
         return (Http2FrameCodec) frameCodecCtx.handler();
     }
 }

@@ -52,9 +52,11 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.util.CharsetUtil;
 
+import static io.netty.util.internal.ObjectUtil.checkState;
+
 /**
- * ATTENTION: This is an incomplete example! In order to provide a fully functional
- * end-to-end example we'd need an X.509 certificate and the matching PrivateKey.
+ * ATTENTION: This is an incomplete example! In order to provide a fully functional end-to-end example we'd need an
+ * X.509 certificate and the matching PrivateKey.
  */
 @SuppressWarnings("unused")
 public class OcspServerExample {
@@ -75,9 +77,7 @@ public class OcspServerExample {
         URI uri = OcspUtils.ocspUri(certificate);
         System.out.println("OCSP Responder URI: " + uri);
 
-        if (uri == null) {
-            throw new IllegalStateException("The CA/certificate doesn't have an OCSP responder");
-        }
+        checkState(uri != null, "The CA/certificate doesn't have an OCSP responde");
 
         // Step 3: Construct the OCSP request
         OCSPReq request = new OcspRequestBuilder()
@@ -87,49 +87,36 @@ public class OcspServerExample {
 
         // Step 4: Do the request to the CA's OCSP responder
         OCSPResp response = OcspUtils.request(uri, request, 5L, TimeUnit.SECONDS);
-        if (response.getStatus() != OCSPResponseStatus.SUCCESSFUL) {
-            throw new IllegalStateException("response-status=" + response.getStatus());
-        }
+        checkState(response.getStatus() == OCSPResponseStatus.SUCCESSFUL, "response-status=" + response.getStatus());
 
         // Step 5: Is my certificate any good or has the CA revoked it?
         BasicOCSPResp basicResponse = (BasicOCSPResp) response.getResponseObject();
         SingleResp first = basicResponse.getResponses()[0];
 
         CertificateStatus status = first.getCertStatus();
-        System.out.println("Status: " + (status == CertificateStatus.GOOD ? "Good" : status));
+        System.out.println("Status: " + (status == CertificateStatus.GOOD? "Good" : status));
         System.out.println("This Update: " + first.getThisUpdate());
         System.out.println("Next Update: " + first.getNextUpdate());
 
-        if (status != null) {
-            throw new IllegalStateException("certificate-status=" + status);
-        }
+        checkState(status == null, "certificate-status=" + status);
 
         BigInteger certSerial = certificate.getSerialNumber();
         BigInteger ocspSerial = first.getCertID().getSerialNumber();
-        if (!certSerial.equals(ocspSerial)) {
-            throw new IllegalStateException("Bad Serials=" + certSerial + " vs. " + ocspSerial);
-        }
+        checkState(certificate.equals(ocspSerial), "Bad Serials=" + certSerial + " vs. " + ocspSerial);
 
         // Step 6: Cache the OCSP response and use it as long as it's not
         // expired. The exact semantics are beyond the scope of this example.
 
-        if (!OpenSsl.isAvailable()) {
-            throw new IllegalStateException("OpenSSL is not available!");
-        }
-
-        if (!OpenSsl.isOcspSupported()) {
-            throw new IllegalStateException("OCSP is not supported!");
-        }
-
-        if (privateKey == null) {
-            throw new IllegalStateException("Because we don't have a PrivateKey we can't continue past this point.");
-        }
+        checkState(OpenSsl.isAvailable(), "OpenSSL is not available!");
+        checkState(OpenSsl.isOcspSupported(), "OCSP is not supported!");
+        checkState(privateKey != null, "Because we don't have a PrivateKey we can't continue past this point.");
+        checkState(privateKey != null, "Because we don't have a PrivateKey we can't continue past this point.");
 
         ReferenceCountedOpenSslContext context
-            = (ReferenceCountedOpenSslContext) SslContextBuilder.forServer(privateKey, keyCertChain)
-                .sslProvider(SslProvider.OPENSSL)
-                .enableOcsp(true)
-                .build();
+                = (ReferenceCountedOpenSslContext) SslContextBuilder.forServer(privateKey, keyCertChain)
+                                                                    .sslProvider(SslProvider.OPENSSL)
+                                                                    .enableOcsp(true)
+                                                                    .build();
 
         try {
             ServerBootstrap bootstrap = new ServerBootstrap()
@@ -142,7 +129,7 @@ public class OcspServerExample {
     }
 
     private static ChannelInitializer<Channel> newServerHandler(final ReferenceCountedOpenSslContext context,
-            final OCSPResp response) {
+                                                                final OCSPResp response) {
         return new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -150,7 +137,7 @@ public class OcspServerExample {
 
                 if (response != null) {
                     ReferenceCountedOpenSslEngine engine
-                        = (ReferenceCountedOpenSslEngine) sslHandler.engine();
+                            = (ReferenceCountedOpenSslEngine) sslHandler.engine();
 
                     engine.setOcspResponse(response.getEncoded());
                 }
@@ -190,16 +177,16 @@ public class OcspServerExample {
 
         PEMParser parser = new PEMParser(reader);
         try {
-          X509CertificateHolder holder = null;
+            X509CertificateHolder holder = null;
 
-          while ((holder = (X509CertificateHolder) parser.readObject()) != null) {
-            X509Certificate certificate = converter.getCertificate(holder);
-            if (certificate == null) {
-              continue;
+            while ((holder = (X509CertificateHolder) parser.readObject()) != null) {
+                X509Certificate certificate = converter.getCertificate(holder);
+                if (certificate == null) {
+                    continue;
+                }
+
+                dst.add(certificate);
             }
-
-            dst.add(certificate);
-          }
         } finally {
             parser.close();
         }

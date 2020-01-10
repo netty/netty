@@ -24,9 +24,11 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import static io.netty.util.internal.ObjectUtil.checkState;
+
 /**
- * Configures a {@link ChannelPipeline} depending on the application-level protocol negotiation result of
- * {@link SslHandler}.  For example, you could configure your HTTP pipeline depending on the result of ALPN:
+ * Configures a {@link ChannelPipeline} depending on the application-level protocol negotiation result of {@link
+ * SslHandler}.  For example, you could configure your HTTP pipeline depending on the result of ALPN:
  * <pre>
  * public class MyInitializer extends {@link ChannelInitializer}&lt;{@link Channel}&gt; {
  *     private final {@link SslContext} sslCtx;
@@ -69,8 +71,8 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     /**
      * Creates a new instance with the specified fallback protocol name.
      *
-     * @param fallbackProtocol the name of the protocol to use when
-     *                         ALPN/NPN negotiation fails or the client does not support ALPN/NPN
+     * @param fallbackProtocol the name of the protocol to use when ALPN/NPN negotiation fails or the client does not
+     * support ALPN/NPN
      */
     protected ApplicationProtocolNegotiationHandler(String fallbackProtocol) {
         this.fallbackProtocol = ObjectUtil.checkNotNull(fallbackProtocol, "fallbackProtocol");
@@ -84,12 +86,10 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
                 SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
                 if (handshakeEvent.isSuccess()) {
                     SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
-                    if (sslHandler == null) {
-                        throw new IllegalStateException("cannot find an SslHandler in the pipeline (required for "
-                                + "application-level protocol negotiation)");
-                    }
+                    checkState(sslHandler != null, "cannot find an SslHandler in the pipeline (required for "
+                                                   + "application-level protocol negotiation)");
                     String protocol = sslHandler.applicationProtocol();
-                    configurePipeline(ctx, protocol != null ? protocol : fallbackProtocol);
+                    configurePipeline(ctx, protocol != null? protocol : fallbackProtocol);
                 } else {
                     handshakeFailure(ctx, handshakeEvent.cause());
                 }
@@ -106,12 +106,11 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     }
 
     /**
-     * Invoked on successful initial SSL/TLS handshake. Implement this method to configure your pipeline
-     * for the negotiated application-level protocol.
+     * Invoked on successful initial SSL/TLS handshake. Implement this method to configure your pipeline for the
+     * negotiated application-level protocol.
      *
-     * @param protocol the name of the negotiated application-level protocol, or
-     *                 the fallback protocol name specified in the constructor call if negotiation failed or the client
-     *                 isn't aware of ALPN/NPN extension
+     * @param protocol the name of the negotiated application-level protocol, or the fallback protocol name specified in
+     * the constructor call if negotiation failed or the client isn't aware of ALPN/NPN extension
      */
     protected abstract void configurePipeline(ChannelHandlerContext ctx, String protocol) throws Exception;
 

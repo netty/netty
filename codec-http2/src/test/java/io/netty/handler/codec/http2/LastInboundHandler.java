@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.LockSupport;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.*;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
@@ -73,9 +73,7 @@ public class LastInboundHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        if (channelActive) {
-            throw new IllegalStateException("channelActive may only be fired once.");
-        }
+        checkState(!channelActive, "channelActive may only be fired once.");
         channelActive = true;
         super.channelActive(ctx);
     }
@@ -90,9 +88,7 @@ public class LastInboundHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        if (!channelActive) {
-            throw new IllegalStateException("channelInactive may only be fired once after channelActive.");
-        }
+        checkState(channelActive, "channelInactive may only be fired once after channelActive.");
         channelActive = false;
         super.channelInactive(ctx);
     }

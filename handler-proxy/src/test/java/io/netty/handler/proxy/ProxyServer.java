@@ -132,7 +132,7 @@ abstract class ProxyServer {
      */
     public final void checkExceptions() {
         Throwable t;
-        for (;;) {
+        for (; ; ) {
             t = recordedExceptions.poll();
             if (t == null) {
                 break;
@@ -187,7 +187,7 @@ abstract class ProxyServer {
         private void flush() {
             if (backend != null) {
                 boolean wrote = false;
-                for (;;) {
+                for (; ; ) {
                     Object msg = received.poll();
                     if (msg == null) {
                         break;

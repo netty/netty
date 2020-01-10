@@ -21,6 +21,8 @@ import io.netty.handler.codec.http2.Http2Settings;
 
 import java.util.concurrent.TimeUnit;
 
+import static io.netty.util.internal.ObjectUtil.checkState;
+
 /**
  * Reads the first {@link Http2Settings} object and notifies a {@link io.netty.channel.ChannelPromise}
  */
@@ -37,17 +39,15 @@ public class Http2SettingsHandler extends SimpleChannelInboundHandler<Http2Setti
     }
 
     /**
-     * Wait for this handler to be added after the upgrade to HTTP/2, and for initial preface
-     * handshake to complete.
+     * Wait for this handler to be added after the upgrade to HTTP/2, and for initial preface handshake to complete.
      *
      * @param timeout Time to wait
      * @param unit {@link java.util.concurrent.TimeUnit} for {@code timeout}
+     *
      * @throws Exception if timeout or other failure occurs
      */
     public void awaitSettings(long timeout, TimeUnit unit) throws Exception {
-        if (!promise.awaitUninterruptibly(timeout, unit)) {
-            throw new IllegalStateException("Timed out waiting for settings");
-        }
+        checkState(promise.awaitUninterruptibly(timeout, unit), "Timed out waiting for settings");
         if (!promise.isSuccess()) {
             throw new RuntimeException(promise.cause());
         }

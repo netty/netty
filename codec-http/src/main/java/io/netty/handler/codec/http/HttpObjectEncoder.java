@@ -32,19 +32,17 @@ import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.handler.codec.http.HttpConstants.CR;
 import static io.netty.handler.codec.http.HttpConstants.LF;
+import static io.netty.util.internal.ObjectUtil.checkState;
 
 /**
- * Encodes an {@link HttpMessage} or an {@link HttpContent} into
- * a {@link ByteBuf}.
+ * Encodes an {@link HttpMessage} or an {@link HttpContent} into a {@link ByteBuf}.
  *
  * <h3>Extensibility</h3>
- *
- * Please note that this encoder is designed to be extended to implement
- * a protocol derived from HTTP, such as
+ * <p>
+ * Please note that this encoder is designed to be extended to implement a protocol derived from HTTP, such as
  * <a href="http://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
  * <a href="http://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
- * To implement the encoder of such a derived protocol, extend this class and
- * implement all abstract methods properly.
+ * To implement the encoder of such a derived protocol, extend this class and implement all abstract methods properly.
  */
 public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToMessageEncoder<Object> {
     static final int CRLF_SHORT = (CR << 8) | LF;
@@ -52,7 +50,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     private static final byte[] ZERO_CRLF_CRLF = { '0', CR, LF, CR, LF };
     private static final ByteBuf CRLF_BUF = unreleasableBuffer(directBuffer(2).writeByte(CR).writeByte(LF));
     private static final ByteBuf ZERO_CRLF_CRLF_BUF = unreleasableBuffer(directBuffer(ZERO_CRLF_CRLF.length)
-            .writeBytes(ZERO_CRLF_CRLF));
+                                                                                 .writeBytes(ZERO_CRLF_CRLF));
     private static final float HEADERS_WEIGHT_NEW = 1 / 5f;
     private static final float HEADERS_WEIGHT_HISTORICAL = 1 - HEADERS_WEIGHT_NEW;
     private static final float TRAILERS_WEIGHT_NEW = HEADERS_WEIGHT_NEW;
@@ -67,14 +65,14 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     private int state = ST_INIT;
 
     /**
-     * Used to calculate an exponential moving average of the encoded size of the initial line and the headers for
-     * a guess for future buffer allocations.
+     * Used to calculate an exponential moving average of the encoded size of the initial line and the headers for a
+     * guess for future buffer allocations.
      */
     private float headersEncodedSizeAccumulator = 256;
 
     /**
-     * Used to calculate an exponential moving average of the encoded size of the trailers for
-     * a guess for future buffer allocations.
+     * Used to calculate an exponential moving average of the encoded size of the trailers for a guess for future buffer
+     * allocations.
      */
     private float trailersEncodedSizeAccumulator = 256;
 
@@ -82,19 +80,16 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
         ByteBuf buf = null;
         if (msg instanceof HttpMessage) {
-            if (state != ST_INIT) {
-                throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg)
-                        + ", state: " + state);
-            }
-
+            checkState(state == ST_INIT, "unexpected message type: " + StringUtil.simpleClassName(msg)
+                                         + ", state: " + state);
             @SuppressWarnings({ "unchecked", "CastConflictsWithInstanceof" })
             H m = (H) msg;
 
             buf = ctx.alloc().buffer((int) headersEncodedSizeAccumulator);
             // Encode the message.
             encodeInitialLine(buf, m);
-            state = isContentAlwaysEmpty(m) ? ST_CONTENT_ALWAYS_EMPTY :
-                    HttpUtil.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
+            state = isContentAlwaysEmpty(m)? ST_CONTENT_ALWAYS_EMPTY :
+                    HttpUtil.isTransferEncodingChunked(m)? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
 
             sanitizeHeadersBeforeEncode(m, state == ST_CONTENT_ALWAYS_EMPTY);
 
@@ -120,57 +115,57 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
         if (msg instanceof HttpContent || msg instanceof ByteBuf || msg instanceof FileRegion) {
             switch (state) {
-                case ST_INIT:
-                    throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
-                case ST_CONTENT_NON_CHUNK:
-                    final long contentLength = contentLength(msg);
-                    if (contentLength > 0) {
-                        if (buf != null && buf.writableBytes() >= contentLength && msg instanceof HttpContent) {
-                            // merge into other buffer for performance reasons
-                            buf.writeBytes(((HttpContent) msg).content());
-                            out.add(buf);
-                        } else {
-                            if (buf != null) {
-                                out.add(buf);
-                            }
-                            out.add(encodeAndRetain(msg));
-                        }
-
-                        if (msg instanceof LastHttpContent) {
-                            state = ST_INIT;
-                        }
-
-                        break;
-                    }
-
-                    // fall-through!
-                case ST_CONTENT_ALWAYS_EMPTY:
-
-                    if (buf != null) {
-                        // We allocated a buffer so add it now.
+            case ST_INIT:
+                throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
+            case ST_CONTENT_NON_CHUNK:
+                final long contentLength = contentLength(msg);
+                if (contentLength > 0) {
+                    if (buf != null && buf.writableBytes() >= contentLength && msg instanceof HttpContent) {
+                        // merge into other buffer for performance reasons
+                        buf.writeBytes(((HttpContent) msg).content());
                         out.add(buf);
                     } else {
-                        // Need to produce some output otherwise an
-                        // IllegalStateException will be thrown as we did not write anything
-                        // Its ok to just write an EMPTY_BUFFER as if there are reference count issues these will be
-                        // propagated as the caller of the encode(...) method will release the original
-                        // buffer.
-                        // Writing an empty buffer will not actually write anything on the wire, so if there is a user
-                        // error with msg it will not be visible externally
-                        out.add(Unpooled.EMPTY_BUFFER);
+                        if (buf != null) {
+                            out.add(buf);
+                        }
+                        out.add(encodeAndRetain(msg));
+                    }
+
+                    if (msg instanceof LastHttpContent) {
+                        state = ST_INIT;
                     }
 
                     break;
-                case ST_CONTENT_CHUNK:
-                    if (buf != null) {
-                        // We allocated a buffer so add it now.
-                        out.add(buf);
-                    }
-                    encodeChunkedContent(ctx, msg, contentLength(msg), out);
+                }
 
-                    break;
-                default:
-                    throw new Error();
+                // fall-through!
+            case ST_CONTENT_ALWAYS_EMPTY:
+
+                if (buf != null) {
+                    // We allocated a buffer so add it now.
+                    out.add(buf);
+                } else {
+                    // Need to produce some output otherwise an
+                    // IllegalStateException will be thrown as we did not write anything
+                    // Its ok to just write an EMPTY_BUFFER as if there are reference count issues these will be
+                    // propagated as the caller of the encode(...) method will release the original
+                    // buffer.
+                    // Writing an empty buffer will not actually write anything on the wire, so if there is a user
+                    // error with msg it will not be visible externally
+                    out.add(Unpooled.EMPTY_BUFFER);
+                }
+
+                break;
+            case ST_CONTENT_CHUNK:
+                if (buf != null) {
+                    // We allocated a buffer so add it now.
+                    out.add(buf);
+                }
+                encodeChunkedContent(ctx, msg, contentLength(msg), out);
+
+                break;
+            default:
+                throw new Error();
             }
 
             if (msg instanceof LastHttpContent) {
@@ -231,10 +226,11 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     }
 
     /**
-     * Determine whether a message has a content or not. Some message may have headers indicating
-     * a content without having an actual content, e.g the response to an HEAD or CONNECT request.
+     * Determine whether a message has a content or not. Some message may have headers indicating a content without
+     * having an actual content, e.g the response to an HEAD or CONNECT request.
      *
      * @param msg the message to test
+     *
      * @return {@code true} to signal the message has no content
      */
     protected boolean isContentAlwaysEmpty(@SuppressWarnings("unused") H msg) {
@@ -275,7 +271,9 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     /**
      * Add some additional overhead to the buffer. The rational is that it is better to slightly over allocate and waste
      * some memory, rather than under allocate and require a resize/copy.
+     *
      * @param readableBytes The readable bytes in the buffer.
+     *
      * @return The {@code readableBytes} with some additional padding.
      */
     private static int padSizeForAccumulation(int readableBytes) {

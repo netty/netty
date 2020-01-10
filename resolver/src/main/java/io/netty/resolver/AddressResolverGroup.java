@@ -19,7 +19,6 @@ package io.netty.resolver;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -29,6 +28,9 @@ import java.net.SocketAddress;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkState;
 
 /**
  * Creates and manages {@link NameResolver}s so that each {@link EventExecutor} has its own resolver instance.
@@ -44,20 +46,18 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
     private final Map<EventExecutor, AddressResolver<T>> resolvers =
             new IdentityHashMap<EventExecutor, AddressResolver<T>>();
 
-    protected AddressResolverGroup() { }
+    protected AddressResolverGroup() {
+    }
 
     /**
      * Returns the {@link AddressResolver} associated with the specified {@link EventExecutor}. If there's no associated
-     * resolved found, this method creates and returns a new resolver instance created by
-     * {@link #newResolver(EventExecutor)} so that the new resolver is reused on another
-     * {@link #getResolver(EventExecutor)} call with the same {@link EventExecutor}.
+     * resolved found, this method creates and returns a new resolver instance created by {@link
+     * #newResolver(EventExecutor)} so that the new resolver is reused on another {@link #getResolver(EventExecutor)}
+     * call with the same {@link EventExecutor}.
      */
     public AddressResolver<T> getResolver(final EventExecutor executor) {
-        ObjectUtil.checkNotNull(executor, "executor");
-
-        if (executor.isShuttingDown()) {
-            throw new IllegalStateException("executor not accepting a task");
-        }
+        checkNotNull(executor, "executor");
+        checkState(!executor.isShuttingDown(), "executor not accepting a task");
 
         AddressResolver<T> r;
         synchronized (resolvers) {
@@ -105,7 +105,7 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
             resolvers.clear();
         }
 
-        for (AddressResolver<T> r: rArray) {
+        for (AddressResolver<T> r : rArray) {
             try {
                 r.close();
             } catch (Throwable t) {

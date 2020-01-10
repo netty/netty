@@ -30,6 +30,7 @@ import static io.netty.handler.codec.http.HttpHeaderNames.SET_COOKIE;
 import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
 import static io.netty.util.internal.StringUtil.COMMA;
 import static io.netty.util.internal.StringUtil.unescapeCsvFields;
+import static io.netty.util.internal.ObjectUtil.checkState;
 
 /**
  * Will add multiple values for the same header as single header with a comma separated list of values.
@@ -80,8 +81,8 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
         }
 
         CombinedHttpHeadersImpl(HashingStrategy<CharSequence> nameHashingStrategy,
-                ValueConverter<CharSequence> valueConverter,
-                io.netty.handler.codec.DefaultHeaders.NameValidator<CharSequence> nameValidator) {
+                                ValueConverter<CharSequence> valueConverter,
+                                io.netty.handler.codec.DefaultHeaders.NameValidator<CharSequence> nameValidator) {
             super(nameHashingStrategy, valueConverter, nameValidator);
         }
 
@@ -92,9 +93,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
                 return itr;
             }
             Iterator<CharSequence> unescapedItr = unescapeCsvFields(itr.next()).iterator();
-            if (itr.hasNext()) {
-                throw new IllegalStateException("CombinedHttpHeaders should only have one value");
-            }
+            checkState(!itr.hasNext(), "CombinedHttpHeaders should only have one value");
             return unescapedItr;
         }
 
@@ -104,9 +103,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
             if (values.isEmpty() || cannotBeCombined(name)) {
                 return values;
             }
-            if (values.size() != 1) {
-                throw new IllegalStateException("CombinedHttpHeaders should only have one value");
-            }
+            checkState(values.size() == 1, "CombinedHttpHeaders should only have one value");
             return unescapeCsvFields(values.get(0));
         }
 

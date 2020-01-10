@@ -23,28 +23,25 @@ import net.jpountz.xxhash.XXHashFactory;
 import java.nio.ByteBuffer;
 import java.util.zip.Checksum;
 
+import static io.netty.util.internal.ObjectUtil.checkState;
+
 /**
- * A special-purpose {@link ByteBufChecksum} implementation for use with
- * {@link Lz4FrameEncoder} and {@link Lz4FrameDecoder}.
- *
- * {@link StreamingXXHash32#asChecksum()} has a particularly nasty implementation
- * of {@link Checksum#update(int)} that allocates a single-element byte array for
- * every invocation.
- *
- * In addition to that, it doesn't implement an overload that accepts a {@link ByteBuffer}
- * as an argument.
- *
- * Combined, this means that we can't use {@code ReflectiveByteBufChecksum} at all,
- * and can't use {@code SlowByteBufChecksum} because of its atrocious performance
- * with direct byte buffers (allocating an array and making a JNI call for every byte
- * checksummed might be considered sub-optimal by some).
- *
- * Block version of xxHash32 ({@link XXHash32}), however, does provide
- * {@link XXHash32#hash(ByteBuffer, int)} method that is efficient and does exactly
- * what we need, with a caveat that we can only invoke it once before having to reset.
- * This, however, is fine for our purposes, given the way we use it in
- * {@link Lz4FrameEncoder} and {@link Lz4FrameDecoder}:
- * {@code reset()}, followed by one {@code update()}, followed by {@code getValue()}.
+ * A special-purpose {@link ByteBufChecksum} implementation for use with {@link Lz4FrameEncoder} and {@link
+ * Lz4FrameDecoder}.
+ * <p>
+ * {@link StreamingXXHash32#asChecksum()} has a particularly nasty implementation of {@link Checksum#update(int)} that
+ * allocates a single-element byte array for every invocation.
+ * <p>
+ * In addition to that, it doesn't implement an overload that accepts a {@link ByteBuffer} as an argument.
+ * <p>
+ * Combined, this means that we can't use {@code ReflectiveByteBufChecksum} at all, and can't use {@code
+ * SlowByteBufChecksum} because of its atrocious performance with direct byte buffers (allocating an array and making a
+ * JNI call for every byte checksummed might be considered sub-optimal by some).
+ * <p>
+ * Block version of xxHash32 ({@link XXHash32}), however, does provide {@link XXHash32#hash(ByteBuffer, int)} method
+ * that is efficient and does exactly what we need, with a caveat that we can only invoke it once before having to
+ * reset. This, however, is fine for our purposes, given the way we use it in {@link Lz4FrameEncoder} and {@link
+ * Lz4FrameDecoder}: {@code reset()}, followed by one {@code update()}, followed by {@code getValue()}.
  */
 public final class Lz4XXHash32 extends ByteBufChecksum {
 
@@ -66,18 +63,14 @@ public final class Lz4XXHash32 extends ByteBufChecksum {
 
     @Override
     public void update(byte[] b, int off, int len) {
-        if (used) {
-            throw new IllegalStateException();
-        }
+        checkState(!used, "");
         value = XXHASH32.hash(b, off, len, seed);
         used = true;
     }
 
     @Override
     public void update(ByteBuf b, int off, int len) {
-        if (used) {
-            throw new IllegalStateException();
-        }
+        checkState(!used, "");
         if (b.hasArray()) {
             value = XXHASH32.hash(b.array(), b.arrayOffset() + off, len, seed);
         } else {
@@ -88,9 +81,7 @@ public final class Lz4XXHash32 extends ByteBufChecksum {
 
     @Override
     public long getValue() {
-        if (!used) {
-            throw new IllegalStateException();
-        }
+        checkState(!used, "");
         /*
          * If you look carefully, you'll notice that the most significant nibble
          * is being discarded; we believe this to be a bug, but this is what

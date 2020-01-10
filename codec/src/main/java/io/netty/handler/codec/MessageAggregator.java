@@ -28,7 +28,7 @@ import io.netty.util.ReferenceCountUtil;
 import java.util.List;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * An abstract {@link ChannelHandler} that aggregates a series of message objects into a single aggregated message.
@@ -39,9 +39,9 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  * <li>1 or more content messages.</li>
  * </ul>
  * The content of the aggregated message will be the merged content of the start message and its following content
- * messages. If this aggregator encounters a content message where {@link #isLastContentMessage(ByteBufHolder)}
- * return {@code true} for, the aggregator will finish the aggregation and produce the aggregated message and expect
- * another start message.
+ * messages. If this aggregator encounters a content message where {@link #isLastContentMessage(ByteBufHolder)} return
+ * {@code true} for, the aggregator will finish the aggregation and produce the aggregated message and expect another
+ * start message.
  * </p>
  *
  * @param <I> the type that covers both start message and content message
@@ -67,10 +67,8 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     /**
      * Creates a new instance.
      *
-     * @param maxContentLength
-     *        the maximum length of the aggregated content.
-     *        If the length of the aggregated content exceeds this value,
-     *        {@link #handleOversizedMessage(ChannelHandlerContext, Object)} will be called.
+     * @param maxContentLength the maximum length of the aggregated content. If the length of the aggregated content
+     * exceeds this value, {@link #handleOversizedMessage(ChannelHandlerContext, Object)} will be called.
      */
     protected MessageAggregator(int maxContentLength) {
         validateMaxContentLength(maxContentLength);
@@ -145,8 +143,8 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     protected abstract boolean isLastContentMessage(C msg) throws Exception;
 
     /**
-     * Returns {@code true} if and only if the specified message is already aggregated.  If this method returns
-     * {@code true}, this handler will simply forward the message to the next handler as-is.
+     * Returns {@code true} if and only if the specified message is already aggregated.  If this method returns {@code
+     * true}, this handler will simply forward the message to the next handler as-is.
      */
     protected abstract boolean isAggregated(I msg) throws Exception;
 
@@ -158,21 +156,20 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     }
 
     /**
-     * Returns the maximum number of components in the cumulation buffer.  If the number of
-     * the components in the cumulation buffer exceeds this value, the components of the
-     * cumulation buffer are consolidated into a single component, involving memory copies.
-     * The default value of this property is {@value #DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS}.
+     * Returns the maximum number of components in the cumulation buffer.  If the number of the components in the
+     * cumulation buffer exceeds this value, the components of the cumulation buffer are consolidated into a single
+     * component, involving memory copies. The default value of this property is {@value
+     * #DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS}.
      */
     public final int maxCumulationBufferComponents() {
         return maxCumulationBufferComponents;
     }
 
     /**
-     * Sets the maximum number of components in the cumulation buffer.  If the number of
-     * the components in the cumulation buffer exceeds this value, the components of the
-     * cumulation buffer are consolidated into a single component, involving memory copies.
-     * The default value of this property is {@value #DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS}
-     * and its minimum allowed value is {@code 2}.
+     * Sets the maximum number of components in the cumulation buffer.  If the number of the components in the
+     * cumulation buffer exceeds this value, the components of the cumulation buffer are consolidated into a single
+     * component, involving memory copies. The default value of this property is {@value
+     * #DEFAULT_MAX_COMPOSITEBUFFER_COMPONENTS} and its minimum allowed value is {@code 2}.
      */
     public final void setMaxCumulationBufferComponents(int maxCumulationBufferComponents) {
         if (maxCumulationBufferComponents < 2) {
@@ -181,12 +178,8 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
                     " (expected: >= 2)");
         }
 
-        if (ctx == null) {
-            this.maxCumulationBufferComponents = maxCumulationBufferComponents;
-        } else {
-            throw new IllegalStateException(
-                    "decoder properties cannot be changed once the decoder is added to a pipeline.");
-        }
+        checkState(ctx == null, "decoder properties cannot be changed once the decoder is added to a pipeline.");
+        this.maxCumulationBufferComponents = maxCumulationBufferComponents;
     }
 
     /**
@@ -198,9 +191,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     }
 
     protected final ChannelHandlerContext ctx() {
-        if (ctx == null) {
-            throw new IllegalStateException("not added to a pipeline yet");
-        }
+        checkState(ctx != null, "not added to a pipeline yet");
         return ctx;
     }
 
@@ -335,18 +326,20 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     }
 
     /**
-     * Determine if the message {@code start}'s content length is known, and if it greater than
-     * {@code maxContentLength}.
+     * Determine if the message {@code start}'s content length is known, and if it greater than {@code
+     * maxContentLength}.
+     *
      * @param start The message which may indicate the content length.
      * @param maxContentLength The maximum allowed content length.
-     * @return {@code true} if the message {@code start}'s content length is known, and if it greater than
-     * {@code maxContentLength}. {@code false} otherwise.
+     *
+     * @return {@code true} if the message {@code start}'s content length is known, and if it greater than {@code
+     * maxContentLength}. {@code false} otherwise.
      */
     protected abstract boolean isContentLengthInvalid(S start, int maxContentLength) throws Exception;
 
     /**
-     * Returns the 'continue response' for the specified start message if necessary. For example, this method is
-     * useful to handle an HTTP 100-continue header.
+     * Returns the 'continue response' for the specified start message if necessary. For example, this method is useful
+     * to handle an HTTP 100-continue header.
      *
      * @return the 'continue response', or {@code null} if there's no message to send
      */
@@ -354,38 +347,42 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
             throws Exception;
 
     /**
-     * Determine if the channel should be closed after the result of
-     * {@link #newContinueResponse(Object, int, ChannelPipeline)} is written.
+     * Determine if the channel should be closed after the result of {@link #newContinueResponse(Object, int,
+     * ChannelPipeline)} is written.
+     *
      * @param msg The return value from {@link #newContinueResponse(Object, int, ChannelPipeline)}.
-     * @return {@code true} if the channel should be closed after the result of
-     * {@link #newContinueResponse(Object, int, ChannelPipeline)} is written. {@code false} otherwise.
+     *
+     * @return {@code true} if the channel should be closed after the result of {@link #newContinueResponse(Object, int,
+     * ChannelPipeline)} is written. {@code false} otherwise.
      */
     protected abstract boolean closeAfterContinueResponse(Object msg) throws Exception;
 
     /**
-     * Determine if all objects for the current request/response should be ignored or not.
-     * Messages will stop being ignored the next time {@link #isContentMessage(Object)} returns {@code true}.
+     * Determine if all objects for the current request/response should be ignored or not. Messages will stop being
+     * ignored the next time {@link #isContentMessage(Object)} returns {@code true}.
      *
      * @param msg The return value from {@link #newContinueResponse(Object, int, ChannelPipeline)}.
-     * @return {@code true} if all objects for the current request/response should be ignored or not.
-     * {@code false} otherwise.
+     *
+     * @return {@code true} if all objects for the current request/response should be ignored or not. {@code false}
+     * otherwise.
      */
     protected abstract boolean ignoreContentAfterContinueResponse(Object msg) throws Exception;
 
     /**
      * Creates a new aggregated message from the specified start message and the specified content.  If the start
-     * message implements {@link ByteBufHolder}, its content is appended to the specified {@code content}.
-     * This aggregator will continue to append the received content to the specified {@code content}.
+     * message implements {@link ByteBufHolder}, its content is appended to the specified {@code content}. This
+     * aggregator will continue to append the received content to the specified {@code content}.
      */
     protected abstract O beginAggregation(S start, ByteBuf content) throws Exception;
 
     /**
-     * Transfers the information provided by the specified content message to the specified aggregated message.
-     * Note that the content of the specified content message has been appended to the content of the specified
-     * aggregated message already, so that you don't need to.  Use this method to transfer the additional information
-     * that the content message provides to {@code aggregated}.
+     * Transfers the information provided by the specified content message to the specified aggregated message. Note
+     * that the content of the specified content message has been appended to the content of the specified aggregated
+     * message already, so that you don't need to.  Use this method to transfer the additional information that the
+     * content message provides to {@code aggregated}.
      */
-    protected void aggregate(O aggregated, C content) throws Exception { }
+    protected void aggregate(O aggregated, C content) throws Exception {
+    }
 
     private void finishAggregation0(O aggregated) throws Exception {
         aggregating = false;
@@ -395,7 +392,8 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     /**
      * Invoked when the specified {@code aggregated} message is about to be passed to the next handler in the pipeline.
      */
-    protected void finishAggregation(O aggregated) throws Exception { }
+    protected void finishAggregation(O aggregated) throws Exception {
+    }
 
     private void invokeHandleOversizedMessage(ChannelHandlerContext ctx, S oversized) throws Exception {
         handlingOversizedMessage = true;

@@ -28,10 +28,11 @@ import io.netty.util.concurrent.EventExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.*;
+import static io.netty.util.internal.ObjectUtil.checkState;
 
 /**
  * Compresses a {@link ByteBuf} using the Bzip2 algorithm.
- *
+ * <p>
  * See <a href="http://en.wikipedia.org/wiki/Bzip2">Bzip2</a>.
  */
 public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
@@ -86,10 +87,10 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
 
     /**
      * Creates a new bzip2 encoder with the specified {@code blockSizeMultiplier}.
-     * @param blockSizeMultiplier
-     *        The Bzip2 block size as a multiple of 100,000 bytes (minimum {@code 1}, maximum {@code 9}).
-     *        Larger block sizes require more memory for both compression and decompression,
-     *        but give better compression ratios. {@code 9} will usually be the best value to use.
+     *
+     * @param blockSizeMultiplier The Bzip2 block size as a multiple of 100,000 bytes (minimum {@code 1}, maximum {@code
+     * 9}). Larger block sizes require more memory for both compression and decompression, but give better compression
+     * ratios. {@code 9} will usually be the best value to use.
      */
     public Bzip2Encoder(final int blockSizeMultiplier) {
         if (blockSizeMultiplier < MIN_BLOCK_SIZE || blockSizeMultiplier > MAX_BLOCK_SIZE) {
@@ -106,41 +107,41 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
             return;
         }
 
-        for (;;) {
+        for (; ; ) {
             switch (currentState) {
-                case INIT:
-                    out.ensureWritable(4);
-                    out.writeMedium(MAGIC_NUMBER);
-                    out.writeByte('0' + streamBlockSize / BASE_BLOCK_SIZE);
-                    currentState = State.INIT_BLOCK;
-                    // fall through
-                case INIT_BLOCK:
-                    blockCompressor = new Bzip2BlockCompressor(writer, streamBlockSize);
-                    currentState = State.WRITE_DATA;
-                    // fall through
-                case WRITE_DATA:
-                    if (!in.isReadable()) {
+            case INIT:
+                out.ensureWritable(4);
+                out.writeMedium(MAGIC_NUMBER);
+                out.writeByte('0' + streamBlockSize / BASE_BLOCK_SIZE);
+                currentState = State.INIT_BLOCK;
+                // fall through
+            case INIT_BLOCK:
+                blockCompressor = new Bzip2BlockCompressor(writer, streamBlockSize);
+                currentState = State.WRITE_DATA;
+                // fall through
+            case WRITE_DATA:
+                if (!in.isReadable()) {
+                    return;
+                }
+                Bzip2BlockCompressor blockCompressor = this.blockCompressor;
+                final int length = Math.min(in.readableBytes(), blockCompressor.availableSize());
+                final int bytesWritten = blockCompressor.write(in, in.readerIndex(), length);
+                in.skipBytes(bytesWritten);
+                if (!blockCompressor.isFull()) {
+                    if (in.isReadable()) {
+                        break;
+                    } else {
                         return;
                     }
-                    Bzip2BlockCompressor blockCompressor = this.blockCompressor;
-                    final int length = Math.min(in.readableBytes(), blockCompressor.availableSize());
-                    final int bytesWritten = blockCompressor.write(in, in.readerIndex(), length);
-                    in.skipBytes(bytesWritten);
-                    if (!blockCompressor.isFull()) {
-                        if (in.isReadable()) {
-                            break;
-                        } else {
-                            return;
-                        }
-                    }
-                    currentState = State.CLOSE_BLOCK;
-                    // fall through
-                case CLOSE_BLOCK:
-                    closeBlock(out);
-                    currentState = State.INIT_BLOCK;
-                    break;
-                default:
-                    throw new IllegalStateException();
+                }
+                currentState = State.CLOSE_BLOCK;
+                // fall through
+            case CLOSE_BLOCK:
+                closeBlock(out);
+                currentState = State.INIT_BLOCK;
+                break;
+            default:
+                throw new IllegalStateException();
             }
         }
     }
@@ -166,7 +167,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
 
     /**
      * Close this {@link Bzip2Encoder} and so finish the encoding.
-     *
+     * <p>
      * The returned {@link ChannelFuture} will be notified once the operation completes.
      */
     public ChannelFuture close() {
@@ -174,9 +175,8 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     /**
-     * Close this {@link Bzip2Encoder} and so finish the encoding.
-     * The given {@link ChannelFuture} will be notified once the operation
-     * completes and will also be returned.
+     * Close this {@link Bzip2Encoder} and so finish the encoding. The given {@link ChannelFuture} will be notified once
+     * the operation completes and will also be returned.
      */
     public ChannelFuture close(final ChannelPromise promise) {
         ChannelHandlerContext ctx = ctx();
@@ -241,9 +241,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
 
     private ChannelHandlerContext ctx() {
         ChannelHandlerContext ctx = this.ctx;
-        if (ctx == null) {
-            throw new IllegalStateException("not added to a pipeline");
-        }
+        checkState(ctx != null, "not added to a pipeline");
         return ctx;
     }
 

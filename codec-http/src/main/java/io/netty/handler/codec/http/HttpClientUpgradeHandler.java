@@ -18,7 +18,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.AsciiString;
-import io.netty.util.internal.ObjectUtil;
 
 import java.net.SocketAddress;
 import java.util.Collection;
@@ -28,13 +27,14 @@ import java.util.Set;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
 import static io.netty.util.ReferenceCountUtil.release;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkState;
 
 /**
- * Client-side handler for handling an HTTP upgrade handshake to another protocol. When the first
- * HTTP request is sent, this handler will add all appropriate headers to perform an upgrade to the
- * new protocol. If the upgrade fails (i.e. response is not 101 Switching Protocols), this handler
- * simply removes itself from the pipeline. If the upgrade is successful, upgrades the pipeline to
- * the new protocol.
+ * Client-side handler for handling an HTTP upgrade handshake to another protocol. When the first HTTP request is sent,
+ * this handler will add all appropriate headers to perform an upgrade to the new protocol. If the upgrade fails (i.e.
+ * response is not 101 Switching Protocols), this handler simply removes itself from the pipeline. If the upgrade is
+ * successful, upgrades the pipeline to the new protocol.
  */
 public class HttpClientUpgradeHandler extends HttpObjectAggregator implements ChannelOutboundHandler {
 
@@ -53,8 +53,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
         UPGRADE_SUCCESSFUL,
 
         /**
-         * The Upgrade was unsuccessful due to the server not issuing
-         * with a 101 Switching Protocols response.
+         * The Upgrade was unsuccessful due to the server not issuing with a 101 Switching Protocols response.
          */
         UPGRADE_REJECTED
     }
@@ -86,18 +85,18 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
         CharSequence protocol();
 
         /**
-         * Sets any protocol-specific headers required to the upgrade request. Returns the names of
-         * all headers that were added. These headers will be used to populate the CONNECTION header.
+         * Sets any protocol-specific headers required to the upgrade request. Returns the names of all headers that
+         * were added. These headers will be used to populate the CONNECTION header.
          */
         Collection<CharSequence> setUpgradeHeaders(ChannelHandlerContext ctx, HttpRequest upgradeRequest);
 
         /**
-         * Performs an HTTP protocol upgrade from the source codec. This method is responsible for
-         * adding all handlers required for the new protocol.
+         * Performs an HTTP protocol upgrade from the source codec. This method is responsible for adding all handlers
+         * required for the new protocol.
          *
          * @param ctx the context for the current handler.
-         * @param upgradeResponse the 101 Switching Protocols response that indicates that the server
-         *            has switched to this protocol.
+         * @param upgradeResponse the 101 Switching Protocols response that indicates that the server has switched to
+         * this protocol.
          */
         void upgradeTo(ChannelHandlerContext ctx, FullHttpResponse upgradeResponse) throws Exception;
     }
@@ -116,8 +115,8 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
     public HttpClientUpgradeHandler(SourceCodec sourceCodec, UpgradeCodec upgradeCodec,
                                     int maxContentLength) {
         super(maxContentLength);
-        this.sourceCodec = ObjectUtil.checkNotNull(sourceCodec, "sourceCodec");
-        this.upgradeCodec = ObjectUtil.checkNotNull(upgradeCodec, "upgradeCodec");
+        this.sourceCodec = checkNotNull(sourceCodec, "sourceCodec");
+        this.upgradeCodec = checkNotNull(upgradeCodec, "upgradeCodec");
     }
 
     @Override
@@ -186,9 +185,7 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
             throws Exception {
         FullHttpResponse response = null;
         try {
-            if (!upgradeRequested) {
-                throw new IllegalStateException("Read HTTP response without requesting protocol switch");
-            }
+            checkState(upgradeRequested, "Read HTTP response without requesting protocol switch");
 
             if (msg instanceof HttpResponse) {
                 HttpResponse rep = (HttpResponse) msg;
@@ -222,10 +219,9 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
             }
 
             CharSequence upgradeHeader = response.headers().get(HttpHeaderNames.UPGRADE);
-            if (upgradeHeader != null && !AsciiString.contentEqualsIgnoreCase(upgradeCodec.protocol(), upgradeHeader)) {
-                throw new IllegalStateException(
-                        "Switching Protocols response with unexpected UPGRADE protocol: " + upgradeHeader);
-            }
+            checkState(!(upgradeHeader != null &&
+                         !AsciiString.contentEqualsIgnoreCase(upgradeCodec.protocol(), upgradeHeader)),
+                       "Switching Protocols response with unexpected UPGRADE protocol: " + upgradeHeader);
 
             // Upgrade to the new protocol.
             sourceCodec.prepareUpgradeFrom(ctx);

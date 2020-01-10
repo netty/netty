@@ -26,6 +26,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.RandomAccess;
 
+import static io.netty.util.internal.ObjectUtil.checkState;
+
 /**
  * Encoder for SMTP requests.
  */
@@ -48,11 +50,8 @@ public final class SmtpRequestEncoder extends MessageToMessageEncoder<Object> {
         if (msg instanceof SmtpRequest) {
             final SmtpRequest req = (SmtpRequest) msg;
             if (contentExpected) {
-                if (req.command().equals(SmtpCommand.RSET)) {
-                    contentExpected = false;
-                } else {
-                    throw new IllegalStateException("SmtpContent expected");
-                }
+                checkState(req.command().equals(SmtpCommand.RSET), "SmtpContent expected");
+                contentExpected = false;
             }
             boolean release = true;
             final ByteBuf buffer = ctx.alloc().buffer();
@@ -73,9 +72,7 @@ public final class SmtpRequestEncoder extends MessageToMessageEncoder<Object> {
         }
 
         if (msg instanceof SmtpContent) {
-            if (!contentExpected) {
-                throw new IllegalStateException("No SmtpContent expected");
-            }
+            checkState(contentExpected, "No SmtpContent expected");
             final ByteBuf content = ((SmtpContent) msg).content();
             out.add(content.retain());
             if (msg instanceof LastSmtpContent) {
@@ -99,7 +96,7 @@ public final class SmtpRequestEncoder extends MessageToMessageEncoder<Object> {
             ByteBufUtil.writeAscii(out, parameters.get(sizeMinusOne));
         } else {
             final Iterator<CharSequence> params = parameters.iterator();
-            for (;;) {
+            for (; ; ) {
                 ByteBufUtil.writeAscii(out, params.next());
                 if (params.hasNext()) {
                     out.writeByte(SP);

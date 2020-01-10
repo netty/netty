@@ -31,6 +31,8 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Map;
 
+import static io.netty.util.internal.ObjectUtil.checkState;
+
 public final class EpollDatagramChannelConfig extends EpollChannelConfig implements DatagramChannelConfig {
     private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR = new FixedRecvByteBufAllocator(2048);
     private boolean activeOnOpen;
@@ -148,9 +150,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
     }
 
     private void setActiveOnOpen(boolean activeOnOpen) {
-        if (channel.isRegistered()) {
-            throw new IllegalStateException("Can only changed before channel was registered");
-        }
+        checkState(!channel.isRegistered(), "Can only changed before channel was registered");
         this.activeOnOpen = activeOnOpen;
     }
 
@@ -417,11 +417,11 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
     }
 
     /**
-     * Set the SO_REUSEPORT option on the underlying Channel. This will allow to bind multiple
-     * {@link EpollSocketChannel}s to the same port and so accept connections with multiple threads.
-     *
-     * Be aware this method needs be called before {@link EpollDatagramChannel#bind(java.net.SocketAddress)} to have
-     * any affect.
+     * Set the SO_REUSEPORT option on the underlying Channel. This will allow to bind multiple {@link
+     * EpollSocketChannel}s to the same port and so accept connections with multiple threads.
+     * <p>
+     * Be aware this method needs be called before {@link EpollDatagramChannel#bind(java.net.SocketAddress)} to have any
+     * affect.
      */
     public EpollDatagramChannelConfig setReusePort(boolean reusePort) {
         try {
@@ -508,12 +508,12 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
     }
 
     /**
-     * Set the maximum {@link io.netty.channel.socket.DatagramPacket} size. This will be used to determine if
-     * {@code recvmmsg} should be used when reading from the underlying socket. When {@code recvmmsg} is used
-     * we may be able to read multiple {@link io.netty.channel.socket.DatagramPacket}s with one syscall and so
-     * greatly improve the performance. This number will be used to slice {@link ByteBuf}s returned by the used
-     * {@link RecvByteBufAllocator}. You can use {@code 0} to disable the usage of recvmmsg, any other bigger value
-     * will enable it.
+     * Set the maximum {@link io.netty.channel.socket.DatagramPacket} size. This will be used to determine if {@code
+     * recvmmsg} should be used when reading from the underlying socket. When {@code recvmmsg} is used we may be able to
+     * read multiple {@link io.netty.channel.socket.DatagramPacket}s with one syscall and so greatly improve the
+     * performance. This number will be used to slice {@link ByteBuf}s returned by the used {@link
+     * RecvByteBufAllocator}. You can use {@code 0} to disable the usage of recvmmsg, any other bigger value will enable
+     * it.
      */
     public EpollDatagramChannelConfig setMaxDatagramPayloadSize(int maxDatagramSize) {
         this.maxDatagramSize = ObjectUtil.checkPositiveOrZero(maxDatagramSize, "maxDatagramSize");

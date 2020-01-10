@@ -29,6 +29,7 @@ import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.concurrent.TimeUnit;
+import static io.netty.util.internal.ObjectUtil.checkState;
 
 /**
  * Compresses a {@link ByteBuf} using the deflate algorithm.
@@ -41,9 +42,8 @@ public class JZlibEncoder extends ZlibEncoder {
     private volatile ChannelHandlerContext ctx;
 
     /**
-     * Creates a new zlib encoder with the default compression level ({@code 6}),
-     * default window bits ({@code 15}), default memory level ({@code 8}),
-     * and the default wrapper ({@link ZlibWrapper#ZLIB}).
+     * Creates a new zlib encoder with the default compression level ({@code 6}), default window bits ({@code 15}),
+     * default memory level ({@code 8}), and the default wrapper ({@link ZlibWrapper#ZLIB}).
      *
      * @throws CompressionException if failed to initialize zlib
      */
@@ -52,14 +52,11 @@ public class JZlibEncoder extends ZlibEncoder {
     }
 
     /**
-     * Creates a new zlib encoder with the specified {@code compressionLevel},
-     * default window bits ({@code 15}), default memory level ({@code 8}),
-     * and the default wrapper ({@link ZlibWrapper#ZLIB}).
+     * Creates a new zlib encoder with the specified {@code compressionLevel}, default window bits ({@code 15}), default
+     * memory level ({@code 8}), and the default wrapper ({@link ZlibWrapper#ZLIB}).
      *
-     * @param compressionLevel
-     *        {@code 1} yields the fastest compression and {@code 9} yields the
-     *        best compression.  {@code 0} means no compression.  The default
-     *        compression level is {@code 6}.
+     * @param compressionLevel {@code 1} yields the fastest compression and {@code 9} yields the best compression.
+     * {@code 0} means no compression.  The default compression level is {@code 6}.
      *
      * @throws CompressionException if failed to initialize zlib
      */
@@ -68,9 +65,8 @@ public class JZlibEncoder extends ZlibEncoder {
     }
 
     /**
-     * Creates a new zlib encoder with the default compression level ({@code 6}),
-     * default window bits ({@code 15}), default memory level ({@code 8}),
-     * and the specified wrapper.
+     * Creates a new zlib encoder with the default compression level ({@code 6}), default window bits ({@code 15}),
+     * default memory level ({@code 8}), and the specified wrapper.
      *
      * @throws CompressionException if failed to initialize zlib
      */
@@ -79,14 +75,11 @@ public class JZlibEncoder extends ZlibEncoder {
     }
 
     /**
-     * Creates a new zlib encoder with the specified {@code compressionLevel},
-     * default window bits ({@code 15}), default memory level ({@code 8}),
-     * and the specified wrapper.
+     * Creates a new zlib encoder with the specified {@code compressionLevel}, default window bits ({@code 15}), default
+     * memory level ({@code 8}), and the specified wrapper.
      *
-     * @param compressionLevel
-     *        {@code 1} yields the fastest compression and {@code 9} yields the
-     *        best compression.  {@code 0} means no compression.  The default
-     *        compression level is {@code 6}.
+     * @param compressionLevel {@code 1} yields the fastest compression and {@code 9} yields the best compression.
+     * {@code 0} means no compression.  The default compression level is {@code 6}.
      *
      * @throws CompressionException if failed to initialize zlib
      */
@@ -95,24 +88,17 @@ public class JZlibEncoder extends ZlibEncoder {
     }
 
     /**
-     * Creates a new zlib encoder with the specified {@code compressionLevel},
-     * the specified {@code windowBits}, the specified {@code memLevel}, and
-     * the specified wrapper.
+     * Creates a new zlib encoder with the specified {@code compressionLevel}, the specified {@code windowBits}, the
+     * specified {@code memLevel}, and the specified wrapper.
      *
-     * @param compressionLevel
-     *        {@code 1} yields the fastest compression and {@code 9} yields the
-     *        best compression.  {@code 0} means no compression.  The default
-     *        compression level is {@code 6}.
-     * @param windowBits
-     *        The base two logarithm of the size of the history buffer.  The
-     *        value should be in the range {@code 9} to {@code 15} inclusive.
-     *        Larger values result in better compression at the expense of
-     *        memory usage.  The default value is {@code 15}.
-     * @param memLevel
-     *        How much memory should be allocated for the internal compression
-     *        state.  {@code 1} uses minimum memory and {@code 9} uses maximum
-     *        memory.  Larger values result in better and faster compression
-     *        at the expense of memory usage.  The default value is {@code 8}
+     * @param compressionLevel {@code 1} yields the fastest compression and {@code 9} yields the best compression.
+     * {@code 0} means no compression.  The default compression level is {@code 6}.
+     * @param windowBits The base two logarithm of the size of the history buffer.  The value should be in the range
+     * {@code 9} to {@code 15} inclusive. Larger values result in better compression at the expense of memory usage. The
+     * default value is {@code 15}.
+     * @param memLevel How much memory should be allocated for the internal compression state.  {@code 1} uses minimum
+     * memory and {@code 9} uses maximum memory.  Larger values result in better and faster compression at the expense
+     * of memory usage.  The default value is {@code 8}
      *
      * @throws CompressionException if failed to initialize zlib
      */
@@ -149,13 +135,11 @@ public class JZlibEncoder extends ZlibEncoder {
     }
 
     /**
-     * Creates a new zlib encoder with the default compression level ({@code 6}),
-     * default window bits ({@code 15}), default memory level ({@code 8}),
-     * and the specified preset dictionary.  The wrapper is always
-     * {@link ZlibWrapper#ZLIB} because it is the only format that supports
-     * the preset dictionary.
+     * Creates a new zlib encoder with the default compression level ({@code 6}), default window bits ({@code 15}),
+     * default memory level ({@code 8}), and the specified preset dictionary.  The wrapper is always {@link
+     * ZlibWrapper#ZLIB} because it is the only format that supports the preset dictionary.
      *
-     * @param dictionary  the preset dictionary
+     * @param dictionary the preset dictionary
      *
      * @throws CompressionException if failed to initialize zlib
      */
@@ -164,17 +148,13 @@ public class JZlibEncoder extends ZlibEncoder {
     }
 
     /**
-     * Creates a new zlib encoder with the specified {@code compressionLevel},
-     * default window bits ({@code 15}), default memory level ({@code 8}),
-     * and the specified preset dictionary.  The wrapper is always
-     * {@link ZlibWrapper#ZLIB} because it is the only format that supports
-     * the preset dictionary.
+     * Creates a new zlib encoder with the specified {@code compressionLevel}, default window bits ({@code 15}), default
+     * memory level ({@code 8}), and the specified preset dictionary.  The wrapper is always {@link ZlibWrapper#ZLIB}
+     * because it is the only format that supports the preset dictionary.
      *
-     * @param compressionLevel
-     *        {@code 1} yields the fastest compression and {@code 9} yields the
-     *        best compression.  {@code 0} means no compression.  The default
-     *        compression level is {@code 6}.
-     * @param dictionary  the preset dictionary
+     * @param compressionLevel {@code 1} yields the fastest compression and {@code 9} yields the best compression.
+     * {@code 0} means no compression.  The default compression level is {@code 6}.
+     * @param dictionary the preset dictionary
      *
      * @throws CompressionException if failed to initialize zlib
      */
@@ -183,27 +163,19 @@ public class JZlibEncoder extends ZlibEncoder {
     }
 
     /**
-     * Creates a new zlib encoder with the specified {@code compressionLevel},
-     * the specified {@code windowBits}, the specified {@code memLevel},
-     * and the specified preset dictionary.  The wrapper is always
-     * {@link ZlibWrapper#ZLIB} because it is the only format that supports
-     * the preset dictionary.
+     * Creates a new zlib encoder with the specified {@code compressionLevel}, the specified {@code windowBits}, the
+     * specified {@code memLevel}, and the specified preset dictionary.  The wrapper is always {@link ZlibWrapper#ZLIB}
+     * because it is the only format that supports the preset dictionary.
      *
-     * @param compressionLevel
-     *        {@code 1} yields the fastest compression and {@code 9} yields the
-     *        best compression.  {@code 0} means no compression.  The default
-     *        compression level is {@code 6}.
-     * @param windowBits
-     *        The base two logarithm of the size of the history buffer.  The
-     *        value should be in the range {@code 9} to {@code 15} inclusive.
-     *        Larger values result in better compression at the expense of
-     *        memory usage.  The default value is {@code 15}.
-     * @param memLevel
-     *        How much memory should be allocated for the internal compression
-     *        state.  {@code 1} uses minimum memory and {@code 9} uses maximum
-     *        memory.  Larger values result in better and faster compression
-     *        at the expense of memory usage.  The default value is {@code 8}
-     * @param dictionary  the preset dictionary
+     * @param compressionLevel {@code 1} yields the fastest compression and {@code 9} yields the best compression.
+     * {@code 0} means no compression.  The default compression level is {@code 6}.
+     * @param windowBits The base two logarithm of the size of the history buffer.  The value should be in the range
+     * {@code 9} to {@code 15} inclusive. Larger values result in better compression at the expense of memory usage. The
+     * default value is {@code 15}.
+     * @param memLevel How much memory should be allocated for the internal compression state.  {@code 1} uses minimum
+     * memory and {@code 9} uses maximum memory.  Larger values result in better and faster compression at the expense
+     * of memory usage.  The default value is {@code 8}
+     * @param dictionary the preset dictionary
      *
      * @throws CompressionException if failed to initialize zlib
      */
@@ -263,9 +235,8 @@ public class JZlibEncoder extends ZlibEncoder {
 
     private ChannelHandlerContext ctx() {
         ChannelHandlerContext ctx = this.ctx;
-        if (ctx == null) {
-            throw new IllegalStateException("not added to a pipeline");
-        }
+        checkState(ctx != null, "not added to a pipeline");
+
         return ctx;
     }
 

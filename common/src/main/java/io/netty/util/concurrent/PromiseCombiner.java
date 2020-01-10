@@ -15,7 +15,8 @@
  */
 package io.netty.util.concurrent;
 
-import io.netty.util.internal.ObjectUtil;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkState;
 
 /**
  * <p>A promise combiner monitors the outcome of a number of discrete futures, then notifies a final, aggregate promise
@@ -81,12 +82,12 @@ public final class PromiseCombiner {
      * @param executor the {@link EventExecutor} to use for notifications.
      */
     public PromiseCombiner(EventExecutor executor) {
-        this.executor = ObjectUtil.checkNotNull(executor, "executor");
+        this.executor = checkNotNull(executor, "executor");
     }
 
     /**
-     * Adds a new promise to be combined. New promises may be added until an aggregate promise is added via the
-     * {@link PromiseCombiner#finish(Promise)} method.
+     * Adds a new promise to be combined. New promises may be added until an aggregate promise is added via the {@link
+     * PromiseCombiner#finish(Promise)} method.
      *
      * @param promise the promise to add to this promise combiner
      *
@@ -98,8 +99,8 @@ public final class PromiseCombiner {
     }
 
     /**
-     * Adds a new future to be combined. New futures may be added until an aggregate promise is added via the
-     * {@link PromiseCombiner#finish(Promise)} method.
+     * Adds a new future to be combined. New futures may be added until an aggregate promise is added via the {@link
+     * PromiseCombiner#finish(Promise)} method.
      *
      * @param future the future to add to this promise combiner
      */
@@ -112,8 +113,8 @@ public final class PromiseCombiner {
     }
 
     /**
-     * Adds new promises to be combined. New promises may be added until an aggregate promise is added via the
-     * {@link PromiseCombiner#finish(Promise)} method.
+     * Adds new promises to be combined. New promises may be added until an aggregate promise is added via the {@link
+     * PromiseCombiner#finish(Promise)} method.
      *
      * @param promises the promises to add to this promise combiner
      *
@@ -125,8 +126,8 @@ public final class PromiseCombiner {
     }
 
     /**
-     * Adds new futures to be combined. New futures may be added until an aggregate promise is added via the
-     * {@link PromiseCombiner#finish(Promise)} method.
+     * Adds new futures to be combined. New futures may be added until an aggregate promise is added via the {@link
+     * PromiseCombiner#finish(Promise)} method.
      *
      * @param futures the futures to add to this promise combiner
      */
@@ -149,11 +150,9 @@ public final class PromiseCombiner {
      * @param aggregatePromise the promise to notify when all combined futures have finished
      */
     public void finish(Promise<Void> aggregatePromise) {
-        ObjectUtil.checkNotNull(aggregatePromise, "aggregatePromise");
+        checkNotNull(aggregatePromise, "aggregatePromise");
         checkInEventLoop();
-        if (this.aggregatePromise != null) {
-            throw new IllegalStateException("Already finished");
-        }
+        checkState(this.aggregatePromise == null, "Already finished");
         this.aggregatePromise = aggregatePromise;
         if (doneCount == expectedCount) {
             tryPromise();
@@ -167,7 +166,7 @@ public final class PromiseCombiner {
     }
 
     private boolean tryPromise() {
-        return (cause == null) ? aggregatePromise.trySuccess(null) : aggregatePromise.tryFailure(cause);
+        return (cause == null)? aggregatePromise.trySuccess(null) : aggregatePromise.tryFailure(cause);
     }
 
     private void checkAddAllowed() {

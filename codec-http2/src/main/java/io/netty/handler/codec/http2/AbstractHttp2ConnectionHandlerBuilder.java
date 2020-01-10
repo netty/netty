@@ -26,43 +26,43 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_RESERVED_S
 import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty.util.internal.ObjectUtil.checkState;
 
 /**
  * Abstract base class which defines commonly used features required to build {@link Http2ConnectionHandler} instances.
  *
  * <h3>Three ways to build a {@link Http2ConnectionHandler}</h3>
  * <h4>Let the builder create a {@link Http2ConnectionHandler}</h4>
- * Simply call all the necessary setter methods, and then use {@link #build()} to build a new
- * {@link Http2ConnectionHandler}. Setting the following properties are prohibited because they are used for
- * other ways of building a {@link Http2ConnectionHandler}.
- * conflicts with this option:
+ * Simply call all the necessary setter methods, and then use {@link #build()} to build a new {@link
+ * Http2ConnectionHandler}. Setting the following properties are prohibited because they are used for other ways of
+ * building a {@link Http2ConnectionHandler}. conflicts with this option:
  * <ul>
- *   <li>{@link #connection(Http2Connection)}</li>
- *   <li>{@link #codec(Http2ConnectionDecoder, Http2ConnectionEncoder)}</li>
+ * <li>{@link #connection(Http2Connection)}</li>
+ * <li>{@link #codec(Http2ConnectionDecoder, Http2ConnectionEncoder)}</li>
  * </ul>
  *
  *
  * <h4>Let the builder use the {@link Http2ConnectionHandler} you specified</h4>
- * Call {@link #connection(Http2Connection)} to tell the builder that you want to build the handler from the
- * {@link Http2Connection} you specified. Setting the following properties are prohibited and thus will trigger
- * an {@link IllegalStateException} because they conflict with this option.
+ * Call {@link #connection(Http2Connection)} to tell the builder that you want to build the handler from the {@link
+ * Http2Connection} you specified. Setting the following properties are prohibited and thus will trigger an {@link
+ * IllegalStateException} because they conflict with this option.
  * <ul>
- *   <li>{@link #server(boolean)}</li>
- *   <li>{@link #codec(Http2ConnectionDecoder, Http2ConnectionEncoder)}</li>
+ * <li>{@link #server(boolean)}</li>
+ * <li>{@link #codec(Http2ConnectionDecoder, Http2ConnectionEncoder)}</li>
  * </ul>
  *
  * <h4>Let the builder use the {@link Http2ConnectionDecoder} and {@link Http2ConnectionEncoder} you specified</h4>
  * Call {@link #codec(Http2ConnectionDecoder, Http2ConnectionEncoder)} to tell the builder that you want to built the
  * handler from the {@link Http2ConnectionDecoder} and {@link Http2ConnectionEncoder} you specified. Setting the
- * following properties are prohibited and thus will trigger an {@link IllegalStateException} because they conflict
- * with this option:
+ * following properties are prohibited and thus will trigger an {@link IllegalStateException} because they conflict with
+ * this option:
  * <ul>
- *   <li>{@link #server(boolean)}</li>
- *   <li>{@link #connection(Http2Connection)}</li>
- *   <li>{@link #frameLogger(Http2FrameLogger)}</li>
- *   <li>{@link #headerSensitivityDetector(SensitivityDetector)}</li>
- *   <li>{@link #encoderEnforceMaxConcurrentStreams(boolean)}</li>
- *   <li>{@link #encoderIgnoreMaxHeaderListSize(boolean)}</li>
+ * <li>{@link #server(boolean)}</li>
+ * <li>{@link #connection(Http2Connection)}</li>
+ * <li>{@link #frameLogger(Http2FrameLogger)}</li>
+ * <li>{@link #headerSensitivityDetector(SensitivityDetector)}</li>
+ * <li>{@link #encoderEnforceMaxConcurrentStreams(boolean)}</li>
+ * <li>{@link #encoderIgnoreMaxHeaderListSize(boolean)}</li>
  * </ul>
  *
  * <h3>Exposing necessary methods in a subclass</h3>
@@ -74,7 +74,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  */
 @UnstableApi
 public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2ConnectionHandler,
-                                                            B extends AbstractHttp2ConnectionHandlerBuilder<T, B>> {
+        B extends AbstractHttp2ConnectionHandlerBuilder<T, B>> {
 
     private static final SensitivityDetector DEFAULT_HEADER_SENSITIVITY_DETECTOR = Http2HeadersEncoder.NEVER_SENSITIVE;
 
@@ -135,8 +135,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
-     * Sets the listener of inbound frames.
-     * This listener will only be set if the decoder's listener is {@code null}.
+     * Sets the listener of inbound frames. This listener will only be set if the decoder's listener is {@code null}.
      */
     protected B frameListener(Http2FrameListener frameListener) {
         this.frameListener = checkNotNull(frameListener, "frameListener");
@@ -144,8 +143,8 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
-     * Returns the graceful shutdown timeout of the {@link Http2Connection} in milliseconds. Returns -1 if the
-     * timeout is indefinite.
+     * Returns the graceful shutdown timeout of the {@link Http2Connection} in milliseconds. Returns -1 if the timeout
+     * is indefinite.
      */
     protected long gracefulShutdownTimeoutMillis() {
         return gracefulShutdownTimeoutMillis;
@@ -164,16 +163,16 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
-     * Returns if {@link #build()} will to create a {@link Http2Connection} in server mode ({@code true})
-     * or client mode ({@code false}).
+     * Returns if {@link #build()} will to create a {@link Http2Connection} in server mode ({@code true}) or client mode
+     * ({@code false}).
      */
     protected boolean isServer() {
-        return isServer != null ? isServer : true;
+        return isServer != null? isServer : true;
     }
 
     /**
-     * Sets if {@link #build()} will to create a {@link Http2Connection} in server mode ({@code true})
-     * or client mode ({@code false}).
+     * Sets if {@link #build()} will to create a {@link Http2Connection} in server mode ({@code true}) or client mode
+     * ({@code false}).
      */
     protected B server(boolean isServer) {
         enforceConstraint("server", "connection", connection);
@@ -187,12 +186,12 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     /**
      * Get the maximum number of streams which can be in the reserved state at any given time.
      * <p>
-     * By default this value will be ignored on the server for local endpoint. This is because the RFC provides
-     * no way to explicitly communicate a limit to how many states can be in the reserved state, and instead relies
-     * on the peer to send RST_STREAM frames when they will be rejected.
+     * By default this value will be ignored on the server for local endpoint. This is because the RFC provides no way
+     * to explicitly communicate a limit to how many states can be in the reserved state, and instead relies on the peer
+     * to send RST_STREAM frames when they will be rejected.
      */
     protected int maxReservedStreams() {
-        return maxReservedStreams != null ? maxReservedStreams : DEFAULT_MAX_RESERVED_STREAMS;
+        return maxReservedStreams != null? maxReservedStreams : DEFAULT_MAX_RESERVED_STREAMS;
     }
 
     /**
@@ -278,7 +277,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.6">RFC 7540, 8.1.2.6</a>.
      */
     protected boolean isValidateHeaders() {
-        return validateHeaders != null ? validateHeaders : true;
+        return validateHeaders != null? validateHeaders : true;
     }
 
     /**
@@ -310,16 +309,15 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
-     * Returns if the encoder should queue frames if the maximum number of concurrent streams
-     * would otherwise be exceeded.
+     * Returns if the encoder should queue frames if the maximum number of concurrent streams would otherwise be
+     * exceeded.
      */
     protected boolean encoderEnforceMaxConcurrentStreams() {
-        return encoderEnforceMaxConcurrentStreams != null ? encoderEnforceMaxConcurrentStreams : false;
+        return encoderEnforceMaxConcurrentStreams != null? encoderEnforceMaxConcurrentStreams : false;
     }
 
     /**
-     * Sets if the encoder should queue frames if the maximum number of concurrent streams
-     * would otherwise be exceeded.
+     * Sets if the encoder should queue frames if the maximum number of concurrent streams would otherwise be exceeded.
      */
     protected B encoderEnforceMaxConcurrentStreams(boolean encoderEnforceMaxConcurrentStreams) {
         enforceNonCodecConstraints("encoderEnforceMaxConcurrentStreams");
@@ -328,10 +326,10 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
-     * Returns the maximum number of queued control frames that are allowed before the connection is closed.
-     * This allows to protected against various attacks that can lead to high CPU / memory usage if the remote-peer
-     * floods us with frames that would have us produce control frames, but stops to read from the underlying socket.
-     *
+     * Returns the maximum number of queued control frames that are allowed before the connection is closed. This allows
+     * to protected against various attacks that can lead to high CPU / memory usage if the remote-peer floods us with
+     * frames that would have us produce control frames, but stops to read from the underlying socket.
+     * <p>
      * {@code 0} means no protection is in place.
      */
     protected int encoderEnforceMaxQueuedControlFrames() {
@@ -339,10 +337,10 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
-     * Sets the maximum number of queued control frames that are allowed before the connection is closed.
-     * This allows to protected against various attacks that can lead to high CPU / memory usage if the remote-peer
-     * floods us with frames that would have us produce control frames, but stops to read from the underlying socket.
-     *
+     * Sets the maximum number of queued control frames that are allowed before the connection is closed. This allows to
+     * protected against various attacks that can lead to high CPU / memory usage if the remote-peer floods us with
+     * frames that would have us produce control frames, but stops to read from the underlying socket.
+     * <p>
      * {@code 0} means no protection should be applied.
      */
     protected B encoderEnforceMaxQueuedControlFrames(int maxQueuedControlFrames) {
@@ -355,7 +353,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * Returns the {@link SensitivityDetector} to use.
      */
     protected SensitivityDetector headerSensitivityDetector() {
-        return headerSensitivityDetector != null ? headerSensitivityDetector : DEFAULT_HEADER_SENSITIVITY_DETECTOR;
+        return headerSensitivityDetector != null? headerSensitivityDetector : DEFAULT_HEADER_SENSITIVITY_DETECTOR;
     }
 
     /**
@@ -368,10 +366,12 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
-     * Sets if the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
-     * should be ignored when encoding headers.
+     * Sets if the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a> should
+     * be ignored when encoding headers.
+     *
      * @param ignoreMaxHeaderListSize {@code true} to ignore
      * <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>.
+     *
      * @return this.
      */
     protected B encoderIgnoreMaxHeaderListSize(boolean ignoreMaxHeaderListSize) {
@@ -392,6 +392,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
 
     /**
      * Set the {@link Http2PromisedRequestVerifier} to use.
+     *
      * @return this.
      */
     protected B promisedRequestVerifier(Http2PromisedRequestVerifier promisedRequestVerifier) {
@@ -402,6 +403,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
 
     /**
      * Get the {@link Http2PromisedRequestVerifier} to use.
+     *
      * @return the {@link Http2PromisedRequestVerifier} to use.
      */
     protected Http2PromisedRequestVerifier promisedRequestVerifier() {
@@ -410,9 +412,9 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
 
     /**
      * Returns the maximum number of consecutive empty DATA frames (without end_of_stream flag) that are allowed before
-     * the connection is closed. This allows to protected against the remote peer flooding us with such frames and
-     * so use up a lot of CPU. There is no valid use-case for empty DATA frames without end_of_stream flag.
-     *
+     * the connection is closed. This allows to protected against the remote peer flooding us with such frames and so
+     * use up a lot of CPU. There is no valid use-case for empty DATA frames without end_of_stream flag.
+     * <p>
      * {@code 0} means no protection is in place.
      */
     protected int decoderEnforceMaxConsecutiveEmptyDataFrames() {
@@ -420,10 +422,10 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
-     * Sets the maximum number of consecutive empty DATA frames (without end_of_stream flag) that are allowed before
-     * the connection is closed. This allows to protected against the remote peer flooding us with such frames and
-     * so use up a lot of CPU. There is no valid use-case for empty DATA frames without end_of_stream flag.
-     *
+     * Sets the maximum number of consecutive empty DATA frames (without end_of_stream flag) that are allowed before the
+     * connection is closed. This allows to protected against the remote peer flooding us with such frames and so use up
+     * a lot of CPU. There is no valid use-case for empty DATA frames without end_of_stream flag.
+     * <p>
      * {@code 0} means no protection should be applied.
      */
     protected B decoderEnforceMaxConsecutiveEmptyDataFrames(int maxConsecutiveEmptyFrames) {
@@ -435,6 +437,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
 
     /**
      * Determine if settings frame should automatically be acknowledged and applied.
+     *
      * @return this.
      */
     protected B autoAckSettingsFrame(boolean autoAckSettings) {
@@ -445,6 +448,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
 
     /**
      * Determine if the SETTINGS frames should be automatically acknowledged and applied.
+     *
      * @return {@code true} if the SETTINGS frames should be automatically acknowledged and applied.
      */
     protected boolean isAutoAckSettingsFrame() {
@@ -453,6 +457,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
 
     /**
      * Determine if PING frame should automatically be acknowledged or not.
+     *
      * @return this.
      */
     protected B autoAckPingFrame(boolean autoAckPingFrame) {
@@ -463,6 +468,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
 
     /**
      * Determine if the PING frames should be automatically acknowledged or not.
+     *
      * @return {@code true} if the PING frames should be automatically acknowledged.
      */
     protected boolean isAutoAckPingFrame() {
@@ -471,8 +477,10 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
 
     /**
      * Determine if the {@link Channel#close()} should be coupled with goaway and graceful close.
+     *
      * @param decoupleCloseAndGoAway {@code true} to make {@link Channel#close()} directly close the underlying
-     *   transport, and not attempt graceful closure via GOAWAY.
+     * transport, and not attempt graceful closure via GOAWAY.
+     *
      * @return {@code this}.
      */
     protected B decoupleCloseAndGoAway(boolean decoupleCloseAndGoAway) {
@@ -507,9 +515,11 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private T buildFromConnection(Http2Connection connection) {
         Long maxHeaderListSize = initialSettings.maxHeaderListSize();
         Http2FrameReader reader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(isValidateHeaders(),
-                maxHeaderListSize == null ? DEFAULT_HEADER_LIST_SIZE : maxHeaderListSize,
+                                                                                             maxHeaderListSize == null?
+                                                                                                     DEFAULT_HEADER_LIST_SIZE :
+                                                                                                     maxHeaderListSize,
                 /* initialHuffmanDecodeCapacity= */ -1));
-        Http2FrameWriter writer = encoderIgnoreMaxHeaderListSize == null ?
+        Http2FrameWriter writer = encoderIgnoreMaxHeaderListSize == null?
                 new DefaultHttp2FrameWriter(headerSensitivityDetector()) :
                 new DefaultHttp2FrameWriter(headerSensitivityDetector(), encoderIgnoreMaxHeaderListSize);
 
@@ -536,7 +546,9 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         }
 
         DefaultHttp2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
-                promisedRequestVerifier(), isAutoAckSettingsFrame(), isAutoAckPingFrame());
+                                                                                  promisedRequestVerifier(),
+                                                                                  isAutoAckSettingsFrame(),
+                                                                                  isAutoAckPingFrame());
         return buildFromCodec(decoder, encoder);
     }
 
@@ -568,8 +580,8 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * <p>
      * The return of this method will be subject to the following:
      * <ul>
-     *   <li>{@link #frameListener(Http2FrameListener)} will be set if not already set in the decoder</li>
-     *   <li>{@link #gracefulShutdownTimeoutMillis(long)} will always be set</li>
+     * <li>{@link #frameListener(Http2FrameListener)} will be set if not already set in the decoder</li>
+     * <li>{@link #gracefulShutdownTimeoutMillis(long)} will always be set</li>
      * </ul>
      */
     protected abstract T build(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
@@ -589,9 +601,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     private static void enforceConstraint(String methodName, String rejectorName, Object value) {
-        if (value != null) {
-            throw new IllegalStateException(
-                    methodName + "() cannot be called because " + rejectorName + "() has been called already.");
-        }
+        checkState(value == null,
+                   methodName + "() cannot be called because " + rejectorName + "() has been called already.");
     }
 }

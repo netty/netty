@@ -30,6 +30,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
+import static io.netty.util.internal.ObjectUtil.checkState;
+
 /**
  * Process {@link io.netty.handler.codec.http.FullHttpResponse} translated from HTTP/2 frames
  */
@@ -49,7 +51,9 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
      * @param streamId The stream for which a response is expected
      * @param writeFuture A future that represent the request write operation
      * @param promise The promise object that will be used to wait/notify events
+     *
      * @return The previous object associated with {@code streamId}
+     *
      * @see HttpResponseHandler#awaitResponses(long, java.util.concurrent.TimeUnit)
      */
     public Entry<ChannelFuture, ChannelPromise> put(int streamId, ChannelFuture writeFuture, ChannelPromise promise) {
@@ -61,6 +65,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
      *
      * @param timeout Value of time to wait for each response
      * @param unit Units associated with {@code timeout}
+     *
      * @see HttpResponseHandler#put(int, io.netty.channel.ChannelFuture, io.netty.channel.ChannelPromise)
      */
     public void awaitResponses(long timeout, TimeUnit unit) {
@@ -68,16 +73,14 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
         while (itr.hasNext()) {
             Entry<Integer, Entry<ChannelFuture, ChannelPromise>> entry = itr.next();
             ChannelFuture writeFuture = entry.getValue().getKey();
-            if (!writeFuture.awaitUninterruptibly(timeout, unit)) {
-                throw new IllegalStateException("Timed out waiting to write for stream id " + entry.getKey());
-            }
+            checkState(writeFuture.awaitUninterruptibly(timeout, unit),
+                       "Timed out waiting to write for stream id " + entry.getKey());
             if (!writeFuture.isSuccess()) {
                 throw new RuntimeException(writeFuture.cause());
             }
             ChannelPromise promise = entry.getValue().getValue();
-            if (!promise.awaitUninterruptibly(timeout, unit)) {
-                throw new IllegalStateException("Timed out waiting for response on stream id " + entry.getKey());
-            }
+            checkState(promise.awaitUninterruptibly(timeout, unit),
+                       "Timed out waiting for response on stream id " + entry.getKey());
             if (!promise.isSuccess()) {
                 throw new RuntimeException(promise.cause());
             }

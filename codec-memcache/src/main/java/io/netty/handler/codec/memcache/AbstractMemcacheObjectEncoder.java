@@ -25,6 +25,8 @@ import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
+import static io.netty.util.internal.ObjectUtil.checkState;
+
 /**
  * A general purpose {@link AbstractMemcacheObjectEncoder} that encodes {@link MemcacheMessage}s.
  * <p/>
@@ -40,10 +42,7 @@ public abstract class AbstractMemcacheObjectEncoder<M extends MemcacheMessage> e
     @Override
     protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
         if (msg instanceof MemcacheMessage) {
-            if (expectingMoreContent) {
-                throw new IllegalStateException("unexpected message type: " + StringUtil.simpleClassName(msg));
-            }
-
+            checkState(!expectingMoreContent, "unexpected message type: " + StringUtil.simpleClassName(msg));
             @SuppressWarnings({ "unchecked", "CastConflictsWithInstanceof" })
             final M m = (M) msg;
             out.add(encodeMessage(ctx, m));
@@ -71,6 +70,7 @@ public abstract class AbstractMemcacheObjectEncoder<M extends MemcacheMessage> e
      *
      * @param ctx the channel handler context.
      * @param msg the message to encode.
+     *
      * @return the {@link ByteBuf} representation of the message.
      */
     protected abstract ByteBuf encodeMessage(ChannelHandlerContext ctx, M msg);
@@ -79,6 +79,7 @@ public abstract class AbstractMemcacheObjectEncoder<M extends MemcacheMessage> e
      * Determine the content length of the given object.
      *
      * @param msg the object to determine the length of.
+     *
      * @return the determined content length.
      */
     private static int contentLength(Object msg) {
@@ -98,6 +99,7 @@ public abstract class AbstractMemcacheObjectEncoder<M extends MemcacheMessage> e
      * Encode the content, depending on the object type.
      *
      * @param msg the object to encode.
+     *
      * @return the encoded object.
      */
     private static Object encodeAndRetain(Object msg) {
