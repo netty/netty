@@ -15,25 +15,6 @@
  */
 package io.netty.channel.embedded;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.nio.channels.ClosedChannelException;
-import java.util.ArrayDeque;
-import java.util.Queue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.Test;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -52,6 +33,23 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ScheduledFuture;
+import org.junit.Test;
+
+import java.nio.channels.ClosedChannelException;
+import java.util.ArrayDeque;
+import java.util.Queue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class EmbeddedChannelTest {
 
@@ -128,7 +126,7 @@ public class EmbeddedChannelTest {
         assertNull(channel.readInbound());
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @SuppressWarnings({"rawtypes", "unchecked"})
     @Test
     public void testScheduling() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
@@ -159,7 +157,8 @@ public class EmbeddedChannelTest {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
         ScheduledFuture<?> future = ch.eventLoop().schedule(new Runnable() {
             @Override
-            public void run() { }
+            public void run() {
+            }
         }, 1, TimeUnit.DAYS);
         ch.finish();
         assertTrue(future.isCancelled());
@@ -408,7 +407,7 @@ public class EmbeddedChannelTest {
     }
 
     @Test
-    public void testWriteScheduled() throws InterruptedException  {
+    public void testWriteScheduled() throws InterruptedException {
         final int delay = 500;
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
             @Override
@@ -425,7 +424,7 @@ public class EmbeddedChannelTest {
         Object msg = new Object();
 
         assertFalse(channel.writeOutbound(msg));
-        Thread.sleep(delay  * 2);
+        Thread.sleep(delay * 2);
         assertTrue(channel.finish());
         assertSame(msg, channel.readOutbound());
         assertNull(channel.readOutbound());
@@ -437,7 +436,7 @@ public class EmbeddedChannelTest {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
             @Override
             public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-              latch.countDown();
+                latch.countDown();
             }
         });
 
@@ -450,33 +449,33 @@ public class EmbeddedChannelTest {
 
     @Test
     public void testWriteOneInbound() throws InterruptedException {
-      final CountDownLatch latch = new CountDownLatch(1);
-      final AtomicInteger flushCount = new AtomicInteger(0);
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicInteger flushCount = new AtomicInteger(0);
 
-      EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
-          @Override
-          public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-              ReferenceCountUtil.release(msg);
-              latch.countDown();
-          }
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                ReferenceCountUtil.release(msg);
+                latch.countDown();
+            }
 
-          @Override
-          public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-              flushCount.incrementAndGet();
-          }
-      });
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                flushCount.incrementAndGet();
+            }
+        });
 
-      channel.writeOneInbound("Hello, Netty!");
+        channel.writeOneInbound("Hello, Netty!");
 
-      if (!latch.await(1L, TimeUnit.SECONDS)) {
-          fail("Nobody called #channelRead() in time.");
-      }
+        if (!latch.await(1L, TimeUnit.SECONDS)) {
+            fail("Nobody called #channelRead() in time.");
+        }
 
-      channel.close().syncUninterruptibly();
+        channel.close().syncUninterruptibly();
 
-      // There was no #flushInbound() call so nobody should have called
-      // #channelReadComplete()
-      assertEquals(0, flushCount.get());
+        // There was no #flushInbound() call so nobody should have called
+        // #channelReadComplete()
+        assertEquals(0, flushCount.get());
     }
 
     @Test
