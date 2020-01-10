@@ -67,7 +67,7 @@ public class PoolArenaTest {
     }
 
     @Test
-    public final void testAllocationCounter() {
+    public void testAllocationCounter() {
         final PooledByteBufAllocator allocator = new PooledByteBufAllocator(
                 true,   // preferDirect
                 0,      // nHeapArena
@@ -113,7 +113,7 @@ public class PoolArenaTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public final void testDirectArenaMemoryCopy() {
+    public void testDirectArenaMemoryCopy() {
         PooledByteBuf<ByteBuffer> src =
                 (PooledByteBuf<ByteBuffer>) PooledByteBufAllocator.DEFAULT.directBuffer(512);
         PooledByteBuf<ByteBuffer> dst =
