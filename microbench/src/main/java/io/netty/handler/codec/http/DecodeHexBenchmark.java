@@ -30,9 +30,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -52,6 +50,7 @@ public class DecodeHexBenchmark extends AbstractMicrobenchmark {
     @Param({ "1", "10" })
     private int inputs;
     private char[][] hexDigits;
+    private static final long SEED = 1578675524L;
 
     @Setup
     public void init() {
@@ -59,26 +58,24 @@ public class DecodeHexBenchmark extends AbstractMicrobenchmark {
         hexDigits = new char[inputs][];
         hexDigits[0] = hexCh;
         if (inputs > 1) {
-            final Character[] characters = new Character[hexCh.length];
-            for (int i = 0; i < hexCh.length; i++) {
-                characters[i] = Character.valueOf(hexCh[i]);
-            }
-            final Random rnd = new Random();
+            final Random rnd = new Random(SEED);
             for (int i = 1; i < inputs; i++) {
-                hexDigits[i] = shuffle(characters, rnd);
+                hexDigits[i] = shuffle(Arrays.copyOf(hexCh, hexCh.length), rnd);
             }
         }
     }
 
-    private static char[] shuffle(Character[] characters, Random rnd) {
-        final ArrayList<Character> chars = new ArrayList<Character>(characters.length);
-        Collections.addAll(chars, characters);
-        Collections.shuffle(chars, rnd);
-        final char[] chs = new char[chars.size()];
-        for (int j = 0; j < chars.size(); j++) {
-            chs[j] = chars.get(j);
+    // https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
+    private static char[] shuffle(char[] chars, Random rnd) {
+        int index;
+        char tmp;
+        for (int i = chars.length - 1; i > 0; i--) {
+            index = rnd.nextInt(i + 1);
+            tmp = chars[index];
+            chars[index] = chars[i];
+            chars[i] = tmp;
         }
-        return chs;
+        return chars;
     }
 
     private int nextHexDigits() {
