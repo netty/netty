@@ -122,5 +122,8 @@ public class PoolArenaTest {
         dst.writeBytes(ByteBuffer.allocate(128));
         // Ensure internal ByteBuffer duplicate limit is properly reset (used in memoryCopy non-Unsafe case)
         dst.chunk.arena.memoryCopy(src.memory, 0, dst, 512);
+
+        src.release();
+        dst.release();
     }
 }
