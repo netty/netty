@@ -151,8 +151,9 @@ public abstract class AbstractSniHandler<T> extends ByteToMessageDecoder {
                                     select(ctx, extractSniHostname(handshakeBuffer, 0, handshakeLength));
                                     return;
                                 }
+                                break;
                             }
-                            break;
+                            // fall-through
                         default:
                             // not tls, ssl or application data, do not try sni
                             select(ctx, null);
