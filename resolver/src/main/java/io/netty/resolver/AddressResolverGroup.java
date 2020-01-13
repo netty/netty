@@ -59,29 +59,31 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
             throw new IllegalStateException("executor not accepting a task");
         }
 
-        AddressResolver<T> r;
-        synchronized (resolvers) {
-            r = resolvers.get(executor);
-            if (r == null) {
-                final AddressResolver<T> newResolver;
-                try {
-                    newResolver = newResolver(executor);
-                } catch (Exception e) {
-                    throw new IllegalStateException("failed to create a new resolver", e);
-                }
-
-                resolvers.put(executor, newResolver);
-                executor.terminationFuture().addListener(new FutureListener<Object>() {
-                    @Override
-                    public void operationComplete(Future<Object> future) throws Exception {
-                        synchronized (resolvers) {
-                            resolvers.remove(executor);
-                        }
-                        newResolver.close();
+        AddressResolver<T> r = resolvers.get(executor);
+        if (r == null) {
+            synchronized (resolvers) {
+                r = resolvers.get(executor);
+                if (r == null) {
+                    final AddressResolver<T> newResolver;
+                    try {
+                        newResolver = newResolver(executor);
+                    } catch (Exception e) {
+                        throw new IllegalStateException("failed to create a new resolver", e);
                     }
-                });
 
-                r = newResolver;
+                    resolvers.put(executor, newResolver);
+                    executor.terminationFuture().addListener(new FutureListener<Object>() {
+                        @Override
+                        public void operationComplete(Future<Object> future) throws Exception {
+                            synchronized (resolvers) {
+                                resolvers.remove(executor);
+                            }
+                            newResolver.close();
+                        }
+                    });
+
+                    r = newResolver;
+                }
             }
         }
 
