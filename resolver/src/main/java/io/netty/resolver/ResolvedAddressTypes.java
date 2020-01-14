@@ -15,12 +15,9 @@
  */
 package io.netty.resolver;
 
-import io.netty.util.internal.UnstableApi;
-
 /**
  * Defined resolved address types.
  */
-@UnstableApi
 public enum ResolvedAddressTypes {
     /**
      * Only resolve IPv4 addresses

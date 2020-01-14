@@ -18,7 +18,6 @@ package io.netty.resolver;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.SocketAddress;
 import java.util.Collections;
@@ -28,7 +27,6 @@ import java.util.List;
  * A {@link AddressResolver} that does not perform any resolution but always reports successful resolution.
  * This resolver is useful when name resolution is performed by a handler in a pipeline, such as a proxy handler.
  */
-@UnstableApi
 public class NoopAddressResolver extends AbstractAddressResolver<SocketAddress> {
 
     public NoopAddressResolver(EventExecutor executor) {

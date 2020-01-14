@@ -17,7 +17,6 @@ package io.netty.resolver;
 
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.Closeable;
 import java.net.SocketAddress;
@@ -27,7 +26,6 @@ import java.util.List;
 /**
  * Resolves a possibility unresolved {@link SocketAddress}.
  */
-@UnstableApi
 public interface AddressResolver<T extends SocketAddress> extends Closeable {
 
   /**

@@ -16,7 +16,6 @@
 package io.netty.resolver.dns;
 
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.UnstableApi;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -24,7 +23,6 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Utility methods related to {@link DnsServerAddressStreamProvider}.
  */
-@UnstableApi
 public final class DnsServerAddressStreamProviders {
     // We use 5 minutes which is the same as what OpenJDK is using in sun.net.dns.ResolverConfigurationImpl.
     private static final long REFRESH_INTERVAL = TimeUnit.MINUTES.toNanos(5);

@@ -16,14 +16,12 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 
 /**
  * A noop {@link AuthoritativeDnsServerCache} that actually never caches anything.
  */
-@UnstableApi
 public final class NoopAuthoritativeDnsServerCache implements AuthoritativeDnsServerCache {
     public static final NoopAuthoritativeDnsServerCache INSTANCE = new NoopAuthoritativeDnsServerCache();
 

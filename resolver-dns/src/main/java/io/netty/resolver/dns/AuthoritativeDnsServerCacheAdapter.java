@@ -17,7 +17,6 @@ package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecord;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -30,7 +29,6 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * {@link AuthoritativeDnsServerCache} implementation which delegates all operations to a wrapped {@link DnsCache}.
  * This implementation is only present to preserve a upgrade story.
  */
-@UnstableApi
 final class AuthoritativeDnsServerCacheAdapter implements AuthoritativeDnsServerCache {
 
     private static final DnsRecord[] EMPTY = new DnsRecord[0];
