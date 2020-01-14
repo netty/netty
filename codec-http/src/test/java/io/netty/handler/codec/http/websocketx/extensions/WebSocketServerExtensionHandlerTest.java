@@ -204,13 +204,15 @@ public class WebSocketServerExtensionHandlerTest {
         // initialize
         when(mainHandshakerMock.handshakeExtension(webSocketExtensionDataMatcher("main")))
                 .thenReturn(mainExtensionMock);
+        when(mainExtensionMock.newReponseData()).thenReturn(
+                new WebSocketExtensionData("main", Collections.<String, String>emptyMap()));
 
         // execute
         WebSocketServerExtensionHandler extensionHandler =
                 new WebSocketServerExtensionHandler(mainHandshakerMock);
         EmbeddedChannel ch = new EmbeddedChannel(extensionHandler);
 
-        HttpRequest req = newUpgradeRequest("unknown, unknown2");
+        HttpRequest req = newUpgradeRequest("main");
         ch.writeInbound(req);
 
         HttpResponse res = newUpgradeResponse(null);
@@ -221,5 +223,6 @@ public class WebSocketServerExtensionHandlerTest {
         // test
         assertNull(ch.readOutbound());
         assertNotNull(ch.pipeline().context(extensionHandler));
+        assertTrue(ch.finish());
     }
 }

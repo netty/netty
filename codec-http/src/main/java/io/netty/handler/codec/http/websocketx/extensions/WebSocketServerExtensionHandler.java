@@ -141,7 +141,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
                     @Override
                     public void operationComplete(ChannelFuture future) {
                         if (future.isSuccess()) {
-                            ctx.pipeline().remove(ctx.name());
+                            ctx.pipeline().remove(WebSocketServerExtensionHandler.this);
                         }
                     }
                 });
