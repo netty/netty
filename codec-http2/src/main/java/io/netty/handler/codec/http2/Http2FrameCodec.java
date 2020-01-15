@@ -385,8 +385,23 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
     private void writeHeadersFrame(
             final ChannelHandlerContext ctx, Http2HeadersFrame headersFrame, final ChannelPromise promise) {
+        int sid = headersFrame.stream().id();
+        if (isStreamIdValid(sid)) {
+            Http2Stream stream = connection().stream(sid);
+            // Check if the stream was already created in the past. If not it is fair to assume the user did
+            // provide the streamId explicitly. In this case let us just put a DefaultHttp2FrameStream in the map
+            // and write the headers.
+            // See https://github.com/netty/netty/issues/9903
+            if (stream == null) {
+                DefaultHttp2FrameStream s = new DefaultHttp2FrameStream();
+                s.id = sid;
+                Object old = frameStreamToInitializeMap.put(sid, s);
 
-        if (isStreamIdValid(headersFrame.stream().id())) {
+                // We should not re-use ids.
+                assert old == null;
+                writeBufferedHeaders0(sid, headersFrame, promise);
+                return;
+            }
             encoder().writeHeaders(ctx, headersFrame.stream().id(), headersFrame.headers(), headersFrame.padding(),
                     headersFrame.isEndStream(), promise);
         } else {
@@ -414,28 +429,34 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
             // We should not re-use ids.
             assert old == null;
-
-            encoder().writeHeaders(ctx, streamId, headersFrame.headers(), headersFrame.padding(),
-                    headersFrame.isEndStream(), promise);
-
-            if (!promise.isDone()) {
-                numBufferedStreams++;
-                // Clean up the stream being initialized if writing the headers fails and also
-                // decrement the number of buffered streams.
-                promise.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture channelFuture) {
-                        numBufferedStreams--;
-
-                        handleHeaderFuture(channelFuture, streamId);
-                    }
-                });
-            } else {
-                handleHeaderFuture(promise, streamId);
-            }
+            writeBufferedHeaders0(streamId, headersFrame, promise);
         }
     }
 
+    /**
+     * Write {@link Http2HeadersFrame}s that will also create the streamID as part of it.
+     */
+    private void writeBufferedHeaders0(final int streamId, Http2HeadersFrame headersFrame, ChannelPromise promise) {
+        encoder().writeHeaders(
+                ctx, streamId, headersFrame.headers(), headersFrame.padding(),
+                headersFrame.isEndStream(), promise);
+
+        if (!promise.isDone()) {
+            numBufferedStreams++;
+            // Clean up the stream being initialized if writing the headers fails and also
+            // decrement the number of buffered streams.
+            promise.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture channelFuture) {
+                    numBufferedStreams--;
+
+                    handleHeaderFuture(channelFuture, streamId);
+                }
+            });
+        } else {
+            handleHeaderFuture(promise, streamId);
+        }
+    }
     private void handleHeaderFuture(ChannelFuture channelFuture, int streamId) {
         if (!channelFuture.isSuccess()) {
             frameStreamToInitializeMap.remove(streamId);

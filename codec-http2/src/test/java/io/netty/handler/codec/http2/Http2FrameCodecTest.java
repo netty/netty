@@ -69,10 +69,8 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
-import static org.mockito.Mockito.anyShort;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.same;
@@ -591,6 +589,48 @@ public class Http2FrameCodecTest {
 
         listenerExecuted.syncUninterruptibly();
         assertTrue(listenerExecuted.isSuccess());
+    }
+
+    @Test(timeout = 5000)
+    public void newOutboundStreamWithProvidedStreamId() {
+        final Http2FrameStream stream = new Http2FrameStream() {
+            @Override
+            public int id() {
+                return 2;
+            }
+
+            @Override
+            public State state() {
+                return State.IDLE;
+            }
+        };
+
+        assertNotNull(stream);
+        assertTrue(isStreamIdValid(stream.id()));
+
+        final Promise<Void> listenerExecuted = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
+
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), false).stream(stream))
+                .addListener(new ChannelFutureListener() {
+                                 @Override
+                                 public void operationComplete(ChannelFuture future) {
+                                     assertTrue(future.isSuccess());
+                                     listenerExecuted.setSuccess(null);
+                                 }
+                             }
+                );
+        ByteBuf data = Unpooled.buffer().writeZero(100);
+        ChannelFuture f = channel.writeAndFlush(new DefaultHttp2DataFrame(data).stream(stream));
+        assertTrue(f.isSuccess());
+
+        listenerExecuted.syncUninterruptibly();
+
+        frameInboundWriter.writeInboundHeaders(stream.id(), request, 0, true);
+        Http2HeadersFrame inboundHeaders = inboundHandler.readInbound();
+        assertNotNull(inboundHeaders);
+        assertEquals(stream.id(), inboundHeaders.stream().id());
+        assertEquals(request, inboundHeaders.headers());
+        assertTrue(inboundHeaders.isEndStream());
     }
 
     @Test
