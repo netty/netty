@@ -137,4 +137,10 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
             recycler.releaseInputBuffer(input);
         }
     }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        encoder.close();
+        super.handlerRemoved(ctx);
+    }
 }

@@ -26,7 +26,6 @@ import io.netty.resolver.NameResolver;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -38,7 +37,6 @@ import static io.netty.util.internal.PlatformDependent.newConcurrentHashMap;
 /**
  * A {@link AddressResolverGroup} of {@link DnsNameResolver}s.
  */
-@UnstableApi
 public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddress> {
 
     private final DnsNameResolverBuilder dnsResolverBuilder;

@@ -334,8 +334,8 @@ public class SimpleChannelPoolTest {
         final SimpleChannelPool pool = new SimpleChannelPool(bootstrap, new CountingChannelPoolHandler());
         Channel ch1 = pool.acquire().syncUninterruptibly().getNow();
         Channel ch2 = pool.acquire().syncUninterruptibly().getNow();
-        pool.release(ch1);
-        pool.release(ch2);
+        pool.release(ch1).get(1, TimeUnit.SECONDS);
+        pool.release(ch2).get(1, TimeUnit.SECONDS);
 
         // Assert that returned channels are open before close
         assertTrue(ch1.isOpen());

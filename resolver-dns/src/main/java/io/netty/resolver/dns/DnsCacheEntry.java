@@ -15,14 +15,11 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.util.internal.UnstableApi;
-
 import java.net.InetAddress;
 
 /**
  * Represents the results from a previous DNS query which can be cached.
  */
-@UnstableApi
 public interface DnsCacheEntry {
     /**
      * Get the resolved address.

@@ -16,9 +16,7 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
-import io.netty.util.internal.UnstableApi;
 
-@UnstableApi
 public final class NoopDnsCnameCache implements DnsCnameCache {
 
     public static final NoopDnsCnameCache INSTANCE = new NoopDnsCnameCache();

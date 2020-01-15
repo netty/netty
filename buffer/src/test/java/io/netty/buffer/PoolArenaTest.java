@@ -20,6 +20,8 @@ import io.netty.util.internal.PlatformDependent;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.junit.Assume.assumeTrue;
+
 import java.nio.ByteBuffer;
 
 public class PoolArenaTest {
@@ -46,6 +48,7 @@ public class PoolArenaTest {
 
     @Test
     public void testDirectArenaOffsetCacheLine() throws Exception {
+        assumeTrue(PlatformDependent.hasUnsafe());
         int capacity = 5;
         int alignment = 128;
 
@@ -64,7 +67,7 @@ public class PoolArenaTest {
     }
 
     @Test
-    public final void testAllocationCounter() {
+    public void testAllocationCounter() {
         final PooledByteBufAllocator allocator = new PooledByteBufAllocator(
                 true,   // preferDirect
                 0,      // nHeapArena
@@ -106,5 +109,27 @@ public class PoolArenaTest {
         Assert.assertEquals(1, metric.numSmallAllocations());
         Assert.assertEquals(1, metric.numNormalDeallocations());
         Assert.assertEquals(1, metric.numNormalAllocations());
+    }
+
+    @Test
+    public void testDirectArenaMemoryCopy() {
+        ByteBuf src = PooledByteBufAllocator.DEFAULT.directBuffer(512);
+        ByteBuf dst = PooledByteBufAllocator.DEFAULT.directBuffer(512);
+
+        PooledByteBuf<ByteBuffer> pooledSrc = unwrapIfNeeded(src);
+        PooledByteBuf<ByteBuffer> pooledDst = unwrapIfNeeded(dst);
+
+        // This causes the internal reused ByteBuffer duplicate limit to be set to 128
+        pooledDst.writeBytes(ByteBuffer.allocate(128));
+        // Ensure internal ByteBuffer duplicate limit is properly reset (used in memoryCopy non-Unsafe case)
+        pooledDst.chunk.arena.memoryCopy(pooledSrc.memory, 0, pooledDst, 512);
+
+        src.release();
+        dst.release();
+    }
+
+    @SuppressWarnings("unchecked")
+    private PooledByteBuf<ByteBuffer> unwrapIfNeeded(ByteBuf buf) {
+        return (PooledByteBuf<ByteBuffer>) (buf instanceof PooledByteBuf ? buf : buf.unwrap());
     }
 }

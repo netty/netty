@@ -109,6 +109,7 @@ public class WebSocketServerHandshaker07 extends WebSocketServerHandshaker {
      * Upgrade: websocket
      * Connection: Upgrade
      * Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
+     * Sec-WebSocket-Origin: http://example.com
      * Sec-WebSocket-Protocol: chat, superchat
      * Sec-WebSocket-Version: 7
      * </pre>

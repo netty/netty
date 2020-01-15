@@ -15,8 +15,6 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.util.internal.UnstableApi;
-
 import java.net.InetSocketAddress;
 
 import static io.netty.resolver.dns.DnsServerAddresses.sequential;
@@ -24,7 +22,6 @@ import static io.netty.resolver.dns.DnsServerAddresses.sequential;
 /**
  * A {@link DnsServerAddressStreamProvider} which is backed by a sequential list of DNS servers.
  */
-@UnstableApi
 public final class SequentialDnsServerAddressStreamProvider extends UniSequentialDnsServerAddressStreamProvider {
     /**
      * Create a new instance.

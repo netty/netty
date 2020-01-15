@@ -17,7 +17,6 @@ package io.netty.resolver.dns;
 
 import io.netty.util.NetUtil;
 import io.netty.util.internal.SocketUtils;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -37,13 +36,13 @@ import java.util.regex.Pattern;
 import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.indexOfNonWhiteSpace;
+import static io.netty.util.internal.StringUtil.indexOfWhiteSpace;
 
 /**
  * Able to parse files such as <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a> and
  * <a href="https://developer.apple.com/legacy/library/documentation/Darwin/Reference/ManPages/man5/resolver.5.html">
  * /etc/resolver</a> to respect the system default domain servers.
  */
-@UnstableApi
 public final class UnixResolverDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(UnixResolverDnsServerAddressStreamProvider.class);
@@ -178,7 +177,20 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                                 throw new IllegalArgumentException("error parsing label " + NAMESERVER_ROW_LABEL +
                                         " in file " + etcResolverFile + ". value: " + line);
                             }
-                            String maybeIP = line.substring(i);
+                            String maybeIP;
+                            int x = indexOfWhiteSpace(line, i);
+                            if (x == -1) {
+                                maybeIP = line.substring(i);
+                            } else {
+                                // ignore comments
+                                int idx = indexOfNonWhiteSpace(line, x);
+                                if (idx == -1 || line.charAt(idx) != '#') {
+                                    throw new IllegalArgumentException("error parsing label " + NAMESERVER_ROW_LABEL +
+                                            " in file " + etcResolverFile + ". value: " + line);
+                                }
+                                maybeIP = line.substring(i, x);
+                            }
+
                             // There may be a port appended onto the IP address so we attempt to extract it.
                             if (!NetUtil.isValidIpV4Address(maybeIP) && !NetUtil.isValidIpV6Address(maybeIP)) {
                                 i = maybeIP.lastIndexOf('.');
