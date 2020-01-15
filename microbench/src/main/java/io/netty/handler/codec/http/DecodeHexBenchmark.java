@@ -18,7 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.ThreadLocalRandom;
+import org.jctools.util.Pow2;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.CompilerControl;
 import org.openjdk.jmh.annotations.CompilerControl.Mode;
@@ -47,14 +47,19 @@ public class DecodeHexBenchmark extends AbstractMicrobenchmark {
             "4DDeA5gDD1C6fE567E1b6gf0C40FEcDg",
     })
     private String hex;
-    @Param({ "1", "10" })
+    // Needs to specify a high number of inputs to allow the current strategy
+    // on nextHexDigits to produce enough branch-misses
+    @Param({ "2048" })
     private int inputs;
     private char[][] hexDigits;
     private static final long SEED = 1578675524L;
+    private long next;
 
     @Setup
     public void init() {
         final char[] hexCh = hex.toCharArray();
+        next = 0;
+        inputs = Pow2.roundToPowerOfTwo(inputs);
         hexDigits = new char[inputs][];
         hexDigits[0] = hexCh;
         if (inputs > 1) {
@@ -79,10 +84,9 @@ public class DecodeHexBenchmark extends AbstractMicrobenchmark {
     }
 
     private int nextHexDigits() {
-        // always use ThreadLocalRandom here:
-        // we want the inputs = 1 and inputs > 1 to be comparable
-        // and saving using ThreadLocalRandom have impacts!
-        return ThreadLocalRandom.current().nextInt(0, inputs);
+        final int idx = (int) (next & (inputs - 1));
+        next++;
+        return idx;
     }
 
     @Benchmark
