@@ -32,6 +32,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
@@ -178,6 +179,27 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
      */
     DefaultHttp2FrameStream newStream() {
         return new DefaultHttp2FrameStream();
+    }
+
+    /**
+     * Creates a new outbound/local stream.
+     */
+    DefaultHttp2FrameStream newStream(int streamId) throws Http2Exception {
+        assert ctx.executor().inEventLoop();
+        DefaultHttp2FrameStream stream = new DefaultHttp2FrameStream();
+        frameStreamToInitializeMap.put(streamId, stream);
+        try {
+            // We don't create the stream in a `halfClosed` state because if this is an initial
+            // HEADERS frame we don't want the connection state to signify that the HEADERS have
+            // been sent until after they have been encoded and placed in the outbound buffer.
+            // Therefore, we let the `LifeCycleManager` will take care of transitioning the state
+            // as appropriate.
+            connection().local().createStream(streamId, /*endOfStream*/ false);
+        } catch (Http2Exception cause) {
+            frameStreamToInitializeMap.remove(streamId);
+            throw cause;
+        }
+        return stream;
     }
 
     /**

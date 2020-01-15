@@ -75,6 +75,20 @@ public abstract class Http2ChannelDuplexHandler extends ChannelDuplexHandler {
     }
 
     /**
+     * Creates a new {@link Http2FrameStream} object.
+     *
+     * <p>This method is <em>not thread-safe</em>.
+     */
+    public final Http2FrameStream newStream(int streamId) throws Http2Exception {
+        Http2FrameCodec codec = frameCodec;
+        if (codec == null) {
+            throw new IllegalStateException(StringUtil.simpleClassName(Http2FrameCodec.class) + " not found." +
+                    " Has the handler been added to a pipeline?");
+        }
+        return codec.newStream(streamId);
+    }
+
+    /**
      * Allows to iterate over all currently active streams.
      *
      * <p>This method may only be called from the eventloop thread.
