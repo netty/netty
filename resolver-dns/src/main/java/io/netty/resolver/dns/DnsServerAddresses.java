@@ -17,7 +17,6 @@
 package io.netty.resolver.dns;
 
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -27,7 +26,6 @@ import java.util.List;
 /**
  * Provides an infinite sequence of DNS server addresses to {@link DnsNameResolver}.
  */
-@UnstableApi
 @SuppressWarnings("IteratorNextCanNotThrowNoSuchElementException")
 public abstract class DnsServerAddresses {
     /**

@@ -17,7 +17,6 @@ package io.netty.resolver.dns;
 
 import io.netty.util.NetUtil;
 import io.netty.util.internal.SocketUtils;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -44,7 +43,6 @@ import static io.netty.util.internal.StringUtil.indexOfWhiteSpace;
  * <a href="https://developer.apple.com/legacy/library/documentation/Darwin/Reference/ManPages/man5/resolver.5.html">
  * /etc/resolver</a> to respect the system default domain servers.
  */
-@UnstableApi
 public final class UnixResolverDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(UnixResolverDnsServerAddressStreamProvider.class);

@@ -16,14 +16,12 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 
 /**
  * Cache which stores the nameservers that should be used to resolve a specific hostname.
  */
-@UnstableApi
 public interface AuthoritativeDnsServerCache {
 
     /**

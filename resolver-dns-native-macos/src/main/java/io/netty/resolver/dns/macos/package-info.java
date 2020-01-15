@@ -17,7 +17,4 @@
 /**
  * MacOS specific nameserver resolution.
  */
-@UnstableApi
 package io.netty.resolver.dns.macos;
-
-import io.netty.util.internal.UnstableApi;

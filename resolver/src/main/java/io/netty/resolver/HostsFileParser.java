@@ -17,7 +17,6 @@ package io.netty.resolver;
 
 import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -43,7 +42,6 @@ import static io.netty.util.internal.ObjectUtil.*;
 /**
  * A parser for hosts files.
  */
-@UnstableApi
 public final class HostsFileParser {
 
     private static final String WINDOWS_DEFAULT_SYSTEM_ROOT = "C:\\Windows";

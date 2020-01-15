@@ -17,7 +17,6 @@ package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 import java.util.Collections;
@@ -30,7 +29,6 @@ import static io.netty.util.internal.ObjectUtil.*;
 /**
  * Default implementation of {@link AuthoritativeDnsServerCache}, backed by a {@link ConcurrentMap}.
  */
-@UnstableApi
 public class DefaultAuthoritativeDnsServerCache implements AuthoritativeDnsServerCache {
 
     private final int minTtl;

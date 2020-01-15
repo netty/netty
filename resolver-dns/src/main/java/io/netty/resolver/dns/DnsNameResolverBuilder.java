@@ -24,7 +24,6 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.concurrent.Future;
-import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,7 +36,6 @@ import static io.netty.util.internal.ObjectUtil.intValue;
 /**
  * A {@link DnsNameResolver} builder.
  */
-@UnstableApi
 public final class DnsNameResolverBuilder {
     private EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
