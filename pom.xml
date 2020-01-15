@@ -515,7 +515,7 @@
       <dependency>
         <groupId>org.jctools</groupId>
         <artifactId>jctools-core</artifactId>
-        <version>2.1.1</version>
+        <version>3.0.0</version>
       </dependency>
 
       <dependency>
@@ -743,6 +743,7 @@
             </ignoreMissingClassesByRegularExpressions>
             <excludes>
               <exclude>@io.netty.util.internal.UnstableApi</exclude>
+              <exclude>io.netty.util.internal.shaded</exclude>
             </excludes>
           </parameter>
           <skip>${skipJapicmp}</skip>
