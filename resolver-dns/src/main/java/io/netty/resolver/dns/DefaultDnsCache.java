@@ -18,7 +18,6 @@ package io.netty.resolver.dns;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.util.Collections;
@@ -32,7 +31,6 @@ import static java.util.Objects.requireNonNull;
  * Default implementation of {@link DnsCache}, backed by a {@link ConcurrentMap}.
  * If any additional {@link DnsRecord} is used, no caching takes place.
  */
-@UnstableApi
 public class DefaultDnsCache implements DnsCache {
 
     private final Cache<DefaultDnsCacheEntry> resolveCache = new Cache<DefaultDnsCacheEntry>() {

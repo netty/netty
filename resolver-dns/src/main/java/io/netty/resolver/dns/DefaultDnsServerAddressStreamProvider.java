@@ -18,7 +18,6 @@ package io.netty.resolver.dns;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -37,7 +36,6 @@ import static io.netty.resolver.dns.DnsServerAddresses.sequential;
  * <p>
  * This may use the JDK's blocking DNS resolution to bootstrap the default DNS server addresses.
  */
-@UnstableApi
 public final class DefaultDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(DefaultDnsServerAddressStreamProvider.class);

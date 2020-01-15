@@ -17,7 +17,4 @@
 /**
  * Resolves an arbitrary string that represents the name of an endpoint into an address.
  */
-@UnstableApi
 package io.netty.resolver;
-
-import io.netty.util.internal.UnstableApi;

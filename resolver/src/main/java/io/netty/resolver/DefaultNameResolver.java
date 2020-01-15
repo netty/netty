@@ -19,7 +19,6 @@ package io.netty.resolver;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -30,7 +29,6 @@ import java.util.List;
  * A {@link InetNameResolver} that resolves using JDK's built-in domain name lookup mechanism.
  * Note that this resolver performs a blocking name lookup from the caller thread.
  */
-@UnstableApi
 public class DefaultNameResolver extends InetNameResolver {
 
     public DefaultNameResolver(EventExecutor executor) {

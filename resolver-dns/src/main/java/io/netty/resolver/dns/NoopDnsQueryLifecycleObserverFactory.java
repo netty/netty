@@ -16,9 +16,7 @@
 package io.netty.resolver.dns;
 
 import io.netty.handler.codec.dns.DnsQuestion;
-import io.netty.util.internal.UnstableApi;
 
-@UnstableApi
 public final class NoopDnsQueryLifecycleObserverFactory implements DnsQueryLifecycleObserverFactory {
     public static final NoopDnsQueryLifecycleObserverFactory INSTANCE = new NoopDnsQueryLifecycleObserverFactory();
 

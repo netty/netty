@@ -15,15 +15,12 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.util.internal.UnstableApi;
-
 import java.util.List;
 
 /**
  * A {@link DnsServerAddressStreamProvider} which iterates through a collection of
  * {@link DnsServerAddressStreamProvider} until the first non-{@code null} result is found.
  */
-@UnstableApi
 public final class MultiDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
     private final DnsServerAddressStreamProvider[] providers;
 

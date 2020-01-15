@@ -16,14 +16,12 @@
 package io.netty.resolver.dns;
 
 import io.netty.handler.codec.dns.DnsQuestion;
-import io.netty.util.internal.UnstableApi;
 
 import static java.util.Objects.requireNonNull;
 
 /**
  * Combines two {@link DnsQueryLifecycleObserverFactory} into a single {@link DnsQueryLifecycleObserverFactory}.
  */
-@UnstableApi
 public final class BiDnsQueryLifecycleObserverFactory implements DnsQueryLifecycleObserverFactory {
     private final DnsQueryLifecycleObserverFactory a;
     private final DnsQueryLifecycleObserverFactory b;

@@ -16,12 +16,10 @@
 package io.netty.resolver.dns;
 
 import io.netty.handler.codec.dns.DnsQuestion;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Used to generate new instances of {@link DnsQueryLifecycleObserver}.
  */
-@UnstableApi
 public interface DnsQueryLifecycleObserverFactory {
     /**
      * Create a new instance of a {@link DnsQueryLifecycleObserver}. This will be called at the start of a new query.

@@ -17,7 +17,6 @@ package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
 import io.netty.util.AsciiString;
-import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
@@ -28,7 +27,6 @@ import static java.util.Objects.requireNonNull;
 /**
  * Default implementation of a {@link DnsCnameCache}.
  */
-@UnstableApi
 public final class DefaultDnsCnameCache implements DnsCnameCache {
     private final int minTtl;
     private final int maxTtl;
