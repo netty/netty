@@ -180,17 +180,21 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
         return count - 1;
     }
 
-    public StringBuilder stringBuilder() {
+    public StringBuilder stringBuilder(int initSize) {
         StringBuilder sb = stringBuilder;
         if (sb == null) {
-            return stringBuilder = new StringBuilder(STRING_BUILDER_INITIAL_SIZE);
+            return stringBuilder = new StringBuilder(initSize);
         }
         if (sb.capacity() > STRING_BUILDER_MAX_SIZE) {
-            sb.setLength(STRING_BUILDER_INITIAL_SIZE);
+            sb.setLength(initSize);
             sb.trimToSize();
         }
         sb.setLength(0);
         return sb;
+    }
+
+    public StringBuilder stringBuilder() {
+        return stringBuilder(STRING_BUILDER_INITIAL_SIZE);
     }
 
     public Map<Charset, CharsetEncoder> charsetEncoderCache() {
