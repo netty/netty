@@ -1,71 +1,177 @@
 /*
-* Copyright 2020 The Netty Project
-*
-* The Netty Project licenses this file to you under the Apache License,
-* version 2.0 (the "License"); you may not use this file except in compliance
-* with the License. You may obtain a copy of the License at:
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-* WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-* License for the specific language governing permissions and limitations
-* under the License.
-*/
+ * Copyright 2020 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.microbench.search;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.buffer.search.MultiSearchProcessorFactory;
 import io.netty.buffer.search.SearchProcessorFactory;
+import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.TearDown;
+import org.openjdk.jmh.annotations.Warmup;
 
-public class SearchBenchmark extends AbstractSearchMicrobenchmark {
+import java.util.Arrays;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
-    public enum Algorithm {
-        KNUTH_MORRIS_PRATT {
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
+@Warmup(iterations = 5)
+@Measurement(iterations = 5)
+@Fork(1)
+public class SearchBenchmark extends AbstractMicrobenchmark {
+
+    private static final long SEED = 123;
+
+    public enum ByteBufType {
+        HEAP {
             @Override
-            SearchProcessorFactory newFactory(byte[] needle) {
-                return SearchProcessorFactory.newKmpSearchProcessorFactory(needle);
+            ByteBuf newBuffer(byte[] bytes) {
+                return Unpooled.wrappedBuffer(bytes, 0, bytes.length);
             }
         },
-        SHIFTING_BIT_MASK {
+        COMPOSITE {
             @Override
-            SearchProcessorFactory newFactory(byte[] needle) {
-                return SearchProcessorFactory.newShiftingBitMaskSearchProcessorFactory(needle);
+            ByteBuf newBuffer(byte[] bytes) {
+                CompositeByteBuf buf = Unpooled.compositeBuffer();
+                int length = bytes.length;
+                int offset = 0;
+                int capacity = length / 8; // 8 buffers per composite
+
+                while (length > 0) {
+                    buf.addComponent(true, Unpooled.wrappedBuffer(bytes, offset, Math.min(length, capacity)));
+                    length -= capacity;
+                    offset += capacity;
+                }
+                return buf;
             }
         },
-        AHO_CORASIC {
+        DIRECT {
             @Override
-            SearchProcessorFactory newFactory(byte[] needle) {
-                return MultiSearchProcessorFactory.newAhoCorasicSearchProcessorFactory(needle);
+            ByteBuf newBuffer(byte[] bytes) {
+                return Unpooled.directBuffer(bytes.length).writeBytes(bytes);
             }
         };
-        abstract SearchProcessorFactory newFactory(byte[] needle);
+        abstract ByteBuf newBuffer(byte[] bytes);
+    }
+
+    public enum Input {
+        RANDOM_256B {
+            @Override
+            byte[] getNeedle() {
+                return new byte[] { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h' };
+            }
+            @Override
+            byte[] getHaystack() {
+                return randomBytes(256);
+            }
+        },
+        RANDOM_2KB {
+            @Override
+            byte[] getNeedle() {
+                return new byte[] { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h' };
+            }
+            @Override
+            byte[] getHaystack() {
+                return randomBytes(2048);
+            }
+        },
+        WORST_CASE {
+            @Override
+            byte[] getNeedle() {
+                byte[] needle = new byte[64];
+                Arrays.fill(needle, (byte) 'a');
+                needle[needle.length - 1] = 'b';
+                return needle;
+            }
+            @Override
+            byte[] getHaystack() {
+                byte[] haystack = new byte[256];
+                Arrays.fill(haystack, (byte) 'a');
+                return haystack;
+            }
+        };
+
+        abstract byte[] getNeedle();
+        abstract byte[] getHaystack();
+
+        private static byte[] randomBytes(int size) {
+            byte[] bytes = new byte[size];
+            Random rnd = new Random(SEED);
+            for (int i = 0; i < size; i++) {
+                bytes[i] = (byte) (' ' + rnd.nextInt(128 - ' '));
+            }
+            return bytes;
+        }
     }
 
     @Param
-    public Algorithm algorithm;
+    public Input input;
 
-    private SearchProcessorFactory http1SearchProcessorFactory;
-    private SearchProcessorFactory worstCaseSearchProcessorFactory;
+    @Param
+    public ByteBufType bufferType;
+
+    private ByteBuf needle, haystack;
+    private byte[] needleBytes, haystackBytes;
+    private SearchProcessorFactory kmpFactory, shiftingBitMaskFactory, ahoCorasicFactory;
 
     @Setup
     public void setup() {
-        super.setup();
-        http1SearchProcessorFactory = algorithm.newFactory(http1Bytes);
-        worstCaseSearchProcessorFactory = algorithm.newFactory(worstCaseBytes);
+        needleBytes = input.getNeedle();
+        haystackBytes = input.getHaystack();
+
+        needle = Unpooled.wrappedBuffer(needleBytes);
+        haystack = bufferType.newBuffer(haystackBytes);
+
+        kmpFactory = SearchProcessorFactory.newKmpSearchProcessorFactory(needleBytes);
+        shiftingBitMaskFactory = SearchProcessorFactory.newShiftingBitMaskSearchProcessorFactory(needleBytes);
+        ahoCorasicFactory = MultiSearchProcessorFactory.newAhoCorasicSearchProcessorFactory(needleBytes);
+    }
+
+    @TearDown
+    public void teardown() {
+        needle.release();
+        haystack.release();
     }
 
     @Benchmark
-    public void http1Search() {
-        haystack.forEachByte(http1SearchProcessorFactory.newSearchProcessor());
+    public int indexOf() {
+        return ByteBufUtil.indexOf(needle, haystack);
     }
 
     @Benchmark
-    public void worstCaseSearch() {
-        haystack.forEachByte(worstCaseSearchProcessorFactory.newSearchProcessor());
+    public int kmp() {
+        return haystack.forEachByte(kmpFactory.newSearchProcessor());
+    }
+
+    @Benchmark
+    public int shiftingBitMask() {
+        return haystack.forEachByte(shiftingBitMaskFactory.newSearchProcessor());
+    }
+
+    @Benchmark
+    public int ahoCorasic() {
+        return haystack.forEachByte(ahoCorasicFactory.newSearchProcessor());
     }
 
 }
