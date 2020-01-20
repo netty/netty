@@ -23,6 +23,8 @@ import io.netty.buffer.search.MultiSearchProcessorFactory;
 import io.netty.buffer.search.SearchProcessorFactory;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.CompilerControl;
+import org.openjdk.jmh.annotations.CompilerControl.Mode;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
@@ -78,51 +80,62 @@ public class SearchBenchmark extends AbstractMicrobenchmark {
     public enum Input {
         RANDOM_256B {
             @Override
-            byte[] getNeedle() {
+            byte[] getNeedle(Random rnd) {
                 return new byte[] { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h' };
             }
             @Override
-            byte[] getHaystack() {
-                return randomBytes(256);
+            byte[] getHaystack(Random rnd) {
+                return randomBytes(rnd, 256, ' ', 127);
             }
         },
         RANDOM_2KB {
             @Override
-            byte[] getNeedle() {
+            byte[] getNeedle(Random rnd) {
                 return new byte[] { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h' };
             }
             @Override
-            byte[] getHaystack() {
-                return randomBytes(2048);
+            byte[] getHaystack(Random rnd) {
+                return randomBytes(rnd, 2048, ' ', 127);
+            }
+        },
+        PREDICTABLE {
+            @Override
+            byte[] getNeedle(Random rnd) {
+                return new byte[64]; // 00...00
+            }
+            @Override
+            byte[] getHaystack(Random rnd) {
+                return randomBytes(rnd, 2048, 1, 255);
+            }
+        },
+        UNPREDICTABLE {
+            @Override
+            byte[] getNeedle(Random rnd) {
+                return randomBytes(rnd, 64, 0, 1);
+            }
+            @Override
+            byte[] getHaystack(Random rnd) {
+                return randomBytes(rnd, 2048, 0, 1);
             }
         },
         WORST_CASE {
             @Override
-            byte[] getNeedle() {
+            byte[] getNeedle(Random rnd) {
                 byte[] needle = new byte[64];
                 Arrays.fill(needle, (byte) 'a');
                 needle[needle.length - 1] = 'b';
                 return needle;
             }
             @Override
-            byte[] getHaystack() {
+            byte[] getHaystack(Random rnd) {
                 byte[] haystack = new byte[256];
                 Arrays.fill(haystack, (byte) 'a');
                 return haystack;
             }
         };
 
-        abstract byte[] getNeedle();
-        abstract byte[] getHaystack();
-
-        private static byte[] randomBytes(int size) {
-            byte[] bytes = new byte[size];
-            Random rnd = new Random(SEED);
-            for (int i = 0; i < size; i++) {
-                bytes[i] = (byte) (' ' + rnd.nextInt(128 - ' '));
-            }
-            return bytes;
-        }
+        abstract byte[] getNeedle(Random rnd);
+        abstract byte[] getHaystack(Random rnd);
     }
 
     @Param
@@ -131,14 +144,17 @@ public class SearchBenchmark extends AbstractMicrobenchmark {
     @Param
     public ByteBufType bufferType;
 
+    private Random rnd;
     private ByteBuf needle, haystack;
     private byte[] needleBytes, haystackBytes;
     private SearchProcessorFactory kmpFactory, shiftingBitMaskFactory, ahoCorasicFactory;
 
     @Setup
     public void setup() {
-        needleBytes = input.getNeedle();
-        haystackBytes = input.getHaystack();
+        rnd = new Random(SEED);
+
+        needleBytes = input.getNeedle(rnd);
+        haystackBytes = input.getHaystack(rnd);
 
         needle = Unpooled.wrappedBuffer(needleBytes);
         haystack = bufferType.newBuffer(haystackBytes);
@@ -155,23 +171,35 @@ public class SearchBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
+    @CompilerControl(Mode.DONT_INLINE)
     public int indexOf() {
         return ByteBufUtil.indexOf(needle, haystack);
     }
 
     @Benchmark
+    @CompilerControl(Mode.DONT_INLINE)
     public int kmp() {
         return haystack.forEachByte(kmpFactory.newSearchProcessor());
     }
 
     @Benchmark
+    @CompilerControl(Mode.DONT_INLINE)
     public int shiftingBitMask() {
         return haystack.forEachByte(shiftingBitMaskFactory.newSearchProcessor());
     }
 
     @Benchmark
+    @CompilerControl(Mode.DONT_INLINE)
     public int ahoCorasic() {
         return haystack.forEachByte(ahoCorasicFactory.newSearchProcessor());
+    }
+
+    private static byte[] randomBytes(Random rnd, int size, int from, int to) {
+        byte[] bytes = new byte[size];
+        for (int i = 0; i < size; i++) {
+            bytes[i] = (byte) (from + rnd.nextInt(to - from + 1));
+        }
+        return bytes;
     }
 
 }
