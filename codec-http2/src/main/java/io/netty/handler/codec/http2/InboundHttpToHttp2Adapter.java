@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpScheme;
@@ -26,7 +26,7 @@ import io.netty.util.internal.UnstableApi;
  * Translates HTTP/1.x object reads into HTTP/2 frames.
  */
 @UnstableApi
-public class InboundHttpToHttp2Adapter implements ChannelInboundHandler {
+public class InboundHttpToHttp2Adapter implements ChannelHandler {
     private final Http2Connection connection;
     private final Http2FrameListener listener;
 

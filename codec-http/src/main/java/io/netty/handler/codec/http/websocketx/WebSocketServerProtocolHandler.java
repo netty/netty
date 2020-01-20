@@ -20,7 +20,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -47,7 +46,7 @@ import static io.netty.handler.codec.http.websocketx.WebSocketServerProtocolConf
  * to the <tt>io.netty.example.http.websocketx.server.WebSocketServer</tt> example.
  *
  * To know once a handshake was done you can intercept the
- * {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was instance
+ * {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)} and check if the event was instance
  * of {@link HandshakeComplete}, the event will contain extra information about the handshake such as the request and
  * selected subprotocol.
  */

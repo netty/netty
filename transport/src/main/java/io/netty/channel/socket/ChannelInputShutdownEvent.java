@@ -16,11 +16,11 @@
 package io.netty.channel.socket;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelHandler;
 
 /**
  * Special event which will be fired and passed to the
- * {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)} methods once the input of
+ * {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)} methods once the input of
  * a {@link SocketChannel} was shutdown and the {@link SocketChannelConfig#isAllowHalfClosure()} method returns
  * {@code true}.
  */

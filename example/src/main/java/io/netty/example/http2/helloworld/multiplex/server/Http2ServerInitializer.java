@@ -16,8 +16,8 @@
 
 package io.netty.example.http2.helloworld.multiplex.server;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -110,7 +110,7 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
     /**
      * Class that logs any User Events triggered on this channel.
      */
-    private static class UserEventLogger implements ChannelInboundHandler {
+    private static class UserEventLogger implements ChannelHandler {
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
             System.out.println("User Event Triggered: " + evt);

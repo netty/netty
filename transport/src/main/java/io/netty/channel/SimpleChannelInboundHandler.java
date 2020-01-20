@@ -19,7 +19,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.TypeParameterMatcher;
 
 /**
- * {@link ChannelInboundHandler} which allows to explicit only handle a specific type of messages.
+ * {@link ChannelHandler} which allows to explicit only handle a specific type of messages.
  *
  * For example here is an implementation which only handle {@link String} messages.
  *
@@ -39,7 +39,7 @@ import io.netty.util.internal.TypeParameterMatcher;
  * {@link ReferenceCountUtil#release(Object)}. In this case you may need to use
  * {@link ReferenceCountUtil#retain(Object)} if you pass the object to the next handler in the {@link ChannelPipeline}.
  */
-public abstract class SimpleChannelInboundHandler<I> implements ChannelInboundHandler {
+public abstract class SimpleChannelInboundHandler<I> implements ChannelHandler {
 
     private final TypeParameterMatcher matcher;
     private final boolean autoRelease;
@@ -83,7 +83,7 @@ public abstract class SimpleChannelInboundHandler<I> implements ChannelInboundHa
 
     /**
      * Returns {@code true} if the given message should be handled. If {@code false} it will be passed to the next
-     * {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
+     * {@link ChannelHandler} in the {@link ChannelPipeline}.
      */
     public boolean acceptInboundMessage(Object msg) throws Exception {
         return matcher.match(msg);

@@ -17,7 +17,6 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import org.junit.Test;
 

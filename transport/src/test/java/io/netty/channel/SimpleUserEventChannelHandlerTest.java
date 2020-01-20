@@ -85,7 +85,7 @@ public class SimpleUserEventChannelHandlerTest {
         }
     }
 
-    static final class AllEventCatcher implements ChannelInboundHandler {
+    static final class AllEventCatcher implements ChannelHandler {
 
         public List<Object> caughtEvents;
 

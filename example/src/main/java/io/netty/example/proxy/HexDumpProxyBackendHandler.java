@@ -17,10 +17,10 @@ package io.netty.example.proxy;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 
-public class HexDumpProxyBackendHandler implements ChannelInboundHandler {
+public class HexDumpProxyBackendHandler implements ChannelHandler {
 
     private final Channel inboundChannel;
 

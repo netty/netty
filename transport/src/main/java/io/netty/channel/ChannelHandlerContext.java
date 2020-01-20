@@ -82,7 +82,7 @@ import java.nio.channels.Channels;
  * as how many times it is added to pipelines, regardless if it is added to the
  * same pipeline multiple times or added to different pipelines multiple times:
  * <pre>
- * public class FactorialHandler implements {@link ChannelInboundHandler} {
+ * public class FactorialHandler implements {@link ChannelHandler} {
  *
  *   private final {@link AttributeKey}&lt;{@link Integer}&gt; counter = {@link AttributeKey}.valueOf("counter");
  *

@@ -24,7 +24,7 @@ import java.util.Map.Entry;
 public interface MaxBytesRecvByteBufAllocator extends RecvByteBufAllocator {
     /**
      * Returns the maximum number of bytes to read per read loop.
-     * a {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object) channelRead()} event.
+     * a {@link ChannelHandler#channelRead(ChannelHandlerContext, Object) channelRead()} event.
      * If this value is greater than 1, an event loop might attempt to read multiple times to procure bytes.
      */
     int maxBytesPerRead();
@@ -37,7 +37,7 @@ public interface MaxBytesRecvByteBufAllocator extends RecvByteBufAllocator {
 
     /**
      * Returns the maximum number of bytes to read per individual read operation.
-     * a {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object) channelRead()} event.
+     * a {@link ChannelHandler#channelRead(ChannelHandlerContext, Object) channelRead()} event.
      * If this value is greater than 1, an event loop might attempt to read multiple times to procure bytes.
      */
     int maxBytesPerIndividualRead();

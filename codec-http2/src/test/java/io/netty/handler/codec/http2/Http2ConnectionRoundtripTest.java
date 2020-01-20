@@ -24,7 +24,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -520,7 +519,7 @@ public class Http2ConnectionRoundtripTest {
         assertTrue(requestLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
 
         // Add a handler that will immediately throw an exception.
-        clientChannel.pipeline().addFirst(new ChannelHandlerAdapter() {
+        clientChannel.pipeline().addFirst(new ChannelHandler() {
             @Override
             public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                 throw Http2Exception.connectionError(PROTOCOL_ERROR, "Fake Exception");
@@ -702,7 +701,7 @@ public class Http2ConnectionRoundtripTest {
         assertTrue(requestLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
 
         // Add a handler that will immediately throw an exception.
-        clientChannel.pipeline().addFirst(new ChannelHandlerAdapter() {
+        clientChannel.pipeline().addFirst(new ChannelHandler() {
             @Override
             public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                 throw new RuntimeException("Fake Exception");

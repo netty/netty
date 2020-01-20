@@ -15,8 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 import java.util.Collection;
@@ -58,7 +58,7 @@ public class HttpClientUpgradeHandlerTest {
         }
     }
 
-    private static final class UserEventCatcher implements ChannelInboundHandler {
+    private static final class UserEventCatcher implements ChannelHandler {
         private Object evt;
 
         public Object getUserEvent() {

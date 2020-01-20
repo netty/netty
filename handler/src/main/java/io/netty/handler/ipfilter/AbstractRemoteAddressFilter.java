@@ -18,8 +18,8 @@ package io.netty.handler.ipfilter;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 
 import java.net.SocketAddress;
 
@@ -35,7 +35,7 @@ import java.net.SocketAddress;
  * flexibility to respond to rejected (denied) connections. If you do not want to send a response, just have it return
  * null.  Take a look at {@link RuleBasedIpFilter} for details.
  */
-public abstract class AbstractRemoteAddressFilter<T extends SocketAddress> implements ChannelInboundHandler {
+public abstract class AbstractRemoteAddressFilter<T extends SocketAddress> implements ChannelHandler {
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {

@@ -17,8 +17,8 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Send {@link CloseWebSocketFrame} message on channel close, if close frame was not sent before.
  */
-final class WebSocketCloseFrameHandler extends ChannelOutboundHandlerAdapter {
+final class WebSocketCloseFrameHandler implements ChannelHandler {
     private final WebSocketCloseStatus closeStatus;
     private final long forceCloseTimeoutMillis;
     private ChannelPromise closeSent;
@@ -70,7 +70,7 @@ final class WebSocketCloseFrameHandler extends ChannelOutboundHandlerAdapter {
             promise = promise.unvoid();
             closeSent = promise;
         }
-        super.write(ctx, msg, promise);
+        ctx.write(msg, promise);
     }
 
     private void applyCloseSentTimeout(ChannelHandlerContext ctx) {

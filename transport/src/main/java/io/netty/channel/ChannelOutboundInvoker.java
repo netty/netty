@@ -179,8 +179,8 @@ public interface ChannelOutboundInvoker {
      * The given {@link ChannelPromise} will be notified.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#close(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
+     * {@link ChannelHandler#close(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture close(ChannelPromise promise);
@@ -193,8 +193,8 @@ public interface ChannelOutboundInvoker {
      * The given {@link ChannelPromise} will be notified.
      * <p>
      * This will result in having the
-     * {@link ChannelOutboundHandler#register(ChannelHandlerContext, ChannelPromise)}
-     * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
+     * {@link ChannelHandler#register(ChannelHandlerContext, ChannelPromise)}
+     * method called of the next {@link ChannelHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
     ChannelFuture register(ChannelPromise promise);
