@@ -20,9 +20,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.NetUtil;
@@ -202,7 +200,7 @@ public class EpollReuseAddrTest {
     }
 
     @ChannelHandler.Sharable
-    private static class ServerSocketTestHandler implements ChannelInboundHandler {
+    private static class ServerSocketTestHandler implements ChannelHandler {
         private final AtomicBoolean accepted;
 
         ServerSocketTestHandler(AtomicBoolean accepted) {
@@ -217,7 +215,7 @@ public class EpollReuseAddrTest {
     }
 
     @ChannelHandler.Sharable
-    private static class DatagramSocketTestHandler implements ChannelInboundHandler {
+    private static class DatagramSocketTestHandler implements ChannelHandler {
         private final AtomicBoolean received;
 
         DatagramSocketTestHandler(AtomicBoolean received) {
@@ -232,5 +230,5 @@ public class EpollReuseAddrTest {
     }
 
     @ChannelHandler.Sharable
-    private static final class DummyHandler extends ChannelHandlerAdapter { }
+    private static final class DummyHandler implements ChannelHandler { }
 }

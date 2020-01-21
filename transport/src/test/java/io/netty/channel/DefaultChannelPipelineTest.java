@@ -146,7 +146,7 @@ public class DefaultChannelPipelineTest {
         assertTrue(handler.called);
     }
 
-    private static final class StringInboundHandler implements ChannelInboundHandler {
+    private static final class StringInboundHandler implements ChannelHandler {
         boolean called;
 
         @Override
@@ -946,7 +946,7 @@ public class DefaultChannelPipelineTest {
         EmbeddedChannel channel = new EmbeddedChannel(true);
         ChannelPipeline pipeline = channel.pipeline();
 
-        final class SkipHandler implements ChannelInboundHandler, ChannelOutboundHandler {
+        final class SkipHandler implements ChannelHandler {
             private int state = 2;
             private Error errorRef;
 
@@ -1100,7 +1100,7 @@ public class DefaultChannelPipelineTest {
             }
         }
 
-        final class OutboundCalledHandler implements ChannelOutboundHandler {
+        final class OutboundCalledHandler implements ChannelHandler {
             private static final int MASK_BIND = 1;
             private static final int MASK_CONNECT = 1 << 1;
             private static final int MASK_DISCONNECT = 1 << 2;
@@ -1197,7 +1197,7 @@ public class DefaultChannelPipelineTest {
             }
         }
 
-        final class InboundCalledHandler implements ChannelInboundHandler {
+        final class InboundCalledHandler implements ChannelHandler {
 
             private static final int MASK_CHANNEL_REGISTER = 1;
             private static final int MASK_CHANNEL_UNREGISTER = 1 << 1;
@@ -1463,7 +1463,7 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    private static final class CheckExceptionHandler implements ChannelInboundHandler {
+    private static final class CheckExceptionHandler implements ChannelHandler {
         private final Throwable expected;
         private final Promise<Void> promise;
 
@@ -1492,7 +1492,7 @@ public class DefaultChannelPipelineTest {
         fail("handler was not one of the expected handlers");
     }
 
-    private static final class CheckOrderHandler implements ChannelInboundHandler {
+    private static final class CheckOrderHandler implements ChannelHandler {
         private final Queue<CheckOrderHandler> addedQueue;
         private final Queue<CheckOrderHandler> removedQueue;
         private final AtomicReference<Throwable> error = new AtomicReference<>();

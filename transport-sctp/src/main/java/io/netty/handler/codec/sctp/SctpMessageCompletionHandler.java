@@ -19,7 +19,7 @@ package io.netty.handler.codec.sctp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.sctp.SctpMessage;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
@@ -29,7 +29,7 @@ import java.util.Map;
 /**
  * {@link MessageToMessageDecoder} which will take care of handle fragmented {@link SctpMessage}s, so
  * only <strong>complete</strong> {@link SctpMessage}s will be forwarded to the next
- * {@link ChannelInboundHandler}.
+ * {@link ChannelHandler}.
  */
 public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMessage> {
     private final Map<Integer, ByteBuf> fragments = new HashMap<>();

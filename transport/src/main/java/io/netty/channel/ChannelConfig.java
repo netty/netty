@@ -125,7 +125,7 @@ public interface ChannelConfig {
      * {@link MaxMessagesRecvByteBufAllocator#maxMessagesPerRead()}.
      * <p>
      * Returns the maximum number of messages to read per read loop.
-     * a {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object) channelRead()} event.
+     * a {@link ChannelHandler#channelRead(ChannelHandlerContext, Object) channelRead()} event.
      * If this value is greater than 1, an event loop might attempt to read multiple times to procure multiple messages.
      */
     @Deprecated

@@ -15,8 +15,8 @@
  */
 package io.netty.example.objectecho;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +26,7 @@ import java.util.List;
  * ping-pong traffic between the object echo client and server by sending the
  * first message to the server.
  */
-public class ObjectEchoClientHandler implements ChannelInboundHandler {
+public class ObjectEchoClientHandler implements ChannelHandler {
 
     private final List<Integer> firstMessage;
 

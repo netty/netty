@@ -24,9 +24,7 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.buffer.UnpooledHeapByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.BlockingQueue;
@@ -433,13 +431,13 @@ public class ByteToMessageDecoderTest {
 
     @Test
     public void testDoesNotOverRead() {
-        class ReadInterceptingHandler extends ChannelOutboundHandlerAdapter {
+        class ReadInterceptingHandler implements ChannelHandler {
             private int readsTriggered;
 
             @Override
-            public void read(ChannelHandlerContext ctx) throws Exception {
+            public void read(ChannelHandlerContext ctx) {
                 readsTriggered++;
-                super.read(ctx);
+                ctx.read();
             }
         }
         ReadInterceptingHandler interceptor = new ReadInterceptingHandler();

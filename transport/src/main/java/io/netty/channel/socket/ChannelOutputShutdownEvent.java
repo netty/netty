@@ -16,12 +16,12 @@
 package io.netty.channel.socket;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.util.internal.UnstableApi;
 
 /**
  * Special event which will be fired and passed to the
- * {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)} methods once the output of
+ * {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)} methods once the output of
  * a {@link SocketChannel} was shutdown.
  */
 @UnstableApi

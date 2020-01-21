@@ -20,8 +20,8 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -2802,7 +2802,7 @@ public class DnsNameResolverTest {
             }
             resolver = builder.build();
             if (truncatedBecauseOfMtu) {
-                resolver.ch.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+                resolver.ch.pipeline().addFirst(new ChannelHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         if (msg instanceof DatagramPacket) {

@@ -23,7 +23,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -107,7 +106,7 @@ public class SslHandlerTest {
                 writeLatch.countDown();
             }
         };
-        EmbeddedChannel ch = new EmbeddedChannel(new ChannelDuplexHandler() {
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelHandler() {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 if (msg instanceof ByteBuf) {

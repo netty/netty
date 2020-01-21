@@ -251,7 +251,7 @@ public class ChannelInitializerTest {
         }
     }
 
-    private static final class InspectableHandler extends ChannelDuplexHandler {
+    private static final class InspectableHandler implements ChannelHandler {
         final AtomicInteger channelRegisteredCount = new AtomicInteger(0);
 
         @Override

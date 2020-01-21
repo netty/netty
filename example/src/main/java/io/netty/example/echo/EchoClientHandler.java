@@ -17,15 +17,15 @@ package io.netty.example.echo;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 
 /**
  * Handler implementation for the echo client.  It initiates the ping-pong
  * traffic between the echo client and server by sending the first message to
  * the server.
  */
-public class EchoClientHandler implements ChannelInboundHandler {
+public class EchoClientHandler implements ChannelHandler {
 
     private final ByteBuf firstMessage;
 

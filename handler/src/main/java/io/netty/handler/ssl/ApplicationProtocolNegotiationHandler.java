@@ -18,8 +18,8 @@ package io.netty.handler.ssl;
 import static java.util.Objects.requireNonNull;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.internal.logging.InternalLogger;
@@ -60,7 +60,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  * }
  * </pre>
  */
-public abstract class ApplicationProtocolNegotiationHandler implements ChannelInboundHandler {
+public abstract class ApplicationProtocolNegotiationHandler implements ChannelHandler {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(ApplicationProtocolNegotiationHandler.class);

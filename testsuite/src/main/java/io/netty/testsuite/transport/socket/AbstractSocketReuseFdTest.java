@@ -22,8 +22,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.testsuite.transport.TestsuitePermutation;
@@ -110,7 +110,7 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
         }
     }
 
-    static class ReuseFdHandler extends ChannelInboundHandlerAdapter {
+    static class ReuseFdHandler implements ChannelHandler {
         private static final String EXPECTED_PAYLOAD = "payload";
 
         private final Promise<Void> donePromise;

@@ -17,7 +17,6 @@ package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.MultithreadEventLoopGroup;
@@ -47,7 +46,7 @@ public class ServerBootstrapTest {
             sb.channel(LocalServerChannel.class)
               .group(group)
               .childHandler(new ChannelHandler() { })
-              .handler(new ChannelHandlerAdapter() {
+              .handler(new ChannelHandler() {
                   @Override
                   public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                       try {

@@ -22,7 +22,7 @@ import javax.net.ssl.SSLSession;
 import javax.security.cert.X509Certificate;
 
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.nio.NioHandler;
 import org.bouncycastle.asn1.ocsp.OCSPResponseStatus;
@@ -153,7 +153,7 @@ public class OcspClientExample {
         };
     }
 
-    private static class HttpClientHandler implements ChannelInboundHandler {
+    private static class HttpClientHandler implements ChannelHandler {
 
         private final String host;
 

@@ -54,7 +54,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private static final FastThreadLocal<Map<Class<?>, String>> nameCaches =
             new FastThreadLocal<Map<Class<?>, String>>() {
         @Override
-        protected Map<Class<?>, String> initialValue() throws Exception {
+        protected Map<Class<?>, String> initialValue() {
             return new WeakHashMap<>();
         }
     };
@@ -1011,7 +1011,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     /**
      * Called once a {@link Throwable} hit the end of the {@link ChannelPipeline} without been handled by the user
-     * in {@link ChannelInboundHandler#exceptionCaught(ChannelHandlerContext, Throwable)}.
+     * in {@link ChannelHandler#exceptionCaught(ChannelHandlerContext, Throwable)}.
      */
     protected void onUnhandledInboundException(Throwable cause) {
         try {
@@ -1025,14 +1025,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     /**
-     * Called once the {@link ChannelInboundHandler#channelActive(ChannelHandlerContext)}event hit
+     * Called once the {@link ChannelHandler#channelActive(ChannelHandlerContext)}event hit
      * the end of the {@link ChannelPipeline}.
      */
     protected void onUnhandledInboundChannelActive() {
     }
 
     /**
-     * Called once the {@link ChannelInboundHandler#channelInactive(ChannelHandlerContext)} event hit
+     * Called once the {@link ChannelHandler#channelInactive(ChannelHandlerContext)} event hit
      * the end of the {@link ChannelPipeline}.
      */
     protected void onUnhandledInboundChannelInactive() {
@@ -1040,7 +1040,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     /**
      * Called once a message hit the end of the {@link ChannelPipeline} without been handled by the user
-     * in {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object)}. This method is responsible
+     * in {@link ChannelHandler#channelRead(ChannelHandlerContext, Object)}. This method is responsible
      * to call {@link ReferenceCountUtil#release(Object)} on the given msg at some point.
      */
     protected void onUnhandledInboundMessage(ChannelHandlerContext ctx, Object msg) {
@@ -1055,7 +1055,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     /**
-     * Called once the {@link ChannelInboundHandler#channelReadComplete(ChannelHandlerContext)} event hit
+     * Called once the {@link ChannelHandler#channelReadComplete(ChannelHandlerContext)} event hit
      * the end of the {@link ChannelPipeline}.
      */
     protected void onUnhandledInboundChannelReadComplete() {
@@ -1063,7 +1063,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     /**
      * Called once an user event hit the end of the {@link ChannelPipeline} without been handled by the user
-     * in {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)}. This method is responsible
+     * in {@link ChannelHandler#userEventTriggered(ChannelHandlerContext, Object)}. This method is responsible
      * to call {@link ReferenceCountUtil#release(Object)} on the given event at some point.
      */
     protected void onUnhandledInboundUserEventTriggered(Object evt) {
@@ -1073,7 +1073,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     /**
-     * Called once the {@link ChannelInboundHandler#channelWritabilityChanged(ChannelHandlerContext)} event hit
+     * Called once the {@link ChannelHandler#channelWritabilityChanged(ChannelHandlerContext)} event hit
      * the end of the {@link ChannelPipeline}.
      */
     protected void onUnhandledChannelWritabilityChanged() {
@@ -1096,7 +1096,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     // A special catch-all handler that handles both bytes and messages.
-    private static final class TailHandler implements ChannelInboundHandler {
+    private static final class TailHandler implements ChannelHandler {
 
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) { }
