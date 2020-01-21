@@ -70,7 +70,6 @@ public class ChunkedWriteHandler implements ChannelHandler {
 
     private final Queue<PendingWrite> queue = new ArrayDeque<>();
     private volatile ChannelHandlerContext ctx;
-    private PendingWrite currentWrite;
 
     public ChunkedWriteHandler() {
     }
@@ -142,13 +141,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
 
     private void discard(Throwable cause) {
         for (;;) {
-            PendingWrite currentWrite = this.currentWrite;
-
-            if (this.currentWrite == null) {
-                currentWrite = queue.poll();
-            } else {
-                this.currentWrite = null;
-            }
+            PendingWrite currentWrite = queue.poll();
 
             if (currentWrite == null) {
                 break;
@@ -198,9 +191,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
         boolean requiresFlush = true;
         ByteBufAllocator allocator = ctx.alloc();
         while (channel.isWritable()) {
-            if (currentWrite == null) {
-                currentWrite = queue.poll();
-            }
+            final PendingWrite currentWrite = queue.peek();
 
             if (currentWrite == null) {
                 break;
@@ -216,11 +207,10 @@ public class ChunkedWriteHandler implements ChannelHandler {
                 // as this had to be done already by someone who resolved the
                 // promise (using ChunkedInput.close method).
                 // See https://github.com/netty/netty/issues/8700.
-                this.currentWrite = null;
+                queue.remove();
                 continue;
             }
 
-            final PendingWrite currentWrite = this.currentWrite;
             final Object pendingMessage = currentWrite.msg;
 
             if (pendingMessage instanceof ChunkedInput) {
@@ -239,7 +229,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
                         suspend = false;
                     }
                 } catch (final Throwable t) {
-                    this.currentWrite = null;
+                    queue.remove();
 
                     if (message != null) {
                         ReferenceCountUtil.release(message);
@@ -265,7 +255,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
 
                 ChannelFuture f = ctx.write(message);
                 if (endOfInput) {
-                    this.currentWrite = null;
+                    queue.remove();
 
                     // Register a listener which will close the input once the write is complete.
                     // This is needed because the Chunk may have some resource bound that can not
@@ -312,7 +302,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
                 ctx.flush();
                 requiresFlush = false;
             } else {
-                this.currentWrite = null;
+                queue.remove();
                 ctx.write(pendingMessage, currentWrite.promise);
                 requiresFlush = true;
             }
