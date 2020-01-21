@@ -312,7 +312,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
         }
     }
 
-    private void handleEndOfInputFuture(ChannelFuture future, PendingWrite currentWrite) {
+    private static void handleEndOfInputFuture(ChannelFuture future, PendingWrite currentWrite) {
         ChunkedInput<?> input = (ChunkedInput<?>) currentWrite.msg;
         if (!future.isSuccess()) {
             closeInput(input);
