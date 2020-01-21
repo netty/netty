@@ -167,9 +167,21 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      *     <li>{@link #STATE_CALLING_CHILD_DECODE}</li>
      *     <li>{@link #STATE_HANDLER_REMOVED_PENDING}</li>
      * </ul>
+     *
+     * 解码状态
+     *  *
+     *  * 0 - 初始化
+     *  * 1 - 调用 {@link #decode(ChannelHandlerContext, ByteBuf, List)} 方法中，正在进行解码
+     *  * 2 - 准备移除
      */
+
     private byte decodeState = STATE_INIT;
     private int discardAfterReads = 16;
+    /**
+     * 已读取次数。
+     *
+     * 再读取 {@link #discardAfterReads} 次数据后，如果无法全部解码完，则进行释放，避免 OOM
+     */
     private int numReads;
 
     protected ByteToMessageDecoder() {

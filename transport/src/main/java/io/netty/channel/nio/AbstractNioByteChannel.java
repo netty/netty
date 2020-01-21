@@ -144,7 +144,9 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             boolean close = false;
             try {
                 do {
+                    //分配内存
                     byteBuf = allocHandle.allocate(allocator);
+                    //读取socketChannel数据到分配的byteBuf,对写入的大小进行一个累计叠加
                     allocHandle.lastBytesRead(doReadBytes(byteBuf));
                     if (allocHandle.lastBytesRead() <= 0) {
                         // nothing was read. release the buffer.

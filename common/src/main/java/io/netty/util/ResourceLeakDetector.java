@@ -259,12 +259,19 @@ public class ResourceLeakDetector<T> {
         }
 
         if (level.ordinal() < Level.PARANOID.ordinal()) {
+            // 如果这次随机触发了采样间隔
+            // 就报告现有的泄漏
+            // 并返回一个DefaultResourceLeak示例来跟踪当前资源
+            // 注意为了性能，这里使用了ThreadLocalRandom
             if ((PlatformDependent.threadLocalRandom().nextInt(samplingInterval)) == 0) {
                 reportLeak();
                 return new DefaultResourceLeak(obj, refQueue, allLeaks);
             }
+            // 否则如果没触发采样间隔
+            // 则直接返回null 表示不用跟踪这次资源
             return null;
         }
+        // 走到这里说明每次资源创建都需要跟踪
         reportLeak();
         return new DefaultResourceLeak(obj, refQueue, allLeaks);
     }
@@ -373,6 +380,9 @@ public class ResourceLeakDetector<T> {
             // Store the hash of the tracked object to later assert it in the close(...) method.
             // It's important that we not store a reference to the referent as this would disallow it from
             // be collected via the WeakReference.
+            // 这里生成了我们引用指向的资源的hashCode
+            // 注意这里我们存储了hashCode而非资源对象本身
+            // 因为如果存储资源对象本身的话我们就形成了强引用，导致资源不可能被GC
             trackedHash = System.identityHashCode(referent);
             allLeaks.add(this);
             // Create a new Record so we always have the creation stacktrace included.

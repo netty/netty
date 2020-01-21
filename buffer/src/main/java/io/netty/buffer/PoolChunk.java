@@ -28,14 +28,14 @@ import java.util.Deque;
  * > chunk - a chunk is a collection of pages
  * > in this code chunkSize = 2^{maxOrder} * pageSize
  *
- * To begin we allocate a byte array of size = chunkSize
- * Whenever a ByteBuf of given size needs to be created we search for the first position
- * in the byte array that has enough empty space to accommodate the requested size and
- * return a (long) handle that encodes this offset information, (this memory segment is then
- * marked as reserved so it is always used by exactly one ByteBuf and no more)
+ * To begin we allocate a byte array of size = chunkSize        首先，我们分配一个size = chunkSize的字节数组
+ * Whenever a ByteBuf of given size needs to be created     每当需要创建给定大小的ByteBuf时 we search for the first position
+ * in the byte array    我们搜索字节数组中的第一个位置 that has enough empty space to accommodate the requested size and   有足够的空间容纳所请求的大小
+ * return a (long) handle that encodes this offset information  返回一个(long)句柄来编码这个偏移量信息, (this memory segment is then
+ * marked as reserved   然后将这个内存段标记为保留 so it is always used by exactly one ByteBuf and no more   所以它只被一个ByteBuf使用)
  *
- * For simplicity all sizes are normalized according to PoolArena#normalizeCapacity method
- * This ensures that when we request for memory segments of size >= pageSize the normalizedCapacity
+ * For simplicity all sizes are normalized according to PoolArena#normalizeCapacity method  为简单起见，所有大小都根据PoolArena#normalizeCapacity方法进行规范化
+ * This ensures that when we request for memory segments of size >= pageSize    这确保当我们请求大小为>= pageSize的内存段时 the normalizedCapacity
  * equals the next nearest power of 2
  *
  * To search for the first offset in chunk that has at least requested size available we construct a

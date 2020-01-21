@@ -198,7 +198,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
         final AbstractChannelHandlerContext newCtx;
-        synchronized (this) {
+        synchronized (this) {// 同步，为了防止多线程并发操作 pipeline 底层的双向链表
             checkMultiplicity(handler);
 
             newCtx = newContext(group, filterName(name, handler), handler);
@@ -599,6 +599,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private static void checkMultiplicity(ChannelHandler handler) {
         if (handler instanceof ChannelHandlerAdapter) {
             ChannelHandlerAdapter h = (ChannelHandlerAdapter) handler;
+            // 若已经添加，并且未使用 @Sharable 注解，则抛出异常
             if (!h.isSharable() && h.added) {
                 throw new ChannelPipelineException(
                         h.getClass().getName() +

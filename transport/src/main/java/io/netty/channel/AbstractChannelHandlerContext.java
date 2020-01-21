@@ -480,6 +480,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (localAddress == null) {
             throw new NullPointerException("localAddress");
         }
+        // 判断是否为合法的 Promise 对象
         if (isNotValidPromise(promise, false)) {
             // cancelled
             return promise;
@@ -501,6 +502,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     private void invokeBind(SocketAddress localAddress, ChannelPromise promise) {
+        // 判断是否符合的 ChannelHandler
         if (invokeHandler()) {
             try {
                 ((ChannelOutboundHandler) handler()).bind(this, localAddress, promise);

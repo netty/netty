@@ -41,9 +41,14 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         return START_TIME;
     }
 
+    /**
+     * 任务编号
+     */
     // set once when added to priority queue
     private long id;
-
+    /**
+     * 任务执行时间，即到了该时间，该任务就会被执行
+     */
     private long deadlineNanos;
     /* 0 - no repeat, >0 - repeat at fixed rate, <0 - repeat with fixed delay */
     private final long periodNanos;

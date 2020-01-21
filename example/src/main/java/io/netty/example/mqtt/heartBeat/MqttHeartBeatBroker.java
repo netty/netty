@@ -25,6 +25,8 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 
 import java.util.concurrent.TimeUnit;
@@ -45,9 +47,10 @@ public final class MqttHeartBeatBroker {
             b.channel(NioServerSocketChannel.class);
             b.childHandler(new ChannelInitializer<SocketChannel>() {
                 protected void initChannel(SocketChannel ch) throws Exception {
+                    ch.pipeline().addLast("login", new LoggingHandler(LogLevel.DEBUG));
                     ch.pipeline().addLast("encoder", MqttEncoder.INSTANCE);
                     ch.pipeline().addLast("decoder", new MqttDecoder());
-                    ch.pipeline().addLast("heartBeatHandler", new IdleStateHandler(45, 0, 0, TimeUnit.SECONDS));
+//                    ch.pipeline().addLast("heartBeatHandler", new IdleStateHandler(45, 0, 0, TimeUnit.SECONDS));
                     ch.pipeline().addLast("handler", MqttHeartBeatBrokerHandler.INSTANCE);
                 }
             });

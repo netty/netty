@@ -459,17 +459,24 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
+     * 轮询任务队列中的所有任务，并通过{@link Runnable\run（）}方法运行它们。此方法停止运行
      * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.  This method stops running
+     * 任务队列中的任务，如果运行时间超过
      * the tasks in the task queue and returns if it ran longer than {@code timeoutNanos}.
+     * @return 方法的返回值，表示是否执行过任务。因为，任务队列可能为空，那么就会返回 false ，表示没有执行过任务
      */
     protected boolean runAllTasks(long timeoutNanos) {
+        // 从定时任务获得到时间的任务
         fetchFromScheduledTaskQueue();
+        // 获得队头的任务
         Runnable task = pollTask();
         if (task == null) {
+            // 执行所有任务完成的后续方法
             afterRunningAllTasks();
             return false;
         }
 
+        // 计算执行任务截止时间 时间单位为纳秒
         final long deadline = timeoutNanos > 0 ? ScheduledFutureTask.nanoTime() + timeoutNanos : 0;
         long runTasks = 0;
         long lastExecutionTime;
