@@ -101,11 +101,15 @@ public class SearchBenchmark extends AbstractMicrobenchmark {
         PREDICTABLE {
             @Override
             byte[] getNeedle(Random rnd) {
-                return new byte[64]; // 00...00
+                // all 0s
+                return new byte[64];
             }
             @Override
             byte[] getHaystack(Random rnd) {
-                return randomBytes(rnd, 2048, 1, 255);
+                // no 0s except in the very end
+                byte[] bytes = randomBytes(rnd, 2048, 1, 255);
+                Arrays.fill(bytes, bytes.length - 64, bytes.length, (byte) 0);
+                return bytes;
             }
         },
         UNPREDICTABLE {
@@ -118,17 +122,19 @@ public class SearchBenchmark extends AbstractMicrobenchmark {
                 return randomBytes(rnd, 2048, 0, 1);
             }
         },
-        WORST_CASE {
+        WORST_CASE { // ShiftingBitMask will fail on it because the needle is >64 bytes long
             @Override
             byte[] getNeedle(Random rnd) {
-                byte[] needle = new byte[64];
+                // aa(...)aab
+                byte[] needle = new byte[1024];
                 Arrays.fill(needle, (byte) 'a');
                 needle[needle.length - 1] = 'b';
                 return needle;
             }
             @Override
             byte[] getHaystack(Random rnd) {
-                byte[] haystack = new byte[256];
+                // aa(...)aaa
+                byte[] haystack = new byte[2048];
                 Arrays.fill(haystack, (byte) 'a');
                 return haystack;
             }
@@ -160,8 +166,11 @@ public class SearchBenchmark extends AbstractMicrobenchmark {
         haystack = bufferType.newBuffer(haystackBytes);
 
         kmpFactory = SearchProcessorFactory.newKmpSearchProcessorFactory(needleBytes);
-        shiftingBitMaskFactory = SearchProcessorFactory.newShiftingBitMaskSearchProcessorFactory(needleBytes);
         ahoCorasicFactory = MultiSearchProcessorFactory.newAhoCorasicSearchProcessorFactory(needleBytes);
+
+        if (needleBytes.length <= 64) {
+            shiftingBitMaskFactory = SearchProcessorFactory.newShiftingBitMaskSearchProcessorFactory(needleBytes);
+        }
     }
 
     @TearDown
