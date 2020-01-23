@@ -36,7 +36,7 @@ public class AhoCorasicSearchProcessorFactory extends MultiSearchProcessorFactor
         linkSuffixes(trieRoot);
     }
 
-    private TrieNode buildTrie(byte[] ...needles) {
+    private static TrieNode buildTrie(byte[]... needles) {
         final TrieNode trieRoot = new TrieNode();
 
         for (int i = 0; i < needles.length; i++) {
@@ -57,7 +57,7 @@ public class AhoCorasicSearchProcessorFactory extends MultiSearchProcessorFactor
         return trieRoot;
     }
 
-    private void linkSuffixes(TrieNode trieRoot) {
+    private static void linkSuffixes(TrieNode trieRoot) {
 
         Queue<TrieNode> queue = new ArrayDeque<TrieNode>();
         queue.add(trieRoot);

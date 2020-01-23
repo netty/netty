@@ -26,7 +26,7 @@ public class KmpSearchProcessorFactory extends SearchProcessorFactory {
     private final byte[] needle;
 
     KmpSearchProcessorFactory(byte[] needle) {
-        this.needle = needle;
+        this.needle = needle.clone();
         this.next = new int[needle.length + 1];
 
         int j = 0;
