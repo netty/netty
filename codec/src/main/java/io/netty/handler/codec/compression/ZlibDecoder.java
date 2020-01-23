@@ -83,6 +83,8 @@ public abstract class ZlibDecoder extends ByteToMessageDecoder {
      * do something before the {@link DecompressionException} is thrown, such as log the
      * data that was decompressed so far.
      */
-    protected void decompressionBufferExhausted(ByteBuf buffer) {}
+    protected void decompressionBufferExhausted(ByteBuf buffer) {
+
+    }
 
 }
