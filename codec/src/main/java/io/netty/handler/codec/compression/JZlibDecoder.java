@@ -18,6 +18,7 @@ package io.netty.handler.codec.compression;
 import com.jcraft.jzlib.Inflater;
 import com.jcraft.jzlib.JZlib;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.ObjectUtil;
 
@@ -42,6 +43,10 @@ public class JZlibDecoder extends ZlibDecoder {
      * Creates a new instance with the default wrapper ({@link ZlibWrapper#ZLIB})
      * and specified maximum buffer allocation.
      *
+     * @param maxAllocation
+     *          Maximum size of the decompression buffer. Must be &gt;= 0.
+     *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
+     *
      * @throws DecompressionException if failed to initialize zlib
      */
     public JZlibDecoder(int maxAllocation) {
@@ -59,6 +64,10 @@ public class JZlibDecoder extends ZlibDecoder {
 
     /**
      * Creates a new instance with the specified wrapper and maximum buffer allocation.
+     *
+     * @param maxAllocation
+     *          Maximum size of the decompression buffer. Must be &gt;= 0.
+     *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
      *
      * @throws DecompressionException if failed to initialize zlib
      */
@@ -88,6 +97,10 @@ public class JZlibDecoder extends ZlibDecoder {
      * Creates a new instance with the specified preset dictionary and maximum buffer allocation.
      * The wrapper is always {@link ZlibWrapper#ZLIB} because it is the only format that
      * supports the preset dictionary.
+     *
+     * @param maxAllocation
+     *          Maximum size of the decompression buffer. Must be &gt;= 0.
+     *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
      *
      * @throws DecompressionException if failed to initialize zlib
      */

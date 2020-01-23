@@ -28,7 +28,7 @@ public abstract class ZlibDecoder extends ByteToMessageDecoder {
     /**
      * Maximum allowed size of the decompression buffer.
      */
-    protected int maxAllocation;
+    protected final int maxAllocation;
 
     /**
      * Same as {@link #ZlibDecoder(int)} with maxAllocation = 0.
@@ -58,19 +58,20 @@ public abstract class ZlibDecoder extends ByteToMessageDecoder {
 
     /**
      * Allocate or expand the decompression buffer, without exceeding the maximum allocation.
-     * Calls {@link #maxAllocationReached(ByteBuf)} if the buffer is full and cannot be expanded further.
+     * Calls {@link #decompressionBufferExhausted(ByteBuf)} if the buffer is full and cannot be expanded further.
      */
     protected ByteBuf prepareDecompressBuffer(ChannelHandlerContext ctx, ByteBuf buffer, int preferredSize) {
         if (buffer == null) {
             if (maxAllocation == 0) {
                 return ctx.alloc().heapBuffer(preferredSize);
-            } else {
-                return ctx.alloc().heapBuffer(Math.min(preferredSize, maxAllocation), maxAllocation);
             }
+
+            return ctx.alloc().heapBuffer(Math.min(preferredSize, maxAllocation), maxAllocation);
         }
 
         if (buffer.ensureWritable(preferredSize, true) == 1) {
-            return maxAllocationReached(buffer);
+            decompressionBufferExhausted(buffer);
+            throw new DecompressionException("Decompression buffer has reached maximum size: " + buffer.maxCapacity());
         }
 
         return buffer;
@@ -78,10 +79,10 @@ public abstract class ZlibDecoder extends ByteToMessageDecoder {
 
     /**
      * Called when the decompression buffer cannot be expanded further.
-     * Default implementation throws an exception, but subclasses can override to change behavior.
+     * Default implementation is a no-op, but subclasses can override in case they want to
+     * do something before the {@link DecompressionException} is thrown, such as log the
+     * data that was decompressed so far.
      */
-    protected ByteBuf maxAllocationReached(ByteBuf buffer) {
-        throw new DecompressionException("Decompression buffer has reached maximum size: " + buffer.maxCapacity());
-    }
+    protected void decompressionBufferExhausted(ByteBuf buffer) {}
 
 }
