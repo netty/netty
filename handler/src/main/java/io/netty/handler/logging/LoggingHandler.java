@@ -42,7 +42,6 @@ import static io.netty.util.internal.StringUtil.NEWLINE;
 public class LoggingHandler extends ChannelDuplexHandler {
 
     private static final LogLevel DEFAULT_LEVEL = LogLevel.DEBUG;
-    private static final ByteBufFormat DEFAULT_BYTE_BUF_FORMAT = ByteBufFormat.HEX_DUMP;
 
     protected final InternalLogger logger;
     protected final InternalLogLevel internalLevel;
@@ -65,7 +64,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
      * @param level the log level
      */
     public LoggingHandler(LogLevel level) {
-        this(level, DEFAULT_BYTE_BUF_FORMAT);
+        this(level, ByteBufFormat.HEX_DUMP);
     }
 
     /**
@@ -99,7 +98,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
      * @param level the log level
      */
     public LoggingHandler(Class<?> clazz, LogLevel level) {
-        this(clazz, level, DEFAULT_BYTE_BUF_FORMAT);
+        this(clazz, level, ByteBufFormat.HEX_DUMP);
     }
 
     /**
@@ -133,7 +132,7 @@ public class LoggingHandler extends ChannelDuplexHandler {
      * @param level the log level
      */
     public LoggingHandler(String name, LogLevel level) {
-        this(name, level, DEFAULT_BYTE_BUF_FORMAT);
+        this(name, level, ByteBufFormat.HEX_DUMP);
     }
 
     /**
@@ -359,9 +358,13 @@ public class LoggingHandler extends ChannelDuplexHandler {
             buf.append(chStr).append(' ').append(eventName).append(": 0B");
             return buf.toString();
         } else {
-            int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
-            StringBuilder buf = new StringBuilder(chStr.length() + 1 + eventName.length() + 2 + 10 + 1 + 2 + rows * 80);
-
+            int outputLength = chStr.length() + 1 + eventName.length() + 2 + 10 + 1;
+            if (byteBufFormat == ByteBufFormat.HEX_DUMP) {
+                int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
+                int hexDumpLength = 2 + rows * 80;
+                outputLength += hexDumpLength;
+            }
+            StringBuilder buf = new StringBuilder(outputLength);
             buf.append(chStr).append(' ').append(eventName).append(": ").append(length).append('B');
             if (byteBufFormat == ByteBufFormat.HEX_DUMP) {
                 buf.append(NEWLINE);
@@ -385,10 +388,13 @@ public class LoggingHandler extends ChannelDuplexHandler {
             buf.append(chStr).append(' ').append(eventName).append(", ").append(msgStr).append(", 0B");
             return buf.toString();
         } else {
-            int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
-            StringBuilder buf = new StringBuilder(
-                    chStr.length() + 1 + eventName.length() + 2 + msgStr.length() + 2 + 10 + 1 + 2 + rows * 80);
-
+            int outputLength = chStr.length() + 1 + eventName.length() + 2 + msgStr.length() + 2 + 10 + 1;
+            if (byteBufFormat == ByteBufFormat.HEX_DUMP) {
+                int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
+                int hexDumpLength = 2 + rows * 80;
+                outputLength += hexDumpLength;
+            }
+            StringBuilder buf = new StringBuilder(outputLength);
             buf.append(chStr).append(' ').append(eventName).append(": ")
                .append(msgStr).append(", ").append(length).append('B');
             if (byteBufFormat == ByteBufFormat.HEX_DUMP) {

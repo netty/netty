@@ -303,10 +303,9 @@ public class LoggingHandlerTest {
             actualMsg = actual.getMessage().split("(?s)[\\r\\n]+")[0];
             if (actualMsg.matches(expected)) {
                 // The presence of a newline implies a hex-dump was logged
-                return actual.getMessage().contains(NEWLINE) == shouldContainNewline; 
-            } else {
-                return false;
+                return actual.getMessage().contains(NEWLINE) == shouldContainNewline;
             }
+            return false;
         }
     }
 
