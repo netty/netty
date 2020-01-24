@@ -22,22 +22,22 @@ package io.netty.buffer.search;
  */
 public class KmpSearchProcessorFactory extends SearchProcessorFactory {
 
-    private final int[] next;
+    private final int[] jumpTable;
     private final byte[] needle;
 
     KmpSearchProcessorFactory(byte[] needle) {
         this.needle = needle.clone();
-        this.next = new int[needle.length + 1];
+        this.jumpTable = new int[needle.length + 1];
 
         int j = 0;
         for (int i = 1; i < needle.length; i++) {
             while (j > 0 && needle[j] != needle[i]) {
-                j = next[j];
+                j = jumpTable[j];
             }
             if (needle[j] == needle[i]) {
                 j++;
             }
-            next[i + 1] = j;
+            jumpTable[i + 1] = j;
         }
     }
 
@@ -46,7 +46,7 @@ public class KmpSearchProcessorFactory extends SearchProcessorFactory {
      */
     @Override
     public KmpSearchProcessor newSearchProcessor() {
-        return new KmpSearchProcessor(needle, next);
+        return new KmpSearchProcessor(needle, jumpTable);
     }
 
 };

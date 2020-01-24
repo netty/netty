@@ -23,24 +23,24 @@ package io.netty.buffer.search;
 public class KmpSearchProcessor implements SearchProcessor {
 
     private final byte[] needle;
-    private final int[] next;
+    private final int[] jumpTable;
     private int j;
 
-    KmpSearchProcessor(byte[] needle, int[] next) {
+    KmpSearchProcessor(byte[] needle, int[] jumpTable) {
         this.needle = needle;
-        this.next = next;
+        this.jumpTable = jumpTable;
     }
 
     @Override
     public boolean process(byte value) {
         while (j > 0 && needle[j] != value) {
-            j = next[j];
+            j = jumpTable[j];
         }
         if (needle[j] == value) {
             j++;
         }
         if (j == needle.length) {
-            j = next[j];
+            j = jumpTable[j];
             return false;
         }
 
