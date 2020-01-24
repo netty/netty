@@ -103,10 +103,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     /**
-     * Return the current {@link SelectionKey}
+     * Return the current {@link SelectionKey} or {@code null} if the underlying channel was not registered with the
+     * {@link java.nio.channels.Selector} yet.
      */
     protected SelectionKey selectionKey() {
-        assert selectionKey != null;
         return selectionKey;
     }
 
@@ -200,7 +200,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             // Check first if the key is still valid as it may be canceled as part of the deregistration
             // from the EventLoop
             // See https://github.com/netty/netty/issues/2104
-            if (!key.isValid()) {
+            if (key == null || !key.isValid()) {
                 return;
             }
             int interestOps = key.interestOps();
@@ -342,7 +342,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         private boolean isFlushPending() {
             SelectionKey selectionKey = selectionKey();
-            return selectionKey.isValid() && (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
+            return selectionKey != null && selectionKey.isValid()
+                    && (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
         }
     }
 
