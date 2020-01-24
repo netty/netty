@@ -33,7 +33,7 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link ChannelHandler} that logs all events using a logging framework.
- * By default, all events are logged at <tt>DEBUG</tt> level.
+ * By default, all events are logged at <tt>DEBUG</tt> level and full hex dumps are recorded for ByteBufs.
  */
 @Sharable
 @SuppressWarnings({ "StringConcatenationInsideStringBufferAppend", "StringBufferReplaceableByString" })
@@ -45,6 +45,7 @@ public class LoggingHandler implements ChannelHandler {
     protected final InternalLogLevel internalLevel;
 
     private final LogLevel level;
+    private final ByteBufFormat byteBufFormat;
 
     /**
      * Creates a new instance whose logger name is the fully qualified class
@@ -61,10 +62,20 @@ public class LoggingHandler implements ChannelHandler {
      * @param level the log level
      */
     public LoggingHandler(LogLevel level) {
-        requireNonNull(level, "level");
+        this(level, ByteBufFormat.HEX_DUMP);
+    }
 
+    /**
+     * Creates a new instance whose logger name is the fully qualified class
+     * name of the instance.
+     *
+     * @param level the log level
+     * @param byteBufFormat the ByteBuf format
+     */
+    public LoggingHandler(LogLevel level, ByteBufFormat byteBufFormat) {
+        this.level = requireNonNull(level, "level");
+        this.byteBufFormat = requireNonNull(byteBufFormat, "byteBufFormat");
         logger = InternalLoggerFactory.getInstance(getClass());
-        this.level = level;
         internalLevel = level.toInternalLevel();
     }
 
@@ -85,11 +96,21 @@ public class LoggingHandler implements ChannelHandler {
      * @param level the log level
      */
     public LoggingHandler(Class<?> clazz, LogLevel level) {
-        requireNonNull(clazz, "clazz");
-        requireNonNull(level, "level");
+        this(clazz, level, ByteBufFormat.HEX_DUMP);
+    }
 
+    /**
+     * Creates a new instance with the specified logger name.
+     *
+     * @param clazz the class type to generate the logger for
+     * @param level the log level
+     * @param byteBufFormat the ByteBuf format
+     */
+    public LoggingHandler(Class<?> clazz, LogLevel level, ByteBufFormat byteBufFormat) {
+        requireNonNull(clazz, "clazz");
+        this.level = requireNonNull(level, "level");
+        this.byteBufFormat = requireNonNull(byteBufFormat, "byteBufFormat");
         logger = InternalLoggerFactory.getInstance(clazz);
-        this.level = level;
         internalLevel = level.toInternalLevel();
     }
 
@@ -109,11 +130,22 @@ public class LoggingHandler implements ChannelHandler {
      * @param level the log level
      */
     public LoggingHandler(String name, LogLevel level) {
-        requireNonNull(name, "name");
-        requireNonNull(level, "level");
+        this(name, level, ByteBufFormat.HEX_DUMP);
+    }
 
+    /**
+     * Creates a new instance with the specified logger name.
+     *
+     * @param name the name of the class to use for the logger
+     * @param level the log level
+     * @param byteBufFormat the ByteBuf format
+     */
+    public LoggingHandler(String name, LogLevel level, ByteBufFormat byteBufFormat) {
+        requireNonNull(name, "name");
+
+        this.level = requireNonNull(level, "level");
+        this.byteBufFormat = requireNonNull(byteBufFormat, "byteBufFormat");
         logger = InternalLoggerFactory.getInstance(name);
-        this.level = level;
         internalLevel = level.toInternalLevel();
     }
 
@@ -122,6 +154,13 @@ public class LoggingHandler implements ChannelHandler {
      */
     public LogLevel level() {
         return level;
+    }
+
+    /**
+     * Returns the {@link ByteBufFormat} that this handler uses to log
+     */
+    public ByteBufFormat byteBufFormat() {
+        return byteBufFormat;
     }
 
     @Override
@@ -309,7 +348,7 @@ public class LoggingHandler implements ChannelHandler {
     /**
      * Generates the default log message of the specified event whose argument is a {@link ByteBuf}.
      */
-    private static String formatByteBuf(ChannelHandlerContext ctx, String eventName, ByteBuf msg) {
+    private String formatByteBuf(ChannelHandlerContext ctx, String eventName, ByteBuf msg) {
         String chStr = ctx.channel().toString();
         int length = msg.readableBytes();
         if (length == 0) {
@@ -317,11 +356,18 @@ public class LoggingHandler implements ChannelHandler {
             buf.append(chStr).append(' ').append(eventName).append(": 0B");
             return buf.toString();
         } else {
-            int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
-            StringBuilder buf = new StringBuilder(chStr.length() + 1 + eventName.length() + 2 + 10 + 1 + 2 + rows * 80);
-
-            buf.append(chStr).append(' ').append(eventName).append(": ").append(length).append('B').append(NEWLINE);
-            appendPrettyHexDump(buf, msg);
+            int outputLength = chStr.length() + 1 + eventName.length() + 2 + 10 + 1;
+            if (byteBufFormat == ByteBufFormat.HEX_DUMP) {
+                int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
+                int hexDumpLength = 2 + rows * 80;
+                outputLength += hexDumpLength;
+            }
+            StringBuilder buf = new StringBuilder(outputLength);
+            buf.append(chStr).append(' ').append(eventName).append(": ").append(length).append('B');
+            if (byteBufFormat == ByteBufFormat.HEX_DUMP) {
+                buf.append(NEWLINE);
+                appendPrettyHexDump(buf, msg);
+            }
 
             return buf.toString();
         }
@@ -330,7 +376,7 @@ public class LoggingHandler implements ChannelHandler {
     /**
      * Generates the default log message of the specified event whose argument is a {@link ByteBufHolder}.
      */
-    private static String formatByteBufHolder(ChannelHandlerContext ctx, String eventName, ByteBufHolder msg) {
+    private String formatByteBufHolder(ChannelHandlerContext ctx, String eventName, ByteBufHolder msg) {
         String chStr = ctx.channel().toString();
         String msgStr = msg.toString();
         ByteBuf content = msg.content();
@@ -340,13 +386,19 @@ public class LoggingHandler implements ChannelHandler {
             buf.append(chStr).append(' ').append(eventName).append(", ").append(msgStr).append(", 0B");
             return buf.toString();
         } else {
-            int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
-            StringBuilder buf = new StringBuilder(
-                    chStr.length() + 1 + eventName.length() + 2 + msgStr.length() + 2 + 10 + 1 + 2 + rows * 80);
-
+            int outputLength = chStr.length() + 1 + eventName.length() + 2 + msgStr.length() + 2 + 10 + 1;
+            if (byteBufFormat == ByteBufFormat.HEX_DUMP) {
+                int rows = length / 16 + (length % 15 == 0? 0 : 1) + 4;
+                int hexDumpLength = 2 + rows * 80;
+                outputLength += hexDumpLength;
+            }
+            StringBuilder buf = new StringBuilder(outputLength);
             buf.append(chStr).append(' ').append(eventName).append(": ")
-               .append(msgStr).append(", ").append(length).append('B').append(NEWLINE);
-            appendPrettyHexDump(buf, content);
+               .append(msgStr).append(", ").append(length).append('B');
+            if (byteBufFormat == ByteBufFormat.HEX_DUMP) {
+                buf.append(NEWLINE);
+                appendPrettyHexDump(buf, content);
+            }
 
             return buf.toString();
         }
