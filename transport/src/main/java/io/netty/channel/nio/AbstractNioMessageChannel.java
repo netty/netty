@@ -128,6 +128,9 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         final SelectionKey key = selectionKey();
+        if (key == null) {
+            return;
+        }
         final int interestOps = key.interestOps();
 
         for (;;) {

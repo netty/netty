@@ -327,7 +327,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         // Check first if the key is still valid as it may be canceled as part of the deregistration
         // from the EventLoop
         // See https://github.com/netty/netty/issues/2104
-        if (!key.isValid()) {
+        if (key == null || !key.isValid()) {
             return;
         }
         final int interestOps = key.interestOps();
@@ -341,7 +341,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         // Check first if the key is still valid as it may be canceled as part of the deregistration
         // from the EventLoop
         // See https://github.com/netty/netty/issues/2104
-        if (!key.isValid()) {
+        if (key == null || !key.isValid()) {
             return;
         }
         final int interestOps = key.interestOps();
