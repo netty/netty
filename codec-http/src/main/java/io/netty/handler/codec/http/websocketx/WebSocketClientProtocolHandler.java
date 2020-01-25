@@ -78,7 +78,8 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      *            Client protocol configuration.
      */
     public WebSocketClientProtocolHandler(WebSocketClientProtocolConfig clientConfig) {
-        super(checkNotNull(clientConfig, "clientConfig").dropPongFrames());
+        super(checkNotNull(clientConfig, "clientConfig").dropPongFrames(),
+              clientConfig.sendCloseFrame(), clientConfig.forceCloseTimeoutMillis());
         this.handshaker = WebSocketClientHandshakerFactory.newHandshaker(
             clientConfig.webSocketUri(),
             clientConfig.version(),
@@ -377,10 +378,6 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
             // Add the UFT8 checking before this one.
             ctx.pipeline().addBefore(ctx.name(), Utf8FrameValidator.class.getName(),
                     new Utf8FrameValidator());
-        }
-        if (clientConfig.sendCloseFrame() != null) {
-            cp.addBefore(ctx.name(), WebSocketCloseFrameHandler.class.getName(),
-                new WebSocketCloseFrameHandler(clientConfig.sendCloseFrame(), clientConfig.forceCloseTimeoutMillis()));
         }
     }
 }

@@ -29,7 +29,9 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Send {@link CloseWebSocketFrame} message on channel close, if close frame was not sent before.
+ * @deprecated this class was merged into {@link WebSocketProtocolHandler} so should no longer be used
  */
+@Deprecated
 final class WebSocketCloseFrameHandler extends ChannelOutboundHandlerAdapter {
     private final WebSocketCloseStatus closeStatus;
     private final long forceCloseTimeoutMillis;
