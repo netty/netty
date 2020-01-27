@@ -860,11 +860,14 @@ public class SslHandler extends ByteToMessageDecoder {
                         case NOT_HANDSHAKING:
                             setHandshakeSuccessIfStillHandshaking();
                             // deliberate fall-through
-                        case NEED_WRAP:
-                            finishWrap(ctx, out, promise, inUnwrap, false);
+                        case NEED_WRAP: {
+                            ChannelPromise p = promise;
+                            ByteBuf b = out;
                             promise = null;
                             out = null;
+                            finishWrap(ctx, b, p, inUnwrap, false);
                             break;
+                        }
                         case NEED_UNWRAP:
                             needUnwrap = true;
                             return;
