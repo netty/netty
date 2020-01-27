@@ -36,6 +36,7 @@ import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.NotYetConnectedException;
+import java.util.NoSuchElementException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
@@ -775,12 +776,25 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         pipeline.fireChannelInactive();
                     }
                     // Some transports like local and AIO does not allow the deregistration of
-                    // an open channel.  Their doDeregister() calls close(). Consequently,
+                    // an open channel. Their doDeregister() calls close(). Consequently,
                     // close() calls deregister() again - no need to fire channelUnregistered, so check
                     // if it was registered.
                     if (registered) {
                         registered = false;
                         pipeline.fireChannelUnregistered();
+
+                        if (!isOpen()) {
+                            // Remove all handlers from the ChannelPipeline. This is needed to ensure
+                            // handlerRemoved(...) is called and so resources are released.
+                            while (!pipeline.isEmpty()) {
+                                try {
+                                    pipeline.removeLast();
+                                } catch (NoSuchElementException ignore) {
+                                    // try again as there may be a race when someone outside the EventLoop removes
+                                    // handlers concurrently as well.
+                                }
+                            }
+                        }
                     }
                     safeSetSuccess(promise);
                 }

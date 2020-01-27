@@ -440,7 +440,7 @@ public class DefaultPromise<V> implements Promise<V> {
      * @return The executor used to notify listeners when this promise is complete.
      */
     @Override
-    public final EventExecutor executor() {
+    public EventExecutor executor() {
         return executor;
     }
 

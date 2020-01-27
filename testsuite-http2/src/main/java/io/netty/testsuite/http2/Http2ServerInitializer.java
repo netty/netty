@@ -85,8 +85,9 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
                 ChannelPipeline pipeline = ctx.pipeline();
                 ChannelHandlerContext thisCtx = pipeline.context(this);
                 pipeline.addAfter(thisCtx.name(), null, new HelloWorldHttp1Handler("Direct. No Upgrade Attempted."));
-                pipeline.replace(this, null, new HttpObjectAggregator(maxHttpContentLength));
+                pipeline.addAfter(thisCtx.name(), null, new HttpObjectAggregator(maxHttpContentLength));
                 ctx.fireChannelRead(ReferenceCountUtil.retain(msg));
+                pipeline.remove(this);
             }
         });
 

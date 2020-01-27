@@ -328,12 +328,12 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
             sourceCodec.upgradeFrom(ctx);
             upgradeCodec.upgradeTo(ctx, request);
 
-            // Remove this handler from the pipeline.
-            ctx.pipeline().remove(HttpServerUpgradeHandler.this);
-
             // Notify that the upgrade has occurred. Retain the event to offset
             // the release() in the finally block.
             ctx.fireUserEventTriggered(event.retain());
+
+            // Remove this handler from the pipeline.
+            ctx.pipeline().remove(HttpServerUpgradeHandler.this);
 
             // Add the listener last to avoid firing upgrade logic after
             // the channel is already closed since the listener may fire

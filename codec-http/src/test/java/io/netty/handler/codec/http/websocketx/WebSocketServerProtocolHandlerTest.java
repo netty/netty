@@ -66,7 +66,7 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testWebSocketServerProtocolHandshakeHandlerReplacedBeforeHandshake() {
+    public void testWebSocketServerProtocolHandshakeHandlerRemovedAfterHandshake() {
         EmbeddedChannel ch = createChannel(new MockOutboundHandler());
         ChannelHandlerContext handshakerCtx = ch.pipeline().context(WebSocketServerProtocolHandshakeHandler.class);
         ch.pipeline().addLast(new ChannelHandler() {
@@ -74,7 +74,7 @@ public class WebSocketServerProtocolHandlerTest {
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                 if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
                     // We should have removed the handler already.
-                    assertNull(ctx.pipeline().context(WebSocketServerProtocolHandshakeHandler.class));
+                    ctx.executor().execute(() -> ctx.pipeline().context(WebSocketServerProtocolHandshakeHandler.class));
                 }
             }
         });

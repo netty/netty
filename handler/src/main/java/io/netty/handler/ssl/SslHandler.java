@@ -1091,7 +1091,8 @@ public class SslHandler extends ByteToMessageDecoder {
             if (logger.isDebugEnabled()) {
                 logger.debug(
                         "{} Swallowing a harmless 'connection reset by peer / broken pipe' error that occurred " +
-                        "while writing close_notify in response to the peer's close_notify", ctx.channel(), cause);
+                                "while writing close_notify in response to the peer's close_notify",
+                        ctx.channel(), cause);
             }
 
             // Close the connection explicitly just in case the transport
@@ -1101,6 +1102,11 @@ public class SslHandler extends ByteToMessageDecoder {
             }
         } else {
             ctx.fireExceptionCaught(cause);
+
+            if (cause instanceof SSLException ||
+                    ((cause instanceof DecoderException) && cause.getCause() instanceof SSLException)) {
+                ctx.close();
+            }
         }
     }
 
@@ -2056,9 +2062,13 @@ public class SslHandler extends ByteToMessageDecoder {
             }
             final long closeNotifyReadTimeout = closeNotifyReadTimeoutMillis;
             if (closeNotifyReadTimeout <= 0) {
-                // Trigger the close in all cases to make sure the promise is notified
-                // See https://github.com/netty/netty/issues/2358
-                addCloseListener(ctx.close(ctx.newPromise()), promise);
+                if (ctx.channel().isActive()) {
+                    // Trigger the close in all cases to make sure the promise is notified
+                    // See https://github.com/netty/netty/issues/2358
+                    addCloseListener(ctx.close(ctx.newPromise()), promise);
+                } else {
+                    promise.trySuccess();
+                }
             } else {
                 final ScheduledFuture<?> closeNotifyReadTimeoutFuture;
 
@@ -2082,7 +2092,11 @@ public class SslHandler extends ByteToMessageDecoder {
                     if (closeNotifyReadTimeoutFuture != null) {
                         closeNotifyReadTimeoutFuture.cancel(false);
                     }
-                    addCloseListener(ctx.close(ctx.newPromise()), promise);
+                    if (ctx.channel().isActive()) {
+                        addCloseListener(ctx.close(ctx.newPromise()), promise);
+                    } else {
+                        promise.trySuccess();
+                    }
                 });
             }
         });
@@ -2206,6 +2220,14 @@ public class SslHandler extends ByteToMessageDecoder {
                 return;
             }
             checkDeadLock(ctx.executor());
+        }
+
+        @Override
+        public EventExecutor executor() {
+            if (ctx == null) {
+                return super.executor();
+            }
+            return ctx.executor();
         }
     }
 }

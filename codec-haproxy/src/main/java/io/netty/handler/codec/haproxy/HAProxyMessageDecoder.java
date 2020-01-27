@@ -254,6 +254,14 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
     }
 
     @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        ctx.fireExceptionCaught(cause);
+        if (cause instanceof HAProxyProtocolException) {
+            ctx.close(); // drop connection immediately per spec
+        }
+    }
+
+    @Override
     protected final void decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         // determine the specification version
         if (version == -1) {
@@ -325,7 +333,6 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
 
     private void fail(final ChannelHandlerContext ctx, String errMsg, Exception e) {
         finished = true;
-        ctx.close(); // drop connection immediately per spec
         HAProxyProtocolException ppex;
         if (errMsg != null && e != null) {
             ppex = new HAProxyProtocolException(errMsg, e);

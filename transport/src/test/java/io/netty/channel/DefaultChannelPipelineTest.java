@@ -38,6 +38,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
+import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -50,6 +51,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -62,6 +64,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -706,7 +709,7 @@ public class DefaultChannelPipelineTest {
         pipeline.channel().close().syncUninterruptibly();
     }
 
-    @Test(timeout = 2000)
+    @Test(timeout = 5000)
     public void testAddRemoveHandlerCalled() throws Throwable {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
 
@@ -757,6 +760,110 @@ public class DefaultChannelPipelineTest {
     private static void rethrowIfNotNull(Throwable cause) throws Throwable {
         if (cause != null) {
             throw cause;
+        }
+    }
+
+    @Test(timeout = 5000)
+    public void testOperationsFailWhenRemoved() {
+        ChannelPipeline pipeline = newLocalChannel().pipeline();
+        try {
+            pipeline.channel().register().syncUninterruptibly();
+
+            ChannelHandler handler = new ChannelHandler() { };
+            pipeline.addFirst(handler);
+            ChannelHandlerContext ctx = pipeline.context(handler);
+            pipeline.remove(handler);
+
+            testOperationsFailsOnContext(ctx);
+        } finally {
+            pipeline.channel().close().syncUninterruptibly();
+        }
+    }
+
+    @Test(timeout = 5000)
+    public void testOperationsFailWhenReplaced() {
+        ChannelPipeline pipeline = newLocalChannel().pipeline();
+        try {
+            pipeline.channel().register().syncUninterruptibly();
+
+            ChannelHandler handler = new ChannelHandler() { };
+            pipeline.addFirst(handler);
+            ChannelHandlerContext ctx = pipeline.context(handler);
+            pipeline.replace(handler, null, new ChannelHandler() { });
+
+            testOperationsFailsOnContext(ctx);
+        } finally {
+            pipeline.channel().close().syncUninterruptibly();
+        }
+    }
+
+    private static void testOperationsFailsOnContext(ChannelHandlerContext ctx) {
+        assertChannelPipelineException(ctx.writeAndFlush(""));
+        assertChannelPipelineException(ctx.write(""));
+        assertChannelPipelineException(ctx.bind(new SocketAddress() { }));
+        assertChannelPipelineException(ctx.close());
+        assertChannelPipelineException(ctx.connect(new SocketAddress() { }));
+        assertChannelPipelineException(ctx.connect(new SocketAddress() { }, new SocketAddress() { }));
+        assertChannelPipelineException(ctx.deregister());
+        assertChannelPipelineException(ctx.disconnect());
+
+        class ChannelPipelineExceptionValidator implements ChannelHandler {
+
+            private Promise<Void> validationPromise = ImmediateEventExecutor.INSTANCE.newPromise();
+
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                try {
+                    assertThat(cause, Matchers.instanceOf(ChannelPipelineException.class));
+                } catch (Throwable error) {
+                    validationPromise.setFailure(error);
+                    return;
+                }
+                validationPromise.setSuccess(null);
+            }
+
+            void validate() {
+                validationPromise.syncUninterruptibly();
+                validationPromise = ImmediateEventExecutor.INSTANCE.newPromise();
+            }
+        }
+
+        ChannelPipelineExceptionValidator validator = new ChannelPipelineExceptionValidator();
+        ctx.pipeline().addLast(validator);
+
+        ctx.fireChannelRead("");
+        validator.validate();
+
+        ctx.fireUserEventTriggered("");
+        validator.validate();
+
+        ctx.fireChannelReadComplete();
+        validator.validate();
+
+        ctx.fireExceptionCaught(new Exception());
+        validator.validate();
+
+        ctx.fireChannelActive();
+        validator.validate();
+
+        ctx.fireChannelRegistered();
+        validator.validate();
+
+        ctx.fireChannelInactive();
+        validator.validate();
+
+        ctx.fireChannelUnregistered();
+        validator.validate();
+
+        ctx.fireChannelWritabilityChanged();
+        validator.validate();
+    }
+
+    private static void assertChannelPipelineException(ChannelFuture f) {
+        try {
+            f.syncUninterruptibly();
+        } catch (CompletionException e) {
+            assertThat(e.getCause(), Matchers.instanceOf(ChannelPipelineException.class));
         }
     }
 

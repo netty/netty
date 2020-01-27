@@ -120,8 +120,9 @@ public class WebSocketClientExtensionHandler implements ChannelHandler {
                         ctx.pipeline().addAfter(ctx.name(), encoder.getClass().getName(), encoder);
                     }
                 }
-
-                ctx.pipeline().remove(ctx.name());
+                ctx.fireChannelRead(msg);
+                ctx.pipeline().remove(this);
+                return;
             }
         }
 

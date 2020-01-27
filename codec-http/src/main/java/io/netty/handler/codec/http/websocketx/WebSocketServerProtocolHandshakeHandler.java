@@ -45,7 +45,6 @@ import static io.netty.handler.codec.http.HttpVersion.*;
 class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
 
     private final WebSocketServerProtocolConfig serverConfig;
-    private ChannelHandlerContext ctx;
     private ChannelPromise handshakePromise;
 
     WebSocketServerProtocolHandshakeHandler(WebSocketServerProtocolConfig serverConfig) {
@@ -54,7 +53,6 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) {
-        this.ctx = ctx;
         handshakePromise = ctx.newPromise();
     }
 
@@ -86,7 +84,6 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
                 //
                 // See https://github.com/netty/netty/issues/9471.
                 WebSocketServerProtocolHandler.setHandshaker(ctx.channel(), handshaker);
-                ctx.pipeline().remove(this);
 
                 final ChannelFuture handshakeFuture = handshaker.handshake(ctx.channel(), req);
                 handshakeFuture.addListener((ChannelFutureListener) future -> {
@@ -102,8 +99,9 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
                                 new WebSocketServerProtocolHandler.HandshakeComplete(
                                         req.uri(), req.headers(), handshaker.selectedSubprotocol()));
                     }
+                    ctx.pipeline().remove(this);
                 });
-                applyHandshakeTimeout();
+                applyHandshakeTimeout(ctx);
             }
         } finally {
             req.release();
@@ -132,7 +130,7 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
         return protocol + "://" + host + path;
     }
 
-    private void applyHandshakeTimeout() {
+    private void applyHandshakeTimeout(ChannelHandlerContext ctx) {
         final ChannelPromise localHandshakePromise = handshakePromise;
         final long handshakeTimeoutMillis = serverConfig.handshakeTimeoutMillis();
         if (handshakeTimeoutMillis <= 0 || localHandshakePromise.isDone()) {

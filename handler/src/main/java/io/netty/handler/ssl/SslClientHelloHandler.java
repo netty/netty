@@ -63,7 +63,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
                                         "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
                                 in.skipBytes(in.readableBytes());
                                 ctx.fireUserEventTriggered(new SniCompletionEvent(e));
-                                SslUtils.handleHandshakeFailure(ctx, e, true);
+                                ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(e));
                                 throw e;
                             }
                             if (len == SslUtils.NOT_ENOUGH_DATA) {

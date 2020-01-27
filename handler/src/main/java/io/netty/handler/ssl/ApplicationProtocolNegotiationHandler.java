@@ -97,13 +97,16 @@ public abstract class ApplicationProtocolNegotiationHandler implements ChannelHa
             } catch (Throwable cause) {
                 exceptionCaught(ctx, cause);
             } finally {
+                ctx.fireUserEventTriggered(evt);
+
                 ChannelPipeline pipeline = ctx.pipeline();
                 if (pipeline.context(this) != null) {
                     pipeline.remove(this);
                 }
             }
+        } else {
+            ctx.fireUserEventTriggered(evt);
         }
-        ctx.fireUserEventTriggered(evt);
     }
 
     /**

@@ -39,44 +39,52 @@ public abstract class AbstractRemoteAddressFilter<T extends SocketAddress> imple
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        handleNewChannel(ctx);
-        ctx.fireChannelRegistered();
+        handleNewChannel(ctx, true);
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        if (!handleNewChannel(ctx)) {
+        if (!handleNewChannel(ctx, false)) {
             throw new IllegalStateException("cannot determine to accept or reject a channel: " + ctx.channel());
-        } else {
-            ctx.fireChannelActive();
         }
     }
 
-    private boolean handleNewChannel(ChannelHandlerContext ctx) throws Exception {
+    private boolean handleNewChannel(ChannelHandlerContext ctx, boolean register) throws Exception {
         @SuppressWarnings("unchecked")
         T remoteAddress = (T) ctx.channel().remoteAddress();
+        boolean remove = false;
+        try {
+            // If the remote address is not available yet, defer the decision.
+            if (remoteAddress == null) {
+                return false;
+            }
 
-        // If the remote address is not available yet, defer the decision.
-        if (remoteAddress == null) {
-            return false;
-        }
-
-        // No need to keep this handler in the pipeline anymore because the decision is going to be made now.
-        // Also, this will prevent the subsequent events from being handled by this handler.
-        ctx.pipeline().remove(this);
-
-        if (accept(ctx, remoteAddress)) {
-            channelAccepted(ctx, remoteAddress);
-        } else {
-            ChannelFuture rejectedFuture = channelRejected(ctx, remoteAddress);
-            if (rejectedFuture != null) {
-                rejectedFuture.addListener(ChannelFutureListener.CLOSE);
+            if (accept(ctx, remoteAddress)) {
+                channelAccepted(ctx, remoteAddress);
+                remove = true;
             } else {
-                ctx.close();
+                ChannelFuture rejectedFuture = channelRejected(ctx, remoteAddress);
+                if (rejectedFuture != null && !rejectedFuture.isDone()) {
+                    rejectedFuture.addListener(ChannelFutureListener.CLOSE);
+                } else {
+                    ctx.close();
+                }
+            }
+            return true;
+        } finally {
+            if (!ctx.isRemoved()) {
+                if (register) {
+                    ctx.fireChannelRegistered();
+                } else {
+                    ctx.fireChannelActive();
+                }
+                if (remove) {
+                    // No need to keep this handler in the pipeline anymore because the decision is going to be made
+                    // now. Also, this will prevent the subsequent events from being handled by this handler.
+                    ctx.pipeline().remove(this);
+                }
             }
         }
-
-        return true;
     }
 
     /**
