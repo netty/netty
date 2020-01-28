@@ -7,7 +7,7 @@ services:
     build:
       args:
         centos_version : "6"
-        java_version : "adopt-openj9@1.11.0-5"
+        java_version : "adopt-openj9@1.11.0-6"
 
   test:
     image: netty:centos-6-openj9-1.11
