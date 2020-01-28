@@ -90,23 +90,6 @@ public class WebSocketServerProtocolHandlerTest {
     }
 
     @Test
-    public void testSubsequentHttpRequestsAfterUpgradeShouldReturn403() {
-        EmbeddedChannel ch = createChannel();
-
-        writeUpgradeRequest(ch);
-
-        FullHttpResponse response = responses.remove();
-        assertEquals(SWITCHING_PROTOCOLS, response.status());
-        response.release();
-
-        ch.writeInbound(new DefaultFullHttpRequest(HTTP_1_1, HttpMethod.GET, "/test"));
-        response = responses.remove();
-        assertEquals(FORBIDDEN, response.status());
-        response.release();
-        assertFalse(ch.finish());
-    }
-
-    @Test
     public void testHttpUpgradeRequestInvalidUpgradeHeader() {
         EmbeddedChannel ch = createChannel();
         FullHttpRequest httpRequestWithEntity = new WebSocketRequestBuilder().httpVersion(HTTP_1_1)
