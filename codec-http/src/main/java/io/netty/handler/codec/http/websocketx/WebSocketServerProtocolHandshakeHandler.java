@@ -53,7 +53,7 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+    public void handlerAdded(ChannelHandlerContext ctx) {
         this.ctx = ctx;
         handshakePromise = ctx.newPromise();
     }
@@ -86,8 +86,7 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
                 //
                 // See https://github.com/netty/netty/issues/9471.
                 WebSocketServerProtocolHandler.setHandshaker(ctx.channel(), handshaker);
-                ctx.pipeline().replace(this, "WS403Responder",
-                        WebSocketServerProtocolHandler.forbiddenHttpRequestResponder());
+                ctx.pipeline().remove(this);
 
                 final ChannelFuture handshakeFuture = handshaker.handshake(ctx.channel(), req);
                 handshakeFuture.addListener((ChannelFutureListener) future -> {
@@ -155,7 +154,7 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelHandler {
         // Cancel the handshake timeout when handshake is finished.
         localHandshakePromise.addListener(new FutureListener<Void>() {
             @Override
-            public void operationComplete(Future<Void> f) throws Exception {
+            public void operationComplete(Future<Void> f) {
                 timeoutFuture.cancel(false);
             }
         });

@@ -22,7 +22,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -265,21 +264,5 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
 
     static void setHandshaker(Channel channel, WebSocketServerHandshaker handshaker) {
         channel.attr(HANDSHAKER_ATTR_KEY).set(handshaker);
-    }
-
-    static ChannelHandler forbiddenHttpRequestResponder() {
-        return new ChannelHandler() {
-            @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                if (msg instanceof FullHttpRequest) {
-                    ((FullHttpRequest) msg).release();
-                    FullHttpResponse response =
-                            new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.FORBIDDEN, ctx.alloc().buffer(0));
-                    ctx.channel().writeAndFlush(response);
-                } else {
-                    ctx.fireChannelRead(msg);
-                }
-            }
-        };
     }
 }
