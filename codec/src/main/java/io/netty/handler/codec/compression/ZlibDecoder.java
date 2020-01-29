@@ -33,7 +33,7 @@ public abstract class ZlibDecoder extends ByteToMessageDecoder {
     /**
      * Same as {@link #ZlibDecoder(int)} with maxAllocation = 0.
      */
-    public ZlibDecoder() {
+    protected ZlibDecoder() {
         this(0);
     }
 
@@ -43,7 +43,7 @@ public abstract class ZlibDecoder extends ByteToMessageDecoder {
      *          Maximum size of the decompression buffer. Must be &gt;= 0.
      *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
      */
-    public ZlibDecoder(int maxAllocation) {
+    protected ZlibDecoder(int maxAllocation) {
         if (maxAllocation < 0) {
             throw new IllegalArgumentException("maxAllocation must be >= 0");
         }
@@ -69,6 +69,9 @@ public abstract class ZlibDecoder extends ByteToMessageDecoder {
             return ctx.alloc().heapBuffer(Math.min(preferredSize, maxAllocation), maxAllocation);
         }
 
+        // this always expands the buffer if possible, even if the expansion is less than preferredSize
+        // we throw the exception only if the buffer could not be expanded at all
+        // this means that one final attempt to deserialize will always be made with the buffer at maxAllocation
         if (buffer.ensureWritable(preferredSize, true) == 1) {
             decompressionBufferExhausted(buffer);
             throw new DecompressionException("Decompression buffer has reached maximum size: " + buffer.maxCapacity());

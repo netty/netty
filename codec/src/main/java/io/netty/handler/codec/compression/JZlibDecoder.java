@@ -199,6 +199,8 @@ public class JZlibDecoder extends ZlibDecoder {
                 if (decompressed.isReadable()) {
                     out.add(decompressed);
                 } else {
+                    finished = true;
+                    in.skipBytes(in.readableBytes());
                     decompressed.release();
                 }
             }
