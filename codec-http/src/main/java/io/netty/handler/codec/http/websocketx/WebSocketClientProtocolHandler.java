@@ -23,7 +23,11 @@ import io.netty.handler.codec.http.HttpHeaders;
 import java.net.URI;
 import java.util.Objects;
 
-import static io.netty.handler.codec.http.websocketx.WebSocketClientProtocolConfig.DEFAULT;
+import static io.netty.handler.codec.http.websocketx.WebSocketClientProtocolConfig.DEFAULT_ALLOW_MASK_MISMATCH;
+import static io.netty.handler.codec.http.websocketx.WebSocketClientProtocolConfig.DEFAULT_DROP_PONG_FRAMES;
+import static io.netty.handler.codec.http.websocketx.WebSocketClientProtocolConfig.DEFAULT_HANDLE_CLOSE_FRAMES;
+import static io.netty.handler.codec.http.websocketx.WebSocketClientProtocolConfig.DEFAULT_PERFORM_MASKING;
+import static io.netty.handler.codec.http.websocketx.WebSocketServerProtocolConfig.DEFAULT_HANDSHAKE_TIMEOUT_MILLIS;
 
 /**
  * This handler does all the heavy lifting for you to run a websocket client.
@@ -122,7 +126,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
                                           int maxFramePayloadLength, boolean handleCloseFrames,
                                           boolean performMasking, boolean allowMaskMismatch) {
         this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength,
-            handleCloseFrames, performMasking, allowMaskMismatch, DEFAULT.handshakeTimeoutMillis());
+            handleCloseFrames, performMasking, allowMaskMismatch, DEFAULT_HANDSHAKE_TIMEOUT_MILLIS);
     }
 
     /**
@@ -183,7 +187,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
                                                    boolean allowExtensions, HttpHeaders customHeaders,
                                                    int maxFramePayloadLength, boolean handleCloseFrames) {
         this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength,
-             handleCloseFrames, DEFAULT.handshakeTimeoutMillis());
+             handleCloseFrames, DEFAULT_HANDSHAKE_TIMEOUT_MILLIS);
     }
 
     /**
@@ -210,7 +214,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
                                           boolean allowExtensions, HttpHeaders customHeaders, int maxFramePayloadLength,
                                           boolean handleCloseFrames, long handshakeTimeoutMillis) {
         this(webSocketURL, version, subprotocol, allowExtensions, customHeaders, maxFramePayloadLength,
-             handleCloseFrames, DEFAULT.performMasking(), DEFAULT.allowMaskMismatch(), handshakeTimeoutMillis);
+             handleCloseFrames, DEFAULT_PERFORM_MASKING, DEFAULT_ALLOW_MASK_MISMATCH, handshakeTimeoutMillis);
     }
 
     /**
@@ -232,7 +236,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
                                           boolean allowExtensions, HttpHeaders customHeaders,
                                           int maxFramePayloadLength) {
         this(webSocketURL, version, subprotocol, allowExtensions,
-             customHeaders, maxFramePayloadLength, DEFAULT.handshakeTimeoutMillis());
+             customHeaders, maxFramePayloadLength, DEFAULT_HANDSHAKE_TIMEOUT_MILLIS);
     }
 
     /**
@@ -257,7 +261,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
                                           boolean allowExtensions, HttpHeaders customHeaders,
                                           int maxFramePayloadLength, long handshakeTimeoutMillis) {
         this(webSocketURL, version, subprotocol, allowExtensions, customHeaders,
-             maxFramePayloadLength, DEFAULT.handleCloseFrames(), handshakeTimeoutMillis);
+             maxFramePayloadLength, DEFAULT_HANDLE_CLOSE_FRAMES, handshakeTimeoutMillis);
     }
 
     /**
@@ -270,7 +274,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      *            {@code true} if close frames should not be forwarded and just close the channel
      */
     public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker, boolean handleCloseFrames) {
-        this(handshaker, handleCloseFrames, DEFAULT.handshakeTimeoutMillis());
+        this(handshaker, handleCloseFrames, DEFAULT_HANDSHAKE_TIMEOUT_MILLIS);
     }
 
     /**
@@ -287,7 +291,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      */
     public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker, boolean handleCloseFrames,
                                           long handshakeTimeoutMillis) {
-        this(handshaker, handleCloseFrames, DEFAULT.dropPongFrames(), handshakeTimeoutMillis);
+        this(handshaker, handleCloseFrames, DEFAULT_DROP_PONG_FRAMES, handshakeTimeoutMillis);
     }
 
     /**
@@ -303,7 +307,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      */
     public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker, boolean handleCloseFrames,
                                           boolean dropPongFrames) {
-        this(handshaker, handleCloseFrames, dropPongFrames, DEFAULT.handshakeTimeoutMillis());
+        this(handshaker, handleCloseFrames, dropPongFrames, DEFAULT_HANDSHAKE_TIMEOUT_MILLIS);
     }
 
     /**
@@ -338,7 +342,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      *            was established to the remote peer.
      */
     public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker) {
-        this(handshaker, DEFAULT.handshakeTimeoutMillis());
+        this(handshaker, DEFAULT_HANDSHAKE_TIMEOUT_MILLIS);
     }
 
     /**
@@ -352,7 +356,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      *            event {@link ClientHandshakeStateEvent#HANDSHAKE_TIMEOUT}
      */
     public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker, long handshakeTimeoutMillis) {
-        this(handshaker, DEFAULT.handleCloseFrames(), handshakeTimeoutMillis);
+        this(handshaker, DEFAULT_HANDLE_CLOSE_FRAMES, handshakeTimeoutMillis);
     }
 
     @Override

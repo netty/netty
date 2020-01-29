@@ -26,8 +26,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
  */
 public final class WebSocketServerProtocolConfig {
 
-    static final WebSocketServerProtocolConfig DEFAULT = new WebSocketServerProtocolConfig(
-        "/", null, false, 10000L, 0, true, WebSocketCloseStatus.NORMAL_CLOSURE, true, WebSocketDecoderConfig.DEFAULT);
+    static final long DEFAULT_HANDSHAKE_TIMEOUT_MILLIS = 10000L;
 
     private final String websocketPath;
     private final String subprotocols;
@@ -117,7 +116,8 @@ public final class WebSocketServerProtocolConfig {
     }
 
     public static Builder newBuilder() {
-        return new Builder(DEFAULT);
+        return new Builder("/", null, false, DEFAULT_HANDSHAKE_TIMEOUT_MILLIS, 0L,
+                           true, WebSocketCloseStatus.NORMAL_CLOSURE, true, WebSocketDecoderConfig.DEFAULT);
     }
 
     public static final class Builder {
@@ -133,16 +133,36 @@ public final class WebSocketServerProtocolConfig {
         private WebSocketDecoderConfig.Builder decoderConfigBuilder;
 
         private Builder(WebSocketServerProtocolConfig serverConfig) {
-            Objects.requireNonNull(serverConfig, "serverConfig");
-            websocketPath = serverConfig.websocketPath();
-            subprotocols = serverConfig.subprotocols();
-            checkStartsWith = serverConfig.checkStartsWith();
-            handshakeTimeoutMillis = serverConfig.handshakeTimeoutMillis();
-            forceCloseTimeoutMillis = serverConfig.forceCloseTimeoutMillis();
-            handleCloseFrames = serverConfig.handleCloseFrames();
-            sendCloseFrame = serverConfig.sendCloseFrame();
-            dropPongFrames = serverConfig.dropPongFrames();
-            decoderConfig = serverConfig.decoderConfig();
+            this(Objects.requireNonNull(serverConfig, "serverConfig").websocketPath(),
+                 serverConfig.subprotocols(),
+                 serverConfig.checkStartsWith(),
+                 serverConfig.handshakeTimeoutMillis(),
+                 serverConfig.forceCloseTimeoutMillis(),
+                 serverConfig.handleCloseFrames(),
+                 serverConfig.sendCloseFrame(),
+                 serverConfig.dropPongFrames(),
+                 serverConfig.decoderConfig()
+            );
+        }
+
+        private Builder(String websocketPath,
+                        String subprotocols,
+                        boolean checkStartsWith,
+                        long handshakeTimeoutMillis,
+                        long forceCloseTimeoutMillis,
+                        boolean handleCloseFrames,
+                        WebSocketCloseStatus sendCloseFrame,
+                        boolean dropPongFrames,
+                        WebSocketDecoderConfig decoderConfig) {
+            this.websocketPath = websocketPath;
+            this.subprotocols = subprotocols;
+            this.checkStartsWith = checkStartsWith;
+            this.handshakeTimeoutMillis = handshakeTimeoutMillis;
+            this.forceCloseTimeoutMillis = forceCloseTimeoutMillis;
+            this.handleCloseFrames = handleCloseFrames;
+            this.sendCloseFrame = sendCloseFrame;
+            this.dropPongFrames = dropPongFrames;
+            this.decoderConfig = decoderConfig;
         }
 
         /**
