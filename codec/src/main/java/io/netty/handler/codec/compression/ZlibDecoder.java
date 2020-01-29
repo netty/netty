@@ -87,7 +87,6 @@ public abstract class ZlibDecoder extends ByteToMessageDecoder {
      * data that was decompressed so far.
      */
     protected void decompressionBufferExhausted(ByteBuf buffer) {
-
     }
 
 }
