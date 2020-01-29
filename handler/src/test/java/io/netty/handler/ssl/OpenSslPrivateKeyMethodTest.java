@@ -62,7 +62,6 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -100,12 +99,7 @@ public class OpenSslPrivateKeyMethodTest {
 
         GROUP = new MultithreadEventLoopGroup(LocalHandler.newFactory());
         CERT = new SelfSignedCertificate();
-        EXECUTOR = Executors.newCachedThreadPool(new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                return new DelegateThread(r);
-            }
-        });
+        EXECUTOR = Executors.newCachedThreadPool(DelegateThread::new);
     }
 
     @AfterClass

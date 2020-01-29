@@ -23,7 +23,6 @@ import io.netty.buffer.PoolArena.SizeClass;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectPool.Handle;
-import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -493,12 +492,6 @@ final class PoolThreadCache {
         }
 
         @SuppressWarnings("rawtypes")
-        private static final ObjectPool<Entry> RECYCLER = ObjectPool.newPool(new ObjectCreator<Entry>() {
-            @SuppressWarnings("unchecked")
-            @Override
-            public Entry newObject(Handle<Entry> handle) {
-                return new Entry(handle);
-            }
-        });
+        private static final ObjectPool<Entry> RECYCLER = ObjectPool.newPool(handle -> new Entry(handle));
     }
 }

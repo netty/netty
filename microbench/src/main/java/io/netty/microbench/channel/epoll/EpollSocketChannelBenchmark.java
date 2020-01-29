@@ -37,10 +37,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.TearDown;
 
 public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
-    private static final Runnable runnable = new Runnable() {
-        @Override
-        public void run() { }
-    };
+    private static final Runnable runnable = () -> { };
 
     private EventLoopGroup group;
     private Channel serverChan;

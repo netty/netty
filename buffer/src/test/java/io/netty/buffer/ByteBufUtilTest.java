@@ -585,34 +585,19 @@ public class ByteBufUtilTest {
 
     @Test
     public void testWriteUtf8InvalidSubsequences() {
-        testInvalidSubsequences(new TestMethod() {
-            @Override
-            public int invoke(Object... args) {
-                return ByteBufUtil.writeUtf8((ByteBuf) args[0], (String) args[1],
-                        (Integer) args[2], (Integer) args[3]);
-            }
-        });
+        testInvalidSubsequences(args -> ByteBufUtil.writeUtf8((ByteBuf) args[0], (String) args[1],
+                (Integer) args[2], (Integer) args[3]));
     }
 
     @Test
     public void testReserveAndWriteUtf8InvalidSubsequences() {
-        testInvalidSubsequences(new TestMethod() {
-            @Override
-            public int invoke(Object... args) {
-                return ByteBufUtil.reserveAndWriteUtf8((ByteBuf) args[0], (String) args[1],
-                        (Integer) args[2], (Integer) args[3], 32);
-            }
-        });
+        testInvalidSubsequences(args -> ByteBufUtil.reserveAndWriteUtf8((ByteBuf) args[0], (String) args[1],
+                (Integer) args[2], (Integer) args[3], 32));
     }
 
     @Test
     public void testUtf8BytesInvalidSubsequences() {
-        testInvalidSubsequences(new TestMethod() {
-            @Override
-            public int invoke(Object... args) {
-                return ByteBufUtil.utf8Bytes((String) args[1], (Integer) args[2], (Integer) args[3]);
-            }
-        });
+        testInvalidSubsequences(args -> ByteBufUtil.utf8Bytes((String) args[1], (Integer) args[2], (Integer) args[3]));
     }
 
     @Test

@@ -2467,24 +2467,20 @@ public class DnsNameResolverTest {
         final String txt1 = "some text";
         final String txt2 = "some more text";
 
-        TestDnsServer server = new TestDnsServer(new RecordStore() {
+        TestDnsServer server = new TestDnsServer(question -> {
+            if (question.getDomainName().equals(hostname)) {
+                Map<String, Object> map1 = new HashMap<String, Object>();
+                map1.put(DnsAttribute.CHARACTER_STRING.toLowerCase(), txt1);
 
-            @Override
-            public Set<ResourceRecord> getRecords(QuestionRecord question) {
-                if (question.getDomainName().equals(hostname)) {
-                    Map<String, Object> map1 = new HashMap<String, Object>();
-                    map1.put(DnsAttribute.CHARACTER_STRING.toLowerCase(), txt1);
+                Map<String, Object> map2 = new HashMap<String, Object>();
+                map2.put(DnsAttribute.CHARACTER_STRING.toLowerCase(), txt2);
 
-                    Map<String, Object> map2 = new HashMap<String, Object>();
-                    map2.put(DnsAttribute.CHARACTER_STRING.toLowerCase(), txt2);
-
-                    Set<ResourceRecord> records = new HashSet<ResourceRecord>();
-                    records.add(new TestDnsServer.TestResourceRecord(question.getDomainName(), RecordType.TXT, map1));
-                    records.add(new TestDnsServer.TestResourceRecord(question.getDomainName(), RecordType.TXT, map2));
-                    return records;
-                }
-                return Collections.emptySet();
+                Set<ResourceRecord> records = new HashSet<ResourceRecord>();
+                records.add(new TestDnsServer.TestResourceRecord(question.getDomainName(), RecordType.TXT, map1));
+                records.add(new TestDnsServer.TestResourceRecord(question.getDomainName(), RecordType.TXT, map2));
+                return records;
             }
+            return Collections.emptySet();
         });
         server.start();
         DnsNameResolver resolver = newResolver(ResolvedAddressTypes.IPV4_ONLY)
@@ -2536,26 +2532,23 @@ public class DnsNameResolverTest {
     public void testNotIncludeDuplicates() throws IOException {
         final String name = "netty.io";
         final String ipv4Addr = "1.2.3.4";
-        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
-            @Override
-            public Set<ResourceRecord> getRecords(QuestionRecord question) {
-                Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>(4);
-                String qName = question.getDomainName().toLowerCase();
-                if (qName.equals(name)) {
-                    records.add(new TestDnsServer.TestResourceRecord(
-                            qName, RecordType.CNAME,
-                            Collections.<String, Object>singletonMap(
-                                    DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname.netty.io")));
-                    records.add(new TestDnsServer.TestResourceRecord(qName,
-                            RecordType.A, Collections.<String, Object>singletonMap(
-                            DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr)));
-                } else {
-                    records.add(new TestDnsServer.TestResourceRecord(qName,
-                            RecordType.A, Collections.<String, Object>singletonMap(
-                            DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr)));
-                }
-                return records;
+        TestDnsServer dnsServer2 = new TestDnsServer(question -> {
+            Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>(4);
+            String qName = question.getDomainName().toLowerCase();
+            if (qName.equals(name)) {
+                records.add(new TestDnsServer.TestResourceRecord(
+                        qName, RecordType.CNAME,
+                        Collections.<String, Object>singletonMap(
+                                DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname.netty.io")));
+                records.add(new TestDnsServer.TestResourceRecord(qName,
+                        RecordType.A, Collections.<String, Object>singletonMap(
+                        DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr)));
+            } else {
+                records.add(new TestDnsServer.TestResourceRecord(qName,
+                        RecordType.A, Collections.<String, Object>singletonMap(
+                        DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr)));
             }
+            return records;
         });
         dnsServer2.start();
         DnsNameResolver resolver = null;
@@ -2582,19 +2575,16 @@ public class DnsNameResolverTest {
     public void testIncludeDuplicates() throws IOException {
         final String name = "netty.io";
         final String ipv4Addr = "1.2.3.4";
-        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
-            @Override
-            public Set<ResourceRecord> getRecords(QuestionRecord question) {
-                Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>(2);
-                String qName = question.getDomainName().toLowerCase();
-                records.add(new TestDnsServer.TestResourceRecord(qName,
-                        RecordType.A, Collections.<String, Object>singletonMap(
-                        DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr)));
-                records.add(new TestDnsServer.TestResourceRecord(qName,
-                        RecordType.A, Collections.<String, Object>singletonMap(
-                        DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr)));
-                return records;
-            }
+        TestDnsServer dnsServer2 = new TestDnsServer(question -> {
+            Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>(2);
+            String qName = question.getDomainName().toLowerCase();
+            records.add(new TestDnsServer.TestResourceRecord(qName,
+                    RecordType.A, Collections.<String, Object>singletonMap(
+                    DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr)));
+            records.add(new TestDnsServer.TestResourceRecord(qName,
+                    RecordType.A, Collections.<String, Object>singletonMap(
+                    DnsAttribute.IP_ADDRESS.toLowerCase(), ipv4Addr)));
+            return records;
         });
         dnsServer2.start();
         DnsNameResolver resolver = null;
@@ -2674,22 +2664,19 @@ public class DnsNameResolverTest {
     @Test(timeout = 2000)
     public void testDropAAAAResolveAllFast() throws IOException {
         final String host = "somehost.netty.io";
-        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
-            @Override
-            public Set<ResourceRecord> getRecords(QuestionRecord question) throws DnsException {
-                String name = question.getDomainName();
-                if (name.equals(host)) {
-                    Set<ResourceRecord> records = new HashSet<ResourceRecord>(2);
-                    records.add(new TestDnsServer.TestResourceRecord(name, RecordType.A,
-                            Collections.<String, Object>singletonMap(DnsAttribute.IP_ADDRESS.toLowerCase(),
-                                    "10.0.0.1")));
-                    records.add(new TestDnsServer.TestResourceRecord(name, RecordType.A,
-                            Collections.<String, Object>singletonMap(DnsAttribute.IP_ADDRESS.toLowerCase(),
-                                    "10.0.0.2")));
-                    return records;
-                }
-                return null;
+        TestDnsServer dnsServer2 = new TestDnsServer(question -> {
+            String name = question.getDomainName();
+            if (name.equals(host)) {
+                Set<ResourceRecord> records = new HashSet<ResourceRecord>(2);
+                records.add(new TestDnsServer.TestResourceRecord(name, RecordType.A,
+                        Collections.<String, Object>singletonMap(DnsAttribute.IP_ADDRESS.toLowerCase(),
+                                "10.0.0.1")));
+                records.add(new TestDnsServer.TestResourceRecord(name, RecordType.A,
+                        Collections.<String, Object>singletonMap(DnsAttribute.IP_ADDRESS.toLowerCase(),
+                                "10.0.0.2")));
+                return records;
             }
+            return null;
         });
         dnsServer2.start(true);
         DnsNameResolver resolver = null;
@@ -2756,18 +2743,15 @@ public class DnsNameResolverTest {
         final String txt = "this is a txt record";
         final AtomicReference<DnsMessage> messageRef = new AtomicReference<DnsMessage>();
 
-        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
-            @Override
-            public Set<ResourceRecord> getRecords(QuestionRecord question) {
-                String name = question.getDomainName();
-                if (name.equals(host)) {
-                    return Collections.<ResourceRecord>singleton(
-                            new TestDnsServer.TestResourceRecord(name, RecordType.TXT,
-                                    Collections.<String, Object>singletonMap(
-                                            DnsAttribute.CHARACTER_STRING.toLowerCase(), txt)));
-                }
-                return null;
+        TestDnsServer dnsServer2 = new TestDnsServer(question -> {
+            String name = question.getDomainName();
+            if (name.equals(host)) {
+                return Collections.<ResourceRecord>singleton(
+                        new TestDnsServer.TestResourceRecord(name, RecordType.TXT,
+                                Collections.<String, Object>singletonMap(
+                                        DnsAttribute.CHARACTER_STRING.toLowerCase(), txt)));
             }
+            return null;
         }) {
             @Override
             protected DnsMessage filterMessage(DnsMessage message) {

@@ -51,12 +51,7 @@ final class WebSocketCloseFrameHandler implements ChannelHandler {
         }
         flush(ctx);
         applyCloseSentTimeout(ctx);
-        closeSent.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                ctx.close(promise);
-            }
-        });
+        closeSent.addListener((ChannelFutureListener) future -> ctx.close(promise));
     }
 
     @Override
@@ -78,20 +73,12 @@ final class WebSocketCloseFrameHandler implements ChannelHandler {
             return;
         }
 
-        final ScheduledFuture<?> timeoutTask = ctx.executor().schedule(new Runnable() {
-            @Override
-            public void run() {
-                if (!closeSent.isDone()) {
-                    closeSent.tryFailure(new WebSocketHandshakeException("send close frame timed out"));
-                }
+        final ScheduledFuture<?> timeoutTask = ctx.executor().schedule(() -> {
+            if (!closeSent.isDone()) {
+                closeSent.tryFailure(new WebSocketHandshakeException("send close frame timed out"));
             }
         }, forceCloseTimeoutMillis, TimeUnit.MILLISECONDS);
 
-        closeSent.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                timeoutTask.cancel(false);
-            }
-        });
+        closeSent.addListener((ChannelFutureListener) future -> timeoutTask.cancel(false));
     }
 }

@@ -249,12 +249,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             // We schedule this on the EventExecutor to allow to have any extra handlers added to the pipeline
             // before we pass the event to the next handler. This is needed as the event may be called from within
             // handlerAdded(...) which will be run before other handlers will be added to the pipeline.
-            ctx.executor().execute(new Runnable() {
-                @Override
-                public void run() {
-                    ctx.fireUserEventTriggered(evt);
-                }
-            });
+            ctx.executor().execute(() -> ctx.fireUserEventTriggered(evt));
         } else if (evt instanceof UpgradeEvent) {
             UpgradeEvent upgrade = (UpgradeEvent) evt;
             try {

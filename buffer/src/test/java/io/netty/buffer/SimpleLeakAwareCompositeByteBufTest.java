@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.ByteProcessor;
 import io.netty.util.ResourceLeakTracker;
 import org.hamcrest.CoreMatchers;
 import org.junit.After;
@@ -146,12 +145,7 @@ public class SimpleLeakAwareCompositeByteBufTest extends WrappedCompositeByteBuf
         comp.addComponent(true, inner);
         buf.addComponent(true, comp);
 
-        assertEquals(-1, buf.forEachByte(new ByteProcessor() {
-            @Override
-            public boolean process(byte value) {
-                return true;
-            }
-        }));
+        assertEquals(-1, buf.forEachByte(value -> true));
         assertTrue(buf.release());
     }
 

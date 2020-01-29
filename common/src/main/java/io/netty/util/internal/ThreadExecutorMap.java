@@ -52,12 +52,7 @@ public final class ThreadExecutorMap {
     public static Executor apply(final Executor executor, final EventExecutor eventExecutor) {
         Objects.requireNonNull(executor, "executor");
         Objects.requireNonNull(eventExecutor, "eventExecutor");
-        return new Executor() {
-            @Override
-            public void execute(final Runnable command) {
-                executor.execute(apply(command, eventExecutor));
-            }
-        };
+        return command -> executor.execute(apply(command, eventExecutor));
     }
 
     /**
@@ -67,15 +62,12 @@ public final class ThreadExecutorMap {
     public static Runnable apply(final Runnable command, final EventExecutor eventExecutor) {
         Objects.requireNonNull(command, "command");
         Objects.requireNonNull(eventExecutor, "eventExecutor");
-        return new Runnable() {
-            @Override
-            public void run() {
-                setCurrentEventExecutor(eventExecutor);
-                try {
-                    command.run();
-                } finally {
-                    setCurrentEventExecutor(null);
-                }
+        return () -> {
+            setCurrentEventExecutor(eventExecutor);
+            try {
+                command.run();
+            } finally {
+                setCurrentEventExecutor(null);
             }
         };
     }
@@ -87,11 +79,6 @@ public final class ThreadExecutorMap {
     public static ThreadFactory apply(final ThreadFactory threadFactory, final EventExecutor eventExecutor) {
         Objects.requireNonNull(threadFactory, "command");
         Objects.requireNonNull(eventExecutor, "eventExecutor");
-        return new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                return threadFactory.newThread(apply(r, eventExecutor));
-            }
-        };
+        return r -> threadFactory.newThread(apply(r, eventExecutor));
     }
 }

@@ -945,13 +945,10 @@ public class SslHandler extends ByteToMessageDecoder {
                 SSLEngineResult result = wrap(alloc, engine, Unpooled.EMPTY_BUFFER, out);
 
                 if (result.bytesProduced() > 0) {
-                    ctx.write(out).addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) {
-                            Throwable cause = future.cause();
-                            if (cause != null) {
-                                setHandshakeFailureTransportFailure(ctx, cause);
-                            }
+                    ctx.write(out).addListener((ChannelFutureListener) future -> {
+                        Throwable cause = future.cause();
+                        if (cause != null) {
+                            setHandshakeFailureTransportFailure(ctx, cause);
                         }
                     });
                     if (inUnwrap) {

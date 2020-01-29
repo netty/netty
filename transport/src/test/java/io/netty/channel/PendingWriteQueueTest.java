@@ -295,13 +295,10 @@ public class PendingWriteQueueTest {
         });
         ChannelPromise promise2 = channel.newPromise();
         promise2.addListener((ChannelFutureListener) future -> failOrder.add(2));
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                queue.add(1L, promise);
-                queue.add(2L, promise2);
-                queue.removeAndFailAll(new Exception());
-            }
+        channel.eventLoop().execute(() -> {
+            queue.add(1L, promise);
+            queue.add(2L, promise2);
+            queue.removeAndFailAll(new Exception());
         });
 
         assertTrue(promise.isDone());

@@ -97,28 +97,20 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelHandler {
             return;
         }
 
-        final Future<?> timeoutFuture = ctx.executor().schedule(new Runnable() {
-            @Override
-            public void run() {
-                if (localHandshakePromise.isDone()) {
-                    return;
-                }
+        final Future<?> timeoutFuture = ctx.executor().schedule(() -> {
+            if (localHandshakePromise.isDone()) {
+                return;
+            }
 
-                if (localHandshakePromise.tryFailure(new WebSocketHandshakeException("handshake timed out"))) {
-                    ctx.flush()
-                       .fireUserEventTriggered(ClientHandshakeStateEvent.HANDSHAKE_TIMEOUT)
-                       .close();
-                }
+            if (localHandshakePromise.tryFailure(new WebSocketHandshakeException("handshake timed out"))) {
+                ctx.flush()
+                   .fireUserEventTriggered(ClientHandshakeStateEvent.HANDSHAKE_TIMEOUT)
+                   .close();
             }
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
 
         // Cancel the handshake timeout when handshake is finished.
-        localHandshakePromise.addListener(new FutureListener<Void>() {
-            @Override
-            public void operationComplete(Future<Void> f) throws Exception {
-                timeoutFuture.cancel(false);
-            }
-        });
+        localHandshakePromise.addListener((FutureListener<Void>) f -> timeoutFuture.cancel(false));
     }
 
     /**

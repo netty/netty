@@ -19,7 +19,6 @@ package io.netty.util.internal;
 import static java.util.Objects.requireNonNull;
 
 import io.netty.util.internal.ObjectPool.Handle;
-import io.netty.util.internal.ObjectPool.ObjectCreator;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -35,13 +34,7 @@ public final class RecyclableArrayList extends ArrayList<Object> {
 
     private static final int DEFAULT_INITIAL_CAPACITY = 8;
 
-    private static final ObjectPool<RecyclableArrayList> RECYCLER = ObjectPool.newPool(
-            new ObjectCreator<RecyclableArrayList>() {
-        @Override
-        public RecyclableArrayList newObject(Handle<RecyclableArrayList> handle) {
-            return new RecyclableArrayList(handle);
-        }
-    });
+    private static final ObjectPool<RecyclableArrayList> RECYCLER = ObjectPool.newPool(RecyclableArrayList::new);
 
     private boolean insertSinceRecycled;
 
