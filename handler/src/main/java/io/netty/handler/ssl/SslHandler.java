@@ -858,11 +858,25 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         case NOT_HANDSHAKING:
                             setHandshakeSuccessIfStillHandshaking();
                             // deliberate fall-through
-                        case NEED_WRAP:
-                            finishWrap(ctx, out, promise, inUnwrap, false);
+                        case NEED_WRAP: {
+                            ChannelPromise p = promise;
+
+                            // Null out the promise so it is not reused in the finally block in the cause of
+                            // finishWrap(...) throwing.
                             promise = null;
-                            out = null;
+                            final ByteBuf b;
+
+                            if (out.isReadable()) {
+                                // There is something in the out buffer. Ensure we null it out so it is not re-used.
+                                b = out;
+                                out = null;
+                            } else {
+                                // If out is not readable we can re-use it and so save an extra allocation
+                                b = null;
+                            }
+                            finishWrap(ctx, b, p, inUnwrap, false);
                             break;
+                        }
                         case NEED_UNWRAP:
                             needUnwrap = true;
                             return;
