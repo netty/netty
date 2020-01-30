@@ -114,12 +114,8 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
     }
 
-    private final ChannelFutureListener windowUpdateFrameWriteListener = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) {
+    private final ChannelFutureListener windowUpdateFrameWriteListener = future ->
             windowUpdateFrameWriteComplete(future, AbstractHttp2StreamChannel.this);
-        }
-    };
 
     /**
      * The current status of the read-processing for a {@link AbstractHttp2StreamChannel}.

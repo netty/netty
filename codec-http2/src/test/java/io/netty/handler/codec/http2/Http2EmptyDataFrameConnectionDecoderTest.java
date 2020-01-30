@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import static org.junit.Assert.assertNull;
@@ -33,12 +32,8 @@ public class Http2EmptyDataFrameConnectionDecoderTest {
         Http2ConnectionDecoder delegate = mock(Http2ConnectionDecoder.class);
         final ArgumentCaptor<Http2FrameListener> listenerArgumentCaptor =
                 ArgumentCaptor.forClass(Http2FrameListener.class);
-        when(delegate.frameListener()).then(new Answer<Http2FrameListener>() {
-            @Override
-            public Http2FrameListener answer(InvocationOnMock invocationOnMock) {
-                return listenerArgumentCaptor.getValue();
-            }
-        });
+        when(delegate.frameListener()).then(
+                (Answer<Http2FrameListener>) invocationOnMock -> listenerArgumentCaptor.getValue());
         Http2FrameListener listener = mock(Http2FrameListener.class);
         Http2EmptyDataFrameConnectionDecoder decoder = new Http2EmptyDataFrameConnectionDecoder(delegate, 2);
         decoder.frameListener(listener);

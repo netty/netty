@@ -86,12 +86,7 @@ public abstract class AbstractSingleThreadEventLoopTest {
     public void gracefulShutdownAfterStart() throws Exception {
         EventLoop loop = new MultithreadEventLoopGroup(newIoHandlerFactory()).next();
         final CountDownLatch latch = new CountDownLatch(1);
-        loop.execute(new Runnable() {
-            @Override
-            public void run() {
-                latch.countDown();
-            }
-        });
+        loop.execute(latch::countDown);
 
         // Wait for the event loop thread to start.
         latch.await();
@@ -105,10 +100,7 @@ public abstract class AbstractSingleThreadEventLoopTest {
         assertRejection(loop);
     }
 
-    private static final Runnable NOOP = new Runnable() {
-        @Override
-        public void run() { }
-    };
+    private static final Runnable NOOP = () -> { };
 
     private static void assertRejection(EventExecutor loop) {
         try {

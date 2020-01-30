@@ -1608,22 +1608,19 @@ public class DefaultChannelPipelineTest {
         assertEquals(expectedNumber, pipeline.names().size());
         assertEquals(expectedNumber, pipeline.toMap().size());
 
-        pipeline.executor().submit(new Runnable() {
-            @Override
-            public void run() {
-                DefaultChannelHandlerContext ctx = (DefaultChannelHandlerContext) pipeline.firstContext();
-                int handlerNumber = 0;
-                if (ctx != null) {
-                    for (;;) {
-                        handlerNumber++;
-                        if (ctx == pipeline.lastContext()) {
-                            break;
-                        }
-                        ctx = ctx.next;
+        pipeline.executor().submit(() -> {
+            DefaultChannelHandlerContext ctx = (DefaultChannelHandlerContext) pipeline.firstContext();
+            int handlerNumber = 0;
+            if (ctx != null) {
+                for (;;) {
+                    handlerNumber++;
+                    if (ctx == pipeline.lastContext()) {
+                        break;
                     }
+                    ctx = ctx.next;
                 }
-                assertEquals(expectedNumber, handlerNumber);
             }
+            assertEquals(expectedNumber, handlerNumber);
         }).syncUninterruptibly();
     }
 

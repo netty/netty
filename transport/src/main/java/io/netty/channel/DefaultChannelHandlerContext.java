@@ -966,13 +966,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     static final class WriteTask extends AbstractWriteTask implements SingleThreadEventLoop.NonWakeupRunnable {
 
-        private static final ObjectPool<WriteTask> RECYCLER = ObjectPool.newPool(
-                new ObjectPool.ObjectCreator<WriteTask>() {
-            @Override
-            public WriteTask newObject(ObjectPool.Handle<WriteTask> handle) {
-                return new WriteTask(handle);
-            }
-        });
+        private static final ObjectPool<WriteTask> RECYCLER = ObjectPool.newPool(WriteTask::new);
 
         static WriteTask newInstance(
                 DefaultChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
@@ -993,13 +987,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     static final class WriteAndFlushTask extends AbstractWriteTask {
 
-        private static final ObjectPool<WriteAndFlushTask> RECYCLER = ObjectPool.newPool(
-                new ObjectPool.ObjectCreator<WriteAndFlushTask>() {
-            @Override
-            public WriteAndFlushTask newObject(ObjectPool.Handle<WriteAndFlushTask> handle) {
-                return new WriteAndFlushTask(handle);
-            }
-        });
+        private static final ObjectPool<WriteAndFlushTask> RECYCLER = ObjectPool.newPool(WriteAndFlushTask::new);
 
         static WriteAndFlushTask newInstance(
                 DefaultChannelHandlerContext ctx, Object msg, ChannelPromise promise) {

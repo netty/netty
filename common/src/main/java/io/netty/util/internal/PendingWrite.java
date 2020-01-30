@@ -18,18 +18,12 @@ package io.netty.util.internal;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectPool.Handle;
-import io.netty.util.internal.ObjectPool.ObjectCreator;
 
 /**
  * Some pending write which should be picked up later.
  */
 public final class PendingWrite {
-    private static final ObjectPool<PendingWrite> RECYCLER = ObjectPool.newPool(new ObjectCreator<PendingWrite>() {
-        @Override
-        public PendingWrite newObject(Handle<PendingWrite> handle) {
-            return new PendingWrite(handle);
-        }
-    });
+    private static final ObjectPool<PendingWrite> RECYCLER = ObjectPool.newPool(PendingWrite::new);
 
     /**
      * Create a new empty {@link RecyclableArrayList} instance

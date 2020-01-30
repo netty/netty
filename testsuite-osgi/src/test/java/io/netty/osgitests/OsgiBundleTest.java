@@ -24,7 +24,6 @@ import static org.ops4j.pax.exam.CoreOptions.url;
 import static org.osgi.framework.Constants.FRAMEWORK_BOOTDELEGATION;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -45,12 +44,8 @@ public class OsgiBundleTest {
         final Set<String> links = new HashSet<String>();
 
         final File directory = new File("target/generated-test-resources/alta/");
-        File[] files = directory.listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(File dir, String name) {
-                return (name.startsWith("io.netty") || name.startsWith("com.barchart.udt")) && name.endsWith(".link");
-            }
-        });
+        File[] files = directory.listFiles((dir, name) ->
+                (name.startsWith("io.netty") || name.startsWith("com.barchart.udt")) && name.endsWith(".link"));
         if (files == null) {
             throw new IllegalStateException(directory + " is not found or is not a directory");
         }

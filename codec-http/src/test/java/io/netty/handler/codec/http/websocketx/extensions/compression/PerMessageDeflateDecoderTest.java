@@ -221,12 +221,8 @@ public class PerMessageDeflateDecoderTest {
 
     @Test
     public void testSelectivityDecompressionSkip() {
-        WebSocketExtensionFilter selectivityDecompressionFilter = new WebSocketExtensionFilter() {
-            @Override
-            public boolean mustSkip(WebSocketFrame frame) {
-                return frame instanceof TextWebSocketFrame && frame.content().readableBytes() < 100;
-            }
-        };
+        WebSocketExtensionFilter selectivityDecompressionFilter =
+                frame -> frame instanceof TextWebSocketFrame && frame.content().readableBytes() < 100;
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
@@ -266,12 +262,7 @@ public class PerMessageDeflateDecoderTest {
 
     @Test(expected = DecoderException.class)
     public void testIllegalStateWhenDecompressionInProgress() {
-        WebSocketExtensionFilter selectivityDecompressionFilter = new WebSocketExtensionFilter() {
-            @Override
-            public boolean mustSkip(WebSocketFrame frame) {
-                return frame.content().readableBytes() < 100;
-            }
-        };
+        WebSocketExtensionFilter selectivityDecompressionFilter = frame -> frame.content().readableBytes() < 100;
 
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));

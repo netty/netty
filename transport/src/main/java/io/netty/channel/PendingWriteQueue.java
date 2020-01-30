@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.ObjectPool;
-import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -286,12 +285,7 @@ public final class PendingWriteQueue {
      * Holds all meta-data and construct the linked-list structure.
      */
     static final class PendingWrite {
-        private static final ObjectPool<PendingWrite> RECYCLER = ObjectPool.newPool(new ObjectCreator<PendingWrite>() {
-            @Override
-            public PendingWrite newObject(ObjectPool.Handle<PendingWrite> handle) {
-                return new PendingWrite(handle);
-            }
-        });
+        private static final ObjectPool<PendingWrite> RECYCLER = ObjectPool.newPool(PendingWrite::new);
 
         private final ObjectPool.Handle<PendingWrite> handle;
         private PendingWrite next;

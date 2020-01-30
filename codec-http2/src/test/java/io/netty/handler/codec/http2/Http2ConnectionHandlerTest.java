@@ -41,7 +41,6 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.concurrent.CountDownLatch;
@@ -743,38 +742,23 @@ public class Http2ConnectionHandlerTest {
         when(stream.id()).thenReturn(STREAM_ID);
 
         final AtomicBoolean resetSent = new AtomicBoolean();
-        when(stream.resetSent()).then(new Answer<Http2Stream>() {
-            @Override
-            public Http2Stream answer(InvocationOnMock invocationOnMock) {
-                resetSent.set(true);
-                return stream;
-            }
+        when(stream.resetSent()).then((Answer<Http2Stream>) invocationOnMock -> {
+            resetSent.set(true);
+            return stream;
         });
-        when(stream.isResetSent()).then(new Answer<Boolean>() {
-            @Override
-            public Boolean answer(InvocationOnMock invocationOnMock) {
-                return resetSent.get();
-            }
-        });
+        when(stream.isResetSent()).then((Answer<Boolean>) invocationOnMock -> resetSent.get());
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID), anyLong(), any(ChannelPromise.class)))
-                .then(new Answer<ChannelFuture>() {
-                    @Override
-                    public ChannelFuture answer(InvocationOnMock invocationOnMock) throws Throwable {
-                        ChannelPromise promise = invocationOnMock.getArgument(3);
-                        return promise.setSuccess();
-                    }
+                .then((Answer<ChannelFuture>) invocationOnMock -> {
+                    ChannelPromise promise = invocationOnMock.getArgument(3);
+                    return promise.setSuccess();
                 });
 
         ChannelPromise promise =
                 new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
         final ChannelPromise promise2 =
                 new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                handler.resetStream(ctx, STREAM_ID, STREAM_CLOSED.code(), promise2);
-            }
-        });
+        promise.addListener((ChannelFutureListener) future ->
+                handler.resetStream(ctx, STREAM_ID, STREAM_CLOSED.code(), promise2));
 
         handler.resetStream(ctx, STREAM_ID, CANCEL.code(), promise);
         verify(frameWriter).writeRstStream(eq(ctx), eq(STREAM_ID), anyLong(), any(ChannelPromise.class));

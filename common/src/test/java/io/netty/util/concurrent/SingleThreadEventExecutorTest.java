@@ -193,10 +193,7 @@ public class SingleThreadEventExecutorTest {
             }
         };
 
-        final Runnable dummyTask = new Runnable() {
-            @Override
-            public void run() {
-            }
+        final Runnable dummyTask = () -> {
         };
 
         final LinkedBlockingQueue<Future<?>> submittedTasks = new LinkedBlockingQueue<Future<?>>();

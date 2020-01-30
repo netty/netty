@@ -123,12 +123,9 @@ public class SslHandlerTest {
         try {
             final CountDownLatch writeCauseLatch = new CountDownLatch(1);
             final AtomicReference<Throwable> failureRef = new AtomicReference<Throwable>();
-            ch.write(Unpooled.wrappedBuffer(new byte[]{1})).addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) {
-                    failureRef.compareAndSet(null, future.cause());
-                    writeCauseLatch.countDown();
-                }
+            ch.write(Unpooled.wrappedBuffer(new byte[]{1})).addListener((ChannelFutureListener) future -> {
+                failureRef.compareAndSet(null, future.cause());
+                writeCauseLatch.countDown();
             });
             writeLatch.await();
 

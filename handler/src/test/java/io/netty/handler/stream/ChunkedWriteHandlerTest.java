@@ -513,12 +513,9 @@ public class ChunkedWriteHandlerTest {
         final CountDownLatch listenerInvoked = new CountDownLatch(1);
 
         ChannelFuture writeFuture = ch.write(input);
-        writeFuture.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                inputClosedWhenListenerInvoked.set(input.isClosed());
-                listenerInvoked.countDown();
-            }
+        writeFuture.addListener((ChannelFutureListener) future -> {
+            inputClosedWhenListenerInvoked.set(input.isClosed());
+            listenerInvoked.countDown();
         });
         ch.flush();
 
@@ -537,12 +534,9 @@ public class ChunkedWriteHandlerTest {
         final CountDownLatch listenerInvoked = new CountDownLatch(1);
 
         ChannelFuture writeFuture = ch.write(input);
-        writeFuture.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                inputClosedWhenListenerInvoked.set(input.isClosed());
-                listenerInvoked.countDown();
-            }
+        writeFuture.addListener((ChannelFutureListener) future -> {
+            inputClosedWhenListenerInvoked.set(input.isClosed());
+            listenerInvoked.countDown();
         });
         ch.flush();
 
@@ -562,12 +556,9 @@ public class ChunkedWriteHandlerTest {
         final CountDownLatch listenerInvoked = new CountDownLatch(1);
 
         ChannelFuture writeFuture = ch.write(input);
-        writeFuture.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                inputClosedWhenListenerInvoked.set(input.isClosed());
-                listenerInvoked.countDown();
-            }
+        writeFuture.addListener((ChannelFutureListener) future -> {
+            inputClosedWhenListenerInvoked.set(input.isClosed());
+            listenerInvoked.countDown();
         });
         ch.close(); // close channel to make handler discard the input on subsequent flush
         ch.flush();
@@ -588,12 +579,9 @@ public class ChunkedWriteHandlerTest {
         final CountDownLatch listenerInvoked = new CountDownLatch(1);
 
         ChannelFuture writeFuture = ch.write(input);
-        writeFuture.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                inputClosedWhenListenerInvoked.set(input.isClosed());
-                listenerInvoked.countDown();
-            }
+        writeFuture.addListener((ChannelFutureListener) future -> {
+            inputClosedWhenListenerInvoked.set(input.isClosed());
+            listenerInvoked.countDown();
         });
         ch.close(); // close channel to make handler discard the input on subsequent flush
         ch.flush();

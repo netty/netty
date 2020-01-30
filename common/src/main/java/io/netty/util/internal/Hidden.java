@@ -20,8 +20,6 @@ import io.netty.util.concurrent.FastThreadLocalThread;
 import reactor.blockhound.BlockHound;
 import reactor.blockhound.integration.BlockHoundIntegration;
 
-import java.util.function.Function;
-import java.util.function.Predicate;
 
 /**
  * Contains classes that must be have public visibility but are not public API.
@@ -64,18 +62,8 @@ class Hidden {
                     "confirmShutdown"
             );
 
-            builder.nonBlockingThreadPredicate(new Function<Predicate<Thread>, Predicate<Thread>>() {
-                @Override
-                public Predicate<Thread> apply(final Predicate<Thread> p) {
-                    return new Predicate<Thread>() {
-                        @Override
-                        @SuppressJava6Requirement(reason = "Predicate#test")
-                        public boolean test(Thread thread) {
-                            return p.test(thread) || thread instanceof FastThreadLocalThread;
-                        }
-                    };
-                }
-            });
+            builder.nonBlockingThreadPredicate(p -> thread ->
+                    p.test(thread) || thread instanceof FastThreadLocalThread);
         }
     }
 }
