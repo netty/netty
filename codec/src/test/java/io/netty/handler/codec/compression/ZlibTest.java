@@ -354,15 +354,16 @@ public abstract class ZlibTest {
     @Test
     public void testMaxAllocation() throws Exception {
         int maxAllocation = 1024;
-        ZlibDecoder decoder = createDecoder(ZlibWrapper.NONE, maxAllocation);
+        ZlibDecoder decoder = createDecoder(ZlibWrapper.ZLIB, maxAllocation);
         EmbeddedChannel chDecoder = new EmbeddedChannel(decoder);
         TestByteBufAllocator alloc = new TestByteBufAllocator(chDecoder.alloc());
         chDecoder.config().setAllocator(alloc);
 
         try {
-            chDecoder.writeInbound(Unpooled.copiedBuffer(BYTES_LARGE));
+            chDecoder.writeInbound(Unpooled.wrappedBuffer(deflate(BYTES_LARGE)));
             fail("decompressed size > maxAllocation, so should have thrown exception");
         } catch (DecompressionException e) {
+            assertTrue(e.getMessage().startsWith("Decompression buffer has reached maximum size"));
             assertEquals(maxAllocation, alloc.getMaxAllocation());
             assertTrue(decoder.isClosed());
             assertFalse(chDecoder.finish());
