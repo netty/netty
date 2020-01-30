@@ -46,6 +46,8 @@
   <properties>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
+    <!-- Needed for SelfSignedCertificate -->
+    <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
     <skipJapicmp>true</skipJapicmp>
   </properties>
 
@@ -55,7 +57,17 @@
       <artifactId>netty-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-handler</artifactId>
+      <version>${project.version}</version>
+    </dependency>
 
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+      <optional>true</optional>
+    </dependency>
     <dependency>
       <groupId>io.projectreactor.tools</groupId>
       <artifactId>blockhound</artifactId>

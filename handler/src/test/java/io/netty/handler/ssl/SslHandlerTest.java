@@ -934,7 +934,7 @@ public class SslHandlerTest {
         }
     }
 
-    private void testHandshakeWithExecutor(Executor executor) throws Exception {
+    private static void testHandshakeWithExecutor(Executor executor) throws Exception {
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(SslProvider.JDK).build();
@@ -991,7 +991,7 @@ public class SslHandlerTest {
         testHandshakeTimeoutBecauseExecutorNotExecute(false);
     }
 
-    private void testHandshakeTimeoutBecauseExecutorNotExecute(final boolean client) throws Exception {
+    private static void testHandshakeTimeoutBecauseExecutorNotExecute(final boolean client) throws Exception {
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(SslProvider.JDK).build();
