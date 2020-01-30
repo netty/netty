@@ -15,15 +15,41 @@
  */
 package io.netty.util.internal;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.ssl.SslHandshakeCompletionEvent;
+import io.netty.handler.ssl.SslProvider;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.internal.Hidden.NettyBlockHoundIntegration;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import reactor.blockhound.BlockHound;
 import reactor.blockhound.integration.BlockHoundIntegration;
 
+import java.net.InetSocketAddress;
 import java.util.ServiceLoader;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
@@ -64,6 +90,91 @@ public class NettyBlockHoundIntegrationTest {
             Throwable throwable = e.getCause();
             assertNotNull("An exception was thrown", throwable);
             assertTrue("Blocking call was reported", throwable.getMessage().contains("Blocking call"));
+        }
+    }
+
+    // Tests copied from io.netty.handler.ssl.SslHandlerTest
+    @Test
+    public void testHandshakeWithExecutorThatExecuteDirectory() throws Exception {
+        testHandshakeWithExecutor(Runnable::run);
+    }
+
+    @Test
+    public void testHandshakeWithImmediateExecutor() throws Exception {
+        testHandshakeWithExecutor(ImmediateExecutor.INSTANCE);
+    }
+
+    @Test
+    public void testHandshakeWithImmediateEventExecutor() throws Exception {
+        testHandshakeWithExecutor(ImmediateEventExecutor.INSTANCE);
+    }
+
+    @Test
+    public void testHandshakeWithExecutor() throws Exception {
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        try {
+            testHandshakeWithExecutor(executorService);
+        } finally {
+            executorService.shutdown();
+        }
+    }
+
+    private static void testHandshakeWithExecutor(Executor executor) throws Exception {
+        final SslContext sslClientCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(SslProvider.JDK).build();
+
+        final SelfSignedCertificate cert = new SelfSignedCertificate();
+        final SslContext sslServerCtx = SslContextBuilder.forServer(cert.key(), cert.cert())
+                .sslProvider(SslProvider.JDK).build();
+
+        EventLoopGroup group = new NioEventLoopGroup();
+        Channel sc = null;
+        Channel cc = null;
+        final SslHandler clientSslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT, executor);
+        final SslHandler serverSslHandler = sslServerCtx.newHandler(UnpooledByteBufAllocator.DEFAULT, executor);
+
+        try {
+            sc = new ServerBootstrap()
+                    .group(group)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(serverSslHandler)
+                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+
+            ChannelFuture future = new Bootstrap()
+                    .group(group)
+                    .channel(NioSocketChannel.class)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ch.pipeline()
+                              .addLast(clientSslHandler)
+                              .addLast(new ChannelInboundHandlerAdapter() {
+
+                                  @Override
+                                  public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                                      if (evt instanceof SslHandshakeCompletionEvent &&
+                                              ((SslHandshakeCompletionEvent) evt).cause() != null) {
+                                          ((SslHandshakeCompletionEvent) evt).cause().printStackTrace();
+                                      }
+                                      ctx.fireUserEventTriggered(evt);
+                                  }
+                              });
+                        }
+                    }).connect(sc.localAddress());
+            cc = future.syncUninterruptibly().channel();
+
+            assertTrue(clientSslHandler.handshakeFuture().await().isSuccess());
+            assertTrue(serverSslHandler.handshakeFuture().await().isSuccess());
+        } finally {
+            if (cc != null) {
+                cc.close().syncUninterruptibly();
+            }
+            if (sc != null) {
+                sc.close().syncUninterruptibly();
+            }
+            group.shutdownGracefully();
+            ReferenceCountUtil.release(sslClientCtx);
         }
     }
 }

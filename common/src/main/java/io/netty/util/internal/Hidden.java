@@ -62,6 +62,16 @@ class Hidden {
                     "confirmShutdown"
             );
 
+            builder.allowBlockingCallsInside(
+                    "io.netty.handler.ssl.SslHandler",
+                    "handshake"
+            );
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.handler.ssl.SslHandler",
+                    "runAllDelegatedTasks"
+            );
+
             builder.nonBlockingThreadPredicate(p -> thread ->
                     p.test(thread) || thread instanceof FastThreadLocalThread);
         }
