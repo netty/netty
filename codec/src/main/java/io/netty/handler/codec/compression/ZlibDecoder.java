@@ -33,7 +33,7 @@ public abstract class ZlibDecoder extends ByteToMessageDecoder {
     /**
      * Same as {@link #ZlibDecoder(int)} with maxAllocation = 0.
      */
-    protected ZlibDecoder() {
+    public ZlibDecoder() {
         this(0);
     }
 
@@ -43,7 +43,7 @@ public abstract class ZlibDecoder extends ByteToMessageDecoder {
      *          Maximum size of the decompression buffer. Must be &gt;= 0.
      *          If zero, maximum size is decided by the {@link ByteBufAllocator}.
      */
-    protected ZlibDecoder(int maxAllocation) {
+    public ZlibDecoder(int maxAllocation) {
         if (maxAllocation < 0) {
             throw new IllegalArgumentException("maxAllocation must be >= 0");
         }
