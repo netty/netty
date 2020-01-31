@@ -736,22 +736,58 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public ChannelHandler removeFirst() {
+        final DefaultChannelHandlerContext ctx;
+        EventExecutor executor = executor();
+        boolean inEventLoop = executor.inEventLoop();
         synchronized (handlers) {
             if (handlers.isEmpty()) {
                 throw new NoSuchElementException();
             }
-            return handlers.remove(0).handler();
+            int idx = 0;
+
+            ctx = handlers.remove(idx);
+            assert ctx != null;
+
+            if (!inEventLoop) {
+                try {
+                    executor.execute(() -> remove0(ctx));
+                    return ctx.handler();
+                } catch (Throwable cause) {
+                    handlers.add(idx, ctx);
+                    throw cause;
+                }
+            }
         }
+        remove0(ctx);
+        return ctx.handler();
     }
 
     @Override
     public ChannelHandler removeLast() {
+        final DefaultChannelHandlerContext ctx;
+        EventExecutor executor = executor();
+        boolean inEventLoop = executor.inEventLoop();
         synchronized (handlers) {
             if (handlers.isEmpty()) {
-                throw new NoSuchElementException();
+                return null;
             }
-            return handlers.remove(handlers.size() - 1).handler();
+            int idx = handlers.size() - 1;
+
+            ctx = handlers.remove(idx);
+            assert ctx != null;
+
+            if (!inEventLoop) {
+                try {
+                    executor.execute(() -> remove0(ctx));
+                    return ctx.handler();
+                } catch (Throwable cause) {
+                    handlers.add(idx, ctx);
+                    throw cause;
+                }
+            }
         }
+        remove0(ctx);
+        return ctx.handler();
     }
 
     @Override
