@@ -23,7 +23,7 @@ public class JZlibTest extends ZlibTest {
     }
 
     @Override
-    protected ZlibDecoder createDecoder(ZlibWrapper wrapper) {
-        return new JZlibDecoder(wrapper);
+    protected ZlibDecoder createDecoder(ZlibWrapper wrapper, int maxAllocation) {
+        return new JZlibDecoder(wrapper, maxAllocation);
     }
 }

@@ -38,8 +38,8 @@ public class JdkZlibTest extends ZlibTest {
     }
 
     @Override
-    protected ZlibDecoder createDecoder(ZlibWrapper wrapper) {
-        return new JdkZlibDecoder(wrapper);
+    protected ZlibDecoder createDecoder(ZlibWrapper wrapper, int maxAllocation) {
+        return new JdkZlibDecoder(wrapper, maxAllocation);
     }
 
     @Test(expected = DecompressionException.class)
