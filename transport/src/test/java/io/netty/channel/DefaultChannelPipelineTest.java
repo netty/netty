@@ -709,18 +709,52 @@ public class DefaultChannelPipelineTest {
     @Test(timeout = 2000)
     public void testAddRemoveHandlerCalled() throws Throwable {
         ChannelPipeline pipeline = newLocalChannel().pipeline();
-        CallbackCheckHandler handler = new CallbackCheckHandler();
 
+        CallbackCheckHandler handler = new CallbackCheckHandler();
         pipeline.addFirst(handler);
         pipeline.remove(handler);
-
         assertTrue(handler.addedHandler.get());
         assertTrue(handler.removedHandler.get());
 
+        CallbackCheckHandler handlerType = new CallbackCheckHandler();
+        pipeline.addFirst(handlerType);
+        pipeline.remove(handlerType.getClass());
+        assertTrue(handlerType.addedHandler.get());
+        assertTrue(handlerType.removedHandler.get());
+
+        CallbackCheckHandler handlerName = new CallbackCheckHandler();
+        pipeline.addFirst("handler", handlerName);
+        pipeline.remove("handler");
+        assertTrue(handlerName.addedHandler.get());
+        assertTrue(handlerName.removedHandler.get());
+
+        CallbackCheckHandler first = new CallbackCheckHandler();
+        pipeline.addFirst(first);
+        pipeline.removeFirst();
+        assertTrue(first.addedHandler.get());
+        assertTrue(first.removedHandler.get());
+
+        CallbackCheckHandler last = new CallbackCheckHandler();
+        pipeline.addFirst(last);
+        pipeline.removeLast();
+        assertTrue(last.addedHandler.get());
+        assertTrue(last.removedHandler.get());
+
         pipeline.channel().register().syncUninterruptibly();
         Throwable cause = handler.error.get();
+        Throwable causeName = handlerName.error.get();
+        Throwable causeType = handlerType.error.get();
+        Throwable causeFirst = first.error.get();
+        Throwable causeLast = last.error.get();
         pipeline.channel().close().syncUninterruptibly();
+        rethrowIfNotNull(cause);
+        rethrowIfNotNull(causeName);
+        rethrowIfNotNull(causeType);
+        rethrowIfNotNull(causeFirst);
+        rethrowIfNotNull(causeLast);
+    }
 
+    private static void rethrowIfNotNull(Throwable cause) throws Throwable {
         if (cause != null) {
             throw cause;
         }
