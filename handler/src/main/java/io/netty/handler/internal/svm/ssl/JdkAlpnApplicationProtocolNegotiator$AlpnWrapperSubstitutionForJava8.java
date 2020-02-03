@@ -32,11 +32,11 @@ final class JdkAlpnApplicationProtocolNegotiator$AlpnWrapperSubstitutionForJava8
     @Substitute
     public SSLEngine wrapSslEngine(SSLEngine engine, ByteBufAllocator alloc,
         JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer) {
-        if (JettyAlpnSslEngineSubstitutions.isAvailable()) {
+        if (JettyAlpnSslEngineSubstitution.isAvailable()) {
             return isServer
-                ? (SSLEngine) (Object) JettyAlpnSslEngineSubstitutions.newServerEngine(engine,
+                ? (SSLEngine) (Object) JettyAlpnSslEngineSubstitution.newServerEngine(engine,
                 applicationNegotiator)
-                : (SSLEngine) (Object) JettyAlpnSslEngineSubstitutions.newClientEngine(engine,
+                : (SSLEngine) (Object) JettyAlpnSslEngineSubstitution.newClientEngine(engine,
                 applicationNegotiator);
         }
         throw new RuntimeException("Unable to wrap SSLEngine of type " + engine.getClass().getName());

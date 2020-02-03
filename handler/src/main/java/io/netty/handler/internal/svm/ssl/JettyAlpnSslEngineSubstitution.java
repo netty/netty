@@ -15,15 +15,34 @@
  */
 package io.netty.handler.internal.svm.ssl;
 
+import io.netty.handler.ssl.JdkApplicationProtocolNegotiator;
+
+import javax.net.ssl.SSLEngine;
+
 import com.oracle.svm.core.annotate.Alias;
 import com.oracle.svm.core.annotate.TargetClass;
+import com.oracle.svm.core.jdk.JDK8OrEarlier;
 
-@TargetClass(className = "io.netty.handler.ssl.JdkDefaultApplicationProtocolNegotiator")
-final class JdkDefaultApplicationProtocolNegotiatorSubstitution {
+@TargetClass(className = "io.netty.handler.ssl.JettyAlpnSslEngine", onlyWith = JDK8OrEarlier.class)
+final class JettyAlpnSslEngineSubstitution {
 
-    private JdkDefaultApplicationProtocolNegotiatorSubstitution() {
+    private JettyAlpnSslEngineSubstitution() {
     }
 
     @Alias
-    public static JdkDefaultApplicationProtocolNegotiatorSubstitution INSTANCE;
+    static boolean isAvailable() {
+        return false;
+    }
+
+    @Alias
+    static JettyAlpnSslEngineSubstitution newClientEngine(SSLEngine engine,
+        JdkApplicationProtocolNegotiator applicationNegotiator) {
+        return null;
+    }
+
+    @Alias
+    static JettyAlpnSslEngineSubstitution newServerEngine(SSLEngine engine,
+        JdkApplicationProtocolNegotiator applicationNegotiator) {
+        return null;
+    }
 }
