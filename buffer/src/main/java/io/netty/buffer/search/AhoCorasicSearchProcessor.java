@@ -31,7 +31,6 @@ public class AhoCorasicSearchProcessor implements MultiSearchProcessor {
     }
 
     private TrieNode currentNode;
-    private int foundNeedleId = -1;
 
     AhoCorasicSearchProcessor(TrieNode trieRoot) {
         currentNode = trieRoot;
@@ -40,13 +39,12 @@ public class AhoCorasicSearchProcessor implements MultiSearchProcessor {
     @Override
     public boolean process(byte value) {
         currentNode = currentNode.children[value & 0xff];
-        foundNeedleId = currentNode.matchForNeedleId;
-        return foundNeedleId == -1;
+        return currentNode.matchForNeedleId == -1;
     }
 
     @Override
     public int getFoundNeedleId() {
-        return foundNeedleId;
+        return currentNode.matchForNeedleId;
     }
 
 }
