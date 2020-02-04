@@ -269,20 +269,7 @@
               <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>netty-build</artifactId>
-                <version>19</version>
-                <exclusions>
-                  <!-- Use version 7.3 until a new netty-build release is out -->
-                  <!-- See https://issues.apache.org/jira/browse/JXR-133 -->
-                  <exclusion>
-                    <groupId>com.puppycrawl.tools</groupId>
-                    <artifactId>checkstyle</artifactId>
-                  </exclusion>
-                </exclusions>
-              </dependency>
-              <dependency>
-                <groupId>com.puppycrawl.tools</groupId>
-                <artifactId>checkstyle</artifactId>
-                <version>7.3</version>
+                <version>${netty.build.version}</version>
               </dependency>
             </dependencies>
           </plugin>
