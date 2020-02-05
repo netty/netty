@@ -17,13 +17,11 @@ package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
-import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.internal.PlatformDependent;
@@ -32,7 +30,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * {@link ByteToMessageDecoder} which allows to be notified once a full {@code ClientHello} was received.
@@ -146,7 +143,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
                                 readerIndex += packetLength;
                                 readableBytes -= packetLength;
                                 if (handshakeLength <= handshakeBuffer.readableBytes()) {
-                                    ByteBuf clientHello = handshakeBuffer.slice(0, handshakeLength);
+                                    ByteBuf clientHello = handshakeBuffer.setIndex(0, handshakeLength);
                                     handshakeBuffer = null;
 
                                     select(ctx, clientHello);
