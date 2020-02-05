@@ -17,15 +17,20 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.local.LocalAddress;
@@ -47,7 +52,9 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.hamcrest.Matchers.*;
@@ -291,6 +298,56 @@ public class BootstrapTest {
         assertThat(connectFuture.await(10000), is(true));
         assertThat(connectFuture.cause(), sameInstance((Throwable) exception));
         assertThat(connectFuture.channel(), is(not(nullValue())));
+    }
+
+    @Test
+    public void testChannelOptionOrderPreserve() throws InterruptedException {
+        final BlockingQueue<ChannelOption<?>> options = new LinkedBlockingQueue<ChannelOption<?>>();
+        class ChannelConfigValidator extends DefaultChannelConfig {
+            ChannelConfigValidator(Channel channel) {
+                super(channel);
+            }
+
+            @Override
+            public <T> boolean setOption(ChannelOption<T> option, T value) {
+                options.add(option);
+                return super.setOption(option, value);
+            }
+        }
+        final CountDownLatch latch = new CountDownLatch(1);
+        final Bootstrap bootstrap = new Bootstrap()
+                .handler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) {
+                        latch.countDown();
+                    }
+                })
+                .group(groupA)
+                .channelFactory(new ChannelFactory<Channel>() {
+                    @Override
+                    public Channel newChannel() {
+                        return new LocalChannel() {
+                            private ChannelConfigValidator config;
+                            @Override
+                            public synchronized ChannelConfig config() {
+                                if (config == null) {
+                                    config = new ChannelConfigValidator(this);
+                                }
+                                return config;
+                            }
+                        };
+                    }
+                })
+                .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 1)
+                .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 2);
+
+        bootstrap.register().syncUninterruptibly();
+
+        latch.await();
+
+        // Check the order is the same as what we defined before.
+        assertSame(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, options.take());
+        assertSame(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, options.take());
     }
 
     private static final class DelayedEventLoopGroup extends DefaultEventLoop {
