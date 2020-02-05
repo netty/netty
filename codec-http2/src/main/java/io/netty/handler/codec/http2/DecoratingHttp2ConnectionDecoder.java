@@ -26,7 +26,7 @@ import java.util.List;
  * Decorator around another {@link Http2ConnectionDecoder} instance.
  */
 @UnstableApi
-public class DecoratingHttp2ConnectionDecoder implements Http2ConnectionDecoder {
+public class DecoratingHttp2ConnectionDecoder implements Http2ConnectionDecoder, ByteRequirer {
     private final Http2ConnectionDecoder delegate;
 
     public DecoratingHttp2ConnectionDecoder(Http2ConnectionDecoder delegate) {
@@ -56,6 +56,11 @@ public class DecoratingHttp2ConnectionDecoder implements Http2ConnectionDecoder 
     @Override
     public Http2FrameListener frameListener() {
         return delegate.frameListener();
+    }
+
+    @Override
+    public int requiredBytes() {
+        return delegate instanceof ByteRequirer ? ((ByteRequirer) delegate).requiredBytes() : -1;
     }
 
     @Override

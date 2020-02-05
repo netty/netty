@@ -26,13 +26,18 @@ import io.netty.util.internal.UnstableApi;
  * back the listener.
  */
 @UnstableApi
-public class Http2InboundFrameLogger implements Http2FrameReader {
+public class Http2InboundFrameLogger implements Http2FrameReader, ByteRequirer {
     private final Http2FrameReader reader;
     private final Http2FrameLogger logger;
 
     public Http2InboundFrameLogger(Http2FrameReader reader, Http2FrameLogger logger) {
         this.reader = checkNotNull(reader, "reader");
         this.logger = checkNotNull(logger, "logger");
+    }
+
+    @Override
+    public int requiredBytes() {
+        return reader instanceof ByteRequirer ? ((ByteRequirer) reader).requiredBytes() : -1;
     }
 
     @Override

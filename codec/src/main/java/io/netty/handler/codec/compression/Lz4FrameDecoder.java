@@ -139,6 +139,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
     public Lz4FrameDecoder(LZ4Factory factory, Checksum checksum) {
         decompressor = ObjectUtil.checkNotNull(factory, "factory").fastDecompressor();
         this.checksum = checksum == null ? null : ByteBufChecksum.wrapChecksum(checksum);
+        setRequiredBytes(HEADER_LENGTH);
     }
 
     @Override
@@ -146,9 +147,6 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
         try {
             switch (currentState) {
             case INIT_BLOCK:
-                if (in.readableBytes() < HEADER_LENGTH) {
-                    break;
-                }
                 final long magic = in.readLong();
                 if (magic != MAGIC_NUMBER) {
                     throw new DecompressionException("unexpected block identifier");
@@ -188,6 +186,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
                     currentState = State.FINISHED;
                     decompressor = null;
                     checksum = null;
+                    setRequiredBytes(1);
                     break;
                 }
 
@@ -205,6 +204,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
                 currentChecksum = this.currentChecksum;
 
                 if (in.readableBytes() < compressedLength) {
+                    setRequiredBytes(compressedLength);
                     break;
                 }
 
@@ -240,6 +240,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
                     out.add(uncompressed);
                     uncompressed = null;
                     currentState = State.INIT_BLOCK;
+                    setRequiredBytes(HEADER_LENGTH);
                 } catch (LZ4Exception e) {
                     throw new DecompressionException(e);
                 } finally {
@@ -257,6 +258,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
             }
         } catch (Exception e) {
             currentState = State.CORRUPTED;
+            setRequiredBytes(1);
             throw e;
         }
     }

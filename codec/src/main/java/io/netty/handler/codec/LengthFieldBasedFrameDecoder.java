@@ -325,6 +325,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         this.lengthFieldEndOffset = lengthFieldOffset + lengthFieldLength;
         this.initialBytesToStrip = initialBytesToStrip;
         this.failFast = failFast;
+        setRequiredBytes(lengthFieldEndOffset);
     }
 
     @Override
@@ -399,6 +400,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         }
 
         if (in.readableBytes() < lengthFieldEndOffset) {
+            setRequiredBytes(bytesToDiscard > 0 ? 1 : lengthFieldEndOffset);
             return null;
         }
 
@@ -417,12 +419,14 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
 
         if (frameLength > maxFrameLength) {
             exceededFrameLength(in, frameLength);
+            setRequiredBytes(bytesToDiscard > 0 ? 1 : lengthFieldEndOffset);
             return null;
         }
 
         // never overflows because it's less than maxFrameLength
         int frameLengthInt = (int) frameLength;
         if (in.readableBytes() < frameLengthInt) {
+            setRequiredBytes(frameLengthInt);
             return null;
         }
 
@@ -436,6 +440,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         int actualFrameLength = frameLengthInt - initialBytesToStrip;
         ByteBuf frame = extractFrame(ctx, in, readerIndex, actualFrameLength);
         in.readerIndex(readerIndex + actualFrameLength);
+        setRequiredBytes(lengthFieldEndOffset);
         return frame;
     }
 

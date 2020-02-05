@@ -280,7 +280,7 @@ public class ByteToMessageDecoderTest {
             protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
                 assertFalse(decodeLast);
                 decodeLast = true;
-                super.decodeLast(ctx, in, out);
+                decode(ctx, in, out);
             }
         });
         byte[] bytes = new byte[1024];

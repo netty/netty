@@ -325,8 +325,9 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
     final void channelInputClosed(ChannelHandlerContext ctx, List<Object> out) throws Exception {
         try {
             replayable.terminate();
-            if (cumulation != null) {
-                callDecode(ctx, internalBuffer(), out);
+            ByteBuf buf = internalBuffer();
+            if (buf.isReadable()) {
+                callDecode(ctx, buf, out);
             } else {
                 replayable.setCumulation(Unpooled.EMPTY_BUFFER);
             }
@@ -341,6 +342,7 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
     protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         replayable.setCumulation(in);
         try {
+            super.setRequiredBytes(1, Integer.MAX_VALUE);
             while (in.isReadable()) {
                 int oldReaderIndex = checkpoint = in.readerIndex();
                 int outSize = out.size();
@@ -403,6 +405,9 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
                         // Called by cleanup() - no need to maintain the readerIndex
                         // anymore because the buffer has been released already.
                     }
+                    int requiredBytes = replayable.minRequiredBytes();
+                    super.setRequiredBytes(requiredBytes > 0 ? requiredBytes : in.readableBytes() + 1,
+                            Integer.MAX_VALUE);
                     break;
                 }
 
@@ -420,5 +425,10 @@ public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder {
         } catch (Exception cause) {
             throw new DecoderException(cause);
         }
+    }
+
+    @Override
+    protected final void setRequiredBytes(int min, int max) {
+        throw new DecoderException("setRequiredBytes(...) is not currently supported by ReplayingDecoders");
     }
 }

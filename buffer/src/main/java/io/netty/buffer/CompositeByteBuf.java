@@ -1530,6 +1530,15 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     }
 
     /**
+     * Like {@link #componentAtOffset(int)} but returns a slice of the remainder
+     * of the component starting from where {@code offset} lies
+     */
+    public ByteBuf componentSliceFromOffset(int offset) {
+        Component component = findComponent(offset);
+        return component.buf.slice(component.idx(offset), component.endOffset - offset);
+    }
+
+    /**
      * Return the internal {@link ByteBuf} on the specified index. Note that updating the indexes of the returned
      * buffer will lead to an undefined behavior of this buffer.
      *
