@@ -325,7 +325,30 @@ public class HttpRequestDecoderTest {
     public void testWhitespace() {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
                 "Transfer-Encoding : chunked\r\n" +
-                "Host: netty.io\n\r\n";
+                "Host: netty.io\r\n\r\n";
+        testInvalidHeaders0(requestStr);
+    }
+
+    @Test
+    public void testWhitespaceBeforeTransferEncoding01() {
+        String requestStr = "GET /some/path HTTP/1.1\r\n" +
+                " Transfer-Encoding : chunked\r\n" +
+                "Content-Length: 1\r\n" +
+                "Host: netty.io\r\n\r\n" +
+                "a";
+        testInvalidHeaders0(requestStr);
+    }
+
+    @Test
+    public void testWhitespaceBeforeTransferEncoding02() {
+        String requestStr = "POST / HTTP/1.1" +
+                " Transfer-Encoding : chunked\r\n" +
+                "Host: target.com" +
+                "Content-Length: 65\r\n\r\n" +
+                "0\r\n\r\n" +
+                "GET /maliciousRequest HTTP/1.1\r\n" +
+                "Host: evilServer.com\r\n" +
+                "Foo: x";
         testInvalidHeaders0(requestStr);
     }
 
