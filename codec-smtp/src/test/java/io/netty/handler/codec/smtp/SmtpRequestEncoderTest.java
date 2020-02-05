@@ -39,6 +39,21 @@ public class SmtpRequestEncoderTest {
     }
 
     @Test
+    public void testEncodeAuth() {
+        testEncode(SmtpRequests.auth("LOGIN"), "AUTH LOGIN\r\n");
+    }
+
+    @Test
+    public void testEncodeAuthWithParameter() {
+        testEncode(SmtpRequests.auth("PLAIN", "dGVzdAB0ZXN0ADEyMzQ="), "AUTH PLAIN dGVzdAB0ZXN0ADEyMzQ=\r\n");
+    }
+
+    @Test
+    public void testEncodeEmpty() {
+        testEncode(SmtpRequests.empty("dGVzdAB0ZXN0ADEyMzQ="),  "dGVzdAB0ZXN0ADEyMzQ=\r\n");
+    }
+
+    @Test
     public void testEncodeMail() {
         testEncode(SmtpRequests.mail("me@netty.io"), "MAIL FROM:<me@netty.io>\r\n");
     }
