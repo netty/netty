@@ -124,8 +124,22 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         DEFAULT_CACHE_TRIM_INTERVAL = SystemPropertyUtil.getInt(
                 "io.netty.allocator.cacheTrimInterval", 8192);
 
-        DEFAULT_CACHE_TRIM_INTERVAL_MILLIS = SystemPropertyUtil.getLong(
-                "io.netty.allocation.cacheTrimIntervalMillis", 0);
+        if (SystemPropertyUtil.contains("io.netty.allocation.cacheTrimIntervalMillis")) {
+            logger.warn("-Dio.netty.allocation.cacheTrimIntervalMillis is deprecated," +
+                    " use -Dio.netty.allocator.cacheTrimIntervalMillis");
+
+            if (SystemPropertyUtil.contains("io.netty.allocator.cacheTrimIntervalMillis")) {
+                // Both system properties are specified. Use the non-deprecated one.
+                DEFAULT_CACHE_TRIM_INTERVAL_MILLIS = SystemPropertyUtil.getLong(
+                        "io.netty.allocator.cacheTrimIntervalMillis", 0);
+            } else {
+                DEFAULT_CACHE_TRIM_INTERVAL_MILLIS = SystemPropertyUtil.getLong(
+                        "io.netty.allocation.cacheTrimIntervalMillis", 0);
+            }
+        } else {
+            DEFAULT_CACHE_TRIM_INTERVAL_MILLIS = SystemPropertyUtil.getLong(
+                    "io.netty.allocator.cacheTrimIntervalMillis", 0);
+        }
 
         DEFAULT_USE_CACHE_FOR_ALL_THREADS = SystemPropertyUtil.getBoolean(
                 "io.netty.allocator.useCacheForAllThreads", true);
