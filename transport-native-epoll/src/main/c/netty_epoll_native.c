@@ -394,7 +394,8 @@ static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
 
               if (addrLen == 4) {
                   // IPV4 mapped IPV6 address
-                  (*env)->SetByteArrayRegion(env, address, 12, 4, (jbyte*) &ip6addr->sin6_addr.s6_addr);
+                  jbyte* addr = (jbyte*) &ip6addr->sin6_addr.s6_addr;
+                  (*env)->SetByteArrayRegion(env, address, 0, 4, addr + 12);
               } else {
                   (*env)->SetByteArrayRegion(env, address, 0, 16, (jbyte*) &ip6addr->sin6_addr.s6_addr);
               }
