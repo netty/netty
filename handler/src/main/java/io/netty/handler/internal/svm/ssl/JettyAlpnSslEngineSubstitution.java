@@ -29,6 +29,14 @@ final class JettyAlpnSslEngineSubstitution {
     private JettyAlpnSslEngineSubstitution() {
     }
 
+    /**
+     * The engine is not available in a native Graal image, so we always return false and therefor in both
+     * {@link #newClientEngine(SSLEngine, JdkApplicationProtocolNegotiator)} and
+     * {@link #newServerEngine(SSLEngine, JdkApplicationProtocolNegotiator)}
+     * {@literal null}
+     * @return always false.
+     */
+    @SuppressWarnings("deprecation")
     @Alias
     static boolean isAvailable() {
         return false;
