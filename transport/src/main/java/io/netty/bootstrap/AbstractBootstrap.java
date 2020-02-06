@@ -39,6 +39,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -59,7 +60,10 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     @SuppressWarnings("deprecation")
     private volatile ChannelFactory<? extends C> channelFactory;
     private volatile SocketAddress localAddress;
-    private final Map<ChannelOption<?>, Object> options = new ConcurrentHashMap<ChannelOption<?>, Object>();
+
+    // The order in which ChannelOptions are applied is important they may depend on each other for validation
+    // purposes.
+    private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
     private final Map<AttributeKey<?>, Object> attrs = new ConcurrentHashMap<AttributeKey<?>, Object>();
     private volatile ChannelHandler handler;
 
@@ -72,7 +76,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         channelFactory = bootstrap.channelFactory;
         handler = bootstrap.handler;
         localAddress = bootstrap.localAddress;
-        options.putAll(bootstrap.options);
+        synchronized (bootstrap.options) {
+            options.putAll(bootstrap.options);
+        }
         attrs.putAll(bootstrap.attrs);
     }
 
@@ -166,10 +172,12 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      */
     public <T> B option(ChannelOption<T> option, T value) {
         ObjectUtil.checkNotNull(option, "option");
-        if (value == null) {
-            options.remove(option);
-        } else {
-            options.put(option, value);
+        synchronized (options) {
+            if (value == null) {
+                options.remove(option);
+            } else {
+                options.put(option, value);
+            }
         }
         return self();
     }
@@ -377,6 +385,12 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      */
     public abstract AbstractBootstrapConfig<B, C> config();
 
+    final Map.Entry<ChannelOption<?>, Object>[] newOptionsArray() {
+        synchronized (options) {
+            return options.entrySet().toArray(EMPTY_OPTION_ARRAY);
+        }
+    }
+
     final Map<ChannelOption<?>, Object> options0() {
         return options;
     }
@@ -399,7 +413,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     final Map<ChannelOption<?>, Object> options() {
-        return copiedMap(options);
+        synchronized (options) {
+            return copiedMap(options);
+        }
     }
 
     final Map<AttributeKey<?>, Object> attrs() {
