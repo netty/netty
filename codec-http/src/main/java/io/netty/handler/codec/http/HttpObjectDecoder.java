@@ -112,7 +112,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private HttpMessage message;
     private long chunkSize;
-    private long contentLength = Long.MIN_VALUE;
+    protected long contentLength = Long.MIN_VALUE;
     private volatile boolean resetRequested;
 
     // These will be updated by splitHeader(...)
@@ -664,6 +664,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      */
     protected void handleTransferEncodingChunkedWithContentLength(HttpMessage message) {
         message.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
+        contentLength = 0;
     }
 
     private long contentLength() {
