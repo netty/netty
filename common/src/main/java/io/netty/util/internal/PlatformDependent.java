@@ -511,7 +511,15 @@ public final class PlatformDependent {
         return PlatformDependent0.getInt(data, index);
     }
 
+    public static int getInt(int[] data, int index) {
+        return PlatformDependent0.getInt(data, index);
+    }
+
     public static long getLong(byte[] data, int index) {
+        return PlatformDependent0.getLong(data, index);
+    }
+
+    public static long getLong(long[] data, int index) {
         return PlatformDependent0.getLong(data, index);
     }
 
