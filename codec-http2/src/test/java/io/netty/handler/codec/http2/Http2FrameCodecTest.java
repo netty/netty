@@ -349,6 +349,35 @@ public class Http2FrameCodecTest {
     }
 
     @Test
+    public void receiveGoawayWithOpenStreams() throws Exception {
+        ByteBuf debugData = bb("foo");
+        final AtomicBoolean wasStillOpen = new AtomicBoolean();
+
+        channel.pipeline().remove(inboundHandler);
+        inboundHandler = new LastInboundHandler() {
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                if (msg instanceof Http2GoAwayFrame) {
+                    wasStillOpen.set(frameCodec.connection().stream(4).state() == State.OPEN);
+                }
+                    super.channelRead(ctx, msg);
+            }
+        };
+        channel.pipeline().addLast(inboundHandler);
+
+        final Http2Stream lateStream = frameCodec.connection().local().createStream(4, false);
+        assertNotNull(lateStream);
+
+        frameInboundWriter.writeInboundGoAway(2, NO_ERROR.code(), debugData);
+        assertTrue(wasStillOpen.get());
+        assertEquals(lateStream.state(), State.CLOSED);
+        Http2GoAwayFrame expectedFrame = new DefaultHttp2GoAwayFrame(2, NO_ERROR.code(), bb("foo"));
+        Http2GoAwayFrame actualFrame = inboundHandler.readInbound();
+        assertEqualsAndRelease(expectedFrame, actualFrame);
+        assertNull(inboundHandler.readInbound());
+    }
+
+    @Test
     public void unknownFrameTypeShouldThrowAndBeReleased() throws Exception {
         class UnknownHttp2Frame extends AbstractReferenceCounted implements Http2Frame {
             @Override

@@ -483,6 +483,13 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 onHttp2StreamStateChanged(ctx, stream2);
             }
         }
+
+        @Override
+        public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
+            // We want to send the frame more eagerly than through the listener because the
+            // connection is going to be aggressive about closing the individual streams.
+            onHttp2Frame(ctx, new DefaultHttp2GoAwayFrame(lastStreamId, errorCode, debugData).retain());
+        }
     }
 
     @Override
@@ -606,7 +613,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         @Override
         public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData) {
-            onHttp2Frame(ctx, new DefaultHttp2GoAwayFrame(lastStreamId, errorCode, debugData).retain());
+            // We do nothing as this is already handled in the ConnectionListener.
         }
 
         @Override
