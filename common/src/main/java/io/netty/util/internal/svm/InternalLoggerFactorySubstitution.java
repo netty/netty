@@ -32,6 +32,8 @@ final class InternalLoggerFactorySubstitution {
 
     @Substitute
     private static InternalLoggerFactory newDefaultFactory(String name) {
-        return JdkLoggerFactory.INSTANCE;
+        InternalLoggerFactory f = JdkLoggerFactory.INSTANCE;
+        f.newInstance(name).debug("Using java.util.logging as the default logging framework");
+        return f;
     }
 }
