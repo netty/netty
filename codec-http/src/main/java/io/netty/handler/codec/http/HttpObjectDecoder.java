@@ -664,7 +664,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      */
     protected void handleTransferEncodingChunkedWithContentLength(HttpMessage message) {
         message.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
-        contentLength = 0;
+        contentLength = Long.MIN_VALUE;
     }
 
     private long contentLength() {
