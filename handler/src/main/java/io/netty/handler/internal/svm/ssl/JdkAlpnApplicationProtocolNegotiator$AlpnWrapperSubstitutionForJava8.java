@@ -39,6 +39,6 @@ final class JdkAlpnApplicationProtocolNegotiator$AlpnWrapperSubstitutionForJava8
                 : (SSLEngine) (Object) JettyAlpnSslEngineSubstitution.newClientEngine(engine,
                 applicationNegotiator);
         }
-        throw new RuntimeException("Unable to wrap SSLEngine of type " + engine.getClass().getName());
+        throw new IllegalStateException("Unable to wrap SSLEngine of type " + engine.getClass().getName());
     }
 }

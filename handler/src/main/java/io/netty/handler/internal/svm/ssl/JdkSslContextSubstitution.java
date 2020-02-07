@@ -44,12 +44,12 @@ import com.oracle.svm.core.annotate.TargetClass;
                     ApplicationProtocolConfig.SelectorFailureBehavior behavior = config.selectorFailureBehavior();
                     if (behavior == ApplicationProtocolConfig.SelectorFailureBehavior.FATAL_ALERT) {
                         return new JdkAlpnApplicationProtocolNegotiator(true, config.supportedProtocols());
-                    } else if (behavior == ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE) {
-                        return new JdkAlpnApplicationProtocolNegotiator(false, config.supportedProtocols());
-                    } else {
-                        throw new UnsupportedOperationException(new StringBuilder("JDK provider does not support ")
-                            .append(config.selectorFailureBehavior()).append(" failure behavior").toString());
                     }
+                    if (behavior == ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE) {
+                        return new JdkAlpnApplicationProtocolNegotiator(false, config.supportedProtocols());
+                    }
+                    throw new UnsupportedOperationException(new StringBuilder("JDK provider does not support ")
+                        .append(config.selectorFailureBehavior()).append(" failure behavior").toString());
                 } else {
                     switch (config.selectedListenerFailureBehavior()) {
                         case ACCEPT:
