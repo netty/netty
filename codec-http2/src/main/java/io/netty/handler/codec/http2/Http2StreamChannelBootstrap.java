@@ -34,6 +34,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -45,7 +46,9 @@ public final class Http2StreamChannelBootstrap {
     @SuppressWarnings("unchecked")
     private static final Map.Entry<AttributeKey<?>, Object>[] EMPTY_ATTRIBUTE_ARRAY = new Map.Entry[0];
 
-    private final Map<ChannelOption<?>, Object> options = new ConcurrentHashMap<>();
+    // The order in which ChannelOptions are applied is important they may depend on each other for validation
+    // purposes.
+    private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<>();
     private final Map<AttributeKey<?>, Object> attrs = new ConcurrentHashMap<>();
     private final Channel channel;
     private volatile ChannelHandler handler;
@@ -64,10 +67,13 @@ public final class Http2StreamChannelBootstrap {
     @SuppressWarnings("unchecked")
     public <T> Http2StreamChannelBootstrap option(ChannelOption<T> option, T value) {
         requireNonNull(option, "option");
-        if (value == null) {
-            options.remove(option);
-        } else {
-            options.put(option, value);
+
+        synchronized (options) {
+            if (value == null) {
+                options.remove(option);
+            } else {
+                options.put(option, value);
+            }
         }
         return this;
     }
@@ -195,7 +201,12 @@ public final class Http2StreamChannelBootstrap {
         if (handler != null) {
             p.addLast(handler);
         }
-        setChannelOptions(channel, options.entrySet().toArray(EMPTY_OPTION_ARRAY));
+        final Map.Entry<ChannelOption<?>, Object> [] optionArray;
+        synchronized (options) {
+            optionArray = options.entrySet().toArray(EMPTY_OPTION_ARRAY);
+        }
+
+        setChannelOptions(channel, optionArray);
         setAttributes(channel, attrs.entrySet().toArray(EMPTY_ATTRIBUTE_ARRAY));
     }
 
