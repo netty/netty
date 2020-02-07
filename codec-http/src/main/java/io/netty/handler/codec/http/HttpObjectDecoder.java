@@ -112,7 +112,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private HttpMessage message;
     private long chunkSize;
-    protected long contentLength = Long.MIN_VALUE;
+    private long contentLength = Long.MIN_VALUE;
     private volatile boolean resetRequested;
 
     // These will be updated by splitHeader(...)
@@ -659,8 +659,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      *     a message downstream.
      * </pre>
      * Also see:
-     * https://github.com/apache/tomcat/blob/b693d7c1981fa7f51e58bc8c8e72e3fe80b7b773/java/org/apache/coyote/http11/Http11Processor.java#L747-L755
-     * https://github.com/nginx/nginx/blob/0ad4393e30c119d250415cb769e3d8bc8dce5186/src/http/ngx_http_request.c#L1946-L1953
+     * https://github.com/apache/tomcat/blob/b693d7c1981fa7f51e58bc8c8e72e3fe80b7b773/
+     * java/org/apache/coyote/http11/Http11Processor.java#L747-L755
+     * https://github.com/nginx/nginx/blob/0ad4393e30c119d250415cb769e3d8bc8dce5186/
+     * src/http/ngx_http_request.c#L1946-L1953
      */
     protected void handleTransferEncodingChunkedWithContentLength(HttpMessage message) {
         message.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
