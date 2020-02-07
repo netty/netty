@@ -85,11 +85,11 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         promise.setFailure(newRemovedException(ctx, null));
     }
 
-    private void fireHandlerRemoved() {
-        fireHandlerRemoved(null);
+    private void notifyHandlerRemovedAlready() {
+        notifyHandlerRemovedAlready(null);
     }
 
-    private void fireHandlerRemoved(Throwable cause) {
+    private void notifyHandlerRemovedAlready(Throwable cause) {
         pipeline().fireExceptionCaught(newRemovedException(this, cause));
     }
 
@@ -149,7 +149,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private void findAndInvokeChannelRegistered() {
         DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_REGISTERED);
         if (ctx == null) {
-            fireHandlerRemoved();
+            notifyHandlerRemovedAlready();
             return;
         }
         ctx.invokeChannelRegistered();
@@ -177,7 +177,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private void findAndInvokeChannelUnregistered() {
         DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_UNREGISTERED);
         if (ctx == null) {
-            fireHandlerRemoved();
+            notifyHandlerRemovedAlready();
             return;
         }
         ctx.invokeChannelUnregistered();
@@ -205,7 +205,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private void findAndInvokeChannelActive() {
         DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_ACTIVE);
         if (ctx == null) {
-            fireHandlerRemoved();
+            notifyHandlerRemovedAlready();
             return;
         }
         ctx.invokeChannelActive();
@@ -233,7 +233,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private void findAndInvokeChannelInactive() {
         DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_INACTIVE);
         if (ctx == null) {
-            fireHandlerRemoved();
+            notifyHandlerRemovedAlready();
             return;
         }
         ctx.invokeChannelInactive();
@@ -269,7 +269,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private void findAndInvokeExceptionCaught(Throwable cause) {
         DefaultChannelHandlerContext ctx = findContextInbound(MASK_EXCEPTION_CAUGHT);
         if (ctx == null) {
-            fireHandlerRemoved(cause);
+            notifyHandlerRemovedAlready(cause);
             return;
         }
         ctx.invokeExceptionCaught(cause);
@@ -310,7 +310,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         DefaultChannelHandlerContext ctx = findContextInbound(MASK_USER_EVENT_TRIGGERED);
         if (ctx == null) {
             ReferenceCountUtil.release(event);
-            fireHandlerRemoved();
+            notifyHandlerRemovedAlready();
             return;
         }
         ctx.invokeUserEventTriggered(event);
@@ -345,7 +345,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_READ);
         if (ctx == null) {
             ReferenceCountUtil.release(msg);
-            fireHandlerRemoved();
+            notifyHandlerRemovedAlready();
             return;
         }
         ctx.invokeChannelRead(msg);
@@ -375,7 +375,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private void findAndInvokeChannelReadComplete() {
         DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_READ_COMPLETE);
         if (ctx == null) {
-            fireHandlerRemoved();
+            notifyHandlerRemovedAlready();
             return;
         }
         ctx.invokeChannelReadComplete();
@@ -404,7 +404,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private void findAndInvokeChannelWritabilityChanged() {
         DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_WRITABILITY_CHANGED);
         if (ctx == null) {
-            fireHandlerRemoved();
+            notifyHandlerRemovedAlready();
             return;
         }
         ctx.invokeChannelWritabilityChanged();
@@ -698,7 +698,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         } else {
             DefaultChannelHandlerContext ctx = findContextInbound(MASK_EXCEPTION_CAUGHT);
             if (ctx == null) {
-                fireHandlerRemoved();
+                notifyHandlerRemovedAlready();
                 return;
             }
             ctx.invokeExceptionCaught(t);
