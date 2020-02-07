@@ -680,7 +680,7 @@
       <dependency>
         <groupId>io.projectreactor.tools</groupId>
         <artifactId>blockhound</artifactId>
-        <version>1.0.1.RELEASE</version>
+        <version>1.0.2.RELEASE</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
