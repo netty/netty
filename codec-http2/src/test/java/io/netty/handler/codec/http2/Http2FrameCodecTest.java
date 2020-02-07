@@ -360,7 +360,7 @@ public class Http2FrameCodecTest {
                 if (msg instanceof Http2GoAwayFrame) {
                     wasStillOpen.set(frameCodec.connection().stream(4).state() == State.OPEN);
                 }
-                    super.channelRead(ctx, msg);
+                super.channelRead(ctx, msg);
             }
         };
         channel.pipeline().addLast(inboundHandler);
