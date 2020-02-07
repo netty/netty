@@ -63,7 +63,7 @@ public class HttpHelloWorldServerHandler extends SimpleChannelInboundHandler<Htt
                 response.headers().set(CONNECTION, CLOSE);
             }
 
-            ChannelFuture f = ctx.write(response);
+            ChannelFuture f = ctx.writeAndFlush(response);
 
             if (!keepAlive) {
                 f.addListener(ChannelFutureListener.CLOSE);
