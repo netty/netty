@@ -39,9 +39,11 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.internal.Hidden.NettyBlockHoundIntegration;
+import org.hamcrest.Matchers;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import reactor.blockhound.BlockHound;
+import reactor.blockhound.BlockingOperationError;
 import reactor.blockhound.integration.BlockHoundIntegration;
 
 import java.net.InetSocketAddress;
@@ -54,6 +56,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -87,9 +90,7 @@ public class NettyBlockHoundIntegrationTest {
             future.get(5, TimeUnit.SECONDS);
             fail("Expected an exception due to a blocking call but none was thrown");
         } catch (ExecutionException e) {
-            Throwable throwable = e.getCause();
-            assertNotNull("An exception was thrown", throwable);
-            assertTrue("Blocking call was reported", throwable.getMessage().contains("Blocking call"));
+            assertThat(e.getCause(), Matchers.instanceOf(BlockingOperationError.class));
         }
     }
 
