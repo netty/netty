@@ -19,6 +19,7 @@ package io.netty.resolver;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -42,13 +43,16 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
     private final Map<EventExecutor, AddressResolver<T>> resolvers =
             new IdentityHashMap<EventExecutor, AddressResolver<T>>();
 
+    private final Map<EventExecutor, GenericFutureListener<Future<Object>>> executorTerminationListeners =
+            new IdentityHashMap<EventExecutor, GenericFutureListener<Future<Object>>>();
+
     protected AddressResolverGroup() { }
 
     /**
      * Returns the {@link AddressResolver} associated with the specified {@link EventExecutor}. If there's no associated
-     * resolved found, this method creates and returns a new resolver instance created by
+     * resolver found, this method creates and returns a new resolver instance created by
      * {@link #newResolver(EventExecutor)} so that the new resolver is reused on another
-     * {@link #getResolver(EventExecutor)} call with the same {@link EventExecutor}.
+     * {@code #getResolver(EventExecutor)} call with the same {@link EventExecutor}.
      */
     public AddressResolver<T> getResolver(final EventExecutor executor) {
         ObjectUtil.checkNotNull(executor, "executor");
@@ -69,15 +73,20 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
                 }
 
                 resolvers.put(executor, newResolver);
-                executor.terminationFuture().addListener(new FutureListener<Object>() {
+
+                final FutureListener<Object> terminationListener = new FutureListener<Object>() {
                     @Override
-                    public void operationComplete(Future<Object> future) throws Exception {
+                    public void operationComplete(Future<Object> future) {
                         synchronized (resolvers) {
                             resolvers.remove(executor);
+                            executorTerminationListeners.remove(executor);
                         }
                         newResolver.close();
                     }
-                });
+                };
+
+                executorTerminationListeners.put(executor, terminationListener);
+                executor.terminationFuture().addListener(terminationListener);
 
                 r = newResolver;
             }
@@ -101,9 +110,17 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
         synchronized (resolvers) {
             rArray = (AddressResolver<T>[]) resolvers.values().toArray(new AddressResolver[0]);
             resolvers.clear();
+
+            for (final Map.Entry<EventExecutor, GenericFutureListener<Future<Object>>> entry :
+                    executorTerminationListeners.entrySet()) {
+
+                entry.getKey().terminationFuture().removeListener(entry.getValue());
+            }
+
+            executorTerminationListeners.clear();
         }
 
-        for (AddressResolver<T> r: rArray) {
+        for (final AddressResolver<T> r: rArray) {
             try {
                 r.close();
             } catch (Throwable t) {
