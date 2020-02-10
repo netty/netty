@@ -107,17 +107,17 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
     @SuppressWarnings({ "unchecked", "SuspiciousToArrayCall" })
     public void close() {
         final AddressResolver<T>[] rArray;
+        final Map.Entry<EventExecutor, GenericFutureListener<Future<Object>>>[] listeners;
+
         synchronized (resolvers) {
             rArray = (AddressResolver<T>[]) resolvers.values().toArray(new AddressResolver[0]);
             resolvers.clear();
-
-            for (final Map.Entry<EventExecutor, GenericFutureListener<Future<Object>>> entry :
-                    executorTerminationListeners.entrySet()) {
-
-                entry.getKey().terminationFuture().removeListener(entry.getValue());
-            }
-
+            listeners = executorTerminationListeners.entrySet().toArray(new Map.Entry[0]);
             executorTerminationListeners.clear();
+        }
+
+        for (final Map.Entry<EventExecutor, GenericFutureListener<Future<Object>>> entry : listeners) {
+            entry.getKey().terminationFuture().removeListener(entry.getValue());
         }
 
         for (final AddressResolver<T> r: rArray) {
