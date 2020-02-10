@@ -408,7 +408,15 @@ public class HttpRequestDecoderTest {
                 "Content-Length: 5\r\n" +
                 "Transfer-Encoding: chunked\r\n\r\n" +
                 "0\r\n\r\n";
-        testInvalidHeaders0(requestStr);
+
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertFalse(request.decoderResult().isFailure());
+        assertTrue(request.headers().contains("Transfer-Encoding", "chunked", false));
+        assertFalse(request.headers().contains("Content-Length"));
+        LastHttpContent c = channel.readInbound();
+        assertFalse(channel.finish());
     }
 
     private static void testInvalidHeaders0(String requestStr) {
