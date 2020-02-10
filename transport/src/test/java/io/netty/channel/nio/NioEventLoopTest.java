@@ -33,7 +33,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import org.hamcrest.core.IsInstanceOf;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -269,7 +268,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         }
     }
 
-    @Test
+    @Test(timeout = 3000L)
     public void testChannelsRegistered() throws Exception {
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         final NioEventLoop loop = (NioEventLoop) group.next();
@@ -285,7 +284,14 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             assertEquals(2, registeredChannels(loop));
 
             assertTrue(ch1.deregister().syncUninterruptibly().isSuccess());
-            assertEquals(1, registeredChannels(loop));
+
+            int registered;
+            // As SelectionKeys are removed in a lazy fashion in the JDK implementation we may need to query a few
+            // times before we see the right number of registered chanels.
+            while ((registered = registeredChannels(loop)) == 2) {
+                Thread.sleep(50);
+            }
+            assertEquals(1, registered);
         } finally {
             group.shutdownGracefully();
         }
