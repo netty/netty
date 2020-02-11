@@ -62,6 +62,13 @@ class Hidden {
                     "confirmShutdown"
             );
 
+            builder.allowBlockingCallsInside("io.netty.util.concurrent.GlobalEventExecutor",
+                    "takeTask");
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.util.concurrent.SingleThreadEventExecutor",
+                    "takeTask");
+
             builder.allowBlockingCallsInside(
                     "io.netty.handler.ssl.SslHandler",
                     "handshake"
