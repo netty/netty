@@ -1023,11 +1023,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 // There is nothing to flush so this is a NOOP.
                 return;
             }
-            try {
-                flush0(parentContext());
-            } finally {
-                writeDoneAndNoFlush = false;
-            }
+            // We need to set this to false before we call flush0(...) as ChannelFutureListener may produce more data
+            // that are explicit flushed.
+            writeDoneAndNoFlush = false;
+            flush0(parentContext());
         }
 
         @Override
