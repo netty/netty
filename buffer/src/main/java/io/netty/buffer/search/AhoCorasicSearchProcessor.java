@@ -21,30 +21,28 @@ package io.netty.buffer.search;
  */
 public class AhoCorasicSearchProcessor implements MultiSearchProcessor {
 
-    static class TrieNode {
-        final TrieNode[] children = new TrieNode[256];
-        int matchForNeedleId = -1;
+    private final int[] jumpTable;
+    private final int[] matchForNeedleId;
+    private int currentPosition;
 
-        boolean hasChildFor(int ch) {
-            return children[ch] != null;
-        }
-    }
-
-    private TrieNode currentNode;
-
-    AhoCorasicSearchProcessor(TrieNode trieRoot) {
-        currentNode = trieRoot;
+    AhoCorasicSearchProcessor(int[] jumpTable, int[] matchForNeedleId) {
+        this.jumpTable = jumpTable;
+        this.matchForNeedleId = matchForNeedleId;
     }
 
     @Override
     public boolean process(byte value) {
-        currentNode = currentNode.children[value & 0xff];
-        return currentNode.matchForNeedleId == -1;
+        currentPosition = jumpTable[currentPosition | (value & 0xff)];
+        if (currentPosition < 0) {
+            currentPosition = -currentPosition;
+            return false;
+        }
+        return true;
     }
 
     @Override
     public int getFoundNeedleId() {
-        return currentNode.matchForNeedleId;
+        return matchForNeedleId[currentPosition >> AhoCorasicSearchProcessorFactory.BITS_PER_SYMOBOL];
     }
 
 }

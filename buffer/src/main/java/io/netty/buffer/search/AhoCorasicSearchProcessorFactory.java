@@ -14,11 +14,9 @@
  */
 package io.netty.buffer.search;
 
-import io.netty.buffer.search.AhoCorasicSearchProcessor.TrieNode;
-
 import java.util.ArrayDeque;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Queue;
 
 /**
@@ -29,54 +27,117 @@ import java.util.Queue;
  */
 public class AhoCorasicSearchProcessorFactory extends MultiSearchProcessorFactory {
 
-    private final TrieNode trieRoot;
+    private final int[] jumpTable;
+    private final int[] matchForNeedleId;
+
+    static final int BITS_PER_SYMOBOL = 8;
+    static final int ALPHABET_SIZE = 1 << BITS_PER_SYMOBOL;
+
+    private static class Context {
+        int[] jumpTable;
+        int[] matchForNeedleId;
+    }
 
     AhoCorasicSearchProcessorFactory(byte[] ...needles) {
-        this.trieRoot = buildTrie(needles);
-        linkSuffixes(trieRoot);
-    }
 
-    private static TrieNode buildTrie(byte[]... needles) {
-        final TrieNode trieRoot = new TrieNode();
-
-        for (int i = 0; i < needles.length; i++) {
-            byte[] needle = needles[i];
-            TrieNode currentNode = trieRoot;
-
-            for (byte ch0: needle) {
-                final int ch = ch0 & 0xff;
-                if (!currentNode.hasChildFor(ch)) {
-                    currentNode.children[ch] = new TrieNode();
-                }
-                currentNode = currentNode.children[ch];
+        for (byte[] needle: needles) {
+            if (needle.length == 0) {
+                throw new IllegalArgumentException("Needle must be non empty");
             }
-
-            currentNode.matchForNeedleId = i;
         }
 
-        return trieRoot;
+        Context context = buildTrie(needles);
+        jumpTable = context.jumpTable;
+        matchForNeedleId = context.matchForNeedleId;
+
+        linkSuffixes();
+
+        for (int i = 0; i < jumpTable.length; i++) {
+            if (matchForNeedleId[jumpTable[i] >> BITS_PER_SYMOBOL] >= 0) {
+                jumpTable[i] = -jumpTable[i];
+            }
+        }
     }
 
-    private static void linkSuffixes(TrieNode trieRoot) {
+    private static Context buildTrie(byte[][] needles) {
 
-        Queue<TrieNode> queue = new ArrayDeque<TrieNode>();
-        queue.add(trieRoot);
-        Map<TrieNode, TrieNode> suffixLinks = new HashMap<TrieNode, TrieNode>();
+        ArrayList<Integer> jumpTableBuilder = new ArrayList<Integer>(ALPHABET_SIZE);
+        for (int i = 0; i < ALPHABET_SIZE; i++) {
+            jumpTableBuilder.add(-1);
+        }
+
+        ArrayList<Integer> matchForBuilder = new ArrayList<Integer>();
+        matchForBuilder.add(-1);
+
+        for (int needleId = 0; needleId < needles.length; needleId++) {
+            byte[] needle = needles[needleId];
+            int currentPosition = 0;
+
+            for (byte ch0: needle) {
+
+                final int ch = ch0 & 0xff;
+                final int next = currentPosition + ch;
+
+                if (jumpTableBuilder.get(next) == -1) {
+                    jumpTableBuilder.set(next, jumpTableBuilder.size());
+                    for (int i = 0; i < ALPHABET_SIZE; i++) {
+                        jumpTableBuilder.add(-1);
+                    }
+                    matchForBuilder.add(-1);
+                }
+
+                currentPosition = jumpTableBuilder.get(next);
+            }
+
+            matchForBuilder.set(currentPosition >> BITS_PER_SYMOBOL, needleId);
+        }
+
+        Context context = new Context();
+
+        context.jumpTable = new int[jumpTableBuilder.size()];
+        for (int i = 0; i < jumpTableBuilder.size(); i++) {
+            context.jumpTable[i] = jumpTableBuilder.get(i);
+        }
+
+        context.matchForNeedleId = new int[matchForBuilder.size()];
+        for (int i = 0; i < matchForBuilder.size(); i++) {
+            context.matchForNeedleId[i] = matchForBuilder.get(i);
+        }
+
+        return context;
+    }
+
+    private void linkSuffixes() {
+
+        Queue<Integer> queue = new ArrayDeque<Integer>();
+        queue.add(0);
+
+        int[] suffixLinks = new int[matchForNeedleId.length];
+        Arrays.fill(suffixLinks, -1);
 
         while (!queue.isEmpty()) {
-            final TrieNode v = queue.remove();
-            final TrieNode vLink = suffixLinks.get(v);
-            final TrieNode u = vLink != null ? vLink : v;
-            if (v.matchForNeedleId == -1) {
-                v.matchForNeedleId = u.matchForNeedleId;
+
+            final int v = queue.remove();
+            int vPosition = v >> BITS_PER_SYMOBOL;
+            final int u = suffixLinks[vPosition] == -1 ? 0 : suffixLinks[vPosition];
+
+            if (matchForNeedleId[vPosition] == -1) {
+                matchForNeedleId[vPosition] = matchForNeedleId[u >> BITS_PER_SYMOBOL];
             }
-            for (int ch = 0; ch < 256; ch++) {
-                if (v.hasChildFor(ch)) {
-                    final TrieNode link = suffixLinks.containsKey(v) && u.hasChildFor(ch) ? u.children[ch] : trieRoot;
-                    suffixLinks.put(v.children[ch], link);
-                    queue.add(v.children[ch]);
+
+            for (int ch = 0; ch < ALPHABET_SIZE; ch++) {
+
+                final int vIndex = v | ch;
+                final int uIndex = u | ch;
+
+                final int jumpV = jumpTable[vIndex];
+                final int jumpU = jumpTable[uIndex];
+
+                if (jumpV != -1) {
+                    suffixLinks[jumpV >> BITS_PER_SYMOBOL] = v > 0 && jumpU != -1 ? jumpU : 0;
+                    queue.add(jumpV);
                 } else {
-                    v.children[ch] = u.hasChildFor(ch) ? u.children[ch] : trieRoot;
+                    jumpTable[vIndex] = jumpU != -1 ? jumpU : 0;
                 }
             }
         }
@@ -87,7 +148,7 @@ public class AhoCorasicSearchProcessorFactory extends MultiSearchProcessorFactor
      */
     @Override
     public AhoCorasicSearchProcessor newSearchProcessor() {
-        return new AhoCorasicSearchProcessor(trieRoot);
+        return new AhoCorasicSearchProcessor(jumpTable, matchForNeedleId);
     }
 
 }

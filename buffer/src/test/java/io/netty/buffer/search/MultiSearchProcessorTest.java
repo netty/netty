@@ -78,16 +78,15 @@ public class MultiSearchProcessorTest {
     }
 
     @Test
-    public void findFirstNeedleInCaseOfSuffixMatch() {
-        final ByteBuf haystack = Unpooled.copiedBuffer("abc", CharsetUtil.UTF_8);
-        final int length = haystack.readableBytes();
+    public void findLongerNeedleInCaseOfSuffixMatch() {
+        final ByteBuf haystack = Unpooled.copiedBuffer("xabcx", CharsetUtil.UTF_8);
 
         final MultiSearchProcessor processor1 = MultiSearchProcessorFactory.newAhoCorasicSearchProcessorFactory(
                 bytes("abc"),
                 bytes("bc")
         ).newSearchProcessor();
 
-        assertEquals(2, haystack.forEachByte(processor1));
+        assertEquals(3, haystack.forEachByte(processor1)); // end of "abc" in haystack
         assertEquals(0, processor1.getFoundNeedleId()); // index of "abc" in needles[]
 
         final MultiSearchProcessor processor2 = MultiSearchProcessorFactory.newAhoCorasicSearchProcessorFactory(
@@ -95,13 +94,13 @@ public class MultiSearchProcessorTest {
                 bytes("abc")
         ).newSearchProcessor();
 
-        assertEquals(2, haystack.forEachByte(processor1));
-        assertEquals(0, processor1.getFoundNeedleId()); // index of "bc" in needles[]
+        assertEquals(3, haystack.forEachByte(processor2)); // end of "abc" in haystack
+        assertEquals(1, processor2.getFoundNeedleId()); // index of "abc" in needles[]
 
         haystack.release();
     }
 
-    private byte[] bytes(String s) {
+    private static byte[] bytes(String s) {
         return s.getBytes(CharsetUtil.UTF_8);
     }
 

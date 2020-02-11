@@ -29,7 +29,7 @@ package io.netty.buffer.search;
  * <br>
  * <b>Note:</b> in some cases one {@code needle} can be a suffix of another {@code needle}, eg. {@code {"BC", "ABC"}},
  * and there can potentially be multiple {@code needles} found ending at the same position of the {@code haystack}.
- * In such case {@link MultiSearchProcessor#getFoundNeedleId()} returns the index of the first matching {@code needle}
+ * In such case {@link MultiSearchProcessor#getFoundNeedleId()} returns the index of the longest matching {@code needle}
  * in the array of {@code needles}.
  * <br>
  * Usage example (given that the {@code haystack} is a {@link io.netty.buffer.ByteBuf} containing "ABCD" and the
@@ -80,10 +80,9 @@ public abstract class MultiSearchProcessorFactory extends SearchProcessorFactory
      * <br>
      * Precomputation (this method) time is linear in the size of input ({@code O(Σ|needles|)}).
      * <br>
-     * The factory allocates and retains X {@link AhoCorasicSearchProcessor.TrieNode} objects, where X
+     * The factory allocates and retains an array of 256 * X ints plus another array of X ints, where X
      * is the sum of lengths of each entry of {@code needles} minus the sum of lengths of repeated
-     * prefixes of the {@code needles}. Each instance of {@link AhoCorasicSearchProcessor.TrieNode} contains
-     * an array with 256 references to {@link AhoCorasicSearchProcessor.TrieNode}.
+     * prefixes of the {@code needles}.
      * <br>
      * Search (the actual application of {@link MultiSearchProcessor}) time is linear in the size of
      * {@link io.netty.buffer.ByteBuf} on which the search is peformed ({@code O(|haystack|)}).
