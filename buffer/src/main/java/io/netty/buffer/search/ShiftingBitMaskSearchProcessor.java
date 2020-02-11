@@ -12,7 +12,9 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
- package io.netty.buffer.search;
+package io.netty.buffer.search;
+
+import io.netty.util.internal.PlatformDependent;
 
 /**
  * Implements Shifting Bit Mask string search algorithm as {@link io.netty.util.ByteProcessor}.
@@ -31,7 +33,7 @@ public class ShiftingBitMaskSearchProcessor implements SearchProcessor {
 
     @Override
     public boolean process(byte value) {
-        currentMask = ((currentMask << 1) | 1) & bitMasks[value & 0xff];
+        currentMask = ((currentMask << 1) | 1) & PlatformDependent.getLong(bitMasks, value & 0xff);
         return (currentMask & successBit) == 0;
     }
 

@@ -14,6 +14,8 @@
  */
 package io.netty.buffer.search;
 
+import io.netty.util.internal.PlatformDependent;
+
 /**
  * Implements
  * <a href="https://en.wikipedia.org/wiki/Knuth%E2%80%93Morris%E2%80%93Pratt_algorithm">Knuth-Morris-Pratt</a>
@@ -24,7 +26,7 @@ public class KmpSearchProcessor implements SearchProcessor {
 
     private final byte[] needle;
     private final int[] jumpTable;
-    private int j;
+    private int currentPosition;
 
     KmpSearchProcessor(byte[] needle, int[] jumpTable) {
         this.needle = needle;
@@ -33,14 +35,14 @@ public class KmpSearchProcessor implements SearchProcessor {
 
     @Override
     public boolean process(byte value) {
-        while (j > 0 && needle[j] != value) {
-            j = jumpTable[j];
+        while (currentPosition > 0 && needle[currentPosition] != value) {
+            currentPosition = PlatformDependent.getInt(jumpTable, currentPosition);
         }
-        if (needle[j] == value) {
-            j++;
+        if (PlatformDependent.getByte(needle, currentPosition) == value) {
+            currentPosition++;
         }
-        if (j == needle.length) {
-            j = jumpTable[j];
+        if (currentPosition == needle.length) {
+            currentPosition = PlatformDependent.getInt(jumpTable, currentPosition);
             return false;
         }
 
