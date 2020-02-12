@@ -99,7 +99,7 @@ public class LastInboundHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
-        if (writabilityStates == "") {
+        if (writabilityStates.equals("")) {
             writabilityStates = String.valueOf(ctx.channel().isWritable());
         } else {
             writabilityStates += "," + ctx.channel().isWritable();
