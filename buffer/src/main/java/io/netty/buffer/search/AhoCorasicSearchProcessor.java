@@ -45,4 +45,9 @@ public class AhoCorasicSearchProcessor implements MultiSearchProcessor {
         return matchForNeedleId[currentPosition >> AhoCorasicSearchProcessorFactory.BITS_PER_SYMOBOL];
     }
 
+    @Override
+    public void reset() {
+        currentPosition = 0;
+    }
+
 }

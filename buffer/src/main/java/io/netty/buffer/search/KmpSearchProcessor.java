@@ -49,4 +49,9 @@ public class KmpSearchProcessor implements SearchProcessor {
         return true;
     }
 
+    @Override
+    public void reset() {
+        currentPosition = 0;
+    }
+
 }

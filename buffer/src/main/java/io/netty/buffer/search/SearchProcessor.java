@@ -20,4 +20,11 @@ import io.netty.util.ByteProcessor;
  * Interface for {@link ByteProcessor} that implements string search.
  * @see SearchProcessorFactory
  */
-public interface SearchProcessor extends ByteProcessor { };
+public interface SearchProcessor extends ByteProcessor {
+
+    /**
+     * Resets the state of SearchProcessor for reuse.
+     */
+    void reset();
+
+};

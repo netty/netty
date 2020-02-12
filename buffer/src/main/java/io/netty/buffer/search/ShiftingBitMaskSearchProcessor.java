@@ -37,4 +37,9 @@ public class ShiftingBitMaskSearchProcessor implements SearchProcessor {
         return (currentMask & successBit) == 0;
     }
 
+    @Override
+    public void reset() {
+        currentMask = 0;
+    }
+
 }
