@@ -33,7 +33,7 @@ public class ShiftingBitMaskSearchProcessor implements SearchProcessor {
 
     @Override
     public boolean process(byte value) {
-        currentMask = ((currentMask << 1) | 1) & PlatformDependent.getLong(bitMasks, value & 0xff);
+        currentMask = ((currentMask << 1) | 1) & PlatformDependent.getLong(bitMasks, value & 0xffL);
         return (currentMask & successBit) == 0;
     }
 

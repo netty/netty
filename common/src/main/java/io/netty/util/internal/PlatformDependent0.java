@@ -537,6 +537,10 @@ final class PlatformDependent0 {
         return UNSAFE.getByte(data, BYTE_ARRAY_BASE_OFFSET + index);
     }
 
+    static byte getByte(byte[] data, long index) {
+        return UNSAFE.getByte(data, BYTE_ARRAY_BASE_OFFSET + index);
+    }
+
     static short getShort(byte[] data, int index) {
         return UNSAFE.getShort(data, BYTE_ARRAY_BASE_OFFSET + index);
     }
@@ -545,7 +549,7 @@ final class PlatformDependent0 {
         return UNSAFE.getInt(data, BYTE_ARRAY_BASE_OFFSET + index);
     }
 
-    static int getInt(int[] data, int index) {
+    static int getInt(int[] data, long index) {
         return UNSAFE.getInt(data, INT_ARRAY_BASE_OFFSET + INT_ARRAY_INDEX_SCALE * index);
     }
 
@@ -553,7 +557,7 @@ final class PlatformDependent0 {
         return UNSAFE.getLong(data, BYTE_ARRAY_BASE_OFFSET + index);
     }
 
-    static long getLong(long[] data, int index) {
+    static long getLong(long[] data, long index) {
         return UNSAFE.getLong(data, LONG_ARRAY_BASE_OFFSET + LONG_ARRAY_INDEX_SCALE * index);
     }
 

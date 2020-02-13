@@ -14,6 +14,8 @@
  */
 package io.netty.buffer.search;
 
+import io.netty.util.internal.PlatformDependent;
+
 /**
  * Implements <a href="https://en.wikipedia.org/wiki/Aho%E2%80%93Corasick_algorithm">Aho–Corasick</a>
  * string search algorithm as {@link io.netty.util.ByteProcessor}.
@@ -23,7 +25,7 @@ public class AhoCorasicSearchProcessor implements MultiSearchProcessor {
 
     private final int[] jumpTable;
     private final int[] matchForNeedleId;
-    private int currentPosition;
+    private long currentPosition;
 
     AhoCorasicSearchProcessor(int[] jumpTable, int[] matchForNeedleId) {
         this.jumpTable = jumpTable;
@@ -32,7 +34,7 @@ public class AhoCorasicSearchProcessor implements MultiSearchProcessor {
 
     @Override
     public boolean process(byte value) {
-        currentPosition = jumpTable[currentPosition | (value & 0xff)];
+        currentPosition = PlatformDependent.getInt(jumpTable, currentPosition | (value & 0xff));
         if (currentPosition < 0) {
             currentPosition = -currentPosition;
             return false;
@@ -42,7 +44,7 @@ public class AhoCorasicSearchProcessor implements MultiSearchProcessor {
 
     @Override
     public int getFoundNeedleId() {
-        return matchForNeedleId[currentPosition >> AhoCorasicSearchProcessorFactory.BITS_PER_SYMOBOL];
+        return matchForNeedleId[(int) currentPosition >> AhoCorasicSearchProcessorFactory.BITS_PER_SYMOBOL];
     }
 
     @Override

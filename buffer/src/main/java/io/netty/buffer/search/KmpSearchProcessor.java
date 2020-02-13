@@ -26,7 +26,7 @@ public class KmpSearchProcessor implements SearchProcessor {
 
     private final byte[] needle;
     private final int[] jumpTable;
-    private int currentPosition;
+    private long currentPosition;
 
     KmpSearchProcessor(byte[] needle, int[] jumpTable) {
         this.needle = needle;
