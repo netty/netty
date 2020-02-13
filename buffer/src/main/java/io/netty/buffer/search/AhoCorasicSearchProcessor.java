@@ -34,7 +34,7 @@ public class AhoCorasicSearchProcessor implements MultiSearchProcessor {
 
     @Override
     public boolean process(byte value) {
-        currentPosition = PlatformDependent.getInt(jumpTable, currentPosition | (value & 0xff));
+        currentPosition = PlatformDependent.getInt(jumpTable, currentPosition | (value & 0xffL));
         if (currentPosition < 0) {
             currentPosition = -currentPosition;
             return false;
