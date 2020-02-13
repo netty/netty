@@ -2221,13 +2221,5 @@ public class SslHandler extends ByteToMessageDecoder {
             }
             checkDeadLock(ctx.executor());
         }
-
-        @Override
-        public EventExecutor executor() {
-            if (ctx == null) {
-                return super.executor();
-            }
-            return ctx.executor();
-        }
     }
 }
