@@ -35,7 +35,7 @@ public class KmpSearchProcessor implements SearchProcessor {
 
     @Override
     public boolean process(byte value) {
-        while (currentPosition > 0 && needle[currentPosition] != value) {
+        while (currentPosition > 0 && PlatformDependent.getByte(needle, currentPosition) != value) {
             currentPosition = PlatformDependent.getInt(jumpTable, currentPosition);
         }
         if (PlatformDependent.getByte(needle, currentPosition) == value) {
