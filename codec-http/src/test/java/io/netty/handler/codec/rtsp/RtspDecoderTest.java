@@ -65,7 +65,6 @@ public class RtspDecoderTest {
         ((FullHttpRequest) res1).release();
 
         HttpObject res2 = ch.readInbound();
-        System.out.println(res2);
         assertNotNull(res2);
         assertTrue(res2 instanceof FullHttpResponse);
         ((FullHttpResponse) res2).release();
