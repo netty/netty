@@ -28,6 +28,8 @@ public final class CookieHeaderNames {
 
     public static final String HTTPONLY = "HTTPOnly";
 
+    public static final String SAMESITE = "SameSite";
+
     private CookieHeaderNames() {
         // Unused.
     }

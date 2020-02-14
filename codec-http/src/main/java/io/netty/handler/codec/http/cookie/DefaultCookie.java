@@ -31,6 +31,7 @@ public class DefaultCookie implements Cookie {
     private long maxAge = UNDEFINED_MAX_AGE;
     private boolean secure;
     private boolean httpOnly;
+    private String sameSite;
 
     /**
      * Creates a new cookie with the specified name and value.
@@ -117,6 +118,14 @@ public class DefaultCookie implements Cookie {
     @Override
     public void setHttpOnly(boolean httpOnly) {
         this.httpOnly = httpOnly;
+    }
+
+    public String sameSite() {
+        return sameSite;
+    }
+
+    public void setSameSite(String sameSite) {
+        this.sameSite = validateAttributeValue(CookieHeaderNames.SAMESITE, sameSite);
     }
 
     @Override
@@ -231,6 +240,9 @@ public class DefaultCookie implements Cookie {
         }
         if (isHttpOnly()) {
             buf.append(", HTTPOnly");
+        }
+        if (sameSite() != null) {
+            buf.append(", SameSite=").append(sameSite());
         }
         return buf.toString();
     }

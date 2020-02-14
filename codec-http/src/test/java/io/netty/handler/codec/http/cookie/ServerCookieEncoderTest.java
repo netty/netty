@@ -41,13 +41,14 @@ public class ServerCookieEncoderTest {
 
         int maxAge = 50;
 
-        String result =
-                "myCookie=myValue; Max-Age=50; Expires=(.+?); Path=/apathsomewhere; Domain=.adomainsomewhere; Secure";
-        Cookie cookie = new DefaultCookie("myCookie", "myValue");
+        String result = "myCookie=myValue; Max-Age=50; Expires=(.+?); Path=/apathsomewhere;" +
+                " Domain=.adomainsomewhere; Secure; SameSite=Lax";
+        DefaultCookie cookie = new DefaultCookie("myCookie", "myValue");
         cookie.setDomain(".adomainsomewhere");
         cookie.setMaxAge(maxAge);
         cookie.setPath("/apathsomewhere");
         cookie.setSecure(true);
+        cookie.setSameSite("Lax");
 
         String encodedCookie = ServerCookieEncoder.STRICT.encode(cookie);
 
