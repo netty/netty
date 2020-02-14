@@ -264,6 +264,33 @@ public class DefaultChannelPipelineTest {
         assertSame(pipeline.get("handler2"), newHandler2);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testReplaceHandlerChecksDuplicateNames() {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+
+        ChannelHandler handler1 = newHandler();
+        ChannelHandler handler2 = newHandler();
+        pipeline.addLast("handler1", handler1);
+        pipeline.addLast("handler2", handler2);
+
+        ChannelHandler newHandler1 = newHandler();
+        pipeline.replace("handler1", "handler2", newHandler1);
+    }
+
+    @Test
+    public void testReplaceNameWithGenerated() {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+
+        ChannelHandler handler1 = newHandler();
+        pipeline.addLast("handler1", handler1);
+        assertSame(pipeline.get("handler1"), handler1);
+
+        ChannelHandler newHandler1 = newHandler();
+        pipeline.replace("handler1", null, newHandler1);
+        assertSame(pipeline.get("DefaultChannelPipelineTest$TestHandler#0"), newHandler1);
+        assertNull(pipeline.get("handler1"));
+    }
+
     @Test
     public void testRenameChannelHandler() {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
