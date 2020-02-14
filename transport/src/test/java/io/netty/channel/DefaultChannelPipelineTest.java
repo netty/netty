@@ -265,6 +265,34 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
+    public void testRenameChannelHandler() {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+
+        ChannelHandler handler1 = newHandler();
+        pipeline.addLast("handler1", handler1);
+        pipeline.addLast("handler2", handler1);
+        pipeline.addLast("handler3", handler1);
+        assertSame(pipeline.get("handler1"), handler1);
+        assertSame(pipeline.get("handler2"), handler1);
+        assertSame(pipeline.get("handler3"), handler1);
+
+        ChannelHandler newHandler1 = newHandler();
+        pipeline.replace("handler1", "newHandler1", newHandler1);
+        assertSame(pipeline.get("newHandler1"), newHandler1);
+        assertNull(pipeline.get("handler1"));
+
+        ChannelHandler newHandler3 = newHandler();
+        pipeline.replace("handler3", "newHandler3", newHandler3);
+        assertSame(pipeline.get("newHandler3"), newHandler3);
+        assertNull(pipeline.get("handler3"));
+
+        ChannelHandler newHandler2 = newHandler();
+        pipeline.replace("handler2", "newHandler2", newHandler2);
+        assertSame(pipeline.get("newHandler2"), newHandler2);
+        assertNull(pipeline.get("handler2"));
+    }
+
+    @Test
     public void testChannelHandlerContextNavigation() {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
 
