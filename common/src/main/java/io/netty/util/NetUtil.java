@@ -316,7 +316,7 @@ public final class NetUtil {
             InputStreamReader isr = new InputStreamReader(is);
             try (BufferedReader br = new BufferedReader(isr)) {
                 String line = br.readLine();
-                if (line.startsWith(sysctlKey)) {
+                if (line != null && line.startsWith(sysctlKey)) {
                     for (int i = line.length() - 1; i > sysctlKey.length(); --i) {
                         if (!Character.isDigit(line.charAt(i))) {
                             return Integer.valueOf(line.substring(i + 1));
