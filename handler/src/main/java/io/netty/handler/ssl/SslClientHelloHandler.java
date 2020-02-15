@@ -177,17 +177,17 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
         }
     }
 
-    private void select(final ChannelHandlerContext ctx, final ByteBuf clientHello) {
+    private void select(final ChannelHandlerContext ctx, ByteBuf clientHello) {
         final Future<T> future;
         try {
             future = lookup(ctx, clientHello);
             if (future.isDone()) {
-                releaseIfNotNull(clientHello);
                 onLookupComplete(ctx, future);
             } else {
                 suppressRead = true;
+                final ByteBuf finalClientHello = clientHello;
                 future.addListener((FutureListener<T>) f -> {
-                    releaseIfNotNull(clientHello);
+                    releaseIfNotNull(finalClientHello);
                     try {
                         suppressRead = false;
                         try {
@@ -206,10 +206,14 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
                         }
                     }
                 });
+
+                // Ownership was transferred to the FutureListener.
+                clientHello = null;
             }
         } catch (Throwable cause) {
-            releaseIfNotNull(clientHello);
             PlatformDependent.throwException(cause);
+        } finally {
+            releaseIfNotNull(clientHello);
         }
     }
 
