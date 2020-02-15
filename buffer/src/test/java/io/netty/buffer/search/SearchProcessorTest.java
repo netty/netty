@@ -33,19 +33,19 @@ public class SearchProcessorTest {
         KNUTH_MORRIS_PRATT {
             @Override
             SearchProcessorFactory newFactory(byte[] needle) {
-                return SearchProcessorFactory.newKmpSearchProcessorFactory(needle);
+                return AbstractSearchProcessorFactory.newKmpSearchProcessorFactory(needle);
             }
         },
         SHIFTING_BIT_MASK {
             @Override
             SearchProcessorFactory newFactory(byte[] needle) {
-                return SearchProcessorFactory.newShiftingBitMaskSearchProcessorFactory(needle);
+                return AbstractSearchProcessorFactory.newShiftingBitMaskSearchProcessorFactory(needle);
             }
         },
         AHO_CORASIC {
             @Override
             SearchProcessorFactory newFactory(byte[] needle) {
-                return MultiSearchProcessorFactory.newAhoCorasicSearchProcessorFactory(needle);
+                return AbstractMultiSearchProcessorFactory.newAhoCorasicSearchProcessorFactory(needle);
             }
         };
         abstract SearchProcessorFactory newFactory(byte[] needle);

@@ -25,4 +25,4 @@ public interface MultiSearchProcessor extends SearchProcessor {
      */
     int getFoundNeedleId();
 
-};
+}

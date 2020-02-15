@@ -21,11 +21,11 @@ import java.util.Queue;
 
 /**
  * Factory that creates {@link AhoCorasicSearchProcessor}.
- * Use static {@link MultiSearchProcessorFactory#newAhoCorasicSearchProcessorFactory}
+ * Use static {@link AbstractMultiSearchProcessorFactory#newAhoCorasicSearchProcessorFactory}
  * to create an instance of this factory.
- * @see MultiSearchProcessorFactory
+ * @see AbstractMultiSearchProcessorFactory
  */
-public class AhoCorasicSearchProcessorFactory extends MultiSearchProcessorFactory {
+public class AhoCorasicSearchProcessorFactory extends AbstractMultiSearchProcessorFactory {
 
     private final int[] jumpTable;
     private final int[] matchForNeedleId;

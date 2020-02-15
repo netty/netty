@@ -23,8 +23,8 @@ import io.netty.util.ByteProcessor;
 public interface SearchProcessor extends ByteProcessor {
 
     /**
-     * Resets the state of SearchProcessor for reuse.
+     * Resets the state of SearchProcessor.
      */
     void reset();
 
-};
+}

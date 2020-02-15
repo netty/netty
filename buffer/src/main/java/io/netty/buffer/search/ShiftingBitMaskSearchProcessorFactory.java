@@ -16,11 +16,11 @@ package io.netty.buffer.search;
 
 /**
  * Factory that creates {@link ShiftingBitMaskSearchProcessor}.
- * Use static {@link SearchProcessorFactory#newShiftingBitMaskSearchProcessorFactory}
+ * Use static {@link AbstractSearchProcessorFactory#newShiftingBitMaskSearchProcessorFactory}
  * to create an instance of this factory.
  * @see SearchProcessorFactory
  */
-public class ShiftingBitMaskSearchProcessorFactory extends SearchProcessorFactory {
+public class ShiftingBitMaskSearchProcessorFactory extends AbstractSearchProcessorFactory {
 
     private final long[] bitMasks = new long[256];
     private final long successBit;
@@ -47,4 +47,4 @@ public class ShiftingBitMaskSearchProcessorFactory extends SearchProcessorFactor
         return new ShiftingBitMaskSearchProcessor(bitMasks, successBit);
     }
 
-};
+}

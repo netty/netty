@@ -16,11 +16,11 @@ package io.netty.buffer.search;
 
 /**
  * Factory that creates {@link KmpSearchProcessor}.
- * Use static {@link SearchProcessorFactory#newKmpSearchProcessorFactory}
+ * Use static {@link AbstractSearchProcessorFactory#newKmpSearchProcessorFactory}
  * to create an instance of this factory.
  * @see SearchProcessorFactory
  */
-public class KmpSearchProcessorFactory extends SearchProcessorFactory {
+public class KmpSearchProcessorFactory extends AbstractSearchProcessorFactory {
 
     private final int[] jumpTable;
     private final byte[] needle;
@@ -49,4 +49,4 @@ public class KmpSearchProcessorFactory extends SearchProcessorFactory {
         return new KmpSearchProcessor(needle, jumpTable);
     }
 
-};
+}

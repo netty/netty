@@ -29,7 +29,7 @@ public class MultiSearchProcessorTest {
         final ByteBuf haystack = Unpooled.copiedBuffer("one two three one", CharsetUtil.UTF_8);
         final int length = haystack.readableBytes();
 
-        final MultiSearchProcessor processor = MultiSearchProcessorFactory.newAhoCorasicSearchProcessorFactory(
+        final MultiSearchProcessor processor = AbstractMultiSearchProcessorFactory.newAhoCorasicSearchProcessorFactory(
                 bytes("one"),
                 bytes("two"),
                 bytes("three")
@@ -59,7 +59,7 @@ public class MultiSearchProcessorTest {
         final ByteBuf haystack = Unpooled.copiedBuffer("abcd", CharsetUtil.UTF_8);
         final int length = haystack.readableBytes();
 
-        final MultiSearchProcessor processor = MultiSearchProcessorFactory.newAhoCorasicSearchProcessorFactory(
+        final MultiSearchProcessor processor = AbstractMultiSearchProcessorFactory.newAhoCorasicSearchProcessorFactory(
                 bytes("ab"),
                 bytes("bc"),
                 bytes("cd")
@@ -81,7 +81,7 @@ public class MultiSearchProcessorTest {
     public void findLongerNeedleInCaseOfSuffixMatch() {
         final ByteBuf haystack = Unpooled.copiedBuffer("xabcx", CharsetUtil.UTF_8);
 
-        final MultiSearchProcessor processor1 = MultiSearchProcessorFactory.newAhoCorasicSearchProcessorFactory(
+        final MultiSearchProcessor processor1 = AbstractMultiSearchProcessorFactory.newAhoCorasicSearchProcessorFactory(
                 bytes("abc"),
                 bytes("bc")
         ).newSearchProcessor();
@@ -89,7 +89,7 @@ public class MultiSearchProcessorTest {
         assertEquals(3, haystack.forEachByte(processor1)); // end of "abc" in haystack
         assertEquals(0, processor1.getFoundNeedleId()); // index of "abc" in needles[]
 
-        final MultiSearchProcessor processor2 = MultiSearchProcessorFactory.newAhoCorasicSearchProcessorFactory(
+        final MultiSearchProcessor processor2 = AbstractMultiSearchProcessorFactory.newAhoCorasicSearchProcessorFactory(
                 bytes("bc"),
                 bytes("abc")
         ).newSearchProcessor();
