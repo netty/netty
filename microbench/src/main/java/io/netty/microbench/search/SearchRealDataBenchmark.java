@@ -78,8 +78,8 @@ public class SearchRealDataBenchmark extends AbstractMicrobenchmark {
     public ByteBufType bufferType;
 
     private ByteBuf haystack;
-    private SearchProcessor[] searchProcessors;
-    private SearchProcessor searchProcessor;
+    private SearchProcessorFactory[] searchProcessorFactories;
+    private SearchProcessorFactory searchProcessorFactory;
 
     private static final byte[][] NEEDLES = {
             "Thank You".getBytes(),
@@ -106,17 +106,16 @@ public class SearchRealDataBenchmark extends AbstractMicrobenchmark {
         searchFrom = 0;
         haystackLength = haystack.readableBytes();
 
-        searchProcessors = new SearchProcessor[NEEDLES.length];
+        searchProcessorFactories = new SearchProcessorFactory[NEEDLES.length];
         for (int i = 0; i < NEEDLES.length; i++) {
-            searchProcessors[i] = algorithm.newFactory(NEEDLES[i]).newSearchProcessor();
+            searchProcessorFactories[i] = algorithm.newFactory(NEEDLES[i]);
         }
     }
 
     @Setup(Level.Invocation)
     public void invocationSetup() {
-        needleId = (needleId + 1) % searchProcessors.length;
-        searchProcessor = searchProcessors[needleId];
-        searchProcessor.reset();
+        needleId = (needleId + 1) % searchProcessorFactories.length;
+        searchProcessorFactory = searchProcessorFactories[needleId];
     }
 
     @TearDown
@@ -127,19 +126,21 @@ public class SearchRealDataBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     @CompilerControl(Mode.DONT_INLINE)
     public int findFirst() {
-        return haystack.forEachByte(searchProcessor);
+        return haystack.forEachByte(searchProcessorFactory.newSearchProcessor());
     }
 
     @Benchmark
     @CompilerControl(Mode.DONT_INLINE)
     public int findFirstFromIndex() {
         searchFrom = (searchFrom + 100) % haystackLength;
-        return haystack.forEachByte(searchFrom, haystackLength - searchFrom, searchProcessor);
+        return haystack.forEachByte(
+                searchFrom, haystackLength - searchFrom, searchProcessorFactory.newSearchProcessor());
     }
 
     @Benchmark
     @CompilerControl(Mode.DONT_INLINE)
     public void findAll(Blackhole blackHole) {
+        SearchProcessor searchProcessor = searchProcessorFactory.newSearchProcessor();
         int pos = 0;
         do {
             pos = haystack.forEachByte(pos, haystackLength - pos, searchProcessor) + 1;
