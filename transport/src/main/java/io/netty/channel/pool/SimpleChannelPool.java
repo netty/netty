@@ -352,7 +352,7 @@ public class SimpleChannelPool implements ChannelPool {
         } else {
             closeAndFail(channel, new IllegalStateException("ChannelPool full") {
                 @Override
-                public synchronized Throwable fillInStackTrace() {
+                public Throwable fillInStackTrace() {
                     return this;
                 }
             }, promise);
