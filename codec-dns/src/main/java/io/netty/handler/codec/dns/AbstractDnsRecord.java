@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -68,10 +69,21 @@ public abstract class AbstractDnsRecord implements DnsRecord {
         // See:
         //   - https://github.com/netty/netty/issues/4937
         //   - https://github.com/netty/netty/issues/4935
-        this.name = appendTrailingDot(IDN.toASCII(requireNonNull(name, "name")));
+        this.name = appendTrailingDot(IDNtoASCII(name));
         this.type = requireNonNull(type, "type");
         this.dnsClass = (short) dnsClass;
         this.timeToLive = timeToLive;
+    }
+
+    private static String IDNtoASCII(String name) {
+        requireNonNull(name, "name");
+        if (PlatformDependent.isAndroid() && DefaultDnsRecordDecoder.ROOT.equals(name)) {
+            // Prior Android 10 there was a bug that did not correctly parse ".".
+            //
+            // See https://github.com/netty/netty/issues/10034
+            return name;
+        }
+        return IDN.toASCII(name);
     }
 
     private static String appendTrailingDot(String name) {
