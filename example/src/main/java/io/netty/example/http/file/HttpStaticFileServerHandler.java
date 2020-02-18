@@ -286,21 +286,24 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             .append("<ul>")
             .append("<li><a href=\"../\">..</a></li>\r\n");
 
-        for (File f: dir.listFiles()) {
-            if (f.isHidden() || !f.canRead()) {
-                continue;
-            }
+        File[] files = dir.listFiles();
+        if (files != null) {
+            for (File f: files) {
+                if (f.isHidden() || !f.canRead()) {
+                    continue;
+                }
 
-            String name = f.getName();
-            if (!ALLOWED_FILE_NAME.matcher(name).matches()) {
-                continue;
-            }
+                String name = f.getName();
+                if (!ALLOWED_FILE_NAME.matcher(name).matches()) {
+                    continue;
+                }
 
-            buf.append("<li><a href=\"")
-               .append(name)
-               .append("\">")
-               .append(name)
-               .append("</a></li>\r\n");
+                buf.append("<li><a href=\"")
+                .append(name)
+                .append("\">")
+                .append(name)
+                .append("</a></li>\r\n");
+            }
         }
 
         buf.append("</ul></body></html>\r\n");
