@@ -141,6 +141,10 @@ public final class TestUtils {
                 return name.endsWith(".hprof");
             }
         });
+        if (files == null) {
+            logger.warn("failed to find heap dump due to I/O error!");
+            return;
+        }
 
         final byte[] buf = new byte[65536];
         final LZMA2Options options = new LZMA2Options(LZMA2Options.PRESET_DEFAULT);
