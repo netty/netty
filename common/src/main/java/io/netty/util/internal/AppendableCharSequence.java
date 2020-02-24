@@ -37,6 +37,13 @@ public final class AppendableCharSequence implements CharSequence, Appendable {
         pos = chars.length;
     }
 
+    public void setLength(int length) {
+        if (length < 0 || length > pos) {
+            throw new IllegalArgumentException("length: " + length + " (length: >= 0, <= " + pos + ')');
+        }
+        this.pos = length;
+    }
+
     @Override
     public int length() {
         return pos;

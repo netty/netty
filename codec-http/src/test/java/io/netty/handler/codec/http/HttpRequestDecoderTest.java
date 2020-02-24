@@ -401,6 +401,30 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
+    public void testContentLengthAndTransferEncodingHeadersWithVerticalTab() {
+        testContentLengthAndTransferEncodingHeadersWithInvalidSeparator((char) 0x0b, false);
+        testContentLengthAndTransferEncodingHeadersWithInvalidSeparator((char) 0x0b, true);
+    }
+
+    @Test
+    public void testContentLengthAndTransferEncodingHeadersWithCR() {
+        testContentLengthAndTransferEncodingHeadersWithInvalidSeparator((char) 0x0d, false);
+        testContentLengthAndTransferEncodingHeadersWithInvalidSeparator((char) 0x0d, true);
+    }
+
+    private static void testContentLengthAndTransferEncodingHeadersWithInvalidSeparator(
+            char separator, boolean extraLine) {
+        String requestStr = "POST / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Connection: close\r\n" +
+                "Content-Length: 9\r\n" +
+                "Transfer-Encoding:" + separator + "chunked\r\n\r\n" +
+                (extraLine ? "0\r\n\r\n" : "") +
+                "something\r\n\r\n";
+        testInvalidHeaders0(requestStr);
+    }
+
+    @Test
     public void testContentLengthHeaderAndChunked() {
         String requestStr = "POST / HTTP/1.1\r\n" +
                 "Host: example.com\r\n" +
@@ -408,7 +432,6 @@ public class HttpRequestDecoderTest {
                 "Content-Length: 5\r\n" +
                 "Transfer-Encoding: chunked\r\n\r\n" +
                 "0\r\n\r\n";
-
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
         HttpRequest request = channel.readInbound();
