@@ -33,6 +33,7 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Enumeration;
+import java.util.NoSuchElementException;
 
 /**
  * Provides socket operations with privileges enabled. This is necessary for applications that use the
@@ -42,7 +43,24 @@ import java.util.Enumeration;
  */
 public final class SocketUtils {
 
+    private static Enumeration<Object> EMPTY = new Enumeration<Object>() {
+        @Override
+        public boolean hasMoreElements() {
+            return false;
+        }
+
+        @Override
+        public Object nextElement() {
+            throw new NoSuchElementException();
+        }
+    };
+
     private SocketUtils() {
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> Enumeration<T> empty() {
+        return (Enumeration<T>) EMPTY;
     }
 
     public static void connect(final Socket socket, final SocketAddress remoteAddress, final int timeout)
@@ -176,12 +194,20 @@ public final class SocketUtils {
     }
 
     public static Enumeration<InetAddress> addressesFromNetworkInterface(final NetworkInterface intf) {
-        return AccessController.doPrivileged(new PrivilegedAction<Enumeration<InetAddress>>() {
+        Enumeration<InetAddress> addresses =
+                AccessController.doPrivileged(new PrivilegedAction<Enumeration<InetAddress>>() {
             @Override
             public Enumeration<InetAddress> run() {
                 return intf.getInetAddresses();
             }
         });
+        // Android seems to sometimes return null even if this is not a valid return value by the api docs.
+        // Just return an empty Enumeration in this case.
+        // See https://github.com/netty/netty/issues/10045
+        if (addresses == null) {
+            return empty();
+        }
+        return addresses;
     }
 
     @SuppressJava6Requirement(reason = "Usage guarded by java version check")
