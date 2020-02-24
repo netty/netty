@@ -22,9 +22,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.sctp.SctpMessage;
 import io.netty.handler.codec.MessageToMessageDecoder;
-
-import java.util.HashMap;
-import java.util.Map;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 
 /**
  * {@link MessageToMessageDecoder} which will take care of handle fragmented {@link SctpMessage}s, so
@@ -32,7 +31,7 @@ import java.util.Map;
  * {@link ChannelHandler}.
  */
 public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMessage> {
-    private final Map<Integer, ByteBuf> fragments = new HashMap<>();
+    private final IntObjectMap<ByteBuf> fragments = new IntObjectHashMap<ByteBuf>();
 
     @Override
     protected void decode(ChannelHandlerContext ctx, SctpMessage msg) throws Exception {
