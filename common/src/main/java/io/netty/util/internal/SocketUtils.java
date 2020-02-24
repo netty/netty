@@ -32,8 +32,8 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collections;
 import java.util.Enumeration;
-import java.util.NoSuchElementException;
 
 /**
  * Provides socket operations with privileges enabled. This is necessary for applications that use the
@@ -43,17 +43,7 @@ import java.util.NoSuchElementException;
  */
 public final class SocketUtils {
 
-    private static Enumeration<Object> EMPTY = new Enumeration<Object>() {
-        @Override
-        public boolean hasMoreElements() {
-            return false;
-        }
-
-        @Override
-        public Object nextElement() {
-            throw new NoSuchElementException();
-        }
-    };
+    private static final Enumeration<Object> EMPTY = Collections.enumeration(Collections.emptyList());
 
     private SocketUtils() {
     }
