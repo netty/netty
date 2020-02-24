@@ -856,7 +856,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 return result;
             } else if (validateOWS && !isOWS(c)) {
                 // Only OWS is supported for whitespace
-                throw new IllegalArgumentException("Invalid separator, only OWS allowed");
+                throw new IllegalArgumentException("Invalid separator, only a single space or horizontal tab allowed," +
+                        " but received a '" + c + "'");
             }
         }
         return sb.length();
