@@ -15,7 +15,8 @@
  */
 package io.netty.handler.codec.http.cookie;
 
-import static io.netty.handler.codec.http.cookie.CookieUtil.*;
+import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
+import static io.netty.handler.codec.http.cookie.CookieUtil.validateAttributeValue;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -120,10 +121,22 @@ public class DefaultCookie implements Cookie {
         this.httpOnly = httpOnly;
     }
 
+    /**
+     * Checks to see if this {@link Cookie} can be sent along cross-site requests.
+     * For more information, please look
+     * <a href="https://tools.ietf.org/html/draft-west-cookie-incrementalism-00#section-3.1">here</a>
+     * @return <b>same-site-flag</b> value
+     */
     public String sameSite() {
         return sameSite;
     }
 
+    /**
+     * Determines if this this {@link Cookie} can be sent along cross-site requests.
+     * For more information, please look
+     *  <a href="https://tools.ietf.org/html/draft-west-cookie-incrementalism-00#section-3.1">here</a>
+     * @param sameSite <b>same-site-flag</b> value
+     */
     public void setSameSite(String sameSite) {
         this.sameSite = validateAttributeValue(CookieHeaderNames.SAMESITE, sameSite);
     }
