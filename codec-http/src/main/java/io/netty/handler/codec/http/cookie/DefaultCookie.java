@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http.cookie;
 
+import io.netty.handler.codec.http.cookie.CookieHeaderNames.SameSite;
+
 import static io.netty.handler.codec.http.cookie.CookieUtil.stringBuilder;
 import static io.netty.handler.codec.http.cookie.CookieUtil.validateAttributeValue;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -32,7 +34,7 @@ public class DefaultCookie implements Cookie {
     private long maxAge = UNDEFINED_MAX_AGE;
     private boolean secure;
     private boolean httpOnly;
-    private String sameSite;
+    private SameSite sameSite;
 
     /**
      * Creates a new cookie with the specified name and value.
@@ -127,7 +129,7 @@ public class DefaultCookie implements Cookie {
      * <a href="https://tools.ietf.org/html/draft-west-cookie-incrementalism-00#section-3.1">here</a>
      * @return <b>same-site-flag</b> value
      */
-    public String sameSite() {
+    public SameSite sameSite() {
         return sameSite;
     }
 
@@ -137,8 +139,8 @@ public class DefaultCookie implements Cookie {
      *  <a href="https://tools.ietf.org/html/draft-west-cookie-incrementalism-00#section-3.1">here</a>
      * @param sameSite <b>same-site-flag</b> value
      */
-    public void setSameSite(String sameSite) {
-        this.sameSite = validateAttributeValue(CookieHeaderNames.SAMESITE, sameSite);
+    public void setSameSite(SameSite sameSite) {
+        this.sameSite = sameSite;
     }
 
     @Override

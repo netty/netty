@@ -48,7 +48,7 @@ public class ClientCookieDecoderTest {
         assertTrue(cookie.isSecure());
 
         assertThat(cookie, is(instanceOf(DefaultCookie.class)));
-        assertEquals("None", ((DefaultCookie) cookie).sameSite());
+        assertEquals("None", ((DefaultCookie) cookie).sameSite().name());
     }
 
     @Test

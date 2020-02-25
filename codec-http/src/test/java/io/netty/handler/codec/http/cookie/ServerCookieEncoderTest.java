@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import io.netty.handler.codec.http.cookie.CookieHeaderNames.SameSite;
 import org.junit.Test;
 
 public class ServerCookieEncoderTest {
@@ -48,7 +49,7 @@ public class ServerCookieEncoderTest {
         cookie.setMaxAge(maxAge);
         cookie.setPath("/apathsomewhere");
         cookie.setSecure(true);
-        cookie.setSameSite("Lax");
+        cookie.setSameSite(SameSite.Lax);
 
         String encodedCookie = ServerCookieEncoder.STRICT.encode(cookie);
 

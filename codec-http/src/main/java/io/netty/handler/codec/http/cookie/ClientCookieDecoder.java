@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.cookie;
 
 import io.netty.handler.codec.DateFormatter;
+import io.netty.handler.codec.http.cookie.CookieHeaderNames.SameSite;
 
 import java.util.Date;
 
@@ -154,7 +155,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
         private int expiresEnd;
         private boolean secure;
         private boolean httpOnly;
-        private String sameSite;
+        private SameSite sameSite;
 
         CookieBuilder(DefaultCookie cookie, String header) {
             this.cookie = cookie;
@@ -247,7 +248,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
             if (header.regionMatches(true, nameStart, CookieHeaderNames.HTTPONLY, 0, 8)) {
                 httpOnly = true;
             } else if (header.regionMatches(true, nameStart, CookieHeaderNames.SAMESITE, 0, 8)) {
-                sameSite = computeValue(valueStart, valueEnd);
+                sameSite = SameSite.of(computeValue(valueStart, valueEnd));
             }
         }
 
