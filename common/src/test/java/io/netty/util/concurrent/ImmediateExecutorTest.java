@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2020 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,6 +17,7 @@
 package io.netty.util.concurrent;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.FutureTask;
@@ -36,13 +37,13 @@ public class ImmediateExecutorTest {
 
             @Override
             public void run() {
-
+                // NOOP
             }
 
         }, null);
         ImmediateExecutor.INSTANCE.execute(task);
         assertTrue(task.isDone());
         assertFalse(task.isCancelled());
-        assertTrue(task.get() == null);
+        assertNull(task.get());
     }
 }
