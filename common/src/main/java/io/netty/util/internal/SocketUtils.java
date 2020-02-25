@@ -32,6 +32,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collections;
 import java.util.Enumeration;
 
 /**
@@ -42,7 +43,14 @@ import java.util.Enumeration;
  */
 public final class SocketUtils {
 
+    private static final Enumeration<Object> EMPTY = Collections.enumeration(Collections.emptyList());
+
     private SocketUtils() {
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> Enumeration<T> empty() {
+        return (Enumeration<T>) EMPTY;
     }
 
     public static void connect(final Socket socket, final SocketAddress remoteAddress, final int timeout)
@@ -137,7 +145,15 @@ public final class SocketUtils {
     }
 
     public static Enumeration<InetAddress> addressesFromNetworkInterface(final NetworkInterface intf) {
-        return AccessController.doPrivileged((PrivilegedAction<Enumeration<InetAddress>>) intf::getInetAddresses);
+        Enumeration<InetAddress> addresses =
+                AccessController.doPrivileged((PrivilegedAction<Enumeration<InetAddress>>) intf::getInetAddresses);
+        // Android seems to sometimes return null even if this is not a valid return value by the api docs.
+        // Just return an empty Enumeration in this case.
+        // See https://github.com/netty/netty/issues/10045
+        if (addresses == null) {
+            return empty();
+        }
+        return addresses;
     }
 
     public static InetAddress loopbackAddress() {
