@@ -144,7 +144,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
         return cookieBuilder != null ? cookieBuilder.cookie() : null;
     }
 
-    private static class CookieBuilder {
+    private class CookieBuilder {
 
         private final String header;
         private final DefaultCookie cookie;
@@ -248,11 +248,18 @@ public final class ClientCookieDecoder extends CookieDecoder {
             if (header.regionMatches(true, nameStart, CookieHeaderNames.HTTPONLY, 0, 8)) {
                 httpOnly = true;
             } else if (header.regionMatches(true, nameStart, CookieHeaderNames.SAMESITE, 0, 8)) {
-                sameSite = SameSite.of(computeValue(valueStart, valueEnd));
+                String sameSiteValue = computeValue(valueStart, valueEnd);
+                try {
+                    sameSite = SameSite.of(sameSiteValue);
+                } catch (IllegalArgumentException e) {
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Skipping SameSite attribute because value '{}' is invalid", sameSiteValue);
+                    }
+                }
             }
         }
 
-        private static boolean isValueDefined(int valueStart, int valueEnd) {
+        private boolean isValueDefined(int valueStart, int valueEnd) {
             return valueStart != -1 && valueStart != valueEnd;
         }
 

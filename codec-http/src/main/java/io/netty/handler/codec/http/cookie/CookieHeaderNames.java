@@ -55,6 +55,7 @@ public final class CookieHeaderNames {
                             return each;
                         }
                     }
+                    throw e;
                 }
             }
             return null;
