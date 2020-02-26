@@ -16,7 +16,14 @@
 package io.netty.example.file;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.*;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -57,7 +64,7 @@ public class FileClient {
                     .option(ChannelOption.TCP_NODELAY, true)
                     .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
-                        public void initChannel(SocketChannel ch) throws Exception {
+                        public void initChannel(SocketChannel ch) {
                             ChannelPipeline p = ch.pipeline();
                             if (sslCtx != null) {
                                 p.addLast(sslCtx.newHandler(ch.alloc(), HOST, PORT));
@@ -67,7 +74,7 @@ public class FileClient {
                                     new StringEncoder(CharsetUtil.UTF_8),
                                     new SimpleChannelInboundHandler<String>() {
                                         @Override
-                                        protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+                                        protected void channelRead0(ChannelHandlerContext ctx, String msg) {
                                             System.err.print(msg);
                                         }
                                     });
