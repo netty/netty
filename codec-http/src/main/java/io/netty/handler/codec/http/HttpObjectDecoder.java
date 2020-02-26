@@ -752,13 +752,13 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         int cStart;
         int cEnd;
 
-        aStart = findNonWhitespace(sb, 0);
-        aEnd = findWhitespace(sb, aStart);
+        aStart = findNonSPLenient(sb, 0);
+        aEnd = findSPLenient(sb, aStart);
 
-        bStart = findNonWhitespace(sb, aEnd);
-        bEnd = findWhitespace(sb, bStart);
+        bStart = findNonSPLenient(sb, aEnd);
+        bEnd = findSPLenient(sb, bStart);
 
-        cStart = findNonWhitespace(sb, bEnd);
+        cStart = findNonSPLenient(sb, bEnd);
         cEnd = findEndOfString(sb);
 
         return new String[] {
@@ -775,7 +775,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         int valueStart;
         int valueEnd;
 
-        nameStart = findNonWhitespace(sb, 0);
+        nameStart = findNonWhitespace(sb, 0, false);
         for (nameEnd = nameStart; nameEnd < length; nameEnd ++) {
             char ch = sb.charAtUnsafe(nameEnd);
             // https://tools.ietf.org/html/rfc7230#section-3.2.4
@@ -792,7 +792,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     // is done in the DefaultHttpHeaders implementation.
                     //
                     // In the case of decoding a response we will "skip" the whitespace.
-                    (!isDecodingRequest() && Character.isWhitespace(ch))) {
+                    (!isDecodingRequest() && isOWS(ch))) {
                 break;
             }
         }
@@ -810,7 +810,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
 
         name = sb.subStringUnsafe(nameStart, nameEnd);
-        valueStart = findNonWhitespace(sb, colonEnd);
+        valueStart = findNonWhitespace(sb, colonEnd, true);
         if (valueStart == length) {
             value = EMPTY_VALUE;
         } else {
@@ -819,19 +819,45 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
     }
 
-    private static int findNonWhitespace(AppendableCharSequence sb, int offset) {
+    private static int findNonSPLenient(AppendableCharSequence sb, int offset) {
         for (int result = offset; result < sb.length(); ++result) {
-            if (!Character.isWhitespace(sb.charAtUnsafe(result))) {
+            char c = sb.charAtUnsafe(result);
+            // See https://tools.ietf.org/html/rfc7230#section-3.5
+            if (isSPLenient(c)) {
+                continue;
+            }
+            if (Character.isWhitespace(c)) {
+                // Any other whitespace delimiter is invalid
+                throw new IllegalArgumentException("Invalid separator");
+            }
+            return result;
+        }
+        return sb.length();
+    }
+
+    private static int findSPLenient(AppendableCharSequence sb, int offset) {
+        for (int result = offset; result < sb.length(); ++result) {
+            if (isSPLenient(sb.charAtUnsafe(result))) {
                 return result;
             }
         }
         return sb.length();
     }
 
-    private static int findWhitespace(AppendableCharSequence sb, int offset) {
+    private static boolean isSPLenient(char c) {
+        // See https://tools.ietf.org/html/rfc7230#section-3.5
+        return c == ' ' || c == (char) 0x09 || c == (char) 0x0B || c == (char) 0x0C || c == (char) 0x0D;
+    }
+
+    private static int findNonWhitespace(AppendableCharSequence sb, int offset, boolean validateOWS) {
         for (int result = offset; result < sb.length(); ++result) {
-            if (Character.isWhitespace(sb.charAtUnsafe(result))) {
+            char c = sb.charAtUnsafe(result);
+            if (!Character.isWhitespace(c)) {
                 return result;
+            } else if (validateOWS && !isOWS(c)) {
+                // Only OWS is supported for whitespace
+                throw new IllegalArgumentException("Invalid separator, only a single space or horizontal tab allowed," +
+                        " but received a '" + c + "'");
             }
         }
         return sb.length();
@@ -844,6 +870,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
         }
         return 0;
+    }
+
+    private static boolean isOWS(char ch) {
+        return ch == ' ' || ch == (char) 0x09;
     }
 
     private static class HeaderParser implements ByteProcessor {
@@ -875,10 +905,13 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         @Override
         public boolean process(byte value) throws Exception {
             char nextByte = (char) (value & 0xFF);
-            if (nextByte == HttpConstants.CR) {
-                return true;
-            }
             if (nextByte == HttpConstants.LF) {
+                int len = seq.length();
+                // Drop CR if we had a CRLF pair
+                if (len >= 1 && seq.charAtUnsafe(len - 1) == HttpConstants.CR) {
+                    -- size;
+                    seq.setLength(len - 1);
+                }
                 return false;
             }
 
