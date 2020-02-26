@@ -34,12 +34,10 @@ public class ImmediateExecutorTest {
     @Test
     public void testExecuteNonNullRunnable() throws Exception {
         FutureTask<Void> task = new FutureTask<Void>(new Runnable() {
-
             @Override
             public void run() {
                 // NOOP
             }
-
         }, null);
         ImmediateExecutor.INSTANCE.execute(task);
         assertTrue(task.isDone());
