@@ -865,13 +865,18 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         bytesWritten = writePlaintextData(src, min(remaining, availableCapacityForWrap));
                     }
 
+                    // Determine how much encrypted data was generated.
+                    //
+                    // Even if SSL_write did fail we may produced some data in the dst buffer (as the return value
+                    // just indicate that we consumed from the src buffer as well). For example session tickets that
+                    // were not sent out to the remote peer yet.
+                    // See https://github.com/netty/netty/issues/10041
+                    final int pendingNow = SSL.bioLengthByteBuffer(networkBIO);
+                    bytesProduced += bioLengthBefore - pendingNow;
+                    bioLengthBefore = pendingNow;
+
                     if (bytesWritten > 0) {
                         bytesConsumed += bytesWritten;
-
-                        // Determine how much encrypted data was generated:
-                        final int pendingNow = SSL.bioLengthByteBuffer(networkBIO);
-                        bytesProduced += bioLengthBefore - pendingNow;
-                        bioLengthBefore = pendingNow;
 
                         if (jdkCompatibilityMode || bytesProduced == dst.remaining()) {
                             return newResultMayFinishHandshake(status, bytesConsumed, bytesProduced);
