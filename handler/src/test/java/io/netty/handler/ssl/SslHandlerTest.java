@@ -43,7 +43,6 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.ByteToMessageCodec;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.DecoderException;
@@ -1073,20 +1072,28 @@ public class SslHandlerTest {
     }
 
     @Test(timeout = 5000L)
-    public void testSessionTicketsWithTLSv13() throws Throwable {
-        assumeTrue(OpenSsl.isAvailable());
-        assumeTrue(OpenSsl.isTlsv13Supported());
+    public void testSessionTicketsWithTLSv12() throws Throwable {
+        testSessionTickets(SslUtils.PROTOCOL_TLS_V1_2);
+    }
 
+    @Test(timeout = 5000L)
+    public void testSessionTicketsWithTLSv13() throws Throwable {
+        assumeTrue(OpenSsl.isTlsv13Supported());
+        testSessionTickets(SslUtils.PROTOCOL_TLS_V1_3);
+    }
+
+    private static void testSessionTickets(String protocol) throws Throwable {
+        assumeTrue(OpenSsl.isAvailable());
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(SslProvider.OPENSSL)
-                .protocols(SslUtils.PROTOCOL_TLS_V1_3)
+                .protocols(protocol)
                 .build();
 
         final SelfSignedCertificate cert = new SelfSignedCertificate();
         final SslContext sslServerCtx = SslContextBuilder.forServer(cert.key(), cert.cert())
                 .sslProvider(SslProvider.OPENSSL)
-                .protocols(SslUtils.PROTOCOL_TLS_V1_3)
+                .protocols(protocol)
                 .build();
 
         OpenSslSessionTicketKey key = new OpenSslSessionTicketKey(new byte[OpenSslSessionTicketKey.NAME_SIZE],
