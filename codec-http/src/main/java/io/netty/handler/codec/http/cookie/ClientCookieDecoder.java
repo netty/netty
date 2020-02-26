@@ -252,9 +252,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
                 try {
                     sameSite = SameSite.of(sameSiteValue);
                 } catch (IllegalArgumentException e) {
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Skipping SameSite attribute because value '{}' is invalid", sameSiteValue);
-                    }
+                    logger.debug("Skipping SameSite attribute because value '{}' is invalid", sameSiteValue);
                 }
             }
         }
