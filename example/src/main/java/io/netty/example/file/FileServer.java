@@ -36,7 +36,7 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.CharsetUtil;
 
 /**
- * Server that accept the path of a file an echo back its content.
+ * Server that accept the path of a file and echo back its content.
  */
 public final class FileServer {
 
