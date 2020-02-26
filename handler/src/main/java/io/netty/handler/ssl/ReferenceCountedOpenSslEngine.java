@@ -867,9 +867,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
                     // Determine how much encrypted data was generated.
                     //
-                    // Even if SSL_write did fail we may produced some data in the dst buffer (as the return value
-                    // just indicate that we consumed from the src buffer as well). For example session tickets that
-                    // were not sent out to the remote peer yet.
+                    // Even if SSL_write doesn't consume any application data it is possible that OpenSSL will
+                    // produce non-application data into the BIO. For example session tickets....
                     // See https://github.com/netty/netty/issues/10041
                     final int pendingNow = SSL.bioLengthByteBuffer(networkBIO);
                     bytesProduced += bioLengthBefore - pendingNow;
