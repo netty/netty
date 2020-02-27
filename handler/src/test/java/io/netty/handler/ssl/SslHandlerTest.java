@@ -43,6 +43,7 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
@@ -57,12 +58,14 @@ import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.PlatformDependent;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -1055,6 +1058,116 @@ public class SslHandlerTest {
                 assertThat(cause, CoreMatchers.<Throwable>instanceOf(SSLException.class));
                 assertThat(cause.getMessage(), containsString("timed out"));
                 assertFalse(clientSslHandler.handshakeFuture().await().isSuccess());
+            }
+        } finally {
+            if (cc != null) {
+                cc.close().syncUninterruptibly();
+            }
+            if (sc != null) {
+                sc.close().syncUninterruptibly();
+            }
+            group.shutdownGracefully();
+            ReferenceCountUtil.release(sslClientCtx);
+        }
+    }
+
+    @Test(timeout = 5000L)
+    public void testSessionTicketsWithTLSv12() throws Throwable {
+        testSessionTickets(SslUtils.PROTOCOL_TLS_V1_2);
+    }
+
+    @Test(timeout = 5000L)
+    public void testSessionTicketsWithTLSv13() throws Throwable {
+        assumeTrue(OpenSsl.isTlsv13Supported());
+        testSessionTickets(SslUtils.PROTOCOL_TLS_V1_3);
+    }
+
+    private static void testSessionTickets(String protocol) throws Throwable {
+        assumeTrue(OpenSsl.isAvailable());
+        final SslContext sslClientCtx = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(SslProvider.OPENSSL)
+                .protocols(protocol)
+                .build();
+
+        final SelfSignedCertificate cert = new SelfSignedCertificate();
+        final SslContext sslServerCtx = SslContextBuilder.forServer(cert.key(), cert.cert())
+                .sslProvider(SslProvider.OPENSSL)
+                .protocols(protocol)
+                .build();
+
+        OpenSslSessionTicketKey key = new OpenSslSessionTicketKey(new byte[OpenSslSessionTicketKey.NAME_SIZE],
+                new byte[OpenSslSessionTicketKey.HMAC_KEY_SIZE], new byte[OpenSslSessionTicketKey.AES_KEY_SIZE]);
+        ((OpenSslSessionContext) sslClientCtx.sessionContext()).setTicketKeys(key);
+        ((OpenSslSessionContext) sslServerCtx.sessionContext()).setTicketKeys(key);
+
+        EventLoopGroup group = new NioEventLoopGroup();
+        Channel sc = null;
+        Channel cc = null;
+        final SslHandler clientSslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
+        final SslHandler serverSslHandler = sslServerCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
+
+        final BlockingQueue<Object> queue = new LinkedBlockingQueue<Object>();
+        final byte[] bytes = new byte[96];
+        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        try {
+            sc = new ServerBootstrap()
+                    .group(group)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ch.pipeline().addLast(serverSslHandler);
+                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                @Override
+                                public void userEventTriggered(ChannelHandlerContext ctx, Object evt)  {
+                                    if (evt instanceof SslHandshakeCompletionEvent) {
+                                        ctx.writeAndFlush(Unpooled.wrappedBuffer(bytes));
+                                    }
+                                }
+                            });
+                        }
+                    })
+                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+
+            ChannelFuture future = new Bootstrap()
+                    .group(group)
+                    .channel(NioSocketChannel.class)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ch.pipeline().addLast(clientSslHandler);
+                            ch.pipeline().addLast(new ByteToMessageDecoder() {
+
+                                @Override
+                                protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+                                    if (in.readableBytes() == bytes.length) {
+                                        queue.add(in.readBytes(bytes.length));
+                                    }
+                                }
+
+                                @Override
+                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                    queue.add(cause);
+                                }
+                            });
+                        }
+                    }).connect(sc.localAddress());
+            cc = future.syncUninterruptibly().channel();
+
+            assertTrue(clientSslHandler.handshakeFuture().await().isSuccess());
+            assertTrue(serverSslHandler.handshakeFuture().await().isSuccess());
+            Object obj = queue.take();
+            if (obj instanceof ByteBuf) {
+                ByteBuf buffer = (ByteBuf) obj;
+                ByteBuf expected = Unpooled.wrappedBuffer(bytes);
+                try {
+                    assertEquals(expected, buffer);
+                } finally {
+                    expected.release();
+                }
+            } else {
+                throw (Throwable) obj;
             }
         } finally {
             if (cc != null) {
