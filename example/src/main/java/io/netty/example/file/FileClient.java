@@ -93,14 +93,15 @@ public class FileClient {
                 if (line == null) {
                     break;
                 }
-                // Type 'bye' to close client.
-                if ("bye".equals(line.toLowerCase())) {
-                    ch.close().sync();
+                // Type 'quit' to close client.
+                if ("quit".equals(line.toLowerCase())) {
                     break;
                 }
                 // Send the received line to the server.
                 lastWriteFuture = ch.writeAndFlush(line + "\r\n");
             }
+
+            ch.close().sync();
             // Wait until all messages are flushed before closing the channel.
             if (lastWriteFuture != null) {
                 lastWriteFuture.sync();
