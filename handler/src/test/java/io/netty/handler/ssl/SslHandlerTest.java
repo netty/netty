@@ -55,14 +55,12 @@ import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.PlatformDependent;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.security.NoSuchAlgorithmException;
-import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionException;
@@ -190,12 +188,12 @@ public class SslHandlerTest {
         assertFalse(ch.finishAndReleaseAll());
     }
 
-    @Test(expected = SSLException.class, timeout = 3000)
+    @Test(expected = SslHandshakeTimeoutException.class, timeout = 3000)
     public void testClientHandshakeTimeout() throws Throwable {
         testHandshakeTimeout(true);
     }
 
-    @Test(expected = SSLException.class, timeout = 3000)
+    @Test(expected = SslHandshakeTimeoutException.class, timeout = 3000)
     public void testServerHandshakeTimeout() throws Throwable {
         testHandshakeTimeout(false);
     }
