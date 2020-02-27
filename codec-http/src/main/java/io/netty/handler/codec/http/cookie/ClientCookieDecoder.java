@@ -144,7 +144,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
         return cookieBuilder != null ? cookieBuilder.cookie() : null;
     }
 
-    private class CookieBuilder {
+    private static class CookieBuilder {
 
         private final String header;
         private final DefaultCookie cookie;
@@ -248,12 +248,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
             if (header.regionMatches(true, nameStart, CookieHeaderNames.HTTPONLY, 0, 8)) {
                 httpOnly = true;
             } else if (header.regionMatches(true, nameStart, CookieHeaderNames.SAMESITE, 0, 8)) {
-                String sameSiteValue = computeValue(valueStart, valueEnd);
-                try {
-                    sameSite = SameSite.of(sameSiteValue);
-                } catch (IllegalArgumentException e) {
-                    logger.debug("Skipping SameSite attribute because value '{}' is invalid", sameSiteValue);
-                }
+                sameSite = SameSite.of(computeValue(valueStart, valueEnd));
             }
         }
 

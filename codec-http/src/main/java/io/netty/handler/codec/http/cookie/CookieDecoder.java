@@ -29,7 +29,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  */
 public abstract class CookieDecoder {
 
-    protected final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
+    private final InternalLogger logger = InternalLoggerFactory.getInstance(getClass());
 
     private final boolean strict;
 

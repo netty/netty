@@ -47,15 +47,10 @@ public final class CookieHeaderNames {
          */
         static SameSite of(String name) {
             if (name != null) {
-                try {
-                    return SameSite.valueOf(name);
-                } catch (IllegalArgumentException e) {
-                    for (SameSite each : SameSite.class.getEnumConstants()) {
-                        if (each.name().equalsIgnoreCase(name)) {
-                            return each;
-                        }
+                for (SameSite each : SameSite.class.getEnumConstants()) {
+                    if (each.name().equalsIgnoreCase(name)) {
+                        return each;
                     }
-                    throw e;
                 }
             }
             return null;
