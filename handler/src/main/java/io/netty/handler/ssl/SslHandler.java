@@ -2012,7 +2012,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (localHandshakePromise.isDone()) {
                     return;
                 }
-                SSLException exception = new SSLException("handshake timed out");
+                SSLException exception =
+                        new SslHandshakeTimeoutException("handshake timed out after " + handshakeTimeoutMillis + "ms");
                 try {
                     if (localHandshakePromise.tryFailure(exception)) {
                         SslUtils.handleHandshakeFailure(ctx, exception, true);

@@ -194,12 +194,12 @@ public class SslHandlerTest {
         assertFalse(ch.finishAndReleaseAll());
     }
 
-    @Test(expected = SSLException.class, timeout = 3000)
+    @Test(expected = SslHandshakeTimeoutException.class, timeout = 3000)
     public void testClientHandshakeTimeout() throws Exception {
         testHandshakeTimeout(true);
     }
 
-    @Test(expected = SSLException.class, timeout = 3000)
+    @Test(expected = SslHandshakeTimeoutException.class, timeout = 3000)
     public void testServerHandshakeTimeout() throws Exception {
         testHandshakeTimeout(false);
     }
