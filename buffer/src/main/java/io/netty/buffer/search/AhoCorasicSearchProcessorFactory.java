@@ -30,8 +30,8 @@ public class AhoCorasicSearchProcessorFactory extends AbstractMultiSearchProcess
     private final int[] jumpTable;
     private final int[] matchForNeedleId;
 
-    static final int BITS_PER_SYMOBOL = 8;
-    static final int ALPHABET_SIZE = 1 << BITS_PER_SYMOBOL;
+    static final int BITS_PER_SYMBOL = 8;
+    static final int ALPHABET_SIZE = 1 << BITS_PER_SYMBOL;
 
     private static class Context {
         int[] jumpTable;
@@ -53,7 +53,7 @@ public class AhoCorasicSearchProcessorFactory extends AbstractMultiSearchProcess
         linkSuffixes();
 
         for (int i = 0; i < jumpTable.length; i++) {
-            if (matchForNeedleId[jumpTable[i] >> BITS_PER_SYMOBOL] >= 0) {
+            if (matchForNeedleId[jumpTable[i] >> BITS_PER_SYMBOL] >= 0) {
                 jumpTable[i] = -jumpTable[i];
             }
         }
@@ -89,7 +89,7 @@ public class AhoCorasicSearchProcessorFactory extends AbstractMultiSearchProcess
                 currentPosition = jumpTableBuilder.get(next);
             }
 
-            matchForBuilder.set(currentPosition >> BITS_PER_SYMOBOL, needleId);
+            matchForBuilder.set(currentPosition >> BITS_PER_SYMBOL, needleId);
         }
 
         Context context = new Context();
@@ -118,11 +118,11 @@ public class AhoCorasicSearchProcessorFactory extends AbstractMultiSearchProcess
         while (!queue.isEmpty()) {
 
             final int v = queue.remove();
-            int vPosition = v >> BITS_PER_SYMOBOL;
+            int vPosition = v >> BITS_PER_SYMBOL;
             final int u = suffixLinks[vPosition] == -1 ? 0 : suffixLinks[vPosition];
 
             if (matchForNeedleId[vPosition] == -1) {
-                matchForNeedleId[vPosition] = matchForNeedleId[u >> BITS_PER_SYMOBOL];
+                matchForNeedleId[vPosition] = matchForNeedleId[u >> BITS_PER_SYMBOL];
             }
 
             for (int ch = 0; ch < ALPHABET_SIZE; ch++) {
@@ -134,7 +134,7 @@ public class AhoCorasicSearchProcessorFactory extends AbstractMultiSearchProcess
                 final int jumpU = jumpTable[uIndex];
 
                 if (jumpV != -1) {
-                    suffixLinks[jumpV >> BITS_PER_SYMOBOL] = v > 0 && jumpU != -1 ? jumpU : 0;
+                    suffixLinks[jumpV >> BITS_PER_SYMBOL] = v > 0 && jumpU != -1 ? jumpU : 0;
                     queue.add(jumpV);
                 } else {
                     jumpTable[vIndex] = jumpU != -1 ? jumpU : 0;

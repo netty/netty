@@ -44,7 +44,7 @@ public class AhoCorasicSearchProcessor implements MultiSearchProcessor {
 
     @Override
     public int getFoundNeedleId() {
-        return matchForNeedleId[(int) currentPosition >> AhoCorasicSearchProcessorFactory.BITS_PER_SYMOBOL];
+        return matchForNeedleId[(int) currentPosition >> AhoCorasicSearchProcessorFactory.BITS_PER_SYMBOL];
     }
 
     @Override
