@@ -32,7 +32,7 @@ public final class CookieHeaderNames {
 
     /**
      * Possible values for the SameSite attribute.
-     * See <a href=https://tools.ietf.org/html/draft-west-cookie-incrementalism-00#section-3.1>changes to RFC6265bis</a>
+     * See <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-05">changes to RFC6265bis</a>
      */
     public enum SameSite {
         Lax,

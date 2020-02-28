@@ -252,7 +252,7 @@ public final class ClientCookieDecoder extends CookieDecoder {
             }
         }
 
-        private boolean isValueDefined(int valueStart, int valueEnd) {
+        private static boolean isValueDefined(int valueStart, int valueEnd) {
             return valueStart != -1 && valueStart != valueEnd;
         }
 
