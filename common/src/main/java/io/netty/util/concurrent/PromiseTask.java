@@ -177,11 +177,6 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     }
 
     @Override
-    public final boolean isCancelled() {
-        return task == CANCELLED || super.isCancelled();
-    }
-
-    @Override
     protected StringBuilder toStringBuilder() {
         StringBuilder buf = super.toStringBuilder();
         buf.setCharAt(buf.length() - 1, ',');
