@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.cookie;
 
 import io.netty.handler.codec.DateFormatter;
+import io.netty.handler.codec.http.cookie.CookieHeaderNames.SameSite;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -48,7 +49,7 @@ public class ClientCookieDecoderTest {
         assertTrue(cookie.isSecure());
 
         assertThat(cookie, is(instanceOf(DefaultCookie.class)));
-        assertEquals("None", ((DefaultCookie) cookie).sameSite().name());
+        assertEquals(SameSite.None, ((DefaultCookie) cookie).sameSite());
     }
 
     @Test

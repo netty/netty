@@ -136,7 +136,7 @@ public class DefaultCookie implements Cookie {
     /**
      * Determines if this this {@link Cookie} can be sent along cross-site requests.
      * For more information, please look
-     *  <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-05>here</a>
+     *  <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-05">here</a>
      * @param sameSite <b>same-site-flag</b> value
      */
     public void setSameSite(SameSite sameSite) {
