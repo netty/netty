@@ -68,6 +68,14 @@ final class ChannelHandlerMask {
                 }
             };
 
+    static boolean isInbound(int mask) {
+        return (mask & MASK_ALL_INBOUND) != 0;
+    }
+
+    static boolean isOutbound(int mask) {
+        return (mask & MASK_ALL_OUTBOUND) != 0;
+    }
+
     /**
      * Return the {@code executionMask}.
      */

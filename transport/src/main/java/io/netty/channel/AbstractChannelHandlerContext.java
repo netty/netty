@@ -906,17 +906,21 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private AbstractChannelHandlerContext findContextInbound(int mask) {
         AbstractChannelHandlerContext ctx = this;
+        EventExecutor currentExecutor = executor();
         do {
             ctx = ctx.next;
-        } while ((ctx.executionMask & mask) == 0);
+        } while (!ChannelHandlerMask.isInbound(ctx.executionMask)
+            || (ctx.executionMask & mask) == 0 && ctx.executor() == currentExecutor);
         return ctx;
     }
 
     private AbstractChannelHandlerContext findContextOutbound(int mask) {
         AbstractChannelHandlerContext ctx = this;
+        EventExecutor currentExecutor = executor();
         do {
             ctx = ctx.prev;
-        } while ((ctx.executionMask & mask) == 0);
+        } while (!ChannelHandlerMask.isOutbound(ctx.executionMask)
+            || (ctx.executionMask & mask) == 0 && ctx.executor() == currentExecutor);
         return ctx;
     }
 
