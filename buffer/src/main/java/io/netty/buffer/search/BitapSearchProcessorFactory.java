@@ -15,17 +15,17 @@
 package io.netty.buffer.search;
 
 /**
- * Factory that creates {@link ShiftingBitMaskSearchProcessor}.
- * Use static {@link AbstractSearchProcessorFactory#newShiftingBitMaskSearchProcessorFactory}
+ * Factory that creates {@link BitapSearchProcessor}.
+ * Use static {@link AbstractSearchProcessorFactory#newBitapSearchProcessorFactory}
  * to create an instance of this factory.
  * @see SearchProcessorFactory
  */
-public class ShiftingBitMaskSearchProcessorFactory extends AbstractSearchProcessorFactory {
+public class BitapSearchProcessorFactory extends AbstractSearchProcessorFactory {
 
     private final long[] bitMasks = new long[256];
     private final long successBit;
 
-    ShiftingBitMaskSearchProcessorFactory(byte[] needle) {
+    BitapSearchProcessorFactory(byte[] needle) {
         if (needle.length > 64) {
             throw new IllegalArgumentException("Maximum supported search pattern length is 64, got " + needle.length);
         }
@@ -40,11 +40,11 @@ public class ShiftingBitMaskSearchProcessorFactory extends AbstractSearchProcess
     }
 
     /**
-     * Returns a new {@link ShiftingBitMaskSearchProcessor}.
+     * Returns a new {@link BitapSearchProcessor}.
      */
     @Override
-    public ShiftingBitMaskSearchProcessor newSearchProcessor() {
-        return new ShiftingBitMaskSearchProcessor(bitMasks, successBit);
+    public BitapSearchProcessor newSearchProcessor() {
+        return new BitapSearchProcessor(bitMasks, successBit);
     }
 
 }

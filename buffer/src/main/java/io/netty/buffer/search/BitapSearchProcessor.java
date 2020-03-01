@@ -17,16 +17,17 @@ package io.netty.buffer.search;
 import io.netty.util.internal.PlatformDependent;
 
 /**
- * Implements Shifting Bit Mask string search algorithm as {@link io.netty.util.ByteProcessor}.
+ * Implements <a href="https://en.wikipedia.org/wiki/Bitap_algorithm">Bitap</a>
+ * string search algorithm as {@link io.netty.util.ByteProcessor}.
  * @see SearchProcessorFactory
  */
-public class ShiftingBitMaskSearchProcessor implements SearchProcessor {
+public class BitapSearchProcessor implements SearchProcessor {
 
     private final long[] bitMasks;
     private final long successBit;
     private long currentMask;
 
-    ShiftingBitMaskSearchProcessor(long[] bitMasks, long successBit) {
+    BitapSearchProcessor(long[] bitMasks, long successBit) {
         this.bitMasks = bitMasks;
         this.successBit = successBit;
     }

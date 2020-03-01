@@ -36,10 +36,10 @@ public class SearchProcessorTest {
                 return AbstractSearchProcessorFactory.newKmpSearchProcessorFactory(needle);
             }
         },
-        SHIFTING_BIT_MASK {
+        BITAP {
             @Override
             SearchProcessorFactory newFactory(byte[] needle) {
-                return AbstractSearchProcessorFactory.newShiftingBitMaskSearchProcessorFactory(needle);
+                return AbstractSearchProcessorFactory.newBitapSearchProcessorFactory(needle);
             }
         },
         AHO_CORASIC {

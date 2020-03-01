@@ -93,7 +93,7 @@ public abstract class AbstractSearchProcessorFactory implements SearchProcessorF
     }
 
     /**
-     * Creates a {@link SearchProcessorFactory} based on Shifting Bit Mask string search algorithm.
+     * Creates a {@link SearchProcessorFactory} based on Bitap string search algorithm.
      * It is a jump free algorithm that has very stable performance (the contents of the inputs have a minimal
      * effect on it). The limitation is that the {@code needle} can be no more than 64 bytes long.
      * <br>
@@ -106,10 +106,10 @@ public abstract class AbstractSearchProcessorFactory implements SearchProcessorF
      * Every byte of {@link io.netty.buffer.ByteBuf} is processed only once, sequentually.
      *
      * @param needle an array <b>of no more than 64 bytes</b> to search for
-     * @return a new instance of {@link ShiftingBitMaskSearchProcessorFactory} precomputed for the given {@code needle}
+     * @return a new instance of {@link BitapSearchProcessorFactory} precomputed for the given {@code needle}
      */
-    public static ShiftingBitMaskSearchProcessorFactory newShiftingBitMaskSearchProcessorFactory(byte[] needle) {
-        return new ShiftingBitMaskSearchProcessorFactory(needle);
+    public static BitapSearchProcessorFactory newBitapSearchProcessorFactory(byte[] needle) {
+        return new BitapSearchProcessorFactory(needle);
     }
 
 }

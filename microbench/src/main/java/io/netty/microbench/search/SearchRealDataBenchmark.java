@@ -62,10 +62,10 @@ public class SearchRealDataBenchmark extends AbstractMicrobenchmark {
                 return AbstractSearchProcessorFactory.newKmpSearchProcessorFactory(needle);
             }
         },
-        SHIFTING_BIT_MASK {
+        BITAP {
             @Override
             SearchProcessorFactory newFactory(byte[] needle) {
-                return AbstractSearchProcessorFactory.newShiftingBitMaskSearchProcessorFactory(needle);
+                return AbstractSearchProcessorFactory.newBitapSearchProcessorFactory(needle);
             }
         };
         abstract SearchProcessorFactory newFactory(byte[] needle);

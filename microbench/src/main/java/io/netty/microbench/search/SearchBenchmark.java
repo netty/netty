@@ -90,7 +90,7 @@ public class SearchBenchmark extends AbstractMicrobenchmark {
                 return randomBytes(rnd, 2048, 0, 1);
             }
         },
-        WORST_CASE { // ShiftingBitMask will fail on it because the needle is >64 bytes long
+        WORST_CASE { // Bitap will fail on it because the needle is >64 bytes long
             @Override
             byte[] getNeedle(Random rnd) {
                 // aa(...)aab
@@ -121,7 +121,7 @@ public class SearchBenchmark extends AbstractMicrobenchmark {
     private Random rnd;
     private ByteBuf needle, haystack;
     private byte[] needleBytes, haystackBytes;
-    private SearchProcessorFactory kmpFactory, shiftingBitMaskFactory, ahoCorasicFactory;
+    private SearchProcessorFactory kmpFactory, bitapFactory, ahoCorasicFactory;
 
     @Setup
     public void setup() {
@@ -137,8 +137,7 @@ public class SearchBenchmark extends AbstractMicrobenchmark {
         ahoCorasicFactory = AbstractMultiSearchProcessorFactory.newAhoCorasicSearchProcessorFactory(needleBytes);
 
         if (needleBytes.length <= 64) {
-            shiftingBitMaskFactory =
-                    AbstractSearchProcessorFactory.newShiftingBitMaskSearchProcessorFactory(needleBytes);
+            bitapFactory = AbstractSearchProcessorFactory.newBitapSearchProcessorFactory(needleBytes);
         }
     }
 
@@ -162,8 +161,8 @@ public class SearchBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     @CompilerControl(Mode.DONT_INLINE)
-    public int shiftingBitMask() {
-        return haystack.forEachByte(shiftingBitMaskFactory.newSearchProcessor());
+    public int bitap() {
+        return haystack.forEachByte(bitapFactory.newSearchProcessor());
     }
 
     @Benchmark
