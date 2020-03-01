@@ -203,8 +203,8 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator {
                     // NOTE: not releasing the response since we're letting it propagate to the
                     // next handler.
                     ctx.fireUserEventTriggered(UpgradeEvent.UPGRADE_REJECTED);
-                    removeThisHandler(ctx);
                     ctx.fireChannelRead(msg);
+                    removeThisHandler(ctx);
                     return;
                 }
             }

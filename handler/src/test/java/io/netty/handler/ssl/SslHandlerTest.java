@@ -442,10 +442,12 @@ public class SslHandlerTest {
                 sslHandler.setHandshakeTimeoutMillis(1000);
                 ch.pipeline().addFirst(sslHandler);
                 sslHandler.handshakeFuture().addListener((FutureListener<Channel>) future -> {
-                    ch.pipeline().remove(sslHandler);
+                    ch.eventLoop().execute(() -> {
+                        ch.pipeline().remove(sslHandler);
 
-                    // Schedule the close so removal has time to propagate exception if any.
-                    ch.eventLoop().execute(ch::close);
+                        // Schedule the close so removal has time to propagate exception if any.
+                        ch.eventLoop().execute(ch::close);
+                    });
                 });
 
                 ch.pipeline().addLast(new ChannelHandler() {
@@ -457,6 +459,7 @@ public class SslHandlerTest {
                         if (cause instanceof IllegalReferenceCountException) {
                             promise.setFailure(cause);
                         }
+                        cause.printStackTrace();
                     }
 
                     @Override

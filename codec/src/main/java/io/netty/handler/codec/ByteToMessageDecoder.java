@@ -154,10 +154,6 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
         }
     };
 
-    private static final byte STATE_INIT = 0;
-    private static final byte STATE_CALLING_CHILD_DECODE = 1;
-    private static final byte STATE_HANDLER_REMOVED_PENDING = 2;
-
     ByteBuf cumulation;
     private Cumulator cumulator = MERGE_CUMULATOR;
     private boolean singleDecode;
@@ -169,15 +165,6 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
      */
     private boolean firedChannelRead;
 
-    /**
-     * A bitmask where the bits are defined as
-     * <ul>
-     *     <li>{@link #STATE_INIT}</li>
-     *     <li>{@link #STATE_CALLING_CHILD_DECODE}</li>
-     *     <li>{@link #STATE_HANDLER_REMOVED_PENDING}</li>
-     * </ul>
-     */
-    private byte decodeState = STATE_INIT;
     private int discardAfterReads = 16;
     private int numReads;
     private ByteToMessageDecoderContext context;
@@ -257,10 +244,6 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
 
     @Override
     public final void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        if (decodeState == STATE_CALLING_CHILD_DECODE) {
-            decodeState = STATE_HANDLER_REMOVED_PENDING;
-            return;
-        }
         ByteBuf buf = cumulation;
         if (buf != null) {
             // Directly set this to null so we are sure we not access it in any other method here anymore.
@@ -469,16 +452,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
      */
     final void decodeRemovalReentryProtection(ChannelHandlerContext ctx, ByteBuf in)
             throws Exception {
-        decodeState = STATE_CALLING_CHILD_DECODE;
-        try {
-            decode(ctx, in);
-        } finally {
-            boolean removePending = decodeState == STATE_HANDLER_REMOVED_PENDING;
-            decodeState = STATE_INIT;
-            if (removePending) {
-                handlerRemoved(ctx);
-            }
-        }
+        decode(ctx, in);
     }
 
     /**

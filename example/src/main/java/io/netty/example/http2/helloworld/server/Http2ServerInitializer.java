@@ -98,8 +98,9 @@ public class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
                 System.err.println("Directly talking: " + msg.protocolVersion() + " (no upgrade was attempted)");
                 ChannelPipeline pipeline = ctx.pipeline();
                 pipeline.addAfter(ctx.name(), null, new HelloWorldHttp1Handler("Direct. No Upgrade Attempted."));
-                pipeline.replace(this, null, new HttpObjectAggregator(maxHttpContentLength));
+                pipeline.addAfter(ctx.name(), null, new HttpObjectAggregator(maxHttpContentLength));
                 ctx.fireChannelRead(ReferenceCountUtil.retain(msg));
+                pipeline.remove(this);
             }
         });
 

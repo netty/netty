@@ -346,7 +346,6 @@ final class SslUtils {
         if (notify) {
             ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
         }
-        ctx.close();
     }
 
     /**

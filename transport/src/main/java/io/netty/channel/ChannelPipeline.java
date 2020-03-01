@@ -438,6 +438,14 @@ public interface ChannelPipeline
     ChannelHandlerContext lastContext();
 
     /**
+     * Returns {@code true} if this {@link ChannelPipeline} is empty, which means no {@link ChannelHandler} is
+     * present.
+     */
+    default boolean isEmpty() {
+        return lastContext() == null;
+    }
+
+    /**
      * Returns the {@link ChannelHandler} with the specified name in this
      * pipeline.
      *

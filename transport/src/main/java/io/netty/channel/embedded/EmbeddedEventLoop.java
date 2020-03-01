@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements EventLoop {
 
     private final Queue<Runnable> tasks = new ArrayDeque<>(2);
-    private boolean running;
+    boolean running;
 
     private static EmbeddedChannel cast(Channel channel) {
         if (channel instanceof EmbeddedChannel) {

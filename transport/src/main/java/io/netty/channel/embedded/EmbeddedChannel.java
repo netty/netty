@@ -782,64 +782,70 @@ public class EmbeddedChannel extends AbstractChannel {
                 return EmbeddedUnsafe.this.remoteAddress();
             }
 
+            private void mayRunPendingTasks() {
+                if (!((EmbeddedEventLoop) eventLoop()).running) {
+                    runPendingTasks();
+                }
+            }
+
             @Override
             public void register(ChannelPromise promise) {
                 EmbeddedUnsafe.this.register(promise);
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override
             public void bind(SocketAddress localAddress, ChannelPromise promise) {
                 EmbeddedUnsafe.this.bind(localAddress, promise);
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override
             public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
                 EmbeddedUnsafe.this.connect(remoteAddress, localAddress, promise);
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override
             public void disconnect(ChannelPromise promise) {
                 EmbeddedUnsafe.this.disconnect(promise);
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override
             public void close(ChannelPromise promise) {
                 EmbeddedUnsafe.this.close(promise);
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override
             public void closeForcibly() {
                 EmbeddedUnsafe.this.closeForcibly();
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override
             public void deregister(ChannelPromise promise) {
                 EmbeddedUnsafe.this.deregister(promise);
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override
             public void beginRead() {
                 EmbeddedUnsafe.this.beginRead();
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override
             public void write(Object msg, ChannelPromise promise) {
                 EmbeddedUnsafe.this.write(msg, promise);
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override
             public void flush() {
                 EmbeddedUnsafe.this.flush();
-                runPendingTasks();
+                mayRunPendingTasks();
             }
 
             @Override

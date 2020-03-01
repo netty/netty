@@ -232,7 +232,9 @@ public class PendingWriteQueueTest {
 
         ChannelPromise promise = channel.newPromise();
         final ChannelPromise promise3 = channel.newPromise();
-        promise.addListener((ChannelFutureListener) future -> queue.add(3L, promise3));
+        promise.addListener((ChannelFutureListener) future -> {
+            queue.add(3L, promise3);
+        });
         ChannelPromise promise2 = channel.newPromise();
 
         channel.eventLoop().execute(() -> {
@@ -245,8 +247,13 @@ public class PendingWriteQueueTest {
         assertTrue(promise.isSuccess());
         assertTrue(promise2.isDone());
         assertTrue(promise2.isSuccess());
+        assertFalse(promise3.isDone());
+        assertFalse(promise3.isSuccess());
+
+        channel.eventLoop().execute(queue::removeAndWriteAll);
         assertTrue(promise3.isDone());
         assertTrue(promise3.isSuccess());
+        channel.runPendingTasks();
         assertTrue(channel.finish());
         assertEquals(1L, (long) channel.readOutbound());
         assertEquals(2L, (long) channel.readOutbound());
