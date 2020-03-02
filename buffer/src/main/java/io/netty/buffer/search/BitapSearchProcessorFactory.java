@@ -14,16 +14,43 @@
  */
 package io.netty.buffer.search;
 
+import io.netty.util.internal.PlatformDependent;
+
 /**
- * Factory that creates {@link BitapSearchProcessor}.
+ * Implements <a href="https://en.wikipedia.org/wiki/Bitap_algorithm">Bitap</a> string search algorithm.
  * Use static {@link AbstractSearchProcessorFactory#newBitapSearchProcessorFactory}
  * to create an instance of this factory.
- * @see SearchProcessorFactory
+ * Use {@link BitapSearchProcessorFactory#newSearchProcessor} to get an instance of {@link io.netty.util.ByteProcessor}
+ * implementation for performing the actual search.
+ * @see AbstractSearchProcessorFactory
  */
 public class BitapSearchProcessorFactory extends AbstractSearchProcessorFactory {
 
     private final long[] bitMasks = new long[256];
     private final long successBit;
+
+    public static class Processor implements SearchProcessor {
+
+        private final long[] bitMasks;
+        private final long successBit;
+        private long currentMask;
+
+        Processor(long[] bitMasks, long successBit) {
+            this.bitMasks = bitMasks;
+            this.successBit = successBit;
+        }
+
+        @Override
+        public boolean process(byte value) {
+            currentMask = ((currentMask << 1) | 1) & PlatformDependent.getLong(bitMasks, value & 0xffL);
+            return (currentMask & successBit) == 0;
+        }
+
+        @Override
+        public void reset() {
+            currentMask = 0;
+        }
+    }
 
     BitapSearchProcessorFactory(byte[] needle) {
         if (needle.length > 64) {
@@ -40,11 +67,11 @@ public class BitapSearchProcessorFactory extends AbstractSearchProcessorFactory 
     }
 
     /**
-     * Returns a new {@link BitapSearchProcessor}.
+     * Returns a new {@link Processor}.
      */
     @Override
-    public BitapSearchProcessor newSearchProcessor() {
-        return new BitapSearchProcessor(bitMasks, successBit);
+    public Processor newSearchProcessor() {
+        return new Processor(bitMasks, successBit);
     }
 
 }

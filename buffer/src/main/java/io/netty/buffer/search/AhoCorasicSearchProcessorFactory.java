@@ -14,15 +14,20 @@
  */
 package io.netty.buffer.search;
 
+import io.netty.util.internal.PlatformDependent;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Queue;
 
 /**
- * Factory that creates {@link AhoCorasicSearchProcessor}.
+ * Implements <a href="https://en.wikipedia.org/wiki/Aho%E2%80%93Corasick_algorithm">Aho–Corasick</a>
+ * string search algorithm.
  * Use static {@link AbstractMultiSearchProcessorFactory#newAhoCorasicSearchProcessorFactory}
  * to create an instance of this factory.
+ * Use {@link AhoCorasicSearchProcessorFactory#newSearchProcessor} to get an instance of
+ * {@link io.netty.util.ByteProcessor} implementation for performing the actual search.
  * @see AbstractMultiSearchProcessorFactory
  */
 public class AhoCorasicSearchProcessorFactory extends AbstractMultiSearchProcessorFactory {
@@ -36,6 +41,38 @@ public class AhoCorasicSearchProcessorFactory extends AbstractMultiSearchProcess
     private static class Context {
         int[] jumpTable;
         int[] matchForNeedleId;
+    }
+
+    public static class Processor implements MultiSearchProcessor {
+
+        private final int[] jumpTable;
+        private final int[] matchForNeedleId;
+        private long currentPosition;
+
+        Processor(int[] jumpTable, int[] matchForNeedleId) {
+            this.jumpTable = jumpTable;
+            this.matchForNeedleId = matchForNeedleId;
+        }
+
+        @Override
+        public boolean process(byte value) {
+            currentPosition = PlatformDependent.getInt(jumpTable, currentPosition | (value & 0xffL));
+            if (currentPosition < 0) {
+                currentPosition = -currentPosition;
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public int getFoundNeedleId() {
+            return matchForNeedleId[(int) currentPosition >> AhoCorasicSearchProcessorFactory.BITS_PER_SYMBOL];
+        }
+
+        @Override
+        public void reset() {
+            currentPosition = 0;
+        }
     }
 
     AhoCorasicSearchProcessorFactory(byte[] ...needles) {
@@ -144,11 +181,11 @@ public class AhoCorasicSearchProcessorFactory extends AbstractMultiSearchProcess
     }
 
     /**
-     * Returns a new {@link AhoCorasicSearchProcessor}.
+     * Returns a new {@link Processor}.
      */
     @Override
-    public AhoCorasicSearchProcessor newSearchProcessor() {
-        return new AhoCorasicSearchProcessor(jumpTable, matchForNeedleId);
+    public Processor newSearchProcessor() {
+        return new Processor(jumpTable, matchForNeedleId);
     }
 
 }
