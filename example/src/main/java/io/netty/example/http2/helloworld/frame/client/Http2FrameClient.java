@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2020 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License, version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
@@ -23,8 +23,19 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.DefaultHttp2HeadersFrame;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
+import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.codec.http2.Http2StreamChannelBootstrap;
+import io.netty.handler.ssl.ApplicationProtocolConfig;
+import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
+import io.netty.handler.ssl.ApplicationProtocolNames;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProvider;
+import io.netty.handler.ssl.SupportedCipherSuiteFilter;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 /**
  * An HTTP2 client that allows you to send HTTP2 frames to a server using the newer HTTP2
@@ -41,8 +52,32 @@ public final class Http2FrameClient {
     static final int PORT = Integer.parseInt(System.getProperty("port", SSL? "8443" : "8080"));
     static final String PATH = System.getProperty("path", "/");
 
+    private Http2FrameClient() {
+    }
+
     public static void main(String[] args) throws Exception {
         final EventLoopGroup clientWorkerGroup = new NioEventLoopGroup();
+
+        // Configure SSL.
+        final SslContext sslCtx;
+        if (SSL) {
+            final SslProvider provider =
+                    SslProvider.isAlpnSupported(SslProvider.OPENSSL)? SslProvider.OPENSSL : SslProvider.JDK;
+            sslCtx = SslContextBuilder.forClient()
+                  .sslProvider(provider)
+                  .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
+                  // you probably won't want to use this in production, but it is fine for this example:
+                  .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                  .applicationProtocolConfig(new ApplicationProtocolConfig(
+                          Protocol.ALPN,
+                          SelectorFailureBehavior.NO_ADVERTISE,
+                          SelectedListenerFailureBehavior.ACCEPT,
+                          ApplicationProtocolNames.HTTP_2,
+                          ApplicationProtocolNames.HTTP_1_1))
+                  .build();
+        } else {
+            sslCtx = null;
+        }
 
         try {
             final Bootstrap b = new Bootstrap();
@@ -50,7 +85,7 @@ public final class Http2FrameClient {
             b.channel(NioSocketChannel.class);
             b.option(ChannelOption.SO_KEEPALIVE, true);
             b.remoteAddress(HOST, PORT);
-            b.handler(new Http2ClientFrameInitializer(SSL));
+            b.handler(new Http2ClientFrameInitializer(sslCtx));
 
             // Start the client.
             final Channel channel = b.connect().syncUninterruptibly().channel();
@@ -61,7 +96,7 @@ public final class Http2FrameClient {
 
             final Http2StreamChannelBootstrap streamChannelBootstrap = new Http2StreamChannelBootstrap(channel);
             final Http2StreamChannel streamChannel = streamChannelBootstrap.open().syncUninterruptibly().getNow();
-            streamChannel.pipeline().addLast("Response Handler", streamFrameResponseHandler);
+            streamChannel.pipeline().addLast(streamFrameResponseHandler);
 
             // Send request (a HTTP/2 HEADERS frame - with ':method = GET' in this case)
             final DefaultHttp2Headers headers = new DefaultHttp2Headers();
