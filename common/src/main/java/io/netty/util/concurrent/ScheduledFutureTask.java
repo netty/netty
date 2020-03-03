@@ -109,7 +109,7 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         // Optimization to avoid checking system clock again
         // after deadline has passed and task has been dequeued
         if (periodNanos == 0) {
-            assert nanoTime() > deadlineNanos;
+            assert nanoTime() >= deadlineNanos;
             deadlineNanos = 0L;
         }
     }
