@@ -793,6 +793,12 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 default:
                     break;
             }
+
+            // This should be a no-op if the `writeDoneAndNoFlush` flag is not set,
+            // however, if as a result of the read operation a WINDOW_UPDATE frame was produced
+            // (or any other outgoing h2 system frame for that matter), we need to make sure
+            // that it's flushed by the parent channel.
+            flush();
         }
 
         private Object pollQueuedMessage() {
@@ -841,6 +847,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 int bytes = flowControlledBytes;
                 flowControlledBytes = 0;
                 ChannelFuture future = write0(parentContext(), new DefaultHttp2WindowUpdateFrame(bytes).stream(stream));
+                // Future object returned by write0 method call is most likely completed within the call stack by the logic
+                // implemented in Http2FrameCodec's `write()` method and may not serve as an indication that the frame bytes
+                // were flushed.
+                writeDoneAndNoFlush = true;
                 // Add a listener which will notify and teardown the stream
                 // when a window update fails if needed or check the result of the future directly if it was completed
                 // already.
@@ -849,7 +859,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                     windowUpdateFrameWriteComplete(future, AbstractHttp2StreamChannel.this);
                 } else {
                     future.addListener(windowUpdateFrameWriteListener);
-                    writeDoneAndNoFlush = true;
                 }
             }
         }
