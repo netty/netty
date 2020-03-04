@@ -43,8 +43,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
 
     // Fallback provider
-    private static final DnsServerAddressStreamProvider DEFAULT_PROVIDER =
-            DnsServerAddressStreamProviders.platformDefault();
+    private static final DnsServerAddressStreamProvider UNIX_PROVIDER;
 
     private static final Throwable UNAVAILABILITY_CAUSE;
 
@@ -62,6 +61,9 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
             cause = error;
         }
         UNAVAILABILITY_CAUSE = cause;
+        // It's important that we load the native lib before we call DnsServerAddressStreamProviders to ensure
+        // the default provider is correctly wired up and has all the needed native libs loaded.
+        UNIX_PROVIDER = DnsServerAddressStreamProviders.unixDefault();
     }
 
     private static void loadNativeLibrary() {
@@ -167,7 +169,7 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
                 if (addresses != null) {
                     return addresses.stream();
                 }
-                return DEFAULT_PROVIDER.nameServerAddressStream(originalHostname);
+                return UNIX_PROVIDER.nameServerAddressStream(originalHostname);
             }
 
             DnsServerAddresses addresses = resolverMap.get(hostname);

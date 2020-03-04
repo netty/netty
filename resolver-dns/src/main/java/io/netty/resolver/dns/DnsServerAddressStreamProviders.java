@@ -16,7 +16,14 @@
 package io.netty.resolver.dns;
 
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -26,6 +33,9 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class DnsServerAddressStreamProviders {
     // We use 5 minutes which is the same as what OpenJDK is using in sun.net.dns.ResolverConfigurationImpl.
     private static final long REFRESH_INTERVAL = TimeUnit.MINUTES.toNanos(5);
+    private static final InternalLogger LOGGER =
+            InternalLoggerFactory.getInstance(DnsServerAddressStreamProviders.class);
+    private static final Constructor<? extends DnsServerAddressStreamProvider> STREAM_PROVIDER_CONSTRUCTOR;
 
     // TODO(scott): how is this done on Windows? This may require a JNI call to GetNetworkParams
     // https://msdn.microsoft.com/en-us/library/aa365968(VS.85).aspx.
@@ -56,6 +66,45 @@ public final class DnsServerAddressStreamProviders {
         }
     };
 
+    static {
+        Constructor<? extends DnsServerAddressStreamProvider> constructor = null;
+        if (PlatformDependent.isOsx()) {
+            try {
+                // As MacOSDnsServerAddressStreamProvider is contained in another jar which depends on this jar
+                // we use reflection to use it if its on the classpath.
+                Object maybeProvider = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                    @Override
+                    public Object run() {
+                        try {
+                            return Class.forName(
+                                    "io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider",
+                                    true,
+                                    DnsServerAddressStreamProviders.class.getClassLoader());
+                        } catch (Throwable cause) {
+                            return cause;
+                        }
+                    }
+                });
+                if (maybeProvider instanceof Class) {
+                    @SuppressWarnings("unchecked")
+                    Class<? extends DnsServerAddressStreamProvider> providerClass =
+                            (Class<? extends DnsServerAddressStreamProvider>) maybeProvider;
+                    Method method = providerClass.getMethod("ensureAvailability");
+                    method.invoke(null);
+                    constructor = providerClass.getConstructor();
+                    constructor.newInstance();
+                } else if (!(maybeProvider instanceof ClassNotFoundException)) {
+                    throw (Throwable) maybeProvider;
+                }
+            } catch (Throwable cause) {
+                LOGGER.debug(
+                        "Unable to use MacOSDnsServerAddressStreamProvider, fallback to system defaults", cause);
+                constructor = null;
+            }
+        }
+        STREAM_PROVIDER_CONSTRUCTOR = constructor;
+    }
+
     private DnsServerAddressStreamProviders() {
     }
 
@@ -67,6 +116,21 @@ public final class DnsServerAddressStreamProviders {
      * configuration.
      */
     public static DnsServerAddressStreamProvider platformDefault() {
+        if (STREAM_PROVIDER_CONSTRUCTOR != null) {
+            try {
+                return STREAM_PROVIDER_CONSTRUCTOR.newInstance();
+            } catch (IllegalAccessException e) {
+                // ignore
+            } catch (InstantiationException e) {
+                // ignore
+            } catch (InvocationTargetException e) {
+                // ignore
+            }
+        }
+        return unixDefault();
+    }
+
+    public static DnsServerAddressStreamProvider unixDefault() {
         return DEFAULT_DNS_SERVER_ADDRESS_STREAM_PROVIDER;
     }
 }
