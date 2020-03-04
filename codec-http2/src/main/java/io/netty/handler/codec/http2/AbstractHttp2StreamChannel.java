@@ -175,8 +175,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
     private Queue<Object> inboundBuffer;
 
-    /** {@code true} after the first HEADERS frame has been written **/
-    private boolean firstFrameWritten;
     private boolean readCompletePending;
 
     AbstractHttp2StreamChannel(DefaultHttp2FrameStream stream, int id, ChannelHandler inboundHandler) {
@@ -934,7 +932,12 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         private void writeHttp2StreamFrame(Http2StreamFrame frame, final ChannelPromise promise) {
-            if (!firstFrameWritten && !isStreamIdValid(stream().id()) && !(frame instanceof Http2HeadersFrame)) {
+            // If this stream doesn't have a stream ID it is because this stream is in the IDLE
+            // state. Note that we use the stream ID because the stream ID gets assigned right away
+            // while the underlying Http2Stream may get set later if the stream is queued due to
+            // MAX_CONCURRENT_STREAMS settings or similar reasons.
+            final boolean openingFrame = !isStreamIdValid(stream().id());
+            if (openingFrame && !(frame instanceof Http2HeadersFrame)) {
                 ReferenceCountUtil.release(frame);
                 promise.setFailure(
                     new IllegalArgumentException("The first frame must be a headers frame. Was: "
@@ -942,16 +945,9 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 return;
             }
 
-            final boolean firstWrite;
-            if (firstFrameWritten) {
-                firstWrite = false;
-            } else {
-                firstWrite = firstFrameWritten = true;
-            }
-
             ChannelFuture f = write0(parentContext(), frame);
             if (f.isDone()) {
-                if (firstWrite) {
+                if (openingFrame) {
                     firstWriteComplete(f, promise);
                 } else {
                     writeComplete(f, promise);
@@ -962,7 +958,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 f.addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) {
-                        if (firstWrite) {
+                        if (openingFrame) {
                             firstWriteComplete(future, promise);
                         } else {
                             writeComplete(future, promise);
