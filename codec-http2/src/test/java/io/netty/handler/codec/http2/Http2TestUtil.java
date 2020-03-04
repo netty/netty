@@ -687,6 +687,10 @@ public final class Http2TestUtil {
         return ByteBufUtil.writeUtf8(UnpooledByteBufAllocator.DEFAULT, s);
     }
 
+    static ByteBuf bb(int size) {
+        return UnpooledByteBufAllocator.DEFAULT.buffer().writeZero(size);
+    }
+
     static void assertEqualsAndRelease(Http2Frame expected, Http2Frame actual) {
         try {
             assertEquals(expected, actual);
