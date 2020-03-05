@@ -1167,8 +1167,10 @@ public class SslHandler extends ByteToMessageDecoder {
                         return true;
                     }
                 } catch (Throwable cause) {
-                    logger.debug("Unexpected exception while loading class {} classname {}",
-                                 getClass(), classname, cause);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Unexpected exception while loading class {} classname {}",
+                                getClass(), classname, cause);
+                    }
                 }
             }
         }
