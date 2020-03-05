@@ -153,6 +153,7 @@ final class OpenSslX509TrustManagerWrapper {
     }
 
     private static SSLContext newSSLContext() throws NoSuchAlgorithmException {
+        /** TLS is not secure */
         return SSLContext.getInstance("TLS");
     }
 
