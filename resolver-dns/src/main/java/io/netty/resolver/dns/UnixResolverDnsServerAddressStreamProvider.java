@@ -71,7 +71,9 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
             return nameServerCache.mayOverrideNameServers() ? nameServerCache
                                                             : DefaultDnsServerAddressStreamProvider.INSTANCE;
         } catch (Exception e) {
-            logger.debug("failed to parse {} and/or {}", ETC_RESOLV_CONF_FILE, ETC_RESOLVER_DIR, e);
+            if (logger.isDebugEnabled()) {
+                logger.debug("failed to parse {} and/or {}", ETC_RESOLV_CONF_FILE, ETC_RESOLVER_DIR, e);
+            }
             return DefaultDnsServerAddressStreamProvider.INSTANCE;
         }
     }
@@ -254,8 +256,10 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
         DnsServerAddresses existingAddresses = domainToNameServerStreamMap.put(domainName, addresses);
         if (existingAddresses != null) {
             domainToNameServerStreamMap.put(domainName, existingAddresses);
-            logger.debug("Domain name {} already maps to addresses {} so new addresses {} will be discarded",
-                    domainName, existingAddresses, addresses);
+            if (logger.isDebugEnabled()) {
+                logger.debug("Domain name {} already maps to addresses {} so new addresses {} will be discarded",
+                        domainName, existingAddresses, addresses);
+            }
         }
     }
 

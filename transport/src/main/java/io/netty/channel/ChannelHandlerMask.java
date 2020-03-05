@@ -173,8 +173,10 @@ final class ChannelHandlerMask {
                 try {
                     m = handlerType.getMethod(methodName, paramTypes);
                 } catch (NoSuchMethodException e) {
-                    logger.debug(
-                        "Class {} missing method {}, assume we can not skip execution", handlerType, methodName, e);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug(
+                            "Class {} missing method {}, assume we can not skip execution", handlerType, methodName, e);
+                    }
                     return false;
                 }
                 return m != null && m.isAnnotationPresent(Skip.class);
