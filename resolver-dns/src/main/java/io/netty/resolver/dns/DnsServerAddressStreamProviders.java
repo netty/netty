@@ -31,40 +31,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * Utility methods related to {@link DnsServerAddressStreamProvider}.
  */
 public final class DnsServerAddressStreamProviders {
-    // We use 5 minutes which is the same as what OpenJDK is using in sun.net.dns.ResolverConfigurationImpl.
-    private static final long REFRESH_INTERVAL = TimeUnit.MINUTES.toNanos(5);
+
     private static final InternalLogger LOGGER =
             InternalLoggerFactory.getInstance(DnsServerAddressStreamProviders.class);
     private static final Constructor<? extends DnsServerAddressStreamProvider> STREAM_PROVIDER_CONSTRUCTOR;
-
-    // TODO(scott): how is this done on Windows? This may require a JNI call to GetNetworkParams
-    // https://msdn.microsoft.com/en-us/library/aa365968(VS.85).aspx.
-    private static final DnsServerAddressStreamProvider DEFAULT_DNS_SERVER_ADDRESS_STREAM_PROVIDER =
-            new DnsServerAddressStreamProvider() {
-        private volatile DnsServerAddressStreamProvider currentProvider = provider();
-        private final AtomicLong lastRefresh = new AtomicLong(System.nanoTime());
-
-        @Override
-        public DnsServerAddressStream nameServerAddressStream(String hostname) {
-            long last = lastRefresh.get();
-            DnsServerAddressStreamProvider current = currentProvider;
-            if (System.nanoTime() - last > REFRESH_INTERVAL) {
-                // This is slightly racy which means it will be possible still use the old configuration for a small
-                // amount of time, but that's ok.
-                if (lastRefresh.compareAndSet(last, System.nanoTime())) {
-                    current = currentProvider = provider();
-                }
-            }
-            return current.nameServerAddressStream(hostname);
-        }
-
-        private DnsServerAddressStreamProvider provider() {
-            // If on windows just use the DefaultDnsServerAddressStreamProvider.INSTANCE as otherwise
-            // we will log some error which may be confusing.
-            return PlatformDependent.isWindows() ? DefaultDnsServerAddressStreamProvider.INSTANCE :
-                    UnixResolverDnsServerAddressStreamProvider.parseSilently();
-        }
-    };
 
     static {
         Constructor<? extends DnsServerAddressStreamProvider> constructor = null;
@@ -131,6 +101,42 @@ public final class DnsServerAddressStreamProviders {
     }
 
     public static DnsServerAddressStreamProvider unixDefault() {
-        return DEFAULT_DNS_SERVER_ADDRESS_STREAM_PROVIDER;
+        return DefaultProviderHolder.DEFAULT_DNS_SERVER_ADDRESS_STREAM_PROVIDER;
+    }
+
+    // We use a Holder class to only initialize DEFAULT_DNS_SERVER_ADDRESS_STREAM_PROVIDER if we really
+    // need it.
+    private static final class DefaultProviderHolder {
+        // We use 5 minutes which is the same as what OpenJDK is using in sun.net.dns.ResolverConfigurationImpl.
+        private static final long REFRESH_INTERVAL = TimeUnit.MINUTES.toNanos(5);
+
+        // TODO(scott): how is this done on Windows? This may require a JNI call to GetNetworkParams
+        // https://msdn.microsoft.com/en-us/library/aa365968(VS.85).aspx.
+        static final DnsServerAddressStreamProvider DEFAULT_DNS_SERVER_ADDRESS_STREAM_PROVIDER =
+                new DnsServerAddressStreamProvider() {
+                    private volatile DnsServerAddressStreamProvider currentProvider = provider();
+                    private final AtomicLong lastRefresh = new AtomicLong(System.nanoTime());
+
+                    @Override
+                    public DnsServerAddressStream nameServerAddressStream(String hostname) {
+                        long last = lastRefresh.get();
+                        DnsServerAddressStreamProvider current = currentProvider;
+                        if (System.nanoTime() - last > REFRESH_INTERVAL) {
+                            // This is slightly racy which means it will be possible still use the old configuration
+                            // for a small amount of time, but that's ok.
+                            if (lastRefresh.compareAndSet(last, System.nanoTime())) {
+                                current = currentProvider = provider();
+                            }
+                        }
+                        return current.nameServerAddressStream(hostname);
+                    }
+
+                    private DnsServerAddressStreamProvider provider() {
+                        // If on windows just use the DefaultDnsServerAddressStreamProvider.INSTANCE as otherwise
+                        // we will log some error which may be confusing.
+                        return PlatformDependent.isWindows() ? DefaultDnsServerAddressStreamProvider.INSTANCE :
+                                UnixResolverDnsServerAddressStreamProvider.parseSilently();
+                    }
+                };
     }
 }
