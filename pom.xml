@@ -365,6 +365,7 @@
     <module>transport-native-kqueue</module>
     <module>transport-rxtx</module>
     <module>transport-sctp</module>
+    <module>transport-selector</module>
     <module>transport-udt</module>
     <module>handler</module>
     <module>handler-proxy</module>
