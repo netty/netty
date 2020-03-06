@@ -811,7 +811,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         } else if (FILENAME_ENCODED.equals(name)) {
             try {
                 name = HttpHeaderValues.FILENAME.toString();
-                String[] split = value.split("'", 3);
+                String[] split = cleanString(value).split("'", 3);
                 value = QueryStringDecoder.decodeComponent(split[2], Charset.forName(split[0]));
             } catch (ArrayIndexOutOfBoundsException e) {
                  throw new ErrorDataDecoderException(e);
