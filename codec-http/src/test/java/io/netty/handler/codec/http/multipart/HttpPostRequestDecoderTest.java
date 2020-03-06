@@ -768,4 +768,39 @@ public class HttpPostRequestDecoderTest {
         request.headers().set(HttpHeaderNames.CONTENT_TYPE, multipartDataValue);
         assertTrue(HttpPostRequestDecoder.isMultipart(request));
     }
+
+    // see https://github.com/netty/netty/issues/10087
+    @Test
+    public void testDecodeWithLanguageContentDispositionFieldParametersForFix() throws Exception {
+
+        final String boundary = "952178786863262625034234";
+
+        String encoding = "UTF-8";
+        String filename = "测试test.txt";
+        String filenameEncoded = URLEncoder.encode(filename, encoding);
+
+        final String body = "--" + boundary + "\r\n" +
+                "Content-Disposition: form-data; name=\"file\"; filename*=\"" +
+                encoding + "''" + filenameEncoded + "\"\r\n" +
+                "\r\n" +
+                "foo\r\n" +
+                "\r\n" +
+                "--" + boundary + "--";
+
+        final DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                HttpMethod.POST,
+                "http://localhost",
+                Unpooled.wrappedBuffer(body.getBytes()));
+
+        req.headers().add(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        final DefaultHttpDataFactory inMemoryFactory = new DefaultHttpDataFactory(false);
+        final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
+        assertFalse(decoder.getBodyHttpDatas().isEmpty());
+        InterfaceHttpData part1 = decoder.getBodyHttpDatas().get(0);
+        assertTrue("the item should be a FileUpload", part1 instanceof FileUpload);
+        FileUpload fileUpload = (FileUpload) part1;
+        assertEquals("the filename should be decoded", filename, fileUpload.getFilename());
+        decoder.destroy();
+        req.release();
+    }
 }
