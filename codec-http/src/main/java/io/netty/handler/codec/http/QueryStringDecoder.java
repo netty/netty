@@ -334,14 +334,6 @@ public class QueryStringDecoder {
     }
 
     private static String decodeComponent(String s, int from, int toExcluded, Charset charset, boolean isPath) {
-        if (charset.equals(CharsetUtil.UTF_8)) {
-            return decodeUtf8Component(s, from, toExcluded, isPath);
-        } else {
-            return decodeNonUtf8Component(s, from, toExcluded, charset, isPath);
-        }
-    }
-
-    private static String decodeUtf8Component(String s, int from, int toExcluded, boolean isPath) {
         int len = toExcluded - from;
         if (len <= 0) {
             return EMPTY_STRING;
@@ -361,11 +353,20 @@ public class QueryStringDecoder {
         // Each encoded byte takes 3 characters (e.g. "%20")
         int decodedCapacity = (toExcluded - firstEscaped) / 3;
         byte[] buf = PlatformDependent.allocateUninitializedArray(decodedCapacity);
-        int bufIdx;
 
         StringBuilder strBuf = new StringBuilder(len);
         strBuf.append(s, from, firstEscaped);
 
+        if (charset.equals(CharsetUtil.UTF_8)) {
+            return decodeUtf8Component(s, firstEscaped, toExcluded, isPath, buf, strBuf);
+        } else {
+            return decodeNonUtf8Component(s, from, toExcluded, charset, isPath, buf, strBuf);
+        }
+    }
+
+    private static String decodeUtf8Component(String s, int firstEscaped, int toExcluded, boolean isPath,
+                                              byte[] buf, StringBuilder strBuf) {
+        int bufIdx;
         for (int i = firstEscaped; i < toExcluded; i++) {
             char c = s.charAt(i);
             if (c != '%') {
@@ -388,31 +389,9 @@ public class QueryStringDecoder {
         return strBuf.toString();
     }
 
-    private static String decodeNonUtf8Component(String s, int from, int toExcluded, Charset charset, boolean isPath) {
-        int len = toExcluded - from;
-        if (len <= 0) {
-            return EMPTY_STRING;
-        }
-        int firstEscaped = -1;
-        for (int i = from; i < toExcluded; i++) {
-            char c = s.charAt(i);
-            if (c == '%' || c == '+' && !isPath) {
-                firstEscaped = i;
-                break;
-            }
-        }
-        if (firstEscaped == -1) {
-            return s.substring(from, toExcluded);
-        }
-
-        // Each encoded byte takes 3 characters (e.g. "%20")
-        int decodedCapacity = (toExcluded - firstEscaped) / 3;
-        byte[] buf = PlatformDependent.allocateUninitializedArray(decodedCapacity);
+    private static String decodeNonUtf8Component(String s, int firstEscaped, int toExcluded, Charset charset,
+                                                 boolean isPath, byte[] buf, StringBuilder strBuf) {
         int bufIdx;
-
-        StringBuilder strBuf = new StringBuilder(len);
-        strBuf.append(s, from, firstEscaped);
-
         for (int i = firstEscaped; i < toExcluded; i++) {
             char c = s.charAt(i);
             if (c != '%') {
