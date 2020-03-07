@@ -246,3 +246,11 @@ This private header is also used by Apple's open source
     * license/LICENSE.dnsinfo.txt (Apache License 2.0)
   * HOMEPAGE:
     * http://www.opensource.apple.com/source/configd/configd-453.19/dnsinfo/dnsinfo.h
+
+This product contains a modified version of 'Utf8', a Java implementation of
+the UTF-8 encode algorithm. It can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE
+  * HOMEPAGE:
+    * https://github.com/protocolbuffers/protobuf
