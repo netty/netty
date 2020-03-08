@@ -519,6 +519,10 @@ public final class PlatformDependent {
         return PlatformDependent0.getByte(data, index);
     }
 
+    public static char getChar(char[] data, int index) {
+        return PlatformDependent0.getChar(data, index);
+    }
+
     public static short getShort(byte[] data, int index) {
         return PlatformDependent0.getShort(data, index);
     }
@@ -645,6 +649,10 @@ public final class PlatformDependent {
 
     public static void putByte(byte[] data, int index, byte value) {
         PlatformDependent0.putByte(data, index, value);
+    }
+
+    public static void putChar(char[] data, int index, char value) {
+        PlatformDependent0.putChar(data, index, value);
     }
 
     public static void putShort(byte[] data, int index, short value) {

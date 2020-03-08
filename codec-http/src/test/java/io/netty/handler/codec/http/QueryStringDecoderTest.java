@@ -21,12 +21,16 @@ import org.junit.Test;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 public class QueryStringDecoderTest {
+
+    private static final Charset SHIFT_JIS = Charset.forName("Shift-JIS");
+    private static final Charset GBK = Charset.forName("GBK");
 
     @Test
     public void testBasicUris() throws URISyntaxException {
@@ -104,6 +108,31 @@ public class QueryStringDecoderTest {
     }
 
     @Test
+    public void testBasicNonUtf8() {
+        QueryStringDecoder d;
+
+        // ほげ=ぼけ&ねこ=いぬ in Shift-JIS
+        d = new QueryStringDecoder("/foo?%82%D9%82%B0=%82%DA%82%AF&%82%CB%82%B1=%82%A2%82%CA",
+                SHIFT_JIS, true);
+        Assert.assertEquals("/foo", d.path());
+        Assert.assertEquals(2, d.parameters().size());
+        Assert.assertEquals(1, d.parameters().get("ほげ").size());
+        Assert.assertEquals(1, d.parameters().get("ねこ").size());
+        Assert.assertEquals("ぼけ", d.parameters().get("ほげ").get(0));
+        Assert.assertEquals("いぬ", d.parameters().get("ねこ").get(0));
+
+        d = new QueryStringDecoder("/foo?%C4%E3%BA%C3=Hello&%C4%E3%BA%C3%C2%F0%A3%BF=" +
+                "How%20are%20you%3F&%C4%E3%BA%C3%C2%F0%A3%BF=Wie%20geht%27s%20dir%3F", GBK, true);
+        Assert.assertEquals("/foo", d.path());
+        Assert.assertEquals(2, d.parameters().size());
+        Assert.assertEquals(1, d.parameters().get("你好").size());
+        Assert.assertEquals(2, d.parameters().get("你好吗？").size());
+        Assert.assertEquals("Hello", d.parameters().get("你好").get(0));
+        Assert.assertEquals("How are you?", d.parameters().get("你好吗？").get(0));
+        Assert.assertEquals("Wie geht's dir?", d.parameters().get("你好吗？").get(1));
+    }
+
+    @Test
     public void testExotic() {
         assertQueryString("", "");
         assertQueryString("foo", "foo");
@@ -171,7 +200,7 @@ public class QueryStringDecoderTest {
     public void testHashDos() {
         StringBuilder buf = new StringBuilder();
         buf.append('?');
-        for (int i = 0; i < 65536; i ++) {
+        for (int i = 0; i < 65536; i++) {
             buf.append('k');
             buf.append(i);
             buf.append("=v");
@@ -252,7 +281,7 @@ public class QueryStringDecoderTest {
         Assert.assertEquals("/foo", decoder.path());
         Assert.assertEquals("/foo", decoder.rawPath());
         Assert.assertEquals("param1=value1&param2=value2&param3=value3", decoder.rawQuery());
-        Map<String, List<String>> params =  decoder.parameters();
+        Map<String, List<String>> params = decoder.parameters();
         Assert.assertEquals(3, params.size());
         Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
 
@@ -283,7 +312,7 @@ public class QueryStringDecoderTest {
         Assert.assertEquals("/", decoder.rawPath());
         Assert.assertEquals("param1=value1&param2=value2&param3=value3", decoder.rawQuery());
 
-        Map<String, List<String>> params =  decoder.parameters();
+        Map<String, List<String>> params = decoder.parameters();
         Assert.assertEquals(3, params.size());
         Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
 
@@ -314,7 +343,7 @@ public class QueryStringDecoderTest {
         Assert.assertEquals("", decoder.rawPath());
         Assert.assertEquals("param1=value1&param2=value2&param3=value3", decoder.rawQuery());
 
-        Map<String, List<String>> params =  decoder.parameters();
+        Map<String, List<String>> params = decoder.parameters();
         Assert.assertEquals(3, params.size());
         Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
 
@@ -345,7 +374,7 @@ public class QueryStringDecoderTest {
         Assert.assertEquals("/images;num=10", decoder.rawPath());
         Assert.assertEquals("query=name;value=123", decoder.rawQuery());
 
-        Map<String, List<String>> params =  decoder.parameters();
+        Map<String, List<String>> params = decoder.parameters();
         Assert.assertEquals(2, params.size());
         Iterator<Entry<String, List<String>>> entries = params.entrySet().iterator();
 

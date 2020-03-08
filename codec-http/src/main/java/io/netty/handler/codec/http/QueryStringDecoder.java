@@ -353,24 +353,24 @@ public class QueryStringDecoder {
         // Each encoded byte takes 3 characters (e.g. "%20")
         int decodedCapacity = (toExcluded - firstEscaped) / 3;
         byte[] buf = PlatformDependent.allocateUninitializedArray(decodedCapacity);
+        char[] charBuf = new char[len];
+        s.getChars(from, firstEscaped, charBuf, 0);
 
-        StringBuilder strBuf = new StringBuilder(len);
-        strBuf.append(s, from, firstEscaped);
-
+        int charBufIdx = firstEscaped - from;
         if (charset.equals(CharsetUtil.UTF_8)) {
-            return decodeUtf8Component(s, firstEscaped, toExcluded, isPath, buf, strBuf);
+            return decodeUtf8Component(s, firstEscaped, toExcluded, isPath, buf, charBuf, charBufIdx);
         } else {
-            return decodeNonUtf8Component(s, from, toExcluded, charset, isPath, buf, strBuf);
+            return decodeNonUtf8Component(s, firstEscaped, toExcluded, charset, isPath, buf, charBuf, charBufIdx);
         }
     }
 
     private static String decodeUtf8Component(String s, int firstEscaped, int toExcluded, boolean isPath,
-                                              byte[] buf, StringBuilder strBuf) {
+                                              byte[] buf, char[] charBuf, int charBufIdx) {
         int bufIdx;
         for (int i = firstEscaped; i < toExcluded; i++) {
             char c = s.charAt(i);
             if (c != '%') {
-                strBuf.append(c != '+' || isPath ? c : SPACE);
+                PlatformDependent.putChar(charBuf, charBufIdx++, c != '+' || isPath ? c : SPACE);
                 continue;
             }
 
@@ -384,18 +384,18 @@ public class QueryStringDecoder {
             } while (i < toExcluded && s.charAt(i) == '%');
             i--;
 
-            Utf8Utils.decodeUtf8(buf, 0, bufIdx, strBuf);
+            charBufIdx += Utf8Utils.decodeUtf8(buf, 0, bufIdx, charBuf, charBufIdx);
         }
-        return strBuf.toString();
+        return new String(charBuf, 0, charBufIdx);
     }
 
     private static String decodeNonUtf8Component(String s, int firstEscaped, int toExcluded, Charset charset,
-                                                 boolean isPath, byte[] buf, StringBuilder strBuf) {
+                                                 boolean isPath, byte[] buf, char[] charBuf, int charBufIdx) {
         int bufIdx;
         for (int i = firstEscaped; i < toExcluded; i++) {
             char c = s.charAt(i);
             if (c != '%') {
-                strBuf.append(c != '+' || isPath ? c : SPACE);
+                charBuf[charBufIdx++] = c != '+' || isPath ? c : SPACE;
                 continue;
             }
 
@@ -409,9 +409,11 @@ public class QueryStringDecoder {
             } while (i < toExcluded && s.charAt(i) == '%');
             i--;
 
-            strBuf.append(new String(buf, 0, bufIdx, charset));
+            String decodedStr = new String(buf, 0, bufIdx, charset);
+            decodedStr.getChars(0, decodedStr.length(), charBuf, charBufIdx);
+            charBufIdx += decodedStr.length();
         }
-        return strBuf.toString();
+        return new String(charBuf, 0, charBufIdx);
     }
 
     private static int findPathEndIndex(String uri) {

@@ -39,6 +39,8 @@ final class PlatformDependent0 {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent0.class);
     private static final long ADDRESS_FIELD_OFFSET;
     private static final long BYTE_ARRAY_BASE_OFFSET;
+    private static final long CHAR_ARRAY_BASE_OFFSET;
+    private static final long CHAR_ARRAY_INDEX_SCALE;
     private static final Constructor<?> DIRECT_BUFFER_CONSTRUCTOR;
     private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
     private static final Method ALLOCATE_ARRAY_METHOD;
@@ -208,6 +210,8 @@ final class PlatformDependent0 {
         if (unsafe == null) {
             ADDRESS_FIELD_OFFSET = -1;
             BYTE_ARRAY_BASE_OFFSET = -1;
+            CHAR_ARRAY_BASE_OFFSET = -1;
+            CHAR_ARRAY_INDEX_SCALE = -1;
             UNALIGNED = false;
             DIRECT_BUFFER_CONSTRUCTOR = null;
             ALLOCATE_ARRAY_METHOD = null;
@@ -263,6 +267,8 @@ final class PlatformDependent0 {
             DIRECT_BUFFER_CONSTRUCTOR = directBufferConstructor;
             ADDRESS_FIELD_OFFSET = objectFieldOffset(addressField);
             BYTE_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
+            CHAR_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(char[].class);
+            CHAR_ARRAY_INDEX_SCALE = UNSAFE.arrayIndexScale(char[].class);
             final boolean unaligned;
             Object maybeUnaligned = AccessController.doPrivileged(new PrivilegedAction<Object>() {
                 @Override
@@ -525,6 +531,10 @@ final class PlatformDependent0 {
         return UNSAFE.getByte(data, BYTE_ARRAY_BASE_OFFSET + index);
     }
 
+    static char getChar(char[] data, int index) {
+        return UNSAFE.getChar(data, CHAR_ARRAY_BASE_OFFSET + (index * CHAR_ARRAY_INDEX_SCALE));
+    }
+
     static short getShort(byte[] data, int index) {
         return UNSAFE.getShort(data, BYTE_ARRAY_BASE_OFFSET + index);
     }
@@ -555,6 +565,10 @@ final class PlatformDependent0 {
 
     static void putByte(byte[] data, int index, byte value) {
         UNSAFE.putByte(data, BYTE_ARRAY_BASE_OFFSET + index, value);
+    }
+
+    static void putChar(char[] data, int index, char value) {
+        UNSAFE.putChar(data, CHAR_ARRAY_BASE_OFFSET + (index * CHAR_ARRAY_INDEX_SCALE), value);
     }
 
     static void putShort(byte[] data, int index, short value) {

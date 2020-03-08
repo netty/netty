@@ -51,9 +51,9 @@ import static java.lang.Character.MIN_LOW_SURROGATE;
 import static java.lang.Character.MIN_SUPPLEMENTARY_CODE_POINT;
 
 /**
- * See original <a
- * href="https://github.com/protocolbuffers/protobuf/blob/master/java/core/src/main/java/com/google/protobuf/Utf8.java">
- * Utf8.java</a>
+ * See original <a href=
+ * "https://github.com/protocolbuffers/protobuf/blob/master/java/core/src/main/java/com/google/protobuf/Utf8.java"
+ * >Utf8.java</a>
  */
 public final class Utf8Utils {
 
@@ -61,23 +61,27 @@ public final class Utf8Utils {
         //empty
     }
 
-    public static void decodeUtf8(byte[] srcBytes, int srcIndex, int size, StringBuilder destStrBuf) {
+    public static int decodeUtf8(byte[] srcBytes, int srcIdx, int srcSize, char[] destChars, int destIdx) {
         // Bitwise OR combines the sign bits so any negative value fails the check.
-        if ((srcIndex | size | srcBytes.length - srcIndex - size) < 0) {
+        if ((srcIdx | srcSize | srcBytes.length - srcIdx - srcSize) < 0
+                || (destIdx | destChars.length - destIdx - srcSize) < 0) {
+            String exMsg = String.format("buffer srcBytes.length=%d, srcIdx=%d, srcSize=%d, destChars.length=%d, " +
+                    "destIdx=%d", srcBytes.length, srcIdx, srcSize, destChars.length, destIdx);
             throw new ArrayIndexOutOfBoundsException(
-                    String.format("buffer length=%d, index=%d, size=%d", srcBytes.length, srcIndex, size));
+                    exMsg);
         }
 
         if (PlatformDependent.hasUnsafe()) {
-            decodeUtf8Unsafe(srcBytes, srcIndex, size, destStrBuf);
+            return decodeUtf8Unsafe(srcBytes, srcIdx, srcSize, destChars, destIdx);
         } else {
-            decodeUtf8Safe(srcBytes, srcIndex, size, destStrBuf);
+            return decodeUtf8Safe(srcBytes, srcIdx, srcSize, destChars, destIdx);
         }
     }
 
-    public static void decodeUtf8Safe(byte[] srcBytes, int srcIndex, int size, StringBuilder outStrBuf) {
+    public static int decodeUtf8Safe(byte[] srcBytes, int srcIndex, int srcSize, char[] destChars, int destIdx) {
         int offset = srcIndex;
-        final int limit = offset + size;
+        final int limit = offset + srcSize;
+        final int destIdx0 = destIdx;
 
         // Optimize for 100% ASCII (Hotspot loves small simple top-level loops like this).
         // This simple loop stops when we encounter a byte >= 0x80 (i.e. non-ASCII).
@@ -87,13 +91,13 @@ public final class Utf8Utils {
                 break;
             }
             offset++;
-            DecodeUtil.handleOneByte(b, outStrBuf);
+            DecodeUtil.handleOneByteSafe(b, destChars, destIdx++);
         }
 
         while (offset < limit) {
             byte byte1 = srcBytes[offset++];
             if (DecodeUtil.isOneByte(byte1)) {
-                DecodeUtil.handleOneByte(byte1, outStrBuf);
+                DecodeUtil.handleOneByteSafe(byte1, destChars, destIdx++);
                 // It's common for there to be multiple ASCII characters in a run mixed in, so add an
                 // extra optimized loop to take care of these runs.
                 while (offset < limit) {
@@ -102,39 +106,44 @@ public final class Utf8Utils {
                         break;
                     }
                     offset++;
-                    DecodeUtil.handleOneByte(b, outStrBuf);
+                    DecodeUtil.handleOneByteSafe(b, destChars, destIdx++);
                 }
             } else if (DecodeUtil.isTwoBytes(byte1)) {
                 if (offset >= limit) {
                     throw new IllegalArgumentException("invalid UTF-8.");
                 }
-                DecodeUtil.handleTwoBytes(byte1, /* byte2 */ srcBytes[offset++], outStrBuf);
+                DecodeUtil.handleTwoBytesSafe(byte1, /* byte2 */ srcBytes[offset++], destChars, destIdx++);
             } else if (DecodeUtil.isThreeBytes(byte1)) {
                 if (offset >= limit - 1) {
                     throw new IllegalArgumentException("invalid UTF-8.");
                 }
-                DecodeUtil.handleThreeBytes(
+                DecodeUtil.handleThreeBytesSafe(
                         byte1,
                         /* byte2 */ srcBytes[offset++],
                         /* byte3 */ srcBytes[offset++],
-                        outStrBuf);
+                        destChars,
+                        destIdx++);
             } else {
                 if (offset >= limit - 2) {
                     throw new IllegalArgumentException("invalid UTF-8.");
                 }
-                DecodeUtil.handleFourBytes(
+                DecodeUtil.handleFourBytesSafe(
                         byte1,
                         /* byte2 */ srcBytes[offset++],
                         /* byte3 */ srcBytes[offset++],
                         /* byte4 */ srcBytes[offset++],
-                        outStrBuf);
+                        destChars,
+                        destIdx);
+                destIdx += 2;
             }
         }
+        return destIdx - destIdx0;
     }
 
-    public static void decodeUtf8Unsafe(byte[] srcBytes, int srcIndex, int size, StringBuilder outStrBuf) {
+    public static int decodeUtf8Unsafe(byte[] srcBytes, int srcIndex, int srcSize, char[] destChars, int destIdx) {
         int offset = srcIndex;
-        final int limit = offset + size;
+        final int limit = offset + srcSize;
+        final int destIdx0 = destIdx;
 
         // Optimize for 100% ASCII (Hotspot loves small simple top-level loops like this).
         // This simple loop stops when we encounter a byte >= 0x80 (i.e. non-ASCII).
@@ -144,13 +153,13 @@ public final class Utf8Utils {
                 break;
             }
             offset++;
-            DecodeUtil.handleOneByte(b, outStrBuf);
+            DecodeUtil.handleOneByteUnsafe(b, destChars, destIdx++);
         }
 
         while (offset < limit) {
             byte byte1 = PlatformDependent.getByte(srcBytes, offset++);
             if (DecodeUtil.isOneByte(byte1)) {
-                DecodeUtil.handleOneByte(byte1, outStrBuf);
+                DecodeUtil.handleOneByteUnsafe(byte1, destChars, destIdx++);
                 // It's common for there to be multiple ASCII characters in a run mixed in, so add an
                 // extra optimized loop to take care of these runs.
                 while (offset < limit) {
@@ -159,34 +168,42 @@ public final class Utf8Utils {
                         break;
                     }
                     offset++;
-                    DecodeUtil.handleOneByte(b, outStrBuf);
+                    DecodeUtil.handleOneByteUnsafe(b, destChars, destIdx++);
                 }
             } else if (DecodeUtil.isTwoBytes(byte1)) {
                 if (offset >= limit) {
                     throw new IllegalArgumentException("invalid UTF-8.");
                 }
-                DecodeUtil.handleTwoBytes(byte1, /* byte2 */ PlatformDependent.getByte(srcBytes, offset++), outStrBuf);
+                DecodeUtil.handleTwoBytesUnsafe(
+                        byte1,
+                        /* byte2 */ PlatformDependent.getByte(srcBytes, offset++),
+                        destChars,
+                        destIdx++);
             } else if (DecodeUtil.isThreeBytes(byte1)) {
                 if (offset >= limit - 1) {
                     throw new IllegalArgumentException("invalid UTF-8.");
                 }
-                DecodeUtil.handleThreeBytes(
+                DecodeUtil.handleThreeBytesUnsafe(
                         byte1,
                         /* byte2 */ PlatformDependent.getByte(srcBytes, offset++),
                         /* byte3 */ PlatformDependent.getByte(srcBytes, offset++),
-                        outStrBuf);
+                        destChars,
+                        destIdx++);
             } else {
                 if (offset >= limit - 2) {
                     throw new IllegalArgumentException("invalid UTF-8.");
                 }
-                DecodeUtil.handleFourBytes(
+                DecodeUtil.handleFourBytesUnsafe(
                         byte1,
                         /* byte2 */ PlatformDependent.getByte(srcBytes, offset++),
                         /* byte3 */ PlatformDependent.getByte(srcBytes, offset++),
                         /* byte4 */ PlatformDependent.getByte(srcBytes, offset++),
-                        outStrBuf);
+                        destChars,
+                        destIdx++);
+                destIdx += 2;
             }
         }
+        return destIdx - destIdx0;
     }
 
     private static class DecodeUtil {
@@ -212,20 +229,39 @@ public final class Utf8Utils {
             return b < (byte) 0xF0;
         }
 
-        private static void handleOneByte(byte byte1, StringBuilder strBuf) {
-            strBuf.append((char) byte1);
+        private static void handleOneByteSafe(byte byte1, char[] resultArr, int resultPos) {
+            resultArr[resultPos] = (char) byte1;
         }
 
-        private static void handleTwoBytes(byte byte1, byte byte2, StringBuilder strBuf) {
+        private static void handleOneByteUnsafe(byte byte1, char[] resultArr, int resultPos) {
+            PlatformDependent.putChar(resultArr, resultPos, (char) byte1);
+        }
+
+        private static void handleTwoBytesSafe(byte byte1, byte byte2, char[] resultArr, int resultPos) {
+            checkUtf8(byte1, byte2);
+            resultArr[resultPos] = (char) (((byte1 & 0x1F) << 6) | trailingByteValue(byte2));
+        }
+
+        private static void checkUtf8(byte byte1, byte byte2) {
             // Simultaneously checks for illegal trailing-byte in leading position (<= '11000000') and
             // overlong 2-byte, '11000001'.
             if (byte1 < (byte) 0xC2 || isNotTrailingByte(byte2)) {
                 throw new IllegalArgumentException("invalid UTF-8.");
             }
-            strBuf.append((char) (((byte1 & 0x1F) << 6) | trailingByteValue(byte2)));
         }
 
-        private static void handleThreeBytes(byte byte1, byte byte2, byte byte3, StringBuilder strBuf) {
+        private static void handleTwoBytesUnsafe(byte byte1, byte byte2, char[] resultArr, int resultPos) {
+            checkUtf8(byte1, byte2);
+            PlatformDependent.putChar(resultArr, resultPos, (char) (((byte1 & 0x1F) << 6) | trailingByteValue(byte2)));
+        }
+
+        private static void handleThreeBytesSafe(byte byte1, byte byte2, byte byte3, char[] resultArr, int resultPos) {
+            checkUtf8(byte1, byte2, byte3);
+            resultArr[resultPos] =
+                    (char) (((byte1 & 0x0F) << 12) | (trailingByteValue(byte2) << 6) | trailingByteValue(byte3));
+        }
+
+        private static void checkUtf8(byte byte1, byte byte2, byte byte3) {
             if (isNotTrailingByte(byte2)
                     // overlong? 5 most significant bits must not all be zero
                     || (byte1 == (byte) 0xE0 && byte2 < (byte) 0xA0)
@@ -234,11 +270,29 @@ public final class Utf8Utils {
                     || isNotTrailingByte(byte3)) {
                 throw new IllegalArgumentException("invalid UTF-8.");
             }
-
-            strBuf.append((char) (((byte1 & 0x0F) << 12) | (trailingByteValue(byte2) << 6) | trailingByteValue(byte3)));
         }
 
-        private static void handleFourBytes(byte byte1, byte byte2, byte byte3, byte byte4, StringBuilder strBuf) {
+        private static void handleThreeBytesUnsafe(byte byte1, byte byte2, byte byte3, char[] resultArr,
+                                                   int resultPos) {
+            checkUtf8(byte1, byte2, byte3);
+            PlatformDependent.putChar(resultArr, resultPos,
+                    (char) (((byte1 & 0x0F) << 12) | (trailingByteValue(byte2) << 6) | trailingByteValue(byte3)));
+        }
+
+        private static void handleFourBytesSafe(byte byte1, byte byte2, byte byte3, byte byte4, char[] resultArr,
+                                                int resultPos) {
+            checkUtf8(byte1, byte2, byte3, byte4);
+            int codepoint =
+                    ((byte1 & 0x07) << 18)
+                            | (trailingByteValue(byte2) << 12)
+                            | (trailingByteValue(byte3) << 6)
+                            | trailingByteValue(byte4);
+
+            resultArr[resultPos] = DecodeUtil.highSurrogate(codepoint);
+            resultArr[resultPos + 1] = DecodeUtil.lowSurrogate(codepoint);
+        }
+
+        private static void checkUtf8(byte byte1, byte byte2, byte byte3, byte byte4) {
             if (isNotTrailingByte(byte2)
                     // Check that 1 <= plane <= 16.  Tricky optimized form of:
                     //   valid 4-byte leading byte?
@@ -252,13 +306,19 @@ public final class Utf8Utils {
                     || isNotTrailingByte(byte4)) {
                 throw new IllegalArgumentException("invalid UTF-8.");
             }
+        }
+
+        private static void handleFourBytesUnsafe(byte byte1, byte byte2, byte byte3, byte byte4, char[] resultArr,
+                                                  int resultPos) {
+            checkUtf8(byte1, byte2, byte3, byte4);
             int codepoint =
                     ((byte1 & 0x07) << 18)
                             | (trailingByteValue(byte2) << 12)
                             | (trailingByteValue(byte3) << 6)
                             | trailingByteValue(byte4);
-            strBuf.append(DecodeUtil.highSurrogate(codepoint));
-            strBuf.append(DecodeUtil.lowSurrogate(codepoint));
+
+            PlatformDependent.putChar(resultArr, resultPos, DecodeUtil.highSurrogate(codepoint));
+            PlatformDependent.putChar(resultArr, resultPos + 1, DecodeUtil.lowSurrogate(codepoint));
         }
 
         /**
