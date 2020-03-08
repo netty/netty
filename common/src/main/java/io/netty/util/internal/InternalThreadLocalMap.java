@@ -43,6 +43,8 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     private static final int DEFAULT_ARRAY_LIST_INITIAL_CAPACITY = 8;
     private static final int STRING_BUILDER_INITIAL_SIZE;
     private static final int STRING_BUILDER_MAX_SIZE;
+    private static final int HANDLER_SHARABLE_CACHE_INITIAL_CAPACITY = 4;
+    private static final int INDEXED_VARIABLE_TABLE_INITIAL_SIZE = 32;
 
     public static final Object UNSET = new Object();
 
@@ -127,7 +129,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     }
 
     private static Object[] newIndexedVariableTable() {
-        Object[] array = new Object[32];
+        Object[] array = new Object[INDEXED_VARIABLE_TABLE_INITIAL_SIZE];
         Arrays.fill(array, UNSET);
         return array;
     }
@@ -271,7 +273,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
         Map<Class<?>, Boolean> cache = handlerSharableCache;
         if (cache == null) {
             // Start with small capacity to keep memory overhead as low as possible.
-            handlerSharableCache = cache = new WeakHashMap<Class<?>, Boolean>(4);
+            handlerSharableCache = cache = new WeakHashMap<Class<?>, Boolean>(HANDLER_SHARABLE_CACHE_INITIAL_CAPACITY);
         }
         return cache;
     }
