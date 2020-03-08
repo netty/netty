@@ -78,7 +78,7 @@ public final class Utf8Utils {
         }
     }
 
-    public static int decodeUtf8Safe(byte[] srcBytes, int srcIndex, int srcSize, char[] destChars, int destIdx) {
+    private static int decodeUtf8Safe(byte[] srcBytes, int srcIndex, int srcSize, char[] destChars, int destIdx) {
         int offset = srcIndex;
         final int limit = offset + srcSize;
         final int destIdx0 = destIdx;
@@ -140,7 +140,7 @@ public final class Utf8Utils {
         return destIdx - destIdx0;
     }
 
-    public static int decodeUtf8Unsafe(byte[] srcBytes, int srcIndex, int srcSize, char[] destChars, int destIdx) {
+    private static int decodeUtf8Unsafe(byte[] srcBytes, int srcIndex, int srcSize, char[] destChars, int destIdx) {
         int offset = srcIndex;
         final int limit = offset + srcSize;
         final int destIdx0 = destIdx;
