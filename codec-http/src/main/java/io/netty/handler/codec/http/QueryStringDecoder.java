@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 
 import java.net.URI;
@@ -63,6 +64,13 @@ import static io.netty.util.internal.StringUtil.decodeHexByte;
 public class QueryStringDecoder {
 
     private static final int DEFAULT_MAX_PARAMS = 1024;
+
+    private static final FastThreadLocal<TempBuf> DECODE_TEMP_BUF = new FastThreadLocal<TempBuf>() {
+        @Override
+        protected TempBuf initialValue() {
+            return new TempBuf(1024);
+        }
+    };
 
     private final Charset charset;
     private final String uri;
@@ -186,7 +194,7 @@ public class QueryStringDecoder {
      */
     public String path() {
         if (path == null) {
-            path = decodeComponent(uri, 0, pathEndIdx(), charset, true);
+            path = decodeComponent(uri, 0, pathEndIdx(), charset, true, DECODE_TEMP_BUF.get());
         }
         return path;
     }
@@ -232,6 +240,8 @@ public class QueryStringDecoder {
         if (s.charAt(from) == '?') {
             from++;
         }
+
+        TempBuf tempBuf = DECODE_TEMP_BUF.get();
         Map<String, List<String>> params = new LinkedHashMap<String, List<String>>();
         int nameStart = from;
         int valueStart = -1;
@@ -252,7 +262,7 @@ public class QueryStringDecoder {
                 }
                 // fall-through
             case '&':
-                if (addParam(s, nameStart, valueStart, i, params, charset)) {
+                if (addParam(s, nameStart, valueStart, i, params, charset, tempBuf)) {
                     paramsLimit--;
                     if (paramsLimit == 0) {
                         return params;
@@ -266,20 +276,20 @@ public class QueryStringDecoder {
                 // continue
             }
         }
-        addParam(s, nameStart, valueStart, i, params, charset);
+        addParam(s, nameStart, valueStart, i, params, charset, tempBuf);
         return params;
     }
 
     private static boolean addParam(String s, int nameStart, int valueStart, int valueEnd,
-                                    Map<String, List<String>> params, Charset charset) {
+                                    Map<String, List<String>> params, Charset charset, TempBuf tempBuf) {
         if (nameStart >= valueEnd) {
             return false;
         }
         if (valueStart <= nameStart) {
             valueStart = valueEnd + 1;
         }
-        String name = decodeComponent(s, nameStart, valueStart - 1, charset, false);
-        String value = decodeComponent(s, valueStart, valueEnd, charset, false);
+        String name = decodeComponent(s, nameStart, valueStart - 1, charset, false, tempBuf);
+        String value = decodeComponent(s, valueStart, valueEnd, charset, false, tempBuf);
         List<String> values = params.get(name);
         if (values == null) {
             values = new ArrayList<String>(1);  // Often there's only 1 value.
@@ -330,10 +340,11 @@ public class QueryStringDecoder {
         if (s == null) {
             return EMPTY_STRING;
         }
-        return decodeComponent(s, 0, s.length(), charset, false);
+        return decodeComponent(s, 0, s.length(), charset, false, DECODE_TEMP_BUF.get());
     }
 
-    private static String decodeComponent(String s, int from, int toExcluded, Charset charset, boolean isPath) {
+    private static String decodeComponent(String s, int from, int toExcluded, Charset charset, boolean isPath,
+                                          TempBuf tempBuf) {
         int len = toExcluded - from;
         if (len <= 0) {
             return EMPTY_STRING;
@@ -352,8 +363,8 @@ public class QueryStringDecoder {
 
         // Each encoded byte takes 3 characters (e.g. "%20")
         int decodedCapacity = (toExcluded - firstEscaped) / 3;
-        byte[] buf = PlatformDependent.allocateUninitializedArray(decodedCapacity);
-        char[] charBuf = new char[len];
+        byte[] buf = tempBuf.byteBuf(decodedCapacity);
+        char[] charBuf = tempBuf.charBuf(len);
         s.getChars(from, firstEscaped, charBuf, 0);
 
         int charBufIdx = firstEscaped - from;
@@ -425,5 +436,33 @@ public class QueryStringDecoder {
             }
         }
         return len;
+    }
+
+    private static final class TempBuf {
+
+        private final char[] chars;
+
+        private final byte[] bytes;
+
+        TempBuf(int bufSize) {
+            this.chars = new char[bufSize];
+            this.bytes = new byte[bufSize];
+        }
+
+        public char[] charBuf(int size) {
+            char[] chars = this.chars;
+            if (size <= chars.length) {
+                return chars;
+            }
+            return new char[size];
+        }
+
+        public byte[] byteBuf(int size) {
+            byte[] bytes = this.bytes;
+            if (size <= bytes.length) {
+                return bytes;
+            }
+            return new byte[size];
+        }
     }
 }
