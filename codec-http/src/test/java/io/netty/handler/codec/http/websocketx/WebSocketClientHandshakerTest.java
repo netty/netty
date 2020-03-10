@@ -218,6 +218,30 @@ public abstract class WebSocketClientHandshakerTest {
     }
 
     @Test
+    public void testUpgradeUrlWithoutPath() {
+        URI uri = URI.create("ws://localhost:9999");
+        WebSocketClientHandshaker handshaker = newHandshaker(uri);
+        FullHttpRequest request = handshaker.newHandshakeRequest();
+        try {
+            assertEquals("/", request.uri());
+        } finally {
+            request.release();
+        }
+    }
+
+    @Test
+    public void testUpgradeUrlWithoutPathWithQuery() {
+        URI uri = URI.create("ws://localhost:9999?a=b%20c");
+        WebSocketClientHandshaker handshaker = newHandshaker(uri);
+        FullHttpRequest request = handshaker.newHandshakeRequest();
+        try {
+            assertEquals("/?a=b%20c", request.uri());
+        } finally {
+            request.release();
+        }
+    }
+
+    @Test
     public void testAbsoluteUpgradeUrlWithQuery() {
         URI uri = URI.create("ws://localhost:9999/path%20with%20ws?a=b%20c");
         WebSocketClientHandshaker handshaker = newHandshaker(uri, null, null, true);
