@@ -19,13 +19,13 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DefaultDatagramChannelConfig;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 
-import java.lang.reflect.Method;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.StandardSocketOptions;
 import java.nio.channels.DatagramChannel;
 import java.util.Enumeration;
 import java.util.Map;
@@ -34,82 +34,6 @@ import java.util.Map;
  * The default {@link NioDatagramChannelConfig} implementation.
  */
 class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
-
-    private static final Object IP_MULTICAST_TTL;
-    private static final Object IP_MULTICAST_IF;
-    private static final Object IP_MULTICAST_LOOP;
-    private static final Method GET_OPTION;
-    private static final Method SET_OPTION;
-
-    static {
-        ClassLoader classLoader = PlatformDependent.getClassLoader(DatagramChannel.class);
-        Class<?> socketOptionType = null;
-        try {
-            socketOptionType = Class.forName("java.net.SocketOption", true, classLoader);
-        } catch (Exception e) {
-            // Not Java 7+
-        }
-        Class<?> stdSocketOptionType = null;
-        try {
-            stdSocketOptionType = Class.forName("java.net.StandardSocketOptions", true, classLoader);
-        } catch (Exception e) {
-            // Not Java 7+
-        }
-
-        Object ipMulticastTtl = null;
-        Object ipMulticastIf = null;
-        Object ipMulticastLoop = null;
-        Method getOption = null;
-        Method setOption = null;
-        if (socketOptionType != null) {
-            try {
-                ipMulticastTtl = stdSocketOptionType.getDeclaredField("IP_MULTICAST_TTL").get(null);
-            } catch (Exception e) {
-                throw new Error("cannot locate the IP_MULTICAST_TTL field", e);
-            }
-
-            try {
-                ipMulticastIf = stdSocketOptionType.getDeclaredField("IP_MULTICAST_IF").get(null);
-            } catch (Exception e) {
-                throw new Error("cannot locate the IP_MULTICAST_IF field", e);
-            }
-
-            try {
-                ipMulticastLoop = stdSocketOptionType.getDeclaredField("IP_MULTICAST_LOOP").get(null);
-            } catch (Exception e) {
-                throw new Error("cannot locate the IP_MULTICAST_LOOP field", e);
-            }
-
-            Class<?> networkChannelClass = null;
-            try {
-                networkChannelClass = Class.forName("java.nio.channels.NetworkChannel", true, classLoader);
-            } catch (Throwable ignore) {
-                // Not Java 7+
-            }
-
-            if (networkChannelClass == null) {
-                getOption = null;
-                setOption = null;
-            } else {
-                try {
-                    getOption = networkChannelClass.getDeclaredMethod("getOption", socketOptionType);
-                } catch (Exception e) {
-                    throw new Error("cannot locate the getOption() method", e);
-                }
-
-                try {
-                    setOption = networkChannelClass.getDeclaredMethod("setOption", socketOptionType, Object.class);
-                } catch (Exception e) {
-                    throw new Error("cannot locate the setOption() method", e);
-                }
-            }
-        }
-        IP_MULTICAST_TTL = ipMulticastTtl;
-        IP_MULTICAST_IF = ipMulticastIf;
-        IP_MULTICAST_LOOP = ipMulticastLoop;
-        GET_OPTION = getOption;
-        SET_OPTION = setOption;
-    }
 
     private final DatagramChannel javaChannel;
 
@@ -120,13 +44,21 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
 
     @Override
     public int getTimeToLive() {
-        return (Integer) getOption0(IP_MULTICAST_TTL);
+        try {
+            return javaChannel.getOption(StandardSocketOptions.IP_MULTICAST_TTL);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public DatagramChannelConfig setTimeToLive(int ttl) {
-        setOption0(IP_MULTICAST_TTL, ttl);
-        return this;
+        try {
+            javaChannel.setOption(StandardSocketOptions.IP_MULTICAST_TTL, ttl);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
@@ -153,24 +85,40 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
 
     @Override
     public NetworkInterface getNetworkInterface() {
-        return (NetworkInterface) getOption0(IP_MULTICAST_IF);
+        try {
+            return javaChannel.getOption(StandardSocketOptions.IP_MULTICAST_IF);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public DatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
-        setOption0(IP_MULTICAST_IF, networkInterface);
-        return this;
+        try {
+            javaChannel.setOption(StandardSocketOptions.IP_MULTICAST_IF, networkInterface);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public boolean isLoopbackModeDisabled() {
-        return (Boolean) getOption0(IP_MULTICAST_LOOP);
+        try {
+            return javaChannel.getOption(StandardSocketOptions.IP_MULTICAST_LOOP);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public DatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
-        setOption0(IP_MULTICAST_LOOP, loopbackModeDisabled);
-        return this;
+        try {
+            javaChannel.setOption(StandardSocketOptions.IP_MULTICAST_LOOP, loopbackModeDisabled);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
@@ -182,30 +130,6 @@ class NioDatagramChannelConfig extends DefaultDatagramChannelConfig {
     @Override
     protected void autoReadCleared() {
         ((NioDatagramChannel) channel).clearReadPending0();
-    }
-
-    private Object getOption0(Object option) {
-        if (GET_OPTION == null) {
-            throw new UnsupportedOperationException();
-        } else {
-            try {
-                return GET_OPTION.invoke(javaChannel, option);
-            } catch (Exception e) {
-                throw new ChannelException(e);
-            }
-        }
-    }
-
-    private void setOption0(Object option, Object value) {
-        if (SET_OPTION == null) {
-            throw new UnsupportedOperationException();
-        } else {
-            try {
-                SET_OPTION.invoke(javaChannel, option, value);
-            } catch (Exception e) {
-                throw new ChannelException(e);
-            }
-        }
     }
 
     @Override

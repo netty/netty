@@ -18,8 +18,10 @@ package io.netty.util.internal;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -33,15 +35,15 @@ import java.security.PrivilegedAction;
  */
 final class CleanerJava6 implements Cleaner {
     private static final long CLEANER_FIELD_OFFSET;
-    private static final Method CLEAN_METHOD;
-    private static final Field CLEANER_FIELD;
+    private static final MethodHandle CLEAN_HANDLE;
+    private static final MethodHandle CLEANER_FIELD_HANDLE;
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(CleanerJava6.class);
 
     static {
         long fieldOffset;
-        Method clean;
-        Field cleanerField;
+        MethodHandle cleanHandle = null;
+        MethodHandle cleanerFieldHandle = null;
         Throwable error = null;
         final ByteBuffer direct = ByteBuffer.allocateDirect(1);
         try {
@@ -62,7 +64,8 @@ final class CleanerJava6 implements Cleaner {
                 throw (Throwable) mayBeCleanerField;
             }
 
-            cleanerField = (Field) mayBeCleanerField;
+            Field cleanerField = (Field) mayBeCleanerField;
+            MethodHandles.Lookup lookup = MethodHandles.lookup();
 
             final Object cleaner;
 
@@ -74,15 +77,16 @@ final class CleanerJava6 implements Cleaner {
             } else {
                 fieldOffset = -1;
                 cleaner = cleanerField.get(direct);
+                cleanerFieldHandle = lookup.unreflectGetter(cleanerField);
             }
-            clean = cleaner.getClass().getDeclaredMethod("clean");
-            clean.invoke(cleaner);
+            cleanHandle = lookup.findVirtual(cleaner.getClass(), "clean", MethodType.methodType(void.class));
+            cleanHandle.invoke(cleaner);
         } catch (Throwable t) {
             // We don't have ByteBuffer.cleaner().
             fieldOffset = -1;
-            clean = null;
+            cleanerFieldHandle = null;
+            cleanHandle = null;
             error = t;
-            cleanerField = null;
         }
 
         if (error == null) {
@@ -90,13 +94,13 @@ final class CleanerJava6 implements Cleaner {
         } else {
             logger.debug("java.nio.ByteBuffer.cleaner(): unavailable", error);
         }
-        CLEANER_FIELD = cleanerField;
+        CLEANER_FIELD_HANDLE = cleanerFieldHandle;
         CLEANER_FIELD_OFFSET = fieldOffset;
-        CLEAN_METHOD = clean;
+        CLEAN_HANDLE = cleanHandle;
     }
 
     static boolean isSupported() {
-        return CLEANER_FIELD_OFFSET != -1 || CLEANER_FIELD != null;
+        return CLEANER_FIELD_OFFSET != -1 || CLEANER_FIELD_HANDLE != null;
     }
 
     @Override
@@ -129,17 +133,17 @@ final class CleanerJava6 implements Cleaner {
         }
     }
 
-    private static void freeDirectBuffer0(ByteBuffer buffer) throws Exception {
+    private static void freeDirectBuffer0(ByteBuffer buffer) throws Throwable {
         final Object cleaner;
         // If CLEANER_FIELD_OFFSET == -1 we need to use reflection to access the cleaner, otherwise we can use
         // sun.misc.Unsafe.
         if (CLEANER_FIELD_OFFSET == -1) {
-            cleaner = CLEANER_FIELD.get(buffer);
+            cleaner = CLEANER_FIELD_HANDLE.invoke(buffer);
         } else {
             cleaner = PlatformDependent0.getObject(buffer, CLEANER_FIELD_OFFSET);
         }
         if (cleaner != null) {
-            CLEAN_METHOD.invoke(cleaner);
+            CLEAN_HANDLE.invoke(cleaner);
         }
     }
 }

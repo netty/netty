@@ -810,6 +810,11 @@
             <version>1.0</version>
           </signature>
           <ignores>
+            <!--
+            We need to whitelist MethodHandle as animal-sniffer can not handle it correctly
+            https://github.com/mojohaus/animal-sniffer/issues/67
+            -->
+            <ignore>java.lang.invoke.MethodHandle</ignore>
             <ignore>sun.misc.Unsafe</ignore>
             <ignore>sun.misc.Cleaner</ignore>
             <ignore>sun.nio.ch.DirectBuffer</ignore>

@@ -19,7 +19,9 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.lang.reflect.Constructor;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.AccessController;
@@ -34,10 +36,10 @@ public final class DnsServerAddressStreamProviders {
 
     private static final InternalLogger LOGGER =
             InternalLoggerFactory.getInstance(DnsServerAddressStreamProviders.class);
-    private static final Constructor<? extends DnsServerAddressStreamProvider> STREAM_PROVIDER_CONSTRUCTOR;
+    private static final MethodHandle STREAM_PROVIDER_CONSTRUCTOR_HANDLE;
 
     static {
-        Constructor<? extends DnsServerAddressStreamProvider> constructor = null;
+        MethodHandle constructorHandle = null;
         if (PlatformDependent.isOsx()) {
             try {
                 // As MacOSDnsServerAddressStreamProvider is contained in another jar which depends on this jar
@@ -56,20 +58,22 @@ public final class DnsServerAddressStreamProviders {
                     @SuppressWarnings("unchecked")
                     Class<? extends DnsServerAddressStreamProvider> providerClass =
                             (Class<? extends DnsServerAddressStreamProvider>) maybeProvider;
+
+                    MethodHandles.Lookup lookup = MethodHandles.lookup();
                     Method method = providerClass.getMethod("ensureAvailability");
                     method.invoke(null);
-                    constructor = providerClass.getConstructor();
-                    constructor.newInstance();
+                    constructorHandle = lookup.findConstructor(providerClass, MethodType.methodType(void.class));
+                    constructorHandle.invokeExact();
                 } else if (!(maybeProvider instanceof ClassNotFoundException)) {
                     throw (Throwable) maybeProvider;
                 }
             } catch (Throwable cause) {
                 LOGGER.debug(
                         "Unable to use MacOSDnsServerAddressStreamProvider, fallback to system defaults", cause);
-                constructor = null;
+                constructorHandle = null;
             }
         }
-        STREAM_PROVIDER_CONSTRUCTOR = constructor;
+        STREAM_PROVIDER_CONSTRUCTOR_HANDLE = constructorHandle;
     }
 
     private DnsServerAddressStreamProviders() {
@@ -83,11 +87,13 @@ public final class DnsServerAddressStreamProviders {
      * configuration.
      */
     public static DnsServerAddressStreamProvider platformDefault() {
-        if (STREAM_PROVIDER_CONSTRUCTOR != null) {
+        if (STREAM_PROVIDER_CONSTRUCTOR_HANDLE != null) {
             try {
-                return STREAM_PROVIDER_CONSTRUCTOR.newInstance();
+                return (DnsServerAddressStreamProvider) STREAM_PROVIDER_CONSTRUCTOR_HANDLE.invokeExact();
             } catch (IllegalAccessException | InstantiationException | InvocationTargetException e) {
                 // ignore
+            } catch (Throwable cause) {
+                PlatformDependent.throwException(cause);
             }
         }
         return unixDefault();
