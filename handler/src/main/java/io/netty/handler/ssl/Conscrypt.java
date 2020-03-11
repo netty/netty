@@ -67,13 +67,16 @@ final class Conscrypt {
     }
 
     private static boolean isConscryptEngine(SSLEngine engine) {
-        try {
-            return (boolean) IS_CONSCRYPT_SSLENGINE.invokeExact(engine);
-        } catch (IllegalAccessException ignore) {
-            return false;
-        } catch (Throwable cause) {
-            throw new RuntimeException(cause);
+        if (IS_CONSCRYPT_SSLENGINE != null) {
+            try {
+                return (boolean) IS_CONSCRYPT_SSLENGINE.invokeExact(engine);
+            } catch (IllegalAccessException ignore) {
+                return false;
+            } catch (Throwable cause) {
+                throw new RuntimeException(cause);
+            }
         }
+        return false;
     }
 
     private Conscrypt() { }
