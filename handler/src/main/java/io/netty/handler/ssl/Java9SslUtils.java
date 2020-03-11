@@ -19,7 +19,9 @@ package io.netty.handler.ssl;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
-import java.lang.reflect.Method;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
@@ -32,44 +34,52 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 final class Java9SslUtils {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Java9SslUtils.class);
-    private static final Method SET_APPLICATION_PROTOCOLS;
-    private static final Method GET_APPLICATION_PROTOCOL;
-    private static final Method GET_HANDSHAKE_APPLICATION_PROTOCOL;
-    private static final Method SET_HANDSHAKE_APPLICATION_PROTOCOL_SELECTOR;
-    private static final Method GET_HANDSHAKE_APPLICATION_PROTOCOL_SELECTOR;
+    private static final MethodHandle SET_APPLICATION_PROTOCOLS;
+    private static final MethodHandle GET_APPLICATION_PROTOCOL;
+    private static final MethodHandle GET_HANDSHAKE_APPLICATION_PROTOCOL;
+    private static final MethodHandle SET_HANDSHAKE_APPLICATION_PROTOCOL_SELECTOR;
+    private static final MethodHandle GET_HANDSHAKE_APPLICATION_PROTOCOL_SELECTOR;
 
     static {
-        Method getHandshakeApplicationProtocol = null;
-        Method getApplicationProtocol = null;
-        Method setApplicationProtocols = null;
-        Method setHandshakeApplicationProtocolSelector = null;
-        Method getHandshakeApplicationProtocolSelector = null;
+        MethodHandle getHandshakeApplicationProtocol;
+        MethodHandle getApplicationProtocol;
+        MethodHandle setApplicationProtocols;
+        MethodHandle setHandshakeApplicationProtocolSelector;
+        MethodHandle getHandshakeApplicationProtocolSelector;
 
         try {
             SSLContext context = SSLContext.getInstance(JdkSslContext.PROTOCOL);
             context.init(null, null, null);
             SSLEngine engine = context.createSSLEngine();
-            getHandshakeApplicationProtocol = AccessController.doPrivileged((PrivilegedExceptionAction<Method>) () ->
-                    SSLEngine.class.getMethod("getHandshakeApplicationProtocol"));
-            getHandshakeApplicationProtocol.invoke(engine);
-            getApplicationProtocol = AccessController.doPrivileged((PrivilegedExceptionAction<Method>) () ->
-                    SSLEngine.class.getMethod("getApplicationProtocol"));
-            getApplicationProtocol.invoke(engine);
+            MethodHandles.Lookup lookup = MethodHandles.lookup();
+            getHandshakeApplicationProtocol =
+                    AccessController.doPrivileged((PrivilegedExceptionAction<MethodHandle>) () ->
+                    lookup.findVirtual(SSLEngine.class, "getHandshakeApplicationProtocol",
+                            MethodType.methodType(String.class)));
+            getHandshakeApplicationProtocol.invokeExact(engine);
 
-            setApplicationProtocols = AccessController.doPrivileged((PrivilegedExceptionAction<Method>) () ->
-                    SSLParameters.class.getMethod("setApplicationProtocols", String[].class));
-            setApplicationProtocols.invoke(engine.getSSLParameters(), new Object[]{EmptyArrays.EMPTY_STRINGS});
+            getApplicationProtocol = AccessController.doPrivileged((PrivilegedExceptionAction<MethodHandle>) () ->
+                    lookup.findVirtual(SSLEngine.class, "getApplicationProtocol",
+                            MethodType.methodType(String.class)));
+            getApplicationProtocol.invokeExact(engine);
+
+            setApplicationProtocols = AccessController.doPrivileged((PrivilegedExceptionAction<MethodHandle>) () ->
+                    lookup.findVirtual(SSLParameters.class, "setApplicationProtocols",
+                            MethodType.methodType(void.class, String[].class)));
+            setApplicationProtocols.invokeExact(engine.getSSLParameters(), EmptyArrays.EMPTY_STRINGS);
 
             setHandshakeApplicationProtocolSelector =
-                    AccessController.doPrivileged((PrivilegedExceptionAction<Method>) () ->
-                            SSLEngine.class.getMethod("setHandshakeApplicationProtocolSelector", BiFunction.class));
-            setHandshakeApplicationProtocolSelector.invoke(engine,
+                    AccessController.doPrivileged((PrivilegedExceptionAction<MethodHandle>) () ->
+                            lookup.findVirtual(SSLEngine.class, "setHandshakeApplicationProtocolSelector",
+                                    MethodType.methodType(void.class, BiFunction.class)));
+            setHandshakeApplicationProtocolSelector.invokeExact(engine,
                     (BiFunction<SSLEngine, List<String>, String>) (sslEngine, strings) -> null);
 
             getHandshakeApplicationProtocolSelector =
-                    AccessController.doPrivileged((PrivilegedExceptionAction<Method>) () ->
-                            SSLEngine.class.getMethod("getHandshakeApplicationProtocolSelector"));
-            getHandshakeApplicationProtocolSelector.invoke(engine);
+                    AccessController.doPrivileged((PrivilegedExceptionAction<MethodHandle>) () ->
+                            lookup.findVirtual(SSLEngine.class, "getHandshakeApplicationProtocolSelector",
+                                    MethodType.methodType(BiFunction.class)));
+            getHandshakeApplicationProtocolSelector.invokeExact(engine);
         } catch (Throwable t) {
             logger.error("Unable to initialize Java9SslUtils, but the detected javaVersion was: {}",
                     PlatformDependent.javaVersion(), t);
@@ -95,20 +105,20 @@ final class Java9SslUtils {
 
     static String getApplicationProtocol(SSLEngine sslEngine) {
         try {
-            return (String) GET_APPLICATION_PROTOCOL.invoke(sslEngine);
+            return (String) GET_APPLICATION_PROTOCOL.invokeExact(sslEngine);
         } catch (UnsupportedOperationException ex) {
             throw ex;
-        } catch (Exception ex) {
+        } catch (Throwable ex) {
             throw new IllegalStateException(ex);
         }
     }
 
     static String getHandshakeApplicationProtocol(SSLEngine sslEngine) {
         try {
-            return (String) GET_HANDSHAKE_APPLICATION_PROTOCOL.invoke(sslEngine);
+            return (String) GET_HANDSHAKE_APPLICATION_PROTOCOL.invokeExact(sslEngine);
         } catch (UnsupportedOperationException ex) {
             throw ex;
-        } catch (Exception ex) {
+        } catch (Throwable ex) {
             throw new IllegalStateException(ex);
         }
     }
@@ -118,10 +128,10 @@ final class Java9SslUtils {
 
         String[] protocolArray = supportedProtocols.toArray(EmptyArrays.EMPTY_STRINGS);
         try {
-            SET_APPLICATION_PROTOCOLS.invoke(parameters, new Object[]{protocolArray});
+            SET_APPLICATION_PROTOCOLS.invokeExact(parameters, protocolArray);
         } catch (UnsupportedOperationException ex) {
             throw ex;
-        } catch (Exception ex) {
+        } catch (Throwable ex) {
             throw new IllegalStateException(ex);
         }
         engine.setSSLParameters(parameters);
@@ -130,21 +140,22 @@ final class Java9SslUtils {
     static void setHandshakeApplicationProtocolSelector(
             SSLEngine engine, BiFunction<SSLEngine, List<String>, String> selector) {
         try {
-            SET_HANDSHAKE_APPLICATION_PROTOCOL_SELECTOR.invoke(engine, selector);
+            SET_HANDSHAKE_APPLICATION_PROTOCOL_SELECTOR.invokeExact(engine, selector);
         } catch (UnsupportedOperationException ex) {
             throw ex;
-        } catch (Exception ex) {
+        } catch (Throwable ex) {
             throw new IllegalStateException(ex);
         }
     }
 
+    @SuppressWarnings("unchecked")
     static BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelector(SSLEngine engine) {
         try {
             return (BiFunction<SSLEngine, List<String>, String>)
-                    GET_HANDSHAKE_APPLICATION_PROTOCOL_SELECTOR.invoke(engine);
+                    GET_HANDSHAKE_APPLICATION_PROTOCOL_SELECTOR.invokeExact(engine);
         } catch (UnsupportedOperationException ex) {
             throw ex;
-        } catch (Exception ex) {
+        } catch (Throwable ex) {
             throw new IllegalStateException(ex);
         }
     }
