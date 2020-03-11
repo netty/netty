@@ -65,13 +65,13 @@ final class Java9SslUtils {
 
             setApplicationProtocols = AccessController.doPrivileged((PrivilegedExceptionAction<MethodHandle>) () ->
                     lookup.findVirtual(SSLParameters.class, "setApplicationProtocols",
-                            MethodType.methodType(void.class).appendParameterTypes(String[].class)));
+                            MethodType.methodType(void.class, String[].class)));
             setApplicationProtocols.invokeExact(engine.getSSLParameters(), EmptyArrays.EMPTY_STRINGS);
 
             setHandshakeApplicationProtocolSelector =
                     AccessController.doPrivileged((PrivilegedExceptionAction<MethodHandle>) () ->
                             lookup.findVirtual(SSLEngine.class, "setHandshakeApplicationProtocolSelector",
-                                    MethodType.methodType(void.class).appendParameterTypes(BiFunction.class)));
+                                    MethodType.methodType(void.class, BiFunction.class)));
             setHandshakeApplicationProtocolSelector.invokeExact(engine,
                     (BiFunction<SSLEngine, List<String>, String>) (sslEngine, strings) -> null);
 

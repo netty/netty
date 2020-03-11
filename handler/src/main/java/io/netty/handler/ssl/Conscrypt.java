@@ -35,8 +35,8 @@ final class Conscrypt {
 
             Class<?> conscryptClass = Class.forName("org.conscrypt.Conscrypt", true,
                     ConscryptAlpnSslEngine.class.getClassLoader());
-            return lookup.findStatic(conscryptClass, "isConscrypt", MethodType.methodType(boolean.class)
-                    .appendParameterTypes(SSLEngine.class));
+            return lookup.findStatic(conscryptClass, "isConscrypt",
+                    MethodType.methodType(boolean.class, SSLEngine.class));
         } catch (Throwable ignore) {
             // Conscrypt was not loaded.
             return null;

@@ -305,7 +305,7 @@ final class PlatformDependent0 {
                         try {
                             return MethodHandles.lookup().findVirtual(finalInternalUnsafe.getClass(),
                                     "allocateUninitializedArray",
-                                    MethodType.methodType(byte[].class).appendParameterTypes(Class.class, int.class))
+                                    MethodType.methodType(byte[].class, Class.class, int.class))
                                     .bindTo(finalInternalUnsafe);
                         } catch (NoSuchMethodException | SecurityException | IllegalAccessException e) {
                             return e;

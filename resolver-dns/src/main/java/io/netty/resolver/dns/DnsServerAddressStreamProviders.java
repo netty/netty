@@ -63,7 +63,7 @@ public final class DnsServerAddressStreamProviders {
                     Method method = providerClass.getMethod("ensureAvailability");
                     method.invoke(null);
                     constructorHandle = lookup.findConstructor(providerClass, MethodType.methodType(void.class));
-                    constructorHandle.invokeExact();
+                    constructorHandle.invoke();
                 } else if (!(maybeProvider instanceof ClassNotFoundException)) {
                     throw (Throwable) maybeProvider;
                 }
@@ -89,7 +89,7 @@ public final class DnsServerAddressStreamProviders {
     public static DnsServerAddressStreamProvider platformDefault() {
         if (STREAM_PROVIDER_CONSTRUCTOR_HANDLE != null) {
             try {
-                return (DnsServerAddressStreamProvider) STREAM_PROVIDER_CONSTRUCTOR_HANDLE.invokeExact();
+                return (DnsServerAddressStreamProvider) STREAM_PROVIDER_CONSTRUCTOR_HANDLE.invoke();
             } catch (IllegalAccessException | InstantiationException | InvocationTargetException e) {
                 // ignore
             } catch (Throwable cause) {

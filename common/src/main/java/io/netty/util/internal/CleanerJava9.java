@@ -46,8 +46,7 @@ final class CleanerJava9 implements Cleaner {
                     MethodHandle m = lookup.findVirtual(
                             PlatformDependent0.UNSAFE.getClass(),
                             "invokeCleaner",
-                            MethodType.methodType(void.class).appendParameterTypes(ByteBuffer.class)).
-                            bindTo(PlatformDependent0.UNSAFE);
+                            MethodType.methodType(void.class, ByteBuffer.class)).bindTo(PlatformDependent0.UNSAFE);
                     m.invokeExact(buffer);
                     return m;
                 } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
