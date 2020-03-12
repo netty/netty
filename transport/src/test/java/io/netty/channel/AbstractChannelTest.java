@@ -36,7 +36,23 @@ public class AbstractChannelTest {
         when(eventLoop.unsafe()).thenReturn(mock(EventLoop.Unsafe.class));
 
         TestChannel channel = new TestChannel(eventLoop);
-        ChannelHandler handler = mock(ChannelHandler.class);
+        // Using spy as otherwise intelliJ will not be able to understand that we dont want to skip the handler
+        ChannelHandler handler = spy(new ChannelHandler() {
+            @Override
+            public void handlerAdded(ChannelHandlerContext ctx) {
+                // NOOP
+            }
+
+            @Override
+            public void channelRegistered(ChannelHandlerContext ctx) {
+                ctx.fireChannelRegistered();
+            }
+
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) {
+                ctx.fireChannelActive();
+            }
+        });
         channel.pipeline().addLast(handler);
 
         registerChannel(channel);
@@ -59,7 +75,23 @@ public class AbstractChannelTest {
         }).when(eventLoop).execute(any(Runnable.class));
 
         final TestChannel channel = new TestChannel(eventLoop);
-        ChannelHandler handler = mock(ChannelHandler.class);
+        // Using spy as otherwise intelliJ will not be able to understand that we dont want to skip the handler
+        ChannelHandler handler = spy(new ChannelHandler() {
+            @Override
+            public void channelRegistered(ChannelHandlerContext ctx) {
+                ctx.fireChannelRegistered();
+            }
+
+            @Override
+            public void channelUnregistered(ChannelHandlerContext ctx) {
+                ctx.fireChannelUnregistered();
+            }
+
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) {
+                ctx.fireChannelActive();
+            }
+        });
 
         channel.pipeline().addLast(handler);
 
@@ -71,7 +103,7 @@ public class AbstractChannelTest {
         verify(handler).handlerAdded(any(ChannelHandlerContext.class));
 
         // Should register twice
-        verify(handler,  times(2)) .channelRegistered(any(ChannelHandlerContext.class));
+        verify(handler, times(2)) .channelRegistered(any(ChannelHandlerContext.class));
         verify(handler).channelActive(any(ChannelHandlerContext.class));
         verify(handler).channelUnregistered(any(ChannelHandlerContext.class));
     }
