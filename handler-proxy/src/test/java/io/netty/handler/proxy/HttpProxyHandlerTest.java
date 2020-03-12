@@ -41,7 +41,6 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.proxy.HttpProxyHandler.HttpProxyConnectException;
 import io.netty.util.NetUtil;
 
-import java.net.UnknownHostException;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 
@@ -271,7 +270,7 @@ public class HttpProxyHandlerTest {
     }
 
     @Test
-    public void testHttpClientCodecIsInvisible() throws UnknownHostException {
+    public void testHttpClientCodecIsInvisible() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpProxyHandler(
                 new InetSocketAddress(NetUtil.LOCALHOST, 8080))) {
             @Override
