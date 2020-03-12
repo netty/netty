@@ -244,7 +244,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
             headers.set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
 
-        headers.set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, "13");
+        headers.set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, version().toAsciiString());
         return request;
     }
 
