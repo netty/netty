@@ -364,7 +364,9 @@ public abstract class WebSocketClientHandshakerTest {
 
         // add values for the headers that are reserved for use in the websockets handshake
         for (CharSequence header : getHandshakeRequiredHeaderNames()) {
-            inputHeaders.add(header, bogusHeaderValue);
+            if (!HttpHeaderNames.HOST.equals(header)) {
+                inputHeaders.add(header, bogusHeaderValue);
+            }
         }
         inputHeaders.add(getProtocolHeaderName(), bogusSubProtocol);
 
