@@ -243,7 +243,7 @@ public class WebSocketClientHandshaker08 extends WebSocketClientHandshaker {
             headers.set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, expectedSubprotocol);
         }
 
-        headers.set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, "8");
+        headers.set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, version().toAsciiString());
         return request;
     }
 
