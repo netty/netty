@@ -56,7 +56,7 @@ public class WebSocketIndexPageHandler extends SimpleChannelInboundHandler<FullH
         }
 
         // Allow only GET methods.
-        if (!GET.equals(req.method())) {
+        if (!GET.toString().equals(req.method().toString())) {
             sendHttpResponse(ctx, req, new DefaultFullHttpResponse(req.protocolVersion(), FORBIDDEN,
                                                                    ctx.alloc().buffer(0)));
             return;
