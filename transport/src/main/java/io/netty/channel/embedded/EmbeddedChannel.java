@@ -749,6 +749,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     protected void doClose() throws Exception {
+        state = State.CLOSED;
         if (isNotEmpty(tempInboundMessages)) {
             ClosedChannelException exception = null;
             for (;;) {
@@ -769,7 +770,6 @@ public class EmbeddedChannel extends AbstractChannel {
                 }
             }
         }
-        state = State.CLOSED;
     }
 
     @Override
