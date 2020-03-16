@@ -192,9 +192,9 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
             AddressResolver<SocketAddress> resolver;
             try {
                 resolver = this.resolver.getResolver(eventLoop);
-            } catch (Throwable e) {
+            } catch (Throwable cause) {
                 channel.close();
-                throw e;
+                return promise.setFailure(cause);
             }
 
             if (!resolver.isSupported(remoteAddress) || resolver.isResolved(remoteAddress)) {
