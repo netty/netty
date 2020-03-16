@@ -52,6 +52,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -689,7 +690,7 @@ public class EmbeddedChannelTest {
         } catch (InterruptedException e) {
             fail();
         } catch (ExecutionException e) {
-            Matchers.instanceOf(ClosedChannelException.class);
+            assertThat(e.getCause(), Matchers.instanceOf(ClosedChannelException.class));
         }
     }
 
