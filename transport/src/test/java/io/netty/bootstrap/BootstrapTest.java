@@ -41,7 +41,6 @@ import io.netty.resolver.AbstractAddressResolver;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import org.hamcrest.Matchers;
 import org.junit.AfterClass;
 import org.junit.Test;
 
@@ -304,8 +303,8 @@ public class BootstrapTest {
 
         // Should fail with the IllegalStateException.
         assertThat(connectFuture.await(10000), is(true));
-        assertThat(connectFuture.cause(), Matchers.instanceOf(IllegalStateException.class));
-        assertThat(connectFuture.cause().getCause(), Matchers.instanceOf(TestException.class));
+        assertThat(connectFuture.cause(), instanceOf(IllegalStateException.class));
+        assertThat(connectFuture.cause().getCause(), instanceOf(TestException.class));
         assertThat(connectFuture.channel().isOpen(), is(false));
     }
 
