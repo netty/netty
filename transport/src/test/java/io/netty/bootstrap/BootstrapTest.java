@@ -30,7 +30,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.DefaultEventLoopGroup;
-import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.local.LocalAddress;
@@ -52,7 +51,6 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -275,6 +273,38 @@ public class BootstrapTest {
         // Should fail with the UnknownHostException.
         assertThat(connectFuture.await(10000), is(true));
         assertThat(connectFuture.cause(), is(instanceOf(UnknownHostException.class)));
+        assertThat(connectFuture.channel().isOpen(), is(false));
+    }
+
+    @Test
+    public void testGetResolverFailed() throws Exception {
+        class TestException extends RuntimeException { }
+
+        final Bootstrap bootstrapA = new Bootstrap();
+        bootstrapA.group(groupA);
+        bootstrapA.channel(LocalChannel.class);
+
+        bootstrapA.resolver(new AddressResolverGroup<SocketAddress>() {
+            @Override
+            protected AddressResolver<SocketAddress> newResolver(EventExecutor executor) {
+                throw new TestException();
+            }
+        });
+        bootstrapA.handler(dummyHandler);
+
+        final ServerBootstrap bootstrapB = new ServerBootstrap();
+        bootstrapB.group(groupB);
+        bootstrapB.channel(LocalServerChannel.class);
+        bootstrapB.childHandler(dummyHandler);
+        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).sync().channel().localAddress();
+
+        // Connect to the server using the asynchronous resolver.
+        ChannelFuture connectFuture = bootstrapA.connect(localAddress);
+
+        // Should fail with the IllegalStateException.
+        assertThat(connectFuture.await(10000), is(true));
+        assertThat(connectFuture.cause(), instanceOf(IllegalStateException.class));
+        assertThat(connectFuture.cause().getCause(), instanceOf(TestException.class));
         assertThat(connectFuture.channel().isOpen(), is(false));
     }
 

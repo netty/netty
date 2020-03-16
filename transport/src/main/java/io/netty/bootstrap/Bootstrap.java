@@ -189,7 +189,13 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
                                                final SocketAddress localAddress, final ChannelPromise promise) {
         try {
             final EventLoop eventLoop = channel.eventLoop();
-            final AddressResolver<SocketAddress> resolver = this.resolver.getResolver(eventLoop);
+            AddressResolver<SocketAddress> resolver;
+            try {
+                resolver = this.resolver.getResolver(eventLoop);
+            } catch (Throwable cause) {
+                channel.close();
+                return promise.setFailure(cause);
+            }
 
             if (!resolver.isSupported(remoteAddress) || resolver.isResolved(remoteAddress)) {
                 // Resolver has no idea about what to do with the specified remote address or it's resolved already.
