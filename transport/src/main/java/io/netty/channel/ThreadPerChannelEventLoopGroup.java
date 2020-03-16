@@ -18,6 +18,7 @@ package io.netty.channel;
 
 import io.netty.util.concurrent.AbstractEventExecutorGroup;
 import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -36,7 +37,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -86,7 +86,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
      *                          Use {@code 0} to use no limit
      */
     protected ThreadPerChannelEventLoopGroup(int maxChannels) {
-        this(maxChannels, Executors.defaultThreadFactory());
+        this(maxChannels, (ThreadFactory) null);
     }
 
     /**
@@ -102,7 +102,7 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
      * @param args              arguments which will passed to each {@link #newChild(Object...)} call.
      */
     protected ThreadPerChannelEventLoopGroup(int maxChannels, ThreadFactory threadFactory, Object... args) {
-        this(maxChannels, new ThreadPerTaskExecutor(threadFactory), args);
+        this(maxChannels, threadFactory == null ? null : new ThreadPerTaskExecutor(threadFactory), args);
     }
 
     /**
@@ -119,7 +119,9 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
      */
     protected ThreadPerChannelEventLoopGroup(int maxChannels, Executor executor, Object... args) {
         ObjectUtil.checkPositiveOrZero(maxChannels, "maxChannels");
-        ObjectUtil.checkNotNull(executor, "executor");
+        if (executor == null) {
+            executor = new ThreadPerTaskExecutor(new DefaultThreadFactory(getClass()));
+        }
 
         if (args == null) {
             childArgs = EmptyArrays.EMPTY_OBJECTS;
