@@ -309,6 +309,42 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
+    public void testTooLargeInitialLineWithWSOnly() {
+        testTooLargeInitialLineWithControlCharsOnly("                    ");
+    }
+
+    @Test
+    public void testTooLargeInitialLineWithCRLFOnly() {
+        testTooLargeInitialLineWithControlCharsOnly("\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n");
+    }
+
+    private static void testTooLargeInitialLineWithControlCharsOnly(String controlChars) {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(15, 1024, 1024));
+        String requestStr = controlChars + "GET / HTTP/1.1\r\n" +
+                "Host: localhost1\r\n\r\n";
+
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isFailure());
+        assertTrue(request.decoderResult().cause() instanceof TooLongFrameException);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testInitialLineWithLeadingControlChars() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        String crlf = "\r\n";
+        String request =  crlf + "GET /some/path HTTP/1.1" + crlf +
+                "Host: localhost" + crlf + crlf;
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(request, CharsetUtil.US_ASCII)));
+        HttpRequest req = channel.readInbound();
+        assertEquals(HttpMethod.GET, req.method());
+        assertEquals("/some/path", req.uri());
+        assertEquals(HttpVersion.HTTP_1_1, req.protocolVersion());
+        assertTrue(channel.finishAndReleaseAll());
+    }
+
+    @Test
     public void testTooLargeHeaders() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(1024, 10, 1024));
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
