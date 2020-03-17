@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.48.Final</version>
+    <version>4.1.49.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-transport-blockhound-tests</artifactId>
