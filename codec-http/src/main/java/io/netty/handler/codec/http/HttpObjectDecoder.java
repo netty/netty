@@ -185,12 +185,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
 
         switch (currentState) {
-        case SKIP_CONTROL_CHARS: {
-            if (!skipControlCharacters(buffer)) {
-                return;
-            }
-            currentState = State.READ_INITIAL;
-        }
+        case SKIP_CONTROL_CHARS:
+            // Fall-through
         case READ_INITIAL: try {
             AppendableCharSequence line = lineParser.parse(buffer);
             if (line == null) {
@@ -545,22 +541,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return chunk;
     }
 
-    private static boolean skipControlCharacters(ByteBuf buffer) {
-        boolean skiped = false;
-        final int wIdx = buffer.writerIndex();
-        int rIdx = buffer.readerIndex();
-        while (wIdx > rIdx) {
-            int c = buffer.getUnsignedByte(rIdx++);
-            if (!Character.isISOControl(c) && !Character.isWhitespace(c)) {
-                rIdx--;
-                skiped = true;
-                break;
-            }
-        }
-        buffer.readerIndex(rIdx);
-        return skiped;
-    }
-
     private State readHeaders(ByteBuf buffer) {
         final HttpMessage message = this.message;
         final HttpHeaders headers = message.headers();
@@ -911,6 +891,13 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 return false;
             }
 
+            increaseCount();
+
+            seq.append(nextByte);
+            return true;
+        }
+
+        protected final void increaseCount() {
             if (++ size > maxLength) {
                 // TODO: Respond with Bad Request and discard the traffic
                 //    or close the connection.
@@ -918,9 +905,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 //       If decoding a response, just throw an exception.
                 throw newException(maxLength);
             }
-
-            seq.append(nextByte);
-            return true;
         }
 
         protected TooLongFrameException newException(int maxLength) {
@@ -928,7 +912,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
     }
 
-    private static final class LineParser extends HeaderParser {
+    private final class LineParser extends HeaderParser {
 
         LineParser(AppendableCharSequence seq, int maxLength) {
             super(seq, maxLength);
@@ -938,6 +922,19 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         public AppendableCharSequence parse(ByteBuf buffer) {
             reset();
             return super.parse(buffer);
+        }
+
+        @Override
+        public boolean process(byte value) throws Exception {
+            if (currentState == State.SKIP_CONTROL_CHARS) {
+                char c = (char) (value & 0xFF);
+                if (Character.isISOControl(c) || Character.isWhitespace(c)) {
+                    increaseCount();
+                    return true;
+                }
+                currentState = State.READ_INITIAL;
+            }
+            return super.process(value);
         }
 
         @Override
