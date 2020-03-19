@@ -33,16 +33,16 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  */
 public final class CachingDomainNameMapping<V> extends DomainNameMapping<V> {
     private final Map<String, V> exactMatchMap;
-    private final Map<String, V> wildcardMap;
+    private final Map.Entry<String, V>[] wildcardArray;
     private final RelaxedCache<V> wildcardCache;
     private volatile Map<String, V> combinedMap;
 
     @SuppressWarnings("deprecation")
     private CachingDomainNameMapping(final V defaultValue, final Map<String, V> exactMatchMap,
-                                     final Map<String, V> wildcardMap, final int cacheCapacity) {
+                                     final Map.Entry<String, V>[] wildcardArray, final int cacheCapacity) {
         super(defaultValue);
-        this.exactMatchMap = new LinkedHashMap<String, V>(exactMatchMap);
-        this.wildcardMap = new LinkedHashMap<String, V>(wildcardMap);
+        this.exactMatchMap = exactMatchMap;
+        this.wildcardArray = wildcardArray;
         this.wildcardCache = cacheCapacity > 0 ? new RelaxedCache<V>(cacheCapacity) : null;
     }
 
@@ -64,13 +64,12 @@ public final class CachingDomainNameMapping<V> extends DomainNameMapping<V> {
                 }
             }
 
-            if (!wildcardMap.isEmpty()) {
-                for (Map.Entry<String, V> entry : wildcardMap.entrySet()) {
-                    if (matches(entry.getKey(), normalized)) {
-                        V v = entry.getValue();
-                        cacheIfPossible(normalized, v);
-                        return v;
-                    }
+            for (int i = 0; i < wildcardArray.length; i++) {
+                Map.Entry<String, V> entry = wildcardArray[i];
+                if (matches(entry.getKey(), normalized)) {
+                    V v = entry.getValue();
+                    cacheIfPossible(normalized, v);
+                    return v;
                 }
             }
 
@@ -96,9 +95,12 @@ public final class CachingDomainNameMapping<V> extends DomainNameMapping<V> {
     public Map<String, V> asMap() {
         Map<String, V> combinedMap = this.combinedMap;
         if (combinedMap == null) {
-            final Map<String, V> workingMap = new LinkedHashMap<String, V>(exactMatchMap.size() + wildcardMap.size());
+            final Map<String, V> workingMap = new LinkedHashMap<String, V>(exactMatchMap.size() + wildcardArray.length);
             workingMap.putAll(exactMatchMap);
-            workingMap.putAll(wildcardMap);
+            for (int i = 0; i < wildcardArray.length; i++) {
+                Map.Entry<String, V> entry = wildcardArray[i];
+                workingMap.put(entry.getKey(), entry.getValue());
+            }
             this.combinedMap = combinedMap = Collections.unmodifiableMap(workingMap);
         }
         return combinedMap;
@@ -174,9 +176,10 @@ public final class CachingDomainNameMapping<V> extends DomainNameMapping<V> {
          *
          * @return new {@link DomainNameMapping} instance
          */
+        @SuppressWarnings("unchecked")
         public CachingDomainNameMapping<V> build() {
             return new CachingDomainNameMapping<V>(defaultValue, new LinkedHashMap<String, V>(exactMatchMap),
-                    new LinkedHashMap<String, V>(wildcardMap), cacheCapacity);
+                    wildcardMap.entrySet().toArray(new Map.Entry[0]), cacheCapacity);
         }
     }
 
