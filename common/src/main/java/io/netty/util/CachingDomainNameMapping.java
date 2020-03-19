@@ -15,6 +15,7 @@
  */
 package io.netty.util;
 
+import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Collections;
@@ -33,7 +34,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 public final class CachingDomainNameMapping<V> extends DomainNameMapping<V> {
     private final Map<String, V> exactMatchMap;
     private final Map<String, V> wildcardMap;
-    private final SimpleSizeLimitedMap<String, V> wildcardCache;
+    private final RelaxedCache<V> wildcardCache;
     private volatile Map<String, V> combinedMap;
 
     @SuppressWarnings("deprecation")
@@ -42,7 +43,7 @@ public final class CachingDomainNameMapping<V> extends DomainNameMapping<V> {
         super(defaultValue);
         this.exactMatchMap = new LinkedHashMap<String, V>(exactMatchMap);
         this.wildcardMap = new LinkedHashMap<String, V>(wildcardMap);
-        this.wildcardCache = cacheCapacity > 0 ? new SimpleSizeLimitedMap<String, V>(cacheCapacity) : null;
+        this.wildcardCache = cacheCapacity > 0 ? new RelaxedCache<V>(cacheCapacity) : null;
     }
 
     @Override
@@ -176,6 +177,78 @@ public final class CachingDomainNameMapping<V> extends DomainNameMapping<V> {
         public CachingDomainNameMapping<V> build() {
             return new CachingDomainNameMapping<V>(defaultValue, new LinkedHashMap<String, V>(exactMatchMap),
                     new LinkedHashMap<String, V>(wildcardMap), cacheCapacity);
+        }
+    }
+
+    private static final class RelaxedCache<V> {
+
+        private static final class CacheEntry<V> {
+            private final String key;
+            final V value;
+
+            CacheEntry(String key, V value) {
+                this.key = key;
+                this.value = value;
+            }
+
+            @Override
+            public int hashCode() {
+                return key.hashCode();
+            }
+
+            @Override
+            public boolean equals(Object obj) {
+                return obj instanceof CacheEntry && key.equals(((CacheEntry<?>) obj).key);
+            }
+        }
+
+        private final CacheEntry<V>[] entries;
+        private final int mask;
+        private final int shift;
+
+        @SuppressWarnings("unchecked")
+        RelaxedCache(final int capacity) {
+            entries = (CacheEntry<V>[]) new Object[MathUtil.findNextPositivePowerOfTwo(capacity)];
+            mask = entries.length - 1;
+            //log2 of entries.length
+            shift = 31 - Integer.numberOfLeadingZeros(entries.length);
+        }
+
+        // fast % operation with power of 2 entries.length
+        private int firstIndex(int hashCode) {
+            return hashCode & mask;
+        };
+
+        private int secondIndex(int hashCode) {
+            return (hashCode >> shift) & mask;
+        }
+
+        private V value(int idx, String key) {
+            final CacheEntry<V> entry = entries[idx];
+            if (entry != null && entry.key.equals(key)) {
+                return entry.value;
+            }
+            return null;
+        }
+
+        V get(final String key) {
+            final int hashCode = key.hashCode();
+            final int firstIndex = firstIndex(hashCode);
+            final V firstValue = value(firstIndex, key);
+            return firstValue != null ? firstValue :
+                    value(secondIndex(hashCode), key);
+        }
+
+        void put(String key, V value) {
+            CacheEntry<V> entry = new CacheEntry<V>(key, value);
+            final int hashCode = key.hashCode();
+            final int firstIndex = firstIndex(hashCode);
+            final V firstValue = value(firstIndex, key);
+            if (firstValue == null) {
+                entries[firstIndex] = entry;
+            } else {
+                entries[secondIndex(hashCode)] = entry;
+            }
         }
     }
 }
