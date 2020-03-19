@@ -193,24 +193,22 @@ public final class CachingDomainNameMapping<V> extends DomainNameMapping<V> {
         }
 
         private final CacheEntry<V>[] entries;
-        private final int mask;
         private final int shift;
 
         @SuppressWarnings("unchecked")
         RelaxedCache(final int capacity) {
             entries = (CacheEntry<V>[]) new Object[MathUtil.findNextPositivePowerOfTwo(capacity)];
-            mask = entries.length - 1;
             //log2 of entries.length
             shift = 31 - Integer.numberOfLeadingZeros(entries.length);
         }
 
         // fast % operation with power of 2 entries.length
         private int firstIndex(int hashCode) {
-            return hashCode & mask;
+            return hashCode & (entries.length - 1);
         }
 
         private int secondIndex(int hashCode) {
-            return (hashCode >> shift) & mask;
+            return (hashCode >> shift) & (entries.length - 1);
         }
 
         private V value(int idx, String key) {
