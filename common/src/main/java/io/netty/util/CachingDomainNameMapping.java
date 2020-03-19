@@ -190,16 +190,6 @@ public final class CachingDomainNameMapping<V> extends DomainNameMapping<V> {
                 this.key = key;
                 this.value = value;
             }
-
-            @Override
-            public int hashCode() {
-                return key.hashCode();
-            }
-
-            @Override
-            public boolean equals(Object obj) {
-                return obj instanceof CacheEntry && key.equals(((CacheEntry<?>) obj).key);
-            }
         }
 
         private final CacheEntry<V>[] entries;
@@ -217,7 +207,7 @@ public final class CachingDomainNameMapping<V> extends DomainNameMapping<V> {
         // fast % operation with power of 2 entries.length
         private int firstIndex(int hashCode) {
             return hashCode & mask;
-        };
+        }
 
         private int secondIndex(int hashCode) {
             return (hashCode >> shift) & mask;
