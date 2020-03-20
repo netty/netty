@@ -186,7 +186,7 @@ public final class CachingDomainNameMapping<V> extends DomainNameMapping<V> {
     private static final class RelaxedCache<V> {
 
         private static final class CacheEntry<V> {
-            private final String key;
+            final String key;
             final V value;
 
             CacheEntry(String key, V value) {
