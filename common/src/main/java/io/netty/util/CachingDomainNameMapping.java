@@ -183,6 +183,17 @@ public final class CachingDomainNameMapping<V> extends DomainNameMapping<V> {
         }
     }
 
+    /**
+     * Cache that uses "relaxed" concurrency access, which means different threads may see updates done by other
+     * threads but are not guaranteed to do so. This is OK as for a given key we will always cache the same value so
+     * at worse we will do some extra work.
+     *
+     * The implementation idea is based on
+     * <a href="http://vanillajava.blogspot.com/2014/12/on-heap-vs-off-heap-memory-usage.html">On heap vs off
+     * heap memory usage</a>.
+     *
+     * @param <V> the type of key to cache.
+     */
     private static final class RelaxedCache<V> {
 
         private static final class CacheEntry<V> {
