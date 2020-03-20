@@ -15,6 +15,7 @@
  */
 package io.netty.util;
 
+import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
@@ -25,7 +26,6 @@ import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -115,16 +115,16 @@ public class HashedWheelTimer implements Timer {
 
     /**
      * Creates a new timer with the default thread factory
-     * ({@link Executors#defaultThreadFactory()}), default tick duration, and
+     * ({@link io.netty.util.concurrent.DefaultThreadFactory}), default tick duration, and
      * default number of ticks per wheel.
      */
     public HashedWheelTimer() {
-        this(Executors.defaultThreadFactory());
+        this(null);
     }
 
     /**
      * Creates a new timer with the default thread factory
-     * ({@link Executors#defaultThreadFactory()}) and default number of ticks
+     * ({@link io.netty.util.concurrent.DefaultThreadFactory}) and default number of ticks
      * per wheel.
      *
      * @param tickDuration   the duration between tick
@@ -133,12 +133,12 @@ public class HashedWheelTimer implements Timer {
      * @throws IllegalArgumentException if {@code tickDuration} is &lt;= 0
      */
     public HashedWheelTimer(long tickDuration, TimeUnit unit) {
-        this(Executors.defaultThreadFactory(), tickDuration, unit);
+        this(null, tickDuration, unit);
     }
 
     /**
      * Creates a new timer with the default thread factory
-     * ({@link Executors#defaultThreadFactory()}).
+     * ({@link io.netty.util.concurrent.DefaultThreadFactory}).
      *
      * @param tickDuration   the duration between tick
      * @param unit           the time unit of the {@code tickDuration}
@@ -147,7 +147,7 @@ public class HashedWheelTimer implements Timer {
      * @throws IllegalArgumentException if either of {@code tickDuration} and {@code ticksPerWheel} is &lt;= 0
      */
     public HashedWheelTimer(long tickDuration, TimeUnit unit, int ticksPerWheel) {
-        this(Executors.defaultThreadFactory(), tickDuration, unit, ticksPerWheel);
+        this(null, tickDuration, unit, ticksPerWheel);
     }
 
     /**
@@ -156,8 +156,9 @@ public class HashedWheelTimer implements Timer {
      *
      * @param threadFactory  a {@link ThreadFactory} that creates a
      *                       background {@link Thread} which is dedicated to
-     *                       {@link TimerTask} execution.
-     * @throws NullPointerException if {@code threadFactory} is {@code null}
+     *                       {@link TimerTask} execution,
+     *                       or {@code null} if the default thread factory
+     *                       ({@link io.netty.util.concurrent.DefaultThreadFactory}) should be used.
      */
     public HashedWheelTimer(ThreadFactory threadFactory) {
         this(threadFactory, 100, TimeUnit.MILLISECONDS);
@@ -168,10 +169,12 @@ public class HashedWheelTimer implements Timer {
      *
      * @param threadFactory  a {@link ThreadFactory} that creates a
      *                       background {@link Thread} which is dedicated to
-     *                       {@link TimerTask} execution.
+     *                       {@link TimerTask} execution,
+     *                       or {@code null} if the default thread factory
+     *                       ({@link io.netty.util.concurrent.DefaultThreadFactory}) should be used.
      * @param tickDuration   the duration between tick
      * @param unit           the time unit of the {@code tickDuration}
-     * @throws NullPointerException     if either of {@code threadFactory} and {@code unit} is {@code null}
+     * @throws NullPointerException     if {@code unit} is {@code null}
      * @throws IllegalArgumentException if {@code tickDuration} is &lt;= 0
      */
     public HashedWheelTimer(
@@ -184,11 +187,13 @@ public class HashedWheelTimer implements Timer {
      *
      * @param threadFactory  a {@link ThreadFactory} that creates a
      *                       background {@link Thread} which is dedicated to
-     *                       {@link TimerTask} execution.
+     *                       {@link TimerTask} execution,
+     *                       or {@code null} if the default thread factory
+     *                       ({@link io.netty.util.concurrent.DefaultThreadFactory}) should be used.
      * @param tickDuration   the duration between tick
      * @param unit           the time unit of the {@code tickDuration}
      * @param ticksPerWheel  the size of the wheel
-     * @throws NullPointerException     if either of {@code threadFactory} and {@code unit} is {@code null}
+     * @throws NullPointerException     if {@code unit} is {@code null}
      * @throws IllegalArgumentException if either of {@code tickDuration} and {@code ticksPerWheel} is &lt;= 0
      */
     public HashedWheelTimer(
@@ -202,14 +207,16 @@ public class HashedWheelTimer implements Timer {
      *
      * @param threadFactory        a {@link ThreadFactory} that creates a
      *                             background {@link Thread} which is dedicated to
-     *                             {@link TimerTask} execution.
+     *                             {@link TimerTask} execution,
+     *                             or {@code null} if the default thread factory
+     *                             ({@link io.netty.util.concurrent.DefaultThreadFactory}) should be used.
      * @param tickDuration         the duration between tick
      * @param unit                 the time unit of the {@code tickDuration}
      * @param ticksPerWheel        the size of the wheel
      * @param leakDetection        {@code true} if leak detection should be enabled always,
      *                             if false it will only be enabled if the worker thread is not
      *                             a daemon thread.
-     * @throws NullPointerException     if either of {@code threadFactory} and {@code unit} is {@code null}
+     * @throws NullPointerException     if {@code unit} is {@code null}
      * @throws IllegalArgumentException if either of {@code tickDuration} and {@code ticksPerWheel} is &lt;= 0
      */
     public HashedWheelTimer(
@@ -223,7 +230,9 @@ public class HashedWheelTimer implements Timer {
      *
      * @param threadFactory        a {@link ThreadFactory} that creates a
      *                             background {@link Thread} which is dedicated to
-     *                             {@link TimerTask} execution.
+     *                             {@link TimerTask} execution,
+     *                             or {@code null} if the default thread factory
+     *                             ({@link io.netty.util.concurrent.DefaultThreadFactory}) should be used.
      * @param tickDuration         the duration between tick
      * @param unit                 the time unit of the {@code tickDuration}
      * @param ticksPerWheel        the size of the wheel
@@ -235,7 +244,7 @@ public class HashedWheelTimer implements Timer {
      *                             {@link java.util.concurrent.RejectedExecutionException}
      *                             being thrown. No maximum pending timeouts limit is assumed if
      *                             this value is 0 or negative.
-     * @throws NullPointerException     if either of {@code threadFactory} and {@code unit} is {@code null}
+     * @throws NullPointerException     if {@code unit} is {@code null}
      * @throws IllegalArgumentException if either of {@code tickDuration} and {@code ticksPerWheel} is &lt;= 0
      */
     public HashedWheelTimer(
@@ -243,10 +252,13 @@ public class HashedWheelTimer implements Timer {
             long tickDuration, TimeUnit unit, int ticksPerWheel, boolean leakDetection,
             long maxPendingTimeouts) {
 
-        ObjectUtil.checkNotNull(threadFactory, "threadFactory");
         ObjectUtil.checkNotNull(unit, "unit");
         ObjectUtil.checkPositive(tickDuration, "tickDuration");
         ObjectUtil.checkPositive(ticksPerWheel, "ticksPerWheel");
+
+        if (threadFactory == null) {
+            threadFactory = new DefaultThreadFactory(getClass());
+        }
 
         // Normalize ticksPerWheel to power of two and initialize the wheel.
         wheel = createWheel(ticksPerWheel);
