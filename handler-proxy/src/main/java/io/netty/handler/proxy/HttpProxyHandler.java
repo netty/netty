@@ -100,12 +100,17 @@ public final class HttpProxyHandler extends ProxyHandler {
         this.password = ObjectUtil.checkNotNull(password, "password");
 
         ByteBuf authz = Unpooled.copiedBuffer(username + ':' + password, CharsetUtil.UTF_8);
-        ByteBuf authzBase64 = Base64.encode(authz, false);
-
-        authorization = new AsciiString("Basic " + authzBase64.toString(CharsetUtil.US_ASCII));
-
-        authz.release();
-        authzBase64.release();
+        ByteBuf authzBase64;
+        try {
+            authzBase64 = Base64.encode(authz, false);
+        } finally {
+            authz.release();
+        }
+        try {
+            authorization = new AsciiString("Basic " + authzBase64.toString(CharsetUtil.US_ASCII));
+        } finally {
+            authzBase64.release();
+        }
 
         this.outboundHeaders = headers;
         this.ignoreDefaultPortsInConnectHostHeader = ignoreDefaultPortsInConnectHostHeader;
