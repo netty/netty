@@ -16,6 +16,7 @@
 package io.netty.util;
 
 import io.netty.util.internal.MathUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Collections;
@@ -249,7 +250,12 @@ public final class CachingDomainNameMapping<V> extends DomainNameMapping<V> {
             if (firstValue == null) {
                 entries[firstIndex] = entry;
             } else {
-                entries[secondIndex(hashCode)] = entry;
+                int secondIndex = secondIndex(hashCode);
+                if (entries[secondIndex] != null && PlatformDependent.threadLocalRandom().nextBoolean()) {
+                    entries[firstIndex] = entry;
+                } else {
+                    entries[secondIndex] = entry;
+                }
             }
         }
     }
