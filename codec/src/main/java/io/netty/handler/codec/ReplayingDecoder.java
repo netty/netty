@@ -64,7 +64,7 @@ import java.util.List;
  *      extends {@link ReplayingDecoder}&lt;{@link Void}&gt; {
  *
  *   protected void decode({@link ChannelHandlerContext} ctx,
- *                           {@link ByteBuf} buf) throws Exception {
+ *                           {@link ByteBuf} buf, List&lt;Object&gt; out) throws Exception {
  *
  *     out.add(buf.readBytes(buf.readInt()));
  *   }
