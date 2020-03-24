@@ -41,6 +41,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 final class PoolThreadCache {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PoolThreadCache.class);
+    private static final int INTEGER_SIZE_MINUS_ONE = Integer.SIZE - 1;
 
     final PoolArena<byte[]> heapArena;
     final PoolArena<ByteBuffer> directArena;
@@ -150,13 +151,9 @@ final class PoolThreadCache {
         }
     }
 
+    // val > 0
     private static int log2(int val) {
-        int res = 0;
-        while (val > 1) {
-            val >>= 1;
-            res++;
-        }
-        return res;
+        return INTEGER_SIZE_MINUS_ONE - Integer.numberOfLeadingZeros(val);
     }
 
     /**
@@ -322,6 +319,7 @@ final class PoolThreadCache {
 
     private MemoryRegionCache<?> cacheForNormal(PoolArena<?> area, int normCapacity) {
         if (area.isDirect()) {
+            // sizeClass == Normal => normCapacity >= pageSize => the shifted value > 0
             int idx = log2(normCapacity >> numShiftsNormalDirect);
             return cache(normalDirectCaches, idx);
         }
