@@ -71,11 +71,22 @@ public class DomainWildcardMappingBuilder<V> {
      *                 when the specified host name matches the specified input host name
      */
     public DomainWildcardMappingBuilder<V> add(String hostname, V output) {
-        map.put(ImmutableDomainWildcardMapping.normalize(checkNotNull(hostname, "hostname")),
+        map.put(normalizeHostName(hostname),
                 checkNotNull(output, "output"));
         return this;
     }
 
+    private String normalizeHostName(String hostname) {
+        checkNotNull(hostname, "hostname");
+        if (hostname.isEmpty() || hostname.charAt(0) == '.') {
+            throw new IllegalArgumentException("Hostname '" + hostname + "'not valid");
+        }
+        hostname = ImmutableDomainWildcardMapping.normalize(checkNotNull(hostname, "hostname"));
+        if (hostname.charAt(0) == '*') {
+            return hostname.substring(1);
+        }
+        return hostname;
+    }
     /**
      * Creates a new instance of an immutable {@link Mapping}.
      *
@@ -112,7 +123,7 @@ public class DomainWildcardMappingBuilder<V> {
                 // No exact match, let's try a wildcard match.
                 int idx = hostname.indexOf('.');
                 if (idx != -1) {
-                    value = map.get('*' + hostname.substring(idx));
+                    value = map.get(hostname.substring(idx));
                     if (value != null) {
                         return value;
                     }
@@ -129,7 +140,18 @@ public class DomainWildcardMappingBuilder<V> {
 
         @Override
         public String toString() {
-            return REPR_HEADER + defaultValue + REPR_MAP_OPENING + map.toString() + REPR_MAP_CLOSING;
+            StringBuilder sb = new StringBuilder();
+            sb.append(REPR_HEADER).append(defaultValue).append(REPR_MAP_OPENING).append('{');
+
+            for (Map.Entry<String, V> entry : map.entrySet()) {
+                String hostname = entry.getKey();
+                if (hostname.charAt(0) == '.') {
+                    hostname = '*' + hostname;
+                }
+                sb.append(hostname).append('=').append(entry.getValue()).append(", ");
+            }
+            sb.setLength(sb.length() - 2);
+            return sb.append('}').append(REPR_MAP_CLOSING).toString();
         }
     }
 }
