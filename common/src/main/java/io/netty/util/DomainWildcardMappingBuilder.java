@@ -83,6 +83,9 @@ public class DomainWildcardMappingBuilder<V> {
         }
         hostname = ImmutableDomainWildcardMapping.normalize(checkNotNull(hostname, "hostname"));
         if (hostname.charAt(0) == '*') {
+            if (hostname.charAt(1) != '.' || hostname.length() < 3) {
+                throw new IllegalArgumentException("Wildcard '" + hostname + "'not valid");
+            }
             return hostname.substring(1);
         }
         return hostname;
