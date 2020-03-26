@@ -1073,6 +1073,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        boolean handshakeFailed = handshakePromise.cause() != null;
+
         ClosedChannelException exception = new ClosedChannelException();
         // Make sure to release SSLEngine,
         // and notify the handshake future if the connection has been closed during handshake.
@@ -1081,7 +1083,18 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // Ensure we always notify the sslClosePromise as well
         notifyClosePromise(exception);
 
-        super.channelInactive(ctx);
+        try {
+            super.channelInactive(ctx);
+        } catch (DecoderException e) {
+            if (!handshakeFailed || !(e.getCause() instanceof SSLException)) {
+                // We only rethrow the exception if the handshake did not fail before channelInactive(...) was called
+                // as otherwise this may produce duplicated failures as super.channelInactive(...) will also call
+                // channelRead(...).
+                //
+                // See https://github.com/netty/netty/issues/10119
+                throw e;
+            }
+        }
     }
 
     @Override
