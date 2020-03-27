@@ -47,12 +47,15 @@ public class AbstractMemoryHttpDataTest {
         String contentStr = "foo_test";
         ByteBuf buf = Unpooled.wrappedBuffer(contentStr.getBytes(UTF_8));
         buf.markReaderIndex();
-        try (ByteBufInputStream is = new ByteBufInputStream(buf)) {
+        ByteBufInputStream is = new ByteBufInputStream(buf);
+        try {
             test.setContent(is);
             assertFalse(buf.isReadable());
             assertEquals(test.getString(UTF_8), contentStr);
             buf.resetReaderIndex();
             assertTrue(ByteBufUtil.equals(buf, test.getByteBuf()));
+        } finally {
+            is.close();
         }
 
         Random random = new SecureRandom();
