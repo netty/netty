@@ -35,6 +35,8 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
     private final int maxUsage;
     private final int maxCapacity;
     private PoolChunk<T> head;
+    private final int freeMinThreshold;
+    private final int freeMaxThreshold;
 
     // This is only update once when create the linked like list of PoolChunkList in PoolArena constructor.
     private PoolChunkList<T> prevList;
@@ -49,6 +51,8 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
         this.minUsage = minUsage;
         this.maxUsage = maxUsage;
         maxCapacity = calculateMaxCapacity(minUsage, chunkSize);
+        freeMinThreshold = (maxUsage == 100) ? 0 : (int) (chunkSize * (100L - maxUsage + 1) / 100L);
+        freeMaxThreshold = (minUsage == 100) ? 0 : (int) (chunkSize * (100L - minUsage + 1) / 100L - 1);
     }
 
     /**
@@ -85,7 +89,7 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
 
         for (PoolChunk<T> cur = head; cur != null; cur = cur.next) {
             if (cur.allocate(buf, reqCapacity, normCapacity)) {
-                if (cur.usage() >= maxUsage) {
+                if (cur.freeBytes() <= freeMinThreshold) {
                     remove(cur);
                     nextList.add(cur);
                 }
@@ -97,7 +101,7 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
 
     boolean free(PoolChunk<T> chunk, long handle, ByteBuffer nioBuffer) {
         chunk.free(handle, nioBuffer);
-        if (chunk.usage() < minUsage) {
+        if (chunk.freeBytes() > freeMaxThreshold) {
             remove(chunk);
             // Move the PoolChunk down the PoolChunkList linked-list.
             return move0(chunk);
@@ -108,7 +112,7 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
     private boolean move(PoolChunk<T> chunk) {
         assert chunk.usage() < maxUsage;
 
-        if (chunk.usage() < minUsage) {
+        if (chunk.freeBytes() > freeMaxThreshold) {
             // Move the PoolChunk down the PoolChunkList linked-list.
             return move0(chunk);
         }
@@ -133,7 +137,7 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
     }
 
     void add(PoolChunk<T> chunk) {
-        if (chunk.usage() >= maxUsage) {
+        if (chunk.freeBytes() <= freeMinThreshold) {
             nextList.add(chunk);
             return;
         }
