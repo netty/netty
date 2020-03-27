@@ -16,6 +16,9 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 
 import org.junit.Test;
@@ -39,6 +42,19 @@ public class AbstractMemoryHttpDataTest {
      */
     @Test
     public void testSetContentFromStream() throws Exception {
+        // definedSize=0
+        TestHttpData test = new TestHttpData("test", UTF_8, 0);
+        String contentStr = "foo_test";
+        ByteBuf buf = Unpooled.wrappedBuffer(contentStr.getBytes(UTF_8));
+        buf.markReaderIndex();
+        try (ByteBufInputStream is = new ByteBufInputStream(buf)) {
+            test.setContent(is);
+            assertFalse(buf.isReadable());
+            assertEquals(test.getString(UTF_8), contentStr);
+            buf.resetReaderIndex();
+            assertTrue(ByteBufUtil.equals(buf, test.getByteBuf()));
+        }
+
         Random random = new SecureRandom();
 
         for (int i = 0; i < 20; i++) {
@@ -59,36 +75,7 @@ public class AbstractMemoryHttpDataTest {
             assertEquals(0, buffer.readerIndex());
             assertEquals(bytes.length, buffer.writerIndex());
             assertArrayEquals(bytes, Arrays.copyOf(buffer.array(), bytes.length));
-        }
-    }
-
-    @Test
-    public void testSetContentFromStreamExceptionally() throws Exception {
-        TestHttpData data = new TestHttpData("test", UTF_8, 0); //definedSize=0
-        data.setMaxSize(10);
-        byte[] bytes = new byte[16];
-        UnpooledByteBufAllocator alloc = UnpooledByteBufAllocator.DEFAULT;
-        long usedHeap = alloc.metric().usedHeapMemory();
-        long usedDirect = alloc.metric().usedDirectMemory();
-        try {
-            data.setContent(new ByteArrayInputStream(bytes));
-            fail("shouldn't reach here!");
-        } catch (IOException e) {
-            //actual size of bytes over maxSize
-            assertEquals(usedHeap, alloc.metric().usedHeapMemory());
-            assertEquals(usedDirect, alloc.metric().usedDirectMemory());
-        }
-
-        data = new TestHttpData("test", UTF_8, 10); //definedSize=10
-        usedHeap = alloc.metric().usedHeapMemory();
-        usedDirect = alloc.metric().usedDirectMemory();
-        try {
-            data.setContent(new ByteArrayInputStream(bytes));
-            fail("shouldn't reach here!");
-        } catch (IOException e) {
-            //actual size of bytes over definedSize
-            assertEquals(usedHeap, alloc.metric().usedHeapMemory());
-            assertEquals(usedDirect, alloc.metric().usedDirectMemory());
+            assertArrayEquals(bytes, data.get());
         }
     }
 
