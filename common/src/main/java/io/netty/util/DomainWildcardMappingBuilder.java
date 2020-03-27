@@ -15,7 +15,6 @@
  */
 package io.netty.util;
 
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -109,7 +108,7 @@ public class DomainWildcardMappingBuilder<V> {
 
         ImmutableDomainWildcardMapping(V defaultValue, Map<String, V> map) {
             this.defaultValue = defaultValue;
-            this.map = Collections.unmodifiableMap(map);
+            this.map = new LinkedHashMap<String, V>(map);
         }
 
         @Override
