@@ -95,7 +95,7 @@ public class DomainWildcardMappingBuilder<V> {
      * @return new {@link Mapping} instance
      */
     public Mapping<String, V> build() {
-        return new ImmutableDomainWildcardMapping<V>(defaultValue, new LinkedHashMap<String, V>(map));
+        return new ImmutableDomainWildcardMapping<V>(defaultValue, map);
     }
 
     private static final class ImmutableDomainWildcardMapping<V> implements Mapping<String, V> {
