@@ -24,6 +24,8 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
+import java.util.Arrays;
+
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
@@ -67,15 +69,23 @@ public class SearchProcessorTest {
         assertEquals(1, haystack.forEachByte(factory("ab").newSearchProcessor()));
         assertEquals(2, haystack.forEachByte(factory("abc").newSearchProcessor()));
         assertEquals(5, haystack.forEachByte(factory("abc☺").newSearchProcessor()));
+        assertEquals(-1, haystack.forEachByte(factory("abc☺☺").newSearchProcessor()));
+        assertEquals(-1, haystack.forEachByte(factory("abc☺x").newSearchProcessor()));
 
         assertEquals(1, haystack.forEachByte(factory("b").newSearchProcessor()));
         assertEquals(2, haystack.forEachByte(factory("bc").newSearchProcessor()));
         assertEquals(5, haystack.forEachByte(factory("bc☺").newSearchProcessor()));
+        assertEquals(-1, haystack.forEachByte(factory("bc☺☺").newSearchProcessor()));
+        assertEquals(-1, haystack.forEachByte(factory("bc☺x").newSearchProcessor()));
 
         assertEquals(2, haystack.forEachByte(factory("c").newSearchProcessor()));
         assertEquals(5, haystack.forEachByte(factory("c☺").newSearchProcessor()));
+        assertEquals(-1, haystack.forEachByte(factory("c☺☺").newSearchProcessor()));
+        assertEquals(-1, haystack.forEachByte(factory("c☺x").newSearchProcessor()));
 
         assertEquals(5, haystack.forEachByte(factory("☺").newSearchProcessor()));
+        assertEquals(-1, haystack.forEachByte(factory("☺☺").newSearchProcessor()));
+        assertEquals(-1, haystack.forEachByte(factory("☺x").newSearchProcessor()));
 
         assertEquals(-1, haystack.forEachByte(factory("z").newSearchProcessor()));
         assertEquals(-1, haystack.forEachByte(factory("aa").newSearchProcessor()));
@@ -113,8 +123,52 @@ public class SearchProcessorTest {
         haystack.release();
     }
 
+    @Test
+    public void testLongInputs() {
+        final int haystackLen = 1024;
+        final int needleLen = 64;
+
+        final byte[] haystackBytes = new byte[haystackLen];
+        haystackBytes[haystackLen - 1] = 1;
+        final ByteBuf haystack = Unpooled.copiedBuffer(haystackBytes); // 00000...00001
+
+        final byte[] needleBytes = new byte[needleLen]; // 000...000
+        assertEquals(needleLen - 1, haystack.forEachByte(factory(needleBytes).newSearchProcessor()));
+
+        needleBytes[needleLen - 1] = 1; // 000...001
+        assertEquals(haystackLen - 1, haystack.forEachByte(factory(needleBytes).newSearchProcessor()));
+
+        needleBytes[needleLen - 1] = 2; // 000...002
+        assertEquals(-1, haystack.forEachByte(factory(needleBytes).newSearchProcessor()));
+
+        needleBytes[needleLen - 1] = 0;
+        needleBytes[0] = 1; // 100...000
+        assertEquals(-1, haystack.forEachByte(factory(needleBytes).newSearchProcessor()));
+    }
+
+    @Test
+    public void testUniqueLen64Substrings() {
+        final byte[] haystackBytes = new byte[32 * 65]; // 1, 2, 2, 3, 3, 3, 4, 4, 4, 4, ...
+        int pos = 0;
+        for (int i = 1; i <= 64; i++) {
+            for (int j = 0; j < i; j++) {
+                haystackBytes[pos++] = (byte) i;
+            }
+        }
+        final ByteBuf haystack = Unpooled.copiedBuffer(haystackBytes);
+
+        for (int start = 0; start < haystackBytes.length - 64; start++) {
+            final byte[] needle = Arrays.copyOfRange(haystackBytes, start, start + 64);
+            assertEquals(start + 63, haystack.forEachByte(factory(needle).newSearchProcessor()));
+        }
+    }
+
+    private SearchProcessorFactory factory(byte[] needle) {
+        return algorithm.newFactory(needle);
+    }
+
     private SearchProcessorFactory factory(String needle) {
-        return algorithm.newFactory(needle.getBytes(CharsetUtil.UTF_8));
+        return factory(needle.getBytes(CharsetUtil.UTF_8));
     }
 
 }
