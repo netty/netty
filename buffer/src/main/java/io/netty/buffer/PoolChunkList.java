@@ -89,7 +89,7 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
 
         for (PoolChunk<T> cur = head; cur != null; cur = cur.next) {
             if (cur.allocate(buf, reqCapacity, normCapacity)) {
-                if (cur.freeBytes() <= freeMinThreshold) {
+                if (cur.freeBytes <= freeMinThreshold) {
                     remove(cur);
                     nextList.add(cur);
                 }
@@ -101,7 +101,7 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
 
     boolean free(PoolChunk<T> chunk, long handle, ByteBuffer nioBuffer) {
         chunk.free(handle, nioBuffer);
-        if (chunk.freeBytes() > freeMaxThreshold) {
+        if (chunk.freeBytes > freeMaxThreshold) {
             remove(chunk);
             // Move the PoolChunk down the PoolChunkList linked-list.
             return move0(chunk);
@@ -112,7 +112,7 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
     private boolean move(PoolChunk<T> chunk) {
         assert chunk.usage() < maxUsage;
 
-        if (chunk.freeBytes() > freeMaxThreshold) {
+        if (chunk.freeBytes > freeMaxThreshold) {
             // Move the PoolChunk down the PoolChunkList linked-list.
             return move0(chunk);
         }
@@ -137,7 +137,7 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
     }
 
     void add(PoolChunk<T> chunk) {
-        if (chunk.freeBytes() <= freeMinThreshold) {
+        if (chunk.freeBytes <= freeMinThreshold) {
             nextList.add(chunk);
             return;
         }
