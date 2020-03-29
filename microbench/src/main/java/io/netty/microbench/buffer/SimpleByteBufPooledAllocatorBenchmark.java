@@ -26,6 +26,7 @@ import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.infra.Blackhole;
 
 import java.util.concurrent.TimeUnit;
 
@@ -41,10 +42,16 @@ public class SimpleByteBufPooledAllocatorBenchmark extends AbstractMicrobenchmar
     @Param({"123", "1234", "12345", "123456", "1234567"})
     public int size;
 
+    @Param({"0", "5", "10", "100"})
+    public long tokens;
+
     @Benchmark
     public boolean getAndRelease() {
         ByteBufAllocator alloc = PooledByteBufAllocator.DEFAULT;
         ByteBuf buf = alloc.directBuffer(size);
+        if (tokens > 0) {
+            Blackhole.consumeCPU(tokens);
+        }
         return buf.release();
     }
 }
