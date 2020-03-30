@@ -155,17 +155,22 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     public List<V> getAll(K name) {
         requireNonNull(name, "name");
 
-        LinkedList<V> values = new LinkedList<>();
-
         int h = hashingStrategy.hashCode(name);
         int i = index(h);
         HeaderEntry<K, V> e = entries[i];
-        while (e != null) {
+
+        if (e == null) {
+            return Collections.emptyList();
+        }
+
+        LinkedList<V> values = new LinkedList<>();
+
+         do {
             if (e.hash == h && hashingStrategy.equals(name, e.key)) {
                 values.addFirst(e.getValue());
             }
             e = e.next;
-        }
+        } while (e != null);
         return values;
     }
 
