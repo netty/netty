@@ -38,6 +38,10 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     public static final String postfix = ".tmp";
 
+    private final String baseDir;
+
+    private final boolean deleteOnExit;
+
     private String filename;
 
     private String contentType;
@@ -45,11 +49,19 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     private String contentTransferEncoding;
 
     public DiskFileUpload(String name, String filename, String contentType,
-            String contentTransferEncoding, Charset charset, long size) {
+            String contentTransferEncoding, Charset charset, long size, String baseDir, boolean deleteOnExit) {
         super(name, charset, size);
         setFilename(filename);
         setContentType(contentType);
         setContentTransferEncoding(contentTransferEncoding);
+        this.baseDir = baseDir == null ? baseDirectory : baseDir;
+        this.deleteOnExit = deleteOnExit;
+    }
+
+    public DiskFileUpload(String name, String filename, String contentType,
+            String contentTransferEncoding, Charset charset, long size) {
+        this(name, filename, contentType, contentTransferEncoding,
+                charset, size, baseDirectory, deleteOnExitTemporaryFile);
     }
 
     @Override
@@ -135,12 +147,12 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
 
     @Override
     protected boolean deleteOnExit() {
-        return deleteOnExitTemporaryFile;
+        return deleteOnExit;
     }
 
     @Override
     protected String getBaseDirectory() {
-        return baseDirectory;
+        return baseDir;
     }
 
     @Override
@@ -193,7 +205,8 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
     @Override
     public FileUpload replace(ByteBuf content) {
         DiskFileUpload upload = new DiskFileUpload(
-                getName(), getFilename(), getContentType(), getContentTransferEncoding(), getCharset(), size);
+                getName(), getFilename(), getContentType(), getContentTransferEncoding(), getCharset(), size,
+                baseDir, deleteOnExit);
         if (content != null) {
             try {
                 upload.setContent(content);
