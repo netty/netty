@@ -16,9 +16,15 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
+
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.security.SecureRandom;
 import java.util.Arrays;
@@ -36,6 +42,22 @@ public class AbstractMemoryHttpDataTest {
      */
     @Test
     public void testSetContentFromStream() throws Exception {
+        // definedSize=0
+        TestHttpData test = new TestHttpData("test", UTF_8, 0);
+        String contentStr = "foo_test";
+        ByteBuf buf = Unpooled.wrappedBuffer(contentStr.getBytes(UTF_8));
+        buf.markReaderIndex();
+        ByteBufInputStream is = new ByteBufInputStream(buf);
+        try {
+            test.setContent(is);
+            assertFalse(buf.isReadable());
+            assertEquals(test.getString(UTF_8), contentStr);
+            buf.resetReaderIndex();
+            assertTrue(ByteBufUtil.equals(buf, test.getByteBuf()));
+        } finally {
+            is.close();
+        }
+
         Random random = new SecureRandom();
 
         for (int i = 0; i < 20; i++) {
@@ -56,6 +78,7 @@ public class AbstractMemoryHttpDataTest {
             assertEquals(0, buffer.readerIndex());
             assertEquals(bytes.length, buffer.writerIndex());
             assertArrayEquals(bytes, Arrays.copyOf(buffer.array(), bytes.length));
+            assertArrayEquals(bytes, data.get());
         }
     }
 
