@@ -65,18 +65,24 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
     @Override
     public void setContent(InputStream inputStream) throws IOException {
         requireNonNull(inputStream, "inputStream");
-        ByteBuf buffer = buffer();
         byte[] bytes = new byte[4096 * 4];
-        int read = inputStream.read(bytes);
+        ByteBuf buffer = buffer();
         int written = 0;
-        while (read > 0) {
-            buffer.writeBytes(bytes, 0, read);
-            written += read;
-            checkSize(written);
-            read = inputStream.read(bytes);
+        try {
+            int read = inputStream.read(bytes);
+            while (read > 0) {
+                buffer.writeBytes(bytes, 0, read);
+                written += read;
+                checkSize(written);
+                read = inputStream.read(bytes);
+            }
+        } catch (IOException e) {
+            buffer.release();
+            throw e;
         }
         size = written;
         if (definedSize > 0 && definedSize < size) {
+            buffer.release();
             throw new IOException("Out of size: " + size + " > " + definedSize);
         }
         if (byteBuf != null) {
