@@ -2978,7 +2978,12 @@ public abstract class SSLEngineTest {
             assertTrue(serverSession.getPacketBufferSize() > 0);
 
             assertNotNull(clientSession.getSessionContext());
-            assertNotNull(serverSession.getSessionContext());
+
+            // Workaround for possible JDK 14 regression.
+            // See http://mail.openjdk.java.net/pipermail/security-dev/2020-March/021488.html
+            if (PlatformDependent.javaVersion() < 14) {
+                assertNotNull(serverSession.getSessionContext());
+            }
 
             Object value = new Object();
 
