@@ -78,7 +78,7 @@ public class DomainWildcardMappingBuilder<V> {
     private String normalizeHostName(String hostname) {
         checkNotNull(hostname, "hostname");
         if (hostname.isEmpty() || hostname.charAt(0) == '.') {
-            throw new IllegalArgumentException("Hostname '" + hostname + "'not valid");
+            throw new IllegalArgumentException("Hostname '" + hostname + "' not valid");
         }
         hostname = ImmutableDomainWildcardMapping.normalize(checkNotNull(hostname, "hostname"));
         if (hostname.charAt(0) == '*') {
