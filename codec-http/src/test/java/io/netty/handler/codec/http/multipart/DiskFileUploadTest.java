@@ -18,12 +18,28 @@ package io.netty.handler.codec.http.multipart;
 import io.netty.buffer.Unpooled;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class DiskFileUploadTest {
+    @Test
+    public void testSpecificCustomBaseDir() throws IOException {
+        File baseDir = new File("target/DiskFileUploadTest/testSpecificCustomBaseDir");
+        baseDir.mkdirs(); // we don't need to clean it since it is in volatile files anyway
+        DiskFileUpload f =
+                new DiskFileUpload("d1", "d1", "application/json", null, null, 100,
+                        baseDir.getAbsolutePath(), false);
+
+        f.setContent(Unpooled.EMPTY_BUFFER);
+
+        assertTrue(f.getFile().getAbsolutePath().startsWith(baseDir.getAbsolutePath()));
+        assertTrue(f.getFile().exists());
+        assertEquals(0, f.getFile().length());
+        f.delete();
+    }
 
     @Test
     public final void testDiskFileUploadEquals() {
