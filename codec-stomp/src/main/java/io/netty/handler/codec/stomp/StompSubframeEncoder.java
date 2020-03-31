@@ -34,9 +34,14 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
         if (msg instanceof StompFrame) {
             StompFrame frame = (StompFrame) msg;
             ByteBuf frameBuf = encodeFrame(frame, ctx);
-            out.add(frameBuf);
-            ByteBuf contentBuf = encodeContent(frame, ctx);
-            out.add(contentBuf);
+            if (frame.content().isReadable()) {
+                out.add(frameBuf);
+                ByteBuf contentBuf = encodeContent(frame, ctx);
+                out.add(contentBuf);
+            } else {
+                frameBuf.writeByte(StompConstants.NUL);
+                out.add(frameBuf);
+            }
         } else if (msg instanceof StompHeadersSubframe) {
             StompHeadersSubframe frame = (StompHeadersSubframe) msg;
             ByteBuf buf = encodeFrame(frame, ctx);

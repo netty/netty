@@ -83,4 +83,18 @@ public class StompSubframeEncoderTest {
         assertTrue(fullFrame.release());
     }
 
+    @Test
+    public void testOneBufferForStompFrameWithEmptyContent() {
+        StompFrame connectedFrame = new DefaultStompFrame(StompCommand.CONNECTED);
+        connectedFrame.headers().set(StompHeaders.VERSION, "1.2");
+
+        assertTrue(channel.writeOutbound(connectedFrame));
+
+        ByteBuf stompBuffer = channel.readOutbound();
+
+        assertNotNull(stompBuffer);
+        assertNull(channel.readOutbound());
+        assertEquals("CONNECTED\nversion:1.2\n\n\0", stompBuffer.toString(CharsetUtil.UTF_8));
+        assertTrue(stompBuffer.release());
+    }
 }
