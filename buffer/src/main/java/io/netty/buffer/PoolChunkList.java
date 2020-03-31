@@ -51,8 +51,24 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
         this.minUsage = minUsage;
         this.maxUsage = maxUsage;
         maxCapacity = calculateMaxCapacity(minUsage, chunkSize);
-        freeMinThreshold = (maxUsage == 100) ? 0 : (int) (chunkSize * (100L - maxUsage + 1) / 100L);
-        freeMaxThreshold = (minUsage == 100) ? 0 : (int) (chunkSize * (100L - minUsage + 1) / 100L - 1);
+
+        // the thresholds are aligned with PoolChunk.usage() logic:
+        // 1) basic logic: usage() = 100 - freeBytes * 100L / chunkSize
+        //    so, for example: (usage() >= maxUsage) condition can be transformed in the following way:
+        //      100 - freeBytes * 100L / chunkSize >= maxUsage
+        //      freeBytes <= chunkSize * (100 - maxUsage) / 100
+        //      let freeMinThreshold = chunkSize * (100 - maxUsage) / 100, then freeBytes <= freeMinThreshold
+        //
+        //  2) usage() returns an int value and has a floor rounding during a calculation,
+        //     to be aligned absolute thresholds should be shifted for "the rounding step":
+        //       freeBytes * 100 / chunkSize < 1
+        //       the condition can be converted to: freeBytes < 1 * chunkSize / 100
+        //     this is why we have + 0.99999999 shifts. A example why just +1 shift cannot be used:
+        //       freeBytes = 16777216 == freeMaxThreshold: 16777216, usage = 0 < minUsage: 1, chunkSize: 16777216
+        //     At the same time we want to have zero thresholds in case of (maxUsage == 100) and (minUsage == 100).
+        //
+        freeMinThreshold = (maxUsage == 100) ? 0 : (int) (chunkSize * (100.0 - maxUsage + 0.99999999) / 100L);
+        freeMaxThreshold = (minUsage == 100) ? 0 : (int) (chunkSize * (100.0 - minUsage + 0.99999999) / 100L);
     }
 
     /**

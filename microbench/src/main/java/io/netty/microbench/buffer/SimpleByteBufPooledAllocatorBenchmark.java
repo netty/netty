@@ -21,10 +21,12 @@ import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
 
@@ -45,10 +47,28 @@ public class SimpleByteBufPooledAllocatorBenchmark extends AbstractMicrobenchmar
     @Param({"0", "5", "10", "100"})
     public long tokens;
 
+    @Param({"false", "true"})
+    public boolean useThreadCache;
+
+    public ByteBufAllocator allocator;
+
+    @Setup(Level.Trial)
+    public void doSetup() {
+        allocator = new PooledByteBufAllocator(
+                PooledByteBufAllocator.defaultPreferDirect(),
+                PooledByteBufAllocator.defaultNumHeapArena(),
+                PooledByteBufAllocator.defaultNumDirectArena(),
+                PooledByteBufAllocator.defaultPageSize(),
+                PooledByteBufAllocator.defaultMaxOrder(),
+                PooledByteBufAllocator.defaultTinyCacheSize(),
+                PooledByteBufAllocator.defaultSmallCacheSize(),
+                PooledByteBufAllocator.defaultNormalCacheSize(),
+                useThreadCache);
+    }
+
     @Benchmark
     public boolean getAndRelease() {
-        ByteBufAllocator alloc = PooledByteBufAllocator.DEFAULT;
-        ByteBuf buf = alloc.directBuffer(size);
+        ByteBuf buf = allocator.directBuffer(size);
         if (tokens > 0) {
             Blackhole.consumeCPU(tokens);
         }
