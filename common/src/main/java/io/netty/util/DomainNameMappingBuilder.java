@@ -27,7 +27,9 @@ import static java.util.Objects.requireNonNull;
  * Builder for immutable {@link DomainNameMapping} instances.
  *
  * @param <V> concrete type of value objects
+ * @deprecated Use {@link DomainWildcardMappingBuilder}
  */
+@Deprecated
 public final class DomainNameMappingBuilder<V> {
 
     private final V defaultValue;

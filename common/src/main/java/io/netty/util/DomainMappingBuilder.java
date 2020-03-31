@@ -20,7 +20,7 @@ package io.netty.util;
  * Builder for immutable {@link DomainNameMapping} instances.
  *
  * @param <V> concrete type of value objects
- * @deprecated Use {@link DomainNameMappingBuilder} instead.
+ * @deprecated Use {@link DomainWildcardMappingBuilder} instead.
  */
 @Deprecated
 public final class DomainMappingBuilder<V> {
