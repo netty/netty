@@ -132,7 +132,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     // This may be null if the PoolChunk is unpooled as pooling the ByteBuffer instances does not make any sense here.
     private final Deque<ByteBuffer> cachedNioBuffers;
 
-    private int freeBytes;
+    int freeBytes;
 
     PoolChunkList<T> parent;
     PoolChunk<T> prev;
