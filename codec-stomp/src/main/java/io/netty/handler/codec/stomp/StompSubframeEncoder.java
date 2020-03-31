@@ -17,6 +17,7 @@ package io.netty.handler.codec.stomp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
@@ -34,9 +35,14 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
         if (msg instanceof StompFrame) {
             StompFrame frame = (StompFrame) msg;
             ByteBuf frameBuf = encodeFrame(frame, ctx);
-            out.add(frameBuf);
-            ByteBuf contentBuf = encodeContent(frame, ctx);
-            out.add(contentBuf);
+            if (frame.content().isReadable()) {
+                out.add(frameBuf);
+                ByteBuf contentBuf = encodeContent(frame, ctx);
+                out.add(contentBuf);
+            } else {
+                frameBuf.writeByte(StompConstants.NUL);
+                out.add(frameBuf);
+            }
         } else if (msg instanceof StompHeadersSubframe) {
             StompHeadersSubframe frame = (StompHeadersSubframe) msg;
             ByteBuf buf = encodeFrame(frame, ctx);
