@@ -188,18 +188,22 @@ public class DelimiterBasedFrameDecoder extends ByteToMessageDecoder {
 
     /** Returns true if the delimiters are "\n" and "\r\n".  */
     private static boolean isLineBased(final ByteBuf[] delimiters) {
-        if (delimiters.length != 2) {
-            return false;
+        if(delimiters.length == 1){
+            ByteBuf a = delimiters[0];
+            return a.capacity() == 1 && a.getByte(0) == '\n';
+        }else if(delimiters.length == 2){
+            ByteBuf a = delimiters[0];
+            ByteBuf b = delimiters[1];
+            if (a.capacity() < b.capacity()) {
+                a = delimiters[1];
+                b = delimiters[0];
+            }
+            return a.capacity() == 2 && b.capacity() == 1
+                    && a.getByte(0) == '\r' && a.getByte(1) == '\n'
+                    && b.getByte(0) == '\n';
         }
-        ByteBuf a = delimiters[0];
-        ByteBuf b = delimiters[1];
-        if (a.capacity() < b.capacity()) {
-            a = delimiters[1];
-            b = delimiters[0];
-        }
-        return a.capacity() == 2 && b.capacity() == 1
-                && a.getByte(0) == '\r' && a.getByte(1) == '\n'
-                && b.getByte(0) == '\n';
+        return false;
+
     }
 
     /**
