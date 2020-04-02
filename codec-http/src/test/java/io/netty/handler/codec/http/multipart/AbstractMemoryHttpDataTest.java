@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty.util.internal.ThreadLocalRandom;
+import io.netty.util.internal.PlatformDependent;
 
 import org.junit.Test;
 
@@ -41,23 +41,28 @@ public class AbstractMemoryHttpDataTest {
     @Test
     public void testSetContentFromFile() throws Exception {
         TestHttpData test = new TestHttpData("test", UTF_8, 0);
-        File tmpFile = File.createTempFile(UUID.randomUUID().toString(), ".tmp");
-        tmpFile.deleteOnExit();
-        FileOutputStream fos = new FileOutputStream(tmpFile);
-        byte[] bytes = new byte[4096];
-        ThreadLocalRandom.current().nextBytes(bytes);
         try {
-            fos.write(bytes);
-            fos.flush();
+            File tmpFile = File.createTempFile(UUID.randomUUID().toString(), ".tmp");
+            tmpFile.deleteOnExit();
+            FileOutputStream fos = new FileOutputStream(tmpFile);
+            byte[] bytes = new byte[4096];
+            PlatformDependent.threadLocalRandom().nextBytes(bytes);
+            try {
+                fos.write(bytes);
+                fos.flush();
+            } finally {
+                fos.close();
+            }
+            test.setContent(tmpFile);
+            ByteBuf buf = test.getByteBuf();
+            assertEquals(buf.readerIndex(), 0);
+            assertEquals(buf.writerIndex(), bytes.length);
+            assertArrayEquals(bytes, test.get());
+            assertArrayEquals(bytes, ByteBufUtil.getBytes(buf));
         } finally {
-            fos.close();
+            //release the ByteBuf
+            test.delete();
         }
-        test.setContent(tmpFile);
-        ByteBuf buf = test.getByteBuf();
-        assertEquals(buf.readerIndex(), 0);
-        assertEquals(buf.writerIndex(), bytes.length);
-        assertArrayEquals(bytes, test.get());
-        assertArrayEquals(bytes, ByteBufUtil.getBytes(buf));
     }
     /**
      * Provide content into HTTP data with input stream.
