@@ -2979,8 +2979,8 @@ public abstract class SSLEngineTest {
 
             assertNotNull(clientSession.getSessionContext());
 
-            // Workaround for possible JDK 14 regression.
-            // See http://mail.openjdk.java.net/pipermail/security-dev/2020-March/021488.html
+            // Workaround for JDK 14 regression.
+            // See https://bugs.openjdk.java.net/browse/JDK-8242008
             if (PlatformDependent.javaVersion() < 14) {
                 assertNotNull(serverSession.getSessionContext());
             }
