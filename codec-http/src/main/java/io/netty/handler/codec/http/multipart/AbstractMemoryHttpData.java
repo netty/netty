@@ -132,15 +132,22 @@ public abstract class AbstractMemoryHttpData extends AbstractHttpData {
         }
         checkSize(newsize);
         RandomAccessFile accessFile = new RandomAccessFile(file, "r");
-        FileChannel fileChannel = accessFile.getChannel();
-        byte[] array = new byte[(int) newsize];
-        ByteBuffer byteBuffer = ByteBuffer.wrap(array);
-        int read = 0;
-        while (read < newsize) {
-            read += fileChannel.read(byteBuffer);
+        ByteBuffer byteBuffer;
+        try {
+            FileChannel fileChannel = accessFile.getChannel();
+            try {
+                byte[] array = new byte[(int) newsize];
+                byteBuffer = ByteBuffer.wrap(array);
+                int read = 0;
+                while (read < newsize) {
+                    read += fileChannel.read(byteBuffer);
+                }
+            } finally {
+                fileChannel.close();
+            }
+        } finally {
+            accessFile.close();
         }
-        fileChannel.close();
-        accessFile.close();
         byteBuffer.flip();
         if (byteBuf != null) {
             byteBuf.release();
