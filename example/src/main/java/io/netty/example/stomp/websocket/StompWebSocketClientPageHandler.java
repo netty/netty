@@ -76,7 +76,6 @@ public final class StompWebSocketClientPageHandler extends SimpleChannelInboundH
     private static boolean sendResource(FullHttpRequest request, ChannelHandlerContext ctx) {
         if (request.uri().isEmpty() || !request.uri().startsWith("/")) {
             return false;
-
         }
 
         String requestResource = request.uri().substring(1);
