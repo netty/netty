@@ -85,8 +85,9 @@ public class StompChatHandler extends SimpleChannelInboundHandler<StompFrame> {
         Set<StompSubscription> subscriptions = chatDestinations.get(destination);
         if (subscriptions == null) {
             subscriptions = new HashSet<StompSubscription>();
-            if (chatDestinations.putIfAbsent(destination, subscriptions) != null) {
-                subscriptions = chatDestinations.get(destination);
+            Set<StompSubscription> previousSubscriptions = chatDestinations.putIfAbsent(destination, subscriptions);
+            if (previousSubscriptions != null) {
+                subscriptions = previousSubscriptions;
             }
         }
 
@@ -185,7 +186,14 @@ public class StompChatHandler extends SimpleChannelInboundHandler<StompFrame> {
         String id = UUID.randomUUID().toString();
         messageFrame.headers()
                     .set(MESSAGE_ID, id)
-                    .set(SUBSCRIPTION, subscription.id());
+                    .set(SUBSCRIPTION, subscription.id())
+                    .set(CONTENT_LENGTH, Integer.toString(messageFrame.content().readableBytes()));
+
+        CharSequence contentType = sendFrame.headers().get(CONTENT_TYPE);
+        if (contentType != null) {
+            messageFrame.headers().set(CONTENT_TYPE, contentType);
+        }
+
         return messageFrame;
     }
 }

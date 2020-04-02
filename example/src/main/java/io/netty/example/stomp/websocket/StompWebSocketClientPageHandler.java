@@ -31,6 +31,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.URL;
@@ -56,6 +57,12 @@ public final class StompWebSocketClientPageHandler extends SimpleChannelInboundH
             return;
         }
 
+        if (request.decoderResult().isFailure()) {
+            FullHttpResponse badRequest = new DefaultFullHttpResponse(request.protocolVersion(), BAD_REQUEST);
+            sendResponse(badRequest, ctx, true);
+            return;
+        }
+
         if (!sendResource(request, ctx)) {
             FullHttpResponse notFound = new DefaultFullHttpResponse(request.protocolVersion(), NOT_FOUND);
             notFound.headers().set(CONTENT_TYPE, TEXT_PLAIN);
@@ -67,6 +74,11 @@ public final class StompWebSocketClientPageHandler extends SimpleChannelInboundH
     }
 
     private static boolean sendResource(FullHttpRequest request, ChannelHandlerContext ctx) {
+        if (request.uri().isEmpty() || !request.uri().startsWith("/")) {
+            return false;
+
+        }
+
         String requestResource = request.uri().substring(1);
         if (requestResource.isEmpty()) {
             requestResource = "index.html";
@@ -82,14 +94,17 @@ public final class StompWebSocketClientPageHandler extends SimpleChannelInboundH
         try {
             raf = new RandomAccessFile(resourceUrl.getFile(), "r");
             fileLength = raf.length();
+        } catch (FileNotFoundException fne) {
+            System.out.println("File not found " + fne.getMessage());
+            return false;
         } catch (IOException io) {
-            System.out.println("File not found " + io.getMessage());
+            System.out.println("Cannot read file length " + io.getMessage());
             return false;
         } finally {
             if (fileLength < 0 && raf != null) {
                 try {
                     raf.close();
-                } catch (Exception io) {
+                } catch (IOException io) {
                     // Nothing to do
                 }
             }
@@ -109,7 +124,7 @@ public final class StompWebSocketClientPageHandler extends SimpleChannelInboundH
 
         response.headers().set(CONTENT_TYPE, contentType);
         sendResponse(response, ctx, false);
-        ctx.write(new DefaultFileRegion(raf.getChannel(), 0, fileLength), ctx.voidPromise());
+        ctx.write(new DefaultFileRegion(raf.getChannel(), 0, fileLength));
         ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
         return true;
     }

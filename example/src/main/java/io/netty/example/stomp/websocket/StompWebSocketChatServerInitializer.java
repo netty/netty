@@ -39,6 +39,6 @@ public class StompWebSocketChatServerInitializer extends ChannelInitializer<Sock
                .addLast(new HttpObjectAggregator(65536))
                .addLast(StompWebSocketClientPageHandler.INSTANCE)
                .addLast(new WebSocketServerProtocolHandler(chatPath, StompVersion.SUB_PROTOCOLS))
-               .addLast("stompWebSocketProtocolCodec", stompWebSocketProtocolCodec);
+               .addLast(stompWebSocketProtocolCodec);
     }
 }

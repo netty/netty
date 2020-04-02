@@ -39,12 +39,11 @@ public class StompWebSocketProtocolCodec extends MessageToMessageCodec<WebSocket
         if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
             StompVersion stompVersion = StompVersion.findBySubProtocol(((HandshakeComplete) evt).selectedSubprotocol());
             ctx.channel().attr(StompVersion.CHANNEL_ATTRIBUTE_KEY).set(stompVersion);
-            String ctxName = ctx.name();
             ctx.pipeline()
-               .addAfter(ctxName, "stompChatHandler", stompChatHandler)
-               .addAfter(ctxName, "stompAggregator", new StompSubframeAggregator(65536))
-               .addAfter(ctxName, "stompEncoder", new StompSubframeEncoder())
-               .addAfter(ctxName, "stompDecoder", new StompSubframeDecoder())
+               .addLast(new StompSubframeDecoder())
+               .addLast(new StompSubframeEncoder())
+               .addLast(new StompSubframeAggregator(65536))
+               .addLast(stompChatHandler)
                .remove(StompWebSocketClientPageHandler.INSTANCE);
         } else {
             super.userEventTriggered(ctx, evt);
