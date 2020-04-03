@@ -60,7 +60,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -155,13 +154,14 @@ public class NettyBlockHoundIntegrationTest {
     }
 
     private static void testHandshakeWithExecutor(Executor executor) throws Exception {
+        String tlsVersion = "TLSv1.2";
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .sslProvider(SslProvider.JDK).build();
+                .sslProvider(SslProvider.JDK).protocols(tlsVersion).build();
 
         final SelfSignedCertificate cert = new SelfSignedCertificate();
         final SslContext sslServerCtx = SslContextBuilder.forServer(cert.key(), cert.cert())
-                .sslProvider(SslProvider.JDK).build();
+                .sslProvider(SslProvider.JDK).protocols(tlsVersion).build();
 
         EventLoopGroup group = new NioEventLoopGroup();
         Channel sc = null;
