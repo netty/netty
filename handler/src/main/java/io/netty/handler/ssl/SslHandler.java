@@ -66,6 +66,7 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLSession;
 
 import static io.netty.buffer.ByteBufUtil.ensureWritableSuccess;
@@ -688,6 +689,24 @@ public class SslHandler extends ByteToMessageDecoder {
                     new ChannelException("Pending write on removal of SslHandler"));
         }
         pendingUnencryptedWrites = null;
+
+        SSLHandshakeException cause = null;
+
+        // If the handshake is not done yet we should fail the handshake promise and notify the rest of the
+        // pipeline.
+        if (!handshakePromise.isDone()) {
+            cause = new SSLHandshakeException("SslHandler removed before handshake completed");
+            if (handshakePromise.tryFailure(cause)) {
+                ctx.fireUserEventTriggered(new SslHandshakeCompletionEvent(cause));
+            }
+        }
+        if (!sslClosePromise.isDone()) {
+            if (cause == null) {
+                cause = new SSLHandshakeException("SslHandler removed before handshake completed");
+            }
+            notifyClosePromise(cause);
+        }
+
         if (engine instanceof ReferenceCounted) {
             ((ReferenceCounted) engine).release();
         }

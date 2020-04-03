@@ -249,6 +249,43 @@ public class SslHandlerTest {
         }
     }
 
+    @Test(timeout = 5000L)
+    public void testHandshakeAndClosePromiseFailedOnRemoval() throws Exception {
+        SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+        engine.setUseClientMode(true);
+        SslHandler handler = new SslHandler(engine);
+        final AtomicReference<Throwable> handshakeRef = new AtomicReference<>();
+        final AtomicReference<Throwable> closeRef = new AtomicReference<>();
+        EmbeddedChannel ch = new EmbeddedChannel(handler, new ChannelHandler() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                if (evt instanceof SslHandshakeCompletionEvent) {
+                    handshakeRef.set(((SslHandshakeCompletionEvent) evt).cause());
+                } else if (evt instanceof SslCloseCompletionEvent) {
+                    closeRef.set(((SslCloseCompletionEvent) evt).cause());
+                }
+            }
+        });
+        assertFalse(handler.handshakeFuture().isDone());
+        assertFalse(handler.sslCloseFuture().isDone());
+
+        ch.pipeline().remove(handler);
+
+        try {
+            while (!handler.handshakeFuture().isDone() || handshakeRef.get() == null
+                    || !handler.sslCloseFuture().isDone() || closeRef.get() == null) {
+                Thread.sleep(10);
+                // Continue running all pending tasks until we notified for everything.
+                ch.runPendingTasks();
+            }
+
+            assertSame(handler.handshakeFuture().cause(), handshakeRef.get());
+            assertSame(handler.sslCloseFuture().cause(), closeRef.get());
+        } finally {
+            ch.finishAndReleaseAll();
+        }
+    }
+
     @Test
     public void testTruncatedPacket() throws Exception {
         SSLEngine engine = newServerModeSSLEngine();
