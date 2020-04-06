@@ -25,6 +25,7 @@ import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.nio.charset.Charset;
 import java.security.SecureRandom;
@@ -61,6 +62,43 @@ public class AbstractMemoryHttpDataTest {
             assertArrayEquals(bytes, ByteBufUtil.getBytes(buf));
         } finally {
             //release the ByteBuf
+            test.delete();
+        }
+    }
+
+    @Test
+    public void testRenameTo() throws Exception {
+        TestHttpData test = new TestHttpData("test", UTF_8, 0);
+        try {
+            File tmpFile = File.createTempFile(UUID.randomUUID().toString(), ".tmp");
+            tmpFile.deleteOnExit();
+            final int totalByteCount = 4096;
+            byte[] bytes = new byte[totalByteCount];
+            PlatformDependent.threadLocalRandom().nextBytes(bytes);
+            ByteBuf content = Unpooled.wrappedBuffer(bytes);
+            test.setContent(content);
+            boolean succ = test.renameTo(tmpFile);
+            assertTrue(succ);
+            FileInputStream fis = new FileInputStream(tmpFile);
+            try {
+                byte[] buf = new byte[totalByteCount];
+                int count = 0;
+                int offset = 0;
+                int size = totalByteCount;
+                while ((count = fis.read(buf, offset, size)) > 0) {
+                    offset += count;
+                    size -= count;
+                    if (offset >= totalByteCount || size <= 0) {
+                        break;
+                    }
+                }
+                assertArrayEquals(bytes, buf);
+                assertEquals(0, fis.available());
+            } finally {
+                fis.close();
+            }
+        } finally {
+            //release the ByteBuf in AbstractMemoryHttpData
             test.delete();
         }
     }
