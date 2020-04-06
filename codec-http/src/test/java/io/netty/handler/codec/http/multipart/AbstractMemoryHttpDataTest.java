@@ -72,7 +72,8 @@ public class AbstractMemoryHttpDataTest {
         try {
             File tmpFile = File.createTempFile(UUID.randomUUID().toString(), ".tmp");
             tmpFile.deleteOnExit();
-            byte[] bytes = new byte[4096];
+            final int totalByteCount = 4096;
+            byte[] bytes = new byte[totalByteCount];
             PlatformDependent.threadLocalRandom().nextBytes(bytes);
             ByteBuf content = Unpooled.wrappedBuffer(bytes);
             test.setContent(content);
@@ -80,9 +81,19 @@ public class AbstractMemoryHttpDataTest {
             assertTrue(succ);
             FileInputStream fis = new FileInputStream(tmpFile);
             try {
-                byte[] buf = new byte[4096];
-                fis.read(buf);
+                byte[] buf = new byte[totalByteCount];
+                int count = 0;
+                int offset = 0;
+                int size = totalByteCount;
+                while ((count = fis.read(buf, offset, size)) > 0) {
+                    offset += count;
+                    size -= count;
+                    if (offset >= totalByteCount || size <= 0) {
+                        break;
+                    }
+                }
                 assertArrayEquals(bytes, buf);
+                assertEquals(0, fis.available());
             } finally {
                 fis.close();
             }
