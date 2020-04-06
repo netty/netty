@@ -96,7 +96,7 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
         this.prevList = prevList;
     }
 
-    boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int normCapacity) {
+    boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int normCapacity, PoolThreadCache threadCache) {
         if (normCapacity > maxCapacity) {
             // Either this PoolChunkList is empty or the requested capacity is larger then the capacity which can
             // be handled by the PoolChunks that are contained in this PoolChunkList.
@@ -104,7 +104,7 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
         }
 
         for (PoolChunk<T> cur = head; cur != null; cur = cur.next) {
-            if (cur.allocate(buf, reqCapacity, normCapacity)) {
+            if (cur.allocate(buf, reqCapacity, normCapacity, threadCache)) {
                 if (cur.freeBytes <= freeMinThreshold) {
                     remove(cur);
                     nextList.add(cur);
