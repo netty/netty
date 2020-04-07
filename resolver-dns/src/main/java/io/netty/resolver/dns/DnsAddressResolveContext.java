@@ -33,23 +33,26 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
     private final AuthoritativeDnsServerCache authoritativeDnsServerCache;
     private final boolean completeEarlyIfPossible;
 
-    DnsAddressResolveContext(DnsNameResolver parent, String hostname, DnsRecord[] additionals,
+    DnsAddressResolveContext(DnsNameResolver parent, Promise<?> originalPromise,
+                             String hostname, DnsRecord[] additionals,
                              DnsServerAddressStream nameServerAddrs, DnsCache resolveCache,
                              AuthoritativeDnsServerCache authoritativeDnsServerCache,
                              boolean completeEarlyIfPossible) {
-        super(parent, hostname, DnsRecord.CLASS_IN, parent.resolveRecordTypes(), additionals, nameServerAddrs);
+        super(parent, originalPromise, hostname, DnsRecord.CLASS_IN,
+              parent.resolveRecordTypes(), additionals, nameServerAddrs);
         this.resolveCache = resolveCache;
         this.authoritativeDnsServerCache = authoritativeDnsServerCache;
         this.completeEarlyIfPossible = completeEarlyIfPossible;
     }
 
     @Override
-    DnsResolveContext<InetAddress> newResolverContext(DnsNameResolver parent, String hostname,
+    DnsResolveContext<InetAddress> newResolverContext(DnsNameResolver parent, Promise<?> originalPromise,
+                                                      String hostname,
                                                       int dnsClass, DnsRecordType[] expectedTypes,
                                                       DnsRecord[] additionals,
                                                       DnsServerAddressStream nameServerAddrs) {
-        return new DnsAddressResolveContext(parent, hostname, additionals, nameServerAddrs, resolveCache,
-                authoritativeDnsServerCache, completeEarlyIfPossible);
+        return new DnsAddressResolveContext(parent, originalPromise, hostname, additionals, nameServerAddrs,
+                                            resolveCache, authoritativeDnsServerCache, completeEarlyIfPossible);
     }
 
     @Override
