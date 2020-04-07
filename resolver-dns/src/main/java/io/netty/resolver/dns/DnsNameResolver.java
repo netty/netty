@@ -160,7 +160,9 @@ public class DnsNameResolver extends InetNameResolver {
                 NetworkInterface iface = interfaces.nextElement();
                 Enumeration<InetAddress> addresses = iface.getInetAddresses();
                 while (addresses.hasMoreElements()) {
-                    if (addresses.nextElement() instanceof Inet6Address) {
+                    InetAddress inetAddress = addresses.nextElement();
+                    if (inetAddress instanceof Inet6Address && !inetAddress.isAnyLocalAddress() &&
+                        !inetAddress.isLoopbackAddress() && !inetAddress.isLinkLocalAddress()) {
                         return true;
                     }
                 }
