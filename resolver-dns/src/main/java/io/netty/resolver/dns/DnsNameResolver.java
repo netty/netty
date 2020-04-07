@@ -714,7 +714,7 @@ public class DnsNameResolver extends InetNameResolver {
      * @return the list of the address as the result of the resolution
      */
     public final Future<List<InetAddress>> resolveAll(String inetHost, Iterable<DnsRecord> additionals,
-                                                Promise<List<InetAddress>> promise) {
+                                                      Promise<List<InetAddress>> promise) {
         checkNotNull(promise, "promise");
         DnsRecord[] additionalsArray = toArray(additionals, true);
         try {
@@ -816,7 +816,7 @@ public class DnsNameResolver extends InetNameResolver {
         // It was not A/AAAA question or there was no entry in /etc/hosts.
         final DnsServerAddressStream nameServerAddrs =
                 dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
-        new DnsRecordResolveContext(this, question, additionals, nameServerAddrs).resolve(promise);
+        new DnsRecordResolveContext(this, promise, question, additionals, nameServerAddrs).resolve(promise);
         return promise;
     }
 
@@ -940,7 +940,7 @@ public class DnsNameResolver extends InetNameResolver {
                                    final Promise<InetAddress> promise,
                                    DnsCache resolveCache, boolean completeEarlyIfPossible) {
         final Promise<List<InetAddress>> allPromise = executor().newPromise();
-        doResolveAllUncached(hostname, additionals, allPromise, resolveCache, true);
+        doResolveAllUncached(hostname, additionals, promise, allPromise, resolveCache, true);
         allPromise.addListener(new FutureListener<List<InetAddress>>() {
             @Override
             public void operationComplete(Future<List<InetAddress>> future) {
@@ -987,7 +987,8 @@ public class DnsNameResolver extends InetNameResolver {
         }
 
         if (!doResolveAllCached(hostname, additionals, promise, resolveCache, resolvedInternetProtocolFamilies)) {
-            doResolveAllUncached(hostname, additionals, promise, resolveCache, completeOncePreferredResolved);
+            doResolveAllUncached(hostname, additionals, promise, promise,
+                                 resolveCache, completeOncePreferredResolved);
         }
     }
 
@@ -1029,6 +1030,7 @@ public class DnsNameResolver extends InetNameResolver {
 
     private void doResolveAllUncached(final String hostname,
                                       final DnsRecord[] additionals,
+                                      final Promise<?> originalPromise,
                                       final Promise<List<InetAddress>> promise,
                                       final DnsCache resolveCache,
                                       final boolean completeEarlyIfPossible) {
@@ -1036,12 +1038,14 @@ public class DnsNameResolver extends InetNameResolver {
         // to submit multiple Runnable at the end if we are not already on the EventLoop.
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            doResolveAllUncached0(hostname, additionals, promise, resolveCache, completeEarlyIfPossible);
+            doResolveAllUncached0(hostname, additionals, originalPromise,
+                                  promise, resolveCache, completeEarlyIfPossible);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    doResolveAllUncached0(hostname, additionals, promise, resolveCache, completeEarlyIfPossible);
+                    doResolveAllUncached0(hostname, additionals, originalPromise,
+                                          promise, resolveCache, completeEarlyIfPossible);
                 }
             });
         }
@@ -1049,6 +1053,7 @@ public class DnsNameResolver extends InetNameResolver {
 
     private void doResolveAllUncached0(String hostname,
                                        DnsRecord[] additionals,
+                                       Promise<?> originalPromise,
                                        Promise<List<InetAddress>> promise,
                                        DnsCache resolveCache,
                                        boolean completeEarlyIfPossible) {
@@ -1057,8 +1062,9 @@ public class DnsNameResolver extends InetNameResolver {
 
         final DnsServerAddressStream nameServerAddrs =
                 dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
-        new DnsAddressResolveContext(this, hostname, additionals, nameServerAddrs, resolveCache,
-                authoritativeDnsServerCache, completeEarlyIfPossible).resolve(promise);
+        new DnsAddressResolveContext(this, originalPromise, hostname, additionals, nameServerAddrs,
+                                     resolveCache, authoritativeDnsServerCache, completeEarlyIfPossible)
+                .resolve(promise);
     }
 
     private static String hostname(String inetHost) {

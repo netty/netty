@@ -85,6 +85,7 @@ abstract class DnsResolveContext<T> {
             "tryToFinishResolve(..)");
 
     final DnsNameResolver parent;
+    private final Promise<?> originalPromise;
     private final DnsServerAddressStream nameServerAddrs;
     private final String hostname;
     private final int dnsClass;
@@ -101,13 +102,13 @@ abstract class DnsResolveContext<T> {
     private boolean triedCNAME;
     private boolean completeEarly;
 
-    DnsResolveContext(DnsNameResolver parent,
+    DnsResolveContext(DnsNameResolver parent, Promise<?> originalPromise,
                       String hostname, int dnsClass, DnsRecordType[] expectedTypes,
                       DnsRecord[] additionals, DnsServerAddressStream nameServerAddrs) {
-
         assert expectedTypes.length > 0;
 
         this.parent = parent;
+        this.originalPromise = originalPromise;
         this.hostname = hostname;
         this.dnsClass = dnsClass;
         this.expectedTypes = expectedTypes;
@@ -163,7 +164,8 @@ abstract class DnsResolveContext<T> {
     /**
      * Creates a new context with the given parameters.
      */
-    abstract DnsResolveContext<T> newResolverContext(DnsNameResolver parent, String hostname,
+    abstract DnsResolveContext<T> newResolverContext(DnsNameResolver parent, Promise<?> originalPromise,
+                                                     String hostname,
                                                      int dnsClass, DnsRecordType[] expectedTypes,
                                                      DnsRecord[] additionals,
                                                      DnsServerAddressStream nameServerAddrs);
@@ -262,8 +264,8 @@ abstract class DnsResolveContext<T> {
     }
 
     void doSearchDomainQuery(String hostname, Promise<List<T>> nextPromise) {
-        DnsResolveContext<T> nextContext = newResolverContext(parent, hostname, dnsClass, expectedTypes,
-                                                              additionals, nameServerAddrs);
+        DnsResolveContext<T> nextContext = newResolverContext(parent, originalPromise, hostname, dnsClass,
+                                                              expectedTypes, additionals, nameServerAddrs);
         nextContext.internalResolve(hostname, nextPromise);
     }
 
@@ -352,7 +354,7 @@ abstract class DnsResolveContext<T> {
                        final Promise<List<T>> promise,
                        final Throwable cause) {
         if (completeEarly || nameServerAddrStreamIndex >= nameServerAddrStream.size() ||
-                allowedQueries == 0 || promise.isCancelled()) {
+                allowedQueries == 0 || originalPromise.isCancelled() || promise.isCancelled()) {
             tryToFinishResolve(nameServerAddrStream, nameServerAddrStreamIndex, question, queryLifecycleObserver,
                                promise, cause);
             return;
@@ -362,7 +364,7 @@ abstract class DnsResolveContext<T> {
 
         final InetSocketAddress nameServerAddr = nameServerAddrStream.next();
         if (nameServerAddr.isUnresolved()) {
-            queryUnresolvedNameserver(nameServerAddr, nameServerAddrStream, nameServerAddrStreamIndex, question,
+            queryUnresolvedNameServer(nameServerAddr, nameServerAddrStream, nameServerAddrStreamIndex, question,
                                       queryLifecycleObserver, promise, cause);
             return;
         }
@@ -416,7 +418,7 @@ abstract class DnsResolveContext<T> {
         });
     }
 
-    private void queryUnresolvedNameserver(final InetSocketAddress nameServerAddr,
+    private void queryUnresolvedNameServer(final InetSocketAddress nameServerAddr,
                                            final DnsServerAddressStream nameServerAddrStream,
                                            final int nameServerAddrStreamIndex,
                                            final DnsQuestion question,
@@ -455,7 +457,7 @@ abstract class DnsResolveContext<T> {
         if (!DnsNameResolver.doResolveAllCached(nameServerName, additionals, resolverPromise, resolveCache(),
                 parent.resolvedInternetProtocolFamiliesUnsafe())) {
             final AuthoritativeDnsServerCache authoritativeDnsServerCache = authoritativeDnsServerCache();
-            new DnsAddressResolveContext(parent, nameServerName, additionals,
+            new DnsAddressResolveContext(parent, originalPromise, nameServerName, additionals,
                                          parent.newNameServerAddressStream(nameServerName),
                                          resolveCache(), new AuthoritativeDnsServerCache() {
                 @Override

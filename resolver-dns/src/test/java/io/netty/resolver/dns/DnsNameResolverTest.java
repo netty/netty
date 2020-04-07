@@ -45,6 +45,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
@@ -95,6 +96,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -2905,5 +2907,45 @@ public class DnsNameResolverTest {
                 resolver.close();
             }
         }
+    }
+
+    @Test
+    public void testCancelPromise() throws Exception {
+        final EventLoop eventLoop = group.next();
+        final Promise<InetAddress> promise = eventLoop.newPromise();
+        final TestDnsServer dnsServer1 = new TestDnsServer(Collections.<String>emptySet()) {
+            @Override
+            protected DnsMessage filterMessage(DnsMessage message) {
+                promise.cancel(true);
+                return message;
+            }
+        };
+        dnsServer1.start();
+        final AtomicBoolean isQuerySentToSecondServer = new AtomicBoolean();
+        final TestDnsServer dnsServer2 = new TestDnsServer(Collections.<String>emptySet()) {
+            @Override
+            protected DnsMessage filterMessage(DnsMessage message) {
+                isQuerySentToSecondServer.set(true);
+                return message;
+            }
+        };
+        dnsServer2.start();
+        DnsServerAddressStreamProvider nameServerProvider =
+                new SequentialDnsServerAddressStreamProvider(dnsServer1.localAddress(),
+                                                             dnsServer2.localAddress());
+        final DnsNameResolver resolver = new DnsNameResolverBuilder(group.next())
+                .dnsQueryLifecycleObserverFactory(new TestRecursiveCacheDnsQueryLifecycleObserverFactory())
+                .channelType(NioDatagramChannel.class)
+                .optResourceEnabled(false)
+                .nameServerProvider(nameServerProvider)
+                .build();
+
+        try {
+            resolver.resolve("non-existent.netty.io", promise).sync();
+            fail();
+        } catch (Exception e) {
+            assertThat(e, is(instanceOf(CancellationException.class)));
+        }
+        assertThat(isQuerySentToSecondServer.get(), is(false));
     }
 }
