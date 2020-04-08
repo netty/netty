@@ -321,15 +321,10 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         int tableIdx;
         PoolSubpage<T>[] table;
         if (isTiny(elemSize)) { // < 512
-            tableIdx = elemSize >>> 4;
+            tableIdx = tinyIdx(elemSize);
             table = tinySubpagePools;
         } else {
-            tableIdx = 0;
-            elemSize >>>= 10;
-            while (elemSize != 0) {
-                elemSize >>>= 1;
-                tableIdx ++;
-            }
+            tableIdx = smallIdx(elemSize);
             table = smallSubpagePools;
         }
 
