@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static io.netty.handler.codec.haproxy.HAProxyConstants.*;
+import static io.netty.handler.codec.haproxy.HAProxyMessageEncoder.*;
 import static org.junit.Assert.*;
 
 public class HaProxyMessageEncoderTest {
@@ -37,12 +38,10 @@ public class HaProxyMessageEncoderTest {
     private static final int V2_HEADER_BYTES_LENGTH = 16;
     private static final int IPv4_ADDRESS_BYTES_LENGTH = 12;
     private static final int IPv6_ADDRESS_BYTES_LENGTH = 36;
-    private static final int UNIX_ADDRESS_BYTES_LENGTH = 216;
 
     @Test
     public void testIPV4EncodeProxyV1() {
-        HAProxyMessageEncoder encoder = new HAProxyMessageEncoder();
-        EmbeddedChannel ch = new EmbeddedChannel(encoder);
+        EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
 
         HAProxyMessage message = new HAProxyMessage(
                 HAProxyProtocolVersion.V1, HAProxyCommand.PROXY, HAProxyProxiedProtocol.TCP4,
@@ -53,12 +52,14 @@ public class HaProxyMessageEncoderTest {
 
         assertEquals("PROXY TCP4 192.168.0.1 192.168.0.11 56324 443\r\n",
                      byteBuf.toString(CharsetUtil.US_ASCII));
+
+        byteBuf.release();
+        assertFalse(ch.finish());
     }
 
     @Test
     public void testIPV6EncodeProxyV1() {
-        HAProxyMessageEncoder encoder = new HAProxyMessageEncoder();
-        EmbeddedChannel ch = new EmbeddedChannel(encoder);
+        EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
 
         HAProxyMessage message = new HAProxyMessage(
                 HAProxyProtocolVersion.V1, HAProxyCommand.PROXY, HAProxyProxiedProtocol.TCP6,
@@ -69,12 +70,14 @@ public class HaProxyMessageEncoderTest {
 
         assertEquals("PROXY TCP6 2001:0db8:85a3:0000:0000:8a2e:0370:7334 1050:0:0:0:5:600:300c:326b 56324 443\r\n",
                      byteBuf.toString(CharsetUtil.US_ASCII));
+
+        byteBuf.release();
+        assertFalse(ch.finish());
     }
 
     @Test
     public void testIPv4EncodeProxyV2() {
-        HAProxyMessageEncoder encoder = new HAProxyMessageEncoder();
-        EmbeddedChannel ch = new EmbeddedChannel(encoder);
+        EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
 
         HAProxyMessage message = new HAProxyMessage(
                 HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.TCP4,
@@ -103,11 +106,11 @@ public class HaProxyMessageEncoderTest {
 
         // source address
         byte[] sourceAddr = ByteBufUtil.getBytes(byteBuf, 16, 4);
-        assertArrayEquals(new byte[] { (byte) 0xc0, (byte) 0xa8, 0x00, 0x01}, sourceAddr);
+        assertArrayEquals(new byte[] { (byte) 0xc0, (byte) 0xa8, 0x00, 0x01 }, sourceAddr);
 
         // destination address
         byte[] destAddr = ByteBufUtil.getBytes(byteBuf, 20, 4);
-        assertArrayEquals(new byte[] { (byte) 0xc0, (byte) 0xa8, 0x00, 0x0b}, destAddr);
+        assertArrayEquals(new byte[] { (byte) 0xc0, (byte) 0xa8, 0x00, 0x0b }, destAddr);
 
         // source port
         int sourcePort = byteBuf.getUnsignedShort(24);
@@ -116,12 +119,14 @@ public class HaProxyMessageEncoderTest {
         // destination port
         int destPort = byteBuf.getUnsignedShort(26);
         assertEquals(443, destPort);
+
+        byteBuf.release();
+        assertFalse(ch.finish());
     }
 
     @Test
     public void testIPv6EncodeProxyV2() {
-        HAProxyMessageEncoder encoder = new HAProxyMessageEncoder();
-        EmbeddedChannel ch = new EmbeddedChannel(encoder);
+        EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
 
         HAProxyMessage message = new HAProxyMessage(
                 HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.TCP6,
@@ -150,14 +155,18 @@ public class HaProxyMessageEncoderTest {
 
         // source address
         byte[] sourceAddr = ByteBufUtil.getBytes(byteBuf, 16, 16);
-        assertArrayEquals(new byte[] { (byte) 0x20, (byte) 0x01, 0x0d, (byte) 0xb8,
+        assertArrayEquals(new byte[] {
+                (byte) 0x20, (byte) 0x01, 0x0d, (byte) 0xb8,
                 (byte) 0x85, (byte) 0xa3, 0x00, 0x00, 0x00, 0x00, (byte) 0x8a, 0x2e,
-                0x03, 0x70, 0x73, 0x34}, sourceAddr);
+                0x03, 0x70, 0x73, 0x34
+        }, sourceAddr);
 
         // destination address
         byte[] destAddr = ByteBufUtil.getBytes(byteBuf, 32, 16);
-        assertArrayEquals(new byte[] { (byte) 0x10, (byte) 0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x05, 0x06, 0x00, 0x30, 0x0c, 0x32, 0x6b}, destAddr);
+        assertArrayEquals(new byte[] {
+                (byte) 0x10, (byte) 0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x05, 0x06, 0x00, 0x30, 0x0c, 0x32, 0x6b
+        }, destAddr);
 
         // source port
         int sourcePort = byteBuf.getUnsignedShort(48);
@@ -166,12 +175,14 @@ public class HaProxyMessageEncoderTest {
         // destination port
         int destPort = byteBuf.getUnsignedShort(50);
         assertEquals(443, destPort);
+
+        byteBuf.release();
+        assertFalse(ch.finish());
     }
 
     @Test
     public void testUnixEncodeProxyV2() {
-        HAProxyMessageEncoder encoder = new HAProxyMessageEncoder();
-        EmbeddedChannel ch = new EmbeddedChannel(encoder);
+        EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
 
         HAProxyMessage message = new HAProxyMessage(
                 HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNIX_STREAM,
@@ -194,9 +205,9 @@ public class HaProxyMessageEncoderTest {
         assertEquals(0x03, (transportByte & 0xf0) >> 4);
         assertEquals(0x01, transportByte & 0x0f);
 
-        // source address length
-        int sourceAddrLength = byteBuf.getUnsignedShort(14);
-        assertEquals(216, sourceAddrLength);
+        // address length
+        int addrLength = byteBuf.getUnsignedShort(14);
+        assertEquals(TOTAL_UNIX_ADDRESS_BYTES_LENGTH, addrLength);
 
         // source address
         int srcAddrEnd = byteBuf.forEachByte(16, 108, ByteProcessor.FIND_NUL);
@@ -207,12 +218,14 @@ public class HaProxyMessageEncoderTest {
         int dstAddrEnd = byteBuf.forEachByte(124, 108, ByteProcessor.FIND_NUL);
         assertEquals("/var/run/dst.sock",
                      byteBuf.slice(124, dstAddrEnd - 124).toString(CharsetUtil.US_ASCII));
+
+        byteBuf.release();
+        assertFalse(ch.finish());
     }
 
     @Test
     public void testTLVEncodeProxy() {
-        HAProxyMessageEncoder encoder = new HAProxyMessageEncoder();
-        EmbeddedChannel ch = new EmbeddedChannel(encoder);
+        EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
 
         List<HAProxyTLV> tlvs = new ArrayList<HAProxyTLV>();
 
@@ -248,12 +261,14 @@ public class HaProxyMessageEncoderTest {
         bufLength = tlv.readShort();
         assertEquals(arbitrary.array().length, bufLength);
         assertEquals(arbitrary, tlv.readBytes(bufLength));
+
+        byteBuf.release();
+        assertFalse(ch.finish());
     }
 
     @Test
     public void testSslTLVEncodeProxy() {
-        HAProxyMessageEncoder encoder = new HAProxyMessageEncoder();
-        EmbeddedChannel ch = new EmbeddedChannel(encoder);
+        EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
 
         List<HAProxyTLV> tlvs = new ArrayList<HAProxyTLV>();
 
@@ -301,12 +316,14 @@ public class HaProxyMessageEncoderTest {
         bufLength = tlv.readShort();
         assertEquals(arbitrary.array().length, bufLength);
         assertEquals(arbitrary, tlv.readBytes(bufLength));
+
+        byteBuf.release();
+        assertFalse(ch.finish());
     }
 
     @Test
     public void testEncodeLocalProxyV2() {
-        HAProxyMessageEncoder encoder = new HAProxyMessageEncoder();
-        EmbeddedChannel ch = new EmbeddedChannel(encoder);
+        EmbeddedChannel ch = new EmbeddedChannel(INSTANCE);
 
         HAProxyMessage message = new HAProxyMessage(
                 HAProxyProtocolVersion.V2, HAProxyCommand.LOCAL, HAProxyProxiedProtocol.UNKNOWN,
@@ -334,9 +351,12 @@ public class HaProxyMessageEncoderTest {
         assertEquals(0, sourceAddrLength);
 
         assertFalse(byteBuf.isReadable());
+
+        byteBuf.release();
+        assertFalse(ch.finish());
     }
 
-    @Test(expected = HAProxyProtocolException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testInvalidIpV4Address() {
         String invalidIpv4Address = "192.168.0.1234";
         new HAProxyMessage(
@@ -344,7 +364,7 @@ public class HaProxyMessageEncoderTest {
                 invalidIpv4Address, "192.168.0.11", 56324, 443);
     }
 
-    @Test(expected = HAProxyProtocolException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testInvalidIpV6Address() {
         String invalidIpv6Address = "2001:0db8:85a3:0000:0000:8a2e:0370:73345";
         new HAProxyMessage(
@@ -352,7 +372,7 @@ public class HaProxyMessageEncoderTest {
                 invalidIpv6Address, "1050:0:0:0:5:600:300c:326b", 56324, 443);
     }
 
-    @Test(expected = HAProxyProtocolException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testInvalidUnixAddress() {
         String invalidUnixAddress = new String(new byte[UNIX_ADDRESS_BYTES_LENGTH + 1]);
         new HAProxyMessage(
@@ -360,14 +380,14 @@ public class HaProxyMessageEncoderTest {
                 invalidUnixAddress, "/var/run/dst.sock", 0, 0);
     }
 
-    @Test(expected = HAProxyProtocolException.class)
+    @Test(expected = NullPointerException.class)
     public void testNullUnixAddress() {
         new HAProxyMessage(
                 HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNIX_STREAM,
                 null, null, 0, 0);
     }
 
-    @Test(expected = HAProxyProtocolException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testLongUnixAddress() {
         String longUnixAddress = new String(new char[109]).replace("\0", "a");
         new HAProxyMessage(
@@ -375,7 +395,7 @@ public class HaProxyMessageEncoderTest {
                 "source", longUnixAddress, 0, 0);
     }
 
-    @Test(expected = HAProxyProtocolException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testInvalidUnixPort() {
         new HAProxyMessage(
                 HAProxyProtocolVersion.V2, HAProxyCommand.PROXY, HAProxyProxiedProtocol.UNIX_STREAM,

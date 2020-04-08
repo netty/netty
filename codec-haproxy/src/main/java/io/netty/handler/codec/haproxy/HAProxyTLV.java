@@ -88,7 +88,14 @@ public class HAProxyTLV extends DefaultByteBufHolder {
             }
         }
 
-        public static byte byteValueForType(final Type type) {
+        /**
+         * Returns the byte value for the {@link Type} as defined in the PROXY protocol 1.5 spec.
+         *
+         * @param type the {@link Type}
+         *
+         * @return the byte value of the {@link Type}.
+         */
+        public static byte byteValueForType(Type type) {
             switch (type) {
             case PP2_TYPE_ALPN:
                 return 0x01;
@@ -201,12 +208,9 @@ public class HAProxyTLV extends DefaultByteBufHolder {
 
     @Override
     public String toString() {
-        return new StringBuilder(256)
-                .append(StringUtil.simpleClassName(this))
-                .append("(type: ").append(type)
-                .append(", typeByteValue: ").append(typeByteValue)
-                .append(", content: ").append(contentToString())
-                .append(')')
-                .toString();
+        return StringUtil.simpleClassName(this) +
+               "(type: " + type() +
+               ", typeByteValue: " + typeByteValue() +
+               ", content: " + contentToString() + ')';
     }
 }

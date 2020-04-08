@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
-import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 
@@ -33,9 +32,18 @@ import static io.netty.handler.codec.haproxy.HAProxyConstants.*;
  * @see <a href="http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt">Proxy Protocol Specification</a>
  */
 @Sharable
-public class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMessage> {
+public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMessage> {
 
     private static final int V2_VERSION_BITMASK = 0x02 << 4;
+
+    // Length for source/destination addresses for the UNIX family must be 108 bytes each.
+    static final int UNIX_ADDRESS_BYTES_LENGTH = 108;
+    static final int TOTAL_UNIX_ADDRESS_BYTES_LENGTH = UNIX_ADDRESS_BYTES_LENGTH * 2;
+
+    public static final HAProxyMessageEncoder INSTANCE = new HAProxyMessageEncoder();
+
+    private HAProxyMessageEncoder() {
+    }
 
     @Override
     protected void encode(ChannelHandlerContext ctx, HAProxyMessage msg, ByteBuf out) throws Exception {
@@ -55,7 +63,7 @@ public class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMessage> 
                 .append(msg.sourceAddress()).append(' ')
                 .append(msg.destinationAddress()).append(' ')
                 .append(msg.sourcePort()).append(' ').append(msg.destinationPort()).append("\r\n");
-        out.writeBytes(sb.toString().getBytes(CharsetUtil.US_ASCII));
+        out.writeCharSequence(sb.toString(), CharsetUtil.US_ASCII);
     }
 
     private static void encodeV2(HAProxyMessage msg, ByteBuf out) {
@@ -63,27 +71,33 @@ public class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMessage> 
         out.writeByte(V2_VERSION_BITMASK | msg.command().byteValue());
         out.writeByte(msg.proxiedProtocol().byteValue());
 
-        if (msg.proxiedProtocol().addressFamily() == AddressFamily.AF_IPv4 ||
-            msg.proxiedProtocol().addressFamily() == AddressFamily.AF_IPv6) {
-            byte[] sourceAddress = NetUtil.createByteArrayFromIpAddressString(msg.sourceAddress());
-            byte[] destinationAddress = NetUtil.createByteArrayFromIpAddressString(msg.destinationAddress());
-            out.writeShort(sourceAddress.length + destinationAddress.length + 4 + msg.tlvNumBytes());
-            out.writeBytes(sourceAddress);
-            out.writeBytes(destinationAddress);
-            out.writeShort(msg.sourcePort());
-            out.writeShort(msg.destinationPort());
-            encodeTlvs(msg.tlvs(), out);
-        } else if (msg.proxiedProtocol().addressFamily() == AddressFamily.AF_UNIX) {
-            out.writeShort(216 + msg.tlvNumBytes());
-            byte[] srcAddressBytes = msg.sourceAddress().getBytes(CharsetUtil.US_ASCII);
-            out.writeBytes(srcAddressBytes);
-            out.writeBytes(new byte[108 - srcAddressBytes.length]);
-            byte[] dstAddressBytes = msg.destinationAddress().getBytes(CharsetUtil.US_ASCII);
-            out.writeBytes(dstAddressBytes);
-            out.writeBytes(new byte[108 - dstAddressBytes.length]);
-            encodeTlvs(msg.tlvs(), out);
-        } else if (msg.proxiedProtocol().addressFamily() == AddressFamily.AF_UNSPEC) {
-            out.writeShort(0);
+        switch (msg.proxiedProtocol().addressFamily()) {
+            case AF_IPv4:
+            case AF_IPv6:
+                byte[] sourceAddress = NetUtil.createByteArrayFromIpAddressString(msg.sourceAddress());
+                byte[] destinationAddress = NetUtil.createByteArrayFromIpAddressString(msg.destinationAddress());
+                out.writeShort(sourceAddress.length + destinationAddress.length + 4 + msg.tlvNumBytes());
+                out.writeBytes(sourceAddress);
+                out.writeBytes(destinationAddress);
+                out.writeShort(msg.sourcePort());
+                out.writeShort(msg.destinationPort());
+                encodeTlvs(msg.tlvs(), out);
+                break;
+            case AF_UNIX:
+                out.writeShort(TOTAL_UNIX_ADDRESS_BYTES_LENGTH + msg.tlvNumBytes());
+                byte[] srcAddressBytes = msg.sourceAddress().getBytes(CharsetUtil.US_ASCII);
+                out.writeBytes(srcAddressBytes);
+                out.writeBytes(new byte[UNIX_ADDRESS_BYTES_LENGTH - srcAddressBytes.length]);
+                byte[] dstAddressBytes = msg.destinationAddress().getBytes(CharsetUtil.US_ASCII);
+                out.writeBytes(dstAddressBytes);
+                out.writeBytes(new byte[UNIX_ADDRESS_BYTES_LENGTH - dstAddressBytes.length]);
+                encodeTlvs(msg.tlvs(), out);
+                break;
+            case AF_UNSPEC:
+                out.writeShort(0);
+                break;
+            default:
+                throw new HAProxyProtocolException("unexpected addrFamily");
         }
     }
 
@@ -105,8 +119,8 @@ public class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMessage> 
     }
 
     private static void encodeTlvs(List<HAProxyTLV> haProxyTLVs, ByteBuf out) {
-        for (HAProxyTLV tlv: haProxyTLVs) {
-            encodeTlv(tlv, out);
+        for (int i = 0; i < haProxyTLVs.size(); i++) {
+            encodeTlv(haProxyTLVs.get(i), out);
         }
     }
 }

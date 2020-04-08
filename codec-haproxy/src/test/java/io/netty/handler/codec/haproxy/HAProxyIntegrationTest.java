@@ -41,6 +41,7 @@ public class HAProxyIntegrationTest {
     public void testBasicCase() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<HAProxyMessage> msgHolder = new AtomicReference<HAProxyMessage>();
+        LocalAddress localAddress = new LocalAddress("HAProxyIntegrationTest");
 
         EventLoopGroup group = new DefaultEventLoopGroup();
         ServerBootstrap sb = new ServerBootstrap();
@@ -53,37 +54,43 @@ public class HAProxyIntegrationTest {
                   ch.pipeline().addLast(new SimpleChannelInboundHandler<HAProxyMessage>() {
                       @Override
                       protected void channelRead0(ChannelHandlerContext ctx, HAProxyMessage msg) throws Exception {
-                          msgHolder.set(msg);
+                          msgHolder.set(msg.retain());
                           latch.countDown();
                       }
                   });
               }
           });
-
-        LocalAddress localAddress = new LocalAddress("HAProxyIntegrationTest");
-        sb.bind(localAddress).sync().channel();
+        Channel serverChannel = sb.bind(localAddress).sync().channel();
 
         Bootstrap b = new Bootstrap();
         Channel clientChannel = b.channel(LocalChannel.class)
-                                 .handler(new HAProxyMessageEncoder())
+                                 .handler(HAProxyMessageEncoder.INSTANCE)
                                  .group(group)
                                  .connect(localAddress).sync().channel();
 
-        HAProxyMessage message = new HAProxyMessage(
-                HAProxyProtocolVersion.V1, HAProxyCommand.PROXY, HAProxyProxiedProtocol.TCP4,
-                "192.168.0.1", "192.168.0.11", 56324, 443);
-        clientChannel.writeAndFlush(message);
+        try {
+            HAProxyMessage message = new HAProxyMessage(
+                    HAProxyProtocolVersion.V1, HAProxyCommand.PROXY, HAProxyProxiedProtocol.TCP4,
+                    "192.168.0.1", "192.168.0.11", 56324, 443);
+            clientChannel.writeAndFlush(message).sync();
 
-        assertTrue(latch.await(5, TimeUnit.SECONDS));
-        HAProxyMessage readMessage = msgHolder.get();
+            assertTrue(latch.await(5, TimeUnit.SECONDS));
+            HAProxyMessage readMessage = msgHolder.get();
 
-        assertEquals(message.protocolVersion(), readMessage.protocolVersion());
-        assertEquals(message.command(), readMessage.command());
-        assertEquals(message.proxiedProtocol(), readMessage.proxiedProtocol());
-        assertEquals(message.sourceAddress(), readMessage.sourceAddress());
-        assertEquals(message.destinationAddress(), readMessage.destinationAddress());
-        assertEquals(message.sourcePort(), readMessage.sourcePort());
-        assertEquals(message.destinationPort(), readMessage.destinationPort());
+            assertEquals(message.protocolVersion(), readMessage.protocolVersion());
+            assertEquals(message.command(), readMessage.command());
+            assertEquals(message.proxiedProtocol(), readMessage.proxiedProtocol());
+            assertEquals(message.sourceAddress(), readMessage.sourceAddress());
+            assertEquals(message.destinationAddress(), readMessage.destinationAddress());
+            assertEquals(message.sourcePort(), readMessage.sourcePort());
+            assertEquals(message.destinationPort(), readMessage.destinationPort());
+
+            readMessage.release();
+        } finally {
+            clientChannel.close().sync();
+            serverChannel.close().sync();
+            group.shutdownGracefully().sync();
+        }
     }
 
 }

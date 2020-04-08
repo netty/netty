@@ -27,11 +27,9 @@ import io.netty.handler.codec.haproxy.HAProxyProtocolException;
 
 public class HAProxyHandler extends ChannelOutboundHandlerAdapter {
 
-    private static final HAProxyMessageEncoder encoder = new HAProxyMessageEncoder();
-
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        ctx.pipeline().addBefore(ctx.name(), null, encoder);
+        ctx.pipeline().addBefore(ctx.name(), null, HAProxyMessageEncoder.INSTANCE);
         super.handlerAdded(ctx);
     }
 
@@ -46,7 +44,7 @@ public class HAProxyHandler extends ChannelOutboundHandlerAdapter {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
-                    ctx.pipeline().remove(encoder);
+                    ctx.pipeline().remove(HAProxyMessageEncoder.INSTANCE);
                     ctx.pipeline().remove(HAProxyHandler.this);
                 } else {
                     throw new HAProxyProtocolException("failed to write HAProxy message");

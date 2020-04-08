@@ -428,7 +428,8 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
                 }
                 return;
             case AF_UNIX:
-                if (address == null || address.getBytes(CharsetUtil.US_ASCII).length > 108) {
+                ObjectUtil.checkNotNull(address, "address");
+                if (address.getBytes(CharsetUtil.US_ASCII).length > 108) {
                     throw new IllegalArgumentException("invalid AF_UNIX address: " + address);
                 }
                 return;

@@ -83,9 +83,13 @@ public final class HAProxySSLTLV extends HAProxyTLV {
         return (clientBitField & 0x4) != 0;
     }
 
+    /**
+     * Returns the client bit field
+     */
     public byte client() {
         return clientBitField;
     }
+
     /**
      * Returns the verification result
      */
@@ -111,13 +115,11 @@ public final class HAProxySSLTLV extends HAProxyTLV {
 
     @Override
     public String toString() {
-        return new StringBuilder(128)
-                .append(StringUtil.simpleClassName(this))
-                .append("(type: ").append(type())
-                .append(", typeByteValue: ").append(typeByteValue())
-                .append(", client: ").append(client())
-                .append(", verify: ").append(verify())
-                .append(", numEncapsulatedTlvs: ").append(tlvs.size())
-                .append(')').toString();
+        return StringUtil.simpleClassName(this) +
+               "(type: " + type() +
+               ", typeByteValue: " + typeByteValue() +
+               ", client: " + client() +
+               ", verify: " + verify() +
+               ", numEncapsulatedTlvs: " + tlvs.size() + ')';
     }
 }
