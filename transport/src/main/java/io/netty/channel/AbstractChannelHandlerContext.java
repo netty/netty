@@ -165,7 +165,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             try {
                 ((ChannelInboundHandler) handler()).channelRegistered(this);
             } catch (Throwable t) {
-                notifyHandlerException(t);
+                invokeExceptionCaught(t);
             }
         } else {
             fireChannelRegistered();
@@ -197,7 +197,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             try {
                 ((ChannelInboundHandler) handler()).channelUnregistered(this);
             } catch (Throwable t) {
-                notifyHandlerException(t);
+                invokeExceptionCaught(t);
             }
         } else {
             fireChannelUnregistered();
@@ -229,7 +229,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             try {
                 ((ChannelInboundHandler) handler()).channelActive(this);
             } catch (Throwable t) {
-                notifyHandlerException(t);
+                invokeExceptionCaught(t);
             }
         } else {
             fireChannelActive();
@@ -261,7 +261,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             try {
                 ((ChannelInboundHandler) handler()).channelInactive(this);
             } catch (Throwable t) {
-                notifyHandlerException(t);
+                invokeExceptionCaught(t);
             }
         } else {
             fireChannelInactive();
@@ -345,7 +345,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             try {
                 ((ChannelInboundHandler) handler()).userEventTriggered(this, event);
             } catch (Throwable t) {
-                notifyHandlerException(t);
+                invokeExceptionCaught(t);
             }
         } else {
             fireUserEventTriggered(event);
@@ -378,7 +378,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             try {
                 ((ChannelInboundHandler) handler()).channelRead(this, msg);
             } catch (Throwable t) {
-                notifyHandlerException(t);
+                invokeExceptionCaught(t);
             }
         } else {
             fireChannelRead(msg);
@@ -409,7 +409,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             try {
                 ((ChannelInboundHandler) handler()).channelReadComplete(this);
             } catch (Throwable t) {
-                notifyHandlerException(t);
+                invokeExceptionCaught(t);
             }
         } else {
             fireChannelReadComplete();
@@ -440,7 +440,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             try {
                 ((ChannelInboundHandler) handler()).channelWritabilityChanged(this);
             } catch (Throwable t) {
-                notifyHandlerException(t);
+                invokeExceptionCaught(t);
             }
         } else {
             fireChannelWritabilityChanged();
@@ -685,7 +685,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             try {
                 ((ChannelOutboundHandler) handler()).read(this);
             } catch (Throwable t) {
-                notifyHandlerException(t);
+                invokeExceptionCaught(t);
             }
         } else {
             read();
@@ -749,7 +749,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         try {
             ((ChannelOutboundHandler) handler()).flush(this);
         } catch (Throwable t) {
-            notifyHandlerException(t);
+            invokeExceptionCaught(t);
         }
     }
 
@@ -812,39 +812,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         // Only log if the given promise is not of type VoidChannelPromise as tryFailure(...) is expected to return
         // false.
         PromiseNotificationUtil.tryFailure(promise, cause, promise instanceof VoidChannelPromise ? null : logger);
-    }
-
-    private void notifyHandlerException(Throwable cause) {
-        if (inExceptionCaught(cause)) {
-            if (logger.isWarnEnabled()) {
-                logger.warn(
-                        "An exception was thrown by a user handler " +
-                                "while handling an exceptionCaught event", cause);
-            }
-            return;
-        }
-
-        invokeExceptionCaught(cause);
-    }
-
-    private static boolean inExceptionCaught(Throwable cause) {
-        do {
-            StackTraceElement[] trace = cause.getStackTrace();
-            if (trace != null) {
-                for (StackTraceElement t : trace) {
-                    if (t == null) {
-                        break;
-                    }
-                    if ("exceptionCaught".equals(t.getMethodName())) {
-                        return true;
-                    }
-                }
-            }
-
-            cause = cause.getCause();
-        } while (cause != null);
-
-        return false;
     }
 
     @Override
