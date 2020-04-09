@@ -40,14 +40,16 @@ public class HAProxyHandler extends ChannelOutboundHandlerAdapter {
             return;
         }
 
-        ctx.writeAndFlush(msg, promise).addListener(new ChannelFutureListener() {
+        ctx.write(msg, promise).addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isSuccess()) {
                     ctx.pipeline().remove(HAProxyMessageEncoder.INSTANCE);
                     ctx.pipeline().remove(HAProxyHandler.this);
                 } else {
-                    throw new HAProxyProtocolException("failed to write HAProxy message");
+                    ctx.fireExceptionCaught(new HAProxyProtocolException("failed to write HAProxy message",
+                                                                         future.cause()));
+                    ctx.close();
                 }
             }
         });

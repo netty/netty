@@ -20,9 +20,9 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -57,15 +57,14 @@ public final class HAProxyServer {
             ch.pipeline().addLast(
                     new LoggingHandler(LogLevel.DEBUG),
                     new HAProxyMessageDecoder(),
-                    new ChannelInboundHandlerAdapter() {
+                    new SimpleChannelInboundHandler() {
                         @Override
-                        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
                             if (msg instanceof HAProxyMessage) {
                                 System.out.println("proxy message: " + msg);
                             } else if (msg instanceof ByteBuf) {
                                 System.out.println("bytebuf message: " + ByteBufUtil.prettyHexDump((ByteBuf) msg));
                             }
-                            super.channelRead(ctx, msg);
                         }
                     });
         }

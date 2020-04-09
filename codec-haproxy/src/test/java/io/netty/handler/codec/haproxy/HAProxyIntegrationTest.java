@@ -92,5 +92,4 @@ public class HAProxyIntegrationTest {
             group.shutdownGracefully().sync();
         }
     }
-
 }

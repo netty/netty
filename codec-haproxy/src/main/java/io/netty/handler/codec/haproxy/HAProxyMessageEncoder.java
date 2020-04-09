@@ -57,13 +57,17 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
     }
 
     private static void encodeV1(HAProxyMessage msg, ByteBuf out) {
-        final String protocol = msg.proxiedProtocol().name();
-        StringBuilder sb = new StringBuilder(108)
-                .append("PROXY ").append(protocol).append(' ')
-                .append(msg.sourceAddress()).append(' ')
-                .append(msg.destinationAddress()).append(' ')
-                .append(msg.sourcePort()).append(' ').append(msg.destinationPort()).append("\r\n");
-        out.writeCharSequence(sb.toString(), CharsetUtil.US_ASCII);
+        out.writeCharSequence("PROXY ", CharsetUtil.US_ASCII);
+        out.writeCharSequence(msg.proxiedProtocol().name(), CharsetUtil.US_ASCII);
+        out.writeCharSequence(" ", CharsetUtil.US_ASCII);
+        out.writeCharSequence(msg.sourceAddress(), CharsetUtil.US_ASCII);
+        out.writeCharSequence(" ", CharsetUtil.US_ASCII);
+        out.writeCharSequence(msg.destinationAddress(), CharsetUtil.US_ASCII);
+        out.writeCharSequence(" ", CharsetUtil.US_ASCII);
+        out.writeCharSequence(String.valueOf(msg.sourcePort()), CharsetUtil.US_ASCII);
+        out.writeCharSequence(" ", CharsetUtil.US_ASCII);
+        out.writeCharSequence(String.valueOf(msg.destinationPort()), CharsetUtil.US_ASCII);
+        out.writeCharSequence("\r\n", CharsetUtil.US_ASCII);
     }
 
     private static void encodeV2(HAProxyMessage msg, ByteBuf out) {
@@ -87,10 +91,10 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
                 out.writeShort(TOTAL_UNIX_ADDRESS_BYTES_LENGTH + msg.tlvNumBytes());
                 byte[] srcAddressBytes = msg.sourceAddress().getBytes(CharsetUtil.US_ASCII);
                 out.writeBytes(srcAddressBytes);
-                out.writeBytes(new byte[UNIX_ADDRESS_BYTES_LENGTH - srcAddressBytes.length]);
+                out.writeZero(UNIX_ADDRESS_BYTES_LENGTH - srcAddressBytes.length);
                 byte[] dstAddressBytes = msg.destinationAddress().getBytes(CharsetUtil.US_ASCII);
                 out.writeBytes(dstAddressBytes);
-                out.writeBytes(new byte[UNIX_ADDRESS_BYTES_LENGTH - dstAddressBytes.length]);
+                out.writeZero(UNIX_ADDRESS_BYTES_LENGTH - dstAddressBytes.length);
                 encodeTlvs(msg.tlvs(), out);
                 break;
             case AF_UNSPEC:

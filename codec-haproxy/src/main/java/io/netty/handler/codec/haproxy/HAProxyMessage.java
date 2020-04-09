@@ -93,6 +93,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
             String sourceAddress, String destinationAddress, int sourcePort, int destinationPort,
             List<? extends HAProxyTLV> tlvs) {
 
+        ObjectUtil.checkNotNull(protocolVersion, "protocolVersion");
         ObjectUtil.checkNotNull(proxiedProtocol, "proxiedProtocol");
         ObjectUtil.checkNotNull(tlvs, "tlvs");
         AddressFamily addrFamily = proxiedProtocol.addressFamily();
