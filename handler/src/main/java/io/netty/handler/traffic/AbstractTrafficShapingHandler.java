@@ -512,6 +512,16 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
         ctx.fireChannelRead(msg);
     }
 
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        Channel channel = ctx.channel();
+        if (channel.hasAttr(REOPEN_TASK)) {
+            //release the reopen task
+            channel.attr(REOPEN_TASK).set(null);
+        }
+        super.handlerRemoved(ctx);
+    }
+
     /**
      * Method overridden in GTSH to take into account specific timer for the channel.
      * @param wait the wait delay computed in ms
