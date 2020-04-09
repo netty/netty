@@ -89,12 +89,10 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
                 break;
             case AF_UNIX:
                 out.writeShort(TOTAL_UNIX_ADDRESS_BYTES_LENGTH + msg.tlvNumBytes());
-                byte[] srcAddressBytes = msg.sourceAddress().getBytes(CharsetUtil.US_ASCII);
-                out.writeBytes(srcAddressBytes);
-                out.writeZero(UNIX_ADDRESS_BYTES_LENGTH - srcAddressBytes.length);
-                byte[] dstAddressBytes = msg.destinationAddress().getBytes(CharsetUtil.US_ASCII);
-                out.writeBytes(dstAddressBytes);
-                out.writeZero(UNIX_ADDRESS_BYTES_LENGTH - dstAddressBytes.length);
+                int srcAddrBytesWritten = out.writeCharSequence(msg.sourceAddress(), CharsetUtil.US_ASCII);
+                out.writeZero(UNIX_ADDRESS_BYTES_LENGTH - srcAddrBytesWritten);
+                int dstAddrBytesWritten = out.writeCharSequence(msg.destinationAddress(), CharsetUtil.US_ASCII);
+                out.writeZero(UNIX_ADDRESS_BYTES_LENGTH - dstAddrBytesWritten);
                 encodeTlvs(msg.tlvs(), out);
                 break;
             case AF_UNSPEC:
