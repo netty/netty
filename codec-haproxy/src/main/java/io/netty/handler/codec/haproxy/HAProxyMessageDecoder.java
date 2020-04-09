@@ -51,14 +51,6 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
      */
     private static final int V2_MAX_TLV = 65535 - 216;
 
-    private static final byte[] TEXT_PREFIX = {
-            (byte) 'P',
-            (byte) 'R',
-            (byte) 'O',
-            (byte) 'X',
-            (byte) 'Y',
-    };
-
     /**
      * Binary header prefix length
      */
@@ -338,7 +330,7 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
         if (match(BINARY_PREFIX, buffer, idx)) {
             return DETECTION_RESULT_V2;
         }
-        if (match(TEXT_PREFIX, buffer, idx)) {
+        if (match(PROXY_PREFIX, buffer, idx)) {
             return DETECTION_RESULT_V1;
         }
         return ProtocolDetectionResult.invalid();

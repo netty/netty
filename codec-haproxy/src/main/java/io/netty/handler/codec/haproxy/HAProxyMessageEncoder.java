@@ -57,17 +57,19 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
     }
 
     private static void encodeV1(HAProxyMessage msg, ByteBuf out) {
-        out.writeCharSequence("PROXY ", CharsetUtil.US_ASCII);
+        out.writeBytes(PROXY_PREFIX);
+        out.writeByte((byte) ' ');
         out.writeCharSequence(msg.proxiedProtocol().name(), CharsetUtil.US_ASCII);
-        out.writeCharSequence(" ", CharsetUtil.US_ASCII);
+        out.writeByte((byte) ' ');
         out.writeCharSequence(msg.sourceAddress(), CharsetUtil.US_ASCII);
-        out.writeCharSequence(" ", CharsetUtil.US_ASCII);
+        out.writeByte((byte) ' ');
         out.writeCharSequence(msg.destinationAddress(), CharsetUtil.US_ASCII);
-        out.writeCharSequence(" ", CharsetUtil.US_ASCII);
+        out.writeByte((byte) ' ');
         out.writeCharSequence(String.valueOf(msg.sourcePort()), CharsetUtil.US_ASCII);
-        out.writeCharSequence(" ", CharsetUtil.US_ASCII);
+        out.writeByte((byte) ' ');
         out.writeCharSequence(String.valueOf(msg.destinationPort()), CharsetUtil.US_ASCII);
-        out.writeCharSequence("\r\n", CharsetUtil.US_ASCII);
+        out.writeByte((byte) '\r');
+        out.writeByte((byte) '\n');
     }
 
     private static void encodeV2(HAProxyMessage msg, ByteBuf out) {
@@ -78,11 +80,12 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
         switch (msg.proxiedProtocol().addressFamily()) {
             case AF_IPv4:
             case AF_IPv6:
-                byte[] sourceAddress = NetUtil.createByteArrayFromIpAddressString(msg.sourceAddress());
-                byte[] destinationAddress = NetUtil.createByteArrayFromIpAddressString(msg.destinationAddress());
-                out.writeShort(sourceAddress.length + destinationAddress.length + 4 + msg.tlvNumBytes());
-                out.writeBytes(sourceAddress);
-                out.writeBytes(destinationAddress);
+                byte[] srcAddrBytes = NetUtil.createByteArrayFromIpAddressString(msg.sourceAddress());
+                byte[] dstAddrBytes = NetUtil.createByteArrayFromIpAddressString(msg.destinationAddress());
+                // srcAddrLen + dstAddrLen + 4 (srcPort + dstPort) + numTlvBytes
+                out.writeShort(srcAddrBytes.length + dstAddrBytes.length + 4 + msg.tlvNumBytes());
+                out.writeBytes(srcAddrBytes);
+                out.writeBytes(dstAddrBytes);
                 out.writeShort(msg.sourcePort());
                 out.writeShort(msg.destinationPort());
                 encodeTlvs(msg.tlvs(), out);

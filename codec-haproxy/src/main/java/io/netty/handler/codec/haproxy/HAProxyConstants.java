@@ -74,5 +74,13 @@ final class HAProxyConstants {
             (byte) 0x0A
     };
 
+    static final byte[] PROXY_PREFIX = {
+            (byte) 'P',
+            (byte) 'R',
+            (byte) 'O',
+            (byte) 'X',
+            (byte) 'Y',
+    };
+
     private HAProxyConstants() { }
 }
