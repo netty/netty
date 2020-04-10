@@ -1788,7 +1788,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         handshakePromise.trySuccess(ctx.channel());
 
         if (logger.isDebugEnabled()) {
-            logger.debug("{} HANDSHAKEN: {}", ctx.channel(), engine.getSession().getCipherSuite());
+            SSLSession session = engine.getSession();
+            logger.debug(
+              "{} HANDSHAKEN: protocol:{} cipher suite:{}",
+              ctx.channel(),
+              session.getProtocol(),
+              session.getCipherSuite());
         }
         ctx.fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
 
