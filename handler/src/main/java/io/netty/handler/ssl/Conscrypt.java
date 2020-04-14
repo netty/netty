@@ -56,7 +56,8 @@ final class Conscrypt {
      * Indicates whether or not conscrypt is available on the current system.
      */
     static boolean isAvailable() {
-        return CAN_INSTANCE_PROVIDER && IS_CONSCRYPT_SSLENGINE != null && PlatformDependent.javaVersion() >= 8;
+        return CAN_INSTANCE_PROVIDER && IS_CONSCRYPT_SSLENGINE != null &&
+            (PlatformDependent.javaVersion() >= 8 || PlatformDependent.isAndroid());
     }
 
     static boolean isEngineSupported(SSLEngine engine) {
