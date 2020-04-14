@@ -330,7 +330,7 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
         if (match(BINARY_PREFIX, buffer, idx)) {
             return DETECTION_RESULT_V2;
         }
-        if (match(PROXY_PREFIX, buffer, idx)) {
+        if (match(TEXT_PREFIX, buffer, idx)) {
             return DETECTION_RESULT_V1;
         }
         return ProtocolDetectionResult.invalid();

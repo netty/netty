@@ -74,7 +74,7 @@ final class HAProxyConstants {
             (byte) 0x0A
     };
 
-    static final byte[] PROXY_PREFIX = {
+    static final byte[] TEXT_PREFIX = {
             (byte) 'P',
             (byte) 'R',
             (byte) 'O',

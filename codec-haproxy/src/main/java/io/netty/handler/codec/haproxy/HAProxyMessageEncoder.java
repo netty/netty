@@ -60,7 +60,7 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
     }
 
     private static void encodeV1(HAProxyMessage msg, ByteBuf out) {
-        out.writeBytes(PROXY_PREFIX);
+        out.writeBytes(TEXT_PREFIX);
         out.writeByte((byte) ' ');
         out.writeCharSequence(msg.proxiedProtocol().name(), CharsetUtil.US_ASCII);
         out.writeByte((byte) ' ');
