@@ -47,12 +47,15 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
 
     @Override
     protected void encode(ChannelHandlerContext ctx, HAProxyMessage msg, ByteBuf out) throws Exception {
-        if (msg.protocolVersion() == HAProxyProtocolVersion.V1) {
-            encodeV1(msg, out);
-        } else if (msg.protocolVersion() == HAProxyProtocolVersion.V2) {
-            encodeV2(msg, out);
-        } else {
-            throw new HAProxyProtocolException("Unsupported version: " + msg.protocolVersion());
+        switch (msg.protocolVersion()) {
+            case V1:
+                encodeV1(msg, out);
+                break;
+            case V2:
+                encodeV2(msg, out);
+                break;
+            default:
+                throw new HAProxyProtocolException("Unsupported version: " + msg.protocolVersion());
         }
     }
 

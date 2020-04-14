@@ -23,7 +23,6 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyMessageEncoder;
-import io.netty.handler.codec.haproxy.HAProxyProtocolException;
 
 public class HAProxyHandler extends ChannelOutboundHandlerAdapter {
 
@@ -35,23 +34,19 @@ public class HAProxyHandler extends ChannelOutboundHandlerAdapter {
 
     @Override
     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        if (!(msg instanceof HAProxyMessage)) {
-            super.write(ctx, msg, promise);
-            return;
-        }
-
-        ctx.write(msg, promise).addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (future.isSuccess()) {
-                    ctx.pipeline().remove(HAProxyMessageEncoder.INSTANCE);
-                    ctx.pipeline().remove(HAProxyHandler.this);
-                } else {
-                    ctx.fireExceptionCaught(new HAProxyProtocolException("failed to write HAProxy message",
-                                                                         future.cause()));
-                    ctx.close();
+        ChannelFuture future = ctx.write(msg, promise);
+        if (msg instanceof HAProxyMessage) {
+            future.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (future.isSuccess()) {
+                        ctx.pipeline().remove(HAProxyMessageEncoder.INSTANCE);
+                        ctx.pipeline().remove(HAProxyHandler.this);
+                    } else {
+                        ctx.close();
+                    }
                 }
-            }
-        });
+            });
+        }
     }
 }

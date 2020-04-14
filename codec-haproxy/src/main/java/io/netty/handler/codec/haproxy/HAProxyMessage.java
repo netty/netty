@@ -465,7 +465,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
         case AF_IPv6:
         case AF_IPv4:
             if (port < 0 || port > 65535) {
-                throw new IllegalArgumentException("invalid port: " + port + " (expected: 1 ~ 65535)");
+                throw new IllegalArgumentException("invalid port: " + port + " (expected: 0 ~ 65535)");
             }
             break;
         case AF_UNIX:
@@ -616,10 +616,10 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
                 .append(", sourcePort: ").append(sourcePort)
                 .append(", destinationPort: ").append(destinationPort)
                 .append(", tlvs: [");
-        for (HAProxyTLV tlv: tlvs) {
-            sb.append(tlv).append(", ");
-        }
         if (!tlvs.isEmpty()) {
+            for (HAProxyTLV tlv: tlvs) {
+                sb.append(tlv).append(", ");
+            }
             sb.setLength(sb.length() - 2);
         }
         sb.append("])");
