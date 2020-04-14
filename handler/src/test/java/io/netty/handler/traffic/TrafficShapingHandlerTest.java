@@ -71,7 +71,7 @@ public class TrafficShapingHandlerTest {
         }
     }
 
-    private void testHandlerRemove0(AbstractTrafficShapingHandler trafficHandler)
+    private void testHandlerRemove0(final AbstractTrafficShapingHandler trafficHandler)
             throws Exception {
         Channel svrChannel = null;
         Channel ch = null;
