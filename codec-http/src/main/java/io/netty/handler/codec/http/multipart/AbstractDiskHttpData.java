@@ -184,8 +184,11 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 RandomAccessFile accessFile = new RandomAccessFile(file, "rw");
                 fileChannel = accessFile.getChannel();
             }
-            fileChannel.force(false);
-            fileChannel.close();
+            try {
+                fileChannel.force(false);
+            } finally {
+                fileChannel.close();
+            }
             fileChannel = null;
             setCompleted();
         } else {
