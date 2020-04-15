@@ -351,7 +351,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
             return new HAProxyMessage(
                     HAProxyProtocolVersion.V1, HAProxyCommand.PROXY,
                     protAndFam, parts[2], parts[3], parts[4], parts[5]);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             throw new HAProxyProtocolException("invalid HAProxy message", e);
         }
     }
