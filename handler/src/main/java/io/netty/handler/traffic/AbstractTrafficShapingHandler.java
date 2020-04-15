@@ -512,6 +512,15 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
         ctx.fireChannelRead(msg);
     }
 
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        Channel channel = ctx.channel();
+        if (channel.hasAttr(REOPEN_TASK)) {
+            //release the reopen task
+            channel.attr(REOPEN_TASK).set(null);
+        }
+    }
+
     /**
      * Method overridden in GTSH to take into account specific timer for the channel.
      * @param wait the wait delay computed in ms
