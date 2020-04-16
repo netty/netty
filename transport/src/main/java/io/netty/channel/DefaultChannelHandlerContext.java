@@ -159,7 +159,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().channelRegistered(this);
         } catch (Throwable t) {
-            notifyHandlerException(t);
+            invokeExceptionCaught(t);
         }
     }
 
@@ -187,7 +187,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().channelUnregistered(this);
         } catch (Throwable t) {
-            notifyHandlerException(t);
+            invokeExceptionCaught(t);
         }
     }
 
@@ -215,7 +215,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().channelActive(this);
         } catch (Throwable t) {
-            notifyHandlerException(t);
+            invokeExceptionCaught(t);
         }
     }
 
@@ -243,7 +243,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().channelInactive(this);
         } catch (Throwable t) {
-            notifyHandlerException(t);
+            invokeExceptionCaught(t);
         }
     }
 
@@ -320,7 +320,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().userEventTriggered(this, event);
         } catch (Throwable t) {
-            notifyHandlerException(t);
+            invokeExceptionCaught(t);
         }
     }
 
@@ -356,7 +356,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().channelRead(this, m);
         } catch (Throwable t) {
-            notifyHandlerException(t);
+            invokeExceptionCaught(t);
         }
     }
 
@@ -385,7 +385,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().channelReadComplete(this);
         } catch (Throwable t) {
-            notifyHandlerException(t);
+            invokeExceptionCaught(t);
         }
     }
 
@@ -414,7 +414,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         try {
             handler().channelWritabilityChanged(this);
         } catch (Throwable t) {
-            notifyHandlerException(t);
+            invokeExceptionCaught(t);
         }
     }
 
@@ -694,7 +694,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     private void invokeExceptionCaughtFromOutbound(Throwable t) {
         if ((executionMask & MASK_EXCEPTION_CAUGHT) != 0) {
-            notifyHandlerException(t);
+            invokeExceptionCaught(t);
         } else {
             DefaultChannelHandlerContext ctx = findContextInbound(MASK_EXCEPTION_CAUGHT);
             if (ctx == null) {
@@ -818,39 +818,6 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         // Only log if the given promise is not of type VoidChannelPromise as tryFailure(...) is expected to return
         // false.
         PromiseNotificationUtil.tryFailure(promise, cause, promise instanceof VoidChannelPromise ? null : logger);
-    }
-
-    private void notifyHandlerException(Throwable cause) {
-        if (inExceptionCaught(cause)) {
-            if (logger.isWarnEnabled()) {
-                logger.warn(
-                        "An exception was thrown by a user handler " +
-                                "while handling an exceptionCaught event", cause);
-            }
-            return;
-        }
-
-        invokeExceptionCaught(cause);
-    }
-
-    private static boolean inExceptionCaught(Throwable cause) {
-        do {
-            StackTraceElement[] trace = cause.getStackTrace();
-            if (trace != null) {
-                for (StackTraceElement t : trace) {
-                    if (t == null) {
-                        break;
-                    }
-                    if ("exceptionCaught".equals(t.getMethodName())) {
-                        return true;
-                    }
-                }
-            }
-
-            cause = cause.getCause();
-        } while (cause != null);
-
-        return false;
     }
 
     @Override
