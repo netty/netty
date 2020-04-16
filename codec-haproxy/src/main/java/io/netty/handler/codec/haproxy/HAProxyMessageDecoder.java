@@ -21,6 +21,9 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.ProtocolDetectionResult;
 import io.netty.util.CharsetUtil;
 
+
+import static io.netty.handler.codec.haproxy.HAProxyConstants.*;
+
 /**
  * Decodes an HAProxy proxy protocol header
  *
@@ -46,32 +49,6 @@ public class HAProxyMessageDecoder extends ByteToMessageDecoder {
      * Maximum possible length for v2 additional TLV data (max unsigned short - max v2 address info space)
      */
     private static final int V2_MAX_TLV = 65535 - 216;
-
-    /**
-     * Binary header prefix
-     */
-    private static final byte[] BINARY_PREFIX = {
-            (byte) 0x0D,
-            (byte) 0x0A,
-            (byte) 0x0D,
-            (byte) 0x0A,
-            (byte) 0x00,
-            (byte) 0x0D,
-            (byte) 0x0A,
-            (byte) 0x51,
-            (byte) 0x55,
-            (byte) 0x49,
-            (byte) 0x54,
-            (byte) 0x0A
-    };
-
-    private static final byte[] TEXT_PREFIX = {
-            (byte) 'P',
-            (byte) 'R',
-            (byte) 'O',
-            (byte) 'X',
-            (byte) 'Y',
-    };
 
     /**
      * Binary header prefix length
