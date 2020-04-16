@@ -60,6 +60,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 
@@ -331,6 +332,87 @@ public class DefaultChannelPipelineTest {
         pipeline.addLast(lastHandlers);
 
         verifyContextNumber(pipeline, HANDLER_ARRAY_LEN * 2);
+    }
+
+    @Test(timeout = 3000)
+    public void testThrowInExceptionCaught() throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicInteger counter = new AtomicInteger();
+        Channel channel = new LocalChannel();
+        try {
+            group.register(channel).syncUninterruptibly();
+            channel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                class TestException extends Exception { }
+
+                @Override
+                public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                    throw new TestException();
+                }
+
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    if (cause instanceof TestException) {
+                        ctx.executor().execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                latch.countDown();
+                            }
+                        });
+                    }
+                    counter.incrementAndGet();
+                    throw new Exception();
+                }
+            });
+
+            channel.pipeline().fireChannelReadComplete();
+            latch.await();
+            assertEquals(1, counter.get());
+        } finally {
+            channel.close().syncUninterruptibly();
+        }
+    }
+
+    @Test(timeout = 3000)
+    public void testThrowInOtherHandlerAfterInvokedFromExceptionCaught() throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicInteger counter = new AtomicInteger();
+        Channel channel = new LocalChannel();
+        try {
+            group.register(channel).syncUninterruptibly();
+            channel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                    ctx.fireChannelReadComplete();
+                }
+            }, new ChannelInboundHandlerAdapter() {
+                class TestException extends Exception { }
+
+                @Override
+                public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                    throw new TestException();
+                }
+
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                    if (cause instanceof TestException) {
+                        ctx.executor().execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                latch.countDown();
+                            }
+                        });
+                    }
+                    counter.incrementAndGet();
+                    throw new Exception();
+                }
+            });
+
+            channel.pipeline().fireExceptionCaught(new Exception());
+            latch.await();
+            assertEquals(1, counter.get());
+        } finally {
+            channel.close().syncUninterruptibly();
+        }
     }
 
     @Test
