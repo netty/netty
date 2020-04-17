@@ -16,7 +16,3 @@ RUN set -x && \
 
 ENV PATH="/gcc-linaro-$GCC_VERSION-x86_64_aarch64-linux-gnu/bin:${PATH}"
 ENV JAVA_HOME="/usr/lib/jvm/java-1.8.0-openjdk/"
-
-# Get Netty source
-RUN set -x && \
-  git clone https://github.com/netty/netty
