@@ -175,7 +175,7 @@ public class DiskFileUploadTest {
         }
     }
 
-    private byte[] doReadFile(File file, int maxRead) throws Exception {
+    private static byte[] doReadFile(File file, int maxRead) throws Exception {
         FileInputStream fis = new FileInputStream(file);
         try {
             byte[] buf = new byte[maxRead];
