@@ -16,7 +16,6 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.internal.PlatformDependent;
 
 import javax.net.ssl.SSLEngine;
 
@@ -146,7 +145,10 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
     }
 
     static boolean jdkAlpnSupported() {
-        return PlatformDependent.javaVersion() >= 9 && Java9SslUtils.supportsAlpn();
+        // While it is called Java9SslUtils it is not strictly true anymore that this only exists in Java9+ as it
+        // was recently backported as port of https://bugs.java.com/bugdatabase/view_bug.do?bug_id=8230977.
+        // Because of this lets not do a Java version runtime check but just depend on if the methods are present.
+        return Java9SslUtils.supportsAlpn();
     }
 
     static boolean isAlpnSupported() {

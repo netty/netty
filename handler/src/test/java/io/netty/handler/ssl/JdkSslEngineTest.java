@@ -79,10 +79,11 @@ public class JdkSslEngineTest extends SSLEngineTest {
                 return null;
             }
         },
-        ALPN_JAVA9 {
+        ALPN_JAVA {
+            @SuppressWarnings("deprecation")
             @Override
             boolean isAvailable() {
-                return PlatformDependent.javaVersion() >= 9 && Java9SslUtils.supportsAlpn();
+                return JdkAlpnApplicationProtocolNegotiator.isAlpnSupported();
             }
 
             @Override
