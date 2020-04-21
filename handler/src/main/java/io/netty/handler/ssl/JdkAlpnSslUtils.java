@@ -97,8 +97,11 @@ final class JdkAlpnSslUtils {
             });
             getHandshakeApplicationProtocolSelector.invoke(engine);
         } catch (Throwable t) {
-            logger.error("Unable to initialize JdkAlpnSslUtils, but the detected java version was: {}",
-                    PlatformDependent.javaVersion(), t);
+            int version = PlatformDependent.javaVersion();
+            if (version >= 9) {
+                // We only log when run on java9+ as this is expected on some earlier java8 versions
+                logger.error("Unable to initialize JdkAlpnSslUtils, but the detected java version was: {}", version, t);
+            }
             getHandshakeApplicationProtocol = null;
             getApplicationProtocol = null;
             setApplicationProtocols = null;
