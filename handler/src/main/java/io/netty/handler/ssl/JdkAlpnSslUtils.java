@@ -41,11 +41,11 @@ final class JdkAlpnSslUtils {
     private static final Method GET_HANDSHAKE_APPLICATION_PROTOCOL_SELECTOR;
 
     static {
-        Method getHandshakeApplicationProtocol = null;
-        Method getApplicationProtocol = null;
-        Method setApplicationProtocols = null;
-        Method setHandshakeApplicationProtocolSelector = null;
-        Method getHandshakeApplicationProtocolSelector = null;
+        Method getHandshakeApplicationProtocol;
+        Method getApplicationProtocol;
+        Method setApplicationProtocols;
+        Method setHandshakeApplicationProtocolSelector;
+        Method getHandshakeApplicationProtocolSelector;
 
         try {
             SSLContext context = SSLContext.getInstance(JdkSslContext.PROTOCOL);
