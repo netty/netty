@@ -80,7 +80,6 @@ public class JdkSslEngineTest extends SSLEngineTest {
             }
         },
         ALPN_JAVA {
-            @SuppressWarnings("deprecation")
             @Override
             boolean isAvailable() {
                 return JdkAlpnSslUtils.supportsAlpn();
