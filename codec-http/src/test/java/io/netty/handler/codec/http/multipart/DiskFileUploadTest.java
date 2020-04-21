@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http.multipart;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 
@@ -23,6 +25,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -128,6 +131,67 @@ public class DiskFileUploadTest {
             }
         } finally {
             f1.delete();
+        }
+    }
+
+    @Test
+    public void testSetContentFromByteBuf() throws Exception {
+        DiskFileUpload f1 = new DiskFileUpload("file2", "file2", "application/json", null, null, 0);
+        try {
+            String json = "{\"hello\":\"world\"}";
+            byte[] bytes = json.getBytes(CharsetUtil.UTF_8);
+            f1.setContent(Unpooled.wrappedBuffer(bytes));
+            assertEquals(json, f1.getString());
+            assertArrayEquals(bytes, f1.get());
+            File file = f1.getFile();
+            assertEquals((long) bytes.length, file.length());
+            assertArrayEquals(bytes, doReadFile(file, bytes.length));
+        } finally {
+            f1.delete();
+        }
+    }
+
+    @Test
+    public void testSetContentFromInputStream() throws Exception {
+        String json = "{\"hello\":\"world\",\"foo\":\"bar\"}";
+        DiskFileUpload f1 = new DiskFileUpload("file3", "file3", "application/json", null, null, 0);
+        try {
+            byte[] bytes = json.getBytes(CharsetUtil.UTF_8);
+            ByteBuf buf = Unpooled.wrappedBuffer(bytes);
+            InputStream is = new ByteBufInputStream(buf);
+            try {
+                f1.setContent(is);
+                assertEquals(json, f1.getString());
+                assertArrayEquals(bytes, f1.get());
+                File file = f1.getFile();
+                assertEquals((long) bytes.length, file.length());
+                assertArrayEquals(bytes, doReadFile(file, bytes.length));
+            } finally {
+                buf.release();
+                is.close();
+            }
+        } finally {
+            f1.delete();
+        }
+    }
+
+    private static byte[] doReadFile(File file, int maxRead) throws Exception {
+        FileInputStream fis = new FileInputStream(file);
+        try {
+            byte[] buf = new byte[maxRead];
+            int offset = 0;
+            int read = 0;
+            int len = buf.length;
+            while ((read = fis.read(buf, offset, len)) > 0) {
+                len -= read;
+                offset += read;
+                if (len <= 0 || offset >= buf.length) {
+                    break;
+                }
+            }
+            return buf;
+        } finally {
+            fis.close();
         }
     }
 }
