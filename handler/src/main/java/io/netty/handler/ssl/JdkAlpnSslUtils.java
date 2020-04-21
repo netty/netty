@@ -32,8 +32,8 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-final class Java9SslUtils {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Java9SslUtils.class);
+final class JdkAlpnSslUtils {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(JdkAlpnSslUtils.class);
     private static final MethodHandle SET_APPLICATION_PROTOCOLS;
     private static final MethodHandle GET_APPLICATION_PROTOCOL;
     private static final MethodHandle GET_HANDSHAKE_APPLICATION_PROTOCOL;
@@ -81,8 +81,11 @@ final class Java9SslUtils {
                                     MethodType.methodType(BiFunction.class)));
             getHandshakeApplicationProtocolSelector.invokeExact(engine);
         } catch (Throwable t) {
-            logger.error("Unable to initialize Java9SslUtils, but the detected javaVersion was: {}",
-                    PlatformDependent.javaVersion(), t);
+            int version = PlatformDependent.javaVersion();
+            if (version >= 9) {
+                // We only log when run on java9+ as this is expected on some earlier java8 versions
+                logger.error("Unable to initialize JdkAlpnSslUtils, but the detected java version was: {}", version, t);
+            }
             getHandshakeApplicationProtocol = null;
             getApplicationProtocol = null;
             setApplicationProtocols = null;
@@ -96,7 +99,7 @@ final class Java9SslUtils {
         GET_HANDSHAKE_APPLICATION_PROTOCOL_SELECTOR = getHandshakeApplicationProtocolSelector;
     }
 
-    private Java9SslUtils() {
+    private JdkAlpnSslUtils() {
     }
 
     static boolean supportsAlpn() {

@@ -339,7 +339,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     public String getApplicationProtocol() {
         if (PlatformDependent.javaVersion() >= 9) {
             try {
-                return Java9SslUtils.getApplicationProtocol(getWrappedEngine());
+                return JdkAlpnSslUtils.getApplicationProtocol(getWrappedEngine());
             } finally {
                 assertErrorStackEmpty();
             }
@@ -350,7 +350,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     public String getHandshakeApplicationProtocol() {
         if (PlatformDependent.javaVersion() >= 9) {
             try {
-                return Java9SslUtils.getHandshakeApplicationProtocol(getWrappedEngine());
+                return JdkAlpnSslUtils.getHandshakeApplicationProtocol(getWrappedEngine());
             } finally {
                 assertErrorStackEmpty();
             }
@@ -361,7 +361,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     public void setHandshakeApplicationProtocolSelector(BiFunction<SSLEngine, List<String>, String> selector) {
         if (PlatformDependent.javaVersion() >= 9) {
             try {
-                Java9SslUtils.setHandshakeApplicationProtocolSelector(getWrappedEngine(), selector);
+                JdkAlpnSslUtils.setHandshakeApplicationProtocolSelector(getWrappedEngine(), selector);
             } finally {
                 assertErrorStackEmpty();
             }
@@ -372,7 +372,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     public BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelector() {
         if (PlatformDependent.javaVersion() >= 9) {
             try {
-                return Java9SslUtils.getHandshakeApplicationProtocolSelector(getWrappedEngine());
+                return JdkAlpnSslUtils.getHandshakeApplicationProtocolSelector(getWrappedEngine());
             } finally {
                 assertErrorStackEmpty();
             }
