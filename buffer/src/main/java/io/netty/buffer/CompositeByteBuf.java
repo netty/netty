@@ -280,6 +280,12 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             Component c = newComponent(ensureAccessible(buffer), 0);
             int readableBytes = c.length();
 
+            // Check if we would overflow.
+            // See https://github.com/netty/netty/issues/10194
+            if (capacity() + readableBytes < 0) {
+                throw new IllegalArgumentException("Can't increase by " + readableBytes);
+            }
+
             addComp(cIndex, c);
             wasAdded = true;
             if (readableBytes > 0 && cIndex < componentCount - 1) {
@@ -360,6 +366,18 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     private CompositeByteBuf addComponents0(boolean increaseWriterIndex,
             final int cIndex, ByteBuf[] buffers, int arrOffset) {
         final int len = buffers.length, count = len - arrOffset;
+
+        int readableBytes = 0;
+        int capacity = capacity();
+        for (int i = 0; i < buffers.length; i++) {
+            readableBytes += buffers[i].readableBytes();
+
+            // Check if we would overflow.
+            // See https://github.com/netty/netty/issues/10194
+            if (capacity + readableBytes < 0) {
+                throw new IllegalArgumentException("Can't increase by " + readableBytes);
+            }
+        }
         // only set ci after we've shifted so that finally block logic is always correct
         int ci = Integer.MAX_VALUE;
         try {
