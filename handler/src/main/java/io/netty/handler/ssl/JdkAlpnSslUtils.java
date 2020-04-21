@@ -32,8 +32,8 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 @SuppressJava6Requirement(reason = "Usage guarded by java version check")
-final class Java9SslUtils {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Java9SslUtils.class);
+final class JdkAlpnSslUtils {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(JdkAlpnSslUtils.class);
     private static final Method SET_APPLICATION_PROTOCOLS;
     private static final Method GET_APPLICATION_PROTOCOL;
     private static final Method GET_HANDSHAKE_APPLICATION_PROTOCOL;
@@ -112,7 +112,7 @@ final class Java9SslUtils {
         GET_HANDSHAKE_APPLICATION_PROTOCOL_SELECTOR = getHandshakeApplicationProtocolSelector;
     }
 
-    private Java9SslUtils() {
+    private JdkAlpnSslUtils() {
     }
 
     static boolean supportsAlpn() {
@@ -164,6 +164,7 @@ final class Java9SslUtils {
         }
     }
 
+    @SuppressWarnings("unchecked")
     static BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelector(SSLEngine engine) {
         try {
             return (BiFunction<SSLEngine, List<String>, String>)

@@ -1157,9 +1157,9 @@ public abstract class SSLEngineTest {
         assertEquals(expectedApplicationProtocol, appProto);
 
         SSLEngine engine = handler.engine();
-        if (engine instanceof Java9SslEngine) {
+        if (engine instanceof JdkAlpnSslEngine) {
             // Also verify the Java9 exposed method.
-            Java9SslEngine java9SslEngine = (Java9SslEngine) engine;
+            JdkAlpnSslEngine java9SslEngine = (JdkAlpnSslEngine) engine;
             assertEquals(expectedApplicationProtocol == null ? StringUtil.EMPTY_STRING : expectedApplicationProtocol,
                     java9SslEngine.getApplicationProtocol());
         }
