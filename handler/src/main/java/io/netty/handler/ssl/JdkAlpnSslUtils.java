@@ -32,8 +32,8 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 @SuppressJava6Requirement(reason = "Usage guarded by java version check")
-final class Java9SslUtils {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Java9SslUtils.class);
+final class JdkAlpnSslUtils {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(JdkAlpnSslUtils.class);
     private static final Method SET_APPLICATION_PROTOCOLS;
     private static final Method GET_APPLICATION_PROTOCOL;
     private static final Method GET_HANDSHAKE_APPLICATION_PROTOCOL;
@@ -41,11 +41,11 @@ final class Java9SslUtils {
     private static final Method GET_HANDSHAKE_APPLICATION_PROTOCOL_SELECTOR;
 
     static {
-        Method getHandshakeApplicationProtocol = null;
-        Method getApplicationProtocol = null;
-        Method setApplicationProtocols = null;
-        Method setHandshakeApplicationProtocolSelector = null;
-        Method getHandshakeApplicationProtocolSelector = null;
+        Method getHandshakeApplicationProtocol;
+        Method getApplicationProtocol;
+        Method setApplicationProtocols;
+        Method setHandshakeApplicationProtocolSelector;
+        Method getHandshakeApplicationProtocolSelector;
 
         try {
             SSLContext context = SSLContext.getInstance(JdkSslContext.PROTOCOL);
@@ -97,8 +97,11 @@ final class Java9SslUtils {
             });
             getHandshakeApplicationProtocolSelector.invoke(engine);
         } catch (Throwable t) {
-            logger.error("Unable to initialize Java9SslUtils, but the detected javaVersion was: {}",
-                    PlatformDependent.javaVersion(), t);
+            int version = PlatformDependent.javaVersion();
+            if (version >= 9) {
+                // We only log when run on java9+ as this is expected on some earlier java8 versions
+                logger.error("Unable to initialize JdkAlpnSslUtils, but the detected java version was: {}", version, t);
+            }
             getHandshakeApplicationProtocol = null;
             getApplicationProtocol = null;
             setApplicationProtocols = null;
@@ -112,7 +115,7 @@ final class Java9SslUtils {
         GET_HANDSHAKE_APPLICATION_PROTOCOL_SELECTOR = getHandshakeApplicationProtocolSelector;
     }
 
-    private Java9SslUtils() {
+    private JdkAlpnSslUtils() {
     }
 
     static boolean supportsAlpn() {
@@ -164,6 +167,7 @@ final class Java9SslUtils {
         }
     }
 
+    @SuppressWarnings("unchecked")
     static BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelector(SSLEngine engine) {
         try {
             return (BiFunction<SSLEngine, List<String>, String>)
