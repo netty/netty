@@ -18,6 +18,7 @@ package io.netty.buffer;
 import static java.util.Objects.requireNonNull;
 
 import io.netty.buffer.CompositeByteBuf.ByteWrapper;
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
@@ -579,11 +580,47 @@ public final class Unpooled {
     public static ByteBuf copiedBuffer(CharSequence string, Charset charset) {
         requireNonNull(string, "string");
 
+        if (CharsetUtil.UTF_8.equals(charset)) {
+            return copiedBufferUtf8(string);
+        }
+        if (CharsetUtil.US_ASCII.equals(charset)) {
+            return copiedBufferAscii(string);
+        }
         if (string instanceof CharBuffer) {
             return copiedBuffer((CharBuffer) string, charset);
         }
 
         return copiedBuffer(CharBuffer.wrap(string), charset);
+    }
+
+    private static ByteBuf copiedBufferUtf8(CharSequence string) {
+        boolean release = true;
+        // Mimic the same behavior as other copiedBuffer implementations.
+        ByteBuf buffer = ALLOC.heapBuffer(ByteBufUtil.utf8Bytes(string));
+        try {
+            ByteBufUtil.writeUtf8(buffer, string);
+            release = false;
+            return buffer;
+        } finally {
+            if (release) {
+                buffer.release();
+            }
+        }
+    }
+
+    private static ByteBuf copiedBufferAscii(CharSequence string) {
+        boolean release = true;
+        // Mimic the same behavior as other copiedBuffer implementations.
+        ByteBuf buffer = ALLOC.heapBuffer(string.length());
+        try {
+            ByteBufUtil.writeAscii(buffer, string);
+            release = false;
+            return buffer;
+        } finally {
+            if (release) {
+                buffer.release();
+            }
+        }
     }
 
     /**
