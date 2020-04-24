@@ -57,7 +57,9 @@ final class Conscrypt {
      */
     static boolean isAvailable() {
         return CAN_INSTANCE_PROVIDER && IS_CONSCRYPT_SSLENGINE != null &&
-            (PlatformDependent.javaVersion() >= 8 || PlatformDependent.isAndroid());
+                ((PlatformDependent.javaVersion() >= 8 &&
+                        // Only works on Java14 and earlier for now
+                        PlatformDependent.javaVersion() < 15) || PlatformDependent.isAndroid());
     }
 
     static boolean isEngineSupported(SSLEngine engine) {
