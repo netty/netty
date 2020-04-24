@@ -78,18 +78,4 @@ public class ConscryptSslEngineTest extends SSLEngineTest {
     @Override
     public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth() {
     }
-
-    @Ignore("Ignore due bug in Conscrypt")
-    @Override
-    public void testSessionBindingEvent() throws Exception {
-        // Ignore due bug in Conscrypt where the incorrect SSLSession object is used in the SSLSessionBindingEvent.
-        // See https://github.com/google/conscrypt/issues/593
-    }
-
-    @Ignore("Ignore due bug in Conscrypt")
-    @Override
-    public void testHandshakeSession() throws Exception {
-        // Ignore as Conscrypt does not correctly return the local certificates while the TrustManager is invoked.
-        // See https://github.com/google/conscrypt/issues/634
-    }
 }
