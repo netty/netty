@@ -77,9 +77,9 @@ import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
-import static io.netty.resolver.dns.UnixResolverDnsServerAddressStreamProvider.parseEtcResolverFirstNdots;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 
@@ -111,7 +111,7 @@ public class DnsNameResolver extends InetNameResolver {
 
     static final ResolvedAddressTypes DEFAULT_RESOLVE_ADDRESS_TYPES;
     static final String[] DEFAULT_SEARCH_DOMAINS;
-    private static final int DEFAULT_NDOTS;
+    private static final UnixResolverOptions DEFAULT_OPTIONS;
 
     static {
         if (NetUtil.isIpV4StackPreferred() || !anyInterfaceSupportsIpV6()) {
@@ -141,13 +141,13 @@ public class DnsNameResolver extends InetNameResolver {
         }
         DEFAULT_SEARCH_DOMAINS = searchDomains;
 
-        int ndots;
+        UnixResolverOptions options;
         try {
-            ndots = parseEtcResolverFirstNdots();
+            options = UnixResolverDnsServerAddressStreamProvider.parseEtcResolverOptions();
         } catch (Exception ignore) {
-            ndots = UnixResolverDnsServerAddressStreamProvider.DEFAULT_NDOTS;
+            options = UnixResolverOptions.newBuilder().build();
         }
-        DEFAULT_NDOTS = ndots;
+        DEFAULT_OPTIONS = options;
     }
 
     /**
@@ -383,10 +383,12 @@ public class DnsNameResolver extends InetNameResolver {
             boolean decodeIdn,
             boolean completeOncePreferredResolved) {
         super(eventLoop);
-        this.queryTimeoutMillis = checkPositive(queryTimeoutMillis, "queryTimeoutMillis");
+        this.queryTimeoutMillis = queryTimeoutMillis > 0
+            ? queryTimeoutMillis
+            : TimeUnit.SECONDS.toMillis(DEFAULT_OPTIONS.timeout());
         this.resolvedAddressTypes = resolvedAddressTypes != null ? resolvedAddressTypes : DEFAULT_RESOLVE_ADDRESS_TYPES;
         this.recursionDesired = recursionDesired;
-        this.maxQueriesPerResolve = checkPositive(maxQueriesPerResolve, "maxQueriesPerResolve");
+        this.maxQueriesPerResolve = maxQueriesPerResolve > 0 ? maxQueriesPerResolve : DEFAULT_OPTIONS.attempts();
         this.maxPayloadSize = checkPositive(maxPayloadSize, "maxPayloadSize");
         this.optResourceEnabled = optResourceEnabled;
         this.hostsFileEntriesResolver = checkNotNull(hostsFileEntriesResolver, "hostsFileEntriesResolver");
@@ -401,7 +403,7 @@ public class DnsNameResolver extends InetNameResolver {
                                                                dnsQueryLifecycleObserverFactory) :
                 checkNotNull(dnsQueryLifecycleObserverFactory, "dnsQueryLifecycleObserverFactory");
         this.searchDomains = searchDomains != null ? searchDomains.clone() : DEFAULT_SEARCH_DOMAINS;
-        this.ndots = ndots >= 0 ? ndots : DEFAULT_NDOTS;
+        this.ndots = ndots >= 0 ? ndots : DEFAULT_OPTIONS.ndots();
         this.decodeIdn = decodeIdn;
         this.completeOncePreferredResolved = completeOncePreferredResolved;
         this.socketChannelFactory = socketChannelFactory;
