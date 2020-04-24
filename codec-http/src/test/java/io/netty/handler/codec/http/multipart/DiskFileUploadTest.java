@@ -29,6 +29,9 @@ import java.io.InputStream;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class DiskFileUploadTest {
@@ -192,6 +195,24 @@ public class DiskFileUploadTest {
             return buf;
         } finally {
             fis.close();
+        }
+    }
+
+    @Test
+    public void testDelete() throws Exception {
+        String json = "{\"foo\":\"bar\"}";
+        byte[] bytes = json.getBytes(CharsetUtil.UTF_8);
+        File tmpFile = null;
+        DiskFileUpload f1 = new DiskFileUpload("file4", "file4", "application/json", null, null, 0);
+        try {
+            assertNull(f1.getFile());
+            f1.setContent(Unpooled.wrappedBuffer(bytes));
+            assertNotNull(tmpFile = f1.getFile());
+        } finally {
+            f1.delete();
+            assertNull(f1.getFile());
+            assertNotNull(tmpFile);
+            assertFalse(tmpFile.exists());
         }
     }
 }
