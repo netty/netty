@@ -123,6 +123,7 @@ public final class PlatformDependent {
     private static final String LINUX_ID_PREFIX = "ID=";
     private static final String LINUX_ID_LIKE_PREFIX = "ID_LIKE=";
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
+    private static Pattern bitPattern = Pattern.compile("([1-9][0-9]+)-?bit");
 
     private static final Cleaner NOOP = new Cleaner() {
         @Override
@@ -1276,7 +1277,6 @@ public final class PlatformDependent {
 
         // Last resort: guess from VM name and then fall back to most common 64-bit mode.
         String vm = SystemPropertyUtil.get("java.vm.name", "").toLowerCase(Locale.US);
-        Pattern bitPattern = Pattern.compile("([1-9][0-9]+)-?bit");
         Matcher m = bitPattern.matcher(vm);
         if (m.find()) {
             return Integer.parseInt(m.group(1));
