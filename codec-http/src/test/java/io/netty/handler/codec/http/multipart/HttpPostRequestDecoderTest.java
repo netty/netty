@@ -25,7 +25,6 @@ import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
@@ -318,10 +317,10 @@ public class HttpPostRequestDecoderTest {
         byte[] payload3 = payload.substring(firstChunk + middleChunk, firstChunk + middleChunk * 2).getBytes();
         byte[] payload4 = payload.substring(firstChunk + middleChunk * 2).getBytes();
 
-        ByteBuf buf1 = ByteBufAllocator.DEFAULT.directBuffer(payload1.length);
-        ByteBuf buf2 = ByteBufAllocator.DEFAULT.directBuffer(payload2.length);
-        ByteBuf buf3 = ByteBufAllocator.DEFAULT.directBuffer(payload3.length);
-        ByteBuf buf4 = ByteBufAllocator.DEFAULT.directBuffer(payload4.length);
+        ByteBuf buf1 = Unpooled.directBuffer(payload1.length);
+        ByteBuf buf2 = Unpooled.directBuffer(payload2.length);
+        ByteBuf buf3 = Unpooled.directBuffer(payload3.length);
+        ByteBuf buf4 = Unpooled.directBuffer(payload4.length);
 
         buf1.writeBytes(payload1);
         buf2.writeBytes(payload2);
@@ -337,7 +336,6 @@ public class HttpPostRequestDecoderTest {
         assertEquals(139, decoder.getBodyHttpDatas().size());
 
         Attribute attr = (Attribute) decoder.getBodyHttpData("town");
-        assertTrue(attr.getByteBuf().hasArray());
         assertEquals("794649819", attr.getValue());
 
         decoder.destroy();
@@ -715,14 +713,14 @@ public class HttpPostRequestDecoderTest {
         String BOUNDARY = "01f136d9282f";
 
         byte[] bodyBytes = ("--" + BOUNDARY + "\n" +
-                "Content-Disposition: form-data; name=\"msg_id\"\n" +
-                "\n" +
-                "15200\n" +
-                "--" + BOUNDARY + "\n" +
-                "Content-Disposition: form-data; name=\"msg\"\n" +
-                "\n" +
-                "test message\n" +
-                "--" + BOUNDARY + "--").getBytes();
+            "Content-Disposition: form-data; name=\"msg_id\"\n" +
+            "\n" +
+            "15200\n" +
+            "--" + BOUNDARY + "\n" +
+            "Content-Disposition: form-data; name=\"msg\"\n" +
+            "\n" +
+            "test message\n" +
+            "--" + BOUNDARY + "--").getBytes();
         ByteBuf byteBuf = Unpooled.directBuffer(bodyBytes.length);
         byteBuf.writeBytes(bodyBytes);
 
@@ -771,7 +769,7 @@ public class HttpPostRequestDecoderTest {
     }
 
     private static void testNotLeakWhenWrapIllegalArgumentException(ByteBuf buf) {
-        buf.writeCharSequence("==", CharsetUtil.US_ASCII);
+        buf.writeCharSequence("a=b&foo=%22bar%22&==", CharsetUtil.US_ASCII);
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", buf);
         try {
             new HttpPostStandardRequestDecoder(request);
@@ -830,9 +828,9 @@ public class HttpPostRequestDecoderTest {
     }
 
     @Test
-    public void testFullRequestWithDirectByteBuf() throws Exception {
-        byte[] bodyBytes = "foo=bar&a=b&city=%22london%22".getBytes();
-        ByteBuf content = ByteBufAllocator.DEFAULT.directBuffer(bodyBytes.length);
+    public void testDecodeFullHttpRequestWithUrlEncodedBody() throws Exception {
+        byte[] bodyBytes = "foo=bar&a=b&empty=&city=%3c%22new%22%20york%20city%3e".getBytes();
+        ByteBuf content = Unpooled.directBuffer(bodyBytes.length);
         content.writeBytes(bodyBytes);
 
         FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", content);
@@ -840,21 +838,93 @@ public class HttpPostRequestDecoderTest {
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
 
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
-        assertEquals(3, decoder.getBodyHttpDatas().size());
+        assertEquals(4, decoder.getBodyHttpDatas().size());
 
         Attribute attr = (Attribute) decoder.getBodyHttpData("foo");
-        assertTrue(attr.getByteBuf().hasArray());
+        assertTrue(attr.getByteBuf().isDirect());
         assertEquals("bar", attr.getValue());
 
         attr = (Attribute) decoder.getBodyHttpData("a");
-        assertTrue(attr.getByteBuf().hasArray());
+        assertTrue(attr.getByteBuf().isDirect());
         assertEquals("b", attr.getValue());
 
+        attr = (Attribute) decoder.getBodyHttpData("empty");
+        assertTrue(attr.getByteBuf().isDirect());
+        assertEquals("", attr.getValue());
+
         attr = (Attribute) decoder.getBodyHttpData("city");
-        assertTrue(attr.getByteBuf().hasArray());
-        assertEquals("\"london\"", attr.getValue());
+        assertTrue(attr.getByteBuf().isDirect());
+        assertEquals("<\"new\" york city>", attr.getValue());
 
         decoder.destroy();
         req.release();
+    }
+
+    @Test
+    public void testDecodeFullHttpRequestWithUrlEncodedBodyWithBrokenHexByte0() {
+        byte[] bodyBytes = "foo=bar&a=b&empty=%&city=paris".getBytes();
+        ByteBuf content = Unpooled.directBuffer(bodyBytes.length);
+        content.writeBytes(bodyBytes);
+
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", content);
+        try {
+            new HttpPostRequestDecoder(req);
+            fail("Was expecting an ErrorDataDecoderException");
+        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+            assertEquals("Invalid hex byte at index '0' in string: '%'", e.getMessage());
+        } finally {
+            req.release();
+        }
+    }
+
+    @Test
+    public void testDecodeFullHttpRequestWithUrlEncodedBodyWithBrokenHexByte1() {
+        byte[] bodyBytes = "foo=bar&a=b&empty=%2&city=london".getBytes();
+        ByteBuf content = Unpooled.directBuffer(bodyBytes.length);
+        content.writeBytes(bodyBytes);
+
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", content);
+        try {
+            new HttpPostRequestDecoder(req);
+            fail("Was expecting an ErrorDataDecoderException");
+        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+            assertEquals("Invalid hex byte at index '0' in string: '%2'", e.getMessage());
+        } finally {
+            req.release();
+        }
+    }
+
+    @Test
+    public void testDecodeFullHttpRequestWithUrlEncodedBodyWithInvalidHexNibbleHi() {
+        byte[] bodyBytes = "foo=bar&a=b&empty=%Zc&city=london".getBytes();
+        ByteBuf content = Unpooled.directBuffer(bodyBytes.length);
+        content.writeBytes(bodyBytes);
+
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", content);
+        try {
+            new HttpPostRequestDecoder(req);
+            fail("Was expecting an ErrorDataDecoderException");
+        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+            assertEquals("Invalid hex byte at index '0' in string: '%Zc'", e.getMessage());
+        } finally {
+            req.release();
+        }
+    }
+
+    @Test
+    public void testDecodeFullHttpRequestWithUrlEncodedBodyWithInvalidHexNibbleLo() {
+        byte[] bodyBytes = "foo=bar&a=b&empty=%2g&city=london".getBytes();
+        ByteBuf content = Unpooled.directBuffer(bodyBytes.length);
+        content.writeBytes(bodyBytes);
+
+        FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", content);
+        try {
+            new HttpPostRequestDecoder(req);
+            fail("Was expecting an ErrorDataDecoderException");
+        } catch (HttpPostRequestDecoder.ErrorDataDecoderException e) {
+            assertEquals("Invalid hex byte at index '0' in string: '%2g'", e.getMessage());
+        } finally {
+            req.release();
+        }
     }
 }

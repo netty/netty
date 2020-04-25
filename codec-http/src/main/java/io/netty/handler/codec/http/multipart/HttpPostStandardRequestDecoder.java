@@ -26,7 +26,10 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDec
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.MultiPartStatus;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
+import io.netty.util.ByteProcessor;
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -627,9 +630,10 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
 
     private void setFinalBuffer(ByteBuf buffer) throws IOException {
         currentAttribute.addContent(buffer, true);
-        // TODO: implement an in-place QueryStringDecoder.decodeComponent(ByteBuf, charset) to avoid allocs
-        String value = decodeAttribute(currentAttribute.getByteBuf().toString(charset), charset);
-        currentAttribute.setValue(value);
+        ByteBuf decodedBuf = decodeAttribute(currentAttribute.getByteBuf(), charset);
+        if (decodedBuf != null) { // override content only when ByteBuf needed decoding
+            currentAttribute.setContent(decodedBuf);
+        }
         addHttpData(currentAttribute);
         currentAttribute = null;
     }
@@ -645,6 +649,28 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
         } catch (IllegalArgumentException e) {
             throw new ErrorDataDecoderException("Bad string: '" + s + '\'', e);
         }
+    }
+
+    private static ByteBuf decodeAttribute(ByteBuf b, Charset charset) {
+        int firstEscaped = b.forEachByte(new ByteProcessor.IndexOfProcessor((byte) '%'));
+        if (firstEscaped == -1) {
+            return null; // nothing to decode
+        }
+
+        ByteBuf buf = b.alloc().buffer(b.readableBytes());
+        UrlDecoder urlDecode = new UrlDecoder(buf);
+        int idx = b.forEachByte(urlDecode);
+        if (urlDecode.nextEscapedIdx != 0) { // incomplete hex byte
+            if (idx == -1) {
+                idx = b.readableBytes() - 1;
+            }
+            idx -= urlDecode.nextEscapedIdx - 1;
+            buf.release();
+            throw new ErrorDataDecoderException(
+                String.format("Invalid hex byte at index '%d' in string: '%s'", idx, b.toString(charset)));
+        }
+
+        return buf;
     }
 
     /**
@@ -682,5 +708,40 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
         checkDestroyed();
 
         factory.removeHttpDataFromClean(request, data);
+    }
+
+    private static final class UrlDecoder implements ByteProcessor {
+
+        private final ByteBuf output;
+        private int nextEscapedIdx;
+        private byte hiByte;
+
+        UrlDecoder(ByteBuf output) {
+            this.output = output;
+        }
+
+        @Override
+        public boolean process(byte value) {
+            if (nextEscapedIdx != 0) {
+                if (nextEscapedIdx == 1) {
+                    hiByte = value;
+                    ++nextEscapedIdx;
+                } else {
+                    int hi = StringUtil.decodeHexNibble((char) hiByte);
+                    int lo = StringUtil.decodeHexNibble((char) value);
+                    if (hi == -1 || lo == -1) {
+                        ++nextEscapedIdx;
+                        return false;
+                    }
+                    output.writeByte((hi << 4) + lo);
+                    nextEscapedIdx = 0;
+                }
+            } else if (value == '%') {
+                nextEscapedIdx = 1;
+            } else {
+                output.writeByte(value);
+            }
+            return true;
+        }
     }
 }
