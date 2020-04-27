@@ -2106,6 +2106,7 @@ public abstract class SSLEngineTest {
                     throw e;
                 }
                 // Workaround for conscrypt bug
+                // See https://github.com/google/conscrypt/issues/840
             }
         } finally {
             cleanupClientSslEngine(client);
@@ -2202,6 +2203,7 @@ public abstract class SSLEngineTest {
         try {
             engine.closeInbound();
             // Workaround for conscrypt bug
+            // See https://github.com/google/conscrypt/issues/839
             if (!Conscrypt.isEngineSupported(engine)) {
                 fail();
             }
