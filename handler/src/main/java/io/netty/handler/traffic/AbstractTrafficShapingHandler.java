@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.FileRegion;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLogger;
@@ -643,7 +644,8 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
     /**
      * Calculate the size of the given {@link Object}.
      *
-     * This implementation supports {@link ByteBuf} and {@link ByteBufHolder}. Sub-classes may override this.
+     * This implementation supports {@link ByteBuf}, {@link ByteBufHolder} and {@link FileRegion}.
+     * Sub-classes may override this.
      * @param msg the msg for which the size should be calculated.
      * @return size the size of the msg or {@code -1} if unknown.
      */
@@ -653,6 +655,9 @@ public abstract class AbstractTrafficShapingHandler implements ChannelHandler {
         }
         if (msg instanceof ByteBufHolder) {
             return ((ByteBufHolder) msg).content().readableBytes();
+        }
+        if (msg instanceof FileRegion) {
+            return ((FileRegion) msg).count();
         }
         return -1;
     }
