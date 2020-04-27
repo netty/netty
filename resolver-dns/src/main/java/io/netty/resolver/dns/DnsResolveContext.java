@@ -286,24 +286,28 @@ abstract class DnsResolveContext<T> {
             return name;
         }
 
-        String mapping = cnameCache.get(hostnameWithDot(first));
-        if (mapping == null) {
+        String second = cnameCache.get(hostnameWithDot(first));
+        if (second == null) {
             // Nothing else to follow, return first match.
             return first;
         }
 
-        if (first.equals(mapping)) {
+        if (first.equals(second)) {
             // Loop detected.... early return.
             return first;
         }
 
+        return cnameResolveFromCacheLoop(cnameCache, first, second);
+    }
+
+    private String cnameResolveFromCacheLoop(DnsCnameCache cnameCache, String first, String mapping) {
         // Detect loops using a HashSet. We use this as last resort implementation to reduce allocations in the most
         // common cases.
         Set<String> cnames = new HashSet<String>(4);
         cnames.add(first);
         cnames.add(mapping);
 
-        name = mapping;
+        String name = mapping;
         // Resolve from cnameCache() until there is no more cname entry cached.
         while ((mapping = cnameCache.get(hostnameWithDot(name))) != null) {
             if (!cnames.add(mapping)) {
