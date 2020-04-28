@@ -3046,8 +3046,338 @@ public class DnsNameResolverTest {
         }
     }
 
+    public void testResolveWithCacheFallback() throws Exception {
+        DnsCache cache = new DefaultDnsCache();
+        DnsNameResolver resolver = newResolver()
+                .queryTimeoutMillis(100)
+                .resolveCache(cache)
+                .resolveCacheFallback(new FlatTtlDnsCache(1000))
+                .build();
+
+        Future<InetAddress> result = resolver.resolve("google.com").awaitUninterruptibly();
+        InetAddress addr0 = result.getNow();
+
+        result = resolver.resolve("google.com").awaitUninterruptibly();
+        InetAddress addr1 = result.getNow();
+        assertSame(addr0, addr1);
+
+        // clear the cache. next resolve call will return the entry cached in the fallback cache
+        cache.clear();
+
+        result = resolver.resolve("google.com").awaitUninterruptibly();
+        InetAddress addr2 = result.getNow();
+        assertSame(addr1, addr2);
+
+        // pause for 150ms
+        pause(resolver.executor(), 150);
+
+        // next resolved address is different
+        result = resolver.resolve("google.com").awaitUninterruptibly();
+        InetAddress addr3 = result.getNow();
+        assertNotNull(addr3);
+        assertNotSame(addr0, addr3);
+
+        resolver.close();
+    }
+
+    @Test
+    public void testResolveAllWithCacheFallback() throws Exception {
+        DnsCache cache = new DefaultDnsCache();
+        DnsNameResolver resolver = newResolver()
+                .queryTimeoutMillis(100)
+                .resolveCache(cache)
+                .resolveCacheFallback(new FlatTtlDnsCache(1000))
+                .build();
+
+        Future<List<InetAddress>> result = resolver.resolveAll("google.com").awaitUninterruptibly();
+        List<InetAddress> addrs0 = result.getNow();
+
+        result = resolver.resolveAll("google.com").awaitUninterruptibly();
+        List<InetAddress> addrs1 = result.getNow();
+        assertListSame(addrs0, addrs1);
+
+        // clear the cache. next resolve call will return the entry cached in the fallback cache
+        cache.clear();
+
+        result = resolver.resolveAll("google.com").awaitUninterruptibly();
+        List<InetAddress> addrs2 = result.getNow();
+        assertListSame(addrs1, addrs2);
+
+        // pause for 150ms
+        pause(resolver.executor(), 150);
+
+        // next resolved address is different
+        result = resolver.resolveAll("google.com").awaitUninterruptibly();
+        List<InetAddress> addrs3 = result.getNow();
+        assertNotNull(addrs3);
+        assertListNotSame(addrs0, addrs3);
+
+        resolver.close();
+    }
+
+    @Test
+    public void testResolveWithCacheFallbackEmpty() {
+        DnsCache cache = new DefaultDnsCache();
+        DnsCache cacheFallback = new FlatTtlDnsCache(1000);
+        DnsNameResolver resolver = newResolver()
+                .queryTimeoutMillis(100)
+                .resolveCache(cache)
+                .resolveCacheFallback(cacheFallback)
+                .build();
+
+        Future<InetAddress> result = resolver.resolve("google.com").awaitUninterruptibly();
+        InetAddress addr0 = result.getNow();
+
+        result = resolver.resolve("google.com").awaitUninterruptibly();
+        InetAddress addr1 = result.getNow();
+        assertSame(addr0, addr1);
+
+        // clear both caches. next resolve will return a new entry
+        cache.clear();
+        cacheFallback.clear();
+
+        result = resolver.resolve("google.com").awaitUninterruptibly();
+        InetAddress addr2 = result.getNow();
+        assertNotNull(addr2);
+        assertNotSame(addr1, addr2);
+
+        resolver.close();
+    }
+
+    @Test
+    public void testResolveAllWithCacheFallbackEmpty() {
+        DnsCache cache = new DefaultDnsCache();
+        DnsCache cacheFallback = new FlatTtlDnsCache(1000);
+        DnsNameResolver resolver = newResolver()
+                .queryTimeoutMillis(100)
+                .resolveCache(cache)
+                .resolveCacheFallback(cacheFallback)
+                .build();
+
+        Future<List<InetAddress>> result = resolver.resolveAll("google.com").awaitUninterruptibly();
+        List<InetAddress> addrs0 = result.getNow();
+
+        result = resolver.resolveAll("google.com").awaitUninterruptibly();
+        List<InetAddress> addrs1 = result.getNow();
+        assertListSame(addrs0, addrs1);
+
+        // clear both caches. next resolve will return a new entry
+        cache.clear();
+        cacheFallback.clear();
+
+        result = resolver.resolveAll("google.com").awaitUninterruptibly();
+        List<InetAddress> addrs2 = result.getNow();
+        assertNotNull(addrs2);
+        assertListNotSame(addrs1, addrs2);
+
+        resolver.close();
+    }
+
+    @Test
+    public void testResolveWithCacheFailedFallback() {
+        DnsCache cache = new DefaultDnsCache();
+        DnsCache cacheFallback = new FlatTtlDnsCache(1000, 100);
+        DnsNameResolver resolver = newResolver()
+                .queryTimeoutMillis(100)
+                .resolveCache(cache)
+                .resolveCacheFallback(cacheFallback)
+                .build();
+
+        Future<InetAddress> result = resolver.resolve("google.com").awaitUninterruptibly();
+        InetAddress addr0 = result.getNow();
+
+        result = resolver.resolve("google.com").awaitUninterruptibly();
+        InetAddress addr1 = result.getNow();
+        assertSame(addr0, addr1);
+
+        // clear the primary cache. fail the fallback cache.
+        cache.clear();
+        Exception exception = new Exception();
+        cacheFallback.cache("google.com", null, exception, resolver.executor());
+
+        result = resolver.resolve("google.com").awaitUninterruptibly();
+        assertSame(exception, result.cause());
+
+        resolver.close();
+    }
+
+    @Test
+    public void testResolveAllWithCacheFailedFallback() {
+        DnsCache cache = new DefaultDnsCache();
+        DnsCache cacheFallback = new FlatTtlDnsCache(1000, 100);
+        DnsNameResolver resolver = newResolver()
+                .queryTimeoutMillis(100)
+                .resolveCache(cache)
+                .resolveCacheFallback(cacheFallback)
+                .build();
+
+        Future<List<InetAddress>> result = resolver.resolveAll("google.com").awaitUninterruptibly();
+        List<InetAddress> addrs0 = result.getNow();
+
+        result = resolver.resolveAll("google.com").awaitUninterruptibly();
+        List<InetAddress> addrs1 = result.getNow();
+        assertListSame(addrs0, addrs1);
+
+        // clear the primary cache. fail the fallback cache.
+        cache.clear();
+        Exception exception = new Exception();
+        cacheFallback.cache("google.com", null, exception, resolver.executor());
+
+        result = resolver.resolveAll("google.com").awaitUninterruptibly();
+        assertSame(exception, result.cause());
+
+        resolver.close();
+    }
+
+    @Test
+    public void testResolveCacheFallbackWithFailedEntryInPrimaryCacheAndNegativeTtl() throws Exception {
+        DnsCache cache = new DefaultDnsCache(10, 10, 100);
+        DnsNameResolver resolver = newResolver()
+                .queryTimeoutMillis(100)
+                .resolveCache(cache)
+                .resolveCacheFallback(new FlatTtlDnsCache(1000))
+                .build();
+
+        Future<InetAddress> result = resolver.resolve("google.com").awaitUninterruptibly();
+        InetAddress addr0 = result.getNow();
+
+        result = resolver.resolve("google.com").awaitUninterruptibly();
+        InetAddress addr1 = result.getNow();
+        assertSame(addr0, addr1);
+
+        // fail the primary cache. entry from the fallback cache will be returned on the next resolve call
+        cache.cache("google.com", null, new Exception(), resolver.executor());
+
+        result = resolver.resolve("google.com").awaitUninterruptibly();
+        InetAddress addr2 = result.getNow();
+        assertSame(addr1, addr2);
+
+        // pausing for 150ms won't make a difference
+        pause(resolver.executor(), 150);
+
+        // next resolved address is still the same because there is still an entry in the primary cache
+        result = resolver.resolve("google.com").awaitUninterruptibly();
+        InetAddress addr3 = result.getNow();
+        assertSame(addr1, addr3);
+
+        resolver.close();
+    }
+
+    @Test
+    public void testResolveAllCacheFallbackWithFailedEntryInPrimaryCacheAndNegativeTtl() throws Exception {
+        DnsCache cache = new DefaultDnsCache(10, 10, 100);
+        DnsNameResolver resolver = newResolver()
+                .queryTimeoutMillis(100)
+                .resolveCache(cache)
+                .resolveCacheFallback(new FlatTtlDnsCache(1000))
+                .build();
+
+        Future<List<InetAddress>> result = resolver.resolveAll("google.com").awaitUninterruptibly();
+        List<InetAddress> addrs0 = result.getNow();
+
+        result = resolver.resolveAll("google.com").awaitUninterruptibly();
+        List<InetAddress> addrs1 = result.getNow();
+        assertListSame(addrs0, addrs1);
+
+        // fail the primary cache. entry from the fallback cache will be returned on the next resolve call
+        cache.cache("google.com", null, new Exception(), resolver.executor());
+
+        result = resolver.resolveAll("google.com").awaitUninterruptibly();
+        List<InetAddress> addrs2 = result.getNow();
+        assertListSame(addrs1, addrs2);
+
+        // pausing for 150ms won't make a difference because of the negativeTtl on the primary cache
+        pause(resolver.executor(), 150);
+
+        // next resolved address is still the same because there is still an entry in the primary cache
+        result = resolver.resolveAll("google.com").awaitUninterruptibly();
+        List<InetAddress> addrs3 = result.getNow();
+        assertListSame(addrs1, addrs3);
+
+        resolver.close();
+    }
+
+    @Test
+    public void testResolveCacheFallbackWithFailedEntryInBothCaches() throws Exception {
+        DnsCache cache = new DefaultDnsCache(10, 10, 100);
+        DefaultDnsCache cacheFallback = new FlatTtlDnsCache(1000, 100);
+        DnsNameResolver resolver = newResolver()
+                .queryTimeoutMillis(100)
+                .resolveCache(cache)
+                .resolveCacheFallback(cacheFallback)
+                .build();
+
+        Future<InetAddress> result = resolver.resolve("google.com").awaitUninterruptibly();
+        InetAddress addr0 = result.getNow();
+
+        result = resolver.resolve("google.com").awaitUninterruptibly();
+        InetAddress addr1 = result.getNow();
+        assertSame(addr0, addr1);
+
+        // fail both caches
+        Exception exception = new Exception();
+        cache.cache("google.com", null, exception, resolver.executor());
+        cacheFallback.cache("google.com", null, new Exception(), resolver.executor());
+
+        result = resolver.resolve("google.com").awaitUninterruptibly();
+        // checks the exception is from the primary cache
+        assertSame(exception, result.cause());
+
+        resolver.close();
+    }
+
+    @Test
+    public void testResolveAllCacheFallbackWithFailedEntryInBothCaches() throws Exception {
+        DnsCache cache = new DefaultDnsCache(10, 10, 100);
+        DefaultDnsCache cacheFallback = new FlatTtlDnsCache(1000, 100);
+        DnsNameResolver resolver = newResolver()
+                .queryTimeoutMillis(100)
+                .resolveCache(cache)
+                .resolveCacheFallback(cacheFallback)
+                .build();
+
+        Future<List<InetAddress>> result = resolver.resolveAll("google.com").awaitUninterruptibly();
+        List<InetAddress> addrs0 = result.getNow();
+
+        result = resolver.resolveAll("google.com").awaitUninterruptibly();
+        List<InetAddress> addrs1 = result.getNow();
+        assertListSame(addrs0, addrs1);
+
+        // fail both caches
+        Exception exception = new Exception();
+        cache.cache("google.com", null, exception, resolver.executor());
+        cacheFallback.cache("google.com", null, new Exception(), resolver.executor());
+
+        result = resolver.resolveAll("google.com").awaitUninterruptibly();
+        // checks the exception is from the primary cache
+        assertSame(exception, result.cause());
+
+        resolver.close();
+    }
+
     private static void assertResolvedAddress(InetAddress resolvedAddress, String ipAddr, String hostname) {
         assertEquals(ipAddr, resolvedAddress.getHostAddress());
         assertEquals(hostname, resolvedAddress.getHostName());
+    }
+
+    static void pause(EventLoop eventLoop, long millis) throws Exception {
+        eventLoop.schedule(new Runnable() {
+            @Override
+            public void run() {
+            }
+        }, millis, TimeUnit.MILLISECONDS).get();
+    }
+
+    private static void assertListSame(List<?> l1, List<?> l2) {
+        assertEquals(l1.size(), l2.size());
+        for (int i = 0; i < l1.size(); i++) {
+            assertSame(l1.get(i), l2.get(i));
+        }
+    }
+
+    private static void assertListNotSame(List<?> l1, List<?> l2) {
+        for (int i = 0; i < l1.size() && i < l2.size(); i++) {
+            assertNotSame(l1.get(i), l2.get(i));
+        }
     }
 }

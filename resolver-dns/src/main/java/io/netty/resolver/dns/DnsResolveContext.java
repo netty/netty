@@ -147,6 +147,10 @@ abstract class DnsResolveContext<T> {
         return parent.resolveCache();
     }
 
+    DnsCache resolveCacheFallback() {
+        return parent.resolveCacheFallback();
+    }
+
     /**
      * The {@link DnsCnameCache} that is used for resolving.
      */
@@ -491,12 +495,14 @@ abstract class DnsResolveContext<T> {
                 }
             }
         });
-        if (!DnsNameResolver.doResolveAllCached(nameServerName, additionals, resolverPromise, resolveCache(),
-                parent.resolvedInternetProtocolFamiliesUnsafe())) {
+
+        DnsNameResolver.ResolvedAddresses result = DnsNameResolver.doResolveAllCached(nameServerName, additionals,
+                resolveCache(), parent.resolvedInternetProtocolFamiliesUnsafe());
+        if (result == null) {
             final AuthoritativeDnsServerCache authoritativeDnsServerCache = authoritativeDnsServerCache();
             new DnsAddressResolveContext(parent, originalPromise, nameServerName, additionals,
                                          parent.newNameServerAddressStream(nameServerName),
-                                         resolveCache(), new AuthoritativeDnsServerCache() {
+                                         resolveCache(), resolveCacheFallback(), new AuthoritativeDnsServerCache() {
                 @Override
                 public DnsServerAddressStream get(String hostname) {
                     // To not risk falling into any loop, we will not use the cache while following redirects but only
@@ -519,6 +525,8 @@ abstract class DnsResolveContext<T> {
                     return authoritativeDnsServerCache.clear(hostname);
                 }
             }, false).resolve(resolverPromise);
+        } else {
+            result.complete(resolverPromise);
         }
     }
 

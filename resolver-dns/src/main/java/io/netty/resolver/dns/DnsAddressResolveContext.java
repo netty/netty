@@ -19,6 +19,7 @@ import static io.netty.resolver.dns.DnsAddressDecoder.decodeAddress;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -30,17 +31,19 @@ import io.netty.util.concurrent.Promise;
 final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
 
     private final DnsCache resolveCache;
+    private final DnsCache resolveCacheFallback;
     private final AuthoritativeDnsServerCache authoritativeDnsServerCache;
     private final boolean completeEarlyIfPossible;
 
     DnsAddressResolveContext(DnsNameResolver parent, Promise<?> originalPromise,
                              String hostname, DnsRecord[] additionals,
                              DnsServerAddressStream nameServerAddrs, DnsCache resolveCache,
-                             AuthoritativeDnsServerCache authoritativeDnsServerCache,
+                             DnsCache resolveCacheFallback, AuthoritativeDnsServerCache authoritativeDnsServerCache,
                              boolean completeEarlyIfPossible) {
         super(parent, originalPromise, hostname, DnsRecord.CLASS_IN,
               parent.resolveRecordTypes(), additionals, nameServerAddrs);
         this.resolveCache = resolveCache;
+        this.resolveCacheFallback = resolveCacheFallback;
         this.authoritativeDnsServerCache = authoritativeDnsServerCache;
         this.completeEarlyIfPossible = completeEarlyIfPossible;
     }
@@ -52,7 +55,8 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
                                                       DnsRecord[] additionals,
                                                       DnsServerAddressStream nameServerAddrs) {
         return new DnsAddressResolveContext(parent, originalPromise, hostname, additionals, nameServerAddrs,
-                                            resolveCache, authoritativeDnsServerCache, completeEarlyIfPossible);
+                                            resolveCache, resolveCacheFallback, authoritativeDnsServerCache,
+                                            completeEarlyIfPossible);
     }
 
     @Override
@@ -81,19 +85,29 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
     void cache(String hostname, DnsRecord[] additionals,
                DnsRecord result, InetAddress convertedResult) {
         resolveCache.cache(hostname, additionals, convertedResult, result.timeToLive(), parent.ch.eventLoop());
+        if (resolveCacheFallback != null) {
+            resolveCacheFallback.cache(hostname, additionals, convertedResult, result.timeToLive(),
+                    parent.ch.eventLoop());
+        }
     }
 
     @Override
     void cache(String hostname, DnsRecord[] additionals, UnknownHostException cause) {
         resolveCache.cache(hostname, additionals, cause, parent.ch.eventLoop());
+        if (resolveCacheFallback != null) {
+            resolveCacheFallback.cache(hostname, additionals, cause, parent.ch.eventLoop());
+        }
     }
 
     @Override
     void doSearchDomainQuery(String hostname, Promise<List<InetAddress>> nextPromise) {
         // Query the cache for the hostname first and only do a query if we could not find it in the cache.
-        if (!DnsNameResolver.doResolveAllCached(
-                hostname, additionals, nextPromise, resolveCache, parent.resolvedInternetProtocolFamiliesUnsafe())) {
+        DnsNameResolver.ResolvedAddresses result = DnsNameResolver.doResolveAllCached(hostname, additionals,
+                resolveCache, parent.resolvedInternetProtocolFamiliesUnsafe());
+        if (result == null) {
             super.doSearchDomainQuery(hostname, nextPromise);
+        } else {
+            result.complete(nextPromise);
         }
     }
 

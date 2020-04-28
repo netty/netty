@@ -228,6 +228,7 @@ public class DnsNameResolver extends InetNameResolver {
      * Cache for {@link #doResolve(String, Promise)} and {@link #doResolveAll(String, Promise)}.
      */
     private final DnsCache resolveCache;
+    private final DnsCache resolveCacheFallback;
     private final AuthoritativeDnsServerCache authoritativeDnsServerCache;
     private final DnsCnameCache cnameCache;
 
@@ -356,10 +357,10 @@ public class DnsNameResolver extends InetNameResolver {
             String[] searchDomains,
             int ndots,
             boolean decodeIdn) {
-        this(eventLoop, channelFactory, null, resolveCache, NoopDnsCnameCache.INSTANCE, authoritativeDnsServerCache,
-             dnsQueryLifecycleObserverFactory, queryTimeoutMillis, resolvedAddressTypes, recursionDesired,
-             maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled, hostsFileEntriesResolver,
-             dnsServerAddressStreamProvider, searchDomains, ndots, decodeIdn, false);
+        this(eventLoop, channelFactory, null, resolveCache, null, NoopDnsCnameCache.INSTANCE,
+                authoritativeDnsServerCache, dnsQueryLifecycleObserverFactory, queryTimeoutMillis, resolvedAddressTypes,
+                recursionDesired, maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled,
+                hostsFileEntriesResolver, dnsServerAddressStreamProvider, searchDomains, ndots, decodeIdn, false);
     }
 
     DnsNameResolver(
@@ -367,6 +368,7 @@ public class DnsNameResolver extends InetNameResolver {
             ChannelFactory<? extends DatagramChannel> channelFactory,
             ChannelFactory<? extends SocketChannel> socketChannelFactory,
             final DnsCache resolveCache,
+            final DnsCache resolveCacheFallback,
             final DnsCnameCache cnameCache,
             final AuthoritativeDnsServerCache authoritativeDnsServerCache,
             DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory,
@@ -396,6 +398,7 @@ public class DnsNameResolver extends InetNameResolver {
         this.dnsServerAddressStreamProvider =
                 checkNotNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
         this.resolveCache = checkNotNull(resolveCache, "resolveCache");
+        this.resolveCacheFallback = resolveCacheFallback;
         this.cnameCache = checkNotNull(cnameCache, "cnameCache");
         this.dnsQueryLifecycleObserverFactory = traceEnabled ?
                 dnsQueryLifecycleObserverFactory instanceof NoopDnsQueryLifecycleObserverFactory ?
@@ -471,6 +474,9 @@ public class DnsNameResolver extends InetNameResolver {
             @Override
             public void operationComplete(ChannelFuture future) {
                 resolveCache.clear();
+                if (resolveCacheFallback != null) {
+                    resolveCacheFallback.clear();
+                }
                 cnameCache.clear();
                 authoritativeDnsServerCache.clear();
             }
@@ -527,6 +533,10 @@ public class DnsNameResolver extends InetNameResolver {
      */
     public DnsCache resolveCache() {
         return resolveCache;
+    }
+
+    DnsCache resolveCacheFallback() {
+        return resolveCacheFallback;
     }
 
     /**
@@ -886,37 +896,74 @@ public class DnsNameResolver extends InetNameResolver {
             return;
         }
 
-        if (!doResolveCached(hostname, additionals, promise, resolveCache)) {
-            doResolveUncached(hostname, additionals, promise, resolveCache, true);
-        }
-    }
+        DnsCacheEntry result;
+        // Resolution:
+        //  1. Lookup the entry in the primary cache (resolveCache)
+        //    * When resolveCache contains an error, try the secondary cache (resolveCacheFallback)
+        //    * When resolveCacheFallback returns a non-empty, non-error result, use that to complete the promise.
+        //    * Otherwise use the error from the primary cache to complete the promise.
+        //  2. When step #1 returned nothing, i.e the primary cache does not contain entry for hostname:
+        //    * Always attempt to refresh the primary cache by calling doResolveUncached()
+        //    * Before invoking doResolveUncached(), check whether the secondary cache can be used to complete the
+        //      promise immediately (with anything). If it can, use the result from the secondary cache and create new
+        //      promise to let doResolveUncached() do the resolution in background.
 
-    private boolean doResolveCached(String hostname,
-                                    DnsRecord[] additionals,
-                                    Promise<InetAddress> promise,
-                                    DnsCache resolveCache) {
-        final List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
-        if (cachedEntries == null || cachedEntries.isEmpty()) {
-            return false;
-        }
-
-        Throwable cause = cachedEntries.get(0).cause();
-        if (cause == null) {
-            final int numEntries = cachedEntries.size();
-            // Find the first entry with the preferred address type.
-            for (InternetProtocolFamily f : resolvedInternetProtocolFamilies) {
-                for (int i = 0; i < numEntries; i++) {
-                    final DnsCacheEntry e = cachedEntries.get(i);
-                    if (f.addressType().isInstance(e.address())) {
-                        trySuccess(promise, e.address());
-                        return true;
-                    }
+        // step 1
+        result = doResolveCached(hostname, additionals, resolveCache);
+        if (result != null) {
+            if (result.cause() != null) {
+                DnsCacheEntry secondaryResult = doResolveCached(hostname, additionals, resolveCacheFallback);
+                if (secondaryResult != null && secondaryResult.cause() == null) {
+                    result = secondaryResult;
                 }
             }
-            return false;
+            tryCompleteInetAddressPromise(promise, result);
+            return;
+        }
+
+        // step 2
+        result = doResolveCached(hostname, additionals, resolveCacheFallback);
+        if (result != null) {
+            tryCompleteInetAddressPromise(promise, result);
+            promise = executor().newPromise();
+        }
+
+        doResolveUncached(hostname, additionals, promise, resolveCache, resolveCacheFallback, true);
+    }
+
+    private DnsCacheEntry doResolveCached(String hostname,
+                                    DnsRecord[] additionals,
+                                    DnsCache resolveCache) {
+        if (resolveCache == null) {
+            return null;
+        }
+
+        List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
+        if (cachedEntries == null || cachedEntries.isEmpty()) {
+            return null;
+        }
+
+        DnsCacheEntry e0 = cachedEntries.get(0);
+        if (e0.cause() != null) {
+            return e0;
+        }
+
+        // Find the first entry with the preferred address type.
+        for (InternetProtocolFamily f : resolvedInternetProtocolFamilies) {
+            for (DnsCacheEntry e : cachedEntries) {
+                if (f.addressType().isInstance(e.address())) {
+                    return e;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static void tryCompleteInetAddressPromise(Promise<InetAddress> promise, DnsCacheEntry entry) {
+        if (entry.address() != null) {
+            trySuccess(promise, entry.address());
         } else {
-            tryFailure(promise, cause);
-            return true;
+            tryFailure(promise, entry.cause());
         }
     }
 
@@ -941,9 +988,11 @@ public class DnsNameResolver extends InetNameResolver {
     private void doResolveUncached(String hostname,
                                    DnsRecord[] additionals,
                                    final Promise<InetAddress> promise,
-                                   DnsCache resolveCache, boolean completeEarlyIfPossible) {
+                                   DnsCache resolveCache,
+                                   DnsCache resolveCacheFallback,
+                                   boolean completeEarlyIfPossible) {
         final Promise<List<InetAddress>> allPromise = executor().newPromise();
-        doResolveAllUncached(hostname, additionals, promise, allPromise, resolveCache, true);
+        doResolveAllUncached(hostname, additionals, promise, allPromise, resolveCache, resolveCacheFallback, true);
         allPromise.addListener(new FutureListener<List<InetAddress>>() {
             @Override
             public void operationComplete(Future<List<InetAddress>> future) {
@@ -989,46 +1038,73 @@ public class DnsNameResolver extends InetNameResolver {
             return;
         }
 
-        if (!doResolveAllCached(hostname, additionals, promise, resolveCache, resolvedInternetProtocolFamilies)) {
-            doResolveAllUncached(hostname, additionals, promise, promise,
-                                 resolveCache, completeOncePreferredResolved);
-        }
-    }
+        ResolvedAddresses result;
+        // Resolution:
+        //  1. Lookup the entry in the primary cache (resolveCache)
+        //    * When resolveCache contains an error, try the secondary cache (resolveCacheFallback)
+        //    * When resolveCacheFallback returns a non-empty, non-error result, use that to complete the promise.
+        //    * Otherwise use the error from the primary cache to complete the promise.
+        //  2. When step #1 returned nothing, i.e the primary cache does not contain entry for hostname:
+        //    * Always attempt to refresh the primary cache by calling doResolveAllCached()
+        //    * Before invoking doResolveAllCached(), check whether the secondary cache can be used to complete the
+        //      promise immediately (with anything). If it can, use the result from the secondary cache and create new
+        //      promise to let doResolveAllCached() do the resolution in background.
 
-    static boolean doResolveAllCached(String hostname,
-                                      DnsRecord[] additionals,
-                                      Promise<List<InetAddress>> promise,
-                                      DnsCache resolveCache,
-                                      InternetProtocolFamily[] resolvedInternetProtocolFamilies) {
-        final List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
-        if (cachedEntries == null || cachedEntries.isEmpty()) {
-            return false;
-        }
-
-        Throwable cause = cachedEntries.get(0).cause();
-        if (cause == null) {
-            List<InetAddress> result = null;
-            final int numEntries = cachedEntries.size();
-            for (InternetProtocolFamily f : resolvedInternetProtocolFamilies) {
-                for (int i = 0; i < numEntries; i++) {
-                    final DnsCacheEntry e = cachedEntries.get(i);
-                    if (f.addressType().isInstance(e.address())) {
-                        if (result == null) {
-                            result = new ArrayList<InetAddress>(numEntries);
-                        }
-                        result.add(e.address());
-                    }
+        // step 1
+        result = doResolveAllCached(hostname, additionals, resolveCache, resolvedInternetProtocolFamilies);
+        if (result != null) {
+            if (result.cause() != null) {
+                // the resolveCache contains a DNS error, trying the fallback cache
+                ResolvedAddresses secondaryResult = doResolveAllCached(hostname, additionals, resolveCacheFallback,
+                        resolvedInternetProtocolFamilies);
+                if (secondaryResult != null && secondaryResult.cause() == null) {
+                    result = secondaryResult;
                 }
             }
-            if (result != null) {
-                trySuccess(promise, result);
-                return true;
-            }
-            return false;
-        } else {
-            tryFailure(promise, cause);
-            return true;
+            result.complete(promise);
+            return;
         }
+
+        // step 2
+        result = doResolveAllCached(hostname, additionals, resolveCacheFallback, resolvedInternetProtocolFamilies);
+        if (result != null) {
+            result.complete(promise);
+            promise = executor().newPromise();
+        }
+        doResolveAllUncached(hostname, additionals, promise, promise, resolveCache, resolveCacheFallback,
+                completeOncePreferredResolved);
+    }
+
+    static ResolvedAddresses doResolveAllCached(String hostname,
+                                      DnsRecord[] additionals,
+                                      DnsCache resolveCache,
+                                      InternetProtocolFamily[] resolvedInternetProtocolFamilies) {
+        if (resolveCache == null) {
+            return null;
+        }
+
+        final List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
+        if (cachedEntries == null || cachedEntries.isEmpty()) {
+            return null;
+        }
+
+        DnsCacheEntry e0 = cachedEntries.get(0);
+        if (e0.cause() != null) {
+            return new ResolvedAddresses(e0.cause());
+        }
+
+        List<InetAddress> result = null;
+        for (InternetProtocolFamily f : resolvedInternetProtocolFamilies) {
+            for (DnsCacheEntry e : cachedEntries) {
+                if (f.addressType().isInstance(e.address())) {
+                    if (result == null) {
+                        result = new ArrayList<InetAddress>(cachedEntries.size());
+                    }
+                    result.add(e.address());
+                }
+            }
+        }
+        return result != null ? new ResolvedAddresses(result) : null;
     }
 
     private void doResolveAllUncached(final String hostname,
@@ -1036,19 +1112,20 @@ public class DnsNameResolver extends InetNameResolver {
                                       final Promise<?> originalPromise,
                                       final Promise<List<InetAddress>> promise,
                                       final DnsCache resolveCache,
+                                      final DnsCache resolveCacheFallback,
                                       final boolean completeEarlyIfPossible) {
         // Call doResolveUncached0(...) in the EventLoop as we may need to submit multiple queries which would need
         // to submit multiple Runnable at the end if we are not already on the EventLoop.
         EventExecutor executor = executor();
         if (executor.inEventLoop()) {
             doResolveAllUncached0(hostname, additionals, originalPromise,
-                                  promise, resolveCache, completeEarlyIfPossible);
+                                  promise, resolveCache, resolveCacheFallback, completeEarlyIfPossible);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
                     doResolveAllUncached0(hostname, additionals, originalPromise,
-                                          promise, resolveCache, completeEarlyIfPossible);
+                                          promise, resolveCache, resolveCacheFallback, completeEarlyIfPossible);
                 }
             });
         }
@@ -1059,6 +1136,7 @@ public class DnsNameResolver extends InetNameResolver {
                                        Promise<?> originalPromise,
                                        Promise<List<InetAddress>> promise,
                                        DnsCache resolveCache,
+                                       DnsCache resolveCacheFallback,
                                        boolean completeEarlyIfPossible) {
 
         assert executor().inEventLoop();
@@ -1066,7 +1144,7 @@ public class DnsNameResolver extends InetNameResolver {
         final DnsServerAddressStream nameServerAddrs =
                 dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
         new DnsAddressResolveContext(this, originalPromise, hostname, additionals, nameServerAddrs,
-                                     resolveCache, authoritativeDnsServerCache, completeEarlyIfPossible)
+                resolveCache, resolveCacheFallback, authoritativeDnsServerCache, completeEarlyIfPossible)
                 .resolve(promise);
     }
 
@@ -1432,6 +1510,37 @@ public class DnsNameResolver extends InetNameResolver {
                 hashCode = hashCode * 31 + recipient().hashCode();
             }
             return hashCode;
+        }
+    }
+
+    static final class ResolvedAddresses {
+        private final List<InetAddress> addresses;
+        private final Throwable cause;
+
+        ResolvedAddresses(List<InetAddress> addresses) {
+            this.addresses = addresses;
+            this.cause = null;
+        }
+
+        ResolvedAddresses(Throwable cause) {
+            this.addresses = null;
+            this.cause = cause;
+        }
+
+        List<InetAddress> addresses() {
+            return addresses;
+        }
+
+        Throwable cause() {
+            return cause;
+        }
+
+        void complete(Promise<List<InetAddress>> promise) {
+            if (addresses != null) {
+                trySuccess(promise, addresses);
+            } else {
+                tryFailure(promise, cause);
+            }
         }
     }
 }

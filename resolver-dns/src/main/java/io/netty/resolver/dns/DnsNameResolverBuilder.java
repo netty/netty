@@ -40,6 +40,7 @@ public final class DnsNameResolverBuilder {
     private ChannelFactory<? extends DatagramChannel> channelFactory;
     private ChannelFactory<? extends SocketChannel> socketChannelFactory;
     private DnsCache resolveCache;
+    private DnsCache resolveCacheFallback;
     private DnsCnameCache cnameCache;
     private AuthoritativeDnsServerCache authoritativeDnsServerCache;
     private Integer minTtl;
@@ -152,6 +153,17 @@ public final class DnsNameResolverBuilder {
      */
     public DnsNameResolverBuilder resolveCache(DnsCache resolveCache) {
         this.resolveCache  = resolveCache;
+        return this;
+    }
+
+    /**
+     * Sets the cache fallback for resolution results.
+     *
+     * @param resolveCacheFallback the DNS resolution results cache
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder resolveCacheFallback(DnsCache resolveCacheFallback) {
+        this.resolveCacheFallback = resolveCacheFallback;
         return this;
     }
 
@@ -423,6 +435,10 @@ public final class DnsNameResolverBuilder {
         return new DefaultDnsCache(intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE), intValue(negativeTtl, 0));
     }
 
+    private DnsCache newCacheFallback() {
+        return null;
+    }
+
     private AuthoritativeDnsServerCache newAuthoritativeDnsServerCache() {
         return new DefaultAuthoritativeDnsServerCache(
                 intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE),
@@ -467,6 +483,9 @@ public final class DnsNameResolverBuilder {
         }
 
         DnsCache resolveCache = this.resolveCache != null ? this.resolveCache : newCache();
+        DnsCache resolveCacheFallback = this.resolveCacheFallback != null
+                ? this.resolveCacheFallback
+                : newCacheFallback();
         DnsCnameCache cnameCache = this.cnameCache != null ? this.cnameCache : newCnameCache();
         AuthoritativeDnsServerCache authoritativeDnsServerCache = this.authoritativeDnsServerCache != null ?
                 this.authoritativeDnsServerCache : newAuthoritativeDnsServerCache();
@@ -475,6 +494,7 @@ public final class DnsNameResolverBuilder {
                 channelFactory,
                 socketChannelFactory,
                 resolveCache,
+                resolveCacheFallback,
                 cnameCache,
                 authoritativeDnsServerCache,
                 dnsQueryLifecycleObserverFactory,
@@ -515,6 +535,10 @@ public final class DnsNameResolverBuilder {
 
         if (resolveCache != null) {
             copiedBuilder.resolveCache(resolveCache);
+        }
+
+        if (resolveCacheFallback != null) {
+            copiedBuilder.resolveCacheFallback(resolveCacheFallback);
         }
 
         if (cnameCache != null) {
