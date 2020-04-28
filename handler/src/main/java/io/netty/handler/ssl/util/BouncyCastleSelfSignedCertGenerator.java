@@ -42,8 +42,8 @@ final class BouncyCastleSelfSignedCertGenerator {
 
     private static final Provider PROVIDER = new BouncyCastleProvider();
 
-    static String[] generate(String fqdn, KeyPair keypair, SecureRandom random, Date notBefore, Date notAfter)
-            throws Exception {
+    static String[] generate(String fqdn, KeyPair keypair, SecureRandom random, Date notBefore, Date notAfter,
+                             String algorithm) throws Exception {
         PrivateKey key = keypair.getPrivate();
 
         // Prepare the information required for generating an X.509 certificate.
@@ -51,7 +51,8 @@ final class BouncyCastleSelfSignedCertGenerator {
         X509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(
                 owner, new BigInteger(64, random), notBefore, notAfter, owner, keypair.getPublic());
 
-        ContentSigner signer = new JcaContentSignerBuilder("SHA256WithRSAEncryption").build(key);
+        ContentSigner signer = new JcaContentSignerBuilder(
+                algorithm.equalsIgnoreCase("EC") ? "SHA256withECDSA" : "SHA256WithRSAEncryption").build(key);
         X509CertificateHolder certHolder = builder.build(signer);
         X509Certificate cert = new JcaX509CertificateConverter().setProvider(PROVIDER).getCertificate(certHolder);
         cert.verify(keypair.getPublic());

@@ -25,16 +25,8 @@ import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.SecureRandom;
+import java.io.*;
+import java.security.*;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -49,9 +41,9 @@ import java.util.Date;
  * It is purely for testing purposes, and thus it is very insecure.
  * It even uses an insecure pseudo-random generator for faster generation internally.
  * </p><p>
- * An X.509 certificate file and a RSA private key file are generated in a system's temporary directory using
- * {@link java.io.File#createTempFile(String, String)}, and they are deleted when the JVM exits using
- * {@link java.io.File#deleteOnExit()}.
+ * An X.509 certificate file and a EC/RSA private key file are generated in a system's temporary directory using
+ * {@link File#createTempFile(String, String)}, and they are deleted when the JVM exits using
+ * {@link File#deleteOnExit()}.
  * </p><p>
  * At first, this method tries to use OpenJDK's X.509 implementation (the {@code sun.security.x509} package).
  * If it fails, it tries to use <a href="http://www.bouncycastle.org/">Bouncy Castle</a> as a fallback.
@@ -61,20 +53,24 @@ public final class SelfSignedCertificate {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SelfSignedCertificate.class);
 
-    /** Current time minus 1 year, just in case software clock goes back due to time synchronization */
+    /**
+     * Current time minus 1 year, just in case software clock goes back due to time synchronization
+     */
     private static final Date DEFAULT_NOT_BEFORE = new Date(SystemPropertyUtil.getLong(
             "io.netty.selfSignedCertificate.defaultNotBefore", System.currentTimeMillis() - 86400000L * 365));
-    /** The maximum possible value in X.509 specification: 9999-12-31 23:59:59 */
+    /**
+     * The maximum possible value in X.509 specification: 9999-12-31 23:59:59
+     */
     private static final Date DEFAULT_NOT_AFTER = new Date(SystemPropertyUtil.getLong(
             "io.netty.selfSignedCertificate.defaultNotAfter", 253402300799000L));
 
     /**
-     * FIPS 140-2 encryption requires the key length to be 2048 bits or greater.
+     * NSA Suite B requires the EC key length to be 256 bits or greater.
      * Let's use that as a sane default but allow the default to be set dynamically
      * for those that need more stringent security requirements.
      */
     private static final int DEFAULT_KEY_LENGTH_BITS =
-            SystemPropertyUtil.getInt("io.netty.handler.ssl.util.selfSignedKeyStrength", 2048);
+            SystemPropertyUtil.getInt("io.netty.handler.ssl.util.selfSignedKeyStrength", 256);
 
     private final File certificate;
     private final File privateKey;
@@ -85,16 +81,18 @@ public final class SelfSignedCertificate {
      * Creates a new instance.
      */
     public SelfSignedCertificate() throws CertificateException {
-        this(DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER);
+        this(DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, "EC");
     }
 
     /**
      * Creates a new instance.
+     *
      * @param notBefore Certificate is not valid before this time
-     * @param notAfter Certificate is not valid after this time
+     * @param notAfter  Certificate is not valid after this time
+     * @param algorithm Key pair algorithm
      */
-    public SelfSignedCertificate(Date notBefore, Date notAfter) throws CertificateException {
-        this("example.com", notBefore, notAfter);
+    public SelfSignedCertificate(Date notBefore, Date notAfter, String algorithm) throws CertificateException {
+        this("example.com", notBefore, notAfter, algorithm);
     }
 
     /**
@@ -103,64 +101,78 @@ public final class SelfSignedCertificate {
      * @param fqdn a fully qualified domain name
      */
     public SelfSignedCertificate(String fqdn) throws CertificateException {
-        this(fqdn, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER);
+        this(fqdn, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, "EC");
     }
 
     /**
      * Creates a new instance.
      *
-     * @param fqdn a fully qualified domain name
-     * @param notBefore Certificate is not valid before this time
-     * @param notAfter Certificate is not valid after this time
+     * @param fqdn      a fully qualified domain name
+     * @param algorithm Key pair algorithm
      */
-    public SelfSignedCertificate(String fqdn, Date notBefore, Date notAfter) throws CertificateException {
+    public SelfSignedCertificate(String fqdn, String algorithm) throws CertificateException {
+        this(fqdn, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, algorithm);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param fqdn      a fully qualified domain name
+     * @param notBefore Certificate is not valid before this time
+     * @param notAfter  Certificate is not valid after this time
+     * @param algorithm Key pair algorithm
+     */
+    public SelfSignedCertificate(String fqdn, Date notBefore, Date notAfter, String algorithm) throws CertificateException {
         // Bypass entropy collection by using insecure random generator.
         // We just want to generate it without any delay because it's for testing purposes only.
-        this(fqdn, ThreadLocalInsecureRandom.current(), DEFAULT_KEY_LENGTH_BITS, notBefore, notAfter);
+        this(fqdn, ThreadLocalInsecureRandom.current(), DEFAULT_KEY_LENGTH_BITS, notBefore, notAfter, algorithm);
     }
 
     /**
      * Creates a new instance.
      *
-     * @param fqdn a fully qualified domain name
-     * @param random the {@link java.security.SecureRandom} to use
-     * @param bits the number of bits of the generated private key
+     * @param fqdn      a fully qualified domain name
+     * @param random    the {@link SecureRandom} to use
+     * @param bits      the number of bits of the generated private key
+     * @param algorithm Key pair algorithm
      */
-    public SelfSignedCertificate(String fqdn, SecureRandom random, int bits) throws CertificateException {
-        this(fqdn, random, bits, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER);
+    public SelfSignedCertificate(String fqdn, SecureRandom random, int bits, String algorithm) throws CertificateException {
+        this(fqdn, random, bits, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, algorithm);
     }
 
     /**
      * Creates a new instance.
      *
-     * @param fqdn a fully qualified domain name
-     * @param random the {@link java.security.SecureRandom} to use
-     * @param bits the number of bits of the generated private key
+     * @param fqdn      a fully qualified domain name
+     * @param random    the {@link SecureRandom} to use
+     * @param bits      the number of bits of the generated private key
      * @param notBefore Certificate is not valid before this time
-     * @param notAfter Certificate is not valid after this time
+     * @param notAfter  Certificate is not valid after this time
+     * @param algorithm Key pair algorithm
      */
-    public SelfSignedCertificate(String fqdn, SecureRandom random, int bits, Date notBefore, Date notAfter)
-            throws CertificateException {
-        // Generate an RSA key pair.
+    public SelfSignedCertificate(String fqdn, SecureRandom random, int bits, Date notBefore, Date notAfter,
+                                 String algorithm) throws CertificateException {
+        // Generate key pair based.
         final KeyPair keypair;
         try {
-            KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+            KeyPairGenerator keyGen = KeyPairGenerator.getInstance(algorithm);
             keyGen.initialize(bits, random);
             keypair = keyGen.generateKeyPair();
         } catch (NoSuchAlgorithmException e) {
-            // Should not reach here because every Java implementation must have RSA key pair generator.
+            // Should not reach here because every Java implementation must have RSA and EC key pair generator.
             throw new Error(e);
         }
 
         String[] paths;
         try {
             // Try the OpenJDK's proprietary implementation.
-            paths = OpenJdkSelfSignedCertGenerator.generate(fqdn, keypair, random, notBefore, notAfter);
+            paths = OpenJdkSelfSignedCertGenerator.generate(fqdn, keypair, random, notBefore, notAfter, algorithm);
         } catch (Throwable t) {
             logger.debug("Failed to generate a self-signed X.509 certificate using sun.security.x509:", t);
             try {
                 // Try Bouncy Castle if the current JVM didn't have sun.security.x509.
-                paths = BouncyCastleSelfSignedCertGenerator.generate(fqdn, keypair, random, notBefore, notAfter);
+                paths = BouncyCastleSelfSignedCertGenerator.generate(
+                        fqdn, keypair, random, notBefore, notAfter, algorithm);
             } catch (Throwable t2) {
                 logger.debug("Failed to generate a self-signed X.509 certificate using Bouncy Castle:", t2);
                 final CertificateException certificateException = new CertificateException(
@@ -193,42 +205,6 @@ public final class SelfSignedCertificate {
         }
     }
 
-    /**
-     * Returns the generated X.509 certificate file in PEM format.
-     */
-    public File certificate() {
-        return certificate;
-    }
-
-    /**
-     * Returns the generated RSA private key file in PEM format.
-     */
-    public File privateKey() {
-        return privateKey;
-    }
-
-    /**
-     *  Returns the generated X.509 certificate.
-     */
-    public X509Certificate cert() {
-        return cert;
-    }
-
-    /**
-     * Returns the generated RSA private key.
-     */
-    public PrivateKey key() {
-        return key;
-    }
-
-    /**
-     * Deletes the generated X.509 certificate file and RSA private key file.
-     */
-    public void delete() {
-        safeDelete(certificate);
-        safeDelete(privateKey);
-    }
-
     static String[] newSelfSignedCertificate(
             String fqdn, PrivateKey key, X509Certificate cert) throws IOException, CertificateEncodingException {
         // Encode the private key into a file.
@@ -239,8 +215,8 @@ public final class SelfSignedCertificate {
             encodedBuf = Base64.encode(wrappedBuf, true);
             try {
                 keyText = "-----BEGIN PRIVATE KEY-----\n" +
-                          encodedBuf.toString(CharsetUtil.US_ASCII) +
-                          "\n-----END PRIVATE KEY-----\n";
+                        encodedBuf.toString(CharsetUtil.US_ASCII) +
+                        "\n-----END PRIVATE KEY-----\n";
             } finally {
                 encodedBuf.release();
             }
@@ -270,8 +246,8 @@ public final class SelfSignedCertificate {
             try {
                 // Encode the certificate into a CRT file.
                 certText = "-----BEGIN CERTIFICATE-----\n" +
-                           encodedBuf.toString(CharsetUtil.US_ASCII) +
-                           "\n-----END CERTIFICATE-----\n";
+                        encodedBuf.toString(CharsetUtil.US_ASCII) +
+                        "\n-----END CERTIFICATE-----\n";
             } finally {
                 encodedBuf.release();
             }
@@ -295,7 +271,7 @@ public final class SelfSignedCertificate {
             }
         }
 
-        return new String[] { certFile.getPath(), keyFile.getPath() };
+        return new String[]{certFile.getPath(), keyFile.getPath()};
     }
 
     private static void safeDelete(File certFile) {
@@ -314,5 +290,41 @@ public final class SelfSignedCertificate {
                 logger.warn("Failed to close a file: " + keyFile, e);
             }
         }
+    }
+
+    /**
+     * Returns the generated X.509 certificate file in PEM format.
+     */
+    public File certificate() {
+        return certificate;
+    }
+
+    /**
+     * Returns the generated RSA private key file in PEM format.
+     */
+    public File privateKey() {
+        return privateKey;
+    }
+
+    /**
+     * Returns the generated X.509 certificate.
+     */
+    public X509Certificate cert() {
+        return cert;
+    }
+
+    /**
+     * Returns the generated RSA private key.
+     */
+    public PrivateKey key() {
+        return key;
+    }
+
+    /**
+     * Deletes the generated X.509 certificate file and RSA private key file.
+     */
+    public void delete() {
+        safeDelete(certificate);
+        safeDelete(privateKey);
     }
 }
