@@ -46,19 +46,22 @@ import static io.netty.util.internal.StringUtil.indexOfWhiteSpace;
 public final class UnixResolverDnsServerAddressStreamProvider implements DnsServerAddressStreamProvider {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(UnixResolverDnsServerAddressStreamProvider.class);
+
+    private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
+    private static final String RES_OPTIONS = System.getenv("RES_OPTIONS");
+
     private static final String ETC_RESOLV_CONF_FILE = "/etc/resolv.conf";
     private static final String ETC_RESOLVER_DIR = "/etc/resolver";
     private static final String NAMESERVER_ROW_LABEL = "nameserver";
     private static final String SORTLIST_ROW_LABEL = "sortlist";
-    private static final String OPTIONS_ROW_LABEL = "options";
+    private static final String OPTIONS_ROW_LABEL = "options ";
+    private static final String OPTIONS_ROTATE_FLAG = "rotate";
     private static final String DOMAIN_ROW_LABEL = "domain";
     private static final String SEARCH_ROW_LABEL = "search";
     private static final String PORT_ROW_LABEL = "port";
-    private static final String NDOTS_LABEL = "ndots:";
-    static final int DEFAULT_NDOTS = 1;
+
     private final DnsServerAddresses defaultNameServerAddresses;
     private final Map<String, DnsServerAddresses> domainToNameServerStreamMap;
-    private static final Pattern SEARCH_DOMAIN_PATTERN = Pattern.compile("\\s+");
 
     /**
      * Attempt to parse {@code /etc/resolv.conf} and files in the {@code /etc/resolver} directory by default.
@@ -154,6 +157,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
     private static Map<String, DnsServerAddresses> parse(File... etcResolverFiles) throws IOException {
         Map<String, DnsServerAddresses> domainToNameServerStreamMap =
                 new HashMap<String, DnsServerAddresses>(etcResolverFiles.length << 1);
+        boolean rotateGlobal = RES_OPTIONS != null && RES_OPTIONS.contains(OPTIONS_ROTATE_FLAG);
         for (File etcResolverFile : etcResolverFiles) {
             if (!etcResolverFile.isFile()) {
                 continue;
@@ -164,6 +168,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                 br = new BufferedReader(fr);
                 List<InetSocketAddress> addresses = new ArrayList<InetSocketAddress>(2);
                 String domainName = etcResolverFile.getName();
+                boolean rotate = rotateGlobal;
                 int port = DNS_PORT;
                 String line;
                 while ((line = br.readLine()) != null) {
@@ -173,7 +178,9 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                         if (line.isEmpty() || (c = line.charAt(0)) == '#' || c == ';') {
                             continue;
                         }
-                        if (line.startsWith(NAMESERVER_ROW_LABEL)) {
+                        if (!rotate && line.startsWith(OPTIONS_ROW_LABEL)) {
+                            rotate = line.contains(OPTIONS_ROTATE_FLAG);
+                        } else if (line.startsWith(NAMESERVER_ROW_LABEL)) {
                             int i = indexOfNonWhiteSpace(line, NAMESERVER_ROW_LABEL.length());
                             if (i < 0) {
                                 throw new IllegalArgumentException("error parsing label " + NAMESERVER_ROW_LABEL +
@@ -212,7 +219,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                             }
                             domainName = line.substring(i);
                             if (!addresses.isEmpty()) {
-                                putIfAbsent(domainToNameServerStreamMap, domainName, addresses);
+                                putIfAbsent(domainToNameServerStreamMap, domainName, addresses, rotate);
                             }
                             addresses = new ArrayList<InetSocketAddress>(2);
                         } else if (line.startsWith(PORT_ROW_LABEL)) {
@@ -230,7 +237,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                     }
                 }
                 if (!addresses.isEmpty()) {
-                    putIfAbsent(domainToNameServerStreamMap, domainName, addresses);
+                    putIfAbsent(domainToNameServerStreamMap, domainName, addresses, rotate);
                 }
             } finally {
                 if (br == null) {
@@ -245,9 +252,13 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
 
     private static void putIfAbsent(Map<String, DnsServerAddresses> domainToNameServerStreamMap,
                                     String domainName,
-                                    List<InetSocketAddress> addresses) {
+                                    List<InetSocketAddress> addresses,
+                                    boolean rotate) {
         // TODO(scott): sortlist is being ignored.
-        putIfAbsent(domainToNameServerStreamMap, domainName, DnsServerAddresses.sequential(addresses));
+        DnsServerAddresses addrs = rotate
+            ? DnsServerAddresses.rotational(addresses)
+            : DnsServerAddresses.sequential(addresses);
+        putIfAbsent(domainToNameServerStreamMap, domainName, addrs);
     }
 
     private static void putIfAbsent(Map<String, DnsServerAddresses> domainToNameServerStreamMap,
@@ -264,25 +275,25 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
     }
 
     /**
-     * Parse a file of the format <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a> and return the
-     * value corresponding to the first ndots in an options configuration.
-     * @return the value corresponding to the first ndots in an options configuration, or {@link #DEFAULT_NDOTS} if not
-     * found.
+     * Parse <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a> and return options of interest, namely:
+     * timeout, attempts and ndots.
+     * @return The options values provided by /etc/resolve.conf.
      * @throws IOException If a failure occurs parsing the file.
      */
-    static int parseEtcResolverFirstNdots() throws IOException {
-        return parseEtcResolverFirstNdots(new File(ETC_RESOLV_CONF_FILE));
+    static UnixResolverOptions parseEtcResolverOptions() throws IOException {
+        return parseEtcResolverOptions(new File(ETC_RESOLV_CONF_FILE));
     }
 
     /**
-     * Parse a file of the format <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a> and return the
-     * value corresponding to the first ndots in an options configuration.
+     * Parse a file of the format <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a> and return options
+     * of interest, namely: timeout, attempts and ndots.
      * @param etcResolvConf a file of the format <a href="https://linux.die.net/man/5/resolver">/etc/resolv.conf</a>.
-     * @return the value corresponding to the first ndots in an options configuration, or {@link #DEFAULT_NDOTS} if not
-     * found.
+     * @return The options values provided by /etc/resolve.conf.
      * @throws IOException If a failure occurs parsing the file.
      */
-    static int parseEtcResolverFirstNdots(File etcResolvConf) throws IOException {
+    static UnixResolverOptions parseEtcResolverOptions(File etcResolvConf) throws IOException {
+        UnixResolverOptions.Builder optionsBuilder = UnixResolverOptions.newBuilder();
+
         FileReader fr = new FileReader(etcResolvConf);
         BufferedReader br = null;
         try {
@@ -290,12 +301,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
             String line;
             while ((line = br.readLine()) != null) {
                 if (line.startsWith(OPTIONS_ROW_LABEL)) {
-                    int i = line.indexOf(NDOTS_LABEL);
-                    if (i >= 0) {
-                        i += NDOTS_LABEL.length();
-                        final int j = line.indexOf(' ', i);
-                        return Integer.parseInt(line.substring(i, j < 0 ? line.length() : j));
-                    }
+                    parseResOptions(line.substring(OPTIONS_ROW_LABEL.length()), optionsBuilder);
                     break;
                 }
             }
@@ -306,7 +312,35 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                 br.close();
             }
         }
-        return DEFAULT_NDOTS;
+
+        // amend options
+        if (RES_OPTIONS != null) {
+            parseResOptions(RES_OPTIONS, optionsBuilder);
+        }
+
+        return optionsBuilder.build();
+    }
+
+    private static void parseResOptions(String line, UnixResolverOptions.Builder builder) {
+        String[] opts = WHITESPACE_PATTERN.split(line);
+        for (String opt : opts) {
+            try {
+                if (opt.startsWith("ndots:")) {
+                    builder.setNdots(parseResIntOption(opt, "ndots:"));
+                } else if (opt.startsWith("attempts:")) {
+                    builder.setAttempts(parseResIntOption(opt, "attempts:"));
+                } else if (opt.startsWith("timeout:")) {
+                    builder.setTimeout(parseResIntOption(opt, "timeout:"));
+                }
+            } catch (NumberFormatException ignore) {
+                // skip bad int values from resolv.conf to keep value already set in UnixResolverOptions
+            }
+        }
+    }
+
+    private static int parseResIntOption(String opt, String fullLabel) {
+        String optValue = opt.substring(fullLabel.length());
+        return Integer.parseInt(optValue);
     }
 
     /**
@@ -346,7 +380,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                     if (i >= 0) {
                         // May contain more then one entry, either seperated by whitespace or tab.
                         // See https://linux.die.net/man/5/resolver
-                        String[] domains = SEARCH_DOMAIN_PATTERN.split(line.substring(i));
+                        String[] domains = WHITESPACE_PATTERN.split(line.substring(i));
                         Collections.addAll(searchDomains, domains);
                     }
                 }
@@ -364,4 +398,5 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                 ? Collections.singletonList(localDomain)
                 : searchDomains;
     }
+
 }
