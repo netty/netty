@@ -1947,12 +1947,14 @@ public abstract class SSLEngineTest {
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(Collections.singletonList(sharedCipher))
                 .protocols(PROTOCOL_TLS_V1_2, PROTOCOL_TLS_V1)
+                .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
                 .build());
 
         serverSslCtx = wrapContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .ciphers(Collections.singletonList(sharedCipher))
                 .protocols(PROTOCOL_TLS_V1_2, PROTOCOL_TLS_V1)
+                .sslContextProvider(serverSslContextProvider())
                 .sslProvider(sslServerProvider())
                 .build());
         SSLEngine clientEngine = null;
@@ -1978,12 +1980,14 @@ public abstract class SSLEngineTest {
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(Collections.singletonList(sharedCipher), SupportedCipherSuiteFilter.INSTANCE)
                 .protocols(PROTOCOL_TLS_V1_2, PROTOCOL_TLS_V1)
+                .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
                 .build());
 
         serverSslCtx = wrapContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .ciphers(Collections.singletonList(sharedCipher), SupportedCipherSuiteFilter.INSTANCE)
                 .protocols(PROTOCOL_TLS_V1_2, PROTOCOL_TLS_V1)
+                .sslContextProvider(serverSslContextProvider())
                 .sslProvider(sslServerProvider())
                 .build());
         SSLEngine clientEngine = null;
@@ -2006,6 +2010,7 @@ public abstract class SSLEngineTest {
         clientSslCtx = wrapContext(SslContextBuilder
                 .forClient()
                 .trustManager(cert.cert())
+                .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
@@ -2014,6 +2019,7 @@ public abstract class SSLEngineTest {
 
         serverSslCtx = wrapContext(SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
+                .sslContextProvider(serverSslContextProvider())
                 .sslProvider(sslServerProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
@@ -2049,6 +2055,7 @@ public abstract class SSLEngineTest {
     public void testSSLEngineUnwrapNoSslRecord() throws Exception {
         clientSslCtx = wrapContext(SslContextBuilder
                 .forClient()
+                .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
@@ -2079,6 +2086,7 @@ public abstract class SSLEngineTest {
     public void testBeginHandshakeAfterEngineClosed() throws SSLException {
         clientSslCtx = wrapContext(SslContextBuilder
                 .forClient()
+                .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
@@ -2093,6 +2101,12 @@ public abstract class SSLEngineTest {
                 fail();
             } catch (SSLException expected) {
                 // expected
+            } catch (IllegalStateException e) {
+                if (!Conscrypt.isEngineSupported(client)) {
+                    throw e;
+                }
+                // Workaround for conscrypt bug
+                // See https://github.com/google/conscrypt/issues/840
             }
         } finally {
             cleanupClientSslEngine(client);
@@ -2105,6 +2119,7 @@ public abstract class SSLEngineTest {
 
         clientSslCtx = wrapContext(SslContextBuilder
                 .forClient()
+                .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
@@ -2113,6 +2128,7 @@ public abstract class SSLEngineTest {
 
         serverSslCtx = wrapContext(SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
+                .sslContextProvider(serverSslContextProvider())
                 .sslProvider(sslServerProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
@@ -2156,6 +2172,7 @@ public abstract class SSLEngineTest {
 
         clientSslCtx = wrapContext(SslContextBuilder
                 .forClient()
+                .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
@@ -2164,6 +2181,7 @@ public abstract class SSLEngineTest {
 
         serverSslCtx = wrapContext(SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
+                .sslContextProvider(serverSslContextProvider())
                 .sslProvider(sslServerProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
@@ -2184,7 +2202,11 @@ public abstract class SSLEngineTest {
         engine.beginHandshake();
         try {
             engine.closeInbound();
-            fail();
+            // Workaround for conscrypt bug
+            // See https://github.com/google/conscrypt/issues/839
+            if (!Conscrypt.isEngineSupported(engine)) {
+                fail();
+            }
         } catch (SSLException expected) {
             // expected
         }
@@ -2197,6 +2219,7 @@ public abstract class SSLEngineTest {
         clientSslCtx = wrapContext(SslContextBuilder
                 .forClient()
                 .trustManager(cert.cert())
+                .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
                 // This test only works for non TLSv1.3 for now
                 .protocols(PROTOCOL_TLS_V1_2)
@@ -2205,6 +2228,7 @@ public abstract class SSLEngineTest {
 
         serverSslCtx = wrapContext(SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
+                .sslContextProvider(serverSslContextProvider())
                 .sslProvider(sslServerProvider())
                 // This test only works for non TLSv1.3 for now
                 .protocols(PROTOCOL_TLS_V1_2)
@@ -2234,7 +2258,8 @@ public abstract class SSLEngineTest {
 
             assertEquals(SSLEngineResult.Status.CLOSED, result.getStatus());
             // Need an UNWRAP to read the response of the close_notify
-            if (PlatformDependent.javaVersion() >= 12 && sslClientProvider() == SslProvider.JDK) {
+            if ((PlatformDependent.javaVersion() >= 12 && sslClientProvider() == SslProvider.JDK)
+                    || Conscrypt.isEngineSupported(client)) {
                 // This is a workaround for a possible JDK12+ bug.
                 //
                 // See http://mail.openjdk.java.net/pipermail/security-dev/2019-February/019406.html.
@@ -2352,6 +2377,7 @@ public abstract class SSLEngineTest {
                 .forClient()
                 .trustManager(cert.cert())
                 .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
                 .build());
@@ -2360,6 +2386,7 @@ public abstract class SSLEngineTest {
         serverSslCtx = wrapContext(SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
                 .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
                 .build());
@@ -2394,6 +2421,7 @@ public abstract class SSLEngineTest {
         clientSslCtx = wrapContext(SslContextBuilder
                 .forClient()
                 .trustManager(cert.cert())
+                .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
@@ -2402,6 +2430,7 @@ public abstract class SSLEngineTest {
 
         serverSslCtx = wrapContext(SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
+                .sslContextProvider(serverSslContextProvider())
                 .sslProvider(sslServerProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
@@ -2473,6 +2502,7 @@ public abstract class SSLEngineTest {
         clientSslCtx = wrapContext(SslContextBuilder
                 .forClient()
                 .trustManager(cert.cert())
+                .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
@@ -2481,6 +2511,7 @@ public abstract class SSLEngineTest {
 
         serverSslCtx = wrapContext(SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
+                .sslContextProvider(serverSslContextProvider())
                 .sslProvider(sslServerProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
@@ -2541,6 +2572,7 @@ public abstract class SSLEngineTest {
         clientSslCtx = wrapContext(SslContextBuilder
                 .forClient()
                 .trustManager(cert.cert())
+                .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
@@ -2549,6 +2581,7 @@ public abstract class SSLEngineTest {
 
         serverSslCtx = wrapContext(SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
+                .sslContextProvider(serverSslContextProvider())
                 .sslProvider(sslServerProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
@@ -2616,6 +2649,7 @@ public abstract class SSLEngineTest {
         clientSslCtx = wrapContext(SslContextBuilder
                 .forClient()
                 .trustManager(cert.cert())
+                .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
@@ -2624,6 +2658,7 @@ public abstract class SSLEngineTest {
 
         serverSslCtx = wrapContext(SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
+                .sslContextProvider(serverSslContextProvider())
                 .sslProvider(sslServerProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
@@ -2672,6 +2707,7 @@ public abstract class SSLEngineTest {
 
         SslContext ctx = wrapContext(SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
+                .sslContextProvider(serverSslContextProvider())
                 .sslProvider(sslServerProvider())
                 .protocols(protocols())
                 .ciphers(ciphers())
@@ -2704,7 +2740,10 @@ public abstract class SSLEngineTest {
 
     @Test
     public void testUsingX509TrustManagerVerifiesHostname() throws Exception {
-        SslProvider clientProvider = sslClientProvider();
+        if (clientSslContextProvider() != null) {
+            // Not supported when using conscrypt
+            return;
+        }
         SelfSignedCertificate cert = new SelfSignedCertificate();
         clientSslCtx = wrapContext(SslContextBuilder
                 .forClient()
@@ -2743,6 +2782,7 @@ public abstract class SSLEngineTest {
                     }
                 }, null, TrustManagerFactory.getDefaultAlgorithm()) {
                 })
+                .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
                 .build());
 
@@ -2753,6 +2793,7 @@ public abstract class SSLEngineTest {
 
         serverSslCtx = wrapContext(SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
+                .sslContextProvider(serverSslContextProvider())
                 .sslProvider(sslServerProvider())
                 .build());
 
@@ -2778,7 +2819,8 @@ public abstract class SSLEngineTest {
         SSLEngine server = null;
         try {
             serverSslCtx = wrapContext(SslContextBuilder.forServer(cert.key(), cert.cert())
-                    .sslProvider(sslClientProvider())
+                    .sslContextProvider(serverSslContextProvider())
+                    .sslProvider(sslServerProvider())
                     .ciphers(cipherList).build());
             server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             fail();
