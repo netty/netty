@@ -83,7 +83,7 @@ public final class SelfSignedCertificate {
 
     /**
      * Creates a new instance.
-     * <p> Algorithm: RSA, Key Size: 2048 </p>
+     * <p> Algorithm: RSA </p>
      */
     public SelfSignedCertificate() throws CertificateException {
         this(DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, "RSA", DEFAULT_KEY_LENGTH_BITS);
@@ -91,7 +91,7 @@ public final class SelfSignedCertificate {
 
     /**
      * Creates a new instance.
-     * <p> Algorithm: RSA, Key Size: 2048 </p>
+     * <p> Algorithm: RSA </p>
      *
      * @param notBefore Certificate is not valid before this time
      * @param notAfter  Certificate is not valid after this time
@@ -116,7 +116,7 @@ public final class SelfSignedCertificate {
 
     /**
      * Creates a new instance.
-     * <p> Algorithm: RSA, Key Size: 2048 </p>
+     * <p> Algorithm: RSA </p>
      *
      * @param fqdn a fully qualified domain name
      */
@@ -137,7 +137,7 @@ public final class SelfSignedCertificate {
 
     /**
      * Creates a new instance.
-     * <p> Algorithm: RSA, Key Size: 2048 </p>
+     * <p> Algorithm: RSA </p>
      *
      * @param fqdn      a fully qualified domain name
      * @param notBefore Certificate is not valid before this time
