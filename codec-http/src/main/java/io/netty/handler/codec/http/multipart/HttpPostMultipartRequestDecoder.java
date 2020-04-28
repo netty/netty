@@ -989,9 +989,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      */
     private static String readLineStandard(ByteBuf undecodedChunk, Charset charset) {
         int readerIndex = undecodedChunk.readerIndex();
+        ByteBuf line = buffer(64);
         try {
-            ByteBuf line = buffer(64);
-
             while (undecodedChunk.isReadable()) {
                 byte nextByte = undecodedChunk.readByte();
                 if (nextByte == HttpConstants.CR) {
@@ -1014,6 +1013,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         } catch (IndexOutOfBoundsException e) {
             undecodedChunk.readerIndex(readerIndex);
             throw new NotEnoughDataDecoderException(e);
+        } finally {
+            line.release();
         }
         undecodedChunk.readerIndex(readerIndex);
         throw new NotEnoughDataDecoderException();
@@ -1033,9 +1034,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         }
         SeekAheadOptimize sao = new SeekAheadOptimize(undecodedChunk);
         int readerIndex = undecodedChunk.readerIndex();
+        ByteBuf line = buffer(64);
         try {
-            ByteBuf line = buffer(64);
-
             while (sao.pos < sao.limit) {
                 byte nextByte = sao.bytes[sao.pos++];
                 if (nextByte == HttpConstants.CR) {
@@ -1062,6 +1062,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         } catch (IndexOutOfBoundsException e) {
             undecodedChunk.readerIndex(readerIndex);
             throw new NotEnoughDataDecoderException(e);
+        } finally {
+            line.release();
         }
         undecodedChunk.readerIndex(readerIndex);
         throw new NotEnoughDataDecoderException();
