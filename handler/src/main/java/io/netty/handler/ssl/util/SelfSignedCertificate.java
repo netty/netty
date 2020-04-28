@@ -83,9 +83,22 @@ public final class SelfSignedCertificate {
 
     /**
      * Creates a new instance.
+     * <p> Algorithm: RSA, Key Size: 2048 </p>
      */
     public SelfSignedCertificate() throws CertificateException {
         this(DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, "RSA", DEFAULT_KEY_LENGTH_BITS);
+    }
+
+    /**
+     * Creates a new instance.
+     * <p> Algorithm: RSA, Key Size: 2048 </p>
+     *
+     * @param notBefore Certificate is not valid before this time
+     * @param notAfter  Certificate is not valid after this time
+     */
+    public SelfSignedCertificate(Date notBefore, Date notAfter)
+            throws CertificateException {
+        this("example.com", notBefore, notAfter, "RSA", DEFAULT_KEY_LENGTH_BITS);
     }
 
     /**
@@ -103,6 +116,7 @@ public final class SelfSignedCertificate {
 
     /**
      * Creates a new instance.
+     * <p> Algorithm: RSA, Key Size: 2048 </p>
      *
      * @param fqdn a fully qualified domain name
      */
@@ -123,6 +137,20 @@ public final class SelfSignedCertificate {
 
     /**
      * Creates a new instance.
+     * <p> Algorithm: RSA, Key Size: 2048 </p>
+     *
+     * @param fqdn      a fully qualified domain name
+     * @param notBefore Certificate is not valid before this time
+     * @param notAfter  Certificate is not valid after this time
+     */
+    public SelfSignedCertificate(String fqdn, Date notBefore, Date notAfter) throws CertificateException {
+        // Bypass entropy collection by using insecure random generator.
+        // We just want to generate it without any delay because it's for testing purposes only.
+        this(fqdn, ThreadLocalInsecureRandom.current(), DEFAULT_KEY_LENGTH_BITS, notBefore, notAfter, "RSA");
+    }
+
+    /**
+     * Creates a new instance.
      *
      * @param fqdn      a fully qualified domain name
      * @param notBefore Certificate is not valid before this time
@@ -139,6 +167,19 @@ public final class SelfSignedCertificate {
 
     /**
      * Creates a new instance.
+     * <p> Algorithm: RSA </p>
+     *
+     * @param fqdn      a fully qualified domain name
+     * @param random    the {@link SecureRandom} to use
+     * @param bits      the number of bits of the generated private key
+     */
+    public SelfSignedCertificate(String fqdn, SecureRandom random, int bits)
+            throws CertificateException {
+        this(fqdn, random, bits, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, "RSA");
+    }
+
+    /**
+     * Creates a new instance.
      *
      * @param fqdn      a fully qualified domain name
      * @param random    the {@link SecureRandom} to use
@@ -148,6 +189,21 @@ public final class SelfSignedCertificate {
     public SelfSignedCertificate(String fqdn, SecureRandom random, String algorithm, int bits)
             throws CertificateException {
         this(fqdn, random, bits, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, algorithm);
+    }
+
+    /**
+     * Creates a new instance.
+     * <p> Algorithm: RSA </p>
+     *
+     * @param fqdn      a fully qualified domain name
+     * @param random    the {@link SecureRandom} to use
+     * @param bits      the number of bits of the generated private key
+     * @param notBefore Certificate is not valid before this time
+     * @param notAfter  Certificate is not valid after this time
+     */
+    public SelfSignedCertificate(String fqdn, SecureRandom random, int bits, Date notBefore, Date notAfter)
+            throws CertificateException {
+        this(fqdn, random, bits, notBefore, notAfter, "RSA");
     }
 
     /**
