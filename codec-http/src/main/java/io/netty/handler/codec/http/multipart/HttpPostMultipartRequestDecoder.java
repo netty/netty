@@ -321,17 +321,22 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     public HttpPostMultipartRequestDecoder offer(HttpContent content) {
         checkDestroyed();
 
-        // Maybe we should better not copy here for performance reasons but this will need
-        // more care by the caller to release the content in a correct manner later
-        // So maybe something to optimize on a later stage
-        ByteBuf buf = content.content();
-        if (undecodedChunk == null) {
-            undecodedChunk = buf.copy();
-        } else {
-            undecodedChunk.writeBytes(buf);
-        }
         if (content instanceof LastHttpContent) {
             isLastChunk = true;
+        }
+
+        ByteBuf buf = content.content();
+        if (undecodedChunk == null) {
+            undecodedChunk = isLastChunk
+                // Take a slice instead of copying when the first chunk is also the last
+                // as undecodedChunk.writeBytes will never be called.
+                ? buf.retainedSlice()
+                // Maybe we should better not copy here for performance reasons but this will need
+                // more care by the caller to release the content in a correct manner later
+                // So maybe something to optimize on a later stage
+                : buf.copy();
+        } else {
+            undecodedChunk.writeBytes(buf);
         }
         parseBody();
         if (undecodedChunk != null && undecodedChunk.writerIndex() > discardThreshold) {
@@ -1315,7 +1320,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         if (prevByte == HttpConstants.CR) {
             lastPosition--;
         }
-        ByteBuf content = undecodedChunk.copy(startReaderIndex, lastPosition - startReaderIndex);
+        ByteBuf content = undecodedChunk.retainedSlice(startReaderIndex, lastPosition - startReaderIndex);
         try {
             httpData.addContent(content, delimiterFound);
         } catch (IOException e) {
@@ -1364,7 +1369,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             lastRealPos--;
         }
         final int lastPosition = sao.getReadPosition(lastRealPos);
-        final ByteBuf content = undecodedChunk.copy(startReaderIndex, lastPosition - startReaderIndex);
+        final ByteBuf content = undecodedChunk.retainedSlice(startReaderIndex, lastPosition - startReaderIndex);
         try {
             httpData.addContent(content, delimiterFound);
         } catch (IOException e) {

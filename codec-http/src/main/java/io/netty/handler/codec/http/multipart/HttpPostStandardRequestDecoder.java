@@ -26,7 +26,10 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDec
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.MultiPartStatus;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
+import io.netty.util.ByteProcessor;
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -280,17 +283,22 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
     public HttpPostStandardRequestDecoder offer(HttpContent content) {
         checkDestroyed();
 
-        // Maybe we should better not copy here for performance reasons but this will need
-        // more care by the caller to release the content in a correct manner later
-        // So maybe something to optimize on a later stage
-        ByteBuf buf = content.content();
-        if (undecodedChunk == null) {
-            undecodedChunk = buf.copy();
-        } else {
-            undecodedChunk.writeBytes(buf);
-        }
         if (content instanceof LastHttpContent) {
             isLastChunk = true;
+        }
+
+        ByteBuf buf = content.content();
+        if (undecodedChunk == null) {
+            undecodedChunk = isLastChunk
+                // Take a slice instead of copying when the first chunk is also the last
+                // as undecodedChunk.writeBytes will never be called.
+                ? buf.retainedSlice()
+                // Maybe we should better not copy here for performance reasons but this will need
+                // more care by the caller to release the content in a correct manner later
+                // So maybe something to optimize on a later stage
+                : buf.copy();
+        } else {
+            undecodedChunk.writeBytes(buf);
         }
         parseBody();
         if (undecodedChunk != null && undecodedChunk.writerIndex() > discardThreshold) {
@@ -429,7 +437,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                     if (read == '&') {
                         currentStatus = MultiPartStatus.DISPOSITION;
                         ampersandpos = currentpos - 1;
-                        setFinalBuffer(undecodedChunk.copy(firstpos, ampersandpos - firstpos));
+                        setFinalBuffer(undecodedChunk.retainedSlice(firstpos, ampersandpos - firstpos));
                         firstpos = currentpos;
                         contRead = true;
                     } else if (read == HttpConstants.CR) {
@@ -439,7 +447,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                             if (read == HttpConstants.LF) {
                                 currentStatus = MultiPartStatus.PREEPILOGUE;
                                 ampersandpos = currentpos - 2;
-                                setFinalBuffer(undecodedChunk.copy(firstpos, ampersandpos - firstpos));
+                                setFinalBuffer(undecodedChunk.retainedSlice(firstpos, ampersandpos - firstpos));
                                 firstpos = currentpos;
                                 contRead = false;
                             } else {
@@ -452,7 +460,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                     } else if (read == HttpConstants.LF) {
                         currentStatus = MultiPartStatus.PREEPILOGUE;
                         ampersandpos = currentpos - 1;
-                        setFinalBuffer(undecodedChunk.copy(firstpos, ampersandpos - firstpos));
+                        setFinalBuffer(undecodedChunk.retainedSlice(firstpos, ampersandpos - firstpos));
                         firstpos = currentpos;
                         contRead = false;
                     }
@@ -466,7 +474,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                 // special case
                 ampersandpos = currentpos;
                 if (ampersandpos > firstpos) {
-                    setFinalBuffer(undecodedChunk.copy(firstpos, ampersandpos - firstpos));
+                    setFinalBuffer(undecodedChunk.retainedSlice(firstpos, ampersandpos - firstpos));
                 } else if (!currentAttribute.isCompleted()) {
                     setFinalBuffer(EMPTY_BUFFER);
                 }
@@ -474,7 +482,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                 currentStatus = MultiPartStatus.EPILOGUE;
             } else if (contRead && currentAttribute != null && currentStatus == MultiPartStatus.FIELD) {
                 // reset index except if to continue in case of FIELD getStatus
-                currentAttribute.addContent(undecodedChunk.copy(firstpos, currentpos - firstpos),
+                currentAttribute.addContent(undecodedChunk.retainedSlice(firstpos, currentpos - firstpos),
                                             false);
                 firstpos = currentpos;
             }
@@ -546,7 +554,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                     if (read == '&') {
                         currentStatus = MultiPartStatus.DISPOSITION;
                         ampersandpos = currentpos - 1;
-                        setFinalBuffer(undecodedChunk.copy(firstpos, ampersandpos - firstpos));
+                        setFinalBuffer(undecodedChunk.retainedSlice(firstpos, ampersandpos - firstpos));
                         firstpos = currentpos;
                         contRead = true;
                     } else if (read == HttpConstants.CR) {
@@ -557,7 +565,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                                 currentStatus = MultiPartStatus.PREEPILOGUE;
                                 ampersandpos = currentpos - 2;
                                 sao.setReadPosition(0);
-                                setFinalBuffer(undecodedChunk.copy(firstpos, ampersandpos - firstpos));
+                                setFinalBuffer(undecodedChunk.retainedSlice(firstpos, ampersandpos - firstpos));
                                 firstpos = currentpos;
                                 contRead = false;
                                 break loop;
@@ -575,7 +583,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                         currentStatus = MultiPartStatus.PREEPILOGUE;
                         ampersandpos = currentpos - 1;
                         sao.setReadPosition(0);
-                        setFinalBuffer(undecodedChunk.copy(firstpos, ampersandpos - firstpos));
+                        setFinalBuffer(undecodedChunk.retainedSlice(firstpos, ampersandpos - firstpos));
                         firstpos = currentpos;
                         contRead = false;
                         break loop;
@@ -592,7 +600,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                 // special case
                 ampersandpos = currentpos;
                 if (ampersandpos > firstpos) {
-                    setFinalBuffer(undecodedChunk.copy(firstpos, ampersandpos - firstpos));
+                    setFinalBuffer(undecodedChunk.retainedSlice(firstpos, ampersandpos - firstpos));
                 } else if (!currentAttribute.isCompleted()) {
                     setFinalBuffer(EMPTY_BUFFER);
                 }
@@ -600,7 +608,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                 currentStatus = MultiPartStatus.EPILOGUE;
             } else if (contRead && currentAttribute != null && currentStatus == MultiPartStatus.FIELD) {
                 // reset index except if to continue in case of FIELD getStatus
-                currentAttribute.addContent(undecodedChunk.copy(firstpos, currentpos - firstpos),
+                currentAttribute.addContent(undecodedChunk.retainedSlice(firstpos, currentpos - firstpos),
                                             false);
                 firstpos = currentpos;
             }
@@ -622,8 +630,10 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
 
     private void setFinalBuffer(ByteBuf buffer) throws IOException {
         currentAttribute.addContent(buffer, true);
-        String value = decodeAttribute(currentAttribute.getByteBuf().toString(charset), charset);
-        currentAttribute.setValue(value);
+        ByteBuf decodedBuf = decodeAttribute(currentAttribute.getByteBuf(), charset);
+        if (decodedBuf != null) { // override content only when ByteBuf needed decoding
+            currentAttribute.setContent(decodedBuf);
+        }
         addHttpData(currentAttribute);
         currentAttribute = null;
     }
@@ -639,6 +649,28 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
         } catch (IllegalArgumentException e) {
             throw new ErrorDataDecoderException("Bad string: '" + s + '\'', e);
         }
+    }
+
+    private static ByteBuf decodeAttribute(ByteBuf b, Charset charset) {
+        int firstEscaped = b.forEachByte(new ByteProcessor.IndexOfProcessor((byte) '%'));
+        if (firstEscaped == -1) {
+            return null; // nothing to decode
+        }
+
+        ByteBuf buf = b.alloc().buffer(b.readableBytes());
+        UrlDecoder urlDecode = new UrlDecoder(buf);
+        int idx = b.forEachByte(urlDecode);
+        if (urlDecode.nextEscapedIdx != 0) { // incomplete hex byte
+            if (idx == -1) {
+                idx = b.readableBytes() - 1;
+            }
+            idx -= urlDecode.nextEscapedIdx - 1;
+            buf.release();
+            throw new ErrorDataDecoderException(
+                String.format("Invalid hex byte at index '%d' in string: '%s'", idx, b.toString(charset)));
+        }
+
+        return buf;
     }
 
     /**
@@ -676,5 +708,40 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
         checkDestroyed();
 
         factory.removeHttpDataFromClean(request, data);
+    }
+
+    private static final class UrlDecoder implements ByteProcessor {
+
+        private final ByteBuf output;
+        private int nextEscapedIdx;
+        private byte hiByte;
+
+        UrlDecoder(ByteBuf output) {
+            this.output = output;
+        }
+
+        @Override
+        public boolean process(byte value) {
+            if (nextEscapedIdx != 0) {
+                if (nextEscapedIdx == 1) {
+                    hiByte = value;
+                    ++nextEscapedIdx;
+                } else {
+                    int hi = StringUtil.decodeHexNibble((char) hiByte);
+                    int lo = StringUtil.decodeHexNibble((char) value);
+                    if (hi == -1 || lo == -1) {
+                        ++nextEscapedIdx;
+                        return false;
+                    }
+                    output.writeByte((hi << 4) + lo);
+                    nextEscapedIdx = 0;
+                }
+            } else if (value == '%') {
+                nextEscapedIdx = 1;
+            } else {
+                output.writeByte(value);
+            }
+            return true;
+        }
     }
 }
