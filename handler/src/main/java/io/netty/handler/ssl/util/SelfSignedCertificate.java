@@ -152,7 +152,7 @@ public final class SelfSignedCertificate {
      */
     public SelfSignedCertificate(String fqdn, SecureRandom random, int bits, Date notBefore, Date notAfter,
                                  String algorithm) throws CertificateException {
-        // Generate key pair based.
+        // Generate key pair from specified algorithm.
         final KeyPair keypair;
         try {
             KeyPairGenerator keyGen = KeyPairGenerator.getInstance(algorithm);
