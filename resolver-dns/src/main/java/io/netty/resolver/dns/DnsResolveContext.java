@@ -276,15 +276,52 @@ abstract class DnsResolveContext<T> {
         return name + '.';
     }
 
-    private void internalResolve(String name, Promise<List<T>> promise) {
-        for (;;) {
-            // Resolve from cnameCache() until there is no more cname entry cached.
-            String mapping = cnameCache().get(hostnameWithDot(name));
-            if (mapping == null) {
+    // Resolve the final name from the CNAME cache until there is nothing to follow anymore. This also
+    // guards against loops in the cache but early return once a loop is detected.
+    private String cnameResolveFromCache(String name) {
+        DnsCnameCache cnameCache = cnameCache();
+        String first = cnameCache.get(hostnameWithDot(name));
+        if (first == null) {
+            // Nothing in the cache at all
+            return name;
+        }
+
+        String second = cnameCache.get(hostnameWithDot(first));
+        if (second == null) {
+            // Nothing else to follow, return first match.
+            return first;
+        }
+
+        if (first.equals(second)) {
+            // Loop detected.... early return.
+            return first;
+        }
+
+        return cnameResolveFromCacheLoop(cnameCache, first, second);
+    }
+
+    private String cnameResolveFromCacheLoop(DnsCnameCache cnameCache, String first, String mapping) {
+        // Detect loops using a HashSet. We use this as last resort implementation to reduce allocations in the most
+        // common cases.
+        Set<String> cnames = new HashSet<String>(4);
+        cnames.add(first);
+        cnames.add(mapping);
+
+        String name = mapping;
+        // Resolve from cnameCache() until there is no more cname entry cached.
+        while ((mapping = cnameCache.get(hostnameWithDot(name))) != null) {
+            if (!cnames.add(mapping)) {
+                // Follow CNAME from cache would loop. Lets break here.
                 break;
             }
             name = mapping;
         }
+        return name;
+    }
+
+    private void internalResolve(String name, Promise<List<T>> promise) {
+        // Resolve from cnameCache() until there is no more cname entry cached.
+        name = cnameResolveFromCache(name);
 
         try {
             DnsServerAddressStream nameServerAddressStream = getNameServers(name);
@@ -954,24 +991,7 @@ abstract class DnsResolveContext<T> {
 
     private void followCname(DnsQuestion question, String cname, DnsQueryLifecycleObserver queryLifecycleObserver,
                              Promise<List<T>> promise) {
-        Set<String> cnames = null;
-        for (;;) {
-            // Resolve from cnameCache() until there is no more cname entry cached.
-            String mapping = cnameCache().get(hostnameWithDot(cname));
-            if (mapping == null) {
-                break;
-            }
-            if (cnames == null) {
-                // Detect loops.
-                cnames = new HashSet<String>(2);
-            }
-            if (!cnames.add(cname)) {
-                // Follow CNAME from cache would loop. Lets break here.
-                break;
-            }
-            cname = mapping;
-        }
-
+        cname = cnameResolveFromCache(cname);
         DnsServerAddressStream stream = getNameServers(cname);
 
         final DnsQuestion cnameQuestion;

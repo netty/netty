@@ -2200,6 +2200,32 @@ public class DnsNameResolverTest {
     }
 
     @Test
+    public void testCNAMELoopInCache() {
+        expectedException.expect(UnknownHostException.class);
+        DnsNameResolver resolver = null;
+        try {
+            DnsNameResolverBuilder builder = newResolver()
+                    .recursionDesired(false)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer.localAddress()));
+
+            resolver = builder.build();
+            // Add a CNAME loop into the cache
+            String name = "somehost.netty.io.";
+            String name2 = "cname.netty.io.";
+
+            resolver.cnameCache().cache(name, name2, Long.MAX_VALUE, resolver.executor());
+            resolver.cnameCache().cache(name2, name, Long.MAX_VALUE, resolver.executor());
+            resolver.resolve(name).syncUninterruptibly().getNow();
+        } finally {
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
+
+    @Test
     public void testSearchDomainQueryFailureForSingleAddressTypeCompletes() {
         expectedException.expect(UnknownHostException.class);
         testSearchDomainQueryFailureCompletes(ResolvedAddressTypes.IPV4_ONLY);
