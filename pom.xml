@@ -350,7 +350,7 @@
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
-    <conscrypt.version>1.3.0</conscrypt.version>
+    <conscrypt.version>2.4.0</conscrypt.version>
     <conscrypt.classifier />
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
