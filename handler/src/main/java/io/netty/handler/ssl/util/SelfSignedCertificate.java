@@ -49,7 +49,7 @@ import java.util.Date;
  * It is purely for testing purposes, and thus it is very insecure.
  * It even uses an insecure pseudo-random generator for faster generation internally.
  * </p><p>
- * An X.509 certificate file and a RSA private key file are generated in a system's temporary directory using
+ * An X.509 certificate file and a EC/RSA private key file are generated in a system's temporary directory using
  * {@link java.io.File#createTempFile(String, String)}, and they are deleted when the JVM exits using
  * {@link java.io.File#deleteOnExit()}.
  * </p><p>
@@ -69,12 +69,12 @@ public final class SelfSignedCertificate {
             "io.netty.selfSignedCertificate.defaultNotAfter", 253402300799000L));
 
     /**
-     * NSA Suite B requires the EC key length to be 256 bits or greater.
+     * FIPS 140-2 encryption requires the RSA key length to be 2048 bits or greater.
      * Let's use that as a sane default but allow the default to be set dynamically
      * for those that need more stringent security requirements.
      */
     private static final int DEFAULT_KEY_LENGTH_BITS =
-            SystemPropertyUtil.getInt("io.netty.handler.ssl.util.selfSignedKeyStrength", 256);
+            SystemPropertyUtil.getInt("io.netty.handler.ssl.util.selfSignedKeyStrength", 2048);
 
     private final File certificate;
     private final File privateKey;
@@ -85,7 +85,7 @@ public final class SelfSignedCertificate {
      * Creates a new instance.
      */
     public SelfSignedCertificate() throws CertificateException {
-        this(DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, "EC");
+        this(DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, "RSA", DEFAULT_KEY_LENGTH_BITS);
     }
 
     /**
@@ -94,9 +94,11 @@ public final class SelfSignedCertificate {
      * @param notBefore Certificate is not valid before this time
      * @param notAfter  Certificate is not valid after this time
      * @param algorithm Key pair algorithm
+     * @param bits      the number of bits of the generated private key
      */
-    public SelfSignedCertificate(Date notBefore, Date notAfter, String algorithm) throws CertificateException {
-        this("example.com", notBefore, notAfter, algorithm);
+    public SelfSignedCertificate(Date notBefore, Date notAfter, String algorithm, int bits)
+            throws CertificateException {
+        this("example.com", notBefore, notAfter, algorithm, bits);
     }
 
     /**
@@ -105,7 +107,7 @@ public final class SelfSignedCertificate {
      * @param fqdn a fully qualified domain name
      */
     public SelfSignedCertificate(String fqdn) throws CertificateException {
-        this(fqdn, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, "EC");
+        this(fqdn, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, "RSA", DEFAULT_KEY_LENGTH_BITS);
     }
 
     /**
@@ -113,9 +115,10 @@ public final class SelfSignedCertificate {
      *
      * @param fqdn      a fully qualified domain name
      * @param algorithm Key pair algorithm
+     * @param bits      the number of bits of the generated private key
      */
-    public SelfSignedCertificate(String fqdn, String algorithm) throws CertificateException {
-        this(fqdn, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, algorithm);
+    public SelfSignedCertificate(String fqdn, String algorithm, int bits) throws CertificateException {
+        this(fqdn, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, algorithm, bits);
     }
 
     /**
@@ -125,12 +128,13 @@ public final class SelfSignedCertificate {
      * @param notBefore Certificate is not valid before this time
      * @param notAfter  Certificate is not valid after this time
      * @param algorithm Key pair algorithm
+     * @param bits      the number of bits of the generated private key
      */
-    public SelfSignedCertificate(String fqdn, Date notBefore, Date notAfter, String algorithm)
+    public SelfSignedCertificate(String fqdn, Date notBefore, Date notAfter, String algorithm, int bits)
             throws CertificateException {
         // Bypass entropy collection by using insecure random generator.
         // We just want to generate it without any delay because it's for testing purposes only.
-        this(fqdn, ThreadLocalInsecureRandom.current(), DEFAULT_KEY_LENGTH_BITS, notBefore, notAfter, algorithm);
+        this(fqdn, ThreadLocalInsecureRandom.current(), bits, notBefore, notAfter, algorithm);
     }
 
     /**
@@ -138,10 +142,10 @@ public final class SelfSignedCertificate {
      *
      * @param fqdn      a fully qualified domain name
      * @param random    the {@link SecureRandom} to use
-     * @param bits      the number of bits of the generated private key
      * @param algorithm Key pair algorithm
+     * @param bits      the number of bits of the generated private key
      */
-    public SelfSignedCertificate(String fqdn, SecureRandom random, int bits, String algorithm)
+    public SelfSignedCertificate(String fqdn, SecureRandom random, String algorithm, int bits)
             throws CertificateException {
         this(fqdn, random, bits, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, algorithm);
     }
