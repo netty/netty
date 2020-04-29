@@ -41,7 +41,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import static io.netty.buffer.Unpooled.*;
 import static io.netty.util.internal.ObjectUtil.*;
 
 /**
@@ -184,7 +183,6 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             // See #1089
             offer((HttpContent) request);
         } else {
-            undecodedChunk = buffer();
             parseBody();
         }
     }
@@ -327,14 +325,17 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
 
         ByteBuf buf = content.content();
         if (undecodedChunk == null) {
-            undecodedChunk = isLastChunk
-                // Take a slice instead of copying when the first chunk is also the last
-                // as undecodedChunk.writeBytes will never be called.
-                ? buf.retainedSlice()
-                // Maybe we should better not copy here for performance reasons but this will need
-                // more care by the caller to release the content in a correct manner later
-                // So maybe something to optimize on a later stage
-                : buf.copy();
+            undecodedChunk = isLastChunk ?
+                    // Take a slice instead of copying when the first chunk is also the last
+                    // as undecodedChunk.writeBytes will never be called.
+                    buf.retainedSlice() :
+                    // Maybe we should better not copy here for performance reasons but this will need
+                    // more care by the caller to release the content in a correct manner later
+                    // So maybe something to optimize on a later stage
+                    //
+                    // We are explicit allocate a buffer and NOT calling copy() as otherwise it may set a maxCapacity
+                    // which is not really usable for us as we may exceed it once we add more bytes.
+                    buf.alloc().buffer(buf.readableBytes()).writeBytes(buf);
         } else {
             undecodedChunk.writeBytes(buf);
         }
@@ -989,7 +990,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      */
     private static String readLineStandard(ByteBuf undecodedChunk, Charset charset) {
         int readerIndex = undecodedChunk.readerIndex();
-        ByteBuf line = buffer(64);
+        ByteBuf line = undecodedChunk.alloc().heapBuffer(64);
         try {
             while (undecodedChunk.isReadable()) {
                 byte nextByte = undecodedChunk.readByte();
@@ -1034,7 +1035,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         }
         SeekAheadOptimize sao = new SeekAheadOptimize(undecodedChunk);
         int readerIndex = undecodedChunk.readerIndex();
-        ByteBuf line = buffer(64);
+        ByteBuf line = undecodedChunk.alloc().heapBuffer(64);
         try {
             while (sao.pos < sao.limit) {
                 byte nextByte = sao.bytes[sao.pos++];

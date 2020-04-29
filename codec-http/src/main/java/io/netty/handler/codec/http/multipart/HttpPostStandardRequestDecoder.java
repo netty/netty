@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpRequest;
@@ -27,7 +28,6 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDec
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.MultiPartStatus;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
 import io.netty.util.ByteProcessor;
-import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
@@ -38,7 +38,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import static io.netty.buffer.Unpooled.*;
 import static io.netty.util.internal.ObjectUtil.*;
 
 /**
@@ -158,7 +157,6 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                 // See #1089
                 offer((HttpContent) request);
             } else {
-                undecodedChunk = buffer();
                 parseBody();
             }
         } catch (Throwable e) {
@@ -289,14 +287,17 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
 
         ByteBuf buf = content.content();
         if (undecodedChunk == null) {
-            undecodedChunk = isLastChunk
-                // Take a slice instead of copying when the first chunk is also the last
-                // as undecodedChunk.writeBytes will never be called.
-                ? buf.retainedSlice()
-                // Maybe we should better not copy here for performance reasons but this will need
-                // more care by the caller to release the content in a correct manner later
-                // So maybe something to optimize on a later stage
-                : buf.copy();
+            undecodedChunk = isLastChunk ?
+                    // Take a slice instead of copying when the first chunk is also the last
+                    // as undecodedChunk.writeBytes will never be called.
+                    buf.retainedSlice() :
+                    // Maybe we should better not copy here for performance reasons but this will need
+                    // more care by the caller to release the content in a correct manner later
+                    // So maybe something to optimize on a later stage.
+                    //
+                    // We are explicit allocate a buffer and NOT calling copy() as otherwise it may set a maxCapacity
+                    // which is not really usable for us as we may exceed it once we add more bytes.
+                    buf.alloc().buffer(buf.readableBytes()).writeBytes(buf);
         } else {
             undecodedChunk.writeBytes(buf);
         }
@@ -476,7 +477,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                 if (ampersandpos > firstpos) {
                     setFinalBuffer(undecodedChunk.retainedSlice(firstpos, ampersandpos - firstpos));
                 } else if (!currentAttribute.isCompleted()) {
-                    setFinalBuffer(EMPTY_BUFFER);
+                    setFinalBuffer(Unpooled.EMPTY_BUFFER);
                 }
                 firstpos = currentpos;
                 currentStatus = MultiPartStatus.EPILOGUE;
@@ -511,6 +512,9 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      *             errors
      */
     private void parseBodyAttributes() {
+        if (undecodedChunk == null) {
+            return;
+        }
         if (!undecodedChunk.hasArray()) {
             parseBodyAttributesStandard();
             return;
@@ -602,7 +606,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                 if (ampersandpos > firstpos) {
                     setFinalBuffer(undecodedChunk.retainedSlice(firstpos, ampersandpos - firstpos));
                 } else if (!currentAttribute.isCompleted()) {
-                    setFinalBuffer(EMPTY_BUFFER);
+                    setFinalBuffer(Unpooled.EMPTY_BUFFER);
                 }
                 firstpos = currentpos;
                 currentStatus = MultiPartStatus.EPILOGUE;
