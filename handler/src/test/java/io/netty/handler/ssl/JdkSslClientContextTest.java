@@ -20,7 +20,7 @@ import java.io.File;
 
 public class JdkSslClientContextTest extends SslContextTest {
     @Override
-    protected SslContext newServerContext(File crtFile, File keyFile, String pass) throws SSLException {
+    protected SslContext newSslContext(File crtFile, File keyFile, String pass) throws SSLException {
         return SslContextBuilder.forClient()
           .sslProvider(SslProvider.JDK)
           .keyManager(crtFile, keyFile, pass)

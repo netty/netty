@@ -31,7 +31,7 @@ public class OpenSslClientContextTest extends SslContextTest  {
     }
 
     @Override
-    protected SslContext newServerContext(File crtFile, File keyFile, String pass) throws SSLException {
+    protected SslContext newSslContext(File crtFile, File keyFile, String pass) throws SSLException {
         return SslContextBuilder.forClient()
           .sslProvider(SslProvider.OPENSSL)
           .trustManager(InsecureTrustManagerFactory.INSTANCE)
