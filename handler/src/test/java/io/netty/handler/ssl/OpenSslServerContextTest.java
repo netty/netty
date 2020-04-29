@@ -32,7 +32,7 @@ public class OpenSslServerContextTest extends SslContextTest {
     }
 
     @Override
-    protected SslContext newServerContext(File crtFile, File keyFile, String pass) throws SSLException {
+    protected SslContext newSslContext(File crtFile, File keyFile, String pass) throws SSLException {
         Assume.assumeTrue(OpenSsl.isAvailable());
         return new OpenSslServerContext(crtFile, keyFile, pass);
     }

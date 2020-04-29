@@ -21,7 +21,7 @@ import java.io.File;
 public class JdkSslServerContextTest extends SslContextTest {
 
     @Override
-    protected SslContext newServerContext(File crtFile, File keyFile, String pass) throws SSLException {
+    protected SslContext newSslContext(File crtFile, File keyFile, String pass) throws SSLException {
         return new JdkSslServerContext(crtFile, keyFile, pass);
     }
 }

@@ -22,7 +22,7 @@ import java.io.File;
 
 public class JdkSslClientContextTest extends SslContextTest {
     @Override
-    protected SslContext newServerContext(File crtFile, File keyFile, String pass) throws SSLException {
+    protected SslContext newSslContext(File crtFile, File keyFile, String pass) throws SSLException {
         return new JdkSslClientContext(crtFile, InsecureTrustManagerFactory.INSTANCE, crtFile, keyFile, pass,
                 null, null, IdentityCipherSuiteFilter.INSTANCE, ApplicationProtocolConfig.DISABLED, 0, 0);
     }
