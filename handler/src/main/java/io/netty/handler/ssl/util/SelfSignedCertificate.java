@@ -98,7 +98,7 @@ public final class SelfSignedCertificate {
      */
     public SelfSignedCertificate(Date notBefore, Date notAfter)
             throws CertificateException {
-        this("example.com", notBefore, notAfter, "RSA", DEFAULT_KEY_LENGTH_BITS);
+        this("localhost", notBefore, notAfter, "RSA", DEFAULT_KEY_LENGTH_BITS);
     }
 
     /**
@@ -111,7 +111,7 @@ public final class SelfSignedCertificate {
      */
     public SelfSignedCertificate(Date notBefore, Date notAfter, String algorithm, int bits)
             throws CertificateException {
-        this("example.com", notBefore, notAfter, algorithm, bits);
+        this("localhost", notBefore, notAfter, algorithm, bits);
     }
 
     /**
