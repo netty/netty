@@ -287,19 +287,17 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
 
         ByteBuf buf = content.content();
         if (undecodedChunk == null) {
-            if (isLastChunk) {
-                // Take a slice instead of copying when the first chunk is also the last
-                // as undecodedChunk.writeBytes will never be called.
-                undecodedChunk = buf.retainedSlice();
-            } else {
-                // Maybe we should better not copy here for performance reasons but this will need
-                // more care by the caller to release the content in a correct manner later
-                // So maybe something to optimize on a later stage.
-                //
-                // We are explicit allocate a buffer and NOT calling copy() as otherwise it may set a maxCapacity
-                // which is not really usable for us as we may exceed it once we add more bytes.
-                undecodedChunk = buf.alloc().buffer(buf.readableBytes()).writeBytes(buf);
-            }
+            undecodedChunk = isLastChunk ?
+                    // Take a slice instead of copying when the first chunk is also the last
+                    // as undecodedChunk.writeBytes will never be called.
+                    buf.retainedSlice() :
+                    // Maybe we should better not copy here for performance reasons but this will need
+                    // more care by the caller to release the content in a correct manner later
+                    // So maybe something to optimize on a later stage.
+                    //
+                    // We are explicit allocate a buffer and NOT calling copy() as otherwise it may set a maxCapacity
+                    // which is not really usable for us as we may exceed it once we add more bytes.
+                    buf.alloc().buffer(buf.readableBytes()).writeBytes(buf);
         } else {
             undecodedChunk.writeBytes(buf);
         }
