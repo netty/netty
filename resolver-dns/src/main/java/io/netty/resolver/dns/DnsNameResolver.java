@@ -34,6 +34,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.dns.DatagramDnsQueryEncoder;
 import io.netty.handler.codec.dns.DatagramDnsResponse;
 import io.netty.handler.codec.dns.DatagramDnsResponseDecoder;
@@ -1215,7 +1216,7 @@ public class DnsNameResolver extends InetNameResolver {
 
             final DnsQueryContext qCtx = queryContextManager.get(res.sender(), queryId);
             if (qCtx == null) {
-                logger.warn("{} Received a DNS response with an unknown ID: {}", ch, queryId);
+                logger.debug("Received a DNS response with an unknown ID: UDP [{}: {}]", ch, queryId);
                 res.release();
                 return;
             }
@@ -1236,7 +1237,7 @@ public class DnsNameResolver extends InetNameResolver {
                 public void operationComplete(ChannelFuture future) {
                     if (!future.isSuccess()) {
                         if (logger.isDebugEnabled()) {
-                            logger.debug("{} Unable to fallback to TCP [{}]", queryId, future.cause());
+                            logger.debug("Unable to fallback to TCP [{}]", queryId, future.cause());
                         }
 
                         // TCP fallback failed, just use the truncated response.
@@ -1272,8 +1273,8 @@ public class DnsNameResolver extends InetNameResolver {
                                         response));
                             } else {
                                 response.release();
-                                tcpCtx.tryFailure("Received TCP response with unexpected ID", null, false);
-                                logger.warn("{} Received a DNS response with an unexpected ID: {}",
+                                tcpCtx.tryFailure("Received TCP DNS response with unexpected ID", null, false);
+                                logger.debug("Received a DNS response with an unexpected ID: TCP [{}: {}]",
                                         channel, queryId);
                             }
                         }
@@ -1317,7 +1318,11 @@ public class DnsNameResolver extends InetNameResolver {
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-            logger.warn("{} Unexpected exception: ", ctx.channel(), cause);
+            if (cause instanceof CorruptedFrameException) {
+                logger.debug("Unable to decode DNS response: UDP [{}]", ctx.channel(), cause);
+            } else {
+                logger.warn("Unexpected exception: UDP [{}]", ctx.channel(), cause);
+            }
         }
     }
 
