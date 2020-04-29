@@ -25,7 +25,14 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
@@ -34,6 +41,61 @@ import java.util.zip.Deflater;
  * Compresses a {@link ByteBuf} using the deflate algorithm.
  */
 public class JdkZlibEncoder extends ZlibEncoder {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(JdkZlibEncoder.class);
+    private static final Method DEFLATER_SET_INPUT_BYTEBUFFER;
+    private static final Method DEFLATER_DEFLATE_BYTEBUFFER;
+    private static final Method CRC32_UPDATE_BYTEBUFFER = ByteBufChecksum.CRC32_UPDATE_METHOD;
+
+    static {
+        Method deflaterSetInput = null;
+        Method deflaterDeflate = null;
+        if (PlatformDependent.javaVersion() >= 11) {
+            // discover deflater.setInput(ByteBuffer)
+            Object maybeException =
+                    AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                        @Override
+                        public Object run() {
+                            try {
+                                return Deflater.class.getDeclaredMethod("setInput", ByteBuffer.class);
+                            } catch (NoSuchMethodException e) {
+                                return e;
+                            } catch (SecurityException e) {
+                                return e;
+                            }
+                        }
+                    });
+            if (maybeException instanceof Method) {
+                logger.debug("Deflater.setInput(ByteBuffer): available");
+                deflaterSetInput = (Method) maybeException;
+            } else {
+                logger.debug("Deflater.setInput(ByteBuffer): unavailable", maybeException);
+            }
+
+            // discover deflater.deflate(ByteBuffer, int)
+            maybeException =
+                    AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                        @Override
+                        public Object run() {
+                            try {
+                                return Deflater.class.getDeclaredMethod("deflate", ByteBuffer.class, int.class);
+                            } catch (NoSuchMethodException e) {
+                                return e;
+                            } catch (SecurityException e) {
+                                return e;
+                            }
+                        }
+                    });
+            if (maybeException instanceof Method) {
+                logger.debug("Deflater.deflate(ByteBuffer, int): available");
+                deflaterDeflate = (Method) maybeException;
+            } else {
+                logger.debug("Deflater.deflate(ByteBuffer, int): unavailable", maybeException);
+            }
+        }
+        DEFLATER_SET_INPUT_BYTEBUFFER = deflaterSetInput;
+        DEFLATER_DEFLATE_BYTEBUFFER = deflaterDeflate;
+    }
 
     private final ZlibWrapper wrapper;
     private final Deflater deflater;
@@ -215,14 +277,13 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     private void deflaterSetInput(ByteBuf uncompressed, ByteBuf out, int len) {
-        if (PlatformDependent.javaVersion() >= 11) {
+        if (DEFLATER_SET_INPUT_BYTEBUFFER != null && CRC32_UPDATE_BYTEBUFFER != null) {
             deflaterSetInputJdk11(uncompressed, out, len);
         } else {
             deflaterSetInputJdk6(uncompressed, out, len);
         }
     }
 
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     private void deflaterSetInputJdk11(ByteBuf uncompressed, ByteBuf out, int len) {
         if (uncompressed.isDirect()) {
             if (writeHeader) {
@@ -232,11 +293,21 @@ public class JdkZlibEncoder extends ZlibEncoder {
                 }
             }
 
-            if (wrapper == ZlibWrapper.GZIP) {
-                crc.update(uncompressed.nioBuffer());
-            }
+            try {
+                ByteBuffer nioBuffer = uncompressed.nioBuffer();
+                if (wrapper == ZlibWrapper.GZIP) {
+                    int position = nioBuffer.position();
+                    int limit = nioBuffer.limit();
+                    CRC32_UPDATE_BYTEBUFFER.invoke(crc, nioBuffer);
+                    nioBuffer.position(position).limit(limit);
+                }
 
-            deflater.setInput(uncompressed.nioBuffer());
+                DEFLATER_SET_INPUT_BYTEBUFFER.invoke(deflater, nioBuffer);
+            } catch (IllegalAccessException e) {
+                throw new Error(e);
+            } catch (InvocationTargetException e) {
+                throw new Error(e);
+            }
         } else {
             deflaterSetInputJdk6(uncompressed, out, len);
         }
@@ -351,24 +422,29 @@ public class JdkZlibEncoder extends ZlibEncoder {
         return ctx.writeAndFlush(footer, promise);
     }
 
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     private void deflate(ByteBuf out) {
         if (PlatformDependent.javaVersion() < 7) {
             deflateJdk6(out);
-        } else if (PlatformDependent.javaVersion() >= 11) {
+        } else if (DEFLATER_DEFLATE_BYTEBUFFER != null) {
             deflateJdk11(out);
         } else {
             deflateJdk7(out);
         }
     }
 
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     private void deflateJdk11(ByteBuf out) {
         if (out.isDirect()) {
-            int numBytes;
-            do {
-                numBytes = deflater.deflate(out.nioBuffer(), Deflater.SYNC_FLUSH);
-            } while (numBytes > 0);
+            try {
+                ByteBuffer nioBuffer = out.nioBuffer();
+                int numBytes;
+                do {
+                    numBytes = (Integer) DEFLATER_DEFLATE_BYTEBUFFER.invoke(deflater, nioBuffer, Deflater.SYNC_FLUSH);
+                } while (numBytes > 0);
+            } catch (IllegalAccessException e) {
+                throw new Error(e);
+            } catch (InvocationTargetException e) {
+                throw new Error(e);
+            }
         } else {
             deflateJdk7(out);
         }

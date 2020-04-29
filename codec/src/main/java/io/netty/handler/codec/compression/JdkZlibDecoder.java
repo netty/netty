@@ -20,9 +20,14 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SuppressJava6Requirement;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.zip.CRC32;
 import java.util.zip.DataFormatException;
@@ -33,6 +38,36 @@ import java.util.zip.Inflater;
  * Decompress a {@link ByteBuf} using the inflate algorithm.
  */
 public class JdkZlibDecoder extends ZlibDecoder {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(JdkZlibDecoder.class);
+    private static final Method INFLATER_SET_INPUT_BYTEBUFFER;
+
+    static {
+        Method inflaterSetInput = null;
+        if (PlatformDependent.javaVersion() >= 11) {
+            final Object maybeException =
+                    AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                        @Override
+                        public Object run() {
+                            try {
+                                return Inflater.class.getDeclaredMethod("setInput", ByteBuffer.class);
+                            } catch (NoSuchMethodException e) {
+                                return e;
+                            } catch (SecurityException e) {
+                                return e;
+                            }
+                        }
+                    });
+            if (maybeException instanceof Method) {
+                inflaterSetInput = (Method) maybeException;
+                logger.debug("Inflater.setInput(ByteBuffer): available");
+            } else {
+                logger.debug("Inflater.setInput(ByteBuffer): unavailable", maybeException);
+            }
+        }
+        INFLATER_SET_INPUT_BYTEBUFFER = inflaterSetInput;
+    }
+
     private static final int FHCRC = 0x02;
     private static final int FEXTRA = 0x04;
     private static final int FNAME = 0x08;
@@ -285,18 +320,23 @@ public class JdkZlibDecoder extends ZlibDecoder {
     }
 
     private void inflaterSetInput(ByteBuf in, int readableBytes) {
-        if (PlatformDependent.javaVersion() >= 11) {
+        if (INFLATER_SET_INPUT_BYTEBUFFER != null) {
             inflaterSetInputJdk11(in, readableBytes);
         } else {
             inflaterSetInputJdk6(in, readableBytes);
         }
     }
 
-    @SuppressJava6Requirement(reason = "Guarded with java version check")
     private void inflaterSetInputJdk11(ByteBuf in, int readableBytes) {
         if (in.isDirect()) {
             ByteBuffer directBuf = in.nioBuffer(in.readerIndex(), readableBytes);
-            inflater.setInput(directBuf);
+            try {
+                INFLATER_SET_INPUT_BYTEBUFFER.invoke(inflater, directBuf);
+            } catch (IllegalAccessException e) {
+                throw new Error(e);
+            } catch (InvocationTargetException e) {
+                throw new Error(e);
+            }
         } else {
             inflaterSetInputJdk6(in, readableBytes);
         }

@@ -34,7 +34,7 @@ import java.util.zip.Checksum;
  */
 abstract class ByteBufChecksum implements Checksum {
     private static final Method ADLER32_UPDATE_METHOD;
-    private static final Method CRC32_UPDATE_METHOD;
+    static final Method CRC32_UPDATE_METHOD;
 
     static {
         // See if we can use fast-path when using ByteBuf that is not heap based as Adler32 and CRC32 added support
