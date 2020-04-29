@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -40,6 +41,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Date;
+import java.util.stream.Stream;
 
 /**
  * Generates a temporary self-signed certificate for testing purposes.
@@ -218,7 +220,11 @@ public final class SelfSignedCertificate {
      */
     public SelfSignedCertificate(String fqdn, SecureRandom random, int bits, Date notBefore, Date notAfter,
                                  String algorithm) throws CertificateException {
-        // Generate key pair from specified algorithm.
+
+        if (!(algorithm.equalsIgnoreCase("EC") || algorithm.equalsIgnoreCase("RSA"))) {
+            throw new IllegalArgumentException("Algorithm not valid: " + algorithm);
+        }
+
         final KeyPair keypair;
         try {
             KeyPairGenerator keyGen = KeyPairGenerator.getInstance(algorithm);

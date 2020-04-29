@@ -44,8 +44,8 @@ import static io.netty.handler.ssl.util.SelfSignedCertificate.*;
 final class OpenJdkSelfSignedCertGenerator {
 
     @SuppressJava6Requirement(reason = "Usage guarded by dependency check")
-    static String[] generate(String fqdn, KeyPair keypair, SecureRandom random, Date notBefore, Date notAfter
-            , String algorithm) throws Exception {
+    static String[] generate(String fqdn, KeyPair keypair, SecureRandom random, Date notBefore, Date notAfter,
+                             String algorithm) throws Exception {
         PrivateKey key = keypair.getPrivate();
 
         // Prepare the information required for generating an X.509 certificate.
