@@ -227,13 +227,33 @@ public abstract class ZlibTest {
     }
 
     // Test for https://github.com/netty/netty/issues/2572
-    private void testDecompressOnly(ZlibWrapper decoderWrapper, byte[] compressed, byte[] data) throws Exception {
+    private void testDecompressLarge2(ZlibWrapper decoderWrapper) throws Exception {
+        byte[] compressed;
+        switch (decoderWrapper) {
+            case GZIP:
+                compressed = gzip(BYTES_LARGE2);
+                break;
+            case ZLIB:
+                compressed = deflate(BYTES_LARGE2);
+                break;
+            default:
+                throw new IllegalArgumentException("invalid decoderWrapper value: " + decoderWrapper);
+        }
+
+        testDecompress(decoderWrapper, compressed, BYTES_LARGE2);
+    }
+
+    private void testDecompress(ZlibWrapper decoderWrapper, byte[] compressed, byte[] decompressed) {
+        testDecompress(decoderWrapper, Unpooled.wrappedBuffer(compressed), decompressed);
+        testDecompress(decoderWrapper, Unpooled.directBuffer(compressed.length).writeBytes(compressed), decompressed);
+    }
+
+    private void testDecompress(ZlibWrapper decoderWrapper, ByteBuf compressed, byte[] decompressed) {
         EmbeddedChannel chDecoder = new EmbeddedChannel(createDecoder(decoderWrapper));
-        chDecoder.writeInbound(Unpooled.copiedBuffer(compressed));
+        chDecoder.writeInbound(compressed);
         assertTrue(chDecoder.finish());
 
-        ByteBuf decoded = Unpooled.buffer(data.length);
-
+        ByteBuf decoded = Unpooled.buffer(decompressed.length);
         for (;;) {
             ByteBuf buf = chDecoder.readInbound();
             if (buf == null) {
@@ -242,7 +262,7 @@ public abstract class ZlibTest {
             decoded.writeBytes(buf);
             buf.release();
         }
-        assertEquals(Unpooled.copiedBuffer(data), decoded);
+        assertEquals(Unpooled.wrappedBuffer(decompressed), decoded);
         decoded.release();
     }
 
@@ -263,7 +283,7 @@ public abstract class ZlibTest {
         testCompressNone(ZlibWrapper.ZLIB, ZlibWrapper.ZLIB);
         testCompressSmall(ZlibWrapper.ZLIB, ZlibWrapper.ZLIB);
         testCompressLarge(ZlibWrapper.ZLIB, ZlibWrapper.ZLIB);
-        testDecompressOnly(ZlibWrapper.ZLIB, deflate(BYTES_LARGE2), BYTES_LARGE2);
+        testDecompressLarge2(ZlibWrapper.ZLIB);
     }
 
     @Test
@@ -278,7 +298,7 @@ public abstract class ZlibTest {
         testCompressNone(ZlibWrapper.GZIP, ZlibWrapper.GZIP);
         testCompressSmall(ZlibWrapper.GZIP, ZlibWrapper.GZIP);
         testCompressLarge(ZlibWrapper.GZIP, ZlibWrapper.GZIP);
-        testDecompressOnly(ZlibWrapper.GZIP, gzip(BYTES_LARGE2), BYTES_LARGE2);
+        testDecompressLarge2(ZlibWrapper.GZIP);
     }
 
     @Test

@@ -19,7 +19,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.zip.CRC32;
 import java.util.zip.DataFormatException;
@@ -218,13 +221,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
             readableBytes = in.readableBytes();
         }
 
-        if (in.hasArray()) {
-            inflater.setInput(in.array(), in.arrayOffset() + in.readerIndex(), readableBytes);
-        } else {
-            byte[] array = new byte[readableBytes];
-            in.getBytes(in.readerIndex(), array);
-            inflater.setInput(array);
-        }
+        inflaterSetInput(in, readableBytes);
 
         ByteBuf decompressed = prepareDecompressBuffer(ctx, null, inflater.getRemaining() << 1);
         try {
@@ -284,6 +281,34 @@ public class JdkZlibDecoder extends ZlibDecoder {
             } else {
                 decompressed.release();
             }
+        }
+    }
+
+    private void inflaterSetInput(ByteBuf in, int readableBytes) {
+        if (PlatformDependent.javaVersion() >= 11) {
+            inflaterSetInputJdk11(in, readableBytes);
+        } else {
+            inflaterSetInputJdk6(in, readableBytes);
+        }
+    }
+
+    @SuppressJava6Requirement(reason = "Guarded with java version check")
+    private void inflaterSetInputJdk11(ByteBuf in, int readableBytes) {
+        if (in.isDirect()) {
+            ByteBuffer directBuf = in.nioBuffer(in.readerIndex(), readableBytes);
+            inflater.setInput(directBuf);
+        } else {
+            inflaterSetInputJdk6(in, readableBytes);
+        }
+    }
+
+    private void inflaterSetInputJdk6(ByteBuf in, int readableBytes) {
+        if (in.hasArray()) {
+            inflater.setInput(in.array(), in.arrayOffset() + in.readerIndex(), readableBytes);
+        } else {
+            byte[] array = new byte[readableBytes];
+            in.getBytes(in.readerIndex(), array);
+            inflater.setInput(array);
         }
     }
 

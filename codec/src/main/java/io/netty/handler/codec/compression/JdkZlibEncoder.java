@@ -198,6 +198,51 @@ public class JdkZlibEncoder extends ZlibEncoder {
             return;
         }
 
+        deflaterSetInput(uncompressed, out, len);
+        for (;;) {
+            deflate(out);
+            if (deflater.needsInput()) {
+                // Consumed everything
+                break;
+            } else {
+                if (!out.isWritable()) {
+                    // We did not consume everything but the buffer is not writable anymore. Increase the capacity to
+                    // make more room.
+                    out.ensureWritable(out.writerIndex());
+                }
+            }
+        }
+    }
+
+    private void deflaterSetInput(ByteBuf uncompressed, ByteBuf out, int len) {
+        if (PlatformDependent.javaVersion() >= 11) {
+            deflaterSetInputJdk11(uncompressed, out, len);
+        } else {
+            deflaterSetInputJdk6(uncompressed, out, len);
+        }
+    }
+
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
+    private void deflaterSetInputJdk11(ByteBuf uncompressed, ByteBuf out, int len) {
+        if (uncompressed.isDirect()) {
+            if (writeHeader) {
+                writeHeader = false;
+                if (wrapper == ZlibWrapper.GZIP) {
+                    out.writeBytes(gzipHeader);
+                }
+            }
+
+            if (wrapper == ZlibWrapper.GZIP) {
+                crc.update(uncompressed.nioBuffer());
+            }
+
+            deflater.setInput(uncompressed.nioBuffer());
+        } else {
+            deflaterSetInputJdk6(uncompressed, out, len);
+        }
+    }
+
+    private void deflaterSetInputJdk6(ByteBuf uncompressed, ByteBuf out, int len) {
         int offset;
         byte[] inAry;
         if (uncompressed.hasArray()) {
@@ -224,19 +269,6 @@ public class JdkZlibEncoder extends ZlibEncoder {
         }
 
         deflater.setInput(inAry, offset, len);
-        for (;;) {
-            deflate(out);
-            if (deflater.needsInput()) {
-                // Consumed everything
-                break;
-            } else {
-                if (!out.isWritable()) {
-                    // We did not consume everything but the buffer is not writable anymore. Increase the capacity to
-                    // make more room.
-                    out.ensureWritable(out.writerIndex());
-                }
-            }
-        }
     }
 
     @Override
@@ -323,7 +355,27 @@ public class JdkZlibEncoder extends ZlibEncoder {
     private void deflate(ByteBuf out) {
         if (PlatformDependent.javaVersion() < 7) {
             deflateJdk6(out);
+        } else if (PlatformDependent.javaVersion() >= 11) {
+            deflateJdk11(out);
+        } else {
+            deflateJdk7(out);
         }
+    }
+
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
+    private void deflateJdk11(ByteBuf out) {
+        if (out.isDirect()) {
+            int numBytes;
+            do {
+                numBytes = deflater.deflate(out.nioBuffer(), Deflater.SYNC_FLUSH);
+            } while (numBytes > 0);
+        } else {
+            deflateJdk7(out);
+        }
+    }
+
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
+    private void deflateJdk7(ByteBuf out) {
         int numBytes;
         do {
             int writerIndex = out.writerIndex();
