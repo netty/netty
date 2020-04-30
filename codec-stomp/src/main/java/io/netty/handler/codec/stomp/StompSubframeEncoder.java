@@ -38,9 +38,9 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
             StompFrame frame = (StompFrame) msg;
             ByteBuf frameBuf = encodeFrame(frame, ctx);
             if (frame.content().isReadable()) {
-                out.add(frameBuf);
                 ByteBuf contentBuf = encodeContent(frame, ctx);
-                out.add(contentBuf);
+                ByteBuf buf = Unpooled.wrappedBuffer(frameBuf, contentBuf);
+                out.add(buf);
             } else {
                 frameBuf.writeByte(StompConstants.NUL);
                 out.add(frameBuf);
