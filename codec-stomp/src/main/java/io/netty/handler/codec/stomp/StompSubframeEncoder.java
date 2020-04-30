@@ -17,6 +17,7 @@ package io.netty.handler.codec.stomp;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
@@ -28,6 +29,8 @@ import java.util.Map.Entry;
  * Encodes a {@link StompFrame} or a {@link StompSubframe} into a {@link ByteBuf}.
  */
 public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe> {
+    private static final ByteBuf EOF =
+            Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(new byte[] { StompConstants.NUL }));
 
     @Override
     protected void encode(ChannelHandlerContext ctx, StompSubframe msg, List<Object> out) throws Exception {
@@ -54,14 +57,10 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
     }
 
     private static ByteBuf encodeContent(StompContentSubframe content, ChannelHandlerContext ctx) {
-        if (content instanceof LastStompContentSubframe) {
-            ByteBuf buf = ctx.alloc().buffer(content.content().readableBytes() + 1);
-            buf.writeBytes(content.content());
-            buf.writeByte(StompConstants.NUL);
-            return buf;
-        } else {
-            return content.content().retain();
-        }
+        ByteBuf buf = content.content().retain();
+        return content instanceof LastStompContentSubframe
+                ? Unpooled.wrappedBuffer(buf, EOF.duplicate())
+                : buf;
     }
 
     private static ByteBuf encodeFrame(StompHeadersSubframe frame, ChannelHandlerContext ctx) {
