@@ -139,7 +139,7 @@
         <argLine.noUnsafe>-Dio.netty.noUnsafe</argLine.noUnsafe>
       </properties>
     </profile>
-    <profile>
+    <!--<profile>
       <id>coverage</id>
       <properties>
         <argLine.coverage>${jacoco.argLine}</argLine.coverage>
@@ -164,7 +164,7 @@
           </plugin>
         </plugins>
       </build>
-    </profile>
+    </profile>-->
     <profile>
       <id>jdk8</id>
       <activation>
@@ -210,6 +210,7 @@
       -XX:+HeapDumpOnOutOfMemoryError
     </argLine.common>
     <!-- Default to ALPN. See forcenpn profile to force NPN -->
+    <!--suppress UnresolvedMavenProperty -->
     <argLine.alpnAgent>-javaagent:${jetty.alpnAgent.path}=${jetty.alpnAgent.option}</argLine.alpnAgent>
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
     <argLine.noUnsafe>-D_</argLine.noUnsafe> <!-- Overridden when 'noUnsafe' profile is active -->
@@ -222,16 +223,19 @@
     <os.detection.classifierWithLikes>fedora</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
     <tcnative.version>2.0.12.Final</tcnative.version>
+    <!--suppress UnresolvedMavenProperty -->
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
     <conscrypt.version>1.1.3</conscrypt.version>
     <conscrypt.classifier />
+    <!--suppress UnresolvedMavenProperty -->
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.6.2</log4j2.version>
     <enforcer.plugin.version>1.4.1</enforcer.plugin.version>
+    <!--suppress UnresolvedMavenProperty -->
     <testJavaHome>${env.JAVA_HOME}</testJavaHome>
     <skipOsgiTestsuite>false</skipOsgiTestsuite>
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
@@ -911,12 +915,12 @@
         </executions>
       </plugin>
 
-      <plugin>
+      <!--<plugin>
         <artifactId>maven-source-plugin</artifactId>
         <version>3.0.1</version>
-        <!-- Eclipse-related OSGi manifests
+        &lt;!&ndash; Eclipse-related OSGi manifests
              See https://github.com/netty/netty/issues/3886
-             More information: http://rajakannappan.blogspot.ie/2010/03/automating-eclipse-source-bundle.html -->
+             More information: http://rajakannappan.blogspot.ie/2010/03/automating-eclipse-source-bundle.html &ndash;&gt;
         <configuration>
           <archive>
             <manifestEntries>
@@ -924,18 +928,20 @@
               <Bundle-Name>${project.name}</Bundle-Name>
               <Bundle-SymbolicName>${project.groupId}.${project.artifactId}.source</Bundle-SymbolicName>
               <Bundle-Vendor>${project.organization.name}</Bundle-Vendor>
+              &lt;!&ndash;suppress UnresolvedMavenProperty &ndash;&gt;
               <Bundle-Version>${parsedVersion.osgiVersion}</Bundle-Version>
+              &lt;!&ndash;suppress UnresolvedMavenProperty &ndash;&gt;
               <Eclipse-SourceBundle>${project.groupId}.${project.artifactId};version="${parsedVersion.osgiVersion}";roots:="."</Eclipse-SourceBundle>
             </manifestEntries>
           </archive>
         </configuration>
 
         <executions>
-          <!--
+          &lt;!&ndash;
             ~ This workaround prevents Maven from executing the 'generate-sources' phase twice.
             ~ See http://jira.codehaus.org/browse/MSOURCES-13
             ~ and http://blog.peterlynch.ca/2010/05/maven-how-to-prevent-generate-sources.html
-            -->
+            &ndash;&gt;
           <execution>
             <id>attach-sources</id>
             <phase>invalid</phase>
@@ -951,7 +957,7 @@
             </goals>
           </execution>
         </executions>
-      </plugin>
+      </plugin>-->
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
         <version>2.10.4</version>
@@ -1000,10 +1006,10 @@
 
       <!-- Ensure to put maven-antrun-plugin at the end of the plugin list
            so that they are run lastly in the same phase. -->
-      <plugin>
+      <!--<plugin>
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
-          <!-- Generate the version properties for all artifacts. -->
+          &lt;!&ndash; Generate the version properties for all artifacts. &ndash;&gt;
           <execution>
             <id>write-version-properties</id>
             <phase>initialize</phase>
@@ -1014,21 +1020,21 @@
               <target>
                 <taskdef resource="net/sf/antcontrib/antlib.xml" />
 
-                <!-- Get the information about the latest commit -->
+                &lt;!&ndash; Get the information about the latest commit &ndash;&gt;
                 <exec executable="git" outputproperty="gitOutput.lastCommit" resultproperty="gitExitCode.lastCommit" failonerror="false" failifexecutionfails="false">
                   <arg value="log" />
                   <arg value="-1" />
-                  <arg value="--format=format:%h %H %cd" />
-                  <arg value="--date=iso" />
+                  <arg value="&#45;&#45;format=format:%h %H %cd" />
+                  <arg value="&#45;&#45;date=iso" />
                 </exec>
                 <propertyregex property="shortCommitHash" input="${gitOutput.lastCommit}" regexp="^([0-9a-f]+) .*$" select="\1" casesensitive="true" defaultValue="0" />
                 <propertyregex property="longCommitHash" input="${gitOutput.lastCommit}" regexp="^[0-9a-f]+ ([0-9a-f]{40}) .*$" select="\1" casesensitive="true" defaultValue="0000000000000000000000000000000000000000" />
                 <propertyregex property="commitDate" input="${gitOutput.lastCommit}" regexp="^[0-9a-f]+ [0-9a-f]{40} (.*)$" select="\1" casesensitive="true" defaultValue="1970-01-01 00:00:00 +0000" />
 
-                <!-- Get the information abount whether the repository is clean or dirty -->
+                &lt;!&ndash; Get the information abount whether the repository is clean or dirty &ndash;&gt;
                 <exec executable="git" outputproperty="gitOutput.repoStatus" resultproperty="gitExitCode.repoStatus" failonerror="false" failifexecutionfails="false">
                   <arg value="status" />
-                  <arg value="--porcelain" />
+                  <arg value="&#45;&#45;porcelain" />
                 </exec>
                 <if>
                   <equals arg2="0" arg1="${gitExitCode.repoStatus}" />
@@ -1048,13 +1054,13 @@
                   </else>
                 </if>
 
-                <!-- Print the obtained commit information. -->
+                &lt;!&ndash; Print the obtained commit information. &ndash;&gt;
                 <echo>Current commit: ${shortCommitHash} on ${commitDate}</echo>
 
-                <!-- Generate the .properties file. -->
-                <!--
+                &lt;!&ndash; Generate the .properties file. &ndash;&gt;
+                &lt;!&ndash;
                 <property name="metaInfDir" value="${project.basedir}/src/main/resources/META-INF" />
-                -->
+                &ndash;&gt;
                 <property name="metaInfDir" value="${project.build.outputDirectory}/META-INF" />
                 <property name="versionPropFile" value="${metaInfDir}/${project.groupId}.versions.properties" />
                 <mkdir dir="${metaInfDir}" />
@@ -1095,7 +1101,7 @@
             </exclusions>
           </dependency>
         </dependencies>
-      </plugin>
+      </plugin>-->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-remote-resources-plugin</artifactId>
@@ -1145,6 +1151,7 @@
                     <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                   </manifest>
                   <manifestEntries>
+                    <!--suppress UnresolvedMavenProperty -->
                     <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
                   </manifestEntries>
                   <index>true</index>
