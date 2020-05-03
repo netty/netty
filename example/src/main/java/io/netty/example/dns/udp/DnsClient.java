@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.dns;
+package io.netty.example.dns.udp;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
@@ -53,7 +53,7 @@ public class DnsClient {
     private static void handleQueryResp(DatagramDnsResponse msg) {
         if (msg.count(DnsSection.QUESTION) > 0) {
             DnsQuestion question = msg.recordAt(DnsSection.QUESTION, 0);
-            System.out.printf("name: %s\n", question.name());
+            System.out.printf("name: %s%n", question.name());
         }
         for (int i = 0, count = msg.count(DnsSection.ANSWER); i < count; i++) {
             DnsRecord record = msg.recordAt(DnsSection.ANSWER, i);
