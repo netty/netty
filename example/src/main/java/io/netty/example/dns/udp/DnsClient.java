@@ -41,7 +41,6 @@ import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsSection;
 import io.netty.util.NetUtil;
-import io.netty.util.concurrent.ScheduledFuture;
 
 public final class DnsClient {
 
@@ -85,7 +84,7 @@ public final class DnsClient {
                             try {
                                 handleQueryResp(msg);
                             } finally {
-                                ctx.channel().close();
+                                ctx.close();
                             }
                         }
                     });
@@ -96,17 +95,13 @@ public final class DnsClient {
                     DnsSection.QUESTION,
                     new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
             ch.writeAndFlush(query).sync();
-            ScheduledFuture<?> f = ch.eventLoop().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    if (ch.isActive()) {
-                        System.err.println("dns query timeout.");
-                        ch.close();
-                    }
+            boolean succ = ch.closeFuture().await(10, TimeUnit.SECONDS);
+            if (!succ) {
+                System.err.println("dns query timeout!");
+                if (ch.isActive()) {
+                    ch.close().sync();
                 }
-            }, 10L, TimeUnit.SECONDS);
-            ch.closeFuture().sync();
-            f.cancel(true);
+            }
         } finally {
             group.shutdownGracefully();
         }
