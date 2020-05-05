@@ -16,6 +16,7 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.MathUtil;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -123,7 +124,7 @@ public class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
         }
 
         children = new EventExecutor[nThreads];
-        powerOfTwo = isPowerOfTwo(children.length);
+        powerOfTwo = MathUtil.isPowerOfTwo(children.length);
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
             try {
@@ -185,10 +186,6 @@ public class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
             return children[idx.getAndIncrement() & children.length - 1];
         }
         return children[Math.abs(idx.getAndIncrement() % children.length)];
-    }
-
-    private static boolean isPowerOfTwo(int val) {
-        return (val & -val) == val;
     }
 
     @Override

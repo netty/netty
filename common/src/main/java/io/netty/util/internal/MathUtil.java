@@ -52,6 +52,10 @@ public final class MathUtil {
         return value <= 0 ? 1 : value >= 0x40000000 ? 0x40000000 : findNextPositivePowerOfTwo(value);
     }
 
+    public static boolean isPowerOfTwo(int val) {
+        return (val & -val) == val;
+    }
+
     /**
      * Determine if the requested {@code index} and {@code length} will fit within {@code capacity}.
      * @param index The starting index.
@@ -63,5 +67,4 @@ public final class MathUtil {
     public static boolean isOutOfBounds(int index, int length, int capacity) {
         return (index | length | (index + length) | (capacity - (index + length))) < 0;
     }
-
 }
