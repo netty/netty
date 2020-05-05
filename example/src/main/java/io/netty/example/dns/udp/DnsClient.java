@@ -98,9 +98,7 @@ public final class DnsClient {
             boolean succ = ch.closeFuture().await(10, TimeUnit.SECONDS);
             if (!succ) {
                 System.err.println("dns query timeout!");
-                if (ch.isActive()) {
-                    ch.close().sync();
-                }
+                ch.close().sync();
             }
         } finally {
             group.shutdownGracefully();
