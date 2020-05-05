@@ -473,7 +473,12 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
             consolidateIfNeeded();
             return this;
         }
-        final CompositeByteBuf from = (CompositeByteBuf) buffer;
+        final CompositeByteBuf from;
+        if (buffer instanceof WrappedCompositeByteBuf) {
+            from = (CompositeByteBuf) buffer.unwrap();
+        } else {
+            from = (CompositeByteBuf) buffer;
+        }
         from.checkIndex(ridx, widx - ridx);
         final Component[] fromComponents = from.components;
         final int compCountBefore = componentCount;
