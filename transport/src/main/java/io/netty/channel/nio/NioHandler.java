@@ -33,6 +33,8 @@ import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty.util.telemetry.impl.DisabledEventLoopTelemetry;
+import io.netty.util.telemetry.impl.EventLoopTelemetry;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -69,6 +71,8 @@ public final class NioHandler implements IoHandler {
     private static final int SELECTOR_AUTO_REBUILD_THRESHOLD;
 
     private final IntSupplier selectNowSupplier = this::selectNow;
+
+    private final EventLoopTelemetry telemetry = DisabledEventLoopTelemetry.INSTANCE;
 
     // Workaround for JDK NIO bug.
     //
@@ -300,6 +304,8 @@ public final class NioHandler implements IoHandler {
         if (oldSelector == null) {
             return;
         }
+
+        telemetry.selectorRebuild().increment();
 
         try {
             newSelectorTuple = openSelector();
