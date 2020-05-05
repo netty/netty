@@ -16,7 +16,6 @@
 package io.netty.example.dns.udp;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import io.netty.bootstrap.Bootstrap;
@@ -42,13 +41,15 @@ import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsSection;
 import io.netty.util.NetUtil;
-import io.netty.util.internal.SocketUtils;
+import io.netty.util.concurrent.ScheduledFuture;
 
-public class DnsClient {
+public final class DnsClient {
 
     private static final String QUERY_DOMAIN = "www.example.com";
     private static final int DNS_SERVER_PORT = 53;
     private static final String DNS_SERVER_HOST = "8.8.8.8";
+
+    private DnsClient() { }
 
     private static void handleQueryResp(DatagramDnsResponse msg) {
         if (msg.count(DnsSection.QUESTION) > 0) {
@@ -66,8 +67,7 @@ public class DnsClient {
     }
 
     public static void main(String[] args) throws Exception {
-        InetSocketAddress addr = SocketUtils.socketAddress(DNS_SERVER_HOST, DNS_SERVER_PORT);
-        final CountDownLatch latch = new CountDownLatch(1);
+        InetSocketAddress addr = new InetSocketAddress(DNS_SERVER_HOST, DNS_SERVER_PORT);
         EventLoopGroup group = new NioEventLoopGroup();
         try {
             Bootstrap b = new Bootstrap();
@@ -81,24 +81,32 @@ public class DnsClient {
                      .addLast(new DatagramDnsResponseDecoder())
                      .addLast(new SimpleChannelInboundHandler<DatagramDnsResponse>() {
                         @Override
-                        protected void channelRead0(ChannelHandlerContext ctx, DatagramDnsResponse msg)
-                                throws Exception {
+                        protected void channelRead0(ChannelHandlerContext ctx, DatagramDnsResponse msg) {
                             try {
                                 handleQueryResp(msg);
                             } finally {
-                                latch.countDown();
+                                ctx.channel().close();
                             }
                         }
                     });
                  }
              });
-            Channel ch = b.bind(0).sync().channel();
+            final Channel ch = b.bind(0).sync().channel();
             DnsQuery query = new DatagramDnsQuery(null, addr, 1).setRecord(
                     DnsSection.QUESTION,
                     new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
-            ch.writeAndFlush(query);
-            latch.await(10L, TimeUnit.SECONDS);
-            ch.close().sync();
+            ch.writeAndFlush(query).sync();
+            ScheduledFuture<?> f = ch.eventLoop().schedule(new Runnable() {
+                @Override
+                public void run() {
+                    if (ch.isActive()) {
+                        System.err.println("dns query timeout.");
+                        ch.close();
+                    }
+                }
+            }, 10L, TimeUnit.SECONDS);
+            ch.closeFuture().sync();
+            f.cancel(true);
         } finally {
             group.shutdownGracefully();
         }
