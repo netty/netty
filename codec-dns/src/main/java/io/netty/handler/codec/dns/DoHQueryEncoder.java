@@ -18,6 +18,7 @@ package io.netty.handler.codec.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
+import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
@@ -28,6 +29,7 @@ import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.List;
 
 @UnstableApi
@@ -35,36 +37,40 @@ public class DoHQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
 
     private final DnsQueryEncoder encoder;
     private final boolean isHTTP2;
+    private final boolean GET;
     private final URL url;
 
     /**
-     * Creates a new encoder with {@linkplain DnsRecordEncoder#DEFAULT the default record encoder}
-     * and uses HTTP/1.1.
+     * Creates a new encoder with {@linkplain DnsRecordEncoder#DEFAULT the default record encoder},
+     * uses HTTP/1.1 and HTTP POST method.
      * @param url DoH Upstream Server
      */
     public DoHQueryEncoder(URL url) {
-        this(DnsRecordEncoder.DEFAULT, false, url);
+        this(DnsRecordEncoder.DEFAULT, false, false, url);
     }
 
     /**
-     * Creates a new encoder with {@linkplain DnsRecordEncoder#DEFAULT the default record encoder}
-     * and specify if we're using HTTP/2 (h2).
+     * Creates a new encoder with {@linkplain DnsRecordEncoder#DEFAULT the default record encoder}, uses HTTP POST method
+     * and specifies if we're using HTTP/2 (h2).
      * @param isHTTP2 Use HTTP/2 (h2)
      * @param url DoH Upstream Server
      */
     public DoHQueryEncoder(boolean isHTTP2, URL url) {
-        this(DnsRecordEncoder.DEFAULT, isHTTP2, url);
+        this(DnsRecordEncoder.DEFAULT, isHTTP2, false, url);
     }
 
     /**
-     * Creates a new encoder with the specified {@code recordEncoder}, {@code isHTTP2} and {@code url}
+     * Creates a new encoder with the specified {@code recordEncoder}, {@code isHTTP2},
+     * {@code GET} and {@code url}
      * @param recordEncoder DNS Record Encoder
      * @param isHTTP2 Use HTTP/2 (h2)
+     * @param GET Use HTTP GET method
      * @param url DoH Upstream Server
      */
-    public DoHQueryEncoder(DnsRecordEncoder recordEncoder, boolean isHTTP2, URL url) {
+    public DoHQueryEncoder(DnsRecordEncoder recordEncoder, boolean isHTTP2, boolean GET, URL url) {
         this.encoder = new DnsQueryEncoder(recordEncoder);
         this.isHTTP2 = isHTTP2;
+        this.GET = GET;
         this.url = url;
     }
 
@@ -73,17 +79,22 @@ public class DoHQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
         ByteBuf byteBuf = ctx.alloc().buffer();
         encoder.encode(msg, byteBuf);
 
-        FullHttpRequest fullHttpRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
-                url.getPath(), byteBuf);
+        FullHttpRequest fullHttpRequest;
+        if (GET) {
+            fullHttpRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                    url.getPath() + "?dns=" + Base64.encode(byteBuf).toString(Charset.forName("UTF-8")));
+        } else {
+            fullHttpRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
+                    url.getPath(), byteBuf);
+        }
+
         fullHttpRequest.headers()
                 .add(HttpHeaderNames.HOST, url.getHost())
                 .add(HttpHeaderNames.CONTENT_TYPE, "application/dns-message")
-                .add(HttpHeaderNames.ACCEPT, "application/dns-message")
-                .add(HttpHeaderNames.CONTENT_LENGTH, byteBuf.readableBytes());
+                .add(HttpHeaderNames.ACCEPT, "application/dns-message");
 
         if (isHTTP2) {
-            fullHttpRequest.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(),
-                    HttpScheme.HTTPS.name());
+            fullHttpRequest.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), HttpScheme.HTTPS.name());
         }
 
         out.add(fullHttpRequest);

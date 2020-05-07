@@ -27,14 +27,9 @@ import io.netty.handler.codec.dns.DnsOpCode;
 import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsSection;
-import io.netty.handler.ssl.ApplicationProtocolConfig;
-import io.netty.handler.ssl.ApplicationProtocolNames;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-
+import io.netty.handler.ssl.*;
 
 import java.net.URL;
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 public final class DoHClient {
@@ -66,13 +61,15 @@ public final class DoHClient {
 
             final Channel ch = b.connect(url.getHost(), url.getDefaultPort()).sync().channel();
 
-            Thread.sleep(1000); // Wait for TLS Handshake to finish
+            // Wait for TLS Handshake to finish
+            ch.pipeline().get(SslHandler.class).handshakeFuture().sync();
 
-            int randomID = new Random().nextInt(60000 - 1000) + 1000;
-            DnsQuery query = new DefaultDnsQuery(randomID, DnsOpCode.QUERY);
+            Thread.sleep(500); // See https://github.com/netty/netty/pull/10258#discussion_r421823210
+
+            // RFC 8484 recommends ID 0 [https://tools.ietf.org/html/rfc8484#section-4.1]
+            DnsQuery query = new DefaultDnsQuery(0, DnsOpCode.QUERY);
             query.setRecord(DnsSection.QUESTION, new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
             ch.writeAndFlush(query).sync();
-
             ch.closeFuture().await(10, TimeUnit.SECONDS);
         } finally {
             group.shutdownGracefully();
