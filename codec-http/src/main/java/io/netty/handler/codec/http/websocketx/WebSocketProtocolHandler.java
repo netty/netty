@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -99,13 +100,12 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
         if (closeSent != null) {
             ReferenceCountUtil.release(msg);
             promise.setFailure(new ClosedChannelException());
-            return;
+        } else if (msg instanceof CloseWebSocketFrame) {
+            closeSent = promise.unvoid();
+            ctx.write(msg).addListener(new ChannelPromiseNotifier(false, closeSent));
+        } else {
+            ctx.write(msg, promise);
         }
-        if (msg instanceof CloseWebSocketFrame) {
-            promise = promise.unvoid();
-            closeSent = promise;
-        }
-        ctx.write(msg, promise);
     }
 
     private void applyCloseSentTimeout(ChannelHandlerContext ctx) {
