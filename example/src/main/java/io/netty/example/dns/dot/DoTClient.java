@@ -73,7 +73,6 @@ public final class DoTClient {
     public static void main(String[] args) throws Exception {
         EventLoopGroup group = new NioEventLoopGroup();
         try {
-
             final SslContext sslContext = SslContextBuilder.forClient()
                     .protocols("TLSv1.3", "TLSv1.2")
                     .build();
@@ -102,7 +101,7 @@ public final class DoTClient {
                     });
             final Channel ch = b.connect(DNS_SERVER_HOST, DNS_SERVER_PORT).sync().channel();
 
-            int randomID = new Random().nextInt(60000-1000) + 1000;
+            int randomID = new Random().nextInt(60000 - 1000) + 1000;
             DnsQuery query = new DefaultDnsQuery(randomID, DnsOpCode.QUERY)
                     .setRecord(DnsSection.QUESTION, new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
             ch.writeAndFlush(query).sync();
