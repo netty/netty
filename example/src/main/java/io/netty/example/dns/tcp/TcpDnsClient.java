@@ -71,7 +71,6 @@ public final class TcpDnsClient {
     public static void main(String[] args) throws Exception {
         EventLoopGroup group = new NioEventLoopGroup();
         try {
-
             Bootstrap b = new Bootstrap();
             b.group(group)
                     .channel(NioSocketChannel.class)
@@ -96,7 +95,7 @@ public final class TcpDnsClient {
 
             final Channel ch = b.connect(DNS_SERVER_HOST, DNS_SERVER_PORT).sync().channel();
 
-            int randomID = new Random().nextInt(60000-1000) + 1000;
+            int randomID = new Random().nextInt(60000 - 1000) + 1000;
             DnsQuery query = new DefaultDnsQuery(randomID, DnsOpCode.QUERY)
                     .setRecord(DnsSection.QUESTION, new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
             ch.writeAndFlush(query).sync();
