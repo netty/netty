@@ -35,14 +35,31 @@ public class DoHQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
     private final boolean isHTTP2;
     private final URL url;
 
+    /**
+     * Creates a new encoder with {@linkplain DnsRecordEncoder#DEFAULT the default record encoder}
+     * and uses HTTP/1.1.
+     * @param url DoH Upstream Server
+     */
     public DoHQueryEncoder(URL url) {
         this(DnsRecordEncoder.DEFAULT, false, url);
     }
 
+    /**
+     * Creates a new encoder with {@linkplain DnsRecordEncoder#DEFAULT the default record encoder}
+     * and specify if we're using HTTP/2 (h2).
+     * @param isHTTP2 Use HTTP/2 (h2)
+     * @param url DoH Upstream Server
+     */
     public DoHQueryEncoder(boolean isHTTP2, URL url) {
         this(DnsRecordEncoder.DEFAULT, isHTTP2, url);
     }
 
+    /**
+     * Creates a new encoder with the specified {@code recordEncoder}, {@code isHTTP2} and {@code url}
+     * @param recordEncoder DNS Record Encoder
+     * @param isHTTP2 Use HTTP/2 (h2)
+     * @param url DoH Upstream Server
+     */
     public DoHQueryEncoder(DnsRecordEncoder recordEncoder, boolean isHTTP2, URL url) {
         this.encoder = new DnsQueryEncoder(recordEncoder);
         this.isHTTP2 = isHTTP2;

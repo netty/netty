@@ -27,10 +27,16 @@ public class DoHResponseDecoder extends MessageToMessageDecoder<HttpObject> {
 
     private final DnsResponseDecoder<SocketAddress> dnsResponseDecoder;
 
+    /**
+     * Creates a new decoder with {@linkplain DnsRecordDecoder#DEFAULT the default record decoder}.
+     */
     public DoHResponseDecoder() {
         this(DnsRecordDecoder.DEFAULT);
     }
 
+    /**
+     * Creates a new decoder with the specified {@code recordDecoder}
+     */
     public DoHResponseDecoder(DnsRecordDecoder dnsRecordDecoder) {
         this.dnsResponseDecoder = new DnsResponseDecoder<SocketAddress>(dnsRecordDecoder) {
             @Override
