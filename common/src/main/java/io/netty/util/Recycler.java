@@ -54,6 +54,7 @@ public abstract class Recycler<T> {
     private static final int MAX_DELAYED_QUEUES_PER_THREAD;
     private static final int LINK_CAPACITY;
     private static final int RATIO;
+    private static final int DELAYED_QUEUE_RATIO;
 
     static {
         // In the future, we might have different maxCapacity for different object types.
@@ -83,6 +84,7 @@ public abstract class Recycler<T> {
         // This should help to slowly increase the capacity of the recycler while not be too sensitive to allocation
         // bursts.
         RATIO = max(0, SystemPropertyUtil.getInt("io.netty.recycler.ratio", 8));
+        DELAYED_QUEUE_RATIO = max(0, SystemPropertyUtil.getInt("io.netty.recycler.delayedQueue.ratio", RATIO));
 
         if (logger.isDebugEnabled()) {
             if (DEFAULT_MAX_CAPACITY_PER_THREAD == 0) {
@@ -90,11 +92,13 @@ public abstract class Recycler<T> {
                 logger.debug("-Dio.netty.recycler.maxSharedCapacityFactor: disabled");
                 logger.debug("-Dio.netty.recycler.linkCapacity: disabled");
                 logger.debug("-Dio.netty.recycler.ratio: disabled");
+                logger.debug("-Dio.netty.recycler.delayedQueue.ratio: disabled");
             } else {
                 logger.debug("-Dio.netty.recycler.maxCapacityPerThread: {}", DEFAULT_MAX_CAPACITY_PER_THREAD);
                 logger.debug("-Dio.netty.recycler.maxSharedCapacityFactor: {}", MAX_SHARED_CAPACITY_FACTOR);
                 logger.debug("-Dio.netty.recycler.linkCapacity: {}", LINK_CAPACITY);
                 logger.debug("-Dio.netty.recycler.ratio: {}", RATIO);
+                logger.debug("-Dio.netty.recycler.delayedQueue.ratio: {}", DELAYED_QUEUE_RATIO);
             }
         }
 
@@ -105,12 +109,13 @@ public abstract class Recycler<T> {
     private final int maxSharedCapacityFactor;
     private final int interval;
     private final int maxDelayedQueuesPerThread;
+    private final int delayedQueueInterval;
 
     private final FastThreadLocal<Stack<T>> threadLocal = new FastThreadLocal<Stack<T>>() {
         @Override
         protected Stack<T> initialValue() {
             return new Stack<>(Recycler.this, Thread.currentThread(), maxCapacityPerThread, maxSharedCapacityFactor,
-                    interval, maxDelayedQueuesPerThread);
+                    interval, maxDelayedQueuesPerThread, delayedQueueInterval);
         }
 
         @Override
@@ -138,7 +143,14 @@ public abstract class Recycler<T> {
 
     protected Recycler(int maxCapacityPerThread, int maxSharedCapacityFactor,
                        int ratio, int maxDelayedQueuesPerThread) {
+        this(maxCapacityPerThread, maxSharedCapacityFactor, ratio, maxDelayedQueuesPerThread,
+                DELAYED_QUEUE_RATIO);
+    }
+
+    protected Recycler(int maxCapacityPerThread, int maxSharedCapacityFactor,
+                       int ratio, int maxDelayedQueuesPerThread, int delayedQueueRatio) {
         interval = max(0, ratio);
+        delayedQueueInterval = max(0, delayedQueueRatio);
         if (maxCapacityPerThread <= 0) {
             this.maxCapacityPerThread = 0;
             this.maxSharedCapacityFactor = 1;
@@ -328,7 +340,7 @@ public abstract class Recycler<T> {
             // Stack itself GCed.
             head = new Head(stack.availableSharedCapacity);
             head.link = tail;
-            interval = stack.interval;
+            interval = stack.delayedQueueInterval;
             handleRecycleCount = interval; // Start at interval so the first one will be recycled.
         }
 
@@ -486,6 +498,7 @@ public abstract class Recycler<T> {
 
         private final int maxCapacity;
         private final int interval;
+        private final int delayedQueueInterval;
         DefaultHandle<?>[] elements;
         int size;
         private int handleRecycleCount;
@@ -493,13 +506,14 @@ public abstract class Recycler<T> {
         private volatile WeakOrderQueue head;
 
         Stack(Recycler<T> parent, Thread thread, int maxCapacity, int maxSharedCapacityFactor,
-              int interval, int maxDelayedQueues) {
+              int interval, int maxDelayedQueues, int delayedQueueInterval) {
             this.parent = parent;
             threadRef = new WeakReference<>(thread);
             this.maxCapacity = maxCapacity;
             availableSharedCapacity = new AtomicInteger(max(maxCapacity / maxSharedCapacityFactor, LINK_CAPACITY));
             elements = new DefaultHandle[min(INITIAL_CAPACITY, maxCapacity)];
             this.interval = interval;
+            this.delayedQueueInterval = delayedQueueInterval;
             handleRecycleCount = interval; // Start at interval so the first one will be recycled.
             this.maxDelayedQueues = maxDelayedQueues;
         }
