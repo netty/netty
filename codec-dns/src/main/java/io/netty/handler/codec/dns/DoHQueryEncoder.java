@@ -25,10 +25,12 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.HttpConversionUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.URL;
 import java.util.List;
 
+@UnstableApi
 public class DoHQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
 
     private final DnsQueryEncoder encoder;

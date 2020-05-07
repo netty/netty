@@ -19,10 +19,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpObject;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.SocketAddress;
 import java.util.List;
 
+@UnstableApi
 public class DoHResponseDecoder extends MessageToMessageDecoder<HttpObject> {
 
     private final DnsResponseDecoder<SocketAddress> dnsResponseDecoder;
