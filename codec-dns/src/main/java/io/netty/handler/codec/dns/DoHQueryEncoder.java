@@ -99,7 +99,8 @@ public class DoHQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
 
         // If we're using HTTP/2 (h2) then we'll add "x-http2-scheme" header
         if (HTTP2) {
-            fullHttpRequest.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), HttpScheme.HTTPS.name());
+            fullHttpRequest.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(),
+                    HttpScheme.HTTPS.name());
         }
 
         out.add(fullHttpRequest);
