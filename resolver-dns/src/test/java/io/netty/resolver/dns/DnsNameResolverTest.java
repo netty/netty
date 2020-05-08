@@ -2227,6 +2227,16 @@ public class DnsNameResolverTest {
 
     @Test
     public void testCNAMECachedWhenFullChainInResponse() throws IOException {
+        testCNAMECachedWhenFullChainInResponse(null);
+    }
+
+    @Test
+    public void testCNAMECachedWhenFullChainInResponseThrow() throws IOException {
+        expectedException.expect(UnknownHostException.class);
+        testCNAMECachedWhenFullChainInResponse(new DefaultDnsCnameCache());
+    }
+
+    public void testCNAMECachedWhenFullChainInResponse(DnsCnameCache cnameCache) throws IOException {
         final String firstName = "firstname.com";
         final String secondName = "secondname.com";
         final String ipv4Addr = "1.2.3.4";
@@ -2265,6 +2275,9 @@ public class DnsNameResolverTest {
                     .maxQueriesPerResolve(16)
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
             builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED);
+            if (cnameCache != null) {
+                builder.cnameCache(cnameCache);
+            }
             resolver = builder.build();
             InetAddress resolvedAddress = resolver.resolve(firstName).syncUninterruptibly().getNow();
             assertEquals(ipv4Addr, resolvedAddress.getHostAddress());
