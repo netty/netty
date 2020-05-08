@@ -21,6 +21,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.util.internal.UnstableApi;
 
+import java.io.InvalidObjectException;
 import java.net.SocketAddress;
 import java.util.List;
 
@@ -42,8 +43,8 @@ public class DoHResponseDecoder extends MessageToMessageDecoder<HttpObject> {
     public DoHResponseDecoder(DnsRecordDecoder dnsRecordDecoder) {
         this.dnsResponseDecoder = new DnsResponseDecoder<SocketAddress>(dnsRecordDecoder) {
             @Override
-            protected DnsResponse newResponse(SocketAddress sender, SocketAddress recipient, int id, DnsOpCode opCode,
-                                              DnsResponseCode responseCode) throws Exception {
+            protected DnsResponse newResponse(SocketAddress sender, SocketAddress recipient, int id,
+                                              DnsOpCode opCode, DnsResponseCode responseCode) throws Exception {
                 return new DefaultDnsResponse(id, opCode, responseCode);
             }
         };
@@ -51,6 +52,12 @@ public class DoHResponseDecoder extends MessageToMessageDecoder<HttpObject> {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
+
+        // We don't any other HttpObject except FullHttpResponse
+        if (!(msg instanceof FullHttpResponse)) {
+            throw new InvalidObjectException("HttpObject is not FullHttpResponse");
+        }
+
         FullHttpResponse fullHttpResponse = (FullHttpResponse) msg;
         out.add(dnsResponseDecoder.decode(ctx.channel().remoteAddress(), ctx.channel().localAddress(),
                 fullHttpResponse.content()));

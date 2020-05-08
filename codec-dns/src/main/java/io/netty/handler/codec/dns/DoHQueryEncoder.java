@@ -21,8 +21,8 @@ import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.HttpConversionUtil;
@@ -36,13 +36,14 @@ import java.util.List;
 public class DoHQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
 
     private final DnsQueryEncoder encoder;
-    private final boolean isHTTP2;
+    private final boolean HTTP2;
     private final boolean GET;
     private final URL url;
 
     /**
      * Creates a new encoder with {@linkplain DnsRecordEncoder#DEFAULT the default record encoder},
      * uses HTTP/1.1 and HTTP POST method.
+     *
      * @param url DoH Upstream Server
      */
     public DoHQueryEncoder(URL url) {
@@ -52,24 +53,26 @@ public class DoHQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
     /**
      * Creates a new encoder with {@linkplain DnsRecordEncoder#DEFAULT the default record encoder}, uses HTTP POST method
      * and specifies if we're using HTTP/2 (h2).
-     * @param isHTTP2 Use HTTP/2 (h2)
-     * @param url DoH Upstream Server
+     *
+     * @param HTTP2 Use HTTP/2 (h2)
+     * @param url   DoH Upstream Server
      */
-    public DoHQueryEncoder(boolean isHTTP2, URL url) {
-        this(DnsRecordEncoder.DEFAULT, isHTTP2, false, url);
+    public DoHQueryEncoder(boolean HTTP2, URL url) {
+        this(DnsRecordEncoder.DEFAULT, HTTP2, false, url);
     }
 
     /**
-     * Creates a new encoder with the specified {@code recordEncoder}, {@code isHTTP2},
+     * Creates a new encoder with the specified {@code recordEncoder}, {@code HTTP2},
      * {@code GET} and {@code url}
+     *
      * @param recordEncoder DNS Record Encoder
-     * @param isHTTP2 Use HTTP/2 (h2)
-     * @param GET Use HTTP GET method
-     * @param url DoH Upstream Server
+     * @param HTTP2         Use HTTP/2 (h2)
+     * @param GET           Use HTTP GET method
+     * @param url           DoH Upstream Server
      */
-    public DoHQueryEncoder(DnsRecordEncoder recordEncoder, boolean isHTTP2, boolean GET, URL url) {
+    public DoHQueryEncoder(DnsRecordEncoder recordEncoder, boolean HTTP2, boolean GET, URL url) {
         this.encoder = new DnsQueryEncoder(recordEncoder);
-        this.isHTTP2 = isHTTP2;
+        this.HTTP2 = HTTP2;
         this.GET = GET;
         this.url = url;
     }
@@ -86,6 +89,7 @@ public class DoHQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
         } else {
             fullHttpRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
                     url.getPath(), byteBuf);
+            fullHttpRequest.headers().add(HttpHeaderNames.CONTENT_LENGTH, byteBuf.readableBytes());
         }
 
         fullHttpRequest.headers()
@@ -93,7 +97,8 @@ public class DoHQueryEncoder extends MessageToMessageEncoder<DnsQuery> {
                 .add(HttpHeaderNames.CONTENT_TYPE, "application/dns-message")
                 .add(HttpHeaderNames.ACCEPT, "application/dns-message");
 
-        if (isHTTP2) {
+        // If we're using HTTP/2 (h2) then we'll add "x-http2-scheme" header
+        if (HTTP2) {
             fullHttpRequest.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), HttpScheme.HTTPS.name());
         }
 
