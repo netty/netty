@@ -24,7 +24,9 @@ import static io.netty.util.internal.ObjectUtil.*;
 
 /**
  * Default implementation of a {@link DnsCnameCache}.
+ * @deprecated will be removed as caching CNAME's during resolution is considered problematic
  */
+@Deprecated
 public final class DefaultDnsCnameCache implements DnsCnameCache {
     private final int minTtl;
     private final int maxTtl;

@@ -362,6 +362,7 @@ public class DnsNameResolver extends InetNameResolver {
              dnsServerAddressStreamProvider, searchDomains, ndots, decodeIdn, false);
     }
 
+    @SuppressWarnings("deprecation")
     DnsNameResolver(
             EventLoop eventLoop,
             ChannelFactory<? extends DatagramChannel> channelFactory,

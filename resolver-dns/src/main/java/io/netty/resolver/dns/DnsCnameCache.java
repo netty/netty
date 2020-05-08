@@ -19,7 +19,9 @@ import io.netty.channel.EventLoop;
 
 /**
  * A cache for {@code CNAME}s.
+ * @deprecated will be removed as caching CNAME's during resolution is considered problematic
  */
+@Deprecated
 public interface DnsCnameCache {
 
     /**

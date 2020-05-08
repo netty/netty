@@ -2226,6 +2226,62 @@ public class DnsNameResolverTest {
     }
 
     @Test
+    public void testCNAMECachedWhenFullChainInResponse() throws IOException {
+        final String firstName = "firstname.com";
+        final String secondName = "secondname.com";
+        final String ipv4Addr = "1.2.3.4";
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                if (question.getDomainName().equals(firstName)) {
+                    Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>();
+                    ResourceRecordModifier rm = new ResourceRecordModifier();
+                    rm.setDnsClass(RecordClass.IN);
+                    rm.setDnsName(question.getDomainName());
+                    rm.setDnsTtl(100);
+                    rm.setDnsType(RecordType.CNAME);
+                    rm.put(DnsAttribute.DOMAIN_NAME, secondName);
+                    records.add(rm.getEntry());
+
+                    rm = new ResourceRecordModifier();
+                    rm.setDnsClass(RecordClass.IN);
+                    rm.setDnsName(question.getDomainName());
+                    rm.setDnsTtl(100);
+                    rm.setDnsType(RecordType.A);
+                    rm.put(DnsAttribute.IP_ADDRESS, ipv4Addr);
+                    records.add(rm.getEntry());
+                    return records;
+                } else {
+                    return null;
+                }
+            }
+        });
+        dnsServer2.start();
+        DnsNameResolver resolver = null;
+        try {
+            DnsNameResolverBuilder builder = newResolver()
+                    .resolveCache(NoopDnsCache.INSTANCE)
+                    .recursionDesired(true)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
+            builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED);
+            resolver = builder.build();
+            InetAddress resolvedAddress = resolver.resolve(firstName).syncUninterruptibly().getNow();
+            assertEquals(ipv4Addr, resolvedAddress.getHostAddress());
+            assertEquals(firstName, resolvedAddress.getHostName());
+
+            resolvedAddress = resolver.resolve(firstName).syncUninterruptibly().getNow();
+            assertEquals(ipv4Addr, resolvedAddress.getHostAddress());
+            assertEquals(firstName, resolvedAddress.getHostName());
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
+
+    @Test
     public void testSearchDomainQueryFailureForSingleAddressTypeCompletes() {
         expectedException.expect(UnknownHostException.class);
         testSearchDomainQueryFailureCompletes(ResolvedAddressTypes.IPV4_ONLY);

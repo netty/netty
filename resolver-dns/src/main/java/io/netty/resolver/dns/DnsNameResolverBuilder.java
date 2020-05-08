@@ -160,7 +160,9 @@ public final class DnsNameResolverBuilder {
      *
      * @param cnameCache the cache used to cache {@code CNAME} mappings for a domain.
      * @return {@code this}
+     * @deprecated will be removed as caching CNAME's during resolution is considered problematic
      */
+    @Deprecated
     public DnsNameResolverBuilder cnameCache(DnsCnameCache cnameCache) {
         this.cnameCache  = cnameCache;
         return this;
@@ -431,9 +433,9 @@ public final class DnsNameResolverBuilder {
                 new NameServerComparator(DnsNameResolver.preferredAddressType(resolvedAddressTypes).addressType()));
     }
 
+    @SuppressWarnings("deprecation")
     private DnsCnameCache newCnameCache() {
-        return new DefaultDnsCnameCache(
-                intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE));
+        return NoopDnsCnameCache.INSTANCE;
     }
 
     /**

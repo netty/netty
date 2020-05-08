@@ -17,6 +17,10 @@ package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
 
+/**
+ * @deprecated will be removed as caching CNAME's during resolution is considered problematic
+ */
+@Deprecated
 public final class NoopDnsCnameCache implements DnsCnameCache {
 
     public static final NoopDnsCnameCache INSTANCE = new NoopDnsCnameCache();
